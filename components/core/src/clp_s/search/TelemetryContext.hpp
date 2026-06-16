@@ -26,7 +26,7 @@ public:
     auto operator=(TelemetryContext&&) -> TelemetryContext& = delete;
 
     // Destructor
-    ~TelemetryContext() = default;
+    ~TelemetryContext();
 
 private:
     class Impl;
