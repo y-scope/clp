@@ -819,6 +819,10 @@ impl ClpIngestionState {
                     size: object.size,
                 });
             }
+            crate::telemetry::record_s3_ingestion(
+                chunk.iter().map(|o| o.size).sum(),
+                chunk.len() as u64,
+            );
         }
 
         Ok(buffer_entries)
