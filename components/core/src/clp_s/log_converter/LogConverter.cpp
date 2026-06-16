@@ -2,11 +2,14 @@
 
 #include <cstddef>
 #include <cstring>
+#include <stdexcept>
 #include <string_view>
 #include <system_error>
 #include <utility>
 
 #include <log_surgeon/log_surgeon.hpp>
+#include <log_surgeon/rust_compat.hpp>
+#include <spdlog/spdlog.h>
 #include <ystdlib/containers/Array.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -18,34 +21,48 @@
 
 namespace clp_s::log_converter {
 namespace {
+constexpr std::string_view cDelimiters{R"(\ \t\r\n[(:)"};
+
 /**
  * Non-exhaustive timestamp schema which covers many common patterns.
  *
  * Once log-surgeon has better unicode support, we should also allow \u2202 as an alternative
  * minus sign for timezone offsets.
  */
-constexpr std::string_view cTimestampSchema{
-        R"(header:(?<timestamp>((\d{2,4}[ /\-]{0,1}[ 0-9]{2}[ /\-][ 0-9]{2})|([ 0-9]{2}[ /\-])"
-        R"(((Jan(uary){0,1})|(Feb(ruary){0,1})|(Mar(ch){0,1})|(Apr(il){0,1})|(May)|(Jun(e){0,1})|)"
-        R"((Jul(y){0,1})|(Aug(ust){0,1})|(Sep(tember){0,1})|(Oct(ober){0,1})|(Nov(ember){0,1})|)"
-        R"((Dec(ember){0,1}))[ /\-]\d{2,4}))[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2}([,\.:]\d{1,9}){0,1})"
+constexpr std::string_view cHeaderRulePattern{
+        R"((?<timestamp>()"
+        R"((\d{2,4}[ /\-]?[ \d]{2}[ /\-][ \d]{2}))"
+        R"(|([ \d]{2}[ /\-])"
+        R"(((Jan(uary)?)|(Feb(ruary)?)|(Mar(ch)?)|(Apr(il)?)|(May)|(Jun(e)?)|(Jul(y)?))"
+        R"(|(Aug(ust)?)|(Sep(tember)?)|(Oct(ober)?)|(Nov(ember)?)|(Dec(ember)?)))"
+        R"([ /\-]\d{2,4})))"  // timestamp end
+        R"([ T:][ \d]{2}:[ \d]{2}:[ \d]{2}([,\.:]\d{1,9})?)"
         // Timezone matching:
-        R"(((( UTC){0,1}([\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})|)"
-        R"(((UTC){0,1}([\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})){0,1})|)"
-        R"((( [\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})|)"
-        R"((( Z){0,1}))"
+        R"(((( UTC)?([\+\-]\d{2}(:?\d{2})?)?Z?)|)"
+        R"(((UTC)?([\+\-]\d{2}(:?\d{2})?)?Z?))?))"
+        // Headers with no timestamp:
+        R"(|(( [\+\-]\d{2}(:?\d{2}){0,1})?Z?))"
+        R"(|(( Z)?))"
 };
-
-constexpr std::string_view cDelimiters{R"(delimiters:\ \t\r\n[(:)"};
 }  // namespace
 
 auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
-    std::string rule_text{"delimiter:"};
-    rule_text += cDelimiters;
-    rule_text += "\n";
-    rule_text += cTimestampSchema;
-    log_surgeon::ParserHandle parser{clp::load_parser_from_str(rule_text)};
-    return LogConverter(max_buffer_size, std::move(parser));
+    auto* builder{log_surgeon::log_surgeon_parsing_spec_builder_new()};
+    log_surgeon::log_surgeon_parsing_spec_builder_set_delimiters(
+            builder,
+            log_surgeon::CCharArray::from_string_view(cDelimiters)
+    );
+    if (false
+        == log_surgeon::log_surgeon_parsing_spec_builder_add_rule_with_priority(
+                builder,
+                0,
+                log_surgeon::CCharArray::from_string_view("header"),
+                log_surgeon::CCharArray::from_string_view(cHeaderRulePattern)
+        ))
+    {
+        throw std::runtime_error("failed to add header rule parsing spec");
+    }
+    return LogConverter(max_buffer_size, log_surgeon_parsing_spec_builder_build(builder));
 }
 
 auto LogConverter::convert_file(
@@ -67,43 +84,44 @@ auto LogConverter::convert_file(
         auto const num_bytes_read{YSTDLIB_ERROR_HANDLING_TRYX(refill_buffer(reader))};
         reached_end_of_stream = 0ULL == num_bytes_read;
 
+        std::string_view const buf{m_buffer.data(), m_num_bytes_buffered};
         while (m_parser_offset < m_num_bytes_buffered) {
-            log_surgeon::CCharArray view{m_buffer.data(), m_num_bytes_buffered};
-            auto optional_event{m_parser.next_event(view, &m_parser_offset)};
-            // No error handling for failures?
-            if (false == optional_event.has_value()) {
+            size_t pos{0};
+            auto event{m_parser.next_event(buf, &pos)};
+            if (false == event.has_value()) {
+                SPDLOG_ERROR("failed to parse buffer contents: '{}'", buf);
+                return std::errc::not_supported;
+            }
+
+            // If log-surgeon succeeded to parse to the end of the buffer it is possible the log
+            // event is truncated. Until log-surgeon has an API that handles reads we need to fill
+            // the buffer and try again.
+            if (false == reached_end_of_stream && pos == m_num_bytes_buffered) {
                 break;
             }
+            m_parser_offset = pos;
 
-            auto const& event{optional_event.value()};
-
-            // Ideally the event would just have its timestamp accessible as event.get_timestamp()
-            std::string message;
-            std::string timestamp;
-            size_t leaf_id{0};
-            while (true) {
-                auto optional_leaf{event.get_leaf_match(leaf_id)};
-                if (false == optional_leaf.has_value()) {
-                    break;
-                }
-                auto leaf{optional_leaf.value()};
-                size_t const leaf_len{leaf.range.end - leaf.range.start};
-                if (timestamp.empty() && "header" == leaf.ffi_pointers.root_rule_name.as_cpp_view()
-                    && "timestamp" == leaf.ffi_pointers.rule_name.as_cpp_view())
-                {
-                    timestamp = std::string{m_buffer.data() + leaf.range.start, leaf_len};
-                } else {
-                    message += std::string{m_buffer.data() + leaf.range.start, leaf_len};
-                }
-                ++leaf_id;
+            auto const match{event->get_leaf_match(0)};
+            if (false == match.has_value()) {
+                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(buf.substr(0, m_parser_offset)));
+            } else if ("timestamp" == match->ffi_pointers.rule_name.as_cpp_view()
+                       && "header" == match->ffi_pointers.root_rule_name.as_cpp_view())
+            {
+                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(
+                        match->ffi_pointers.lexeme.as_cpp_view(),
+                        buf.substr(match->range.start)
+                ));
+            } else {
+                SPDLOG_ERROR(
+                        "found a non-timestamp leaf match '{}': '{}'",
+                        match->ffi_pointers.rule_name.as_cpp_view(),
+                        match->ffi_pointers.lexeme.as_cpp_view()
+                );
+                return std::errc::not_supported;
             }
-            if (false == timestamp.empty()) {
-                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(timestamp, message));
-                continue;
-            }
-            YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
         }
     }
+
     serializer.close();
     return ystdlib::error_handling::success();
 }
