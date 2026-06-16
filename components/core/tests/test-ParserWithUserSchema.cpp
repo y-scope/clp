@@ -31,7 +31,6 @@ auto run_clp_compress(
         std::filesystem::path const& output_path,
         std::filesystem::path const& input_path
 ) -> int;
-[[nodiscard]] auto get_config_schema_files_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_tests_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_test_schema_files_dir() -> std::filesystem::path;
 [[nodiscard]] auto get_test_log_dir() -> std::filesystem::path;
@@ -39,11 +38,6 @@ auto run_clp_compress(
 auto get_tests_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
     return std::filesystem::canonical(current_file_path.parent_path());
-}
-
-auto get_config_schema_files_dir() -> std::filesystem::path {
-    std::filesystem::path const current_file_path{__FILE__};
-    return std::filesystem::canonical(current_file_path.parent_path().parent_path()) / "config";
 }
 
 auto get_test_schema_files_dir() -> std::filesystem::path {
@@ -65,7 +59,7 @@ auto run_clp_compress(
     std::vector<char const*> argv{
             "clp",
             "c",
-            "--schema-path",
+            "--unstructured-text-parsing-rule-set",
             schema_path_str.data(),
             output_path_str.data(),
             input_path_str.data(),
@@ -84,9 +78,11 @@ TEST_CASE("Test creating log parser with delimiters", "[LALR1Parser][LogParser]"
     REQUIRE_NOTHROW(load_parser_from_file(schema_file_path.string()));
 }
 
-TEST_CASE("Test creating log parser from config schema", "[LALR1Parser][LogParser]") {
-    auto const schema_file_path = get_config_schema_files_dir() / "schemas.txt";
-    REQUIRE_NOTHROW(load_parser_from_file(schema_file_path.string()));
+TEST_CASE("Test creating log parser from package template schema", "[LALR1Parser][LogParser]") {
+    REQUIRE_NOTHROW(load_parser_from_file((get_tests_dir().parent_path().parent_path()
+                                           / "package-template" / "src" / "etc"
+                                           / "parsing-spec.template.txt")
+                                                  .string()));
 }
 
 TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParser]") {

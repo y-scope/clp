@@ -117,7 +117,6 @@ tasks:
           --config-file "tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
           ".github" \
           "components/core/.clang-format" \
-          "components/core/config" \
           "components/core/tools/" \
           "components/package-template/src/etc" \
           "docs" \

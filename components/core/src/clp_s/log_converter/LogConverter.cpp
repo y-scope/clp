@@ -44,7 +44,7 @@ auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
     rule_text += cDelimiters;
     rule_text += "\n";
     rule_text += cTimestampSchema;
-    log_surgeon::ParserHandle parser{clp::load_parser_from_rule_text(rule_text)};
+    log_surgeon::ParserHandle parser{clp::load_parser_from_str(rule_text)};
     return LogConverter(max_buffer_size, std::move(parser));
 }
 
