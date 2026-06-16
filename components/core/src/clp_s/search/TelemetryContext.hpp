@@ -11,12 +11,6 @@ namespace clp_s::search {
  * exporter so that the spans emitted by `SearchTelemetrySpan` are actually exported. On
  * destruction it flushes any buffered spans and shuts the provider down, which is required for a
  * short-lived CLI process to avoid dropping telemetry on exit.
- *
- * Whether telemetry is enabled is decided by the caller (via the `--enable-telemetry` command line
- * flag, which the CLP package only sets after its telemetry consent checks pass), so this guard
- * should only be constructed when telemetry is enabled. If the provider or exporter cannot be
- * constructed, a warning is logged and the API's default no-op provider is left in place, so spans
- * become no-ops.
  */
 class TelemetryContext {
 public:
@@ -32,7 +26,7 @@ public:
     auto operator=(TelemetryContext&&) -> TelemetryContext& = delete;
 
     // Destructor
-    ~TelemetryContext();
+    ~TelemetryContext() = default;
 
 private:
     class Impl;

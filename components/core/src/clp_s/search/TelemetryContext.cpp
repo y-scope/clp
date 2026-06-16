@@ -35,10 +35,9 @@ constexpr std::string_view cDefaultServiceName{"clp-search"};
 constexpr std::string_view cTracesPath{"/v1/traces"};
 
 /**
- * Bound on how long the destructor blocks while draining buffered spans on exit. Typed as
- * `seconds`; `Shutdown` accepts a `microseconds` timeout, which `seconds` converts to losslessly.
+ * Bound on how long the destructor blocks while draining buffered spans on exit.
  */
-constexpr std::chrono::seconds cShutdownTimeout{5};
+constexpr std::chrono::seconds cShutdownTimeout{1};
 
 /**
  * @param name
@@ -53,14 +52,14 @@ constexpr std::chrono::seconds cShutdownTimeout{5};
  * honoured natively by `OtlpHttpExporterOptions`, so this only supplies an override derived from
  * CLP's `CLP_TELEMETRY_ENDPOINT` when none of the standard variables are set.
  *
- * @return The fully-qualified traces URL.
- * @return std::nullopt to fall back to the exporter defaults.
+ * @return The fully-qualified traces URL, or std::nullopt if opentelemetry defaults should be used.
  */
 [[nodiscard]] auto resolve_clp_endpoint() -> std::optional<std::string>;
 
 /**
- * @return A resource describing this process: a default `service.name` of `clp-search` (used only
- * when `OTEL_SERVICE_NAME` is unset) merged with the attributes detected from the environment.
+ * @return A reResourcesource describing this process; a default `service.name` of `clp-search`
+ * (used only when `OTEL_SERVICE_NAME` is unset) merged with the attributes detected from the
+ * environment.
  */
 [[nodiscard]] auto make_resource() -> resource::Resource;
 
@@ -76,12 +75,11 @@ auto resolve_clp_endpoint() -> std::optional<std::string> {
         return std::nullopt;
     }
 
-    char const* const raw{std::getenv("CLP_TELEMETRY_ENDPOINT")};
-    if (nullptr == raw || '\0' == raw[0]) {
+    if (false == is_env_set("CLP_TELEMETRY_ENDPOINT")) {
         return std::nullopt;
     }
 
-    std::string endpoint{raw};
+    std::string endpoint{std::getenv("CLP_TELEMETRY_ENDPOINT")};
     while (false == endpoint.empty() && '/' == endpoint.back()) {
         endpoint.pop_back();
     }
@@ -153,6 +151,4 @@ private:
 };
 
 TelemetryContext::TelemetryContext() : m_impl{std::make_unique<Impl>()} {}
-
-TelemetryContext::~TelemetryContext() = default;
 }  // namespace clp_s::search
