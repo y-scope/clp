@@ -73,7 +73,7 @@ async fn test_scan_prefix_early_exit() -> Result<()> {
         &s3_client,
         &aws_config.bucket_name,
         &prefix,
-        None::<NonEmptyString>,
+        &None::<NonEmptyString>,
         async move |objects: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
             let page_last_key = objects
                 .last()
@@ -147,7 +147,7 @@ async fn test_scan_prefix_multi_page_filtering() -> Result<()> {
         &s3_client,
         &aws_config.bucket_name,
         &prefix,
-        None::<NonEmptyString>,
+        &None::<NonEmptyString>,
         async move |objects: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
             page_count_for_scan.fetch_add(1, Ordering::Relaxed);
             let last_key = objects

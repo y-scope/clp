@@ -36,7 +36,7 @@ pub async fn scan_prefix<
     client: &Client,
     bucket_name: &NonEmptyString,
     key_prefix: &NonEmptyString,
-    mut start_after: Option<NonEmptyString>,
+    start_after: &Option<NonEmptyString>,
     mut page_callback: CallbackType,
 ) -> Result<Option<NonEmptyString>> {
     let mut continuation_token: Option<String> = None;
@@ -50,8 +50,8 @@ pub async fn scan_prefix<
 
         if let Some(continuation_token) = continuation_token.take() {
             request = request.continuation_token(continuation_token);
-        } else if let Some(start_after) = start_after.take() {
-            request = request.start_after(start_after);
+        } else if let Some(start_after) = start_after {
+            request = request.start_after(start_after.as_str());
         }
 
         let response = request.send().await?;
