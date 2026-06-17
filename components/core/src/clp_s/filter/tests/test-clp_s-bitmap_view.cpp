@@ -17,7 +17,7 @@ namespace {
  * @tparam BitmapComponentType
  * @tparam num_components
  * @param bit_positions A vector of bit positions to set.
- * @param bitmap The underlying
+ * @param bitmap The underlying array used to represent the bitmap.
  */
 template <clp::IntegerType BitmapComponentType, size_t num_components>
 auto set_bits_in_bitmap(
