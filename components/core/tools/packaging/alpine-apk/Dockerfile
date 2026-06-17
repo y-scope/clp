@@ -15,6 +15,6 @@ FROM ${BASE_IMAGE}
 # version pinned here must match universal-deb/Dockerfile.
 ARG SYFT_VERSION=v1.45.0
 
-RUN apk add --no-cache patchelf alpine-sdk python3 py3-yaml curl \
+RUN apk add --no-cache binutils patchelf alpine-sdk python3 py3-yaml curl \
     && curl -sSfL https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh \
        | sh -s -- -b /usr/local/bin "${SYFT_VERSION}"

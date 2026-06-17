@@ -338,12 +338,12 @@ for cur_format in "${format_list[@]}"; do
         # consumes this file, so publishing a package without its SBOM
         # would bypass that gate.
         while IFS= read -r -d '' _pkg; do
-            cp "${_pkg}" "${output_dir}/"
             _sbom="${_pkg}.sbom.cdx.json"
             if [[ ! -f "${_sbom}" ]]; then
                 echo "ERROR: SBOM sidecar missing for $(basename "${_pkg}"): expected ${_sbom}" >&2
                 exit 1
             fi
+            cp "${_pkg}" "${output_dir}/"
             cp "${_sbom}" "${output_dir}/"
         done < <(find -L "${repo_root}/build" -maxdepth 1 -name "clp-core*.${cur_format}" -print0)
         echo ""

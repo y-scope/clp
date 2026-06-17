@@ -47,6 +47,7 @@ staging="/tmp/clp-deb-staging"
 # and append debian revision "-1" (first packaging of this upstream version).
 # E.g., "0.9.1-20260214.5f1d7ca" -> "0.9.1~20260214.5f1d7ca-1"
 deb_version="${PKG_VERSION/-/\~}-1"
+pkg_basename="clp-core_${deb_version}_${PKG_ARCH}.deb"
 
 # --- Bundle binaries and libraries ------------------------------------------
 
@@ -54,6 +55,28 @@ DESTDIR="${staging}" \
 PREFIX=/usr \
 BIN_DIR="${BIN_DIR}" \
     "${script_dir}/../common/bundle-libs.sh"
+
+# --- Create DEBIAN/control ----------------------------------------------------
+
+mkdir -p "${staging}/DEBIAN"
+installed_size_kib="$(du -sk "${staging}/usr" | awk '{print $1}')"
+cat > "${staging}/DEBIAN/control" <<CTRL
+Package: clp-core
+Source: clp
+Version: ${deb_version}
+Architecture: ${PKG_ARCH}
+Section: utils
+Priority: optional
+Installed-Size: ${installed_size_kib}
+Maintainer: YScope Inc. <support@yscope.com>
+Homepage: https://github.com/y-scope/clp
+Depends: libc6 (>= 2.28), libstdc++6
+Description: CLP core universal binaries for log compression and search
+ Portable binaries built on manylinux_2_28 (glibc >= 2.28). Compatible with
+ Debian 10+, Ubuntu 20.04+, and other glibc-based Debian derivatives.
+ .
+ Includes clp-s, clp, clo, clg, indexer, log-converter, and reducer-server.
+CTRL
 
 # --- Generate SBOM sidecar --------------------------------------------------
 #
@@ -64,7 +87,7 @@ BIN_DIR="${BIN_DIR}" \
 #     -> clp-core_<version>_<arch>.deb.sbom.cdx.json
 # See components/core/tools/packaging/SBOM.md for the merge model.
 
-PKG_BASENAME="clp-core_${deb_version}_${PKG_ARCH}.deb" \
+PKG_BASENAME="${pkg_basename}" \
 PKG_NAME="clp-core" \
 PKG_VERSION="${deb_version}" \
 PKG_ARCH="${PKG_ARCH}" \
@@ -76,24 +99,23 @@ DEPS_FAMILY="manylinux_2_28" \
 OUTPUT_DIR="${output_dir}" \
     "${script_dir}/../common/generate-sbom.sh"
 
-# --- Create DEBIAN/control ----------------------------------------------------
-
-mkdir -p "${staging}/DEBIAN"
-cat > "${staging}/DEBIAN/control" <<CTRL
-Package: clp-core
-Version: ${deb_version}
-Architecture: ${PKG_ARCH}
-Maintainer: YScope Inc. <support@yscope.com>
-Homepage: https://github.com/y-scope/clp
-Depends: libc6 (>= 2.28), libstdc++6
-Description: CLP core universal binaries for log compression and search
- Portable binaries built on manylinux_2_28 (glibc >= 2.28). Compatible with
- Debian 10+, Ubuntu 20.04+, and other glibc-based Debian derivatives.
- .
- Includes clp-s, clp, clo, clg, indexer, log-converter, and reducer-server.
-CTRL
+# This manifest drives SBOM scope overrides but is not part of the runtime
+# package payload.
+rm -f "${staging}/.bundled-os-packages.txt"
 
 # --- Build .deb ---------------------------------------------------------------
 
 echo "==> Building deb package..."
 dpkg-deb --build "${staging}" "${output_dir}/"
+
+pkg_path="${output_dir}/${pkg_basename}"
+sbom_path="${pkg_path}.sbom.cdx.json"
+if [[ ! -f "${pkg_path}" ]]; then
+    echo "ERROR: expected package not found after dpkg-deb build: ${pkg_path}" >&2
+    exit 1
+fi
+
+python3 "${script_dir}/../common/verify-package-sbom.py" \
+    --package "${pkg_path}" \
+    --sbom "${sbom_path}" \
+    --update-package-metadata

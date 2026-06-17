@@ -46,6 +46,7 @@ staging="/tmp/clp-rpm-staging"
 # RPM version: replace hyphen with tilde so pre-release sorts before release.
 # E.g., "0.9.1-20260214.5f1d7ca" -> "0.9.1~20260214.5f1d7ca"
 rpm_version="${PKG_VERSION/-/\~}"
+pkg_basename="clp-core-${rpm_version}-1.${PKG_ARCH}.rpm"
 
 # --- Bundle binaries and libraries --------------------------------------------
 
@@ -64,7 +65,7 @@ BIN_DIR="${BIN_DIR}" \
 # Release: 1 is hardcoded in the spec template that follows.
 # See components/core/tools/packaging/SBOM.md for the merge model.
 
-PKG_BASENAME="clp-core-${rpm_version}-1.${PKG_ARCH}.rpm" \
+PKG_BASENAME="${pkg_basename}" \
 PKG_NAME="clp-core" \
 PKG_VERSION="${rpm_version}" \
 PKG_ARCH="${PKG_ARCH}" \
@@ -91,6 +92,7 @@ Summary:        CLP core universal binaries for log compression and search
 License:        Apache-2.0
 URL:            https://github.com/y-scope/clp
 Packager:       YScope Inc. <support@yscope.com>
+Vendor:         YScope Inc.
 
 AutoReqProv:    no
 Requires:       glibc >= 2.28
@@ -120,10 +122,24 @@ SPEC
 echo "==> Building rpm package..."
 rpmbuild \
     --define "_topdir ${rpmbuild_dir}" \
+    --define "__os_install_post %{nil}" \
     --define "pkg_version ${rpm_version}" \
     --define "staging_dir ${staging}" \
     --target "${PKG_ARCH}" \
     --bb "${rpmbuild_dir}/SPECS/clp-core.spec"
 
 # Copy the built RPM to the output directory
-find "${rpmbuild_dir}/RPMS" -name "*.rpm" -exec cp {} "${output_dir}/" \;
+built_rpm="$(find "${rpmbuild_dir}/RPMS" -name "${pkg_basename}" -print -quit)"
+if [[ -z "${built_rpm}" ]]; then
+    echo >&2 "ERROR: rpmbuild produced no matching package: ${pkg_basename}"
+    exit 1
+fi
+cp "${built_rpm}" "${output_dir}/"
+
+pkg_path="${output_dir}/${pkg_basename}"
+sbom_path="${pkg_path}.sbom.cdx.json"
+python3 "${script_dir}/../common/verify-package-sbom.py" \
+    --package "${pkg_path}" \
+    --sbom "${sbom_path}" \
+    --format rpm \
+    --update-package-metadata

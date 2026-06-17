@@ -59,6 +59,7 @@ if [[ "${PKG_VERSION}" == *-* ]]; then
 else
     apk_version="${PKG_VERSION}"
 fi
+pkg_basename="clp-core-${apk_version}-r0.apk"
 
 # --- Bundle binaries and libraries --------------------------------------------
 
@@ -77,7 +78,7 @@ BIN_DIR="${BIN_DIR}" \
 # pkgrel=0 is hardcoded in the APKBUILD template that follows.
 # See components/core/tools/packaging/SBOM.md for the merge model.
 
-PKG_BASENAME="clp-core-${apk_version}-r0.apk" \
+PKG_BASENAME="${pkg_basename}" \
 PKG_NAME="clp-core" \
 PKG_VERSION="${apk_version}" \
 PKG_ARCH="${PKG_ARCH}" \
@@ -100,7 +101,11 @@ mkdir -p "${abuild_dir}"
 if ! abuild-keygen -an 2>&1; then
     echo >&2 "WARN: abuild-keygen failed (key may already exist)"
 fi
+mkdir -p /root/.abuild
 cp /root/.abuild/*.rsa.pub /etc/apk/keys/
+abuild_packager="YScope Inc. <support@yscope.com>"
+export PACKAGER="${abuild_packager}"
+printf 'PACKAGER="%s"\n' "${abuild_packager}" >> /root/.abuild/abuild.conf
 
 # Create APKBUILD that copies our pre-bundled staging directory
 cat > "${abuild_dir}/APKBUILD" <<APKBUILD
@@ -132,8 +137,17 @@ abuild -F checksum
 abuild -F -d -P "/tmp/clp-apk-out"
 
 # Copy the built package to the output directory
-if ! find /tmp/clp-apk-out -name "*.apk" | grep -q .; then
-    echo >&2 "ERROR: abuild produced no .apk files"
+built_apk="$(find /tmp/clp-apk-out -name "${pkg_basename}" -print -quit)"
+if [[ -z "${built_apk}" ]]; then
+    echo >&2 "ERROR: abuild produced no matching package: ${pkg_basename}"
     exit 1
 fi
-find /tmp/clp-apk-out -name "*.apk" -exec cp {} "${output_dir}/" \;
+cp "${built_apk}" "${output_dir}/"
+
+pkg_path="${output_dir}/${pkg_basename}"
+sbom_path="${pkg_path}.sbom.cdx.json"
+python3 "${script_dir}/../common/verify-package-sbom.py" \
+    --package "${pkg_path}" \
+    --sbom "${sbom_path}" \
+    --format apk \
+    --update-package-metadata

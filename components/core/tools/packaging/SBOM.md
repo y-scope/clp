@@ -56,7 +56,12 @@ and `-r0` (apk) are the package-format release numbers.
   `yscope-dev-utils`). These are emitted with `scope: optional` so that
   Trivy runtime-CVE gates can filter them out while preserving them for
   provenance audits.
-* Build toolchain entries (`gcc`, `g++`, `cmake`, `ld`, `patchelf`)
+* File-level evidence for the package payload and, where applicable,
+  package control metadata: package path, SHA-256, size, file mode, and
+  ELF `NEEDED` entries where applicable. These are emitted as
+  `type: file` components with `scope: optional` so they remain audit
+  evidence rather than CVE scan targets.
+* Build toolchain entries (`gcc`, `g++`, `cmake`, `ld`, `readelf`, `patchelf`)
   captured under `metadata.tools`.
 
 ### Out of scope
@@ -132,17 +137,23 @@ build.sh (host)
        -> universal-<fmt>/package.sh
             -> common/bundle-libs.sh     (stages binaries + .so files;
                                           writes .bundled-os-packages.txt)
+            -> write package metadata    (DEBIAN/control, RPM spec, APKBUILD)
             -> common/generate-sbom.sh   (syft scan + Python merger;
                                           reads .bundled-os-packages.txt
-                                          for the scope-required override)
+                                          for the scope-required override;
+                                          records staged package files)
             -> dpkg-deb / rpmbuild / abuild (packages binaries)
+            -> common/verify-package-sbom.py (extracts the final package
+                                              and verifies file evidence)
   -> copy <pkg> and <pkg>.sbom.cdx.json to ./packages/
 ```
 
 The SBOM step runs **after** `bundle-libs.sh` (so that the bundled
 shared libraries and their owning-OS-package manifest are present for
-inspection) and **before** the format-specific build tool (so a build
-that produces a package without a matching SBOM cannot occur).
+inspection) and after format metadata such as `DEBIAN/control`, the RPM
+spec, or `APKBUILD` has been created. A post-build verifier extracts the
+final package and compares its files against the SBOM before the package
+is copied to the output directory.
 
 ### 4.1 syft scan
 
@@ -183,7 +194,7 @@ matching.
 
 ### 4.2 Python merger
 
-[`common/generate-sbom.py`](./common/generate-sbom.py) reads five kinds
+[`common/generate-sbom.py`](./common/generate-sbom.py) reads six kinds
 of input:
 
 1. syft output (`--syft-input`);
@@ -194,9 +205,11 @@ of input:
    set of OS packages that own the `.so` files bundled into the package
    by `bundle-libs.sh`. Used as the structural override described in
    [§6.2](#62-structural-override-for-bundled-libraries).
+6. the staging tree (`--staging-dir` + `--staging-prefix`) — the files
+   that will ship in the package, plus `DEBIAN/control` when present.
 
 It also walks `${staging_dir}${prefix}/lib/clp` to record bundled `.so`
-files and captures `gcc/g++/cmake/ld/patchelf` versions for
+files and captures `gcc/g++/cmake/ld/readelf/patchelf` versions for
 `metadata.tools`.
 
 The merger then composes one CycloneDX document with the dedup rules
@@ -214,6 +227,7 @@ merge_components(
     source_built,        # source 3 (bash; no PURL)
     build_tools,         # source 6 (init.sh; pinned PURL)
     bundled,             # bundle-libs.sh staging walk; no PURL
+    package_files,       # staged payload + package metadata; no PURL
     syft_components,     # syft scan (sources 2, 5; PURLs)
 )
 ```
@@ -275,6 +289,12 @@ The merger logs per-batch counts to stderr during the build:
 ==> syft scope tagging (/tmp/clp-syft.cdx.json): N components marked
 optional (build-only), M remain required
 ```
+
+File-evidence components use `type: file`, `clp:source=package-staging`,
+and `scope: optional`. They are intentionally excluded from runtime CVE
+scans by the same filter used for build-only components. Their purpose is
+to let the package verifier and auditors prove which files the SBOM
+describes; they do not represent independent dependency CVE targets.
 
 ### 6.1 Build-only denylist
 
@@ -342,7 +362,7 @@ handing it to the scanner:
 ```bash
 SBOM=packages/clp-core_<ver>_<arch>.deb.sbom.cdx.json
 jq '.components |= map(select(.scope != "optional"))' "${SBOM}" > /tmp/sbom-required.json
-trivy sbom /tmp/sbom-required.json --distro redhat/8
+trivy sbom /tmp/sbom-required.json --distro alma/8
 ```
 
 For a scope-aware post-process on Trivy JSON output (when stripping is
@@ -350,7 +370,7 @@ not desirable, e.g., for a single-pass scan that also wants to count
 build-only findings separately):
 
 ```bash
-trivy sbom "${SBOM}" --distro redhat/8 --format json \
+trivy sbom "${SBOM}" --distro alma/8 --format json \
   | jq --argjson opt "$(jq '[.components[]|select(.scope=="optional")|.name]' "${SBOM}")" '
       .Results[].Vulnerabilities[]
       | select(.PkgName as $n | $opt | index($n) | not)
@@ -376,6 +396,7 @@ soft-failure carve-outs are documented in [§7.2](#72-soft-failure-carve-outs).
 | Manifest parser cannot find its expected anchor (e.g., `core-all-parallel` removed from YAML, source-built script call convention changed, `YSCOPE_DEV_UTILS_COMMIT_SHA` removed from init.sh) | `common/generate-sbom.py` parsers raise `SbomManifestError` | `main()` catches and `sys.exit(...)` with the parser's diagnostic. |
 | Manifest parser yields fewer components than the per-source minimum (vendored < 20, source-built < 4, build-tool != 1) | `build_sbom()` raises `SbomManifestError` | `main()` catches and `sys.exit(...)`. Guards against silent regressions that the parsers themselves cannot detect. |
 | `bom-ref` collision between any two merged components | `merge_components()` raises `SbomManifestError` | `main()` catches and `sys.exit(...)`. CycloneDX 1.5 requires `bom-ref` uniqueness within the document. |
+| Final package contents differ from SBOM file evidence | `common/verify-package-sbom.py` after package build | Exit 1; the package and sidecar are left in the build directory for debugging but are not copied to the output directory. |
 | Sidecar missing from `${repo_root}/build/` at copy time | `build.sh` post-build loop | Exit 1; `.deb`/`.rpm`/`.apk` not copied to output. |
 | `init.sh` non-zero exit (cannot populate `tools/yscope-dev-utils`) | `build.sh` prerequisite step | Exit 1 via `set -o errexit`. |
 
@@ -417,10 +438,12 @@ builds:
 
 * `metadata.tools` version strings, if the builder image's compiler or
   syft has been updated since the last build.
+* `metadata.properties` package filename, format, size, and SHA-256
+  fields, which are stamped after the final package is built.
 * Any timestamps that syft may include in `metadata.timestamp`.
 
 Reproducibility is verified by the procedure in
-[§9.6](#96-reproducibility-check).
+[§9.7](#97-reproducibility-check).
 
 ## 9. Verification recipes
 
@@ -490,10 +513,28 @@ and only the structural override
 CVE silencing. Fix by removing each listed name from
 `_BUILD_ONLY_PKG_NAMES` so the policy and the bundling reality agree.
 
-### 9.5 Trivy can parse and scan the SBOM
+### 9.5 Package file evidence matches the final artifact
+
+The format-specific packaging scripts run this check automatically after
+building the package. It can also be run manually:
 
 ```bash
-trivy sbom packages/clp-core_<ver>_<arch>.deb.sbom.cdx.json --distro redhat/8
+python3 components/core/tools/packaging/common/verify-package-sbom.py \
+    --package packages/clp-core_<ver>_<arch>.deb \
+    --sbom packages/clp-core_<ver>_<arch>.deb.sbom.cdx.json
+```
+
+For `.rpm` and `.apk`, substitute the matching package and sidecar
+filenames. The verifier extracts the package payload and, for `.deb`,
+the control archive; recomputes the file components; and compares them
+against the `type: file` components in the SBOM. Any missing file,
+unexpected file, hash mismatch, mode mismatch, size mismatch, or ELF
+`NEEDED` mismatch is a failure.
+
+### 9.6 Trivy can parse and scan the SBOM
+
+```bash
+trivy sbom packages/clp-core_<ver>_<arch>.deb.sbom.cdx.json --distro alma/8
 ```
 
 A non-zero exit code or a parser error is a failure. A scan that lists
@@ -504,7 +545,7 @@ gate, not in this document. `.apk` sidecars omit the `--distro` flag
 [§12.3](#123-trivy-almalinux-compatibility-flag-for-debrpm-sidecars)
 for the AlmaLinux compatibility background.
 
-### 9.6 Reproducibility check
+### 9.7 Reproducibility check
 
 ```bash
 ./components/core/tools/packaging/build.sh --format deb --arch x86_64 --clean
@@ -550,7 +591,8 @@ To update:
 | [`common/build-in-container.sh`](./common/build-in-container.sh) | In-container entrypoint; runs `task deps:core`, `task core`, then the format-specific `package.sh`. |
 | [`common/bundle-libs.sh`](./common/bundle-libs.sh) | Stages compiled binaries and their shared-library dependencies into the packaging staging directory; rewrites RPATHs with patchelf; writes `${DESTDIR}/.bundled-os-packages.txt` (the set of OS packages that own the bundled `.so` files; consumed by `generate-sbom.py` as the [§6.2 structural override](#62-structural-override-for-bundled-libraries)). |
 | [`common/generate-sbom.sh`](./common/generate-sbom.sh) | Runs the syft scan and invokes the Python merger. |
-| [`common/generate-sbom.py`](./common/generate-sbom.py) | Parses the manifest sources and merges them with syft output into the final CycloneDX 1.5 document. |
+| [`common/generate-sbom.py`](./common/generate-sbom.py) | Parses the manifest sources, records staged package file evidence, and merges them with syft output into the final CycloneDX 1.5 document. |
+| [`common/verify-package-sbom.py`](./common/verify-package-sbom.py) | Extracts a built `.deb`, `.rpm`, or `.apk`; recomputes package file evidence; compares it against the SBOM; and stamps final package metadata into the sidecar. |
 | [`universal-deb/`](./universal-deb/) | Format-specific Dockerfile + `package.sh` for `.deb` packaging. |
 | [`universal-rpm/`](./universal-rpm/) | Format-specific `package.sh` for `.rpm` packaging (shares the universal-deb Dockerfile). |
 | [`alpine-apk/`](./alpine-apk/) | Format-specific Dockerfile + `package.sh` for `.apk` packaging. |
@@ -612,26 +654,23 @@ the SBOM's top-level `components[]` entry of type
 `syft:distro:idLike=rhel` property). This is the accurate distro
 identifier and preserves the link back to the actual builder.
 
-Trivy versions through 0.71 do not yet recognize `almalinux` as a
-first-class OS family in SBOM mode, even though AlmaLinux is binary-
-compatible with RHEL. A scan with no extra flags emits
+Trivy 0.71 does not recognize the auto-detected SBOM family
+`almalinux` in SBOM mode. A scan with no extra flags emits
 `Unsupported os family="almalinux"` and skips OS-package CVE matching.
-The workaround is the `--distro` override, which tells Trivy to treat
-the SBOM as RHEL 8 and match the `pkg:rpm/almalinux/*` entries against
-the RHEL vulnerability feed:
+The workaround is the `--distro` override. Trivy's supported family name
+for AlmaLinux is `alma`, so `.deb` and `.rpm` sidecars should be scanned
+as `alma/8`:
 
 ```bash
-trivy sbom <sidecar>.deb.sbom.cdx.json --distro redhat/8
-trivy sbom <sidecar>.rpm.sbom.cdx.json --distro redhat/8
+trivy sbom <sidecar>.deb.sbom.cdx.json --distro alma/8
+trivy sbom <sidecar>.rpm.sbom.cdx.json --distro alma/8
 ```
 
-With the flag, Trivy detects CVEs against the RHEL 8 feed as expected
+With the flag, Trivy detects CVEs against the AlmaLinux 8 feed as expected
 (for example, kernel, libpng, and openssl-libs CVEs surface and are
 reported with the AlmaLinux package name and version). The `.apk`
 sidecar does not need this flag — Alpine is a natively-supported
 Trivy OS family.
 
-If Trivy upstream adds first-class AlmaLinux support (already present
-for AlmaLinux 9 in some Trivy releases), this section can be removed
-without changing the SBOM. The data is unaffected; only the scanner
-invocation differs.
+If Trivy upstream teaches SBOM auto-detection to map `almalinux` to
+`alma`, this section can be removed.

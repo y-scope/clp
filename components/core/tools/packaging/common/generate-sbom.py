@@ -7,9 +7,8 @@ by Trivy as the security gate before package publication.
 Inputs (all required):
 
 * ``--syft-input``. A syft-produced CycloneDX document. syft is run with
-  ``--override-default-catalogers os`` so it walks only the rpm, dpkg, or
-  apk package database under ``/`` inside the builder container, capturing
-  the OS-package surface (AlmaLinux 8 / Alpine) including development
+  the rpm, dpkg, and apk package-database catalogers, capturing the
+  OS-package surface (AlmaLinux 8 / Alpine) including development
   libraries that are statically linked into CLP binaries.
 * ``--deps-yaml``. ``taskfiles/deps/main.yaml`` — the source of truth for
   the vendored C/C++ dependencies fetched from GitHub during
@@ -22,6 +21,9 @@ Inputs (all required):
 * ``--init-sh``. ``tools/scripts/deps-download/init.sh`` — pins the
   ``yscope-dev-utils`` commit used to populate the build-time taskfile
   submodule.
+* ``--staging-dir`` and ``--staging-prefix``. The staged package payload
+  used to produce file-level evidence for shipped binaries, bundled
+  shared libraries, and package metadata such as ``DEBIAN/control``.
 
 The merger composes these sources into a single CycloneDX document. See
 ``merge_components`` for the deduplication rules and ``components/core/tools/packaging/SBOM.md``
@@ -32,6 +34,7 @@ unparseable YAML or JSON, empty merged component list).
 """
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -43,6 +46,7 @@ import yaml
 
 
 SPEC_VERSION = "1.5"
+PACKAGE_FILE_SOURCE = "package-staging"
 
 
 class SbomManifestError(RuntimeError):
@@ -412,6 +416,129 @@ def scan_bundled_libs(staging_dir, staging_prefix):
 
 
 # ---------------------------------------------------------------------------
+# Package file evidence
+# ---------------------------------------------------------------------------
+
+
+_HELPER_FILES = frozenset({
+    ".bundled-os-packages.txt",
+    ".PKGINFO",
+    ".INSTALL",
+})
+_NEEDED_RE = re.compile(r"Shared library: \[(?P<name>[^\]]+)\]")
+
+
+def _is_helper_file(rel_path):
+    return (
+        len(rel_path.parts) == 1
+        and (
+            rel_path.name in _HELPER_FILES
+            or rel_path.name.startswith(".SIGN.")
+            or rel_path.name.startswith(".pre-")
+            or rel_path.name.startswith(".post-")
+        )
+    )
+
+
+def _sha256_file(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _is_elf(path):
+    try:
+        with Path(path).open("rb") as f:
+            return f.read(4) == b"\x7fELF"
+    except OSError:
+        return False
+
+
+def _readelf_needed(path):
+    """Return ``(needed, error)`` for an ELF file.
+
+    ``needed`` is sorted and deduplicated. ``error`` is a short diagnostic
+    when ``readelf`` cannot be invoked or cannot parse the file. Non-ELF files
+    return ``([], None)``.
+    """
+    if not _is_elf(path):
+        return [], None
+    try:
+        out = subprocess.run(
+            ["readelf", "-d", str(path)],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return [], "readelf not found"
+    except subprocess.CalledProcessError as exc:
+        err = (exc.stderr or exc.stdout or "").strip().splitlines()
+        return [], f"readelf exited {exc.returncode}: {err[0] if err else 'no output'}"
+    except subprocess.TimeoutExpired:
+        return [], "readelf timed out"
+
+    needed = sorted(set(_NEEDED_RE.findall(out.stdout or "")))
+    return needed, None
+
+
+def _file_component(path, package_path):
+    stat_result = Path(path).stat()
+    mode = stat_result.st_mode & 0o7777
+    needed, needed_error = _readelf_needed(path)
+    properties = [
+        {"name": "clp:source", "value": PACKAGE_FILE_SOURCE},
+        {"name": "clp:path", "value": package_path},
+        {"name": "clp:size", "value": str(stat_result.st_size)},
+        {"name": "clp:mode", "value": f"{mode:04o}"},
+    ]
+    properties.extend({"name": "clp:elf-needed", "value": lib} for lib in needed)
+    if needed_error:
+        properties.append({"name": "clp:elf-needed-error", "value": needed_error})
+
+    return {
+        "type": "file",
+        "bom-ref": f"clp-file:{package_path}",
+        "name": package_path,
+        "scope": "optional",
+        "hashes": [{"alg": "SHA-256", "content": _sha256_file(path)}],
+        "properties": properties,
+    }
+
+
+def scan_package_files(package_root, control_dir=None):
+    """Return file components for the package payload and control metadata.
+
+    ``package_root`` is the root of the filesystem that will be installed by
+    the package. ``control_dir`` may point at a Debian control directory; when
+    present, regular files in it are recorded under ``DEBIAN/<name>``.
+    """
+    root = Path(package_root)
+    components = []
+    if root.is_dir():
+        for path in sorted(p for p in root.rglob("*") if p.is_file()):
+            rel = path.relative_to(root)
+            if rel.parts and rel.parts[0] == "DEBIAN":
+                continue
+            if _is_helper_file(rel):
+                continue
+            components.append(_file_component(path, f"/{rel.as_posix()}"))
+
+    if control_dir:
+        control_root = Path(control_dir)
+        if control_root.is_dir():
+            for path in sorted(p for p in control_root.rglob("*") if p.is_file()):
+                rel = path.relative_to(control_root)
+                components.append(_file_component(path, f"DEBIAN/{rel.as_posix()}"))
+
+    return components
+
+
+# ---------------------------------------------------------------------------
 # Build toolchain capture
 # ---------------------------------------------------------------------------
 
@@ -469,6 +596,7 @@ def capture_toolchain():
         ("g++",      ["g++", "--version"]),
         ("cmake",    ["cmake", "--version"]),
         ("ld",       ["ld", "--version"]),
+        ("readelf",  ["readelf", "--version"]),
         ("patchelf", ["patchelf", "--version"]),
     ]:
         version, error = _tool_version(argv)
@@ -505,7 +633,7 @@ def merge_components(*sources):
     canonical component ordering. Without this, syft's filesystem-walk
     order can cause two builds of the same source tree to differ in
     component order, defeating the reproducibility property documented in
-    ``SBOM.md`` §7.
+    ``SBOM.md`` §8.
 
     Callers must pass sources in priority order. Manifest-derived sources
     (which carry pinned upstream PURLs and tarball SHA-256s) belong before
@@ -1144,6 +1272,10 @@ def build_sbom(args):
     source_built = parse_source_install_script(args.source_install_script)
     build_tools = parse_init_sh(args.init_sh)
     bundled = scan_bundled_libs(args.staging_dir, args.staging_prefix)
+    package_files = scan_package_files(
+        args.staging_dir,
+        Path(args.staging_dir) / "DEBIAN",
+    )
     toolchain = capture_toolchain()
     bundled_packages = _load_bundled_packages(args.bundled_packages)
     syft_components, syft_tools = load_syft(args.syft_input, bundled_packages)
@@ -1171,6 +1303,7 @@ def build_sbom(args):
         source_built,
         build_tools,
         bundled,
+        package_files,
         syft_components,
     )
 
