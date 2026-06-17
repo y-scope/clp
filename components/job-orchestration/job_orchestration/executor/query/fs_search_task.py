@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import os
 from pathlib import Path
 from typing import Any
@@ -13,7 +14,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WorkerConfig,
 )
-from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.clp_logging import bind_log_context, set_logging_level
 from clp_py_utils.s3_utils import (
     generate_s3_url,
     get_credential_env_vars,
@@ -32,6 +33,13 @@ from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTas
 
 # Setup logging
 logger = get_task_logger(__name__)
+
+
+def _get_query_log_context(query_string: str) -> dict[str, str]:
+    return {
+        "query": query_string,
+        "query_hash": hashlib.sha256(query_string.encode("utf-8")).hexdigest()[:16],
+    }
 
 
 def _make_core_clp_command_and_env_vars(
@@ -243,47 +251,48 @@ def search_entry_point(
     clp_home = Path(os.getenv("CLP_HOME"))
     search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
 
-    task_command, core_clp_env_vars = _make_command_and_env_vars(
-        clp_home=clp_home,
-        worker_config=worker_config,
-        archive_id=archive_id,
-        search_config=search_config,
-        results_cache_uri=results_cache_uri,
-        results_collection=job_id,
-        dataset=dataset,
-    )
-    if not task_command:
-        logger.error(f"Error creating {task_name} command")
-        return report_task_failure(
+    with bind_log_context(**_get_query_log_context(search_config.query_string)):
+        task_command, core_clp_env_vars = _make_command_and_env_vars(
+            clp_home=clp_home,
+            worker_config=worker_config,
+            archive_id=archive_id,
+            search_config=search_config,
+            results_cache_uri=results_cache_uri,
+            results_collection=job_id,
+            dataset=dataset,
+        )
+        if not task_command:
+            logger.error(f"Error creating {task_name} command")
+            return report_task_failure(
+                sql_adapter=sql_adapter,
+                task_id=task_id,
+                start_time=start_time,
+            )
+
+        task_results, _ = run_query_task(
             sql_adapter=sql_adapter,
+            logger=logger,
+            clp_logs_dir=clp_logs_dir,
+            task_command=task_command,
+            env_vars=core_clp_env_vars,
+            task_name=task_name,
+            job_id=job_id,
             task_id=task_id,
             start_time=start_time,
         )
 
-    task_results, _ = run_query_task(
-        sql_adapter=sql_adapter,
-        logger=logger,
-        clp_logs_dir=clp_logs_dir,
-        task_command=task_command,
-        env_vars=core_clp_env_vars,
-        task_name=task_name,
-        job_id=job_id,
-        task_id=task_id,
-        start_time=start_time,
-    )
+        storage_config = worker_config.stream_output.storage
+        if (
+            StorageType.S3 == storage_config.type
+            and search_config.write_to_file
+            and QueryTaskStatus.SUCCEEDED == task_results.status
+        ):
+            s3_config = storage_config.s3_config
+            src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
+            dest_path = f"{job_id}/{archive_id}"
+            upload_results_to_s3(task_results, s3_config, src_file, dest_path)
 
-    storage_config = worker_config.stream_output.storage
-    if (
-        StorageType.S3 == storage_config.type
-        and search_config.write_to_file
-        and QueryTaskStatus.SUCCEEDED == task_results.status
-    ):
-        s3_config = storage_config.s3_config
-        src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
-        dest_path = f"{job_id}/{archive_id}"
-        upload_results_to_s3(task_results, s3_config, src_file, dest_path)
-
-    return task_results.model_dump()
+        return task_results.model_dump()
 
 
 @app.task(bind=True)
@@ -297,16 +306,26 @@ def search(
     results_cache_uri: str,
     dataset: str | None = None,
 ) -> dict[str, Any]:
-    try:
-        return search_entry_point(
-            job_id,
-            task_id,
-            job_config_blob,
-            archive_id,
-            clp_metadata_db_conn_params,
-            results_cache_uri,
-            dataset,
-        )
-    except SoftTimeLimitExceeded:
-        logger.exception(f"Search task job_id={job_id} task_id={task_id} exceeded soft time limit.")
-        raise
+    with bind_log_context(
+        job_id=job_id,
+        query_job_type="SEARCH_OR_AGGREGATION",
+        task_id=task_id,
+        archive_id=archive_id,
+        dataset=dataset,
+        celery_task_id=self.request.id,
+    ):
+        try:
+            return search_entry_point(
+                job_id,
+                task_id,
+                job_config_blob,
+                archive_id,
+                clp_metadata_db_conn_params,
+                results_cache_uri,
+                dataset,
+            )
+        except SoftTimeLimitExceeded:
+            logger.exception(
+                f"Search task job_id={job_id} task_id={task_id} exceeded soft time limit."
+            )
+            raise

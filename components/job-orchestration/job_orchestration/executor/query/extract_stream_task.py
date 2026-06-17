@@ -14,7 +14,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WorkerConfig,
 )
-from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.clp_logging import bind_log_context, set_logging_level
 from clp_py_utils.s3_utils import (
     generate_s3_url,
     get_credential_env_vars,
@@ -28,11 +28,18 @@ from job_orchestration.executor.query.utils import (
     run_query_task,
 )
 from job_orchestration.executor.utils import load_worker_config
+from job_orchestration.scheduler.constants import QueryJobType
 from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
+
+
+def _get_query_job_type(job_config: dict) -> str:
+    if "orig_file_id" in job_config:
+        return QueryJobType.EXTRACT_IR.name
+    return QueryJobType.EXTRACT_JSON.name
 
 
 def _make_clp_command_and_env_vars(
@@ -201,7 +208,6 @@ def extract_stream_entry_point(
     logger.info(f"Started {task_name} task for job {job_id}")
 
     start_time = datetime.datetime.now()
-    task_status: QueryTaskStatus
     sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
 
     # Load configuration
@@ -309,18 +315,26 @@ def extract_stream(
     results_cache_uri: str,
     dataset: str | None = None,
 ) -> dict[str, Any]:
-    try:
-        return extract_stream_entry_point(
-            job_id,
-            task_id,
-            job_config,
-            archive_id,
-            clp_metadata_db_conn_params,
-            results_cache_uri,
-            dataset,
-        )
-    except SoftTimeLimitExceeded:
-        logger.exception(
-            f"Stream extraction task job_id={job_id} task_id={task_id} exceeded soft time limit."
-        )
-        raise
+    with bind_log_context(
+        job_id=job_id,
+        query_job_type=_get_query_job_type(job_config),
+        task_id=task_id,
+        archive_id=archive_id,
+        dataset=dataset,
+        celery_task_id=self.request.id,
+    ):
+        try:
+            return extract_stream_entry_point(
+                job_id,
+                task_id,
+                job_config,
+                archive_id,
+                clp_metadata_db_conn_params,
+                results_cache_uri,
+                dataset,
+            )
+        except SoftTimeLimitExceeded:
+            logger.exception(
+                f"Stream extraction task job_id={job_id} task_id={task_id} exceeded soft time limit."
+            )
+            raise
