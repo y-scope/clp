@@ -23,8 +23,16 @@ export default defineConfig({
         port: 8080,
         proxy: {
             // Below targets should match the server's configuration in
-            // `components/webui/server/.env` (or `.env.local` if overridden)
+            // `components/webui/packages/server/.env` (or `.env.local` if overridden)
             "/api/": {
+                target: "http://localhost:3000/",
+                changeOrigin: true,
+            },
+            "/streams": {
+                target: "http://localhost:3000/",
+                changeOrigin: true,
+            },
+            "/log-viewer": {
                 target: "http://localhost:3000/",
                 changeOrigin: true,
             },
