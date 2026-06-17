@@ -6,8 +6,8 @@ IncludeCategories:
   # External library headers. Update when adding new libraries.
   # NOTE: clang-format retains leading white-space on a line in violation of the YAML spec.
   - Regex: "<(absl|antlr4|archive|boost|bsoncxx|catch2|curl|date|fmt|log_surgeon|lzma\
-|mongocxx|msgpack|mysql|nlohmann|openssl|outcome|regex_utils|simdjson|spdlog|sqlite3|string_utils\
-|xxhash|yaml-cpp|ystdlib|zstd)"
+|mongocxx|msgpack|mysql|nlohmann|openssl|opentelemetry|outcome|regex_utils|simdjson|spdlog\
+|sqlite3|string_utils|xxhash|yaml-cpp|ystdlib|zstd)"
     Priority: 3
 
   # Project library headers

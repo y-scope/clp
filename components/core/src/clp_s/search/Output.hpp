@@ -6,9 +6,12 @@
 #include <set>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+
+#include <clp_s/search/SearchTelemetry.hpp>
 
 #include "../ArchiveReader.hpp"
 #include "../SchemaReader.hpp"
@@ -48,6 +51,20 @@ public:
      */
     auto filter() -> bool;
 
+    /**
+     * @return The record-count metrics gathered during the last call to `filter`.
+     */
+    [[nodiscard]] auto get_result_metrics() const -> SearchResultMetrics const& {
+        return m_result_metrics;
+    }
+
+    /**
+     * @return The stage at which the last call to `filter` stopped processing the archive.
+     */
+    [[nodiscard]] auto get_termination_stage() const -> std::string_view {
+        return m_termination_stage;
+    }
+
 private:
     QueryRunner m_query_runner;
     std::shared_ptr<ArchiveReader> m_archive_reader;
@@ -55,6 +72,8 @@ private:
     std::shared_ptr<SchemaMatch> m_match;
     std::unique_ptr<OutputHandler> m_output_handler;
     bool m_should_marshal_records{true};
+    SearchResultMetrics m_result_metrics;
+    std::string_view m_termination_stage{cTerminationStageErtScan};
 };
 }  // namespace clp_s::search
 

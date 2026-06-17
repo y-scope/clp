@@ -12,7 +12,11 @@ spec:
     {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "reducer"
   ports:
-    {{- range $i := until (int .Values.workerConcurrency) }}
+    {{- $reducerSlotsPerPod := include "clp.schedulingSlotsPerPod" (dict
+      "root" .
+      "component" "reducer"
+    ) | int }}
+    {{- range $i := until $reducerSlotsPerPod }}
     - name: "reducer-{{ $i }}"
       port: {{ add 14009 $i }}
     {{- end }}

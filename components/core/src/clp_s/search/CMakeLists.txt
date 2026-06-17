@@ -21,6 +21,8 @@ set(
         QueryRunner.hpp
         SchemaMatch.cpp
         SchemaMatch.hpp
+        SearchTelemetry.cpp
+        SearchTelemetry.hpp
 )
 
 if(CLP_BUILD_CLP_S_SEARCH)
@@ -43,6 +45,8 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 clp::string_utils
                 clp_s::clp_dependencies
                 clp_s::io
+                opentelemetry-cpp::api
                 spdlog::spdlog
+                xxHash::xxhash
         )
 endif()
