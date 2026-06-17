@@ -436,6 +436,10 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
             else:
                 logger.error(f"Failed to cancel job {job_id}.")
 
+            # Yield to the event loop between jobs so cancellation batches do not
+            # monopolize the scheduler when many jobs are being processed.
+            await asyncio.sleep(0)
+
 
 def insert_query_tasks_into_db(db_conn, job_id, archive_ids: list[str]) -> list[int]:
     task_ids = []
