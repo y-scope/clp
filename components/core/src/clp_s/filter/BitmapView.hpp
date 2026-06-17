@@ -33,8 +33,17 @@ concept SetBitVisitorConcept = requires(SetBitVisitor bit_handler, size_t bit_id
 template <clp::IntegerType BitmapComponentType>
 class BitmapView {
 public:
+    // Static constants
     static constexpr size_t cNumBitsPerComponent{sizeof(BitmapComponentType) * 8};
 
+    // Factory methods
+    /**
+     * @param bitmap_array A pointer to the underlying array backing the bitmap.
+     * @param num_bits The number of bits in the bitmap.
+     * @return A result containing the newly created BitmapView, or an error code indicating the
+     * failure:
+     * - std::errc::invalid_argument if either `bitmap_array` is null or `num_bits` is zero.
+     */
     [[nodiscard]] static auto create(BitmapComponentType* bitmap_array, size_t num_bits)
             -> ystdlib::error_handling::Result<BitmapView> {
         if (nullptr == bitmap_array || 0 == num_bits) {
@@ -43,8 +52,18 @@ public:
         return BitmapView{bitmap_array, num_bits};
     }
 
+    // Methods
+    /**
+     * @return The number of bits in the bitmap.
+     */
     [[nodiscard]] auto get_num_bits() const -> size_t { return m_num_bits; }
 
+    /**
+     * @param index
+     * @return The value of the bit at the requested position, or an error code indicating the
+     * failure:
+     * - std::errc::result_out_of_range if the index is beyond the end of the bitmap.
+     */
     [[nodiscard]] auto test_bit(size_t index) const -> ystdlib::error_handling::Result<bool> {
         if (index >= m_num_bits) {
             return std::errc::result_out_of_range;
@@ -57,6 +76,13 @@ public:
         return 0 != (m_bitmap_array[component_idx] & bit_mask);
     }
 
+    /**
+     * Sets a bit at a given index to the given value.
+     * @param index
+     * @param value
+     * @return A void result on success, or an error code indicating the failure:
+     * - std::errc::result_out_of_range if the index is beyond the end of the bitmap.
+     */
     [[nodiscard]] auto set_bit(size_t index, bool value) -> ystdlib::error_handling::Result<void> {
         if (index >= m_num_bits) {
             return std::errc::result_out_of_range;
@@ -75,6 +101,13 @@ public:
         return ystdlib::error_handling::success();
     }
 
+    /**
+     * Runs a visitor function over every set bit in the bitmap, modifying the state of each such
+     * bit according to the return value of the visitor.
+     * @param set_bit_visitor
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `set_bit_visitor`'s return values on failure.
+     */
     template <SetBitVisitorConcept SetBitVisitor>
     [[nodiscard]] auto filter_set_bits(SetBitVisitor set_bit_visitor)
             -> ystdlib::error_handling::Result<void> {
@@ -109,6 +142,7 @@ public:
     }
 
 private:
+    // Constructors
     BitmapView(BitmapComponentType* bitmap_array, size_t num_bits)
             : m_bitmap_array(bitmap_array),
               m_num_bits{num_bits},
@@ -117,6 +151,7 @@ private:
                       + (num_bits % cNumBitsPerComponent > 0 ? 1 : 0)
               } {}
 
+    // Data members
     BitmapComponentType* m_bitmap_array{};
     size_t m_num_bits{};
     size_t m_bitmap_array_length{};
