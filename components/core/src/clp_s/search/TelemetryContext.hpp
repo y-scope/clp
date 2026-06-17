@@ -29,7 +29,10 @@ public:
     ~TelemetryContext();
 
 private:
+    // Types
     class Impl;
+
+    // Data members
     std::unique_ptr<Impl> m_impl;
 };
 }  // namespace clp_s::search

@@ -147,6 +147,7 @@ public:
     }
 
 private:
+    // Data members
     std::shared_ptr<trace_api::TracerProvider> m_provider;
 };
 
