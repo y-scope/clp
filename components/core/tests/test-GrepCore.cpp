@@ -16,7 +16,7 @@
 
 using clp::epochtime_t;
 using clp::GrepCore;
-using clp::load_parser_from_rule_text;
+using clp::load_parser_from_str;
 using log_surgeon::ParserHandle;
 using std::pair;
 using std::string;
@@ -121,17 +121,17 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
 
     string const raw_query{"text 100 10? 3.14*"};
 
-    std::string rule_set_string{R"(delimiters:\ \r\n)"};
-    rule_set_string += "\n";
-    rule_set_string += R"(int:\d+)";
-    rule_set_string += "\n";
-    rule_set_string += R"(float:\d+\.\d+)";
-    rule_set_string += "\n";
-    rule_set_string += R"(hasNumber:[^ &]*\d+[^ &]*)";
+    std::string spec{R"(delimiters:\ \r\n)"};
+    spec += "\n";
+    spec += R"(int:\d+)";
+    spec += "\n";
+    spec += R"(float:\d+\.\d+)";
+    spec += "\n";
+    spec += R"(hasNumber:[^ &]*\d+[^ &]*)";
 
-    CAPTURE(rule_set_string);
+    CAPTURE(spec);
 
-    auto parser{load_parser_from_rule_text(rule_set_string)};
+    auto parser{load_parser_from_str(spec)};
 
     auto const interpretations{parser.query_interpretations("", raw_query)};
     string interpretation_strings{"interps:"};

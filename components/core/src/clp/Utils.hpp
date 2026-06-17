@@ -46,18 +46,18 @@ ErrorCode create_directory_structure(std::string const& path, mode_t mode);
 ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::string>& paths);
 
 /**
- * Loads a parser from a rule set string.
- * @param rule_set_string String of the user defined set of variable regex.
- * @return parser The resulting parser.
+ * Loads a parser from a parsing specification string.
+ * @param parsing_spec
+ * @return parser
  */
-auto load_parser_from_rule_text(std::string const& rule_set_string) -> log_surgeon::ParserHandle;
+auto load_parser_from_str(std::string const& parsing_spec) -> log_surgeon::ParserHandle;
 
 /**
- * Loads a parser from a file.
- * @param rule_set_file_path File path to the user defined set of variable regex.
- * @return parser The resulting parser.
+ * Loads a parser from a parsing specification file.
+ * @param parsing_spec_path
+ * @return parser
  */
-auto load_parser_from_file(std::string const& rule_set_file_path) -> log_surgeon::ParserHandle;
+auto load_parser_from_file(std::string const& parsing_spec_path) -> log_surgeon::ParserHandle;
 }  // namespace clp
 
 #endif  // CLP_UTILS_HPP

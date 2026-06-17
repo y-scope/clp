@@ -5,11 +5,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <set>
 #include <string>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <log_surgeon/log_surgeon.hpp>
@@ -70,12 +68,15 @@ class SchemaSearcher {
 #endif
 
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
 
-        char const* what() const noexcept override { return "Too many encodable variables."; }
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return "Too many encodable variables.";
+        }
     };
 
     /**
@@ -166,8 +167,9 @@ private:
      * @param interpretation The `QueryInterpretation` to scan.
      * @return A vector of positions of encodable wildcard variables.
      */
-    static auto get_wildcard_encodable_positions(std::vector<log_surgeon::SubQuery> const& logtype)
-            -> std::vector<size_t>;
+    static auto get_wildcard_encodable_positions(
+            std::vector<log_surgeon::SubQuery> const& interpretation
+    ) -> std::vector<size_t>;
 
     /**
      * Generates a logtype string from an interpretation, applying a mask to determine which

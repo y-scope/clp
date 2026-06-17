@@ -8,6 +8,7 @@
 
 #include <log_surgeon/log_surgeon.hpp>
 
+#include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
 
 namespace log_surgeon {
