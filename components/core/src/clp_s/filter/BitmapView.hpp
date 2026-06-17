@@ -24,7 +24,7 @@ concept SetBitVisitorConcept = requires(SetBitVisitor bit_handler, size_t bit_id
 };
 
 /**
- * A class implementing a bitmap over a view into an array.
+ * Non-owning view over a bitmap backed by an external array.
  *
  * Bits are assumed to be ordered within each array element from least-significant bit to
  * most-significant bit. Bits beyond the end of the bitmap that fit into the array are expected to
@@ -38,6 +38,8 @@ public:
 
     // Factory methods
     /**
+     * Creates a bitmap over the given array.
+     *
      * @param bitmap_array A pointer to the underlying array backing the bitmap.
      * @param num_bits The number of bits in the bitmap.
      * @return A result containing the newly created BitmapView, or an error code indicating the
@@ -51,6 +53,13 @@ public:
         }
         return BitmapView{bitmap_array, num_bits};
     }
+
+    // Constructors
+    // Default copy & move constructors and assignment operators
+    BitmapView(BitmapView const&) = default;
+    BitmapView(BitmapView&&) noexcept = default;
+    auto operator=(BitmapView const&) -> BitmapView& = default;
+    auto operator=(BitmapView&&) noexcept -> BitmapView& = default;
 
     // Methods
     /**
@@ -104,6 +113,9 @@ public:
     /**
      * Runs a visitor function over every set bit in the bitmap, modifying the state of each such
      * bit according to the return value of the visitor.
+     *
+     * Note: on error, some updates for set bits may be lost.
+     *
      * @param set_bit_visitor
      * @return A void result on success, or an error code indicating the failure:
      * - Forwards `set_bit_visitor`'s return values on failure.
@@ -122,7 +134,7 @@ public:
             BitmapComponentType new_component{};
             auto const last_component_idx{m_bitmap_array_length - 1};
             auto const max_bit{
-                    component_idx == last_component_idx
+                    last_component_idx == component_idx
                             ? m_num_bits - (cNumBitsPerComponent * last_component_idx)
                             : cNumBitsPerComponent
             };
