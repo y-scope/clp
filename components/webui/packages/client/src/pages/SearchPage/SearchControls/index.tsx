@@ -13,7 +13,7 @@ import GuidedControls from "./Presto/Guided/GuidedControls";
  *
  * @param ev
  */
-const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
+const handleSubmit = (ev: React.SyntheticEvent<HTMLFormElement>) => {
     ev.preventDefault();
 };
 
