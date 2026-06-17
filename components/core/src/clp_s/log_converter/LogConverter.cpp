@@ -38,11 +38,11 @@ constexpr std::string_view cHeaderRulePattern{
         R"([ /\-]\d{2,4})))"  // timestamp end
         R"([ T:][ \d]{2}:[ \d]{2}:[ \d]{2}([,\.:]\d{1,9})?)"
         // Timezone matching:
-        R"(((( UTC)?([\+\-]\d{2}(:?\d{2})?)?Z?)|)"
-        R"(((UTC)?([\+\-]\d{2}(:?\d{2})?)?Z?))?))"
+        R"(((( UTC)?([\+\-]\d{2}(:?\d{2})?)?Z?))"
+        R"(|((UTC)?([\+\-]\d{2}(:?\d{2})?)?Z?))?))"
         // Headers with no timestamp:
-        R"(|(( [\+\-]\d{2}(:?\d{2}){0,1})?Z?))"
-        R"(|(( Z)?))"
+        R"(|(( [\+\-]\d{2}(:?\d{2})?)Z?))"
+        R"(|( Z))"
 };
 }  // namespace
 
@@ -86,7 +86,7 @@ auto LogConverter::convert_file(
 
         std::string_view const buf{m_buffer.data(), m_num_bytes_buffered};
         while (m_parser_offset < m_num_bytes_buffered) {
-            size_t pos{0};
+            size_t pos{m_parser_offset};
             auto event{m_parser.next_event(buf, &pos)};
             if (false == event.has_value()) {
                 SPDLOG_ERROR("failed to parse buffer contents: '{}'", buf);
@@ -109,7 +109,7 @@ auto LogConverter::convert_file(
             {
                 YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(
                         match->ffi_pointers.lexeme.as_cpp_view(),
-                        buf.substr(match->range.start)
+                        buf.substr(match->range.end, m_parser_offset - match->range.end)
                 ));
             } else {
                 SPDLOG_ERROR(
