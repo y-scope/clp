@@ -5,7 +5,6 @@ includes:
   toolchains: "../toolchains.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
-  yscope-log-viewer: "./log-viewer.yaml"
 
 vars:
   # Directories
@@ -37,7 +36,6 @@ tasks:
   default:
     deps:
       - "core"
-      - "yscope-log-viewer"
 
   core:
     deps:
