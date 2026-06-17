@@ -145,12 +145,6 @@ private:
     void build_log_shape_id_to_schema_id_map();
 
     /**
-     * Lazily initializes the log-surgeon parser and schema if not already done.
-     * @return true on success, false on failure.
-     */
-    auto ensure_log_surgeon_parser_initialized() -> ystdlib::error_handling::Result<void>;
-
-    /**
      * Finds all child schema nodes whose key name matches the given name.
      * @param parent_id The parent schema node ID.
      * @param key_name The key name to match.
@@ -178,9 +172,8 @@ private:
     ) -> std::unordered_set<int32_t>;
 
     /**
-     * Looks up a decomposed clpp query from the cache, lazily initializing the log-surgeon
-     * parser and schema on first use. The cache is keyed on the fully qualified column name
-     * and the raw query string.
+     * Looks up a decomposed clpp query from the cache, lazily initializing the log-surgeon parser.
+     * The cache is keyed on the fully qualified column name and the raw query string.
      * @param qualified_name The fully qualified dot-separated column name (e.g.
      * "message.block_id").
      * @param query The raw CLP-string query text.
@@ -232,9 +225,9 @@ private:
     // TODO clpp: refactor m_tree and m_schemas
     std::shared_ptr<ArchiveReader> m_archive_reader;
     bool m_clpp_decomposed_query{false};
-    std::string m_ls_schema_contents;
-    log_surgeon::Schema* m_parsing_spec{nullptr};
-    std::unique_ptr<log_surgeon::ParserHandle> m_ls_parser;
+    std::string m_parsing_spec_str;
+    log_surgeon::ParsingSpec* m_parsing_spec{nullptr};
+    std::unique_ptr<log_surgeon::ParserHandle> m_parser;
     absl::flat_hash_map<std::pair<std::string, std::string>, clpp::DecomposedQuery>
             m_decomposed_query_cache;
     std::unordered_map<clpp::log_shape_id_t, std::vector<int32_t>> m_log_shape_id_to_schema_id;

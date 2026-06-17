@@ -995,31 +995,6 @@ void SchemaMatch::build_log_shape_id_to_schema_id_map() {
     }
 }
 
-auto SchemaMatch::ensure_log_surgeon_parser_initialized() -> ystdlib::error_handling::Result<void> {
-    if (nullptr != m_ls_parser) {
-        return ystdlib::error_handling::success();
-    }
-    if (nullptr == m_parsing_spec) {
-        if (m_ls_schema_contents.empty()) {
-            m_ls_schema_contents
-                    = YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec());
-        }
-        if (m_parsing_spec = log_surgeon::log_surgeon_schema_from_definition(
-                    log_surgeon::CCharArray::from_string_view(m_ls_schema_contents)
-            );
-            nullptr == m_parsing_spec)
-        {
-            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-        }
-    }
-    m_ls_parser = std::make_unique<log_surgeon::ParserHandle>(m_parsing_spec);
-    m_parsing_spec = nullptr;
-    if (nullptr == m_ls_parser) {
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-    }
-    return ystdlib::error_handling::success();
-}
-
 auto
 SchemaMatch::find_child_nodes_by_key_name(SchemaNode::id_t parent_id, std::string_view key_name)
         -> std::vector<SchemaNode::id_t> {
@@ -1041,14 +1016,33 @@ SchemaMatch::lookup_decomposed_query(std::string const& qualified_name, std::str
         return &entry->second;
     }
 
-    YSTDLIB_ERROR_HANDLING_TRYV(ensure_log_surgeon_parser_initialized());
+    if (nullptr == m_parser) {
+        if (nullptr == m_parsing_spec) {
+            if (m_parsing_spec_str.empty()) {
+                m_parsing_spec_str
+                        = YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec());
+            }
+            if (m_parsing_spec = log_surgeon::log_surgeon_parsing_spec_from_definition(
+                        log_surgeon::CCharArray::from_string_view(m_parsing_spec_str)
+                );
+                nullptr == m_parsing_spec)
+            {
+                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+            }
+        }
+        m_parser = std::make_unique<log_surgeon::ParserHandle>(m_parsing_spec);
+        m_parsing_spec = nullptr;
+        if (nullptr == m_parser) {
+            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+        }
+    }
 
     return &m_decomposed_query_cache
                     .emplace(
                             std::pair{qualified_name, query},
                             YSTDLIB_ERROR_HANDLING_TRYX(
                                     clpp::DecomposedQuery::decompose_query(
-                                            *m_ls_parser,
+                                            *m_parser,
                                             qualified_name,
                                             query
                                     )

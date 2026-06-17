@@ -183,11 +183,11 @@ JsonParser::JsonParser(JsonParserOption const& option)
                 );
                 throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
             }
-            m_parsing_spec_text.append(buf.data(), bytes_read);
+            m_parsing_spec_str.append(buf.data(), bytes_read);
         }
 
-        auto* builder{log_surgeon::log_surgeon_schema_builder_from_definition(
-                log_surgeon::CCharArray::from_string_view(m_parsing_spec_text)
+        auto* builder{log_surgeon::log_surgeon_parsing_spec_builder_from_definition(
+                log_surgeon::CCharArray::from_string_view(m_parsing_spec_str)
         )};
         if (nullptr == builder) {
             SPDLOG_ERROR(
@@ -198,8 +198,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
         }
 
         for (auto const& encoding : clpp::cEncodingPatterns) {
-            if (nullptr
-                != log_surgeon::log_surgeon_schema_add_encoding(
+            if (false
+                == log_surgeon::log_surgeon_parsing_spec_add_encoding(
                         builder,
                         log_surgeon::CCharArray::from_string_view(encoding.name),
                         log_surgeon::CCharArray::from_string_view(encoding.pattern)
@@ -214,7 +214,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
             }
         }
 
-        auto* schema{log_surgeon::log_surgeon_schema_builder_build(builder)};
+        auto* schema{log_surgeon::log_surgeon_parsing_spec_builder_build(builder)};
         if (nullptr == schema) {
             SPDLOG_ERROR("Failed to build log surgeon specification.");
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
@@ -262,8 +262,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
 
     m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);
-    if (false == m_parsing_spec_text.empty()) {
-        m_archive_writer->set_parsing_spec(m_parsing_spec_text);
+    if (false == m_parsing_spec_str.empty()) {
+        m_archive_writer->set_parsing_spec(m_parsing_spec_str);
     }
 }
 
@@ -1506,8 +1506,8 @@ void JsonParser::split_archive() {
     m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
-    if (false == m_parsing_spec_text.empty()) {
-        m_archive_writer->set_parsing_spec(m_parsing_spec_text);
+    if (false == m_parsing_spec_str.empty()) {
+        m_archive_writer->set_parsing_spec(m_parsing_spec_str);
     }
 }
 

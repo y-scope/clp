@@ -137,7 +137,7 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
         );
     }
 
-    if (false == m_parsing_spec_text.empty()) {
+    if (false == m_parsing_spec_str.empty()) {
         auto compressed_size{store_parsing_spec()};
         files.emplace_back(std::string(constants::cArchiveParsingSpecFile), compressed_size);
     }
@@ -609,7 +609,7 @@ auto ArchiveWriter::close_log_shape_stats() -> ystdlib::error_handling::Result<s
 }
 
 auto ArchiveWriter::store_parsing_spec() -> size_t {
-    if (m_parsing_spec_text.empty()) {
+    if (m_parsing_spec_str.empty()) {
         return 0;
     }
 
@@ -621,8 +621,8 @@ auto ArchiveWriter::store_parsing_spec() -> size_t {
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    compressor.write_numeric_value(static_cast<uint64_t>(m_parsing_spec_text.size()));
-    compressor.write(m_parsing_spec_text.data(), m_parsing_spec_text.size());
+    compressor.write_numeric_value(static_cast<uint64_t>(m_parsing_spec_str.size()));
+    compressor.write(m_parsing_spec_str.data(), m_parsing_spec_str.size());
 
     compressor.close();
     auto compressed_size{writer.get_pos()};

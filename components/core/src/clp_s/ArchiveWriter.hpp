@@ -306,9 +306,9 @@ public:
     }
 
     /**
-     * Stores the parsing specification text for persistence in the archive.
+     * Stores the parsing specification for persistence in the archive.
      */
-    void set_parsing_spec(std::string spec) { m_parsing_spec_text = std::move(spec); }
+    void set_parsing_spec(std::string spec) { m_parsing_spec_str = std::move(spec); }
 
     /**
      * Update the log shape dictionary for the given log shape, adding it to the dictionary if
@@ -429,7 +429,7 @@ private:
     std::optional<clpp::LogShapeStatArray> m_log_shape_stats;
     std::optional<clpp::ParentRuleShapesArray> m_parent_rule_shapes;
     std::shared_ptr<VariableDictionaryWriter> m_log_shape_dict;
-    std::string m_parsing_spec_text;
+    std::string m_parsing_spec_str;
 };
 }  // namespace clp_s
 

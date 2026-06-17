@@ -290,7 +290,7 @@ private:
     std::vector<ArchiveStats> m_archive_stats;
 
     std::unique_ptr<log_surgeon::ParserHandle> m_log_surgeon_parser;
-    std::string m_parsing_spec_text;
+    std::string m_parsing_spec_str;
     std::chrono::microseconds m_parse_duration{0};
 };
 }  // namespace clp_s
