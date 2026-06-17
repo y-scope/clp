@@ -42,31 +42,20 @@ const Details = () => {
         enabled: CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE || isSuccessDatasetNames,
     });
 
-    if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
-        return (
-            <div className={styles["detailsGrid"]}>
-                <div className={styles["timeRange"]}>
-                    <TimeRange
-                        beginDate={dayjs.utc(details.begin_timestamp)}
-                        endDate={dayjs.utc(details.end_timestamp)}
-                        isLoading={isPending}/>
-                </div>
-                <Messages
-                    isLoading={isPending}
-                    numMessages={details.num_messages}/>
-                <Files
-                    isLoading={isPending}
-                    numFiles={details.num_files}/>
-            </div>
-        );
-    }
-
     return (
-        <div>
-            <TimeRange
-                beginDate={dayjs.utc(details.begin_timestamp)}
-                endDate={dayjs.utc(details.end_timestamp)}
-                isLoading={isPending}/>
+        <div className={styles["detailsGrid"]}>
+            <div className={styles["timeRange"]}>
+                <TimeRange
+                    beginDate={dayjs.utc(details.begin_timestamp)}
+                    endDate={dayjs.utc(details.end_timestamp)}
+                    isLoading={isPending}/>
+            </div>
+            <Messages
+                isLoading={isPending}
+                numMessages={details.num_messages}/>
+            <Files
+                isLoading={isPending}
+                numFiles={details.num_files}/>
         </div>
     );
 };

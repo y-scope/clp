@@ -70,43 +70,22 @@ FROM
 const buildMultiDatasetDetailsSql = (datasetNames: string[]): string => {
     const archiveQueries = datasetNames.map((name) => `
     SELECT
-      MIN(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP}) AS begin_timestamp,
-      MAX(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP}) AS end_timestamp
+      ${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP},
+      ${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP},
+      ${CLP_ARCHIVES_TABLE_COLUMN_NAMES.NUM_MESSAGES},
+      ${CLP_ARCHIVES_TABLE_COLUMN_NAMES.NUM_FILES}
     FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.ARCHIVES}
-  `);
-
-    const fileQueries = datasetNames.map((name) => `
-    SELECT
-      COUNT(DISTINCT ${CLP_FILES_TABLE_COLUMN_NAMES.ORIG_FILE_ID}) AS num_files,
-      CAST(
-        COALESCE(SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}), 0) AS UNSIGNED
-      ) AS num_messages
-    FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.FILES}
   `);
 
     return `
     SELECT
-      a.begin_timestamp,
-      a.end_timestamp,
-      b.num_files,
-      b.num_messages
-    FROM
-    (
-      SELECT
-        MIN(begin_timestamp) AS begin_timestamp,
-        MAX(end_timestamp)   AS end_timestamp
-      FROM (
-        ${archiveQueries.join("\nUNION ALL\n")}
-      ) AS archives_combined
-    ) a,
-    (
-      SELECT
-        SUM(num_files)    AS num_files,
-        SUM(num_messages) AS num_messages
-      FROM (
-        ${fileQueries.join("\nUNION ALL\n")}
-      ) AS files_combined
-    ) b;
+      MIN(begin_timestamp) AS begin_timestamp,
+      MAX(end_timestamp)   AS end_timestamp,
+      CAST(COALESCE(SUM(num_messages), 0) AS UNSIGNED) AS num_messages,
+      CAST(COALESCE(SUM(num_files), 0) AS UNSIGNED) AS num_files
+    FROM (
+      ${archiveQueries.join("\nUNION ALL\n")}
+    ) AS archives_combined
   `;
 };
 

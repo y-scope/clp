@@ -120,7 +120,9 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             m_uncompressed_size,
             m_compressed_size,
             archive_range_index,
-            is_split
+            is_split,
+            static_cast<size_t>(m_next_log_event_id),
+            m_num_files
     };
     if (m_print_archive_stats) {
         std::cout << archive_stats.as_string() << '\n';
@@ -135,6 +137,7 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     m_uncompressed_size = 0UL;
     m_compressed_size = 0UL;
     m_next_log_event_id = 0;
+    m_num_files = 0;
     m_authoritative_timestamp.clear();
     m_authoritative_timestamp_namespace.clear();
     m_matched_timestamp_prefix_length = 0ULL;
