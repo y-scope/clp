@@ -53,6 +53,7 @@ public:
         auto const component_idx{index / cNumBitsPerComponent};
         auto const bit_offset{index % cNumBitsPerComponent};
         auto const bit_mask{static_cast<bitmap_component_t>(1) << bit_offset};
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         return 0 != (m_bitmap_array[component_idx] & bit_mask);
     }
 
@@ -65,8 +66,10 @@ public:
         auto const bit_offset{index % cNumBitsPerComponent};
         auto const bit_mask{static_cast<bitmap_component_t>(1) << bit_offset};
         if (value) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             m_bitmap_array[component_idx] |= bit_mask;
         } else {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             m_bitmap_array[component_idx] &= ~bit_mask;
         }
         return ystdlib::error_handling::success();
@@ -76,27 +79,30 @@ public:
     [[nodiscard]] auto filter_set_bits(SetBitVisitor set_bit_visitor)
             -> ystdlib::error_handling::Result<void> {
         for (size_t component_idx{}; component_idx < m_bitmap_array_length; ++component_idx) {
-            if (0 == m_bitmap_array[component_idx]) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+            if (bitmap_component_t{} == m_bitmap_array[component_idx]) {
                 continue;
             }
 
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             auto const current_component{m_bitmap_array[component_idx]};
             bitmap_component_t new_component{};
             auto const last_component_idx{m_bitmap_array_length - 1};
             auto const max_bit{
                     component_idx == last_component_idx
-                            ? m_num_bits - cNumBitsPerComponent * last_component_idx
+                            ? m_num_bits - (cNumBitsPerComponent * last_component_idx)
                             : cNumBitsPerComponent
             };
             for (size_t bit_idx{}; bit_idx < max_bit; ++bit_idx) {
                 auto const current_bit{static_cast<bitmap_component_t>(1) << bit_idx};
                 if (0 != (current_component & current_bit)) {
-                    auto const current_idx{bit_idx + cNumBitsPerComponent * component_idx};
+                    auto const current_idx{bit_idx + (cNumBitsPerComponent * component_idx)};
                     if (YSTDLIB_ERROR_HANDLING_TRYX(set_bit_visitor(current_idx))) {
                         new_component |= current_bit;
                     }
                 }
             }
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             m_bitmap_array[component_idx] = new_component;
         }
         return ystdlib::error_handling::success();
@@ -107,7 +113,7 @@ private:
             : m_bitmap_array(bitmap_array),
               m_num_bits{num_bits},
               m_bitmap_array_length{
-                      num_bits / cNumBitsPerComponent
+                      (num_bits / cNumBitsPerComponent)
                       + (num_bits % cNumBitsPerComponent > 0 ? 1 : 0)
               } {}
 
