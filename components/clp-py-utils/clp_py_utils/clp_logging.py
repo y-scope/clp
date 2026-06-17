@@ -1,6 +1,9 @@
 import logging
 import os
 import pathlib
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import get_args, Literal
 
 LoggingLevel = Literal[
@@ -13,11 +16,77 @@ LoggingLevel = Literal[
 ]
 
 
-def get_logging_formatter():
-    return logging.Formatter("%(asctime)s %(name)s [%(levelname)s] %(message)s")
+_LOG_CONTEXT: ContextVar[dict[str, object] | None] = ContextVar("clp_log_context", default=None)
+
+_LOG_CONTEXT_FIELD_ORDER = (
+    "job_id",
+    "query_job_type",
+    "task_id",
+    "archive_id",
+    "dataset",
+    "partition_id",
+    "celery_task_id",
+    "clp_subprocess_pid",
+    "query",
+    "query_hash",
+)
 
 
-def get_logger(name: str):
+@contextmanager
+def bind_log_context(**fields: object) -> Iterator[None]:
+    """
+    Temporarily adds CLP correlation fields to log records emitted in the current context.
+
+    Fields with ``None`` values are ignored. Nested contexts merge with outer contexts and restore
+    the previous context on exit.
+    """
+    current_context = _LOG_CONTEXT.get() or {}
+    new_context = current_context.copy()
+    new_context.update({key: value for key, value in fields.items() if value is not None})
+    token = _LOG_CONTEXT.set(new_context)
+    try:
+        yield
+    finally:
+        _LOG_CONTEXT.reset(token)
+
+
+def get_log_context() -> dict[str, object]:
+    """Returns a copy of the active CLP log correlation context."""
+    return (_LOG_CONTEXT.get() or {}).copy()
+
+
+class ClpContextFormatter(logging.Formatter):
+    """Appends active CLP correlation fields to log records."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        message = super().format(record)
+        context = get_log_context()
+        if not context:
+            return message
+
+        fields = [f"{key}={context[key]}" for key in _LOG_CONTEXT_FIELD_ORDER if key in context]
+        fields.extend(
+            f"{key}={value}"
+            for key, value in sorted(context.items())
+            if key not in _LOG_CONTEXT_FIELD_ORDER
+        )
+        if len(fields) > 0:
+            message = f"{message} [{' '.join(fields)}]"
+        return message
+
+
+def get_logging_formatter() -> logging.Formatter:
+    return ClpContextFormatter("%(asctime)s %(name)s [%(levelname)s] %(message)s")
+
+
+def set_formatter_on_handlers(logger: logging.Logger) -> None:
+    """Sets CLP's logging formatter on all existing handlers for a logger."""
+    formatter = get_logging_formatter()
+    for handler in logger.handlers:
+        handler.setFormatter(formatter)
+
+
+def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     # Setup console logging
     logging_console_handler = logging.StreamHandler()
@@ -28,7 +97,7 @@ def get_logger(name: str):
     return logger
 
 
-def set_logging_level(logger: logging.Logger, level: str | None):
+def set_logging_level(logger: logging.Logger, level: str | None) -> None:
     if level is None:
         logger.setLevel(logging.INFO)
         return
@@ -43,7 +112,7 @@ def set_logging_level(logger: logging.Logger, level: str | None):
 def configure_logging(
     logger: logging.Logger,
     component_name: str,
-):
+) -> None:
     """
     Configures file logging and the logging level for a logger using environment variables.
 
