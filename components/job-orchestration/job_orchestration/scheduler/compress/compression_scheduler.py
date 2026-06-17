@@ -20,7 +20,7 @@ from clp_py_utils.clp_config import (
     OrchestrationType,
     StorageEngine,
 )
-from clp_py_utils.clp_logging import configure_logging, get_logger
+from clp_py_utils.clp_logging import bind_log_context, configure_logging, get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
     fetch_existing_datasets,
@@ -308,14 +308,15 @@ def search_and_schedule_new_tasks(
     # TODO: revisit why we need to commit here. To end long transactions?
     db_context.connection.commit()
     for job_row in jobs:
-        _schedule_job(
-            clp_config,
-            clp_metadata_db_connection_config,
-            task_manager,
-            db_context,
-            job_row,
-            existing_datasets,
-        )
+        with bind_log_context(job_id=job_row["id"]):
+            _schedule_job(
+                clp_config,
+                clp_metadata_db_connection_config,
+                task_manager,
+                db_context,
+                job_row,
+                existing_datasets,
+            )
 
 
 def _schedule_job(
@@ -474,54 +475,58 @@ def poll_running_jobs(
     logger.debug("Poll running jobs")
     jobs_to_delete = []
     for job_id, job in scheduled_jobs.items():
-        job_success = True
-        duration = 0.0
-        error_messages: list[str] = []
-        num_tasks_in_batch = 0
+        with bind_log_context(job_id=job_id):
+            job_success = True
+            duration = 0.0
+            error_messages: list[str] = []
+            num_tasks_in_batch = 0
 
-        try:
-            returned_results = job.result_handle.get_result()
-            if returned_results is None:
+            try:
+                returned_results = job.result_handle.get_result()
+                if returned_results is None:
+                    continue
+
+                duration = (
+                    datetime.datetime.now(datetime.timezone.utc) - job.start_time
+                ).total_seconds()
+                # Check for finished jobs
+                num_tasks_in_batch = len(returned_results)
+                for task_result in returned_results:
+                    with bind_log_context(task_id=task_result.task_id):
+                        if task_result.status == CompressionTaskStatus.SUCCEEDED:
+                            logger.info(
+                                f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
+                                f" {task_result.duration} second(s)."
+                            )
+                        else:
+                            job_success = False
+                            error_messages.append(
+                                f"task {task_result.task_id}: {task_result.error_message}"
+                            )
+                            logger.error(
+                                f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
+                                f" error: {task_result.error_message}."
+                            )
+
+            except Exception:
+                logger.exception("Error while getting results for job %s", job_id)
+                job_success = False
+
+            if not job_success:
+                _handle_failed_compression_job(logs_directory, db_context, job_id, error_messages)
+                jobs_to_delete.append(job_id)
                 continue
 
-            duration = (
-                datetime.datetime.now(datetime.timezone.utc) - job.start_time
-            ).total_seconds()
-            # Check for finished jobs
-            num_tasks_in_batch = len(returned_results)
-            for task_result in returned_results:
-                if task_result.status == CompressionTaskStatus.SUCCEEDED:
-                    logger.info(
-                        f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
-                        f" {task_result.duration} second(s)."
-                    )
-                else:
-                    job_success = False
-                    error_messages.append(
-                        f"task {task_result.task_id}: {task_result.error_message}"
-                    )
-                    logger.error(
-                        f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
-                        f" error: {task_result.error_message}."
-                    )
+            job.num_tasks_completed += num_tasks_in_batch
 
-        except Exception:
-            logger.exception("Error while getting results for job %s", job_id)
-            job_success = False
-
-        if not job_success:
-            _handle_failed_compression_job(logs_directory, db_context, job_id, error_messages)
-            jobs_to_delete.append(job_id)
-            continue
-
-        job.num_tasks_completed += num_tasks_in_batch
-
-        if len(job.remaining_tasks) > 0:
-            _dispatch_next_task_batch(task_manager, db_context, job, max_concurrent_tasks_per_job)
-        else:
-            # All tasks completed successfully
-            _complete_compression_job(db_context, job_id, job.num_tasks_total, duration)
-            jobs_to_delete.append(job_id)
+            if len(job.remaining_tasks) > 0:
+                _dispatch_next_task_batch(
+                    task_manager, db_context, job, max_concurrent_tasks_per_job
+                )
+            else:
+                # All tasks completed successfully
+                _complete_compression_job(db_context, job_id, job.num_tasks_total, duration)
+                jobs_to_delete.append(job_id)
 
     for job_id in jobs_to_delete:
         del scheduled_jobs[job_id]
