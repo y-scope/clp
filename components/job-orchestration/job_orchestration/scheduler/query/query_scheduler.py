@@ -891,10 +891,7 @@ async def handle_finished_search_job(
         task_status = task_result.status
         if not task_status == QueryTaskStatus.SUCCEEDED:
             new_job_status = QueryJobStatus.FAILED
-            logger.error(
-                f"Search task job-{job_id}-task-{task_id} failed. "
-                f"Check {task_result.error_log_path} for details."
-            )
+            logger.error(f"Search task job-{job_id}-task-{task_id} failed. ")
         else:
             job.num_archives_searched += 1
             logger.info(
@@ -983,10 +980,7 @@ async def handle_finished_stream_extraction_job(
         task_result = QueryTaskResult.model_validate(task_results[0])
         task_id = task_result.task_id
         if not QueryTaskStatus.SUCCEEDED == task_result.status:
-            logger.error(
-                f"Extraction task job-{job_id}-task-{task_id} failed. "
-                f"Check {task_result.error_log_path} for details."
-            )
+            logger.error(f"Extraction task job-{job_id}-task-{task_id} failed. ")
             new_job_status = QueryJobStatus.FAILED
         else:
             logger.info(
