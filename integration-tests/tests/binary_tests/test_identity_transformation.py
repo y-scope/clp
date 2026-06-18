@@ -127,7 +127,7 @@ def test_clp_s_tar_gz_identity_transform(
     json_multifile: SampleDataset,
 ) -> None:
     """
-    Validate that clp-s can ingest a .tar.gz archive and that the resulting round-trip
+    Validate that clp-s can ingest a `.tar.gz` archive and that the resulting round-trip
     compress-decompress is lossless.
 
     :param clp_core_path_config:

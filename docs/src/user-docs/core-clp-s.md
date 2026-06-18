@@ -16,7 +16,7 @@ Usage:
   * a new-line-delimited JSON (ndjson) log file;
   * a KV-IR file;
   * a tarball containing JSON and/or KV-IR;
-  * any of the above compressed with gzip or Zstd.
+  * any of the above compressed with Gzip or Zstandard.
 * `options` allow you to specify how data gets compressed into an archive. For example:
   * `--single-file-archive` specifies that single-file archives should be produced (i.e., each
     archive is a single file in `archives-dir`).

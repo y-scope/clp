@@ -63,7 +63,7 @@ def test_log_converter_tar_gz_transform(
     text_singlefile: SampleDataset,
 ) -> None:
     """
-    Validate that `log-converter` can ingest a .tar.gz archive and that the converted logs can be
+    Validate that `log-converter` can ingest a `.tar.gz` archive and that the converted logs can be
     compressed and searched by `clp-s`.
 
     :param clp_core_path_config:
