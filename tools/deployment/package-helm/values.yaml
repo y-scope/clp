@@ -116,18 +116,6 @@ scheduling:
 # Values follow Kubernetes resource format (e.g., cpu: "1", memory: "1Gi",
 # ephemeral-storage: "4Gi").
 # When omitted, no resource requests or limits are configured.
-#
-# Example:
-#   resources:
-#     compressionWorker:
-#       requests:
-#         cpu: "1"
-#         memory: "1Gi"
-#         ephemeral-storage: "2Gi"
-#       limits:
-#         cpu: "2"
-#         memory: "2Gi"
-#         ephemeral-storage: "4Gi"
 resources:
   # Worker
   compressionWorker: {}
@@ -150,10 +138,13 @@ resources:
   apiServer: {}
   webui: {}
   mcpServer: {}
+  otelCollector: {}
 
   # Jobs
   dbTableCreator: {}
+  prestoWorkerSetupConfigs: {}
   resultsCacheIndicesCreator: {}
+  topologyMetricsEmitter: {}
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.

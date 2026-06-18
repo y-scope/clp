@@ -63,6 +63,10 @@ spec:
         - name: "results-cache-init"
           image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "resultsCacheIndicesCreator"
+            ) | nindent 10 }}
           env:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"

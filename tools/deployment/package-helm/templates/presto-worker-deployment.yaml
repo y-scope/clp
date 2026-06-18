@@ -36,7 +36,7 @@ spec:
           command: ["/bin/sh", "/scripts/presto-worker-setup-configs.sh"]
           {{- include "clp.createResourceLimits" (dict
               "root" .
-              "component" "prestoWorker"
+              "component" "prestoWorkerSetupConfigs"
             ) | nindent 10 }}
           volumeMounts:
             - name: "presto-config"
