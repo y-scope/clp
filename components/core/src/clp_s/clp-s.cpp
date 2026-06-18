@@ -295,7 +295,17 @@ bool search_archive(
                         },
                         [&](CommandLineArguments::StdoutOutputHandlerOptions const& options)
                                 -> void {
-                            output_handler = std::make_unique<clp_s::StandardOutputHandler>();
+                            if (false == options.aggregation_type.has_value()) {
+                                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
+                            } else {
+                                output_handler
+                                        = std::make_unique<clp_s::AggregationToStdoutOutputHandler>(
+                                                std::string{archive_reader->get_archive_id()},
+                                                CommandLineArguments::AggregationType::CountByTime
+                                                        == options.aggregation_type.value(),
+                                                options.count_by_time_bucket_size
+                                        );
+                            }
                         }
                 },
                 command_line_arguments.get_output_handler_options()

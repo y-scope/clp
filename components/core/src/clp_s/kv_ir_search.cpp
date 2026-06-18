@@ -258,7 +258,13 @@ auto search_kv_ir_stream(
     bool const results_cache_aggregation_requested
             = nullptr != results_cache_options
               && results_cache_options->aggregation_type.has_value();
-    if (reducer_aggregation_requested || results_cache_aggregation_requested) {
+    auto const* stdout_options
+            = std::get_if<CommandLineArguments::StdoutOutputHandlerOptions>(&output_handler_options);
+    bool const stdout_aggregation_requested
+            = nullptr != stdout_options && stdout_options->aggregation_type.has_value();
+    if (reducer_aggregation_requested || results_cache_aggregation_requested
+        || stdout_aggregation_requested)
+    {
         SPDLOG_ERROR("kv-ir search: Count support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};
     }

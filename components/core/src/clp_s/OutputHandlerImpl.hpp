@@ -368,6 +368,46 @@ private:
 };
 
 /**
+ * Output handler that performs a count or count-by-time aggregation and writes the results to
+ * standard output as newline-delimited JSON, one object per group.
+ *
+ * Mirroring the reducer count handlers: count accumulates through a `reducer::CountOperator`
+ * pipeline (yielding a single total), while count-by-time accumulates a count per time bucket. Both
+ * are serialized through a `reducer::RecordGroupIterator` in `finish()`.
+ */
+class AggregationToStdoutOutputHandler : public ::clp_s::search::OutputHandler {
+public:
+    // Constructors
+    AggregationToStdoutOutputHandler(
+            std::string archive_id,
+            bool count_by_time,
+            int64_t count_by_time_bucket_size
+    );
+
+    // Methods inherited from OutputHandler
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override;
+
+    void write(std::string_view message) override;
+
+    /**
+     * Serializes the aggregation results to stdout as newline-delimited JSON.
+     * @return ErrorCodeSuccess on success
+     */
+    ErrorCode finish() override;
+
+private:
+    std::string m_archive_id;
+    int64_t m_count_by_time_bucket_size;
+    reducer::Pipeline m_pipeline;
+    std::map<int64_t, int64_t> m_bucket_counts;
+};
+
+/**
  * Output handler that records all results in a provided vector.
  */
 class VectorOutputHandler : public ::clp_s::search::OutputHandler {

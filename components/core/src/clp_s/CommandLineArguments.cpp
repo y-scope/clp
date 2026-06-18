@@ -39,7 +39,8 @@ constexpr std::string_view cStdoutCacheOutputHandlerName{"stdout"};
  */
 auto collect_subcommands(
         std::map<std::string, po::options_description const*> const& subcommands,
-        std::vector<std::string> const& options
+        std::vector<std::string> const& options,
+        std::optional<std::string> const& default_subcommand = std::nullopt
 ) -> std::map<std::string, std::vector<std::string>>;
 
 /**
@@ -161,7 +162,8 @@ void validate_archive_paths(
 
 auto collect_subcommands(
         std::map<std::string, po::options_description const*> const& subcommands,
-        std::vector<std::string> const& options
+        std::vector<std::string> const& options,
+        std::optional<std::string> const& default_subcommand
 ) -> std::map<std::string, std::vector<std::string>> {
     std::optional<std::string> current_subcommand;
     std::optional<std::vector<std::string>> current_subcommand_arguments;
@@ -200,7 +202,14 @@ auto collect_subcommands(
         if (false == current_subcommand.has_value()
             || false == current_subcommand_arguments.has_value())
         {
-            throw std::invalid_argument(fmt::format("unrecognized option \"{}\"", option));
+            // A leading option token (e.g. `--count`) with no named subcommand selects the default
+            // subcommand, letting its options be specified without naming the subcommand.
+            if (false == default_subcommand.has_value() || option.empty() || '-' != option.front()) {
+                throw std::invalid_argument(fmt::format("unrecognized option \"{}\"", option));
+            }
+            current_subcommand = default_subcommand;
+            current_subcommand_arguments.emplace();
+            current_subcommand_options_description = subcommands.at(default_subcommand.value());
         }
 
         current_subcommand_arguments.value().emplace_back(option);
@@ -865,6 +874,21 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "File output path"
             );
 
+            StdoutOutputHandlerOptions stdout_options{};
+            po::options_description stdout_output_handler_options("Stdout Output Handler Options");
+            // clang-format off
+            stdout_output_handler_options.add_options()(
+                    "count",
+                    "Count the number of results"
+            )(
+                    "count-by-time",
+                    po::value<int64_t>(
+                        &stdout_options.count_by_time_bucket_size
+                    )->value_name("SIZE"),
+                    "Count the number of results in each time span of the given size (ms)"
+            );
+            // clang-format on
+
             std::vector<std::string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
@@ -945,6 +969,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                              " --collection test"
                              " --count"
                           << std::endl;
+                std::cerr << std::endl;
+
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output a count aggregation to stdout)"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " --count" << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -953,6 +984,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(network_output_handler_options);
                 visible_options.add(results_cache_output_handler_options);
                 visible_options.add(reducer_output_handler_options);
+                visible_options.add(stdout_output_handler_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -984,11 +1016,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     {std::string{cReducerOutputHandlerName}, &reducer_output_handler_options},
                     {std::string{cResultsCacheOutputHandlerName},
                      &results_cache_output_handler_options},
-                    {std::string{cStdoutCacheOutputHandlerName}, nullptr}
+                    {std::string{cStdoutCacheOutputHandlerName}, &stdout_output_handler_options}
             };
-            auto const output_options_map{
-                    collect_subcommands(subcommands, unrecognized_output_options)
-            };
+            auto const output_options_map{collect_subcommands(
+                    subcommands,
+                    unrecognized_output_options,
+                    std::string{cStdoutCacheOutputHandlerName}
+            )};
 
             validate_archive_paths(archive_path, archive_id, m_input_paths);
 
@@ -1047,14 +1081,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             std::move(results_cache_options)
                     );
                 } else if (cStdoutCacheOutputHandlerName == output_handler_name) {
-                    m_output_handler_options.emplace<StdoutOutputHandlerOptions>();
-                    if (false == output_handler_options.empty()) {
-                        std::string error_msg{fmt::format(
-                                "stdout output handler does not support \"{}\"",
-                                output_handler_options.front()
-                        )};
-                        throw std::invalid_argument(error_msg);
-                    }
+                    parse_stdout_output_handler_options(
+                            stdout_output_handler_options,
+                            output_handler_options,
+                            stdout_options
+                    );
+                    m_output_handler_options.emplace<StdoutOutputHandlerOptions>(
+                            std::move(stdout_options)
+                    );
                 } else if (cFileOutputHandlerName == output_handler_name) {
                     parse_file_output_handler_options(
                             file_output_handler_options,
@@ -1220,6 +1254,18 @@ void CommandLineArguments::parse_file_output_handler_options(
     if (file_options.output_path.empty()) {
         throw std::invalid_argument("path cannot be an empty string.");
     }
+}
+
+void CommandLineArguments::parse_stdout_output_handler_options(
+        po::options_description const& options_description,
+        std::vector<std::string> const& options,
+        StdoutOutputHandlerOptions& stdout_options
+) {
+    po::variables_map parsed_options;
+    parse_subcommand_options(options_description, options, parsed_options);
+
+    stdout_options.aggregation_type
+            = parse_aggregation_options(parsed_options, stdout_options.count_by_time_bucket_size);
 }
 
 void CommandLineArguments::print_basic_usage() const {

@@ -12,12 +12,15 @@
 #include <mongocxx/options/update.hpp>
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../clp/networking/socket_utils.hpp"
 #include "../reducer/CountOperator.hpp"
 #include "../reducer/network_utils.hpp"
 #include "../reducer/Record.hpp"
+#include "../reducer/RecordGroup.hpp"
+#include "../reducer/RecordGroupIterator.hpp"
 #include "archive_constants.hpp"
 #include "search/OutputHandler.hpp"
 #include "TraceableException.hpp"
@@ -229,6 +232,67 @@ ErrorCode CountByTimeToReducerOutputHandler::finish() {
         ))
     {
         return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+AggregationToStdoutOutputHandler::AggregationToStdoutOutputHandler(
+        string archive_id,
+        bool count_by_time,
+        int64_t count_by_time_bucket_size
+)
+        : ::clp_s::search::OutputHandler(count_by_time, false),
+          m_archive_id{std::move(archive_id)},
+          m_count_by_time_bucket_size{count_by_time_bucket_size},
+          m_pipeline{reducer::PipelineInputMode::InterStage} {
+    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+}
+
+void AggregationToStdoutOutputHandler::write(string_view message) {
+    m_pipeline.push_record(reducer::EmptyRecord{});
+}
+
+void AggregationToStdoutOutputHandler::write(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id,
+        int64_t log_event_idx
+) {
+    int64_t const bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+    m_bucket_counts[bucket] += 1;
+}
+
+ErrorCode AggregationToStdoutOutputHandler::finish() {
+    // count-by-time results are serialized from the bucket counts; count results come from the
+    // CountOperator pipeline. `should_output_metadata()` is true only for count-by-time.
+    std::unique_ptr<reducer::RecordGroupIterator> results;
+    if (should_output_metadata()) {
+        results = std::make_unique<reducer::Int64Int64MapRecordGroupIterator>(
+                m_bucket_counts,
+                reducer::CountOperator::cRecordElementKey
+        );
+    } else {
+        results = m_pipeline.finish();
+    }
+    for (; false == results->done(); results->next()) {
+        auto& group{results->get()};
+        nlohmann::json result;
+        result[constants::results_cache::search::cArchiveId] = m_archive_id;
+
+        auto const& tags{group.get_tags()};
+        if (false == tags.empty()) {
+            // For count-by-time the group tag is the (stringified) time bucket.
+            result[constants::results_cache::search::cTimestamp] = std::stoll(tags.front());
+        }
+
+        // A count group contains exactly one record holding the count.
+        auto& record_it{group.record_iter()};
+        if (false == record_it.done()) {
+            result[constants::results_cache::search::cCount]
+                    = record_it.get().get_int64_value(reducer::CountOperator::cRecordElementKey);
+        }
+
+        std::cout << result.dump() << '\n';
     }
     return ErrorCode::ErrorCodeSuccess;
 }
