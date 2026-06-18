@@ -33,6 +33,7 @@ from clp_py_utils.s3_utils import (
 from clp_py_utils.sql_adapter import SqlAdapter
 from opentelemetry import metrics
 
+from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
@@ -452,17 +453,23 @@ def run_clp(
                     converted_inputs_dir,
                 )
 
-    # Open stderr log file
-    stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
-    stderr_log_file = open(stderr_log_path, "w")
+    # Open log files
+    compression_log_path = logs_dir / f"{instance_id_str}-stderr.log"
+    compression_log_file = open(compression_log_path, "w")
+    conversion_log_path = logs_dir / f"{instance_id_str}-conversion-stderr.log"
+    conversion_log_file = open(conversion_log_path, "w")
 
     conversion_return_code = 0
     if conversion_cmd is not None:
         logger.debug("Execute log-converter with command: %s", conversion_cmd)
         conversion_proc = subprocess.Popen(
-            conversion_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file, env=conversion_env
+            conversion_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=conversion_log_file,
+            env=conversion_env,
         )
         conversion_return_code = conversion_proc.wait()
+    conversion_log_file.close()
 
     try:
         if conversion_return_code != 0:
@@ -472,15 +479,20 @@ def run_clp(
             worker_output = {
                 "total_uncompressed_size": 0,
                 "total_compressed_size": 0,
-                "error_message": f"Check logs in {stderr_log_path}",
+                "error_message": f"Check logs in {conversion_log_path}",
             }
+            log_file_contents(logger, conversion_log_path)
+
             return CompressionTaskStatus.FAILED, worker_output
 
         # Start compression
         logger.debug("Compressing...")
         compression_successful = False
         proc = subprocess.Popen(
-            compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file, env=compression_env
+            compression_cmd,
+            stdout=subprocess.PIPE,
+            stderr=compression_log_file,
+            env=compression_env,
         )
 
         # Compute the total amount of data compressed
@@ -559,7 +571,7 @@ def run_clp(
                             subprocess.run(
                                 indexer_cmd,
                                 stdout=subprocess.DEVNULL,
-                                stderr=stderr_log_file,
+                                stderr=compression_log_file,
                                 check=True,
                                 env=indexer_env,
                             )
@@ -582,7 +594,8 @@ def run_clp(
         logger.debug("Compressed.")
     finally:
         cleanup_temporary_files()
-        stderr_log_file.close()
+        compression_log_file.close()
+        log_file_contents(logger, compression_log_path)
 
     worker_output = {
         "total_uncompressed_size": total_uncompressed_size,
@@ -593,7 +606,7 @@ def run_clp(
         return CompressionTaskStatus.SUCCEEDED, worker_output
     error_msgs = []
     if compression_successful is False:
-        error_msgs.append(f"See logs {stderr_log_path}")
+        error_msgs.append(f"See logs {compression_log_path}")
     if s3_error is not None:
         error_msgs.append(s3_error)
     worker_output["error_message"] = "\n".join(error_msgs)

@@ -21,6 +21,7 @@ import atexit
 import concurrent.futures
 import contextlib
 import datetime
+import multiprocessing
 import pathlib
 import sys
 from abc import ABC, abstractmethod
@@ -96,6 +97,8 @@ active_file_split_ir_extractions: dict[str, list[str]] = {}
 active_archive_json_extractions: dict[str, list[str]] = {}
 
 reducer_connection_queue: asyncio.Queue | None = None
+
+_MULTIPROCESSING_START_METHOD = "spawn"
 
 # OpenTelemetry metrics
 meter = metrics.get_meter("query-scheduler")
@@ -487,6 +490,10 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 logger.info(f"Cancelled job {job_id}.")
             else:
                 logger.error(f"Failed to cancel job {job_id}.")
+
+            # Yield to the event loop between jobs so cancellation batches do not
+            # monopolize the scheduler when many jobs are being processed.
+            await asyncio.sleep(0)
 
 
 def insert_query_tasks_into_db(db_conn, job_id, archive_ids: list[str]) -> list[int]:
@@ -943,10 +950,7 @@ async def handle_finished_search_job(
         if not task_status == QueryTaskStatus.SUCCEEDED:
             tasks_failed_counter.add(1)
             new_job_status = QueryJobStatus.FAILED
-            logger.error(
-                f"Search task job-{job_id}-task-{task_id} failed. "
-                f"Check {task_result.error_log_path} for details."
-            )
+            logger.error(f"Search task job-{job_id}-task-{task_id} failed. ")
         else:
             tasks_completed_counter.add(1)
             job.num_archives_searched += 1
@@ -1043,10 +1047,7 @@ async def handle_finished_stream_extraction_job(
         task_duration_histogram.record(task_result.duration)
         if not QueryTaskStatus.SUCCEEDED == task_result.status:
             tasks_failed_counter.add(1)
-            logger.error(
-                f"Extraction task job-{job_id}-task-{task_id} failed. "
-                f"Check {task_result.error_log_path} for details."
-            )
+            logger.error(f"Extraction task job-{job_id}-task-{task_id} failed. ")
             new_job_status = QueryJobStatus.FAILED
         else:
             tasks_completed_counter.add(1)
@@ -1202,6 +1203,11 @@ async def handle_jobs(
 
 async def main(argv: list[str]) -> int:
     global reducer_connection_queue
+
+    # The scheduler accepts reducer TCP connections in the parent process. Using "spawn" prevents
+    # child processes from inheriting those sockets and keeping cancelled reducer jobs alive after
+    # the parent closes its copy.
+    multiprocessing.set_start_method(_MULTIPROCESSING_START_METHOD)
 
     args_parser = argparse.ArgumentParser(description="Wait for and run query jobs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")

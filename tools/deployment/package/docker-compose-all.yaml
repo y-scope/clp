@@ -315,7 +315,6 @@ services:
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/compression_worker"
-      CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
       OTEL_METRIC_EXPORT_INTERVAL: "${CLP_COMPRESSION_WORKER_METRIC_EXPORT_INTERVAL:-60000}"
       OTEL_SERVICE_NAME: "compression-worker"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -338,7 +337,6 @@ services:
       "worker",
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
       "--loglevel", "WARNING",
-      "-f", "/var/log/compression_worker/worker.log",
       "-Q", "compression",
       "-n", "compression-worker@%h"
     ]
@@ -351,7 +349,6 @@ services:
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/compression_worker"
-      CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       SPIDER_LOG_DIR: "/var/log/compression_worker"
     volumes:
@@ -509,7 +506,6 @@ services:
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/query_worker"
-      CLP_WORKER_LOG_PATH: "/var/log/query_worker/worker.log"
       OTEL_METRIC_EXPORT_INTERVAL: "${CLP_QUERY_WORKER_METRIC_EXPORT_INTERVAL:-60000}"
       OTEL_SERVICE_NAME: "query-worker"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -531,7 +527,6 @@ services:
       "worker",
       "--concurrency", "${CLP_QUERY_WORKER_CONCURRENCY:-1}",
       "--loglevel", "WARNING",
-      "-f", "/var/log/query_worker/worker.log",
       "-Q", "query",
       "-n", "query-worker@%h"
     ]
