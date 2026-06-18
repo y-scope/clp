@@ -35,7 +35,7 @@ _LOG_CONTEXT_FIELD_ORDER = (
 @contextmanager
 def bind_log_context(**fields: object) -> Iterator[None]:
     """
-    Temporarily adds CLP correlation fields to log records emitted in the current context.
+    Adds CLP correlation fields to log records emitted in the current context.
 
     Fields with ``None`` values are ignored. Nested contexts merge with outer contexts and restore
     the previous context on exit.
