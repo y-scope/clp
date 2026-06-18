@@ -490,7 +490,6 @@ tasks:
             - "clp_s/search/EvaluateTimestampIndex.hpp"
             - "clp_s/search/kql/generated/*"
             - "clp_s/search/kql/kql.cpp"
-            - "clp_s/search/kql/kql.hpp"
             - "clp_s/search/Output.cpp"
             - "clp_s/search/Output.hpp"
             - "clp_s/search/QueryRunner.cpp"
