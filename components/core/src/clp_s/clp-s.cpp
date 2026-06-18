@@ -2,6 +2,7 @@
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -20,6 +21,7 @@
 #endif
 #include <clp/type_utils.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
+#include <clp_s/search/TelemetryContext.hpp>
 
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
@@ -401,6 +403,11 @@ int main(int argc, char const* argv[]) {
         case CommandLineArguments::ParsingResult::Success:
             // Continue processing
             break;
+    }
+
+    std::optional<TelemetryContext> telemetry_context;
+    if (command_line_arguments.get_enable_telemetry()) {
+        telemetry_context.emplace();
     }
 
     if (CommandLineArguments::Command::Compress == command_line_arguments.get_command()) {
