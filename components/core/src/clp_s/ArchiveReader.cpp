@@ -145,6 +145,7 @@ auto ArchiveReader::read_metadata() -> ystdlib::error_handling::Result<void> {
         throw OperationFailed(error, __FILENAME__, __LINE__);
     }
     if (0 == num_schemas) {
+        m_table_metadata_decompressor.close();
         m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveTableMetadataFile);
         return ystdlib::error_handling::success();
     }
