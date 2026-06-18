@@ -20,6 +20,7 @@ import asyncio
 import concurrent.futures
 import contextlib
 import datetime
+import multiprocessing
 import pathlib
 import sys
 from abc import ABC, abstractmethod
@@ -93,6 +94,8 @@ active_file_split_ir_extractions: dict[str, list[str]] = {}
 active_archive_json_extractions: dict[str, list[str]] = {}
 
 reducer_connection_queue: asyncio.Queue | None = None
+
+_MULTIPROCESSING_START_METHOD = "spawn"
 
 
 class DispatchExecutor:
@@ -435,6 +438,10 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 logger.info(f"Cancelled job {job_id}.")
             else:
                 logger.error(f"Failed to cancel job {job_id}.")
+
+            # Yield to the event loop between jobs so cancellation batches do not
+            # monopolize the scheduler when many jobs are being processed.
+            await asyncio.sleep(0)
 
 
 def insert_query_tasks_into_db(db_conn, job_id, archive_ids: list[str]) -> list[int]:
@@ -1130,6 +1137,11 @@ async def handle_jobs(
 
 async def main(argv: list[str]) -> int:
     global reducer_connection_queue
+
+    # The scheduler accepts reducer TCP connections in the parent process. Using "spawn" prevents
+    # child processes from inheriting those sockets and keeping cancelled reducer jobs alive after
+    # the parent closes its copy.
+    multiprocessing.set_start_method(_MULTIPROCESSING_START_METHOD)
 
     args_parser = argparse.ArgumentParser(description="Wait for and run query jobs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
