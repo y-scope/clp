@@ -57,7 +57,7 @@ constexpr std::chrono::seconds cShutdownTimeout{1};
 [[nodiscard]] auto resolve_clp_endpoint() -> std::optional<std::string>;
 
 /**
- * @return A reResourcesource describing this process; a default `service.name` of `clp-search`
+ * @return A resource describing this process; a default `service.name` of `clp-search`
  * (used only when `OTEL_SERVICE_NAME` is unset) merged with the attributes detected from the
  * environment.
  */
