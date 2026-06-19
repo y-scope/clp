@@ -4,7 +4,6 @@
 #include <string>
 #include <unordered_set>
 
-#include <log_surgeon/generated_bindings.hpp>
 #include <log_surgeon/log_surgeon.hpp>
 #include <log_surgeon/rust_compat.hpp>
 #include <spdlog/sinks/stdout_sinks.h>

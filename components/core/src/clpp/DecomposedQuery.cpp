@@ -9,7 +9,6 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <fmt/format.h>
-#include <log_surgeon/generated_bindings.hpp>
 #include <log_surgeon/log_surgeon.hpp>
 #include <log_surgeon/rust_compat.hpp>
 #include <ystdlib/error_handling/Result.hpp>

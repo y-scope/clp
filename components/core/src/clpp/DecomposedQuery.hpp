@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
-#include <log_surgeon/generated_bindings.hpp>
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 

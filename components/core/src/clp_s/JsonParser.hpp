@@ -12,7 +12,6 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
-#include <log_surgeon/generated_bindings.hpp>
 #include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
 #include <ystdlib/error_handling/Result.hpp>

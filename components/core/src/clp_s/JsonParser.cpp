@@ -20,7 +20,6 @@
 #include <absl/container/flat_hash_set.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <fmt/format.h>
-#include <log_surgeon/generated_bindings.hpp>
 #include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
