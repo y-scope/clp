@@ -256,8 +256,8 @@ tasks:
       CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
-      - "{{.G_WEBUI_SRC_DIR}}/settings.json"
       - "{{.G_WEBUI_SRC_DIR}}/packages/*/dist/**/*"
+      - "{{.G_WEBUI_SRC_DIR}}/settings.json"
       - "{{.TASKFILE}}"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     generates:
@@ -271,7 +271,6 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - "rsync -a 'settings.json' '{{.OUTPUT_DIR}}/settings.json'"
       - "rsync -a 'packages/client/dist/' '{{.OUTPUT_DIR}}/client/'"
       - "rsync -a 'packages/yscope-log-viewer/dist/' '{{.OUTPUT_DIR}}/yscope-log-viewer/'"
       - >-
@@ -280,6 +279,7 @@ tasks:
         --prod
         --filter=@webui/server
         '{{.OUTPUT_DIR}}/server'
+      - "rsync -a 'settings.json' '{{.OUTPUT_DIR}}/settings.json'"
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
