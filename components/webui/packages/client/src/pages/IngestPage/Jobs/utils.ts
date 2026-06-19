@@ -8,10 +8,7 @@ import {
 import dayjs from "dayjs";
 
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
-import {
-    CompressionJobStatus,
-    JobData,
-} from "../Jobs/typings";
+import {JobData} from "../Jobs/typings";
 import {formatSizeInBytes} from "./units";
 
 
@@ -137,7 +134,7 @@ const mapCompressionJobResponseToTableData = ({
         key: String(id),
         paths: paths,
         speed: speedText,
-        status: status as CompressionJobStatus,
+        status: status,
     };
 };
 
