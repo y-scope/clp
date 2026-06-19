@@ -44,6 +44,9 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
+uint64_t QueryRunner::m_dict_id_checks{0};
+uint64_t QueryRunner::m_total_messages_searched{0};
+
 uint64_t QueryRunner::m_int_col_checks{0};
 uint64_t QueryRunner::m_float_col_checks{0};
 uint64_t QueryRunner::m_str_col_checks{0};
@@ -218,7 +221,7 @@ std::string& QueryRunner::get_cached_decompressed_unstructured_array(int32_t col
 }
 
 bool QueryRunner::filter(uint64_t cur_message) {
-    ++clp::GrepCore::m_total_messages_searched;
+    ++m_total_messages_searched;
     m_cur_message = cur_message;
     m_extracted_unstructured_arrays.clear();
     return evaluate(m_expr.get(), m_schema);
@@ -569,6 +572,7 @@ bool QueryRunner::evaluate_clp_string_filter(
         auto vars = reader->get_encoded_vars(m_cur_message);
         if (q->contains_sub_queries()) {
             for (auto const& subquery : q->get_sub_queries()) {
+                ++m_dict_id_checks;
                 if (subquery.matches_logtype(id) && subquery.matches_vars(vars)) {
                     if (subquery.wildcard_match_required()) {
                         matched = clp::string_utils::wildcard_match_unsafe(

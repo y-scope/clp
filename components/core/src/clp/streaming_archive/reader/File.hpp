@@ -30,6 +30,10 @@ public:
         }
     };
 
+    static uint64_t m_dict_id_checks;
+    static uint64_t m_time_range_checks;
+    static uint64_t m_total_messages_searched;
+
     // Constructors
     File()
             : m_archive_logtype_dict(nullptr),

@@ -11,6 +11,10 @@
 using std::string;
 
 namespace clp::streaming_archive::reader {
+uint64_t File::m_dict_id_checks{0};
+uint64_t File::m_time_range_checks{0};
+uint64_t File::m_total_messages_searched{0};
+
 epochtime_t File::get_begin_ts() const {
     return m_begin_ts;
 }
@@ -207,6 +211,8 @@ bool File::find_message_in_time_range(
 ) {
     bool found_msg = false;
     while (m_msgs_ix < m_num_messages && !found_msg) {
+        ++m_total_messages_searched;
+        ++m_time_range_checks;
         // Get logtype
         // NOTE: We get the logtype before the timestamp since we need to use it to get the number
         // of variables, and then advance the variable index, regardless of whether the timestamp
@@ -252,6 +258,7 @@ bool File::find_message_in_time_range(
 SubQuery const* File::find_message_matching_query(Query const& query, Message& msg) {
     SubQuery const* matching_sub_query = nullptr;
     while (m_msgs_ix < m_num_messages && nullptr == matching_sub_query) {
+        ++m_total_messages_searched;
         auto const curr_msg_ix{m_msgs_ix};
         auto logtype_id = m_logtypes[curr_msg_ix];
 
@@ -272,6 +279,7 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
         }
 
         for (auto const* sub_query : query.get_relevant_sub_queries()) {
+            ++m_dict_id_checks;
             if (false == sub_query->matches_logtype(logtype_id)) {
                 continue;
             }

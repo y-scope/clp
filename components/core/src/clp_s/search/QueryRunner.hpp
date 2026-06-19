@@ -47,6 +47,14 @@ namespace clp_s::search {
  */
 class QueryRunner : public FilterClass {
 public:
+    static uint64_t m_dict_id_checks;
+    static uint64_t m_total_messages_searched;
+
+    static uint64_t m_int_col_checks;
+    static uint64_t m_float_col_checks;
+    static uint64_t m_str_col_checks;
+
+    // Constructors
     QueryRunner(
             std::shared_ptr<SchemaMatch> const& match,
             std::shared_ptr<ast::Expression> const& expr,
@@ -73,11 +81,6 @@ public:
 
     QueryRunner(QueryRunner&&) = delete;
     auto operator=(QueryRunner&&) -> QueryRunner& = delete;
-
-    // Static data members
-    static uint64_t m_int_col_checks;
-    static uint64_t m_float_col_checks;
-    static uint64_t m_str_col_checks;
 
     // Methods
     /**

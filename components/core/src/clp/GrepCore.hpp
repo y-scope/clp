@@ -74,11 +74,6 @@ public:
             bool& is_var
     );
 
-    static uint64_t m_total_messages_searched;
-    static uint64_t m_dict_id_checks;
-    static uint64_t m_wildcard_checks;
-    static uint64_t m_time_range_checks;
-
 private:
     // Types
     enum class SubQueryMatchabilityResult : uint8_t {

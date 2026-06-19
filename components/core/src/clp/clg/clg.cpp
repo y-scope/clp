@@ -10,6 +10,8 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
 
+#include <clp/streaming_archive/reader/File.hpp>
+
 #include "../Defs.h"
 #include "../global_metadata_db_utils.hpp"
 #include "../Grep.hpp"
@@ -309,6 +311,8 @@ static bool search(
                 }
             }
             SPDLOG_DEBUG("# matches found: {}", num_matches);
+            SPDLOG_INFO("[stats] matches found: {}", num_matches);
+            SPDLOG_INFO("[stats] segments searched: {}", ids_of_segments_to_search.size());
         }
     } catch (TraceableException& e) {
         error_code = e.get_error_code();
@@ -611,6 +615,11 @@ int main(int argc, char const* argv[]) {
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Search)
+
+    SPDLOG_INFO("[stats] searched messages: {}", clp::streaming_archive::reader::File::m_total_messages_searched);
+    SPDLOG_INFO("[stats] time range checks: {}", clp::streaming_archive::reader::File::m_time_range_checks);
+    SPDLOG_INFO("[stats] dict id checks: {}", clp::streaming_archive::reader::File::m_dict_id_checks);
+    SPDLOG_INFO("[stats] wildcard checks: {}", clp::string_utils::Stats::m_wildcard_checks);
 
     return 0;
 }

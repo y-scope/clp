@@ -18,11 +18,11 @@
 
 #include <clp_s/ErrorCode.hpp>
 #include <clpp/Defs.hpp>
+#include <string_utils/string_utils.hpp>
 
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
-#include <clp/GrepCore.hpp>
 #include <clp/type_utils.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
 #include <clp_s/search/TelemetryContext.hpp>
@@ -587,10 +587,12 @@ int main(int argc, char const* argv[]) {
             }
             archive_reader->close();
         }
-        SPDLOG_INFO("[stats] searched messages: {}", clp::GrepCore::m_total_messages_searched);
+        SPDLOG_INFO("[stats] searched messages: {}", clp_s::search::QueryRunner::m_total_messages_searched);
         SPDLOG_INFO("[stats] int filters: {}", clp_s::search::QueryRunner::m_int_col_checks);
         SPDLOG_INFO("[stats] float filters: {}", clp_s::search::QueryRunner::m_float_col_checks);
         SPDLOG_INFO("[stats] str filters: {}", clp_s::search::QueryRunner::m_str_col_checks);
+        SPDLOG_INFO("[stats] dict id checks: {}", clp_s::search::QueryRunner::m_dict_id_checks);
+        SPDLOG_INFO("[stats] wildcard checks: {}", clp::string_utils::Stats::m_wildcard_checks);
     }
 
     return 0;
