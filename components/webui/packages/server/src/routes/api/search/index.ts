@@ -15,7 +15,7 @@ import {
 } from "@webui/common/schemas/search";
 import {constants} from "http2";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import {publicSettings} from "../../../settings.js";
 import {DEFAULT_MAX_NUM_SEARCH_RESULTS} from "./typings.js";
 import {
     createMongoIndexes,
@@ -41,10 +41,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     }
 
     const searchResultsMetadataCollection = mongoDb.collection<SearchResultsMetadataDocument>(
-        settings.MongoDbSearchResultsMetadataCollectionName
+        publicSettings.MongoDbSearchResultsMetadataCollectionName
     );
 
-    const queryEngine = settings.ClpQueryEngine as CLP_QUERY_ENGINES;
+    const queryEngine = publicSettings.ClpQueryEngine as CLP_QUERY_ENGINES;
 
     /**
      * Submits a search query and initiates the search process.

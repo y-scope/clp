@@ -7,7 +7,7 @@ import {AwsCredentialIdentity} from "@smithy/types";
 import {Nullable} from "@webui/common/utility-types";
 import fp from "fastify-plugin";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import {serverSettings} from "../../../settings.js";
 import {PRE_SIGNED_URL_EXPIRY_TIME_SECONDS} from "./typings.js";
 
 
@@ -73,8 +73,8 @@ declare module "fastify" {
 
 export default fp(
     (fastify) => {
-        const region = settings.StreamFilesS3Region as Nullable<string>;
-        const profile = settings.StreamFilesS3Profile as Nullable<string>;
+        const region = serverSettings.StreamFilesS3Region;
+        const profile = serverSettings.StreamFilesS3Profile;
 
         // Only decorate if the region is set (i.e. s3 support is configured in package)
         if (null !== region && "" !== region) {

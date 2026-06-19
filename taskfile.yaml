@@ -115,8 +115,7 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/clp-package-image.id"
       - "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/clp-config.schema.json"
-      - "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
-      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
+      - "{{.G_WEBUI_BUILD_DIR}}/settings.json"
       - "{{.TASKFILE}}"
       - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
@@ -147,12 +146,8 @@ tasks:
         "{{.OUTPUT_DIR}}/usr/share/config-schemas/"
       - >-
         rsync --archive --mkpath
-        "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
-        "{{.OUTPUT_DIR}}/var/www/webui/client/"
-      - >-
-        rsync --archive --mkpath
-        "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
-        "{{.OUTPUT_DIR}}/var/www/webui/server/dist/"
+        "{{.G_WEBUI_BUILD_DIR}}/settings.json"
+        "{{.OUTPUT_DIR}}/etc/webui/"
       - >-
         rsync --archive
         "tools/deployment/package/"
@@ -261,6 +256,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
+      - "{{.G_WEBUI_SRC_DIR}}/settings.json"
       - "{{.G_WEBUI_SRC_DIR}}/packages/*/dist/**/*"
       - "{{.TASKFILE}}"
     dir: "{{.G_WEBUI_SRC_DIR}}"
@@ -275,6 +271,7 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - "rsync -a 'settings.json' '{{.OUTPUT_DIR}}/settings.json'"
       - "rsync -a 'packages/client/dist/' '{{.OUTPUT_DIR}}/client/'"
       - "rsync -a 'packages/yscope-log-viewer/dist/' '{{.OUTPUT_DIR}}/yscope-log-viewer/'"
       - >-

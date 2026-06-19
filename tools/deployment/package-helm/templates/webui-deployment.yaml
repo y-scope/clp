@@ -68,13 +68,9 @@ spec:
             - name: "webui"
               containerPort: 4000
           volumeMounts:
-            - name: "client-settings"
-              mountPath: "/opt/clp/var/www/webui/client/settings.json"
-              subPath: "webui-client-settings.json"
-              readOnly: true
-            - name: "server-settings"
-              mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
-              subPath: "webui-server-settings.json"
+            - name: "webui-settings"
+              mountPath: "/opt/clp/etc/webui/settings.json"
+              subPath: "webui-settings.json"
               readOnly: true
             {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
@@ -91,7 +87,7 @@ spec:
             {{- end }}
           command: [
             "/opt/clp/bin/node-22",
-            "/opt/clp/var/www/webui/server/dist/src/main.js"
+            "/opt/clp/var/www/webui/server/dist/main.js"
           ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
@@ -102,10 +98,7 @@ spec:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *webui-health-check
       volumes:
-        - name: "client-settings"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
-        - name: "server-settings"
+        - name: "webui-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
         {{- if .Values.clpConfig.aws_config }}

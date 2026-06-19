@@ -4,7 +4,7 @@ import {ErrorSchema} from "@webui/common/schemas/error";
 import {StreamFileExtractionSchema} from "@webui/common/schemas/stream-files";
 import {constants} from "http2";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import {serverSettings} from "../../../settings.js";
 import {StreamFileMetadataSchema} from "../../../typings/stream-files.js";
 
 
@@ -46,7 +46,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     jobType: extractJobType,
                     logEventIdx: logEventIdx,
                     streamId: streamId,
-                    targetUncompressedSize: settings.StreamTargetUncompressedSize,
+                    targetUncompressedSize: serverSettings.StreamTargetUncompressedSize,
                 });
 
                 if (null === extractResult) {
@@ -72,7 +72,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             if (fastify.hasDecorator("StreamFilesS3Manager") &&
                 "undefined" !== typeof fastify.StreamFilesS3Manager) {
                 streamMetadata.path = await fastify.StreamFilesS3Manager.getPreSignedUrl(
-                    `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
+                    `s3://${serverSettings.StreamFilesS3PathPrefix}${streamMetadata.path}`
                 );
             } else {
                 streamMetadata.path = `/streams/${streamMetadata.path}`;
