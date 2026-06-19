@@ -432,12 +432,8 @@ def run_clp(
     # Open log files
     compression_log_path = logs_dir / f"{instance_id_str}-stderr.log"
     compression_log_file = open(compression_log_path, "w")
-    compression_log_file.write(f"job_id={job_id} task_id={task_id} task_name=compression\n")
-    compression_log_file.flush()
     conversion_log_path = logs_dir / f"{instance_id_str}-conversion-stderr.log"
     conversion_log_file = open(conversion_log_path, "w")
-    conversion_log_file.write(f"job_id={job_id} task_id={task_id} task_name=log-converter\n")
-    conversion_log_file.flush()
 
     conversion_return_code = 0
     if conversion_cmd is not None:
