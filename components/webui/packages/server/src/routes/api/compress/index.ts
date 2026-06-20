@@ -78,7 +78,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 (path) => join(publicSettings.LogsInputRootDir ?? "", path)
             );
 
-            const clpStorageEngine = publicSettings.ClpStorageEngine as CLP_STORAGE_ENGINES;
+            const clpStorageEngine = publicSettings.ClpStorageEngine;
             if (CLP_STORAGE_ENGINES.CLP_S === clpStorageEngine) {
                 jobConfig.input.unstructured = false;
                 if ("string" !== typeof dataset || 0 === dataset.length) {

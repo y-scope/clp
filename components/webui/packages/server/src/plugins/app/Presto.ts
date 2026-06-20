@@ -33,7 +33,7 @@ declare module "fastify" {
 
 export default fp(
     (fastify) => {
-        if (CLP_QUERY_ENGINES.PRESTO !== publicSettings.ClpQueryEngine as CLP_QUERY_ENGINES) {
+        if (CLP_QUERY_ENGINES.PRESTO !== publicSettings.ClpQueryEngine) {
             return;
         }
 

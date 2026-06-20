@@ -2,7 +2,6 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
-import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
@@ -44,7 +43,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         publicSettings.MongoDbSearchResultsMetadataCollectionName
     );
 
-    const queryEngine = publicSettings.ClpQueryEngine as CLP_QUERY_ENGINES;
+    const queryEngine = publicSettings.ClpQueryEngine;
 
     /**
      * Submits a search query and initiates the search process.
