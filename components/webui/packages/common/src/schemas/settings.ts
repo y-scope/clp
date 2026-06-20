@@ -65,13 +65,13 @@ const WebuiServerSettingsSchema = Type.Object({
         Type.String(),
         Type.Null(),
     ]),
-    StreamTargetUncompressedSize: Type.Number(),
+    StreamTargetUncompressedSize: Type.Integer({minimum: 1}),
 
-    ArchiveOutputCompressionLevel: Type.Number(),
-    ArchiveOutputTargetArchiveSize: Type.Number(),
-    ArchiveOutputTargetDictionariesSize: Type.Number(),
-    ArchiveOutputTargetEncodedFileSize: Type.Number(),
-    ArchiveOutputTargetSegmentSize: Type.Number(),
+    ArchiveOutputCompressionLevel: Type.Integer({minimum: 0}),
+    ArchiveOutputTargetArchiveSize: Type.Integer({minimum: 1}),
+    ArchiveOutputTargetDictionariesSize: Type.Integer({minimum: 1}),
+    ArchiveOutputTargetEncodedFileSize: Type.Integer({minimum: 1}),
+    ArchiveOutputTargetSegmentSize: Type.Integer({minimum: 1}),
 
     PrestoHost: Type.Union([
         Type.String(),
