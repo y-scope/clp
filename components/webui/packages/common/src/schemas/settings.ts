@@ -78,7 +78,7 @@ const WebuiServerSettingsSchema = Type.Object({
         Type.Null(),
     ]),
     PrestoPort: Type.Union([
-        Type.Integer(),
+        Type.Integer({minimum: 1, maximum: 65535}),
         Type.Null(),
     ]),
 });
