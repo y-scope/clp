@@ -3,10 +3,15 @@ import {
     Type,
 } from "@sinclair/typebox";
 
+import {
+    CLP_QUERY_ENGINES,
+    CLP_STORAGE_ENGINES,
+} from "../config.js";
+
 
 const WebuiPublicSettingsSchema = Type.Object({
-    ClpQueryEngine: Type.String(),
-    ClpStorageEngine: Type.String(),
+    ClpQueryEngine: Type.Enum(CLP_QUERY_ENGINES),
+    ClpStorageEngine: Type.Enum(CLP_STORAGE_ENGINES),
 
     LogsInputRootDir: Type.Union([
         Type.String(),
