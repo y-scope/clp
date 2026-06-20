@@ -43,6 +43,10 @@ spec:
               value: "/var/log/compression_worker"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "compressionWorker"
+            ) | nindent 10 }}
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"
