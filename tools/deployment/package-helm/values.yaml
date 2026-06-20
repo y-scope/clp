@@ -110,6 +110,42 @@ scheduling:
   mcpServer: {}
   otelCollector: {}
 
+# Per-component resource requests and limits.
+# Each component accepts: requests (cpu, memory, ephemeral-storage) and limits
+# (cpu, memory, ephemeral-storage).
+# Values follow Kubernetes resource format (e.g., cpu: "1", memory: "1Gi",
+# ephemeral-storage: "4Gi").
+# When omitted, no resource requests or limits are configured.
+resources:
+  # Worker
+  compressionWorker: {}
+  queryWorker: {}
+  reducer: {}
+  prestoWorker: {}
+
+  # Database
+  database: {}
+  queue: {}
+  redis: {}
+  resultsCache: {}
+
+  # Core
+  compressionScheduler: {}
+  logIngestor: {}
+  queryScheduler: {}
+  prestoCoordinator: {}
+  garbageCollector: {}
+  apiServer: {}
+  webui: {}
+  mcpServer: {}
+  otelCollector: {}
+
+  # Jobs
+  dbTableCreator: {}
+  prestoWorkerSetupConfigs: {}
+  resultsCacheIndicesCreator: {}
+  topologyMetricsEmitter: {}
+
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
   # Remove a service from this list to use an external instance instead, and configure its host/port
