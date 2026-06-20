@@ -269,7 +269,8 @@ data:
         {{- end }}
         "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
 
-        "MaxDatasetsPerQuery": 10,
+        "MaxDatasetsPerQuery":
+          {{ .Values.clpConfig.query_scheduler.max_datasets_per_query | int }},
 
         "SqlDbClpArchivesTableName": "clp_archives",
         "SqlDbClpDatasetsTableName": "clp_datasets",
