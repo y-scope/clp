@@ -311,7 +311,11 @@ data:
         {{- else }}
         "StreamFilesS3Profile": null,
         {{- end }}
-        "StreamFilesS3Region": {{ .region_code | default "null" | quote }},
+        {{- if .region_code }}
+        "StreamFilesS3Region": {{ .region_code | quote }},
+        {{- else }}
+        "StreamFilesS3Region": null,
+        {{- end }}
         {{- end }}{{/* with .Values.clpConfig.stream_output.storage.s3_config */}}
         {{- else }}
         "StreamFilesS3PathPrefix": null,
