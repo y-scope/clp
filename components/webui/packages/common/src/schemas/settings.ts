@@ -6,6 +6,7 @@ import {
 import {
     CLP_QUERY_ENGINES,
     CLP_STORAGE_ENGINES,
+    STORAGE_TYPE,
 } from "../config.js";
 
 
@@ -17,10 +18,10 @@ const WebuiPublicSettingsSchema = Type.Object({
         Type.String(),
         Type.Null(),
     ]),
-    LogsInputType: Type.String(),
+    LogsInputType: Type.Enum(STORAGE_TYPE),
 
     MaxDatasetsPerQuery: Type.Union([
-        Type.Number(),
+        Type.Integer({minimum: 1}),
         Type.Null(),
     ]),
 
@@ -67,7 +68,7 @@ const WebuiServerSettingsSchema = Type.Object({
     ]),
     StreamTargetUncompressedSize: Type.Integer({minimum: 1}),
 
-    ArchiveOutputCompressionLevel: Type.Integer({minimum: 0}),
+    ArchiveOutputCompressionLevel: Type.Integer({minimum: 1, maximum: 19}),
     ArchiveOutputTargetArchiveSize: Type.Integer({minimum: 1}),
     ArchiveOutputTargetDictionariesSize: Type.Integer({minimum: 1}),
     ArchiveOutputTargetEncodedFileSize: Type.Integer({minimum: 1}),
