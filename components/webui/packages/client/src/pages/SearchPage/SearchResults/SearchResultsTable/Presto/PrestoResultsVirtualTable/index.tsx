@@ -21,7 +21,6 @@ const PRESTO_SEARCH_RESULTS_ACTIONS_COLUMN = {
     width: 54,
 };
 
-
 interface PrestoResultsVirtualTableProps {
     tableHeight: number;
 }
