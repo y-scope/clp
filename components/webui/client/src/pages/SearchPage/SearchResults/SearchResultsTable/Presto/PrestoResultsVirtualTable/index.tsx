@@ -13,18 +13,13 @@ import {usePrestoSearchResults} from "./usePrestoSearchResults";
 import {getPrestoSearchResultsTableColumns} from "./utils";
 
 
-/**
- * Prefix reserved for action/control columns in Presto tables.
- */
-const ACTIONS_COLUMN_KEY_PREFIX = "action-col-";
-
 const PRESTO_SEARCH_RESULTS_ACTIONS_COLUMN = {
     align: "right" as const,
-    key: `${ACTIONS_COLUMN_KEY_PREFIX}actions`,
+    fixed: "right" as const,
+    key: "actions",
     title: <ActionsHeader/>,
-    width: 6,
+    width: 54,
 };
-
 
 interface PrestoResultsVirtualTableProps {
     tableHeight: number;
