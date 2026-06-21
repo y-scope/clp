@@ -60,9 +60,6 @@ image:
 #     the same path).
 distributedDeployment: false
 
-# Number of concurrent processes per worker pod.
-workerConcurrency: 8
-
 # Per-component node scheduling and replica config.
 # Each component accepts: replicas (workers only), nodeSelector, affinity, tolerations,
 # topologySpreadConstraints.
@@ -86,10 +83,13 @@ scheduling:
   # Worker
   compressionWorker:
     replicas: 1
+    slotsPerPod: 8
   queryWorker:
     replicas: 1
+    slotsPerPod: 8
   reducer:
     replicas: 1
+    slotsPerPod: 8
   prestoWorker:
     replicas: 1
 
@@ -109,6 +109,42 @@ scheduling:
   webui: {}
   mcpServer: {}
   otelCollector: {}
+
+# Per-component resource requests and limits.
+# Each component accepts: requests (cpu, memory, ephemeral-storage) and limits
+# (cpu, memory, ephemeral-storage).
+# Values follow Kubernetes resource format (e.g., cpu: "1", memory: "1Gi",
+# ephemeral-storage: "4Gi").
+# When omitted, no resource requests or limits are configured.
+resources:
+  # Worker
+  compressionWorker: {}
+  queryWorker: {}
+  reducer: {}
+  prestoWorker: {}
+
+  # Database
+  database: {}
+  queue: {}
+  redis: {}
+  resultsCache: {}
+
+  # Core
+  compressionScheduler: {}
+  logIngestor: {}
+  queryScheduler: {}
+  prestoCoordinator: {}
+  garbageCollector: {}
+  apiServer: {}
+  webui: {}
+  mcpServer: {}
+  otelCollector: {}
+
+  # Jobs
+  dbTableCreator: {}
+  prestoWorkerSetupConfigs: {}
+  resultsCacheIndicesCreator: {}
+  topologyMetricsEmitter: {}
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.

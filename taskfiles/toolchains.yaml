@@ -60,13 +60,15 @@ tasks:
   nodejs-22:
     internal: true
     vars:
+      CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
       NODEJS_VERSION: "v22.20.0"
+      OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
     run: "once"
     cmds:
       - task: "remote:download-and-extract-tar"
         vars:
-          CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           FILE_SHA256: >-
             {{- if and (eq OS "linux") (eq .NODEJS_ARCH "x64") -}}
               00bbd05e306ea68b6e13e17360d0e2f680b493ef95f2fea1c4296ff7437530bc
@@ -80,9 +82,16 @@ tasks:
               unsupported
             {{- end }}
           NUM_COMPONENTS_TO_STRIP: "1"
-          OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
           URL: >-
             https://nodejs.org/dist/{{.NODEJS_VERSION}}/node-{{.NODEJS_VERSION}}-{{OS}}-{{.NODEJS_ARCH}}.tar.xz
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack enable"
+      - "cd '{{.G_WEBUI_SRC_DIR}}' && PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack install"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   rust:
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.

@@ -378,8 +378,10 @@ function(set_clp_s_search_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
         CLP_NEED_LOG_SURGEON
+        CLP_NEED_OPENTELEMETRY_CPP
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
+        CLP_NEED_XXHASH
     )
 endfunction()
 
@@ -556,6 +558,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_OPENSSL
+        CLP_NEED_OPENTELEMETRY_CPP
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
