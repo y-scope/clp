@@ -3,8 +3,15 @@ import os
 import pathlib
 from collections.abc import Iterator
 from contextlib import contextmanager
-from contextvars import ContextVar
 from typing import get_args, Literal
+
+import structlog
+from structlog.contextvars import (
+    bind_contextvars,
+    get_contextvars,
+    merge_contextvars,
+    reset_contextvars,
+)
 
 LoggingLevel = Literal[
     "INFO",
@@ -15,21 +22,8 @@ LoggingLevel = Literal[
     "CRITICAL",
 ]
 
-
-_LOG_CONTEXT: ContextVar[dict[str, object] | None] = ContextVar("clp_log_context", default=None)
-
-_LOG_CONTEXT_FIELD_ORDER = (
-    "job_id",
-    "query_job_type",
-    "task_id",
-    "archive_id",
-    "dataset",
-    "partition_id",
-    "celery_task_id",
-    "clp_subprocess_pid",
-    "query",
-    "query_hash",
-)
+_TIMESTAMP_PROCESSOR = structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp")
+_JSON_RENDERER = structlog.processors.JSONRenderer()
 
 
 @contextmanager
@@ -40,43 +34,43 @@ def bind_log_context(**fields: object) -> Iterator[None]:
     Fields with ``None`` values are ignored. Nested contexts merge with outer contexts and restore
     the previous context on exit.
     """
-    current_context = _LOG_CONTEXT.get() or {}
-    new_context = current_context.copy()
-    new_context.update({key: value for key, value in fields.items() if value is not None})
-    token = _LOG_CONTEXT.set(new_context)
+    tokens = bind_contextvars(**{key: value for key, value in fields.items() if value is not None})
     try:
         yield
     finally:
-        _LOG_CONTEXT.reset(token)
+        reset_contextvars(**tokens)
 
 
 def get_log_context() -> dict[str, object]:
     """Returns a copy of the active CLP log correlation context."""
-    return (_LOG_CONTEXT.get() or {}).copy()
+    return get_contextvars()
 
 
-class ClpContextFormatter(logging.Formatter):
-    """Appends active CLP correlation fields to log records."""
+class _ClpJsonFormatter(logging.Formatter):
+    """Formats log records as JSON and includes active CLP correlation fields."""
 
     def format(self, record: logging.LogRecord) -> str:
-        message = super().format(record)
-        context = get_log_context()
-        if not context:
-            return message
+        method_name = record.levelname.lower()
+        event_dict: dict[str, object] = {
+            "event": record.getMessage(),
+            "logger": record.name,
+            "level": method_name,
+        }
+        if record.exc_info:
+            event_dict["exception"] = self.formatException(record.exc_info)
+        if record.stack_info:
+            event_dict["stack"] = self.formatStack(record.stack_info)
 
-        fields = [f"{key}={context[key]}" for key in _LOG_CONTEXT_FIELD_ORDER if key in context]
-        fields.extend(
-            f"{key}={value}"
-            for key, value in sorted(context.items())
-            if key not in _LOG_CONTEXT_FIELD_ORDER
-        )
-        if len(fields) > 0:
-            message = f"{message} [{' '.join(fields)}]"
-        return message
+        merge_contextvars(None, method_name, event_dict)
+        _TIMESTAMP_PROCESSOR(None, method_name, event_dict)
+        rendered_log = _JSON_RENDERER(None, method_name, event_dict)
+        if isinstance(rendered_log, bytes):
+            return rendered_log.decode("utf-8")
+        return rendered_log
 
 
 def get_logging_formatter() -> logging.Formatter:
-    return ClpContextFormatter("%(asctime)s %(name)s [%(levelname)s] %(message)s")
+    return _ClpJsonFormatter()
 
 
 def set_formatter_on_handlers(logger: logging.Logger) -> None:
