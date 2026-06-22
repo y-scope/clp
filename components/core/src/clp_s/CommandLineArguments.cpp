@@ -809,7 +809,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "count-by-time",
                     po::value<int64_t>(
-                        &reducer_options.count_by_time_bucket_size
+                        &reducer_options.count_by_time_bucket_size_ms
                     )->value_name("SIZE"),
                     "Count the number of results in each time span of the given size (ms)"
             );
@@ -852,7 +852,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "count-by-time",
                     po::value<int64_t>(
-                        &results_cache_options.count_by_time_bucket_size
+                        &results_cache_options.count_by_time_bucket_size_ms
                     )->value_name("SIZE"),
                     "Count the number of results in each time span of the given size (ms)"
             );
@@ -1107,7 +1107,7 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
 
 auto CommandLineArguments::parse_aggregation_options(
         po::variables_map const& parsed_options,
-        int64_t count_by_time_bucket_size
+        int64_t count_by_time_bucket_size_ms
 ) -> std::optional<AggregationType> {
     std::optional<AggregationType> aggregation_type;
     if (parsed_options.count("count")) {
@@ -1120,7 +1120,7 @@ auto CommandLineArguments::parse_aggregation_options(
             );
         }
 
-        if (count_by_time_bucket_size <= 0) {
+        if (count_by_time_bucket_size_ms <= 0) {
             throw std::invalid_argument("Value for count-by-time must be greater than zero.");
         }
 
@@ -1160,7 +1160,7 @@ void CommandLineArguments::parse_reducer_output_handler_options(
     }
 
     auto const aggregation_type{
-            parse_aggregation_options(parsed_options, reducer_options.count_by_time_bucket_size)
+            parse_aggregation_options(parsed_options, reducer_options.count_by_time_bucket_size_ms)
     };
     if (false == aggregation_type.has_value()) {
         throw std::invalid_argument(
@@ -1203,7 +1203,7 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
 
     results_cache_options.aggregation_type = parse_aggregation_options(
             parsed_options,
-            results_cache_options.count_by_time_bucket_size
+            results_cache_options.count_by_time_bucket_size_ms
     );
 }
 

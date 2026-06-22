@@ -256,7 +256,7 @@ bool search_archive(
                                 output_handler
                                         = std::make_unique<clp_s::CountByTimeReducerOutputHandler>(
                                                 reducer_socket_fd,
-                                                options.count_by_time_bucket_size
+                                                options.count_by_time_bucket_size_ms
                                         );
                             } else {
                                 SPDLOG_ERROR("Unhandled aggregation type.");
@@ -290,7 +290,7 @@ bool search_archive(
                                 >(options.uri,
                                   options.collection,
                                   std::string{archive_reader->get_archive_id()},
-                                  options.count_by_time_bucket_size);
+                                  options.count_by_time_bucket_size_ms);
                             } else {
                                 SPDLOG_ERROR("Unhandled aggregation type.");
                                 output_handler = nullptr;

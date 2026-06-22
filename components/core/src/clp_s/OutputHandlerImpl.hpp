@@ -251,10 +251,10 @@ private:
 class CountByTimeReducerOutputHandler : public ::clp_s::search::OutputHandler {
 public:
     // Constructors
-    CountByTimeReducerOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
+    CountByTimeReducerOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size_ms)
             : search::OutputHandler{true, false},
               m_reducer_socket_fd{reducer_socket_fd},
-              m_count_by_time_bucket_size{count_by_time_bucket_size} {}
+              m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {}
 
     // Methods implementing OutputHandler
     auto write(
@@ -263,7 +263,8 @@ public:
             std::string_view archive_id,
             int64_t log_event_idx
     ) -> void override {
-        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+        int64_t bucket
+                = (timestamp / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
         m_bucket_counts[bucket] += 1;
     }
 
@@ -281,7 +282,7 @@ private:
     // Data members
     int m_reducer_socket_fd;
     std::map<int64_t, int64_t> m_bucket_counts;
-    int64_t m_count_by_time_bucket_size;
+    int64_t m_count_by_time_bucket_size_ms;
 };
 
 /**
@@ -349,7 +350,7 @@ public:
             std::string const& uri,
             std::string const& collection,
             std::string archive_id,
-            int64_t count_by_time_bucket_size
+            int64_t count_by_time_bucket_size_ms
     );
 
     // Methods implementing OutputHandler
@@ -359,7 +360,8 @@ public:
             std::string_view archive_id,
             int64_t log_event_idx
     ) -> void override {
-        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+        int64_t bucket
+                = (timestamp / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
         m_bucket_counts[bucket] += 1;
     }
 
@@ -379,7 +381,7 @@ private:
     mongocxx::collection m_collection;
     std::string m_archive_id;
     std::map<int64_t, int64_t> m_bucket_counts;
-    int64_t m_count_by_time_bucket_size;
+    int64_t m_count_by_time_bucket_size_ms;
 };
 
 /**

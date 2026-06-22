@@ -274,11 +274,11 @@ CountByTimeResultsCacheOutputHandler::CountByTimeResultsCacheOutputHandler(
         string const& uri,
         string const& collection,
         string archive_id,
-        int64_t count_by_time_bucket_size
+        int64_t count_by_time_bucket_size_ms
 )
         : ::clp_s::search::OutputHandler{true, false},
           m_archive_id{std::move(archive_id)},
-          m_count_by_time_bucket_size{count_by_time_bucket_size} {
+          m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {
     m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
 }
 
