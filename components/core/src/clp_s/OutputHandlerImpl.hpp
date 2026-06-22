@@ -299,8 +299,8 @@ public:
 
     // Constructors
     CountResultsCacheOutputHandler(
-            std::string_view uri,
-            std::string_view collection,
+            std::string const& uri,
+            std::string const& collection,
             std::string archive_id
     );
 
@@ -346,8 +346,8 @@ public:
 
     // Constructors
     CountByTimeResultsCacheOutputHandler(
-            std::string_view uri,
-            std::string_view collection,
+            std::string const& uri,
+            std::string const& collection,
             std::string archive_id,
             int64_t count_by_time_bucket_size
     );
