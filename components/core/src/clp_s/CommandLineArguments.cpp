@@ -13,6 +13,7 @@
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
 #include "FileReader.hpp"
+#include "search/ast/SearchUtils.hpp"
 
 namespace po = boost::program_options;
 
@@ -204,7 +205,8 @@ auto collect_subcommands(
         {
             // A leading option token (e.g. `--count`) with no named subcommand selects the default
             // subcommand, letting its options be specified without naming the subcommand.
-            if (false == default_subcommand.has_value() || option.empty() || '-' != option.front()) {
+            if (false == default_subcommand.has_value() || option.empty() || '-' != option.front())
+            {
                 throw std::invalid_argument(fmt::format("unrecognized option \"{}\"", option));
             }
             current_subcommand = default_subcommand;
@@ -864,6 +866,16 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         &results_cache_options.count_by_time_bucket_size_ms
                     )->value_name("SIZE"),
                     "Count the number of results in each time span of the given size (ms)"
+            )(
+                    "min",
+                    po::value<std::string>(
+                        &results_cache_options.aggregation_field)->value_name("FIELD"),
+                    "Output the minimum value of the given field"
+            )(
+                    "max",
+                    po::value<std::string>(
+                        &results_cache_options.aggregation_field)->value_name("FIELD"),
+                    "Output the maximum value of the given field"
             );
 
             FileOutputHandlerOptions file_options{};
@@ -883,9 +895,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "count-by-time",
                     po::value<int64_t>(
-                        &stdout_options.count_by_time_bucket_size
+                        &stdout_options.count_by_time_bucket_size_ms
                     )->value_name("SIZE"),
                     "Count the number of results in each time span of the given size (ms)"
+            )(
+                    "min",
+                    po::value<std::string>(
+                        &stdout_options.aggregation_field)->value_name("FIELD"),
+                    "Output the minimum value of the given field"
+            )(
+                    "max",
+                    po::value<std::string>(
+                        &stdout_options.aggregation_field)->value_name("FIELD"),
+                    "Output the maximum value of the given field"
             );
             // clang-format on
 
@@ -976,6 +998,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
                           << " --count" << std::endl;
+                std::cerr << std::endl;
+
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output the maximum value of `latency` to stdout)"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " --max latency" << std::endl;
+                std::cerr << std::endl;
+
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output the minimum value of `latency` to the)"
+                             " results cache"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " " << cResultsCacheOutputHandlerName
+                          << " --uri mongodb://127.0.0.1:27017/test"
+                             " --collection test"
+                             " --min latency"
+                          << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -1141,24 +1182,53 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
 
 auto CommandLineArguments::parse_aggregation_options(
         po::variables_map const& parsed_options,
-        int64_t count_by_time_bucket_size_ms
+        int64_t count_by_time_bucket_size_ms,
+        std::string_view aggregation_field
 ) -> std::optional<AggregationType> {
     std::optional<AggregationType> aggregation_type;
-    if (parsed_options.count("count")) {
-        aggregation_type = AggregationType::Count;
-    }
-    if (parsed_options.count("count-by-time")) {
+    auto const set_aggregation_type = [&](AggregationType type) {
         if (aggregation_type.has_value()) {
             throw std::invalid_argument(
-                    "The --count-by-time and --count options are mutually exclusive."
+                    "The --count, --count-by-time, --min, and --max options are mutually exclusive."
             );
         }
+        aggregation_type = type;
+    };
 
+    if (parsed_options.count("count")) {
+        set_aggregation_type(AggregationType::Count);
+    }
+    if (parsed_options.count("count-by-time")) {
+        set_aggregation_type(AggregationType::CountByTime);
         if (count_by_time_bucket_size_ms <= 0) {
             throw std::invalid_argument("Value for count-by-time must be greater than zero.");
         }
+    }
+    if (parsed_options.count("min")) {
+        set_aggregation_type(AggregationType::Min);
+    }
+    if (parsed_options.count("max")) {
+        set_aggregation_type(AggregationType::Max);
+    }
 
-        aggregation_type = AggregationType::CountByTime;
+    if (AggregationType::Min == aggregation_type || AggregationType::Max == aggregation_type) {
+        if (aggregation_field.empty()) {
+            throw std::invalid_argument("The field for --min/--max cannot be an empty string.");
+        }
+        if (search::ast::has_unescaped_wildcards(aggregation_field)) {
+            throw std::invalid_argument("The field for --min/--max cannot contain wildcards.");
+        }
+        std::vector<std::string> tokens;
+        std::string descriptor_namespace;
+        if (false
+            == search::ast::tokenize_column_descriptor(
+                    std::string{aggregation_field},
+                    tokens,
+                    descriptor_namespace
+            ))
+        {
+            throw std::invalid_argument("The field for --min/--max is not a valid field path.");
+        }
     }
     return aggregation_type;
 }
@@ -1193,9 +1263,11 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         throw std::invalid_argument("job-id cannot be negative.");
     }
 
-    auto const aggregation_type{
-            parse_aggregation_options(parsed_options, reducer_options.count_by_time_bucket_size_ms)
-    };
+    auto const aggregation_type{parse_aggregation_options(
+            parsed_options,
+            reducer_options.count_by_time_bucket_size_ms,
+            std::string_view{}
+    )};
     if (false == aggregation_type.has_value()) {
         throw std::invalid_argument(
                 "The reducer output handler currently only supports count and"
@@ -1237,7 +1309,8 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
 
     results_cache_options.aggregation_type = parse_aggregation_options(
             parsed_options,
-            results_cache_options.count_by_time_bucket_size_ms
+            results_cache_options.count_by_time_bucket_size_ms,
+            results_cache_options.aggregation_field
     );
 }
 
@@ -1264,8 +1337,11 @@ void CommandLineArguments::parse_stdout_output_handler_options(
     po::variables_map parsed_options;
     parse_subcommand_options(options_description, options, parsed_options);
 
-    stdout_options.aggregation_type
-            = parse_aggregation_options(parsed_options, stdout_options.count_by_time_bucket_size);
+    stdout_options.aggregation_type = parse_aggregation_options(
+            parsed_options,
+            stdout_options.count_by_time_bucket_size_ms,
+            stdout_options.aggregation_field
+    );
 }
 
 void CommandLineArguments::print_basic_usage() const {

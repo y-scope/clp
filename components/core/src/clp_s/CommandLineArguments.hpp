@@ -34,6 +34,8 @@ public:
     enum class AggregationType : uint8_t {
         Count,
         CountByTime,
+        Min,
+        Max,
     };
 
     struct ResultsCacheOutputHandlerOptions {
@@ -44,6 +46,8 @@ public:
         uint64_t max_num_results{1000};
         std::optional<AggregationType> aggregation_type;
         int64_t count_by_time_bucket_size_ms{};
+        // Field whose value is aggregated by `--min`/`--max`.
+        std::string aggregation_field;
     };
 
     struct FileOutputHandlerOptions {
@@ -65,7 +69,9 @@ public:
 
     struct StdoutOutputHandlerOptions {
         std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size{};  // Milliseconds
+        int64_t count_by_time_bucket_size_ms{};
+        // Field whose value is aggregated by `--min`/`--max`.
+        std::string aggregation_field;
     };
 
     using OutputHandlerOptionsVariant = std::
@@ -162,16 +168,19 @@ private:
     );
 
     /**
-     * Validates the aggregation options (count and count-by-time) for output handlers that
-     * support aggregations.
+     * Validates the aggregation options (count, count-by-time, min, and max) for output handlers
+     * that support aggregations. The options are mutually exclusive.
      * @param parsed_options
      * @param count_by_time_bucket_size_ms The parsed value of the count-by-time option; only
      * validated when that option was specified.
+     * @param aggregation_field The parsed value of the min/max option; only validated when one of
+     * those options was specified.
      * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
      */
     [[nodiscard]] static auto parse_aggregation_options(
             boost::program_options::variables_map const& parsed_options,
-            int64_t count_by_time_bucket_size_ms
+            int64_t count_by_time_bucket_size_ms,
+            std::string_view aggregation_field
     ) -> std::optional<AggregationType>;
 
     /**

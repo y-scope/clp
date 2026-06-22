@@ -273,27 +273,15 @@ bool search_archive(
                                         options.max_num_results,
                                         options.dataset
                                 );
-                            } else if (CommandLineArguments::AggregationType::Count
-                                       == options.aggregation_type.value())
-                            {
-                                output_handler
-                                        = std::make_unique<clp_s::CountResultsCacheOutputHandler>(
-                                                options.uri,
-                                                options.collection,
-                                                std::string{archive_reader->get_archive_id()}
-                                        );
-                            } else if (CommandLineArguments::AggregationType::CountByTime
-                                       == options.aggregation_type.value())
-                            {
+                            } else {
                                 output_handler = std::make_unique<
-                                        clp_s::CountByTimeResultsCacheOutputHandler
+                                        clp_s::AggregationToResultsCacheOutputHandler
                                 >(options.uri,
                                   options.collection,
                                   std::string{archive_reader->get_archive_id()},
-                                  options.count_by_time_bucket_size_ms);
-                            } else {
-                                SPDLOG_ERROR("Unhandled aggregation type.");
-                                output_handler = nullptr;
+                                  options.aggregation_type.value(),
+                                  options.count_by_time_bucket_size_ms,
+                                  options.aggregation_field);
                             }
                         },
                         [&](CommandLineArguments::StdoutOutputHandlerOptions const& options)
@@ -304,9 +292,9 @@ bool search_archive(
                                 output_handler
                                         = std::make_unique<clp_s::AggregationToStdoutOutputHandler>(
                                                 std::string{archive_reader->get_archive_id()},
-                                                CommandLineArguments::AggregationType::CountByTime
-                                                        == options.aggregation_type.value(),
-                                                options.count_by_time_bucket_size
+                                                options.aggregation_type.value(),
+                                                options.count_by_time_bucket_size_ms,
+                                                options.aggregation_field
                                         );
                             }
                         }

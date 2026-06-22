@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include <mongocxx/client.hpp>
@@ -21,6 +22,7 @@
 #include "../reducer/RecordGroup.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
 #include "archive_constants.hpp"
+#include "search/ast/SearchUtils.hpp"
 #include "search/OutputHandler.hpp"
 #include "TraceableException.hpp"
 
@@ -28,6 +30,8 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
+using AggregationType = CommandLineArguments::AggregationType;
+
 namespace {
 /**
  * Connects to the results cache and returns the requested collection.
@@ -52,7 +56,92 @@ auto connect_to_results_cache(string const& uri, string const& collection, mongo
         throw OperationFailedT(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
     }
 }
+
+/**
+ * @param type
+ * @return Whether the aggregation needs per-record metadata (i.e. the timestamp).
+ */
+[[nodiscard]] auto aggregation_needs_metadata(AggregationType type) -> bool {
+    return AggregationType::CountByTime == type;
+}
+
+/**
+ * @param type
+ * @return Whether the aggregation needs the record marshalled into its JSON message.
+ */
+[[nodiscard]] auto aggregation_needs_marshalling(AggregationType type) -> bool {
+    return AggregationType::Min == type || AggregationType::Max == type;
+}
 }  // namespace
+
+FieldMinMaxAggregator::FieldMinMaxAggregator(bool find_max, string_view field)
+        : m_find_max{find_max} {
+    string descriptor_namespace;
+    if (false
+        == search::ast::tokenize_column_descriptor(
+                string{field},
+                m_field_path,
+                descriptor_namespace
+        ))
+    {
+        // A malformed field tokenizes to nothing, so `update` never matches and min/max yields no
+        // result. The field is validated during command-line parsing, so this is just defensive.
+        m_field_path.clear();
+        return;
+    }
+    if (false == descriptor_namespace.empty()) {
+        // Namespaced fields (e.g. the auto-generated `@` namespace) are marshalled under a
+        // top-level object keyed by the namespace string, so navigate into it first.
+        m_field_path.insert(m_field_path.begin(), descriptor_namespace);
+    }
+}
+
+auto FieldMinMaxAggregator::beats_extreme(Value candidate) const -> bool {
+    auto const& current{m_extreme.value()};
+    // Compare integers exactly; only fall back to a (lossy) double comparison when the types
+    // differ.
+    if (std::holds_alternative<int64_t>(candidate) && std::holds_alternative<int64_t>(current)) {
+        auto const lhs{std::get<int64_t>(candidate)};
+        auto const rhs{std::get<int64_t>(current)};
+        return m_find_max ? lhs > rhs : lhs < rhs;
+    }
+    auto const as_double{[](Value value) {
+        return std::visit([](auto held) { return static_cast<double>(held); }, value);
+    }};
+    return m_find_max ? as_double(candidate) > as_double(current)
+                      : as_double(candidate) < as_double(current);
+}
+
+auto FieldMinMaxAggregator::update(string_view message) -> void {
+    nlohmann::json doc;
+    try {
+        doc = nlohmann::json::parse(message);
+    } catch (nlohmann::json::exception const&) {
+        return;
+    }
+
+    nlohmann::json const* node{&doc};
+    for (auto const& key : m_field_path) {
+        if (false == node->is_object()) {
+            return;
+        }
+        auto const it{node->find(key)};
+        if (node->end() == it) {
+            return;
+        }
+        node = &it.value();
+    }
+
+    if (false == node->is_number()) {
+        return;
+    }
+    Value const candidate{
+            node->is_number_integer() ? Value{node->get<int64_t>()} : Value{node->get<double>()}
+    };
+    if (false == m_extreme.has_value() || beats_extreme(candidate)) {
+        m_extreme = candidate;
+    }
+}
 
 void FileOutputHandler::write(
         string_view message,
@@ -241,18 +330,32 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
 
 AggregationToStdoutOutputHandler::AggregationToStdoutOutputHandler(
         string archive_id,
-        bool count_by_time,
-        int64_t count_by_time_bucket_size
+        CommandLineArguments::AggregationType aggregation_type,
+        int64_t count_by_time_bucket_size_ms,
+        string_view aggregation_field
 )
-        : ::clp_s::search::OutputHandler(count_by_time, false),
+        : ::clp_s::search::
+                  OutputHandler{aggregation_needs_metadata(aggregation_type), aggregation_needs_marshalling(aggregation_type)},
           m_archive_id{std::move(archive_id)},
-          m_count_by_time_bucket_size{count_by_time_bucket_size},
-          m_pipeline{reducer::PipelineInputMode::InterStage} {
-    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+          m_aggregation_type{aggregation_type},
+          m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms},
+          m_aggregation_field{aggregation_field} {
+    if (AggregationType::Count == m_aggregation_type) {
+        m_pipeline.emplace(reducer::PipelineInputMode::InterStage);
+        m_pipeline->add_pipeline_stage(std::make_shared<reducer::CountOperator>());
+    } else if (AggregationType::Min == m_aggregation_type
+               || AggregationType::Max == m_aggregation_type)
+    {
+        m_min_max.emplace(AggregationType::Max == m_aggregation_type, aggregation_field);
+    }
 }
 
 void AggregationToStdoutOutputHandler::write(string_view message) {
-    m_pipeline.push_record(reducer::EmptyRecord{});
+    if (m_pipeline.has_value()) {
+        m_pipeline->push_record(reducer::EmptyRecord{});
+    } else if (m_min_max.has_value()) {
+        m_min_max->update(message);
+    }
 }
 
 void AggregationToStdoutOutputHandler::write(
@@ -261,21 +364,36 @@ void AggregationToStdoutOutputHandler::write(
         string_view archive_id,
         int64_t log_event_idx
 ) {
-    int64_t const bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+    int64_t const bucket
+            = (timestamp / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
     m_bucket_counts[bucket] += 1;
 }
 
 ErrorCode AggregationToStdoutOutputHandler::finish() {
-    // count-by-time results are serialized from the bucket counts; count results come from the
-    // CountOperator pipeline. `should_output_metadata()` is true only for count-by-time.
+    if (AggregationType::Min == m_aggregation_type || AggregationType::Max == m_aggregation_type) {
+        if (m_min_max.has_value() && m_min_max->has_value()) {
+            nlohmann::json result;
+            result[constants::results_cache::search::cArchiveId] = m_archive_id;
+            result[constants::results_cache::search::cField] = m_aggregation_field;
+            auto const* const key = AggregationType::Max == m_aggregation_type
+                                            ? constants::results_cache::search::cMax
+                                            : constants::results_cache::search::cMin;
+            std::visit([&](auto value) { result[key] = value; }, m_min_max->get_value());
+            std::cout << result.dump() << '\n';
+        }
+        return ErrorCode::ErrorCodeSuccess;
+    }
+
+    // count results come from the CountOperator pipeline; count-by-time results are serialized from
+    // the bucket counts.
     std::unique_ptr<reducer::RecordGroupIterator> results;
-    if (should_output_metadata()) {
+    if (AggregationType::CountByTime == m_aggregation_type) {
         results = std::make_unique<reducer::Int64Int64MapRecordGroupIterator>(
                 m_bucket_counts,
                 reducer::CountOperator::cRecordElementKey
         );
     } else {
-        results = m_pipeline.finish();
+        results = m_pipeline->finish();
     }
     for (; false == results->done(); results->next()) {
         auto& group{results->get()};
@@ -300,79 +418,107 @@ ErrorCode AggregationToStdoutOutputHandler::finish() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-CountResultsCacheOutputHandler::CountResultsCacheOutputHandler(
+AggregationToResultsCacheOutputHandler::AggregationToResultsCacheOutputHandler(
         string const& uri,
         string const& collection,
-        string archive_id
+        string archive_id,
+        CommandLineArguments::AggregationType aggregation_type,
+        int64_t count_by_time_bucket_size_ms,
+        string_view aggregation_field
 )
-        : ::clp_s::search::OutputHandler{false, false},
-          m_archive_id{std::move(archive_id)} {
+        : ::clp_s::search::
+                  OutputHandler{aggregation_needs_metadata(aggregation_type), aggregation_needs_marshalling(aggregation_type)},
+          m_archive_id{std::move(archive_id)},
+          m_aggregation_type{aggregation_type},
+          m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms},
+          m_aggregation_field{aggregation_field} {
+    if (AggregationType::Min == m_aggregation_type || AggregationType::Max == m_aggregation_type) {
+        m_min_max.emplace(AggregationType::Max == m_aggregation_type, aggregation_field);
+    }
     m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
 }
 
-auto CountResultsCacheOutputHandler::finish() -> ErrorCode {
-    if (0 == m_count) {
-        return ErrorCode::ErrorCodeSuccess;
-    }
-
+auto AggregationToResultsCacheOutputHandler::finish() -> ErrorCode {
     try {
-        m_collection.insert_one(
-                bsoncxx::builder::basic::make_document(
+        switch (m_aggregation_type) {
+            case AggregationType::Count: {
+                if (0 == m_count) {
+                    return ErrorCode::ErrorCodeSuccess;
+                }
+                m_collection.insert_one(
+                        bsoncxx::builder::basic::make_document(
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cArchiveId,
+                                        m_archive_id
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cCount,
+                                        m_count
+                                )
+                        )
+                );
+                break;
+            }
+            case AggregationType::CountByTime: {
+                if (m_bucket_counts.empty()) {
+                    return ErrorCode::ErrorCodeSuccess;
+                }
+                std::vector<bsoncxx::document::value> documents;
+                documents.reserve(m_bucket_counts.size());
+                for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
+                    documents.emplace_back(
+                            bsoncxx::builder::basic::make_document(
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cArchiveId,
+                                            m_archive_id
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cTimestamp,
+                                            bucket_timestamp
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cCount,
+                                            count
+                                    )
+                            )
+                    );
+                }
+                m_collection.insert_many(documents);
+                break;
+            }
+            case AggregationType::Min:
+            case AggregationType::Max: {
+                if (false == m_min_max.has_value() || false == m_min_max->has_value()) {
+                    return ErrorCode::ErrorCodeSuccess;
+                }
+                bsoncxx::builder::basic::document document;
+                document.append(
                         bsoncxx::builder::basic::kvp(
                                 constants::results_cache::search::cArchiveId,
                                 m_archive_id
                         ),
                         bsoncxx::builder::basic::kvp(
-                                constants::results_cache::search::cCount,
-                                m_count
+                                constants::results_cache::search::cField,
+                                m_aggregation_field
                         )
-                )
-        );
-    } catch (mongocxx::exception const& e) {
-        return ErrorCode::ErrorCodeFailureDbBulkWrite;
-    }
-    return ErrorCode::ErrorCodeSuccess;
-}
-
-CountByTimeResultsCacheOutputHandler::CountByTimeResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection,
-        string archive_id,
-        int64_t count_by_time_bucket_size_ms
-)
-        : ::clp_s::search::OutputHandler{true, false},
-          m_archive_id{std::move(archive_id)},
-          m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {
-    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
-}
-
-auto CountByTimeResultsCacheOutputHandler::finish() -> ErrorCode {
-    if (m_bucket_counts.empty()) {
-        return ErrorCode::ErrorCodeSuccess;
-    }
-
-    try {
-        std::vector<bsoncxx::document::value> documents;
-        documents.reserve(m_bucket_counts.size());
-        for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
-            documents.emplace_back(
-                    bsoncxx::builder::basic::make_document(
-                            bsoncxx::builder::basic::kvp(
-                                    constants::results_cache::search::cArchiveId,
-                                    m_archive_id
-                            ),
-                            bsoncxx::builder::basic::kvp(
-                                    constants::results_cache::search::cTimestamp,
-                                    bucket_timestamp
-                            ),
-                            bsoncxx::builder::basic::kvp(
-                                    constants::results_cache::search::cCount,
-                                    count
-                            )
-                    )
-            );
+                );
+                auto const append_extreme = [&](auto const& key) {
+                    std::visit(
+                            [&](auto value) {
+                                document.append(bsoncxx::builder::basic::kvp(key, value));
+                            },
+                            m_min_max->get_value()
+                    );
+                };
+                if (AggregationType::Max == m_aggregation_type) {
+                    append_extreme(constants::results_cache::search::cMax);
+                } else {
+                    append_extreme(constants::results_cache::search::cMin);
+                }
+                m_collection.insert_one(document.view());
+                break;
+            }
         }
-        m_collection.insert_many(documents);
     } catch (mongocxx::exception const& e) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
