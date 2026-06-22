@@ -74,24 +74,38 @@ def test_clp_identity_transform(
 
 
 @pytest.mark.clp_s
+@pytest.mark.parametrize("input_type", ["directory", "tar_gz"])
 def test_clp_s_identity_transform(
+    input_type: str,
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
     json_multifile: SampleDataset,
 ) -> None:
     """
     Validate that compression and decompression by the core binary `clp-s` run successfully and are
-    lossless.
+    lossless, for both raw directory and `.tar.gz` archive inputs.
 
+    :param input_type: "directory" for raw logs dir, "tar_gz" for a `.tar.gz` archive.
     :param clp_core_path_config:
     :param integration_test_path_config:
     :param json_multifile:
     """
     dataset_name = json_multifile.dataset_name
 
+    if input_type == "tar_gz":
+        tar_gz_path = (
+            integration_test_path_config.test_cache_dir / f"clp-s-{dataset_name}-input.tar.gz"
+        )
+        create_tar_gz_from_dir(json_multifile.logs_path, tar_gz_path)
+        logs_source_dir = tar_gz_path
+        test_name_suffix = "-tar-gz"
+    else:
+        logs_source_dir = json_multifile.logs_path
+        test_name_suffix = ""
+
     test_paths = CompressionTestPathConfig(
-        test_name=f"clp-s-{dataset_name}",
-        logs_source_dir=json_multifile.logs_path,
+        test_name=f"clp-s-{dataset_name}{test_name_suffix}",
+        logs_source_dir=logs_source_dir,
         integration_test_path_config=integration_test_path_config,
     )
     _clp_s_compress_and_decompress(clp_core_path_config, test_paths)
@@ -103,52 +117,7 @@ def test_clp_s_identity_transform(
     #       the directory structure and row/key order) with the original downloaded logs.
     # See also: https://docs.yscope.com/clp/main/user-guide/core-clp-s.html#current-limitations
     consolidated_json_test_paths = CompressionTestPathConfig(
-        test_name=f"clp-s-{dataset_name}-consolidated-json",
-        logs_source_dir=test_paths.decompression_dir,
-        integration_test_path_config=integration_test_path_config,
-    )
-    _clp_s_compress_and_decompress(clp_core_path_config, consolidated_json_test_paths)
-
-    _consolidated_json_file_name = "original"
-    input_path = consolidated_json_test_paths.logs_source_dir / _consolidated_json_file_name
-    output_path = consolidated_json_test_paths.decompression_dir / _consolidated_json_file_name
-    assert is_json_file_structurally_equal(input_path, output_path), (
-        f"Mismatch between clp-s input {input_path} and output {output_path}."
-    )
-
-    test_paths.clear_test_outputs()
-    consolidated_json_test_paths.clear_test_outputs()
-
-
-@pytest.mark.clp_s
-def test_clp_s_tar_gz_identity_transform(
-    clp_core_path_config: ClpCorePathConfig,
-    integration_test_path_config: IntegrationTestPathConfig,
-    json_multifile: SampleDataset,
-) -> None:
-    """
-    Validate that clp-s can ingest a `.tar.gz` archive and that the resulting round-trip
-    compress-decompress is lossless.
-
-    :param clp_core_path_config:
-    :param integration_test_path_config:
-    :param json_multifile:
-    """
-    dataset_name = json_multifile.dataset_name
-
-    tar_gz_path = integration_test_path_config.test_cache_dir / f"clp-s-{dataset_name}-input.tar.gz"
-    create_tar_gz_from_dir(json_multifile.logs_path, tar_gz_path)
-
-    test_paths = CompressionTestPathConfig(
-        test_name=f"clp-s-{dataset_name}-tar-gz",
-        logs_source_dir=tar_gz_path,
-        integration_test_path_config=integration_test_path_config,
-    )
-    _clp_s_compress_and_decompress(clp_core_path_config, test_paths)
-
-    # Same two-round comparison as `test_clp_s_identity_transform`.
-    consolidated_json_test_paths = CompressionTestPathConfig(
-        test_name=f"clp-s-{dataset_name}-tar-gz-consolidated-json",
+        test_name=f"clp-s-{dataset_name}{test_name_suffix}-consolidated-json",
         logs_source_dir=test_paths.decompression_dir,
         integration_test_path_config=integration_test_path_config,
     )

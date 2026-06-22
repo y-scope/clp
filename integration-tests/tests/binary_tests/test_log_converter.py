@@ -26,15 +26,18 @@ pytestmark = pytest.mark.core
 
 
 @pytest.mark.clp_s
+@pytest.mark.parametrize("input_type", ["directory", "tar_gz"])
 def test_log_converter_transform(
+    input_type: str,
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
     text_singlefile: SampleDataset,
 ) -> None:
     """
     Validate that converted logs from the core binary `log-converter` can be ingested successfully
-    by `clp-s`.
+    by `clp-s`, for both raw directory and `.tar.gz` archive inputs.
 
+    :param input_type: "directory" for raw logs dir, "tar_gz" for a `.tar.gz` archive.
     :param clp_core_path_config:
     :param integration_test_path_config:
     :param text_singlefile:
@@ -44,46 +47,21 @@ def test_log_converter_transform(
         with (text_singlefile.logs_path / file_name).open(encoding="utf-8") as f:
             num_log_events += sum(1 for _ in f)
 
-    test_paths = ConversionTestPathConfig(
-        test_name=f"clp-s-{text_singlefile.dataset_name}",
-        logs_source_dir=text_singlefile.logs_path,
-        num_log_events=num_log_events,
-        integration_test_path_config=integration_test_path_config,
-    )
-    try:
-        _convert_and_compress(clp_core_path_config, test_paths)
-    finally:
-        test_paths.clear_test_outputs()
-
-
-@pytest.mark.clp_s
-def test_log_converter_tar_gz_transform(
-    clp_core_path_config: ClpCorePathConfig,
-    integration_test_path_config: IntegrationTestPathConfig,
-    text_singlefile: SampleDataset,
-) -> None:
-    """
-    Validate that `log-converter` can ingest a `.tar.gz` archive and that the converted logs can be
-    compressed and searched by `clp-s`.
-
-    :param clp_core_path_config:
-    :param integration_test_path_config:
-    :param text_singlefile:
-    """
-    num_log_events = 0
-    for file_name in text_singlefile.metadata.file_names:
-        with (text_singlefile.logs_path / file_name).open(encoding="utf-8") as f:
-            num_log_events += sum(1 for _ in f)
-
-    tar_gz_path = (
-        integration_test_path_config.test_cache_dir
-        / f"clp-s-{text_singlefile.dataset_name}-input.tar.gz"
-    )
-    create_tar_gz_from_dir(text_singlefile.logs_path, tar_gz_path)
+    if input_type == "tar_gz":
+        tar_gz_path = (
+            integration_test_path_config.test_cache_dir
+            / f"clp-s-{text_singlefile.dataset_name}-input.tar.gz"
+        )
+        create_tar_gz_from_dir(text_singlefile.logs_path, tar_gz_path)
+        logs_source_dir = tar_gz_path
+        test_name_suffix = "-tar-gz"
+    else:
+        logs_source_dir = text_singlefile.logs_path
+        test_name_suffix = ""
 
     test_paths = ConversionTestPathConfig(
-        test_name=f"clp-s-{text_singlefile.dataset_name}-tar-gz",
-        logs_source_dir=tar_gz_path,
+        test_name=f"clp-s-{text_singlefile.dataset_name}{test_name_suffix}",
+        logs_source_dir=logs_source_dir,
         num_log_events=num_log_events,
         integration_test_path_config=integration_test_path_config,
     )
