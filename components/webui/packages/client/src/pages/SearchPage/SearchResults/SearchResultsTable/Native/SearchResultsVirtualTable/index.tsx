@@ -17,9 +17,6 @@ interface SearchResultsVirtualTableProps {
  * Renders search results in a virtual table and syncs results to the search store
  * so the export action can read them without a duplicate cursor subscription.
  *
- * NOTE: Export is currently only available for the Native search engine. The
- * Presto engine's PrestoResultsVirtualTable does not yet support export.
- *
  * @param props
  * @param props.tableHeight
  * @return
