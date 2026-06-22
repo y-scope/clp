@@ -38,10 +38,10 @@ namespace {
  * @return The collection.
  */
 template <typename OperationFailedT>
-auto connect_to_results_cache(string_view uri, string_view collection, mongocxx::client& client)
+auto connect_to_results_cache(string const& uri, string const& collection, mongocxx::client& client)
         -> mongocxx::collection {
     try {
-        auto mongo_uri = mongocxx::uri(uri);
+        auto mongo_uri = mongocxx::uri{uri};
         client = mongocxx::client(mongo_uri);
         return client[mongo_uri.database()][collection];
     } catch (mongocxx::exception const& e) {
@@ -297,8 +297,8 @@ ErrorCode AggregationToStdoutOutputHandler::finish() {
 }
 
 CountResultsCacheOutputHandler::CountResultsCacheOutputHandler(
-        string_view uri,
-        string_view collection,
+        string const& uri,
+        string const& collection,
         string archive_id
 )
         : ::clp_s::search::OutputHandler{false, false},
@@ -331,8 +331,8 @@ auto CountResultsCacheOutputHandler::finish() -> ErrorCode {
 }
 
 CountByTimeResultsCacheOutputHandler::CountByTimeResultsCacheOutputHandler(
-        string_view uri,
-        string_view collection,
+        string const& uri,
+        string const& collection,
         string archive_id,
         int64_t count_by_time_bucket_size
 )
