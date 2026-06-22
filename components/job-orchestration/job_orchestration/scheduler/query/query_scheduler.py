@@ -1012,14 +1012,12 @@ async def handle_finished_search_job(
         num_tasks_completed=job.num_archives_searched,
         duration=duration,
     ):
+        job_duration_histogram.record(duration)
         if new_job_status == QueryJobStatus.SUCCEEDED:
-            job_duration_histogram.record(duration)
             logger.info(f"Completed job {job_id}.")
         elif reducer_failed:
-            job_duration_histogram.record(duration)
             logger.error(f"Completed job {job_id} with failing reducer.")
         else:
-            job_duration_histogram.record(duration)
             logger.info(f"Completed job {job_id} with failing tasks.")
     del active_jobs[job_id]
 
