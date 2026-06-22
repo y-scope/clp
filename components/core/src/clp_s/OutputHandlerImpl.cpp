@@ -36,6 +36,10 @@ namespace {
  */
 template <typename OperationFailedT>
 auto connect_to_results_cache(string const& uri, string const& collection, mongocxx::client& client)
+        -> mongocxx::collection;
+
+template <typename OperationFailedT>
+auto connect_to_results_cache(string const& uri, string const& collection, mongocxx::client& client)
         -> mongocxx::collection {
     try {
         auto mongo_uri = mongocxx::uri{uri};

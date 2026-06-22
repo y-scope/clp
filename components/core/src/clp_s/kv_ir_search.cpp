@@ -257,8 +257,7 @@ auto search_kv_ir_stream(
                     &output_handler_options
             );
     auto const results_cache_aggregation_requested{
-            nullptr != results_cache_options
-            && results_cache_options->aggregation_type.has_value()
+            nullptr != results_cache_options && results_cache_options->aggregation_type.has_value()
     };
     if (reducer_aggregation_requested || results_cache_aggregation_requested) {
         SPDLOG_ERROR("kv-ir search: Aggregation support is not implemented.");
