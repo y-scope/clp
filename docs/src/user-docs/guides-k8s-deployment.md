@@ -423,6 +423,34 @@ To run all worker types in the same node pool:
 
 ---
 
+### Component resources
+
+Set resource requests and limits for each chart component under the top-level `resources` key.
+Values use standard Kubernetes resource quantities:
+
+```{code-block} yaml
+:caption: resources.yaml
+
+resources:
+  compressionWorker:
+    requests:
+      cpu: "1"
+      memory: "1Gi"
+      ephemeral-storage: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+      ephemeral-storage: "4Gi"
+```
+
+Then install with the values file:
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f resources.yaml
+```
+
+---
+
 ## Verifying the deployment
 
 After installing the Helm chart, you can verify that all components are running correctly as
