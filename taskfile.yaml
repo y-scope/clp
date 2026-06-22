@@ -109,6 +109,16 @@ tasks:
       - "rm -f '{{.G_WEBUI_CHECKSUM_FILE}}'"
 
   package:
+    deps:
+      - "docker-images:package"
+    cmds:
+      - task: "package-assemble"
+
+  # Assembles the package directory from already-built components and the package image's ID file.
+  # NOTE: This is split out from `package` so that callers which build the package image separately
+  # (e.g., the `package-image` CI job) can assemble the directory without rebuilding the image. It
+  # requires `{{.G_BUILD_DIR}}/clp-package-image.id` and the built components to already exist.
+  package-assemble:
     vars:
       CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
@@ -122,7 +132,6 @@ tasks:
       - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
-      - "docker-images:package"
       - "generate-config-schemas"
       - task: "utils:checksum:validate"
         vars:

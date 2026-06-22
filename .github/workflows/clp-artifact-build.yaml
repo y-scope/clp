@@ -679,13 +679,11 @@ jobs:
 
   ubuntu-jammy-integration-tests:
     name: "ubuntu-jammy-integration-tests"
-    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
-    if: >-
-      success()
-      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    # Run if `package-image` built successfully, reusing its build artifact rather than rebuilding
+    # the package here.
+    if: "!cancelled() && !failure() && needs.package-image.result == 'success'"
     needs:
-      - "filter-relevant-changes"
-      - "ubuntu-jammy-x86_64-deps-image"
+      - "package-image"
     runs-on: *runner
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
@@ -696,20 +694,31 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/run-on-image"
-        env:
-          OS_NAME: "ubuntu-jammy"
+      - name: "Download the integration-test bundle"
+        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
-          use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          # TODO: We set HOME due to permission issues inside the container used in run-on-image.
-          # See: https://github.com/y-scope/clp/issues/1145
-          run_command: >-
-            CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
-            HOME=/tmp
-            task tests:integration
+          name: "clp-package-integration-bundle"
+          path: "/tmp/clp-package-integration-bundle"
+
+      - name: "Load the runtime image and restore the build outputs"
+        shell: "bash"
+        run: |-
+          docker load --input "/tmp/clp-package-integration-bundle/clp-package-image.tar"
+          tar --extract \
+            --file "/tmp/clp-package-integration-bundle/build.tar" \
+            --directory "$GITHUB_WORKSPACE"
+
+      - name: "Install uv"
+        shell: "bash"
+        run: |-
+          curl --fail --silent --show-error --location \
+            "https://astral.sh/uv/0.8.0/install.sh" | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: "Run the integration tests"
+        working-directory: "integration-tests"
+        shell: "bash"
+        run: "uv run pytest"
 
   package-image:
     name: "package-image-${{matrix.arch}}"
@@ -774,6 +783,64 @@ jobs:
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           arch: "${{matrix.arch}}"
           platform_version_codename: "jammy"
+
+      # Build a local runtime image, assemble the package directory, and upload them (with the core
+      # binaries) as an artifact for the `ubuntu-jammy-integration-tests` job to consume. This lets
+      # the integration tests reuse this job's build instead of rebuilding the package. We only do
+      # this on amd64 since the integration tests run on x86_64.
+      - name: "Build the package image for the integration tests"
+        if: "matrix.arch == 'amd64'"
+        shell: "bash"
+        run: "./tools/docker-images/clp-package/build.sh"
+
+      - name: "Assemble the package directory for the integration tests"
+        if: "matrix.arch == 'amd64'"
+        uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          # TODO: We set HOME due to permission issues inside the container used in run-on-image.
+          # See: https://github.com/y-scope/clp/issues/1145
+          run_command: >-
+            HOME=/tmp
+            task package-assemble
+
+      - name: "Stage the integration-test bundle"
+        if: "matrix.arch == 'amd64'"
+        id: "stage_integration_bundle"
+        shell: "bash"
+        run: |-
+          bundle_dir="/tmp/clp-package-integration-bundle"
+          echo "bundle_dir=${bundle_dir}" >> "$GITHUB_OUTPUT"
+          mkdir -p "${bundle_dir}"
+
+          # Save the runtime image referenced by the assembled package's `clp-package-image.id`.
+          docker save "$(cat build/clp-package-image.id)" \
+            --output "${bundle_dir}/clp-package-image.tar"
+
+          # Bundle the core binaries and the assembled package directory.
+          tar --create --file "${bundle_dir}/build.tar" \
+            --directory "$GITHUB_WORKSPACE" \
+            build/core/clg \
+            build/core/clo \
+            build/core/clp \
+            build/core/clp-s \
+            build/core/indexer \
+            build/core/log-converter \
+            build/core/reducer-server \
+            build/clp-package
+
+      - name: "Upload the integration-test bundle"
+        if: "matrix.arch == 'amd64'"
+        uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
+        with:
+          name: "clp-package-integration-bundle"
+          path: "${{steps.stage_integration_bundle.outputs.bundle_dir}}"
+          retention-days: 1
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
