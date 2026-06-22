@@ -1,6 +1,6 @@
 delimiters:\ \t\r\n!"#$%&'()*,:;<=>?@[]^_`{|}~
 
-!date:\d{4}[/\-]?\d{2}[/\-]?\d{2}
+!date:\d{4}[/-]?\d{2}[/-]?\d{2}
 !time:\d{2}:\d{2}:\d{2}([,\.]\d+)?
 
 # E.g. 2015-01-31T15:50:45.392
@@ -53,15 +53,15 @@ timestamp:^[A-Z][a-z]{2} \d{2} (?<time>)$
 timestamp:^\d{2}-\d{2} (?<time>)$
 
 # E.g. <<<2016-11-10 03:02:29:936
-timestamp:^\<\<\<(?<date>) (?<time>)$
+timestamp:^<<<(?<date>) (?<time>)$
 
 # Specially-encoded variables
 float:^-?\d+\.\d+$
 int:^-?\d+$
 
 # Dictionary variables
-!valid_txt:[\w_.\-/\\]*
-key_value:^(?<key>(?<valid_txt>))=(?<value>(?<valid_txt>)\w(?<valid_txt>))$
-!non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]*
-has_number:^(?<non_delim>)\d(?<non_delim>)$
+!valid_txt:[\w_./\\-]
+key_value:^(?<key>(?<valid_txt>)*)=(?<value>(?<valid_txt>)*\w(?<valid_txt>)*)$
+!non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]
+has_number:^(?<non_delim>)*\d(?<non_delim>)*$
 hex:^[A-Fa-f]+$

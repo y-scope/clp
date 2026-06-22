@@ -1514,35 +1514,28 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         -> ystdlib::error_handling::Result<void> {
     auto const start{std::chrono::steady_clock::now()};
     size_t parser_pos{0};
-    auto const event_opt{m_log_surgeon_parser->next_event(log_msg, &parser_pos)};
+    auto const event{m_log_surgeon_parser->next_event(log_msg, &parser_pos)};
     auto const end{std::chrono::steady_clock::now()};
     m_parse_duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    if (false == event_opt.has_value()) {
+    if (false == event.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
-    auto const event{event_opt.value()};
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
-    auto [root_matches, parent_matches]{clpp::DecomposedQuery::create_parent_match_dicts(event)};
 
     // This log shape isn't escaped yet be careful
     std::string log_shape{};
     log_shape.reserve(log_msg.size());
     size_t log_msg_pos{0};
     for (size_t i{0};; ++i) {
-        auto const match{event.get_leaf_match(i)};
+        auto const match{event->get_leaf_match(i)};
         if (false == match.has_value()) {
             break;
         }
 
-        auto parent_node_id{log_msg_node_id};
-        if (0 != match->sub_rule_id) {
-            parent_node_id = get_parent_schema_node(
-                    match.value(),
-                    log_msg_node_id,
-                    root_matches,
-                    parent_matches
-            );
-        }
+        auto parent_node_id{get_parent_schema_node(
+                match.value(),
+                log_msg_node_id
+        )};
 
         auto const rule_name{match->ffi_pointers.rule_name.as_cpp_view()};
         auto const lexeme{match->ffi_pointers.lexeme.as_cpp_view()};
@@ -1599,7 +1592,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     if (new_log_shape) {
         clpp::ParentRuleShapes parent_shapes;
         std::vector<std::pair<size_t, size_t>> og_parent_match_pos;
-        for (auto const& match : event.get_all_matches()) {
+        for (auto const& match : event->get_all_matches()) {
             if (match.is_leaf) {
                 continue;
             }
@@ -1611,7 +1604,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             og_parent_match_pos.emplace_back(match.range.start, match.range.end);
         }
         for (size_t i{0};; ++i) {
-            auto const leaf_match{event.get_leaf_match(i)};
+            auto const leaf_match{event->get_leaf_match(i)};
             if (false == leaf_match.has_value()) {
                 break;
             }
@@ -1641,34 +1634,25 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
 
 auto JsonParser::get_parent_schema_node(
         log_surgeon::Match const match,
-        SchemaNode::id_t root_node_id,
-        absl::flat_hash_map<uint32_t, log_surgeon::Match const> const& root_matches,
-        absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> const&
-                parent_matches
+        SchemaNode::id_t root_node_id
 ) -> SchemaNode::id_t {
     if (0 == match.sub_rule_id) {
-        throw(std::runtime_error(
-                fmt::format(
-                        "get parent called from root {}'",
-                        match.ffi_pointers.rule_name.as_cpp_view()
-                )
-        ));
+        return root_node_id;
     }
 
     if (0 == match.parent_id) {
         auto node_id{m_archive_writer->add_node(
                 root_node_id,
                 NodeType::ParentRule,
-                root_matches.at(match.rule_idx).ffi_pointers.rule_name.as_cpp_view()
+                match.ffi_pointers.parent->ffi_pointers.rule_name.as_cpp_view()
         )};
         m_current_schema.insert_unordered(node_id);
         return node_id;
     }
-    log_surgeon::Match const parent{parent_matches.at({match.rule_idx, match.parent_id})};
     auto node_id{m_archive_writer->add_node(
-            get_parent_schema_node(parent, root_node_id, root_matches, parent_matches),
+            get_parent_schema_node(*match.ffi_pointers.parent, root_node_id),
             NodeType::ParentRule,
-            parent.ffi_pointers.rule_name.as_cpp_view()
+            match.ffi_pointers.parent->ffi_pointers.rule_name.as_cpp_view()
     )};
     m_current_schema.insert_unordered(node_id);
     return node_id;

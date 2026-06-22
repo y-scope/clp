@@ -1,16 +1,12 @@
 #include "DecomposedQuery.hpp"
 
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
-#include <absl/container/flat_hash_map.h>
 #include <fmt/format.h>
 #include <log_surgeon/log_surgeon.hpp>
-#include <log_surgeon/rust_compat.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clpp/ErrorCode.hpp>
@@ -46,24 +42,6 @@ auto DecomposedQuery::decompose_query(
     }
 
     return DecomposedQuery{interps};
-}
-
-auto DecomposedQuery::create_parent_match_dicts(log_surgeon::EventHandle const& event) -> std::
-        pair<absl::flat_hash_map<uint32_t, log_surgeon::Match const>,
-             absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const>> {
-    absl::flat_hash_map<uint32_t, log_surgeon::Match const> root_matches;
-    absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> parent_matches;
-    for (auto const& match : event.get_all_matches()) {
-        if (match.is_leaf) {
-            continue;
-        }
-        if (0 == match.sub_rule_id) {
-            root_matches.emplace(match.rule_idx, match);
-        } else {
-            parent_matches.emplace(std::pair{match.rule_idx, match.sub_rule_id}, match);
-        }
-    }
-    return {root_matches, parent_matches};
 }
 
 auto DecomposedQuery::split_qualified_name(std::string_view const qualified_name)

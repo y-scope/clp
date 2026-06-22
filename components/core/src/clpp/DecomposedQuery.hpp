@@ -1,13 +1,11 @@
 #ifndef CLPP_DECOMPOSEDQUERY_HPP
 #define CLPP_DECOMPOSEDQUERY_HPP
 
-#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include <absl/container/flat_hash_map.h>
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -48,11 +46,6 @@ public:
     [[nodiscard]] auto get_interpretations() const -> std::vector<Interpretation> const& {
         return m_interpretations;
     }
-
-    // Investigate removing this
-    static auto create_parent_match_dicts(log_surgeon::EventHandle const& event) -> std::
-            pair<absl::flat_hash_map<uint32_t, log_surgeon::Match const>,
-                 absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const>>;
 
     /**
      * Splits a fully qualified dot-separated rule name into its segments.

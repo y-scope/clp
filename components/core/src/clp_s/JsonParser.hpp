@@ -236,10 +236,7 @@ private:
 
     auto get_parent_schema_node(
             log_surgeon::Match match,
-            SchemaNode::id_t parent_node_id,
-            absl::flat_hash_map<uint32_t, log_surgeon::Match const> const& root_matches,
-            absl::flat_hash_map<std::pair<uint32_t, uint32_t>, log_surgeon::Match const> const&
-                    parent_matches
+            SchemaNode::id_t parent_node_id
     ) -> SchemaNode::id_t;
 
     /**
