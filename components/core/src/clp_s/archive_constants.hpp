@@ -44,11 +44,6 @@ constexpr std::string_view cFileSplitNumber{"_file_split_number"};
 constexpr std::string_view cArchiveCreatorId{"_archive_creator_id"};
 }  // namespace range_index
 
-namespace results_cache {
-// MongoDB's primary-key field, which is backed by a built-in unique index.
-constexpr char cDocId[]{"_id"};
-}  // namespace results_cache
-
 namespace results_cache::decompression {
 constexpr char cPath[]{"path"};
 constexpr char cStreamId[]{"stream_id"};

@@ -3,13 +3,12 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
-#include <mongocxx/model/update_one.hpp>
-#include <mongocxx/options/update.hpp>
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
@@ -36,7 +35,7 @@ namespace {
  * @return The collection.
  */
 template <typename OperationFailedT>
-auto connect_to_results_cache(string const& uri, string const& collection, mongocxx::client& client)
+auto connect_to_results_cache(string_view uri, string_view collection, mongocxx::client& client)
         -> mongocxx::collection {
     try {
         auto mongo_uri = mongocxx::uri(uri);
@@ -198,18 +197,18 @@ void ResultsCacheOutputHandler::write(
     }
 }
 
-CountToReducerOutputHandler::CountToReducerOutputHandler(int reducer_socket_fd)
+CountReducerOutputHandler::CountReducerOutputHandler(int reducer_socket_fd)
         : ::clp_s::search::OutputHandler(false, false),
           m_reducer_socket_fd(reducer_socket_fd),
           m_pipeline(reducer::PipelineInputMode::InterStage) {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
-void CountToReducerOutputHandler::write(string_view message) {
+auto CountReducerOutputHandler::write(string_view message) -> void {
     m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
-ErrorCode CountToReducerOutputHandler::finish() {
+auto CountReducerOutputHandler::finish() -> ErrorCode {
     if (false
         == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
     {
@@ -218,7 +217,7 @@ ErrorCode CountToReducerOutputHandler::finish() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-ErrorCode CountByTimeToReducerOutputHandler::finish() {
+auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,
@@ -233,82 +232,79 @@ ErrorCode CountByTimeToReducerOutputHandler::finish() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-CountToResultsCacheOutputHandler::CountToResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection
+CountResultsCacheOutputHandler::CountResultsCacheOutputHandler(
+        string_view uri,
+        string_view collection,
+        string archive_id
 )
-        : ::clp_s::search::OutputHandler(false, false) {
+        : ::clp_s::search::OutputHandler{false, false},
+          m_archive_id{std::move(archive_id)} {
     m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
 }
 
-ErrorCode CountToResultsCacheOutputHandler::finish() {
+auto CountResultsCacheOutputHandler::finish() -> ErrorCode {
     if (0 == m_count) {
         return ErrorCode::ErrorCodeSuccess;
     }
 
     try {
-        auto const filter = bsoncxx::builder::basic::make_document(
-                bsoncxx::builder::basic::kvp(
-                        constants::results_cache::cDocId,
-                        constants::results_cache::search::cCount
+        m_collection.insert_one(
+                bsoncxx::builder::basic::make_document(
+                        bsoncxx::builder::basic::kvp(
+                                constants::results_cache::search::cArchiveId,
+                                m_archive_id
+                        ),
+                        bsoncxx::builder::basic::kvp(
+                                constants::results_cache::search::cCount,
+                                m_count
+                        )
                 )
         );
-        auto const inc_count = bsoncxx::builder::basic::make_document(
-                bsoncxx::builder::basic::kvp(constants::results_cache::search::cCount, m_count)
-        );
-        auto const update = bsoncxx::builder::basic::make_document(
-                bsoncxx::builder::basic::kvp("$inc", inc_count)
-        );
-        m_collection
-                .update_one(filter.view(), update.view(), mongocxx::options::update{}.upsert(true));
     } catch (mongocxx::exception const& e) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
     return ErrorCode::ErrorCodeSuccess;
 }
 
-CountByTimeToResultsCacheOutputHandler::CountByTimeToResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection,
+CountByTimeResultsCacheOutputHandler::CountByTimeResultsCacheOutputHandler(
+        string_view uri,
+        string_view collection,
+        string archive_id,
         int64_t count_by_time_bucket_size
 )
-        : ::clp_s::search::OutputHandler(true, false),
-          m_count_by_time_bucket_size(count_by_time_bucket_size) {
+        : ::clp_s::search::OutputHandler{true, false},
+          m_archive_id{std::move(archive_id)},
+          m_count_by_time_bucket_size{count_by_time_bucket_size} {
     m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
 }
 
-ErrorCode CountByTimeToResultsCacheOutputHandler::finish() {
+auto CountByTimeResultsCacheOutputHandler::finish() -> ErrorCode {
     if (m_bucket_counts.empty()) {
         return ErrorCode::ErrorCodeSuccess;
     }
 
-    // The bucket timestamp is also stored in a `timestamp` field so that the documents match the
-    // `{timestamp, count}` shape the reducer writes.
     try {
-        auto bulk_write = m_collection.create_bulk_write();
+        std::vector<bsoncxx::document::value> documents;
+        documents.reserve(m_bucket_counts.size());
         for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
-            auto filter = bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(constants::results_cache::cDocId, bucket_timestamp)
-            );
-            auto const inc_count = bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(constants::results_cache::search::cCount, count)
-            );
-            auto const set_timestamp_on_insert = bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::search::cTimestamp,
-                            bucket_timestamp
+            documents.emplace_back(
+                    bsoncxx::builder::basic::make_document(
+                            bsoncxx::builder::basic::kvp(
+                                    constants::results_cache::search::cArchiveId,
+                                    m_archive_id
+                            ),
+                            bsoncxx::builder::basic::kvp(
+                                    constants::results_cache::search::cTimestamp,
+                                    bucket_timestamp
+                            ),
+                            bsoncxx::builder::basic::kvp(
+                                    constants::results_cache::search::cCount,
+                                    count
+                            )
                     )
             );
-            auto update = bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("$inc", inc_count),
-                    bsoncxx::builder::basic::kvp("$setOnInsert", set_timestamp_on_insert)
-            );
-
-            mongocxx::model::update_one update_op{std::move(filter), std::move(update)};
-            update_op.upsert(true);
-            bulk_write.append(update_op);
         }
-        bulk_write.execute();
+        m_collection.insert_many(documents);
     } catch (mongocxx::exception const& e) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
