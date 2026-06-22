@@ -29,6 +29,10 @@ spec:
         - name: "topology-metrics-emitter"
           image: "{{ .Values.image.curl.repository }}:{{ .Values.image.curl.tag }}"
           imagePullPolicy: {{ .Values.image.curl.pullPolicy | quote }}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "topologyMetricsEmitter"
+            ) | nindent 10 }}
           command:
             - "curl"
             - "--request"

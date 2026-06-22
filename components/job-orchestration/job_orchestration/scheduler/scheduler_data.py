@@ -101,4 +101,3 @@ class QueryTaskResult(BaseModel):
     status: QueryTaskStatus
     task_id: int
     duration: float
-    error_log_path: str | None = None
