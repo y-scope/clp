@@ -1,7 +1,7 @@
 # WebUI
 
 The web interface for the CLP package, which currently consists of a [React] client and a [Fastify]
-server. It also serves the [log-viewer].
+server. It also serves the [log viewer][yscope-log-viewer].
 
 ## Requirements
 
@@ -10,10 +10,10 @@ server. It also serves the [log-viewer].
 
 ## Setup
 
-1. Download the log-viewer's source code:
+1. Download the yscope-log-viewer's source code:
 
     ```shell
-    task deps:log-viewer
+    task deps:yscope-log-viewer
     ```
 
 2. Install the app's dependencies:
@@ -68,6 +68,6 @@ task lint:fix-js
 ```
 
 [Fastify]: https://www.fastify.io/
-[log-viewer]: https://github.com/y-scope/yscope-log-viewer
+[yscope-log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [nvm]: https://github.com/nvm-sh/nvm
 [React]: https://reactjs.org/
