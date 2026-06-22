@@ -49,6 +49,10 @@ spec:
                   key: "username"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "dbTableCreator"
+            ) | nindent 10 }}
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yaml"

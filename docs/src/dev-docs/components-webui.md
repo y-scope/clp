@@ -20,7 +20,7 @@ server. It also serves the [log-viewer].
 
     ```shell
     cd components/webui
-    npm run init
+    pnpm install
     ```
 
     If you add a package manually to `package.json` or `package.json` changes for some other reason,
@@ -28,18 +28,25 @@ server. It also serves the [log-viewer].
 
 ## Running
 
-1. To run the client during development:
+1. To run both the client and server during development:
 
     ```shell
-    cd components/webui/client
-    npm run dev
+    cd components/webui
+    pnpm run dev
     ```
 
-2. To run the server during development:
+2. Or run only the client:
 
     ```shell
-    cd components/webui/server
-    npm run dev
+    cd components/webui
+    pnpm --filter @webui/client run dev
+    ```
+
+3. Or run only the server:
+
+    ```shell
+    cd components/webui
+    pnpm --filter @webui/server run dev
     ```
 
     If you want to customize what host and port the server binds to, you can copy `.env` to
