@@ -43,7 +43,7 @@ public:
         uint64_t batch_size{1000};
         uint64_t max_num_results{1000};
         std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size{};  // Milliseconds
+        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct FileOutputHandlerOptions {
@@ -60,7 +60,7 @@ public:
         int port{-1};
         reducer::job_id_t job_id{-1};
         AggregationType aggregation_type{AggregationType::Count};
-        int64_t count_by_time_bucket_size{};  // Milliseconds
+        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct StdoutOutputHandlerOptions {
@@ -165,13 +165,13 @@ private:
      * Validates the aggregation options (count and count-by-time) for output handlers that
      * support aggregations.
      * @param parsed_options
-     * @param count_by_time_bucket_size The parsed value of the count-by-time option; only
+     * @param count_by_time_bucket_size_ms The parsed value of the count-by-time option; only
      * validated when that option was specified.
      * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
      */
     [[nodiscard]] static auto parse_aggregation_options(
             boost::program_options::variables_map const& parsed_options,
-            int64_t count_by_time_bucket_size
+            int64_t count_by_time_bucket_size_ms
     ) -> std::optional<AggregationType>;
 
     /**
