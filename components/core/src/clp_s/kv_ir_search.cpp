@@ -257,8 +257,7 @@ auto search_kv_ir_stream(
                     &output_handler_options
             );
     auto const results_cache_aggregation_requested{
-            nullptr != results_cache_options
-            && results_cache_options->aggregation_type.has_value()
+            nullptr != results_cache_options && results_cache_options->aggregation_type.has_value()
     };
     auto const* stdout_options
             = std::get_if<CommandLineArguments::StdoutOutputHandlerOptions>(&output_handler_options);

@@ -247,16 +247,17 @@ bool search_archive(
                                 -> void {
                             if (CommandLineArguments::AggregationType::Count
                                 == options.aggregation_type) {
-                                output_handler
-                                        = std::make_unique<clp_s::CountReducerOutputHandler>(
-                                                reducer_socket_fd
-                                        );
+                                output_handler = std::make_unique<clp_s::CountReducerOutputHandler>(
+                                        reducer_socket_fd
+                                );
                             } else if (CommandLineArguments::AggregationType::CountByTime
                                        == options.aggregation_type)
                             {
-                                output_handler = std::make_unique<
-                                        clp_s::CountByTimeReducerOutputHandler
-                                >(reducer_socket_fd, options.count_by_time_bucket_size);
+                                output_handler
+                                        = std::make_unique<clp_s::CountByTimeReducerOutputHandler>(
+                                                reducer_socket_fd,
+                                                options.count_by_time_bucket_size
+                                        );
                             } else {
                                 SPDLOG_ERROR("Unhandled aggregation type.");
                                 output_handler = nullptr;
