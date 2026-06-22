@@ -72,6 +72,10 @@ spec:
               value: "compression-scheduler"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "compressionScheduler"
+            ) | nindent 10 }}
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-scheduler"
