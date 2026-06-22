@@ -248,14 +248,14 @@ bool search_archive(
                             if (CommandLineArguments::AggregationType::Count
                                 == options.aggregation_type) {
                                 output_handler
-                                        = std::make_unique<clp_s::CountToReducerOutputHandler>(
+                                        = std::make_unique<clp_s::CountReducerOutputHandler>(
                                                 reducer_socket_fd
                                         );
                             } else if (CommandLineArguments::AggregationType::CountByTime
                                        == options.aggregation_type)
                             {
                                 output_handler = std::make_unique<
-                                        clp_s::CountByTimeToReducerOutputHandler
+                                        clp_s::CountByTimeReducerOutputHandler
                                 >(reducer_socket_fd, options.count_by_time_bucket_size);
                             } else {
                                 SPDLOG_ERROR("Unhandled aggregation type.");
@@ -276,17 +276,19 @@ bool search_archive(
                                        == options.aggregation_type.value())
                             {
                                 output_handler
-                                        = std::make_unique<clp_s::CountToResultsCacheOutputHandler>(
+                                        = std::make_unique<clp_s::CountResultsCacheOutputHandler>(
                                                 options.uri,
-                                                options.collection
+                                                options.collection,
+                                                std::string{archive_reader->get_archive_id()}
                                         );
                             } else if (CommandLineArguments::AggregationType::CountByTime
                                        == options.aggregation_type.value())
                             {
                                 output_handler = std::make_unique<
-                                        clp_s::CountByTimeToResultsCacheOutputHandler
+                                        clp_s::CountByTimeResultsCacheOutputHandler
                                 >(options.uri,
                                   options.collection,
+                                  std::string{archive_reader->get_archive_id()},
                                   options.count_by_time_bucket_size);
                             } else {
                                 SPDLOG_ERROR("Unhandled aggregation type.");
