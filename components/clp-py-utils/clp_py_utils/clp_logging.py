@@ -1,17 +1,12 @@
+"""Shared logging helpers for CLP Python components."""
+
 import logging
 import os
 import pathlib
-from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import get_args, Literal
 
 import structlog
-from structlog.contextvars import (
-    bind_contextvars,
-    get_contextvars,
-    merge_contextvars,
-    reset_contextvars,
-)
+from structlog.typing import Processor
 
 LoggingLevel = Literal[
     "INFO",
@@ -22,65 +17,53 @@ LoggingLevel = Literal[
     "CRITICAL",
 ]
 
-_TIMESTAMP_PROCESSOR = structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp")
-_JSON_RENDERER = structlog.processors.JSONRenderer()
+_STRUCTLOG_PROCESSORS: tuple[Processor, ...] = (
+    structlog.stdlib.add_logger_name,
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.PositionalArgumentsFormatter(),
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.format_exc_info,
+    structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
+)
+_FOREIGN_PRE_CHAIN: tuple[Processor, ...] = (
+    structlog.stdlib.add_logger_name,
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.ExtraAdder(),
+    structlog.stdlib.PositionalArgumentsFormatter(),
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.format_exc_info,
+    structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
+)
 
-
-@contextmanager
-def bind_log_context(**fields: object) -> Iterator[None]:
-    """
-    Adds CLP correlation fields to log records emitted in the current context.
-
-    Fields with ``None`` values are ignored. Nested contexts merge with outer contexts and restore
-    the previous context on exit.
-    """
-    tokens = bind_contextvars(**{key: value for key, value in fields.items() if value is not None})
-    try:
-        yield
-    finally:
-        reset_contextvars(**tokens)
-
-
-def get_log_context() -> dict[str, object]:
-    """Returns a copy of the active CLP log correlation context."""
-    return get_contextvars()
-
-
-class _ClpJsonFormatter(logging.Formatter):
-    """Formats log records as JSON and includes active CLP correlation fields."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        method_name = record.levelname.lower()
-        event_dict: dict[str, object] = {
-            "event": record.getMessage(),
-            "logger": record.name,
-            "level": method_name,
-        }
-        if record.exc_info:
-            event_dict["exception"] = self.formatException(record.exc_info)
-        if record.stack_info:
-            event_dict["stack"] = self.formatStack(record.stack_info)
-
-        merge_contextvars(None, method_name, event_dict)
-        _TIMESTAMP_PROCESSOR(None, method_name, event_dict)
-        rendered_log = _JSON_RENDERER(None, method_name, event_dict)
-        if isinstance(rendered_log, bytes):
-            return rendered_log.decode("utf-8")
-        return rendered_log
+structlog.configure(
+    processors=[
+        *_STRUCTLOG_PROCESSORS,
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
 
 
 def get_logging_formatter() -> logging.Formatter:
-    return _ClpJsonFormatter()
+    return structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=_FOREIGN_PRE_CHAIN,
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            structlog.processors.JSONRenderer(),
+        ],
+    )
 
 
-def set_formatter_on_handlers(logger: logging.Logger) -> None:
-    """Sets CLP's logging formatter on all existing handlers for a logger."""
+def set_json_formatter_on_handlers(logger: logging.Logger) -> None:
+    """Set CLP's JSON log formatter on all handlers currently attached to *logger*."""
     formatter = get_logging_formatter()
     for handler in logger.handlers:
         handler.setFormatter(formatter)
 
 
 def get_logger(name: str) -> logging.Logger:
+    """Return a logger configured with CLP's console formatter."""
     logger = logging.getLogger(name)
     # Setup console logging
     logging_console_handler = logging.StreamHandler()
@@ -96,7 +79,7 @@ def set_logging_level(logger: logging.Logger, level: str | None) -> None:
         logger.setLevel(logging.INFO)
         return
     if level not in get_args(LoggingLevel):
-        logger.warning(f"Invalid logging level: {level}, using INFO as default")
+        logger.warning("Invalid logging level: %s, using INFO as default", level)
         logger.setLevel(logging.INFO)
         return
 
