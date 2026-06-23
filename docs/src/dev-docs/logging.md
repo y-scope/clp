@@ -5,21 +5,22 @@ summarizes the current behavior and the controls developers/operators should use
 
 ## Component summary
 
-| Component family              | Examples                                                            | Logger                                | Format                           | Level control              |
-|-------------------------------|---------------------------------------------------------------------|---------------------------------------|----------------------------------|----------------------------|
-| Python orchestration services | Schedulers, workers, reducer wrapper, garbage collector, MCP server | `clp_py_utils.clp_logging`            | JSON                             | `CLP_LOGGING_LEVEL`        |
-| Rust HTTP services            | API server, log ingestor                                            | `clp_rust_utils::logging` / `tracing` | JSON                             | `RUST_LOG`                 |
-| WebUI server                  | Fastify server                                                      | Fastify/Pino                          | JSON in prod; pretty text in dev | `LOG_LEVEL`                |
-| WebUI client                  | Browser app                                                         | Browser console                       | Browser console output           | Browser/devtools dependent |
-| Native core binaries          | `clp`, `clp-s`, `glt`, native `reducer_server`                      | `spdlog`                              | Text                             | Binary-specific            |
-| Package/setup tools           | Package controller, DB initialization scripts                       | Python stdlib logging                 | Text                             | Script-specific            |
+| Component family              | Examples                                                            | Logger                                                    | Format                           | Level control              |
+|-------------------------------|---------------------------------------------------------------------|-----------------------------------------------------------|----------------------------------|----------------------------|
+| Python orchestration services | Schedulers, workers, reducer wrapper, garbage collector, MCP server | [`clp_py_utils.clp_logging`][clp-py-logging]              | JSON                             | `CLP_LOGGING_LEVEL`        |
+| Rust HTTP services            | API server, log ingestor                                            | [`clp_rust_utils::logging`][clp-rust-logging] / `tracing` | JSON                             | `RUST_LOG`                 |
+| WebUI server                  | Fastify server                                                      | Fastify/Pino                                              | JSON in prod; pretty text in dev | `LOG_LEVEL`                |
+| WebUI client                  | Browser app                                                         | Browser console                                           | Browser console output           | Browser/devtools dependent |
+| Native core binaries          | `clp`, `clp-s`, `glt`, native `reducer_server`                      | `spdlog`                                                  | Text                             | Binary-specific            |
+| Package/setup tools           | Package controller, DB initialization scripts                       | Python stdlib logging                                     | Text                             | Script-specific            |
 
 There is no single project-wide JSON schema. Python, Rust, and Pino logs are all line-delimited JSON
 in packaged non-interactive service runtimes, but each stack uses its own field names.
 
 ## Python orchestration services
 
-These services use `clp_py_utils.clp_logging` and emit one JSON object per log record:
+These services use [`clp_py_utils.clp_logging`][clp-py-logging] and emit one JSON object per log
+record:
 
 * `compression_scheduler`
 * `query_scheduler`
@@ -58,7 +59,8 @@ Controls:
 
 ## Rust HTTP services
 
-`api_server` and `log_ingestor` use `clp_rust_utils::logging::set_up_logging`, which configures
+`api_server` and `log_ingestor` use
+[`clp_rust_utils::logging::set_up_logging`][clp-rust-logging], which configures
 `tracing_subscriber` JSON output.
 
 Rust service records include `timestamp`, `level`, `fields`, `filename`, and `line_number`.
@@ -100,10 +102,14 @@ JSON contracts.
 
 ## Development guidance
 
-* New Python orchestration services should use `clp_py_utils.clp_logging.get_logger` and
-  `clp_py_utils.clp_logging.configure_logging`.
-* New Rust services should use `clp_rust_utils::logging::set_up_logging`.
+* New Python orchestration services should use 
+  [`clp_py_utils.clp_logging.get_logger`][clp-py-logging] and
+  [`clp_py_utils.clp_logging.configure_logging`][clp-py-logging].
+* New Rust services should use [`clp_rust_utils::logging::set_up_logging`][clp-rust-logging].
 * WebUI server code should log through Fastify's logger (`request.log` or `app.log`).
 * WebUI client `console.*` calls should stay limited to browser diagnostics.
 * Native core binaries should keep their existing `spdlog` setup unless a separate change migrates
   them to structured logging.
+
+[clp-py-logging]: https://github.com/y-scope/clp/blob/main/components/clp-py-utils/clp_py_utils/clp_logging.py
+[clp-rust-logging]: https://github.com/y-scope/clp/blob/main/components/clp-rust-utils/src/logging.rs
