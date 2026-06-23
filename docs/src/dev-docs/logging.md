@@ -24,7 +24,11 @@ service logs use UTC ISO-8601 timestamps, Rust service logs use `tracing_subscri
 WebUI server logs use Pino epoch-millisecond timestamps. Prefer converting to local time in the log
 viewer or aggregator rather than emitting ambiguous local-time strings from services.
 
-## Python orchestration services
+## Component details
+
+The following sections describe the behavior and controls for each logging stack.
+
+### Python orchestration services
 
 These services use [`clp_py_utils.clp_logging`][clp-py-logging] and emit one JSON object per log
 record:
@@ -64,7 +68,7 @@ Controls:
 * `CLP_LOGS_DIR`, when set, adds a file handler at `<CLP_LOGS_DIR>/<component_name>.log` in
   addition to stdout.
 
-## Rust HTTP services
+### Rust HTTP services
 
 `api_server` and `log_ingestor` use
 [`clp_rust_utils::logging::set_up_logging`][clp-rust-logging], which configures
@@ -82,7 +86,7 @@ In the package manifests, `log_ingestor` exposes a deployment setting through
 `CLP_LOG_INGESTOR_LOGGING_LEVEL` in Docker Compose and `clpConfig.log_ingestor.logging_level` in
 Helm. `api_server` currently runs with `RUST_LOG=INFO`.
 
-## WebUI
+### WebUI
 
 The WebUI server uses Fastify's Pino logger:
 
@@ -93,19 +97,11 @@ The WebUI server uses Fastify's Pino logger:
 The WebUI client logs to the browser console. Treat client `console.*` output as browser diagnostics,
 not service logs.
 
-## Native core binaries and package tools
+### Native core binaries and package tools
 
 Native core binaries use `spdlog` text output. Package controller commands and one-shot setup scripts
 also use human-readable stdlib logging. These tools are not covered by the Python/Rust/WebUI service
 JSON contracts.
-
-## Deployment notes
-
-* Docker Compose service stdout is available through `docker compose logs`.
-  * Compose services that set `CLP_LOGS_DIR` also write under the mounted CLP log directory, which
-    defaults to `./var/log` through `CLP_LOGS_DIR_HOST`.
-* Helm deployments should primarily use pod stdout through `kubectl logs` or the cluster log
-  collector. File logging is template-specific.
 
 ## Development guidance
 
@@ -118,5 +114,13 @@ JSON contracts.
 * Native core binaries should keep their existing `spdlog` setup unless a separate change migrates
   them to structured logging.
 
-[clp-py-logging]: https://github.com/y-scope/clp/blob/main/components/clp-py-utils/clp_py_utils/clp_logging.py
-[clp-rust-logging]: https://github.com/y-scope/clp/blob/main/components/clp-rust-utils/src/logging.rs
+## Deployment notes
+
+* Docker Compose service stdout is available through `docker compose logs`.
+  * Compose services that set `CLP_LOGS_DIR` also write under the mounted CLP log directory, which
+    defaults to `./var/log` through `CLP_LOGS_DIR_HOST`.
+* Helm deployments should primarily use pod stdout through `kubectl logs` or the cluster log
+  collector. File logging is template-specific.
+
+[clp-py-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-py-utils/clp_py_utils/clp_logging.py
+[clp-rust-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-rust-utils/src/logging.rs
