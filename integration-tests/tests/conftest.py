@@ -73,16 +73,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-def pytest_itemcollected(item: pytest.Item) -> None:
-    """
-    Applies ANSI bold and blue formatting to each collected test's node ID, for the purposes of
-    test output readability.
-
-    :param item:
-    """
-    item._nodeid = f"{BOLD}{BLUE}{item.nodeid}{RESET}"  # noqa: SLF001
-
-
 @pytest.hookimpl(tryfirst=True)
 def pytest_report_header(config: pytest.Config) -> str:  # noqa: ARG001
     """

@@ -15,7 +15,7 @@ def log_test_lifecycle(request: pytest.FixtureRequest) -> Iterator[None]:
 
     :param request:
     """
-    test_name = request.node.originalname
+    test_name = request.node.nodeid
     logger.info("Starting test: '%s'", test_name)
     yield
     logger.info("Test complete: '%s'", test_name)
