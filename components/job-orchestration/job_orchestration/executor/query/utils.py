@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
+from clp_py_utils.clp_logging import bind_log_context
 from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.executor.utils import log_file_contents
@@ -53,6 +54,8 @@ def run_query_task(
 ) -> tuple[QueryTaskResult, str]:
     clo_log_path = get_task_log_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
+    clo_log_file.write(f"job_id={job_id} task_id={task_id} task_name={task_name}\n")
+    clo_log_file.flush()
 
     task_status = QueryTaskStatus.RUNNING
     update_query_task_metadata(
@@ -69,34 +72,36 @@ def run_query_task(
         env=env_vars,
     )
 
-    def sigterm_handler(_signo, _stack_frame):
-        logger.debug("Entered sigterm handler")
-        if task_proc.poll() is None:
-            logger.debug(f"Trying to kill {task_name} process")
-            # Kill the process group in case the task process also forked
-            os.killpg(os.getpgid(task_proc.pid), signal.SIGTERM)
-            os.waitpid(task_proc.pid, 0)
-            logger.info(f"Cancelling {task_name} task.")
-        # Add 128 to follow convention for exit codes from signals
-        # https://tldp.org/LDP/abs/html/exitcodes.html#AEN23549
-        sys.exit(_signo + 128)
+    with bind_log_context(clp_subprocess_pid=task_proc.pid):
 
-    # Register the function to kill the child process at exit
-    signal.signal(signal.SIGTERM, sigterm_handler)
+        def sigterm_handler(_signo, _stack_frame):
+            logger.debug("Entered sigterm handler")
+            if task_proc.poll() is None:
+                logger.debug(f"Trying to kill {task_name} process")
+                # Kill the process group in case the task process also forked
+                os.killpg(os.getpgid(task_proc.pid), signal.SIGTERM)
+                os.waitpid(task_proc.pid, 0)
+                logger.info(f"Cancelling {task_name} task.")
+            # Add 128 to follow convention for exit codes from signals
+            # https://tldp.org/LDP/abs/html/exitcodes.html#AEN23549
+            sys.exit(_signo + 128)
 
-    logger.info(f"Waiting for {task_name} to finish")
-    # `communicate` is equivalent to `wait` in this case, but avoids deadlocks when piping to
-    # stdout/stderr.
-    stdout_data, _ = task_proc.communicate()
-    return_code = task_proc.returncode
-    if 0 != return_code:
-        task_status = QueryTaskStatus.FAILED
-        logger.error(
-            f"{task_name} task {task_id} failed for job {job_id} - return_code={return_code}"
-        )
-    else:
-        task_status = QueryTaskStatus.SUCCEEDED
-        logger.info(f"{task_name} task {task_id} completed for job {job_id}")
+        # Register the function to kill the child process at exit
+        signal.signal(signal.SIGTERM, sigterm_handler)
+
+        logger.info(f"Waiting for {task_name} to finish")
+        # `communicate` is equivalent to `wait` in this case, but avoids deadlocks when piping to
+        # stdout/stderr.
+        stdout_data, _ = task_proc.communicate()
+        return_code = task_proc.returncode
+        if 0 != return_code:
+            task_status = QueryTaskStatus.FAILED
+            logger.error(
+                f"{task_name} task {task_id} failed for job {job_id} - return_code={return_code}"
+            )
+        else:
+            task_status = QueryTaskStatus.SUCCEEDED
+            logger.info(f"{task_name} task {task_id} completed for job {job_id}")
 
     clo_log_file.close()
     if 0 != return_code:

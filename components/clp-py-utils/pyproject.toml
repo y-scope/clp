@@ -15,6 +15,7 @@ dependencies = [
     "result>=0.17.0",
     "sqlalchemy>=2.0.46",
     "StrEnum>=0.4.15",
+    "structlog>=25.5.0",
 ]
 
 [build-system]
