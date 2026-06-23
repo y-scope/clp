@@ -17,6 +17,13 @@ summarizes the current behavior and the controls developers/operators should use
 There is no single project-wide JSON schema. Python, Rust, and Pino logs are all line-delimited JSON
 in packaged non-interactive service runtimes, but each stack uses its own field names.
 
+## Timestamp convention
+
+Structured service logs should use UTC or another unambiguous absolute timestamp format. Python
+service logs use UTC ISO-8601 timestamps, Rust service logs use `tracing_subscriber` timestamps, and
+WebUI server logs use Pino epoch-millisecond timestamps. Prefer converting to local time in the log
+viewer or aggregator rather than emitting ambiguous local-time strings from services.
+
 ## Python orchestration services
 
 These services use [`clp_py_utils.clp_logging`][clp-py-logging] and emit one JSON object per log
