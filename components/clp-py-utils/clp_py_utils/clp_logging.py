@@ -18,6 +18,8 @@ LoggingLevel = Literal[
 ]
 
 _STRUCTLOG_PROCESSORS: tuple[Processor, ...] = (
+    structlog.contextvars.merge_contextvars,
+    structlog.stdlib.filter_by_level,
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
     structlog.stdlib.PositionalArgumentsFormatter(),
@@ -26,6 +28,7 @@ _STRUCTLOG_PROCESSORS: tuple[Processor, ...] = (
     structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
 )
 _FOREIGN_PRE_CHAIN: tuple[Processor, ...] = (
+    structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
     structlog.stdlib.ExtraAdder(),
