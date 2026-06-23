@@ -13,6 +13,7 @@
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/search/ast/FunctionCall.hpp>
 #include <clp_s/TraceableException.hpp>
 
 namespace clp_s::search {
@@ -43,6 +44,12 @@ public:
         Shape = 4,
     };
 
+    enum class OutputType : uint8_t {
+        Default,
+        Decomposed,
+        Shape
+    };
+
     using node_projection_mask_t = std::underlying_type_t<NodeProjection>;
 
     // Constructors
@@ -59,21 +66,27 @@ public:
 
     // Methods
     /**
-     * Adds a column to the set of columns that should be included in the projected results
-     * @param column
-     * @param is_decomposed Whether this column descriptor requests decomposed output (shape +
-     * leaf values).
-     * @param is_shape Whether this column descriptor requests only the shape.
+     * Adds a column to the set of columns that should be included in the projected results.
+     * @param column The column descriptor to project.
+     * @param output_type The projection output type (Default, Decomposed, or Shape).
      * @throws OperationFailed if `column` contains a wildcard
      * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns
-     * @throws OperationFailed if `column` is identical to a previously added column
-     * @throws std::runtime_error if both `is_decomposed` and `is_shape` are true
+     * @throws OperationFailed if `column` is identical to a previously added column with the same
+     * output type.
      */
-    auto add_column(
-            std::shared_ptr<ast::ColumnDescriptor> column,
-            bool is_decomposed = false,
-            bool is_shape = false
-    ) -> void;
+    auto add_column(std::shared_ptr<ast::ColumnDescriptor> column, OutputType output_type) -> void;
+
+    /**
+     * Adds a projection column from a FunctionCall (e.g., shape(column) or decompose(column)).
+     * @param function_call The function call expression.
+     * @throws OperationFailed if the function name is not recognized.
+     * @throws OperationFailed if the argument is not a ColumnDescriptor.
+     * @throws OperationFailed if the column contains a wildcard.
+     * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns.
+     * @throws OperationFailed if the column is identical to a previously added column with the same
+     * output type.
+     */
+    auto add_column(std::shared_ptr<ast::FunctionCall> function_call) -> void;
 
     /**
      * Gets the current projection mode.
@@ -114,7 +127,7 @@ public:
     /**
      * Checks whether a column corresponding to given leaf node should be included in the output
      * @param node_id
-     * @return true if the column should be included in the output, false otherwise
+     * @return true if the column should be included in the output, false if not.
      */
     [[nodiscard]] auto matches_node(SchemaNode::id_t node_id) const -> bool {
         return Mode::ReturnAllColumns == m_projection_mode || m_matching_nodes.contains(node_id);
@@ -122,12 +135,6 @@ public:
 
 private:
     // Types
-    enum class OutputType : uint8_t {
-        Default,
-        Decomposed,
-        Shape
-    };
-
     struct TargetColumn {
         // Constructors
         TargetColumn(

@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 #include <fmt/format.h>
@@ -11,37 +10,18 @@
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/search/ast/FunctionCall.hpp>
 #include <clp_s/TraceableException.hpp>
 #include <clpp/Defs.hpp>
 
 namespace clp_s::search {
-auto Projection::add_column(
-        // Remove once clang-tidy config is updated.
-        // NOLINTNEXTLINE(performance-unnecessary-value-param)
-        std::shared_ptr<ast::ColumnDescriptor> column,
-        bool is_decomposed,
-        bool is_shape
-) -> void {
-    if (is_decomposed && is_shape) {
-        throw std::runtime_error(
-                fmt::format(
-                        "A projection column can not have both {} and {} suffixes.",
-                        clpp::cDecomposedSuffix,
-                        clpp::cShapeSuffix
-                )
-        );
-    }
+auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column, OutputType output_type)
+        -> void {
     if (column->is_unresolved_descriptor()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
     if (Mode::ReturnAllColumns == m_projection_mode) {
         throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
-    }
-    auto output_type{OutputType::Default};
-    if (is_decomposed) {
-        output_type = OutputType::Decomposed;
-    } else if (is_shape) {
-        output_type = OutputType::Shape;
     }
     if (false == m_allow_duplicate_columns) {
         for (auto const& existing : m_columns) {
@@ -51,6 +31,31 @@ auto Projection::add_column(
         }
     }
     m_columns.emplace_back(TargetColumn{column, output_type, {}});
+}
+
+auto Projection::add_column(std::shared_ptr<ast::FunctionCall> function_call) -> void {
+    auto const& function_name{function_call->get_function_name()};
+    auto const& args{function_call->get_args()};
+
+    if (args.size() != 1) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
+    auto column{std::dynamic_pointer_cast<ast::ColumnDescriptor>(args.at(0))};
+    if (!column) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
+    OutputType output_type{OutputType::Default};
+    if (function_name == clpp::cShapeFunction) {
+        output_type = OutputType::Shape;
+    } else if (function_name == clpp::cDecomposeFunction) {
+        output_type = OutputType::Decomposed;
+    } else {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
+    add_column(column, output_type);
 }
 
 auto Projection::is_projected_as(SchemaNode::id_t node_id, NodeProjection projection) const
@@ -111,9 +116,13 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
                 == collect_structural_projections(tree, entry.m_matched_nodes, entry.m_output_type))
             {
                 throw std::runtime_error(
-                        std::string("The @")
-                        + (OutputType::Decomposed == entry.m_output_type ? "decomposed" : "shape")
-                        + " suffix can only be applied to LogMessage or ParentRule columns."
+                        fmt::format(
+                                "{}(<col>) can only be applied to LogMessage or ParentRule "
+                                "columns.",
+                                OutputType::Decomposed == entry.m_output_type
+                                        ? clpp::cDecomposeFunction
+                                        : clpp::cShapeFunction
+                        )
                 );
             }
         } else {
@@ -179,7 +188,7 @@ auto Projection::resolve_column(SchemaTree const& tree, ast::ColumnDescriptor& c
         }
 
         if (false == matched_any) {
-            break;
+            return {};
         }
     }
     return matching_nodes_for_column;

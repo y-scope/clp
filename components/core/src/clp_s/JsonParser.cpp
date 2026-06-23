@@ -1532,10 +1532,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
             break;
         }
 
-        auto parent_node_id{get_parent_schema_node(
-                match.value(),
-                log_msg_node_id
-        )};
+        auto parent_node_id{get_parent_schema_node(match.value(), log_msg_node_id)};
 
         auto const rule_name{match->ffi_pointers.rule_name.as_cpp_view()};
         auto const lexeme{match->ffi_pointers.lexeme.as_cpp_view()};
@@ -1632,10 +1629,9 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     return ystdlib::error_handling::success();
 }
 
-auto JsonParser::get_parent_schema_node(
-        log_surgeon::Match const match,
-        SchemaNode::id_t root_node_id
-) -> SchemaNode::id_t {
+auto
+JsonParser::get_parent_schema_node(log_surgeon::Match const match, SchemaNode::id_t root_node_id)
+        -> SchemaNode::id_t {
     if (0 == match.sub_rule_id) {
         return root_node_id;
     }

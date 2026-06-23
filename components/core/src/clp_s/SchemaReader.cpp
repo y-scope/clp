@@ -1028,7 +1028,8 @@ void SchemaReader::emit_parent_rule_shape(
                         && match.m_start + match.m_size <= log_shape_template.size())
                     {
                         m_json_serializer.add_constant_string_field(
-                                std::string(node.get_key_name()) + std::string(clpp::cShapeSuffix),
+                                std::string(node.get_key_name()) + "."
+                                        + std::string(clpp::cShapeFunction),
                                 log_shape_template.substr(match.m_start, match.m_size)
                         );
                     }
@@ -1045,7 +1046,7 @@ auto SchemaReader::emit_log_shape(clpp::log_shape_id_t log_shape_id)
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
     auto const& log_shape_str{m_log_shape_dict->get_value(log_shape_id)};
-    m_json_serializer.add_constant_string_field(clpp::cShapeSuffix, log_shape_str);
+    m_json_serializer.add_constant_string_field(clpp::cShapeFunction, log_shape_str);
     return ystdlib::error_handling::success();
 }
 
@@ -1221,11 +1222,9 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     }
     auto const object_key{
             modes.effective_has_default
-                    ? std::string(key_name)
-                              + std::string(
-                                      has_any_decomposed ? clpp::cDecomposedSuffix
-                                                         : clpp::cShapeSuffix
-                              )
+                    ? std::string(key_name) + "."
+                              + (has_any_decomposed ? std::string(clpp::cDecomposeFunction)
+                                                    : std::string(clpp::cShapeFunction))
                     : std::string(key_name)
     };
 

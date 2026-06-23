@@ -15,15 +15,17 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
+#include <string_utils/string_utils.hpp>
 
 #include <clp_s/ErrorCode.hpp>
 #include <clpp/Defs.hpp>
-#include <string_utils/string_utils.hpp>
 
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
 #include <clp/type_utils.hpp>
+#include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/search/ast/FunctionCall.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
 #include <clp_s/search/TelemetryContext.hpp>
 
@@ -31,7 +33,6 @@
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
 #include "CommandLineArguments.hpp"
-#include "Defs.h"
 #include "Defs.hpp"
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
@@ -40,7 +41,6 @@
 #include "search/AddTimestampConditions.hpp"
 #include "search/ast/EmptyExpr.hpp"
 #include "search/ast/Expression.hpp"
-#include "search/ast/SearchUtils.hpp"
 #include "search/ast/SetTimestampLiteralPrecision.hpp"
 #include "search/ast/TimestampLiteral.hpp"
 #include "search/EvaluateRangeIndexFilters.hpp"
@@ -267,40 +267,23 @@ bool search_archive(
     );
     try {
         for (auto const& column : command_line_arguments.get_projection_columns()) {
-            bool is_decomposed{false};
-            bool is_shape{false};
-            std::string column_str{column};
-            if (column_str.ends_with(clpp::cDecomposedSuffix)) {
-                is_decomposed = true;
-                column_str.resize(column_str.size() - clpp::cDecomposedSuffix.size());
-            } else if (column_str.ends_with(clpp::cShapeSuffix)) {
-                is_shape = true;
-                column_str.resize(column_str.size() - clpp::cShapeSuffix.size());
-            }
-
-            std::vector<std::string> descriptor_tokens;
-            std::string descriptor_namespace;
-            if (false
-                == clp_s::search::ast::tokenize_column_descriptor(
-                        column_str,
-                        descriptor_tokens,
-                        descriptor_namespace
-                ))
-            {
+            auto parsed{kql::parse_projection_column(column)};
+            if (nullptr == parsed) {
                 record_error_and_log(
-                        "projection column tokenization failed",
-                        fmt::format("Can not tokenize invalid column: \"{}\"", column)
+                        "parsing projection column failed",
+                        fmt::format("Can not parse projection column: \"{}\"", column)
                 );
                 return false;
             }
-            projection->add_column(
-                    ast::ColumnDescriptor::create_from_escaped_tokens(
-                            descriptor_tokens,
-                            descriptor_namespace
-                    ),
-                    is_decomposed,
-                    is_shape
-            );
+            if (auto func_call{std::dynamic_pointer_cast<ast::FunctionCall>(parsed)}) {
+                projection->add_column(func_call);
+            } else if (auto col_desc{std::dynamic_pointer_cast<ast::ColumnDescriptor>(parsed)}) {
+                projection->add_column(col_desc, Projection::OutputType::Default);
+            } else {
+                throw std::runtime_error{
+                        fmt::format("Unexpected projection column type for: \"{}\"", column)
+                };
+            }
         }
         projection->resolve_columns(*archive_reader->get_schema_tree());
     } catch (std::exception const& e) {
@@ -377,9 +360,10 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             for (clpp::log_shape_id_t i{0}; i < shape_stats.size(); ++i) {
                 output_handler.value()->write(
                         fmt::format(
-                                "{{\"id\":{},\"count\":{},\"@shape\":\"{}\"}}\n",
+                                "{{\"id\":{},\"count\":{},\"{}\":\"{}\"}}\n",
                                 i,
                                 shape_stats.at(i).get_count(),
+                                clpp::cShapeFunction,
                                 shape_dict->get_entry(i).get_value()
                         )
                 );
@@ -587,7 +571,10 @@ int main(int argc, char const* argv[]) {
             }
             archive_reader->close();
         }
-        SPDLOG_INFO("[stats] searched messages: {}", clp_s::search::QueryRunner::m_total_messages_searched);
+        SPDLOG_INFO(
+                "[stats] searched messages: {}",
+                clp_s::search::QueryRunner::m_total_messages_searched
+        );
         SPDLOG_INFO("[stats] int filters: {}", clp_s::search::QueryRunner::m_int_col_checks);
         SPDLOG_INFO("[stats] float filters: {}", clp_s::search::QueryRunner::m_float_col_checks);
         SPDLOG_INFO("[stats] str filters: {}", clp_s::search::QueryRunner::m_str_col_checks);

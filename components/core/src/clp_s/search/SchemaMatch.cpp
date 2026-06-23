@@ -65,7 +65,7 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     if (constants::cMetadataSubtreeType == subtree_type) {
         return NodeType::Metadata;
     }
-    if (constants::cObjectSubtreeType == subtree_type) {
+    if (constants::cObjectSubtreeType == subtree_type || clpp::cShapeFunction == subtree_type) {
         return NodeType::Object;
     }
     return NodeType::Unknown;
@@ -1032,9 +1032,6 @@ SchemaMatch::lookup_decomposed_query(std::string const& qualified_name, std::str
         }
         m_parser = std::make_unique<log_surgeon::ParserHandle>(m_parsing_spec);
         m_parsing_spec = nullptr;
-        if (nullptr == m_parser) {
-            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-        }
     }
 
     return &m_decomposed_query_cache
@@ -1068,18 +1065,38 @@ auto SchemaMatch::resolve_clpp_query(
     }
 
     auto qualified_name{m_tree->build_qualified_name(root_node_id)};
+
+    auto match_and_create_exists_filter{
+            [&](auto const& matcher) -> std::shared_ptr<ast::Expression> {
+                auto matched_schema_ids{
+                        find_schemas_matching_predicate(qualified_name, log_shape_dict, matcher)
+                };
+                if (matched_schema_ids.empty()) {
+                    return nullptr;
+                }
+                auto clpp_column{column->copy_with_new_id()};
+                register_clpp_resolved_column(clpp_column, root_node_id, matched_schema_ids);
+                return FilterExpr::create(
+                        clpp_column,
+                        FilterOperation::EXISTS,
+                        filter.is_inverted()
+                );
+            }
+    };
+
     if (FilterOperation::EXISTS == filter.get_operation()) {
-        auto matched_schema_ids{find_schemas_matching_predicate(
-                qualified_name,
-                log_shape_dict,
-                [](std::string_view) -> bool { return true; }
-        )};
-        if (matched_schema_ids.empty()) {
-            return nullptr;
-        }
-        auto clpp_column{column->copy_with_new_id()};
-        register_clpp_resolved_column(clpp_column, root_node_id, matched_schema_ids);
-        return FilterExpr::create(clpp_column, FilterOperation::EXISTS, filter.is_inverted());
+        return match_and_create_exists_filter([](std::string_view) -> bool { return true; });
+    }
+
+    if (column->get_subtree_type().has_value()
+        && clpp::cShapeFunction == column->get_subtree_type().value())
+    {
+        auto& operand{dynamic_cast<ast::Literal&>(*filter.get_operand())};
+        std::string query;
+        operand.as_var_string(query, filter.get_operation());
+        return match_and_create_exists_filter([&query](std::string_view shape_str) -> bool {
+            return clp::string_utils::wildcard_match_unsafe(shape_str, query);
+        });
     }
 
     auto& operand{dynamic_cast<ast::Literal&>(*filter.get_operand())};

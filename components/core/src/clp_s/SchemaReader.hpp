@@ -457,7 +457,7 @@ private:
     ) -> ChildProjectionModes;
 
     /**
-     * Emits the default reconstruction and/or @shape field for a ParentRule node.
+     * Emits the default reconstruction and/or shape field for a ParentRule node.
      * @param log_msg_node_id The LogMessage node ID.
      * @param global_column_id The ParentRule column ID.
      * @param log_shape_id The log shape ID.
@@ -473,7 +473,7 @@ private:
     );
 
     /**
-     * Emits the @shape constant string field for a LogTypeID node.
+     * Emits the shape constant string field for a LogTypeID node.
      * @param log_shape_id The log shape ID.
      * @return A void result on success, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if the shape dictionary is not available.

@@ -172,8 +172,9 @@ private:
     ) -> std::unordered_set<int32_t>;
 
     /**
-     * Looks up a decomposed clpp query from the cache, lazily initializing the log-surgeon parser.
-     * The cache is keyed on the fully qualified column name and the raw query string.
+     * Looks up a decomposed clpp query from the cache, lazily initializing the log-surgeon
+     * parser and parsing specificatino on first use. The cache is keyed on the fully qualified
+     * column name and the raw query string.
      * @param qualified_name The fully qualified dot-separated column name (e.g.
      * "message.block_id").
      * @param query The raw CLP-string query text.

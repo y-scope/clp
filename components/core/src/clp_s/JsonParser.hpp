@@ -234,10 +234,8 @@ private:
     auto parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
             -> ystdlib::error_handling::Result<void>;
 
-    auto get_parent_schema_node(
-            log_surgeon::Match match,
-            SchemaNode::id_t parent_node_id
-    ) -> SchemaNode::id_t;
+    auto get_parent_schema_node(log_surgeon::Match match, SchemaNode::id_t parent_node_id)
+            -> SchemaNode::id_t;
 
     /**
      * Attempts to parse a string lexeme as a float and add it to the current parsed message
