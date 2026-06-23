@@ -5,6 +5,7 @@ from typing import Any
 
 import msgpack
 from celery.app.task import Task
+from celery.exceptions import SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
     Database,
@@ -203,14 +204,11 @@ def upload_results_to_s3(
     except Exception as err:
         logger.error(f"Failed to upload query results {dest_path}: {err}")
         task_results.status = QueryTaskStatus.FAILED
-        task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
     src_file.unlink()
     return
 
 
-@app.task(bind=True)
-def search(
-    self: Task,
+def search_entry_point(
     job_id: str,
     task_id: int,
     job_config_blob: bytes,
@@ -286,3 +284,29 @@ def search(
         upload_results_to_s3(task_results, s3_config, src_file, dest_path)
 
     return task_results.model_dump()
+
+
+@app.task(bind=True)
+def search(
+    self: Task,
+    job_id: str,
+    task_id: int,
+    job_config_blob: bytes,
+    archive_id: str,
+    clp_metadata_db_conn_params: dict,
+    results_cache_uri: str,
+    dataset: str | None = None,
+) -> dict[str, Any]:
+    try:
+        return search_entry_point(
+            job_id,
+            task_id,
+            job_config_blob,
+            archive_id,
+            clp_metadata_db_conn_params,
+            results_cache_uri,
+            dataset,
+        )
+    except SoftTimeLimitExceeded:
+        logger.exception(f"Search task job_id={job_id} task_id={task_id} exceeded soft time limit.")
+        raise

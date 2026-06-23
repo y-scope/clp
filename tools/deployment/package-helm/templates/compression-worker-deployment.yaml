@@ -25,7 +25,7 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: "compression-worker"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
@@ -41,10 +41,12 @@ spec:
               value: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
               value: "/var/log/compression_worker"
-            - name: "CLP_WORKER_LOG_PATH"
-              value: "/dev/stdout"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "compressionWorker"
+            ) | nindent 10 }}
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"
@@ -84,7 +86,10 @@ spec:
             "/opt/clp/lib/python3/site-packages/bin/celery",
             "-A", "job_orchestration.executor.compress",
             "worker",
-            "--concurrency", "{{ .Values.workerConcurrency }}",
+            "--concurrency", "{{ include "clp.schedulingSlotsPerPod" (dict
+              "root" .
+              "component" "compressionWorker"
+            ) }}",
             "--loglevel", "WARNING",
             "-Q", "compression",
             "-n", "compression-worker@%h"

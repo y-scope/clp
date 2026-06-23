@@ -33,7 +33,7 @@ spec:
         - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "api-server"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             {{- include "clp.telemetryEnv" . | nindent 12 }}
@@ -51,6 +51,10 @@ spec:
               value: "api-server"
             - name: "RUST_LOG"
               value: "INFO"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "apiServer"
+            ) | nindent 10 }}
           ports:
             - name: "api-server"
               containerPort: 3001

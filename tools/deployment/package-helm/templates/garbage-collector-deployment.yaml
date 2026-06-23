@@ -35,7 +35,7 @@ spec:
         - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "garbage-collector"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_PASS"
@@ -54,6 +54,10 @@ spec:
               value: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "garbageCollector"
+            ) | nindent 10 }}
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yaml"

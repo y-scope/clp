@@ -66,6 +66,8 @@ def test_clp_json_compression_json_multifile(
 
     logger.info("Compressing the 'json_multifile' dataset with the 'clp-json' package.")
     action = ClpAction.from_args(args)
+    result = action.verify_returncode()
+    assert result, result.failure_message
 
     logger.info("Verifying the compression of the 'json_multifile' dataset.")
     result = verify_compress_structured_clp_json(action, clp_package, json_multifile)
@@ -97,6 +99,8 @@ def test_clp_json_compression_text_multifile(
 
     logger.info("Compressing the 'text_multifile' dataset with the 'clp-json' package.")
     action = ClpAction.from_args(args)
+    result = action.verify_returncode()
+    assert result, result.failure_message
 
     logger.info("Verifying the compression of the 'text_multifile' dataset.")
     result = verify_compress_unstructured_clp_json(action, clp_package, text_multifile)

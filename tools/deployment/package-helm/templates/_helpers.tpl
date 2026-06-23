@@ -97,8 +97,37 @@ in controller.py, ensuring feature parity between Docker Compose and Helm deploy
 {{- $compressionWorkerReplicas := $compressionWorkerScheduling.replicas | default 1 | int -}}
 {{- $queryWorkerReplicas := .Values.scheduling.queryWorker.replicas | default 1 | int -}}
 {{- $reducerReplicas := .Values.scheduling.reducer.replicas | default 1 | int -}}
-{{- $workerConcurrency := .Values.workerConcurrency | default 8 | int -}}
-{{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $compressionWorkerReplicas $timestampNs $workerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $workerConcurrency $timestampNs $reducerReplicas $timestampNs $workerConcurrency $timestampNs -}}
+{{- $compressionWorkerConcurrency := include "clp.schedulingSlotsPerPod" (dict
+  "root" .
+  "component" "compressionWorker"
+) | int -}}
+{{- $queryWorkerConcurrency := include "clp.schedulingSlotsPerPod" (dict
+  "root" .
+  "component" "queryWorker"
+) | int -}}
+{{- $reducerConcurrency := include "clp.schedulingSlotsPerPod" (dict
+  "root" .
+  "component" "reducer"
+) | int -}}
+{{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $compressionWorkerReplicas $timestampNs $compressionWorkerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $queryWorkerConcurrency $timestampNs $reducerReplicas $timestampNs $reducerConcurrency $timestampNs -}}
+{{- end -}}
+
+{{/*
+Gets the effective slot count for a worker-like component.
+
+The `slotsPerPod` value is required for each component.
+
+@param {object} root Template context
+@param {string} component One of compressionWorker/queryWorker/reducer
+@return {int} Slot count for the component
+*/}}
+{{- define "clp.schedulingSlotsPerPod" -}}
+{{- $scheduling := index .root.Values.scheduling .component -}}
+{{- $slotsPerPod := $scheduling.slotsPerPod -}}
+{{- if not (hasKey $scheduling "slotsPerPod") -}}
+{{- fail (printf "scheduling.%s.slotsPerPod is required" .component) -}}
+{{- end -}}
+{{- $slotsPerPod | int -}}
 {{- end -}}
 
 {{/*
@@ -125,22 +154,30 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Creates image reference for the CLP Package.
+Creates a container image reference from .Values.image.
 
-@return {string} Full image reference (repository:tag)
+Renders repository@digest when "digest" is set; otherwise, renders repository:tag. clpPackage
+defaults to Chart.AppVersion when "tag" is omitted; other components require "tag".
+
+@param {object} root Root template context (required)
+@param {string} component Key under .Values.image (e.g., "clpPackage", "redis")
+@return {string} Full image reference (repository@digest or repository:tag)
 */}}
-{{- define "clp.image.ref" -}}
-{{- $tag := .Values.image.clpPackage.tag | default .Chart.AppVersion }}
-{{- printf "%s:%s" .Values.image.clpPackage.repository $tag }}
-{{- end }}
-
-{{/*
-Creates image reference for the kubectl image.
-
-@return {string} Full image reference (repository@digest)
-*/}}
-{{- define "clp.kubectl.image.ref" -}}
-{{- printf "%s@%s" .Values.image.kubectl.repository .Values.image.kubectl.digest }}
+{{- define "clp.imageRef" -}}
+{{- $img := index .root.Values.image .component -}}
+{{- if $img.digest -}}
+{{- printf "%s@%s" $img.repository $img.digest -}}
+{{- else -}}
+{{- $tag := $img.tag -}}
+{{- if not $tag -}}
+  {{- if eq .component "clpPackage" -}}
+    {{- $tag = .root.Chart.AppVersion -}}
+  {{- else -}}
+    {{- fail (printf "image.%s.tag is required" .component) -}}
+  {{- end -}}
+{{- end -}}
+{{- printf "%s:%s" $img.repository $tag -}}
+{{- end -}}
 {{- end }}
 
 {{/*
@@ -502,7 +539,8 @@ should be the job name suffix.
 */}}
 {{- define "clp.waitFor" -}}
 name: "wait-for-{{ .name }}"
-image: {{ include "clp.kubectl.image.ref" .root | quote }}
+image: {{ include "clp.imageRef" (dict "root" .root "component" "kubectl") | quote }}
+imagePullPolicy: {{ .root.Values.image.kubectl.pullPolicy | quote }}
 command: [
   "kubectl", "wait",
   {{- if eq .type "service" }}
@@ -574,3 +612,25 @@ topologySpreadConstraints:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 {{- end }}{{/* define "clp.createSchedulingConfigs" */}}
+
+{{/*
+Creates resource requests and limits configuration for a component.
+
+@param {object} root Root template context
+@param {string} component Key name under .Values.resources (e.g., "compressionWorker", "database")
+@return {string} YAML-formatted resources block (requests, limits) nested under a resources key
+*/}}
+{{- define "clp.createResourceLimits" -}}
+{{- $resourcesConfig := index .root.Values.resources .component | default dict -}}
+{{- if or $resourcesConfig.requests $resourcesConfig.limits }}
+resources:
+{{- with $resourcesConfig.requests }}
+  requests:
+{{- toYaml . | nindent 4 }}
+{{- end }}
+{{- with $resourcesConfig.limits }}
+  limits:
+{{- toYaml . | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}{{/* define "clp.createResourceLimits" */}}

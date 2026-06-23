@@ -25,14 +25,18 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "redis"
-          image: "redis:7.4.8"
-          imagePullPolicy: "Always"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "redis") | quote }}
+          imagePullPolicy: {{ .Values.image.redis.pullPolicy | quote }}
           env:
             - name: "REDIS_PASSWORD"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-redis
                   key: "password"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "redis"
+            ) | nindent 10 }}
           ports:
             - name: "redis"
               containerPort: 6379

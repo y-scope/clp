@@ -445,12 +445,18 @@ class QueryScheduler(BaseModel):
         self.port = self.DEFAULT_PORT
 
 
-class CompressionWorker(BaseModel):
+class WorkerConfigBase(BaseModel):
     logging_level: LoggingLevel = "INFO"
+    task_soft_time_limit: NonNegativeInt = 600
+    task_time_limit: NonNegativeInt = 1200
 
 
-class QueryWorker(BaseModel):
-    logging_level: LoggingLevel = "INFO"
+class CompressionWorker(WorkerConfigBase):
+    pass
+
+
+class QueryWorker(WorkerConfigBase):
+    pass
 
 
 class Redis(BaseModel):

@@ -25,8 +25,8 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "queue"
-          image: "rabbitmq:4.2.6"
-          imagePullPolicy: "Always"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "queue") | quote }}
+          imagePullPolicy: {{ .Values.image.queue.pullPolicy | quote }}
           env:
             - name: "RABBITMQ_DEFAULT_USER"
               valueFrom:
@@ -42,6 +42,10 @@ spec:
               value: "-"
             - name: "RABBITMQ_SASL_LOGS"
               value: "-"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "queue"
+            ) | nindent 10 }}
           ports:
             - name: "queue"
               containerPort: 5672

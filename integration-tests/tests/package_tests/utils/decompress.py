@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from clp_package_utils.general import EXTRACT_FILE_CMD
+from pydantic import Field
 
 from tests.utils.classes import CmdArgs
 
@@ -13,7 +14,7 @@ class DecompressArgs(CmdArgs):
     script_path: Path
     config: Path
     extraction_dir: Path
-    paths: list[Path] | None = None
+    paths: list[Path] = Field(default_factory=list)
 
     def to_cmd(self) -> list[str]:
         """Converts the model attributes to a command list."""
@@ -26,7 +27,6 @@ class DecompressArgs(CmdArgs):
             str(self.extraction_dir),
         ]
 
-        if self.paths:
-            cmd.extend([str(path) for path in self.paths])
+        cmd.extend([str(path) for path in self.paths])
 
         return cmd

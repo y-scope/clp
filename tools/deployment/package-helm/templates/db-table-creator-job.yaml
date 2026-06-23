@@ -24,7 +24,7 @@ spec:
       {{- end }}
       containers:
         - name: "db-table-creator"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_PASS"
@@ -49,6 +49,10 @@ spec:
                   key: "username"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "dbTableCreator"
+            ) | nindent 10 }}
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yaml"

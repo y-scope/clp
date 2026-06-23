@@ -52,6 +52,8 @@ def test_clp_text_compression_text_multifile(
 
     logger.info("Compressing the 'text_multifile' dataset with the 'clp-text' package.")
     action = ClpAction.from_args(args)
+    result = action.verify_returncode()
+    assert result, result.failure_message
 
     logger.info("Verifying the compression of the 'text_multifile' dataset.")
     result = verify_compress_clp_text(action, clp_package, text_multifile)
