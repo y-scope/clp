@@ -32,6 +32,10 @@ spec:
         - name: "otel-collector"
           image: {{ $otelCollectorImage | quote }}
           imagePullPolicy: {{ .Values.image.otelCollector.pullPolicy | quote }}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "otelCollector"
+            ) | nindent 10 }}
           ports:
             - name: "otel-collector"
               containerPort: 4318

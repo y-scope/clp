@@ -204,7 +204,6 @@ def upload_results_to_s3(
     except Exception as err:
         logger.error(f"Failed to upload query results {dest_path}: {err}")
         task_results.status = QueryTaskStatus.FAILED
-        task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
     src_file.unlink()
     return
 
