@@ -98,7 +98,7 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
         SPDLOG_INFO("Log shape count: {}", m_log_shape_dict->get_next_id());
     } else {
         log_dict_compressed_size = m_log_dict->close();
-        SPDLOG_INFO("Log type count: {}", m_log_dict->get_next_id());
+        SPDLOG_INFO("Log shape count: {}", m_log_dict->get_next_id());
     }
     auto array_dict_compressed_size = m_array_dict->close();
     auto schema_tree_compressed_size = m_schema_tree.store(m_archive_path, m_compression_level);
