@@ -1008,8 +1008,6 @@ class ClpConfig(BaseModel):
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
-
-
     def dump_to_primitive_dict(self):
         custom_serialized_fields = {"database", "queue", "redis"}
         d = self.model_dump(exclude=custom_serialized_fields)
@@ -1043,8 +1041,7 @@ class ClpConfig(BaseModel):
         query_engine = self.webui.query_engine
         if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S] and self.query_scheduler is None:
             raise ValueError(
-                f"`query_scheduler` must be configured when webui.query_engine is "
-                f"'{query_engine}'."
+                f"`query_scheduler` must be configured when webui.query_engine is '{query_engine}'."
             )
         return self
 

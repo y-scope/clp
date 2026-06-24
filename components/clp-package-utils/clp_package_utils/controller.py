@@ -10,7 +10,6 @@ import subprocess
 import time
 import uuid
 from abc import ABC, abstractmethod
-from types import MappingProxyType
 from typing import Any
 
 from clp_py_utils.clp_config import (
@@ -33,7 +32,6 @@ from clp_py_utils.clp_config import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
-    DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
