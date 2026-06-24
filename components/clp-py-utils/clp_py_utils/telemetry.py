@@ -1,5 +1,4 @@
 import logging
-import os
 
 from opentelemetry import metrics
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -7,9 +6,9 @@ from opentelemetry.metrics import NoOpMeterProvider
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
-logger = logging.getLogger(__name__)
+from clp_py_utils.telemetry_config import is_telemetry_disabled_by_env
 
-TELEMETRY_DISABLE_VALUES = {"1", "true", "yes", "y"}
+logger = logging.getLogger(__name__)
 
 
 def init_telemetry() -> None:
@@ -19,9 +18,7 @@ def init_telemetry() -> None:
     If telemetry is disabled via environment variables (CLP_DISABLE_TELEMETRY or DO_NOT_TRACK),
     this function installs a NoOpMeterProvider so that any metrics API calls become no-ops.
     """
-    disable_env_var = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
-    dnt_env_var = os.environ.get("DO_NOT_TRACK", "").strip().lower()
-    if disable_env_var in TELEMETRY_DISABLE_VALUES or dnt_env_var in TELEMETRY_DISABLE_VALUES:
+    if is_telemetry_disabled_by_env():
         metrics.set_meter_provider(NoOpMeterProvider())
         logger.debug("OpenTelemetry metrics disabled.")
         return
