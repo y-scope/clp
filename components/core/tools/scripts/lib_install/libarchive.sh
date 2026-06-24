@@ -44,11 +44,8 @@ if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   install_cmd_args+=("sudo")
 fi
 
-# Get number of cpu cores, capped by available memory (min 2 GB per core)
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-source "${script_dir}/../../../../../tools/scripts/compute-cpp-max-parallelism.sh"
-# shellcheck disable=SC2154 # set by the sourced helper above
-num_cpus=$compute_cpp_max_parallelism_result
+# Get number of cpu cores (memory-capped parallelism is handled in taskfile-driven builds)
+num_cpus=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 1)
 
 # Download
 mkdir -p $temp_dir
