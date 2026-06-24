@@ -38,6 +38,7 @@ repo_root="$(cd "${script_dir}/../../../.." && pwd)"
 format="all"
 # Compute default parallelism based on CPU count and available memory (min 2 GB per core)
 source "${repo_root}/tools/scripts/compute-cpp-max-parallelism.sh"
+# shellcheck disable=SC2154 # set by the sourced helper above
 cores=$compute_cpp_max_parallelism_result
 version=""
 output_dir="${repo_root}/packages"

@@ -90,6 +90,18 @@ def _compute_max_parallel_jobs() -> int:
     return max(1, min(cpu_count, mem_limit_jobs))
 
 
+def _positive_int(value: str) -> int:
+    """Argparse type that rejects non-positive integers.
+
+    Only invoked when --num-jobs is given a value, so the ``None`` default (which
+    falls back to :func:`_compute_max_parallel_jobs`) is unaffected.
+    """
+    ivalue = int(value)
+    if ivalue < 1:
+        raise argparse.ArgumentTypeError(f"{value} is not a positive integer (must be >= 1)")
+    return ivalue
+
+
 def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool) -> None:
     cmd = [
         "cmake",
@@ -147,7 +159,7 @@ def main(argv: list[str]) -> int:
     )
     args_parser.add_argument(
         "--num-jobs",
-        type=int,
+        type=_positive_int,
         default=None,
         help="Max number of jobs to run when building. Defaults to min(nproc, available_memory_GB"
         f" / {MIN_MEMORY_PER_JOB_GB}) with a floor of 1.",

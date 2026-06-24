@@ -19,6 +19,7 @@ fi
 # Get number of cpu cores, capped by available memory (min 2 GB per core)
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${script_dir}/../../../../../tools/scripts/compute-cpp-max-parallelism.sh"
+# shellcheck disable=SC2154 # set by the sourced helper above
 num_cpus=$compute_cpp_max_parallelism_result
 
 package_name=curl
