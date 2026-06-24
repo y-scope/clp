@@ -81,9 +81,11 @@ def _observe_active_jobs(_options: metrics.CallbackOptions):
 
 
 def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
-    num_outstanding_tasks = sum(
-        job.num_tasks_total - job.num_tasks_completed for job in scheduled_jobs.values()
-    )
+    try:
+        jobs = list(scheduled_jobs.values())
+    except RuntimeError:
+        return
+    num_outstanding_tasks = sum(job.num_tasks_total - job.num_tasks_completed for job in jobs)
     yield metrics.Observation(num_outstanding_tasks)
 
 

@@ -109,8 +109,12 @@ def _observe_active_jobs(_options: metrics.CallbackOptions):
 
 
 def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
+    try:
+        jobs = list(active_jobs.values())
+    except RuntimeError:
+        return
     num_outstanding_tasks = 0
-    for job in active_jobs.values():
+    for job in jobs:
         if isinstance(job, SearchJob):
             num_outstanding_tasks += job.num_archives_to_search - job.num_archives_searched
         else:
