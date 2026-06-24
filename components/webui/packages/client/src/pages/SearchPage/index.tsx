@@ -3,6 +3,7 @@ import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {SETTINGS_QUERY_ENGINE} from "../../config";
 import styles from "./index.module.css";
 import {ProgressBar} from "./ProgressBar";
+import ResultsLimitWarning from "./ResultsLimitWarning";
 import SearchControls from "./SearchControls";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
@@ -25,6 +26,7 @@ const SearchPage = () => {
             {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO && <ProgressBar/>}
             <div className={styles["searchPageContainer"]}>
                 <SearchControls/>
+                <ResultsLimitWarning/>
                 {(SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ||
                   PRESTO_SQL_INTERFACE.GUIDED === sqlInterface) &&
                   <SearchResultsTimeline/>}

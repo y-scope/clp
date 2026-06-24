@@ -762,6 +762,7 @@ class WebUi(BaseModel):
     port: Port = DEFAULT_PORT
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
+    default_max_num_query_results: PositiveInt = 1000
 
 
 class SweepInterval(BaseModel):

@@ -7,6 +7,7 @@ import {
 import {settings} from "../settings";
 
 
+const SETTINGS_DEFAULT_MAX_NUM_QUERY_RESULTS = settings.DefaultMaxNumQueryResults;
 const SETTINGS_LOGS_INPUT_TYPE = settings.LogsInputType as STORAGE_TYPE;
 const SETTINGS_MAX_DATASETS_PER_QUERY = settings.MaxDatasetsPerQuery;
 const SETTINGS_STORAGE_ENGINE = settings.ClpStorageEngine as CLP_STORAGE_ENGINES;
@@ -20,6 +21,7 @@ const STREAM_TYPE = CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE ?
     "json";
 
 export {
+    SETTINGS_DEFAULT_MAX_NUM_QUERY_RESULTS,
     SETTINGS_LOGS_INPUT_TYPE,
     SETTINGS_MAX_DATASETS_PER_QUERY,
     SETTINGS_QUERY_ENGINE,
