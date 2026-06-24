@@ -29,6 +29,9 @@ spec:
           image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            - name: "OTEL_METRIC_EXPORT_INTERVAL"
+              value: {{ .Values.clpConfig.query_worker.telemetry_update_interval_ms | quote }}
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
                 "root" .
@@ -42,6 +45,8 @@ spec:
               value: {{ .Values.clpConfig.query_worker.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
               value: "/var/log/query_worker"
+            - name: "OTEL_SERVICE_NAME"
+              value: "query-worker"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
           {{- include "clp.createResourceLimits" (dict
