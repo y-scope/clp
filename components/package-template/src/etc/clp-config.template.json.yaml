@@ -114,6 +114,7 @@ telemetry:
 #  logging_level: "INFO"
 #  task_soft_time_limit: 600  # A value of 0 disables the limit
 #  task_time_limit: 1200  # A value of 0 disables the limit
+#  search_sampling_probability: 0.01
 #
 #webui:
 #  host: "localhost"

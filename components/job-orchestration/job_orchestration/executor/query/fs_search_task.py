@@ -1,5 +1,6 @@
 import datetime
 import os
+import random
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from clp_py_utils.telemetry_config import is_telemetry_disabled_by_env
 
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
@@ -68,12 +70,15 @@ def _make_core_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
+    job_id: str,
+    task_id: int,
     dataset: str,
 ) -> tuple[list[str] | None, dict[str, str] | None]:
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
     ]
+    env_vars = dict(os.environ)
     if StorageType.S3 == worker_config.archive_output.storage.type:
         s3_config = worker_config.archive_output.storage.s3_config
         s3_object_key = f"{s3_config.key_prefix}{dataset}/{archive_id}"
@@ -91,7 +96,6 @@ def _make_core_clp_s_command_and_env_vars(
             "s3"
         ))
         # fmt: on
-        env_vars = dict(os.environ)
         env_vars.update(get_credential_env_vars(s3_config.aws_authentication))
     else:
         archives_dir = worker_config.archive_output.get_directory() / dataset
@@ -102,7 +106,15 @@ def _make_core_clp_s_command_and_env_vars(
             archive_id,
         ))
         # fmt: on
-        env_vars = None
+    if not is_telemetry_disabled_by_env():
+        enable_telemetry = random.choices(
+            [True, False],
+            cum_weights=[worker_config.query_worker.search_sampling_probability, 1.0],
+            k=1,
+        )[0]
+        if enable_telemetry:
+            command.append("--enable-telemetry")
+            env_vars.update({"CLP_QUERY_ID": job_id, "CLP_TASK_ID": str(task_id)})
     return command, env_vars
 
 
@@ -112,7 +124,8 @@ def _make_command_and_env_vars(
     archive_id: str,
     search_config: SearchJobConfig,
     results_cache_uri: str,
-    results_collection: str,
+    job_id: str,
+    task_id: int,
     dataset: str | None = None,
 ) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
@@ -123,7 +136,7 @@ def _make_command_and_env_vars(
         )
     elif StorageEngine.CLP_S == storage_engine:
         command, env_vars = _make_core_clp_s_command_and_env_vars(
-            clp_home, worker_config, archive_id, search_config, dataset
+            clp_home, worker_config, archive_id, search_config, job_id, task_id, dataset
         )
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
@@ -166,7 +179,7 @@ def _make_command_and_env_vars(
         ))
         # fmt: on
     elif search_config.write_to_file:
-        output_directory = worker_config.stream_output.get_directory() / results_collection
+        output_directory = worker_config.stream_output.get_directory() / job_id
         output_directory.mkdir(exist_ok=True)
         output_path = output_directory / archive_id
         # fmt: off
@@ -180,7 +193,7 @@ def _make_command_and_env_vars(
         command.extend((
             "results-cache",
             "--uri", results_cache_uri,
-            "--collection", results_collection,
+            "--collection", job_id,
             "--max-num-results", str(search_config.max_num_results),
         ))
         # fmt: on
@@ -249,7 +262,8 @@ def search_entry_point(
         archive_id=archive_id,
         search_config=search_config,
         results_cache_uri=results_cache_uri,
-        results_collection=job_id,
+        job_id=job_id,
+        task_id=task_id,
         dataset=dataset,
     )
     if not task_command:

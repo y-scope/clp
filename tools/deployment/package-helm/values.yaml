@@ -248,6 +248,7 @@ clpConfig:
     task_soft_time_limit: 0  # A value of 0 disables the limit
     task_time_limit: 0  # A value of 0 disables the limit
     telemetry_update_interval_ms: 60000
+    search_sampling_probability: 0.01
 
   reducer:
     logging_level: "INFO"
