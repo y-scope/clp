@@ -10,7 +10,7 @@ server. It also serves the [log viewer][yscope-log-viewer].
 
 ## Setup
 
-1. Download the yscope-log-viewer's source code:
+1. Download the log-viewer's source code:
 
     ```shell
     task deps:yscope-log-viewer
