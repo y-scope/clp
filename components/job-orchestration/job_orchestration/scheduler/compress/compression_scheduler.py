@@ -73,14 +73,14 @@ logger = get_logger("compression_scheduler")
 
 scheduled_jobs = {}
 
-meter = metrics.get_meter("compression-scheduler")
+meter = metrics.get_meter(__name__)
 
 
-def _observe_active_jobs(options: metrics.CallbackOptions):
+def _observe_active_jobs(_options: metrics.CallbackOptions):
     yield metrics.Observation(len(scheduled_jobs))
 
 
-def _observe_outstanding_tasks(options: metrics.CallbackOptions):
+def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
     num_outstanding_tasks = sum(
         job.num_tasks_total - job.num_tasks_completed for job in scheduled_jobs.values()
     )

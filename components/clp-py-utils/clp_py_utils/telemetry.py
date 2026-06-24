@@ -37,9 +37,7 @@ def init_telemetry() -> None:
 
 
 def shutdown_telemetry() -> None:
-    """
-    Shuts down the meter provider, flushing any pending metric exports.
-    """
+    """Shuts down the meter provider, flushing any pending metric exports."""
     provider = metrics.get_meter_provider()
     if hasattr(provider, "force_flush"):
         try:

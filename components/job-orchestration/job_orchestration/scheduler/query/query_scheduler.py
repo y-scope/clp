@@ -101,14 +101,14 @@ reducer_connection_queue: asyncio.Queue | None = None
 _MULTIPROCESSING_START_METHOD = "spawn"
 
 # OpenTelemetry metrics
-meter = metrics.get_meter("query-scheduler")
+meter = metrics.get_meter(__name__)
 
 
-def _observe_active_jobs(options: metrics.CallbackOptions):
+def _observe_active_jobs(_options: metrics.CallbackOptions):
     yield metrics.Observation(len(active_jobs))
 
 
-def _observe_outstanding_tasks(options: metrics.CallbackOptions):
+def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
     num_outstanding_tasks = 0
     for job in active_jobs.values():
         if isinstance(job, SearchJob):

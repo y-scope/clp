@@ -45,7 +45,7 @@ from job_orchestration.scheduler.job_config import (
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
 
-meter = metrics.get_meter("compression-worker")
+meter = metrics.get_meter(__name__)
 bytes_input_counter = meter.create_counter(
     "clp.compression.bytes_input_total",
     unit="By",
