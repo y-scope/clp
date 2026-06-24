@@ -523,9 +523,7 @@ class BaseController(ABC):
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         if self._clp_config.query_scheduler is None:
-            logger.info(
-                f"{component_name} is not configured, skipping environment setup..."
-            )
+            logger.info(f"{component_name} is not configured, skipping environment setup...")
             return EnvVarsDict({"CLP_QUERY_SCHEDULER_ENABLED": "0"})
 
         logger.info(f"Setting up environment for {component_name}...")
@@ -587,9 +585,7 @@ class BaseController(ABC):
         """
         component_name = QUERY_WORKER_COMPONENT_NAME
         if self._clp_config.query_worker is None:
-            logger.info(
-                f"{component_name} is not configured, skipping environment setup..."
-            )
+            logger.info(f"{component_name} is not configured, skipping environment setup...")
             return EnvVarsDict({"CLP_QUERY_WORKER_ENABLED": "0"})
 
         logger.info(f"Setting up environment for {component_name}...")
@@ -626,9 +622,7 @@ class BaseController(ABC):
         """
         component_name = REDUCER_COMPONENT_NAME
         if self._clp_config.reducer is None:
-            logger.info(
-                f"{component_name} is not configured, skipping environment setup..."
-            )
+            logger.info(f"{component_name} is not configured, skipping environment setup...")
             return EnvVarsDict({"CLP_REDUCER_ENABLED": "0"})
 
         logger.info(f"Setting up environment for {component_name}...")
@@ -1095,9 +1089,6 @@ class BaseController(ABC):
                 self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
             else:
                 settings[key] = value
-
-
-
 
 
 class DockerComposeController(BaseController):
