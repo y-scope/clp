@@ -1039,6 +1039,16 @@ class ClpConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_query_scheduler_configuration(self):
+        query_engine = self.webui.query_engine
+        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S] and self.query_scheduler is None:
+            raise ValueError(
+                f"`query_scheduler` must be configured when webui.query_engine is "
+                f"'{query_engine}'."
+            )
+        return self
+
+    @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
         query_engine = self.webui.query_engine
         storage_engine = self.package.storage_engine
