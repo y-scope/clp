@@ -69,7 +69,7 @@ structlog.configure(
 
 
 def get_logging_formatter() -> logging.Formatter:
-    """Return a JSON formatter for both structlog-originated and stdlib log records."""
+    """:return: A JSON log formatter configured with CLP's structlog processors."""
     return structlog.stdlib.ProcessorFormatter(
         # foreign_pre_chain is run for stdlib LogRecord objects that do not go through
         # structlog's processor chain.
@@ -82,14 +82,21 @@ def get_logging_formatter() -> logging.Formatter:
 
 
 def set_json_formatter_on_handlers(logger: logging.Logger) -> None:
-    """Set CLP's JSON log formatter on all handlers currently attached to *logger*."""
+    """
+    Set CLP's JSON log formatter on all handlers currently attached to the logger.
+
+    :param logger: Logger whose handlers should use CLP's JSON formatter.
+    """
     formatter = get_logging_formatter()
     for handler in logger.handlers:
         handler.setFormatter(formatter)
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a logger configured with CLP's console formatter."""
+    """
+    :param name: Name of the logger to create or retrieve.
+    :return: A logger configured with CLP's JSON console formatter.
+    """
     logger = logging.getLogger(name)
     # Setup console logging
     logging_console_handler = logging.StreamHandler()
@@ -101,6 +108,13 @@ def get_logger(name: str) -> logging.Logger:
 
 
 def set_logging_level(logger: logging.Logger, level: str | None) -> None:
+    """
+    Set a logger to the requested logging level, defaulting to INFO when the level is unset or
+    invalid.
+
+    :param logger: Logger whose level should be updated.
+    :param level: Requested logging level, or `None` to use INFO.
+    """
     if level is None:
         logger.setLevel(logging.INFO)
         return
