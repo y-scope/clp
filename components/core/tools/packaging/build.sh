@@ -36,7 +36,9 @@ repo_root="$(cd "${script_dir}/../../../.." && pwd)"
 
 # Defaults
 format="all"
-cores="$(nproc 2>/dev/null || echo 4)"
+# Compute default parallelism based on CPU count and available memory (min 2 GB per core)
+source "${repo_root}/tools/scripts/compute-cpp-max-parallelism.sh"
+cores=$compute_cpp_max_parallelism_result
 version=""
 output_dir="${repo_root}/packages"
 target_arches=""

@@ -45,8 +45,10 @@ if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   install_cmd_args+=("sudo")
 fi
 
-# Get number of cpu cores
-num_cpus=$(grep -c ^processor /proc/cpuinfo)
+# Get number of cpu cores, capped by available memory (min 2 GB per core)
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source "${script_dir}/../../../../../tools/scripts/compute-cpp-max-parallelism.sh"
+num_cpus=$compute_cpp_max_parallelism_result
 
 # Download
 mkdir -p $temp_dir

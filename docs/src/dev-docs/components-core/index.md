@@ -112,8 +112,12 @@ the relevant paths on your machine.
 
 * Build:
   ```shell
-  make -j
+  make -j$(nproc)
   ```
+
+  > **NOTE:** If the build runs out of memory, reduce parallelism by capping based on available
+  > memory (at least 2 GB per core). For example, on a machine with 8 GB of available memory:
+  > `make -j4`
 
 ## Test
 
