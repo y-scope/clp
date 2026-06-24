@@ -16,7 +16,7 @@ from typing_extensions import Self
 from tests.conftest import get_test_log_dir
 from tests.utils.utils import validate_dir_exists, validate_file_exists
 
-DEFAULT_CMD_TIMEOUT_SECONDS = 300.0
+DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
 
 logger = logging.getLogger(__name__)
 
