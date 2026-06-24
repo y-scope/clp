@@ -120,11 +120,13 @@ def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
 
 meter.create_observable_gauge(
     "clp.query.active_jobs",
+    unit="{job}",
     callbacks=[_observe_active_jobs],
     description="Number of active query jobs",
 )
 meter.create_observable_gauge(
     "clp.query.outstanding_tasks",
+    unit="{task}",
     callbacks=[_observe_outstanding_tasks],
     description="Total number of outstanding tasks across all active query jobs",
 )

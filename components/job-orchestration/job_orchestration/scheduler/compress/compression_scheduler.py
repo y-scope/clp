@@ -89,11 +89,13 @@ def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
 
 meter.create_observable_gauge(
     "clp.compression.active_jobs",
+    unit="{job}",
     callbacks=[_observe_active_jobs],
     description="Number of active compression jobs",
 )
 meter.create_observable_gauge(
     "clp.compression.outstanding_tasks",
+    unit="{task}",
     callbacks=[_observe_outstanding_tasks],
     description="Total number of outstanding compression tasks",
 )
