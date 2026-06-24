@@ -757,7 +757,7 @@ class BaseController(ABC):
 
         client_settings_json_updates = {
             "ClpStorageEngine": self._clp_config.package.storage_engine,
-            "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpQueryEngine": self._clp_config.webui.query_engine,
             "LogsInputType": self._clp_config.logs_input.type,
             "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
             "MongoDbSearchResultsMetadataCollectionName": (
@@ -797,7 +797,7 @@ class BaseController(ABC):
                 self._clp_config.archive_output.target_encoded_file_size
             ),
             "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
-            "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpQueryEngine": self._clp_config.webui.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
         }
 
@@ -822,7 +822,7 @@ class BaseController(ABC):
             server_settings_json_updates["StreamFilesS3PathPrefix"] = None
             server_settings_json_updates["StreamFilesS3Profile"] = None
 
-        query_engine = self._clp_config.package.query_engine
+        query_engine = self._clp_config.webui.query_engine
         if QueryEngine.PRESTO == query_engine:
             server_settings_json_updates["PrestoHost"] = container_clp_config.presto.host
             server_settings_json_updates["PrestoPort"] = container_clp_config.presto.port
@@ -1314,10 +1314,16 @@ class DockerComposeController(BaseController):
         # NOTE: Replicas are hardcoded to 1 until multi-container workers land (see #1424).
         add_gauge("clp.deployment.compression_worker_replicas", 1)
         add_gauge("clp.deployment.compression_worker_concurrency", num_workers)
-        add_gauge("clp.deployment.query_worker_replicas", 1)
-        add_gauge("clp.deployment.query_worker_concurrency", num_workers)
-        add_gauge("clp.deployment.reducer_replicas", 1)
-        add_gauge("clp.deployment.reducer_concurrency", num_workers)
+
+        query_worker_replicas = 0 if self._clp_config.query_worker is None else 1
+        query_worker_concurrency = 0 if self._clp_config.query_worker is None else num_workers
+        add_gauge("clp.deployment.query_worker_replicas", query_worker_replicas)
+        add_gauge("clp.deployment.query_worker_concurrency", query_worker_concurrency)
+
+        reducer_replicas = 0 if self._clp_config.reducer is None else 1
+        reducer_concurrency = 0 if self._clp_config.reducer is None else num_workers
+        add_gauge("clp.deployment.reducer_replicas", reducer_replicas)
+        add_gauge("clp.deployment.reducer_concurrency", reducer_concurrency)
 
         payload = {
             "resourceMetrics": [
