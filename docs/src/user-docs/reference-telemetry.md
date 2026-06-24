@@ -32,16 +32,16 @@ Emitted by long-running CLP services to track throughput:
 | query-scheduler       | `clp.query.tasks.completed`          | Counter | Number of completed query tasks                   |
 | query-scheduler       | `clp.query.tasks.failed`             | Counter | Number of failed query tasks                      |
 
-#### Operational gauges
+#### Operational up-down counters
 
 Emitted by long-running CLP services to track current workload state:
 
-| Component             | Metric                              | Type  | Description                                                    |
-| --------------------- | ----------------------------------- | ----- | -------------------------------------------------------------- |
-| compression-scheduler | `clp.compression.active_jobs`       | Gauge | Number of active compression jobs                              |
-| compression-scheduler | `clp.compression.outstanding_tasks` | Gauge | Total number of outstanding compression tasks                  |
-| query-scheduler       | `clp.query.active_jobs`             | Gauge | Number of active query jobs                                    |
-| query-scheduler       | `clp.query.outstanding_tasks`       | Gauge | Total number of outstanding tasks across all active query jobs |
+| Component             | Metric                              | Type          | Description                                                    |
+| --------------------- | ----------------------------------- | ------------- | -------------------------------------------------------------- |
+| compression-scheduler | `clp.compression.active_jobs`       | UpDownCounter | Number of active compression jobs                              |
+| compression-scheduler | `clp.compression.outstanding_tasks` | UpDownCounter | Total number of outstanding compression tasks                  |
+| query-scheduler       | `clp.query.active_jobs`             | UpDownCounter | Number of active query jobs                                    |
+| query-scheduler       | `clp.query.outstanding_tasks`       | UpDownCounter | Total number of outstanding tasks across all active query jobs |
 
 #### Operational histograms
 
@@ -128,6 +128,9 @@ filtering, redaction, aggregation, and forwarding. For a matching baseline, star
 You can configure the interval at which metrics are exported for each instrumented component. The
 `telemetry_update_interval_ms` setting allows you to control the export frequency (in milliseconds)
 and defaults to `60000` (60 seconds).
+
+The supported components are `compression_scheduler`, `compression_worker`, `query_scheduler`, and
+`query_worker`.
 
 ::::{tab-set}
 :::{tab-item} Docker Compose

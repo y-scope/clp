@@ -118,13 +118,13 @@ def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
     yield metrics.Observation(num_outstanding_tasks)
 
 
-meter.create_observable_gauge(
+meter.create_observable_up_down_counter(
     "clp.query.active_jobs",
     unit="{job}",
     callbacks=[_observe_active_jobs],
     description="Number of active query jobs",
 )
-meter.create_observable_gauge(
+meter.create_observable_up_down_counter(
     "clp.query.outstanding_tasks",
     unit="{task}",
     callbacks=[_observe_outstanding_tasks],
