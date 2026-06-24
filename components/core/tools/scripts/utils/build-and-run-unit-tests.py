@@ -65,7 +65,7 @@ def _compute_max_parallel_jobs() -> int:
     Memory detection order:
       1. cgroup v2 memory.max (containers)
       2. cgroup v1 memory.limit_in_bytes (containers)
-      3. /proc/meminfo MemAvailable (Linux hosts)
+      3. /proc/meminfo MemTotal (Linux hosts)
       4. Fall back to CPU count with no memory cap
     """
     cpu_count = os.cpu_count() or 1
@@ -79,9 +79,9 @@ def _compute_max_parallel_jobs() -> int:
         try:
             meminfo = Path("/proc/meminfo").read_text()
             for line in meminfo.splitlines():
-                if line.startswith("MemAvailable:"):
-                    avail_kb = int(line.split()[1])
-                    mem_limit_jobs = max(1, avail_kb // (MIN_MEMORY_PER_JOB_GB * 1024 * 1024))
+                if line.startswith("MemTotal:"):
+                    total_kb = int(line.split()[1])
+                    mem_limit_jobs = max(1, total_kb // (MIN_MEMORY_PER_JOB_GB * 1024 * 1024))
                     break
         except (OSError, ValueError):
             # /proc/meminfo unavailable (e.g., macOS); fall back to CPU count

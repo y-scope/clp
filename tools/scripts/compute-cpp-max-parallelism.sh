@@ -11,7 +11,7 @@
 # Detection order for memory limits:
 #   1. cgroup v2: /sys/fs/cgroup/memory.max (containers)
 #   2. cgroup v1: /sys/fs/cgroup/memory/memory.limit_in_bytes (containers)
-#   3. /proc/meminfo MemAvailable (Linux hosts)
+#   3. /proc/meminfo MemTotal (Linux hosts)
 # If none are available, falls back to the CPU count with no memory cap.
 
 MIN_MEMORY_PER_JOB_GB=2
@@ -50,10 +50,10 @@ compute_cpp_max_parallelism() {
 
     # 3. Try /proc/meminfo (Linux hosts)
     if [ -z "$mem_limit_kb" ]; then
-        local avail_kb
-        avail_kb=$(awk '/MemAvailable/ {print $2}' /proc/meminfo 2>/dev/null || true)
-        if [ -n "$avail_kb" ]; then
-            mem_limit_kb=$avail_kb
+        local total_kb
+        total_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || true)
+        if [ -n "$total_kb" ]; then
+            mem_limit_kb=$total_kb
             mem_source="meminfo"
         fi
     fi
