@@ -85,8 +85,8 @@ Every metric carries the following resource attributes to identify and contextua
 | `host.cpu.model.id`     | `142`                                      | Inform build target priorities               |
 | `host.cpu.vendor.id`    | `GenuineIntel`                             | Inform build target priorities               |
 
-`service.name` is set via the `OTEL_SERVICE_NAME` environment variable for Rust services and
-hardcoded in the controller's topology metrics payload. `clp.deployment.id`,
+`service.name` is set via the `OTEL_SERVICE_NAME` environment variable for Rust and Python services
+and hardcoded in the controller's topology metrics payload. `clp.deployment.id`,
 `clp.deployment.method`, `clp.storage.engine`, and `service.version` are set via the
 `OTEL_RESOURCE_ATTRIBUTES` environment variable (Docker Compose) or Helm template helpers
 (Kubernetes). The `host.*` attributes are collected by the OpenTelemetry Collector's

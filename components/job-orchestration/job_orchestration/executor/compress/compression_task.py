@@ -389,7 +389,11 @@ def run_clp(
         if StorageEngine.CLP_S != clp_storage_engine:
             error_msg = f"S3 storage is not supported for storage engine: {clp_storage_engine}."
             logger.error(error_msg)
-            return False, {"error_message": error_msg}
+            return False, {
+                "total_uncompressed_size": 0,
+                "total_compressed_size": 0,
+                "error_message": error_msg,
+            }
 
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
@@ -412,7 +416,11 @@ def run_clp(
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
-        return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
+        return False, {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": f"Unsupported storage engine {clp_storage_engine}",
+        }
 
     # Generate list of logs to compress
     input_type = clp_config.input.type
@@ -424,7 +432,11 @@ def run_clp(
     else:
         error_msg = f"Unsupported input type: {input_type}."
         logger.error(error_msg)
-        return False, {"error_message": error_msg}
+        return False, {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": error_msg,
+        }
 
     conversion_cmd = None
     converted_inputs_dir = None

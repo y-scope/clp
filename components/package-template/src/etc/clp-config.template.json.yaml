@@ -57,8 +57,8 @@ telemetry:
 #  jobs_poll_delay: 0.1  # seconds
 #  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
 #  logging_level: "INFO"
-#  type: "celery"  # "celery" or "spider"
 #  telemetry_update_interval_ms: 60000
+#  type: "celery"  # "celery" or "spider"
 #
 #spider_scheduler:
 #  host: "localhost"
