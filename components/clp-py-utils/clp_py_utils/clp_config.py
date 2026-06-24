@@ -815,14 +815,14 @@ class ClpConfig(BaseModel):
     # Default to use celery backend
     queue: Queue | None = Queue()
     redis: Redis | None = Redis()
-    reducer: Reducer | None = None
+    reducer: Reducer | None = Reducer()
     results_cache: ResultsCache = ResultsCache()
     otel_collector: OtelCollector = OtelCollector()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     spider_scheduler: SpiderScheduler | None = None
-    query_scheduler: QueryScheduler | None = None
+    query_scheduler: QueryScheduler | None = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
-    query_worker: QueryWorker | None = None
+    query_worker: QueryWorker | None = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
     api_server: ApiServer | None = ApiServer()
@@ -1037,12 +1037,20 @@ class ClpConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_query_scheduler_configuration(self):
+    def validate_query_pipeline_configuration(self):
         query_engine = self.webui.query_engine
-        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S] and self.query_scheduler is None:
-            raise ValueError(
-                f"`query_scheduler` must be configured when webui.query_engine is '{query_engine}'."
-            )
+        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
+            missing = []
+            if self.query_scheduler is None:
+                missing.append("query_scheduler")
+            if self.query_worker is None:
+                missing.append("query_worker")
+            if self.reducer is None:
+                missing.append("reducer")
+            if missing:
+                raise ValueError(
+                    f"`{', '.join(missing)}` must be configured when webui.query_engine is '{query_engine}'."
+                )
         return self
 
     @model_validator(mode="after")

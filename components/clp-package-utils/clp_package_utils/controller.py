@@ -793,6 +793,8 @@ class BaseController(ABC):
             client_settings_json_updates["MaxDatasetsPerQuery"] = (
                 self._clp_config.query_scheduler.max_datasets_per_query
             )
+        else:
+            client_settings_json_updates["MaxDatasetsPerQuery"] = None
 
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
