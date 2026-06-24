@@ -1,16 +1,17 @@
 import datetime
+import logging
 import os
 import signal
 import subprocess
 import sys
 from contextlib import closing
-from logging import Logger
 from pathlib import Path
 from typing import Any
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
 from clp_py_utils.sql_adapter import SqlAdapter
 
+from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 
@@ -41,7 +42,7 @@ def report_task_failure(
 
 def run_query_task(
     sql_adapter: SqlAdapter,
-    logger: Logger,
+    logger: logging.Logger,
     clp_logs_dir: Path,
     task_command: list[str],
     env_vars: dict[str, str] | None,
@@ -98,6 +99,10 @@ def run_query_task(
         logger.info(f"{task_name} task {task_id} completed for job {job_id}")
 
     clo_log_file.close()
+    if 0 != return_code:
+        log_file_contents(logger, clo_log_path)
+    else:
+        log_file_contents(logger, clo_log_path, logging.INFO)
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     update_query_task_metadata(
@@ -109,9 +114,6 @@ def run_query_task(
         task_id=task_id,
         duration=duration,
     )
-
-    if QueryTaskStatus.FAILED == task_status:
-        task_result.error_log_path = str(clo_log_path)
 
     return task_result, stdout_data.decode("utf-8")
 

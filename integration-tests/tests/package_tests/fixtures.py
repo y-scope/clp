@@ -96,3 +96,18 @@ def clp_package(
         stop_clp_action: ClpAction = stop_clp_package(clp_package)
         stop_result = verify_stop_clp_action(stop_clp_action, clp_package)
         assert stop_result, stop_result.failure_message
+
+
+@pytest.fixture
+def clear_package_archives(clp_package: ClpPackage) -> Iterator[None]:
+    """
+    Clears all archives from the `clp_package` at the beginning and end of each test that uses the
+    fixture.
+
+    :param clp_package:
+    """
+    # TODO: fixture will be updated as archive-manager and dataset-manager capabilities are merged.
+    package_path_config = clp_package.path_config
+    package_path_config.clear_archives()
+    yield
+    package_path_config.clear_archives()

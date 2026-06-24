@@ -744,6 +744,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::bool_switch(&m_ignore_case),
                 "Ignore case distinctions between values in the query and the compressed data"
             )(
+                "enable-telemetry",
+                po::bool_switch(&m_enable_telemetry),
+                "Publish search telemetry to the OpenTelemetry endpoint specified in the"
+                " CLP_TELEMETRY_ENDPOINT environment variable"
+            )(
                 "archive-id",
                 po::value<std::string>(&archive_id)->value_name("ID"),
                 "Limit search to the archive with the given ID in a subdirectory of archive-path"
