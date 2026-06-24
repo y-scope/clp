@@ -17,25 +17,45 @@ LoggingLevel = Literal[
     "CRITICAL",
 ]
 
+# Processor chain for events emitted through structlog loggers before they reach
+# ``ProcessorFormatter``.
 _STRUCTLOG_PROCESSORS: tuple[Processor, ...] = (
-    structlog.contextvars.merge_contextvars,
     structlog.stdlib.filter_by_level,
+    structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
     structlog.stdlib.PositionalArgumentsFormatter(),
+    structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
     structlog.processors.StackInfoRenderer(),
     structlog.processors.format_exc_info,
-    structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
+    structlog.processors.UnicodeDecoder(),
+    structlog.processors.CallsiteParameterAdder(
+        {
+            structlog.processors.CallsiteParameter.FILENAME,
+            structlog.processors.CallsiteParameter.FUNC_NAME,
+            structlog.processors.CallsiteParameter.LINENO,
+        }
+    ),
 )
+
+# Processor chain for stdlib ``LogRecord`` objects that did not originate from structlog.
 _FOREIGN_PRE_CHAIN: tuple[Processor, ...] = (
     structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
     structlog.stdlib.ExtraAdder(),
     structlog.stdlib.PositionalArgumentsFormatter(),
+    structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
     structlog.processors.StackInfoRenderer(),
     structlog.processors.format_exc_info,
-    structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
+    structlog.processors.UnicodeDecoder(),
+    structlog.processors.CallsiteParameterAdder(
+        {
+            structlog.processors.CallsiteParameter.FILENAME,
+            structlog.processors.CallsiteParameter.FUNC_NAME,
+            structlog.processors.CallsiteParameter.LINENO,
+        }
+    ),
 )
 
 structlog.configure(
@@ -49,7 +69,10 @@ structlog.configure(
 
 
 def get_logging_formatter() -> logging.Formatter:
+    """Return a JSON formatter for both structlog-originated and stdlib log records."""
     return structlog.stdlib.ProcessorFormatter(
+        # foreign_pre_chain is run for stdlib LogRecord objects that do not go through
+        # structlog's processor chain.
         foreign_pre_chain=_FOREIGN_PRE_CHAIN,
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
