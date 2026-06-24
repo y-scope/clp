@@ -397,6 +397,7 @@ class CompressionScheduler(BaseModel):
     max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
     type: OrchestrationTypeStr = OrchestrationType.CELERY
+    telemetry_update_interval_ms: PositiveInt = 60000
 
 
 class QueryScheduler(BaseModel):
@@ -409,6 +410,7 @@ class QueryScheduler(BaseModel):
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
     scheduler_concurrency: PositiveInt = 4
+    telemetry_update_interval_ms: PositiveInt = 60000
 
     def transform_for_container(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME
@@ -422,11 +424,11 @@ class WorkerConfigBase(BaseModel):
 
 
 class CompressionWorker(WorkerConfigBase):
-    pass
+    telemetry_update_interval_ms: PositiveInt = 60000
 
 
 class QueryWorker(WorkerConfigBase):
-    pass
+    telemetry_update_interval_ms: PositiveInt = 60000
 
 
 class Redis(BaseModel):
