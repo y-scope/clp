@@ -3,13 +3,14 @@
 
 #include <cstddef>
 #include <string_view>
+#include <utility>
 
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/containers/Array.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "../../clp/ReaderInterface.hpp"
-#include "../InputConfig.hpp"
+#include <clp/ReaderInterface.hpp>
+#include <clp_s/InputConfig.hpp>
 
 namespace clp_s::log_converter {
 /**
@@ -17,7 +18,7 @@ namespace clp_s::log_converter {
  */
 class LogConverter {
 public:
-    // Factory function
+    // Factory methods
     /**
      * @param max_buffer_size The maximum size of the internal log-text buffer.
      * @return The newly created `LogConverter`.
@@ -44,7 +45,7 @@ public:
     ) -> ystdlib::error_handling::Result<void>;
 
 private:
-    // Constants
+    // Static constants
     static constexpr size_t cDefaultBufferSize{64ULL * 1024ULL};  // 64 KiB
 
     // Constructors
@@ -69,7 +70,7 @@ private:
     /**
      * Compacts unconsumed content to the start of the buffer.
      */
-    void compact_buffer();
+    auto compact_buffer() -> void;
 
     /**
      * Grows the buffer if it is full.
@@ -78,6 +79,7 @@ private:
      */
     [[nodiscard]] auto grow_buffer_if_full() -> ystdlib::error_handling::Result<void>;
 
+    // Data members
     log_surgeon::ParserHandle m_parser;
     ystdlib::containers::Array<char> m_buffer;
     size_t m_num_bytes_buffered{};

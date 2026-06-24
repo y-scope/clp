@@ -1,5 +1,6 @@
 #include "LogConverter.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <stdexcept>
@@ -8,42 +9,64 @@
 #include <utility>
 
 #include <log_surgeon/log_surgeon.hpp>
-#include <log_surgeon/rust_compat.hpp>
 #include <spdlog/spdlog.h>
 #include <ystdlib/containers/Array.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "../../clp/ErrorCode.hpp"
-#include "../../clp/ReaderInterface.hpp"
-#include "../../clp/Utils.hpp"
-#include "../InputConfig.hpp"
-#include "LogSerializer.hpp"
+#include <clp/ErrorCode.hpp>
+#include <clp/ReaderInterface.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/log_converter/LogSerializer.hpp>
 
 namespace clp_s::log_converter {
 namespace {
 constexpr std::string_view cDelimiters{R"(\ \t\r\n[(:)"};
 
 /**
- * Non-exhaustive timestamp schema which covers many common patterns.
+ * Non-exhaustive timestamp parsing specification which covers many common patterns.
+ * Based on the CLP heuristic.
  *
  * Once log-surgeon has better unicode support, we should also allow \u2202 as an alternative
  * minus sign for timezone offsets.
  */
-constexpr std::string_view cHeaderRulePattern{
-        R"((?<timestamp>()"
-        R"((\d{2,4}[ /\-]?[ \d]{2}[ /\-][ \d]{2}))"
-        R"(|([ \d]{2}[ /\-])"
-        R"(((Jan(uary)?)|(Feb(ruary)?)|(Mar(ch)?)|(Apr(il)?)|(May)|(Jun(e)?)|(Jul(y)?))"
-        R"(|(Aug(ust)?)|(Sep(tember)?)|(Oct(ober)?)|(Nov(ember)?)|(Dec(ember)?)))"
-        R"([ /\-]\d{2,4})))"  // timestamp end
-        R"([ T:][ \d]{2}:[ \d]{2}:[ \d]{2}([,\.:]\d{1,9})?)"
-        // Timezone matching:
-        R"(((( UTC)?([\+\-]\d{2}(:?\d{2})?)?Z?))"
-        R"(|((UTC)?([\+\-]\d{2}(:?\d{2})?)?Z?))?))"
-        // Headers with no timestamp:
-        R"(|(( [\+\-]\d{2}(:?\d{2})?)Z?))"
-        R"(|( Z))"
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#define DATE R"(\d{2,4}[ /-]?[ \d]{2}[ /-]?[ \d]{2})"
+#define MONTH \
+    R"((Jan(uary)?)|(Feb(ruary)?)|(Mar(ch)?)|(Apr(il)?)|(May)|(Jun(e)?)|(Jul(y)?)|(Aug(ust)?)|(Sep(tember)?)|(Oct(ober)?)|(Nov(ember)?)|(Dec(ember)?))"
+#define SEP R"([ T:-])"
+#define TIME R"([ \d]{2}:[ \d]{2}:[ \d]{2}([,\.:]\d{1,9})?)"
+#define OFFSET R"(([\+-]\d{2}(:?\d{2})?))"
+#define ZONE R"(( ?UTC)?(()" OFFSET R"(?Z)|()" OFFSET R"(Z?)))"
+#define PREFIX R"(^(?<timestamp>)"
+#define SUFFIX R"()$)"
+// NOLINTEND(cppcoreguidelines-macro-usage)
+constexpr std::array cHeaderRulePatterns{
+        PREFIX DATE SEP TIME ZONE SUFFIX,
+        PREFIX R"([ \d]{2}[ /-])" MONTH R"([ /-]\d{2,4})" SEP TIME ZONE SUFFIX,
+        PREFIX DATE R"([T ])" TIME SUFFIX,
+        PREFIX DATE R"( {1,2})" TIME SUFFIX,
+        PREFIX R"(\[)" DATE R"([T\- ])" TIME R"(\]?)" SUFFIX,
+        PREFIX R"(\[)" DATE R"([T\- ])" TIME R"(\]?)" SUFFIX,
+        PREFIX R"(\[\d{2}/[A-Z][a-z]{2}/\d{4}:)" TIME SUFFIX,
+        PREFIX R"(\[\d{2}/\d{2}/\d{4}:)" TIME SUFFIX,
+        PREFIX R"((\d{2}|\d{4})/\d{2}/\d{2} )" TIME SUFFIX,
+        PREFIX R"(\d{2}\d{2}\d{2} [ 0-9]{2}:\d{2}:\d{2})" SUFFIX,
+        PREFIX R"(\d{2} [A-Z][a-z]{2} \d{4} )" TIME SUFFIX,
+        PREFIX R"([A-Z][a-z]{2} \d{2}, \d{4} [ 0-9]{2}:\d{2}:\d{2} [AP]M)" SUFFIX,
+        PREFIX R"([A-Z][a-z]+ \d{2}, \d{4} \d{2}:\d{2})$)",
+        PREFIX R"([A-Z][a-z]{2} [A-Z][a-z]{2} [ 0-9]{2} )" TIME R"( \d{4})" SUFFIX,
+        PREFIX R"([A-Z][a-z]{2} \d{2} )" TIME SUFFIX,
+        PREFIX R"(\d{2}-\d{2} )" TIME SUFFIX,
+        PREFIX R"(<<<)" DATE R"( )" TIME SUFFIX
 };
+#undef DATE
+#undef MONTH
+#undef SEP
+#undef TIME
+#undef OFFSET
+#undef ZONE
+#undef PREFIX
+#undef SUFFIX
 }  // namespace
 
 auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
@@ -52,15 +75,17 @@ auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
             builder,
             log_surgeon::CCharArray::from_string_view(cDelimiters)
     );
-    if (false
-        == log_surgeon::log_surgeon_parsing_spec_builder_add_rule_with_priority(
-                builder,
-                0,
-                log_surgeon::CCharArray::from_string_view("header"),
-                log_surgeon::CCharArray::from_string_view(cHeaderRulePattern)
-        ))
-    {
-        throw std::runtime_error("failed to add header rule parsing spec");
+    for (auto const& header_pattern : cHeaderRulePatterns) {
+        if (false
+            == log_surgeon::log_surgeon_parsing_spec_builder_add_rule_with_priority(
+                    builder,
+                    0,
+                    log_surgeon::CCharArray::from_string_view("header"),
+                    log_surgeon::CCharArray::from_string_view(header_pattern)
+            ))
+        {
+            throw std::runtime_error("failed to add header rule parsing spec");
+        }
     }
     return LogConverter(max_buffer_size, log_surgeon_parsing_spec_builder_build(builder));
 }
