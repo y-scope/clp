@@ -522,6 +522,12 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
+        if self._clp_config.query_scheduler is None:
+            logger.info(
+                f"{component_name} is not configured, skipping environment setup..."
+            )
+            return EnvVarsDict({"CLP_QUERY_SCHEDULER_ENABLED": "0"})
+
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -529,6 +535,11 @@ class BaseController(ABC):
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_QUERY_SCHEDULER_ENABLED": "1",
+        }
 
         # Logging config
         env_vars |= {
@@ -575,6 +586,12 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_WORKER_COMPONENT_NAME
+        if self._clp_config.query_worker is None:
+            logger.info(
+                f"{component_name} is not configured, skipping environment setup..."
+            )
+            return EnvVarsDict({"CLP_QUERY_WORKER_ENABLED": "0"})
+
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -582,6 +599,11 @@ class BaseController(ABC):
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_QUERY_WORKER_ENABLED": "1",
+        }
 
         # Logging config
         env_vars |= {
@@ -603,6 +625,12 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDUCER_COMPONENT_NAME
+        if self._clp_config.reducer is None:
+            logger.info(
+                f"{component_name} is not configured, skipping environment setup..."
+            )
+            return EnvVarsDict({"CLP_REDUCER_ENABLED": "0"})
+
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -610,6 +638,11 @@ class BaseController(ABC):
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_REDUCER_ENABLED": "1",
+        }
 
         # Logging config
         env_vars |= {
@@ -1064,14 +1097,7 @@ class BaseController(ABC):
                 settings[key] = value
 
 
-_DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType(
-    {
-        DeploymentType.BASE: "docker-compose-base.yaml",
-        DeploymentType.FULL: "docker-compose.yaml",
-        DeploymentType.SPIDER_BASE: "docker-compose-spider-base.yaml",
-        DeploymentType.SPIDER_FULL: "docker-compose-spider.yaml",
-    }
-)
+
 
 
 class DockerComposeController(BaseController):
@@ -1206,8 +1232,8 @@ class DockerComposeController(BaseController):
             should_compose_project_be_running=False, project_name=self._project_name
         )
 
-        deployment_type = self._clp_config.get_deployment_type()
-        logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
+        orchestration_type = self._clp_config.compression_scheduler.type
+        logger.info(f"Starting CLP using Docker Compose ({orchestration_type} orchestration)...")
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
@@ -1265,7 +1291,9 @@ class DockerComposeController(BaseController):
         """
         :return: The Docker Compose file name to use based on the config.
         """
-        return _DEPLOYMENT_TYPE_TO_COMPOSE_FILE[self._clp_config.get_deployment_type()]
+        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
+            return "docker-compose-spider.yaml"
+        return "docker-compose.yaml"
 
     def _emit_topology_metrics(self) -> None:
         timestamp_ns = int(time.time() * 1e9)

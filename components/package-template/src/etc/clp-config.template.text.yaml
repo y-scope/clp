@@ -8,7 +8,6 @@ telemetry:
 
 package:
   storage_engine: "clp"
-  query_engine: "clp"
 
 # API server config
 api_server: null
@@ -105,6 +104,7 @@ log_ingestor: null
 #webui:
 #  host: "localhost"
 #  port: 4000
+#  query_engine: "clp"
 #  results_metadata_collection_name: "results-metadata"
 #  rate_limit: 1000
 #
