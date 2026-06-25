@@ -104,15 +104,16 @@ auto LogConverter::convert_file(
             LogSerializer::create(output_dir, path.path, compress_converted_file)
     )};
 
+    size_t prev_event_end{0};
     bool reached_end_of_stream{false};
     while (false == reached_end_of_stream) {
         auto const num_bytes_read{YSTDLIB_ERROR_HANDLING_TRYX(refill_buffer(reader))};
         reached_end_of_stream = 0ULL == num_bytes_read;
+        m_parser.reset();
 
         std::string_view const buf{m_buffer.data(), m_num_bytes_buffered};
         while (m_parser_offset < m_num_bytes_buffered) {
-            size_t pos{m_parser_offset};
-            auto event{m_parser.next_event(buf, &pos)};
+            auto event{m_parser.next_event(buf, &m_parser_offset)};
             if (false == event.has_value()) {
                 SPDLOG_ERROR("failed to parse buffer contents: '{}'", buf);
                 return std::errc::not_supported;
@@ -121,10 +122,11 @@ auto LogConverter::convert_file(
             // If log-surgeon succeeded to parse to the end of the buffer it is possible the log
             // event is truncated. Until log-surgeon has an API that handles reads we need to fill
             // the buffer and try again.
-            if (false == reached_end_of_stream && pos == m_num_bytes_buffered) {
+            if (false == reached_end_of_stream && m_parser_offset == m_num_bytes_buffered) {
+                m_parser_offset = prev_event_end;
                 break;
             }
-            m_parser_offset = pos;
+            prev_event_end += event->get_message().size();
 
             auto const match{event->get_leaf_match(0)};
             if (false == match.has_value()) {
