@@ -239,67 +239,24 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-AggregationToStdoutOutputHandler::AggregationToStdoutOutputHandler(
-        string_view archive_id,
-        CommandLineArguments::AggregationType aggregation_type,
-        int64_t count_by_time_bucket_size_ms
-)
-        : search::OutputHandler(
-                  CommandLineArguments::AggregationType::CountByTime == aggregation_type,
-                  false
-          ),
-          m_archive_id{archive_id},
-          m_aggregation_type{aggregation_type},
-          m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms},
-          m_pipeline{reducer::PipelineInputMode::InterStage} {
-    m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
-}
-
-auto AggregationToStdoutOutputHandler::write(string_view message) -> void {
-    m_pipeline.push_record(reducer::EmptyRecord{});
-}
-
-auto AggregationToStdoutOutputHandler::write(
-        string_view message,
-        epochtime_t timestamp_ms,
-        string_view archive_id,
-        int64_t log_event_idx
-) -> void {
-    int64_t const bucket
-            = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
-    m_bucket_counts[bucket] += 1;
-}
-
-auto AggregationToStdoutOutputHandler::finish() -> ErrorCode {
-    // Count-by-time results are serialized from the per-bucket counts; count results come from the
-    // CountOperator pipeline.
-    std::unique_ptr<reducer::RecordGroupIterator> results;
-    if (CommandLineArguments::AggregationType::CountByTime == m_aggregation_type) {
-        results = std::make_unique<reducer::Int64Int64MapRecordGroupIterator>(
-                m_bucket_counts,
-                reducer::CountOperator::cRecordElementKey
-        );
-    } else {
-        results = m_pipeline.finish();
+auto CountToStdoutOutputHandler::finish() -> ErrorCode {
+    if (0 == m_count) {
+        return ErrorCode::ErrorCodeSuccess;
     }
-    for (; false == results->done(); results->next()) {
-        auto& group{results->get()};
+
+    nlohmann::json result;
+    result[constants::results_cache::search::cArchiveId] = m_archive_id;
+    result[constants::results_cache::search::cCount] = m_count;
+    std::cout << result.dump() << '\n';
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+auto CountByTimeToStdoutOutputHandler::finish() -> ErrorCode {
+    for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
         nlohmann::json result;
         result[constants::results_cache::search::cArchiveId] = m_archive_id;
-
-        auto const& tags{group.get_tags()};
-        if (false == tags.empty()) {
-            // For count-by-time the group tag is the (stringified) time bucket.
-            result[constants::results_cache::search::cTimestamp] = std::stoll(tags.front());
-        }
-
-        // A count group contains exactly one record holding the count.
-        auto& record_it{group.record_iter()};
-        if (false == record_it.done()) {
-            result[constants::results_cache::search::cCount]
-                    = record_it.get().get_int64_value(reducer::CountOperator::cRecordElementKey);
-        }
-
+        result[constants::results_cache::search::cTimestamp] = bucket_timestamp;
+        result[constants::results_cache::search::cCount] = count;
         std::cout << result.dump() << '\n';
     }
     return ErrorCode::ErrorCodeSuccess;

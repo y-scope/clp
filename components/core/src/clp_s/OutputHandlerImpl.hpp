@@ -386,35 +386,29 @@ private:
 };
 
 /**
- * Output handler that writes a search aggregation's results to standard output as newline-delimited
- * JSON, one object per group.
- *
- * The aggregation to perform is selected by `AggregationType`. Count accumulates through a
- * `reducer::CountOperator` pipeline (yielding a single total); count-by-time accumulates a count
- * per time bucket. Results are serialized through a `reducer::RecordGroupIterator` in `finish()`.
+ * Output handler that performs a count aggregation and writes the result to standard output as a
+ * JSON object.
  */
-class AggregationToStdoutOutputHandler : public search::OutputHandler {
+class CountToStdoutOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    AggregationToStdoutOutputHandler(
-            std::string_view archive_id,
-            CommandLineArguments::AggregationType aggregation_type,
-            int64_t count_by_time_bucket_size_ms
-    );
+    explicit CountToStdoutOutputHandler(std::string_view archive_id)
+            : search::OutputHandler{false, false},
+              m_archive_id{archive_id} {}
 
     // Methods implementing OutputHandler
     auto write(
             std::string_view message,
-            epochtime_t timestamp_ms,
+            epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) -> void override;
+    ) -> void override {}
 
-    auto write(std::string_view message) -> void override;
+    auto write(std::string_view message) -> void override { m_count += 1; }
 
     // Methods overriding OutputHandler
     /**
-     * Serializes the aggregation results to stdout as newline-delimited JSON.
+     * Writes the count to standard output as a JSON object.
      * @return ErrorCodeSuccess on success
      */
     auto finish() -> ErrorCode override;
@@ -422,9 +416,49 @@ public:
 private:
     // Data members
     std::string m_archive_id;
-    CommandLineArguments::AggregationType m_aggregation_type;
+    int64_t m_count{};
+};
+
+/**
+ * Output handler that performs a count aggregation bucketed by time and writes the per-bucket
+ * results to standard output as newline-delimited JSON, one object per time bucket.
+ */
+class CountByTimeToStdoutOutputHandler : public search::OutputHandler {
+public:
+    // Constructors
+    CountByTimeToStdoutOutputHandler(
+            std::string_view archive_id,
+            int64_t count_by_time_bucket_size_ms
+    )
+            : search::OutputHandler{true, false},
+              m_archive_id{archive_id},
+              m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {}
+
+    // Methods implementing OutputHandler
+    auto write(
+            std::string_view message,
+            epochtime_t timestamp_ms,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) -> void override {
+        int64_t const bucket
+                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
+        m_bucket_counts[bucket] += 1;
+    }
+
+    auto write(std::string_view message) -> void override {}
+
+    // Methods overriding OutputHandler
+    /**
+     * Writes the per-bucket counts to standard output as newline-delimited JSON.
+     * @return ErrorCodeSuccess on success
+     */
+    auto finish() -> ErrorCode override;
+
+private:
+    // Data members
+    std::string m_archive_id;
     int64_t m_count_by_time_bucket_size_ms;
-    reducer::Pipeline m_pipeline;
     std::map<int64_t, int64_t> m_bucket_counts;
 };
 
