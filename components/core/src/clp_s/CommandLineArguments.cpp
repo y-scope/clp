@@ -39,8 +39,7 @@ constexpr std::string_view cStdoutCacheOutputHandlerName{"stdout"};
  */
 auto collect_subcommands(
         std::map<std::string, po::options_description const*> const& subcommands,
-        std::vector<std::string> const& options,
-        std::optional<std::string> const& default_subcommand = std::nullopt
+        std::vector<std::string> const& options
 ) -> std::map<std::string, std::vector<std::string>>;
 
 /**
@@ -162,8 +161,7 @@ void validate_archive_paths(
 
 auto collect_subcommands(
         std::map<std::string, po::options_description const*> const& subcommands,
-        std::vector<std::string> const& options,
-        std::optional<std::string> const& default_subcommand
+        std::vector<std::string> const& options
 ) -> std::map<std::string, std::vector<std::string>> {
     std::optional<std::string> current_subcommand;
     std::optional<std::vector<std::string>> current_subcommand_arguments;
@@ -202,15 +200,7 @@ auto collect_subcommands(
         if (false == current_subcommand.has_value()
             || false == current_subcommand_arguments.has_value())
         {
-            // A leading option token (e.g. `--count`) with no named subcommand selects the default
-            // subcommand, letting its options be specified without naming the subcommand.
-            if (false == default_subcommand.has_value() || option.empty() || '-' != option.front())
-            {
-                throw std::invalid_argument(fmt::format("unrecognized option \"{}\"", option));
-            }
-            current_subcommand = default_subcommand;
-            current_subcommand_arguments.emplace();
-            current_subcommand_options_description = subcommands.at(default_subcommand.value());
+            throw std::invalid_argument(fmt::format("unrecognized option \"{}\"", option));
         }
 
         current_subcommand_arguments.value().emplace_back(option);
@@ -1008,11 +998,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                      &results_cache_output_handler_options},
                     {std::string{cStdoutCacheOutputHandlerName}, &stdout_output_handler_options}
             };
-            auto const output_options_map{collect_subcommands(
-                    subcommands,
-                    unrecognized_output_options,
-                    std::string{cStdoutCacheOutputHandlerName}
-            )};
+            auto const output_options_map{
+                    collect_subcommands(subcommands, unrecognized_output_options)
+            };
 
             validate_archive_paths(archive_path, archive_id, m_input_paths);
 
