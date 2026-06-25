@@ -809,22 +809,14 @@ class BaseController(ABC):
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-            "MongoDbHost": container_clp_config.results_cache.host
-            if container_clp_config.results_cache
-            else None,
-            "MongoDbPort": container_clp_config.results_cache.port
-            if container_clp_config.results_cache
-            else None,
-            "MongoDbName": self._clp_config.results_cache.db_name
-            if self._clp_config.results_cache
-            else None,
+            "MongoDbHost": container_clp_config.results_cache.host if container_clp_config.results_cache else None,
+            "MongoDbPort": container_clp_config.results_cache.port if container_clp_config.results_cache else None,
+            "MongoDbName": self._clp_config.results_cache.db_name if self._clp_config.results_cache else None,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
             "MongoDbStreamFilesCollectionName": (
-                self._clp_config.results_cache.stream_collection_name
-                if self._clp_config.results_cache
-                else None
+                self._clp_config.results_cache.stream_collection_name if self._clp_config.results_cache else None
             ),
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
