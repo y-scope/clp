@@ -42,8 +42,6 @@ public:
         std::string dataset;
         uint64_t batch_size{1000};
         uint64_t max_num_results{1000};
-        std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct FileOutputHandlerOptions {
@@ -59,14 +57,9 @@ public:
         std::string host;
         int port{-1};
         reducer::job_id_t job_id{-1};
-        AggregationType aggregation_type{AggregationType::Count};
-        int64_t count_by_time_bucket_size_ms{};
     };
 
-    struct StdoutOutputHandlerOptions {
-        std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size_ms{};
-    };
+    struct StdoutOutputHandlerOptions {};
 
     using OutputHandlerOptionsVariant = std::
             variant<ResultsCacheOutputHandlerOptions,
@@ -128,6 +121,14 @@ public:
 
     auto get_output_handler_options() const -> OutputHandlerOptionsVariant const& {
         return m_output_handler_options;
+    }
+
+    [[nodiscard]] auto get_aggregation_type() const -> std::optional<AggregationType> const& {
+        return m_aggregation_type;
+    }
+
+    [[nodiscard]] auto get_count_by_time_bucket_size_ms() const -> int64_t {
+        return m_count_by_time_bucket_size_ms;
     }
 
     [[nodiscard]] auto get_retain_float_format() const -> bool {
@@ -273,6 +274,10 @@ private:
     bool m_ignore_case{false};
     bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
+
+    // Aggregation operator options (shared across all output handlers)
+    std::optional<AggregationType> m_aggregation_type;
+    int64_t m_count_by_time_bucket_size_ms{};
 };
 }  // namespace clp_s
 
