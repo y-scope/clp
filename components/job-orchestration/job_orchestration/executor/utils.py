@@ -1,11 +1,21 @@
 """Utilities shared by job-orchestration executors."""
 
+import logging
 import os
-from logging import Logger
 from pathlib import Path
 
 from clp_py_utils.clp_config import ClpConfig, WorkerConfig
 from clp_py_utils.core import read_yaml_config_file
+
+
+def log_file_contents(
+    logger: logging.Logger,
+    log_path: Path,
+    level: int = logging.ERROR,
+) -> None:
+    """Dump the contents of a log file to the logger if it's non-empty."""
+    if log_path.stat().st_size > 0:
+        logger.log(level, f"Contents of {log_path.name}:\n{log_path.read_text()}")
 
 
 def load_clp_config_from_config_path_env_var() -> ClpConfig:
@@ -25,7 +35,7 @@ def load_clp_config_from_config_path_env_var() -> ClpConfig:
 
 def load_worker_config(
     config_path: Path,
-    logger: Logger,
+    logger: logging.Logger,
 ) -> WorkerConfig | None:
     """
     Loads a WorkerConfig object from the specified configuration file.

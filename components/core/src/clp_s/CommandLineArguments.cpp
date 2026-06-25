@@ -13,7 +13,6 @@
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
 #include "FileReader.hpp"
-#include "search/ast/SearchUtils.hpp"
 
 namespace po = boost::program_options;
 
@@ -40,8 +39,7 @@ constexpr std::string_view cStdoutCacheOutputHandlerName{"stdout"};
  */
 auto collect_subcommands(
         std::map<std::string, po::options_description const*> const& subcommands,
-        std::vector<std::string> const& options,
-        std::optional<std::string> const& default_subcommand = std::nullopt
+        std::vector<std::string> const& options
 ) -> std::map<std::string, std::vector<std::string>>;
 
 /**
@@ -163,8 +161,7 @@ void validate_archive_paths(
 
 auto collect_subcommands(
         std::map<std::string, po::options_description const*> const& subcommands,
-        std::vector<std::string> const& options,
-        std::optional<std::string> const& default_subcommand
+        std::vector<std::string> const& options
 ) -> std::map<std::string, std::vector<std::string>> {
     std::optional<std::string> current_subcommand;
     std::optional<std::vector<std::string>> current_subcommand_arguments;
@@ -203,15 +200,7 @@ auto collect_subcommands(
         if (false == current_subcommand.has_value()
             || false == current_subcommand_arguments.has_value())
         {
-            // A leading option token (e.g. `--count`) with no named subcommand selects the default
-            // subcommand, letting its options be specified without naming the subcommand.
-            if (false == default_subcommand.has_value() || option.empty() || '-' != option.front())
-            {
-                throw std::invalid_argument(fmt::format("unrecognized option \"{}\"", option));
-            }
-            current_subcommand = default_subcommand;
-            current_subcommand_arguments.emplace();
-            current_subcommand_options_description = subcommands.at(default_subcommand.value());
+            throw std::invalid_argument(fmt::format("unrecognized option \"{}\"", option));
         }
 
         current_subcommand_arguments.value().emplace_back(option);
@@ -755,6 +744,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::bool_switch(&m_ignore_case),
                 "Ignore case distinctions between values in the query and the compressed data"
             )(
+                "enable-telemetry",
+                po::bool_switch(&m_enable_telemetry),
+                "Publish search telemetry to the OpenTelemetry endpoint specified in the"
+                " CLP_TELEMETRY_ENDPOINT environment variable"
+            )(
                 "archive-id",
                 po::value<std::string>(&archive_id)->value_name("ID"),
                 "Limit search to the archive with the given ID in a subdirectory of archive-path"
@@ -777,6 +771,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
             search_options.add(match_options);
+
+            po::options_description aggregation_options("Aggregation Controls");
+            // clang-format off
+            aggregation_options.add_options()(
+                "count",
+                "Count the number of results"
+            )(
+                "count-by-time",
+                po::value<int64_t>(&m_count_by_time_bucket_size_ms)->value_name("SIZE"),
+                "Count the number of results in each time span of the given size (ms)"
+            );
+            // clang-format on
+            search_options.add(aggregation_options);
 
             NetworkOutputHandlerOptions network_options{};
             po::options_description network_output_handler_options(
@@ -814,15 +821,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<reducer::job_id_t>(
                         &reducer_options.job_id)->value_name("ID"),
                     "Job ID for the requested aggregation operation"
-            )(
-                    "count",
-                    "Count the number of results"
-            )(
-                    "count-by-time",
-                    po::value<int64_t>(
-                        &reducer_options.count_by_time_bucket_size_ms
-                    )->value_name("SIZE"),
-                    "Count the number of results in each time span of the given size (ms)"
             );
             // clang-format on
 
@@ -857,25 +855,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(
                         &results_cache_options.dataset)->value_name("DATASET"),
                     "The dataset name to include in each result document"
-            )(
-                    "count",
-                    "Count the number of results"
-            )(
-                    "count-by-time",
-                    po::value<int64_t>(
-                        &results_cache_options.count_by_time_bucket_size_ms
-                    )->value_name("SIZE"),
-                    "Count the number of results in each time span of the given size (ms)"
-            )(
-                    "min",
-                    po::value<std::string>(
-                        &results_cache_options.aggregation_field)->value_name("FIELD"),
-                    "Output the minimum value of the given field"
-            )(
-                    "max",
-                    po::value<std::string>(
-                        &results_cache_options.aggregation_field)->value_name("FIELD"),
-                    "Output the maximum value of the given field"
             );
 
             FileOutputHandlerOptions file_options{};
@@ -885,31 +864,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&file_options.output_path)->value_name("PATH"),
                     "File output path"
             );
-
-            StdoutOutputHandlerOptions stdout_options{};
-            po::options_description stdout_output_handler_options("Stdout Output Handler Options");
-            // clang-format off
-            stdout_output_handler_options.add_options()(
-                    "count",
-                    "Count the number of results"
-            )(
-                    "count-by-time",
-                    po::value<int64_t>(
-                        &stdout_options.count_by_time_bucket_size_ms
-                    )->value_name("SIZE"),
-                    "Count the number of results in each time span of the given size (ms)"
-            )(
-                    "min",
-                    po::value<std::string>(
-                        &stdout_options.aggregation_field)->value_name("FIELD"),
-                    "Output the minimum value of the given field"
-            )(
-                    "max",
-                    po::value<std::string>(
-                        &stdout_options.aggregation_field)->value_name("FIELD"),
-                    "Output the maximum value of the given field"
-            );
-            // clang-format on
 
             std::vector<std::string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
@@ -976,8 +930,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                              R"( "level: INFO" and output a count aggregation to the reducer)"
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cReducerOutputHandlerName << " --count"
-                          << " --host localhost"
+                          << " --count"
+                          << " " << cReducerOutputHandlerName << " --host localhost"
                           << " --port 14009"
                           << " --job-id 1" << std::endl;
                 std::cerr << std::endl;
@@ -986,10 +940,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                              R"( "level: INFO" and output a count aggregation to the results cache)"
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " --count"
                           << " " << cResultsCacheOutputHandlerName
                           << " --uri mongodb://127.0.0.1:27017/test"
                              " --collection test"
-                             " --count"
                           << std::endl;
                 std::cerr << std::endl;
 
@@ -998,34 +952,15 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
                           << " --count" << std::endl;
-                std::cerr << std::endl;
-
-                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
-                             R"( "level: INFO" and output the maximum value of `latency` to stdout)"
-                          << std::endl;
-                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " --max latency" << std::endl;
-                std::cerr << std::endl;
-
-                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
-                             R"( "level: INFO" and output the minimum value of `latency` to the)"
-                             " results cache"
-                          << std::endl;
-                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cResultsCacheOutputHandlerName
-                          << " --uri mongodb://127.0.0.1:27017/test"
-                             " --collection test"
-                             " --min latency"
-                          << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(match_options);
+                visible_options.add(aggregation_options);
                 visible_options.add(file_output_handler_options);
                 visible_options.add(network_output_handler_options);
                 visible_options.add(results_cache_output_handler_options);
                 visible_options.add(reducer_output_handler_options);
-                visible_options.add(stdout_output_handler_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -1057,13 +992,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     {std::string{cReducerOutputHandlerName}, &reducer_output_handler_options},
                     {std::string{cResultsCacheOutputHandlerName},
                      &results_cache_output_handler_options},
-                    {std::string{cStdoutCacheOutputHandlerName}, &stdout_output_handler_options}
+                    {std::string{cStdoutCacheOutputHandlerName}, nullptr}
             };
-            auto const output_options_map{collect_subcommands(
-                    subcommands,
-                    unrecognized_output_options,
-                    std::string{cStdoutCacheOutputHandlerName}
-            )};
+            auto const output_options_map{
+                    collect_subcommands(subcommands, unrecognized_output_options)
+            };
 
             validate_archive_paths(archive_path, archive_id, m_input_paths);
 
@@ -1092,6 +1025,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             if (output_options_map.size() > 1) {
                 throw std::invalid_argument("clp-s only supports one output handler at a time");
             }
+
+            m_aggregation_type = parse_aggregation_options(
+                    parsed_command_line_options,
+                    m_count_by_time_bucket_size_ms
+            );
 
             for (auto const& [output_handler_name, output_handler_options] : output_options_map) {
                 if (cNetworkOutputHandlerName == output_handler_name) {
@@ -1122,14 +1060,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             std::move(results_cache_options)
                     );
                 } else if (cStdoutCacheOutputHandlerName == output_handler_name) {
-                    parse_stdout_output_handler_options(
-                            stdout_output_handler_options,
-                            output_handler_options,
-                            stdout_options
-                    );
-                    m_output_handler_options.emplace<StdoutOutputHandlerOptions>(
-                            std::move(stdout_options)
-                    );
+                    if (false == output_handler_options.empty()) {
+                        std::string error_msg{fmt::format(
+                                "stdout output handler does not support \"{}\"",
+                                output_handler_options.front()
+                        )};
+                        throw std::invalid_argument(error_msg);
+                    }
+                    m_output_handler_options.emplace<StdoutOutputHandlerOptions>();
                 } else if (cFileOutputHandlerName == output_handler_name) {
                     parse_file_output_handler_options(
                             file_output_handler_options,
@@ -1165,6 +1103,8 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
     po::variables_map parsed_options;
     parse_subcommand_options(options_description, options, parsed_options);
 
+    reject_aggregation_for_handler(cNetworkOutputHandlerName);
+
     if (parsed_options.count("host") == 0) {
         throw std::invalid_argument("host must be specified.");
     }
@@ -1182,55 +1122,34 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
 
 auto CommandLineArguments::parse_aggregation_options(
         po::variables_map const& parsed_options,
-        int64_t count_by_time_bucket_size_ms,
-        std::string_view aggregation_field
+        int64_t count_by_time_bucket_size_ms
 ) -> std::optional<AggregationType> {
     std::optional<AggregationType> aggregation_type;
-    auto const set_aggregation_type = [&](AggregationType type) {
-        if (aggregation_type.has_value()) {
-            throw std::invalid_argument(
-                    "The --count, --count-by-time, --min, and --max options are mutually exclusive."
-            );
-        }
-        aggregation_type = type;
-    };
-
     if (parsed_options.count("count")) {
-        set_aggregation_type(AggregationType::Count);
+        aggregation_type = AggregationType::Count;
     }
     if (parsed_options.count("count-by-time")) {
-        set_aggregation_type(AggregationType::CountByTime);
+        if (aggregation_type.has_value()) {
+            throw std::invalid_argument(
+                    "The --count-by-time and --count options are mutually exclusive."
+            );
+        }
+
         if (count_by_time_bucket_size_ms <= 0) {
             throw std::invalid_argument("Value for count-by-time must be greater than zero.");
         }
-    }
-    if (parsed_options.count("min")) {
-        set_aggregation_type(AggregationType::Min);
-    }
-    if (parsed_options.count("max")) {
-        set_aggregation_type(AggregationType::Max);
-    }
 
-    if (AggregationType::Min == aggregation_type || AggregationType::Max == aggregation_type) {
-        if (aggregation_field.empty()) {
-            throw std::invalid_argument("The field for --min/--max cannot be an empty string.");
-        }
-        if (search::ast::has_unescaped_wildcards(aggregation_field)) {
-            throw std::invalid_argument("The field for --min/--max cannot contain wildcards.");
-        }
-        std::vector<std::string> tokens;
-        std::string descriptor_namespace;
-        if (false
-            == search::ast::tokenize_column_descriptor(
-                    std::string{aggregation_field},
-                    tokens,
-                    descriptor_namespace
-            ))
-        {
-            throw std::invalid_argument("The field for --min/--max is not a valid field path.");
-        }
+        aggregation_type = AggregationType::CountByTime;
     }
     return aggregation_type;
+}
+
+void CommandLineArguments::reject_aggregation_for_handler(std::string_view handler_name) const {
+    if (m_aggregation_type.has_value()) {
+        throw std::invalid_argument(
+                fmt::format("The {} output handler does not support aggregations.", handler_name)
+        );
+    }
 }
 
 void CommandLineArguments::parse_reducer_output_handler_options(
@@ -1263,18 +1182,12 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         throw std::invalid_argument("job-id cannot be negative.");
     }
 
-    auto const aggregation_type{parse_aggregation_options(
-            parsed_options,
-            reducer_options.count_by_time_bucket_size_ms,
-            std::string_view{}
-    )};
-    if (false == aggregation_type.has_value()) {
+    if (false == m_aggregation_type.has_value()) {
         throw std::invalid_argument(
-                "The reducer output handler currently only supports count and"
-                " count-by-time aggregations."
+                "The reducer output handler currently only supports count and count-by-time"
+                " aggregations."
         );
     }
-    reducer_options.aggregation_type = aggregation_type.value();
 }
 
 void CommandLineArguments::parse_results_cache_output_handler_options(
@@ -1306,12 +1219,6 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
     if (0 == results_cache_options.max_num_results) {
         throw std::invalid_argument("max-num-results cannot be 0.");
     }
-
-    results_cache_options.aggregation_type = parse_aggregation_options(
-            parsed_options,
-            results_cache_options.count_by_time_bucket_size_ms,
-            results_cache_options.aggregation_field
-    );
 }
 
 void CommandLineArguments::parse_file_output_handler_options(
@@ -1321,27 +1228,15 @@ void CommandLineArguments::parse_file_output_handler_options(
 ) {
     po::variables_map parsed_options;
     parse_subcommand_options(options_description, options, parsed_options);
+
+    reject_aggregation_for_handler(cFileOutputHandlerName);
+
     if (parsed_options.count("path") == 0) {
         throw std::invalid_argument("path must be specified.");
     }
     if (file_options.output_path.empty()) {
         throw std::invalid_argument("path cannot be an empty string.");
     }
-}
-
-void CommandLineArguments::parse_stdout_output_handler_options(
-        po::options_description const& options_description,
-        std::vector<std::string> const& options,
-        StdoutOutputHandlerOptions& stdout_options
-) {
-    po::variables_map parsed_options;
-    parse_subcommand_options(options_description, options, parsed_options);
-
-    stdout_options.aggregation_type = parse_aggregation_options(
-            parsed_options,
-            stdout_options.count_by_time_bucket_size_ms,
-            stdout_options.aggregation_field
-    );
 }
 
 void CommandLineArguments::print_basic_usage() const {

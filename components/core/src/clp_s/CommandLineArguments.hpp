@@ -34,8 +34,6 @@ public:
     enum class AggregationType : uint8_t {
         Count,
         CountByTime,
-        Min,
-        Max,
     };
 
     struct ResultsCacheOutputHandlerOptions {
@@ -44,10 +42,6 @@ public:
         std::string dataset;
         uint64_t batch_size{1000};
         uint64_t max_num_results{1000};
-        std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size_ms{};
-        // Field whose value is aggregated by `--min`/`--max`.
-        std::string aggregation_field;
     };
 
     struct FileOutputHandlerOptions {
@@ -63,16 +57,9 @@ public:
         std::string host;
         int port{-1};
         reducer::job_id_t job_id{-1};
-        AggregationType aggregation_type{AggregationType::Count};
-        int64_t count_by_time_bucket_size_ms{};
     };
 
-    struct StdoutOutputHandlerOptions {
-        std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size_ms{};
-        // Field whose value is aggregated by `--min`/`--max`.
-        std::string aggregation_field;
-    };
+    struct StdoutOutputHandlerOptions {};
 
     using OutputHandlerOptionsVariant = std::
             variant<ResultsCacheOutputHandlerOptions,
@@ -130,8 +117,18 @@ public:
 
     bool get_ignore_case() const { return m_ignore_case; }
 
+    [[nodiscard]] auto get_enable_telemetry() const -> bool { return m_enable_telemetry; }
+
     auto get_output_handler_options() const -> OutputHandlerOptionsVariant const& {
         return m_output_handler_options;
+    }
+
+    [[nodiscard]] auto get_aggregation_type() const -> std::optional<AggregationType> const& {
+        return m_aggregation_type;
+    }
+
+    [[nodiscard]] auto get_count_by_time_bucket_size_ms() const -> int64_t {
+        return m_count_by_time_bucket_size_ms;
     }
 
     [[nodiscard]] auto get_retain_float_format() const -> bool {
@@ -168,20 +165,24 @@ private:
     );
 
     /**
-     * Validates the aggregation options (count, count-by-time, min, and max) for output handlers
-     * that support aggregations. The options are mutually exclusive.
+     * Validates the aggregation options (count and count-by-time) for output handlers that
+     * support aggregations.
      * @param parsed_options
      * @param count_by_time_bucket_size_ms The parsed value of the count-by-time option; only
      * validated when that option was specified.
-     * @param aggregation_field The parsed value of the min/max option; only validated when one of
-     * those options was specified.
      * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
      */
     [[nodiscard]] static auto parse_aggregation_options(
             boost::program_options::variables_map const& parsed_options,
-            int64_t count_by_time_bucket_size_ms,
-            std::string_view aggregation_field
+            int64_t count_by_time_bucket_size_ms
     ) -> std::optional<AggregationType>;
+
+    /**
+     * Throws if an aggregation was requested.
+     * @param handler_name The name of the output handler, used in the error message.
+     * @throws std::invalid_argument if an aggregation was requested.
+     */
+    void reject_aggregation_for_handler(std::string_view handler_name) const;
 
     /**
      * Validates output options related to the Reducer output handler.
@@ -221,19 +222,6 @@ private:
             boost::program_options::options_description const& options_description,
             std::vector<std::string> const& options,
             FileOutputHandlerOptions& file_options
-    );
-
-    /**
-     * Validates output options related to the stdout output handler.
-     * @param options_description
-     * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set.
-     * @param stdout_options The parsed representation of the stdout output handler options.
-     */
-    void parse_stdout_output_handler_options(
-            boost::program_options::options_description const& options_description,
-            std::vector<std::string> const& options,
-            StdoutOutputHandlerOptions& stdout_options
     );
 
     void print_basic_usage() const;
@@ -278,7 +266,11 @@ private:
     std::optional<epochtime_t> m_search_begin_ts;
     std::optional<epochtime_t> m_search_end_ts;
     bool m_ignore_case{false};
+    bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
+
+    std::optional<AggregationType> m_aggregation_type;
+    int64_t m_count_by_time_bucket_size_ms{};
 };
 }  // namespace clp_s
 

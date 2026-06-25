@@ -246,28 +246,7 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
     }
 
-    auto const& output_handler_options{command_line_arguments.get_output_handler_options()};
-    auto const reducer_aggregation_requested{
-            std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
-                    output_handler_options
-            )
-    };
-    auto const* results_cache_options
-            = std::get_if<CommandLineArguments::ResultsCacheOutputHandlerOptions>(
-                    &output_handler_options
-            );
-    auto const results_cache_aggregation_requested{
-            nullptr != results_cache_options && results_cache_options->aggregation_type.has_value()
-    };
-    auto const* stdout_options = std::get_if<CommandLineArguments::StdoutOutputHandlerOptions>(
-            &output_handler_options
-    );
-    auto const stdout_aggregation_requested{
-            nullptr != stdout_options && stdout_options->aggregation_type.has_value()
-    };
-    if (reducer_aggregation_requested || results_cache_aggregation_requested
-        || stdout_aggregation_requested)
-    {
+    if (command_line_arguments.get_aggregation_type().has_value()) {
         SPDLOG_ERROR("kv-ir search: Aggregation support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};
     }
