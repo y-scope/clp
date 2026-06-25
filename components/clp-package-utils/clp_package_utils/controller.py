@@ -417,9 +417,12 @@ class BaseController(ABC):
         """
         component_name = RESULTS_CACHE_COMPONENT_NAME
 
-        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
+        if (
+            self._clp_config.results_cache is None
+            or BundledService.RESULTS_CACHE not in self._clp_config.bundled
+        ):
             logger.info(
-                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                "%s is not configured or part of the 'bundled' configuration, skipping service bundling...",
                 component_name,
             )
             # Bundling
@@ -463,6 +466,10 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = RESULTS_CACHE_COMPONENT_NAME
+        if self._clp_config.results_cache is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_RESULTS_CACHE_ENABLED": "0"})
+
         logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
@@ -802,14 +809,14 @@ class BaseController(ABC):
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-            "MongoDbHost": container_clp_config.results_cache.host,
-            "MongoDbPort": container_clp_config.results_cache.port,
-            "MongoDbName": self._clp_config.results_cache.db_name,
+            "MongoDbHost": container_clp_config.results_cache.host if container_clp_config.results_cache else None,
+            "MongoDbPort": container_clp_config.results_cache.port if container_clp_config.results_cache else None,
+            "MongoDbName": self._clp_config.results_cache.db_name if self._clp_config.results_cache else None,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
             "MongoDbStreamFilesCollectionName": (
-                self._clp_config.results_cache.stream_collection_name
+                self._clp_config.results_cache.stream_collection_name if self._clp_config.results_cache else None
             ),
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),

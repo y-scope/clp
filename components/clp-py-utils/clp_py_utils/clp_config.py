@@ -816,7 +816,7 @@ class ClpConfig(BaseModel):
     queue: Queue | None = Queue()
     redis: Redis | None = Redis()
     reducer: Reducer | None = Reducer()
-    results_cache: ResultsCache = ResultsCache()
+    results_cache: ResultsCache | None = ResultsCache()
     otel_collector: OtelCollector = OtelCollector()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     spider_scheduler: SpiderScheduler | None = None
@@ -1120,7 +1120,8 @@ class ClpConfig(BaseModel):
             self.redis.transform_for_container(BundledService.REDIS in self.bundled)
         if self.spider_scheduler is not None:
             self.spider_scheduler.transform_for_container()
-        self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
+        if self.results_cache is not None:
+            self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
         self.otel_collector.transform_for_container(BundledService.OTEL_COLLECTOR in self.bundled)
         if self.query_scheduler is not None:
             self.query_scheduler.transform_for_container()
