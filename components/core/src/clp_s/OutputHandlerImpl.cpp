@@ -35,18 +35,12 @@ namespace {
  * @return The collection.
  */
 template <typename OperationFailedT>
-auto connect_to_results_cache(
-        string_view uri,
-        string_view collection,
-        mongocxx::client& client
-) -> mongocxx::collection;
+auto connect_to_results_cache(string_view uri, string_view collection, mongocxx::client& client)
+        -> mongocxx::collection;
 
 template <typename OperationFailedT>
-auto connect_to_results_cache(
-        string_view uri,
-        string_view collection,
-        mongocxx::client& client
-) -> mongocxx::collection {
+auto connect_to_results_cache(string_view uri, string_view collection, mongocxx::client& client)
+        -> mongocxx::collection {
     try {
         auto mongo_uri = mongocxx::uri{string{uri}};
         client = mongocxx::client(mongo_uri);
