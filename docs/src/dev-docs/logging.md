@@ -4,7 +4,7 @@ The CLP package contains multiple runtime stacks, and each stack owns its loggin
 summarizes the current behavior and the controls developers/operators should use.
 
 ## Component summary
-
+This section explains the logging setup of the different components in CLP package. 
 | Component family              | Examples                                                            | Logger                                                    | Format                           | Level control              |
 |-------------------------------|---------------------------------------------------------------------|-----------------------------------------------------------|----------------------------------|----------------------------|
 | Python orchestration services | Schedulers, workers, reducer wrapper, garbage collector, MCP server | [`clp_py_utils.clp_logging`][clp-py-logging]              | JSON                             | `CLP_LOGGING_LEVEL`        |
@@ -16,6 +16,17 @@ summarizes the current behavior and the controls developers/operators should use
 
 There is no single project-wide JSON schema. Python, Rust, and Pino logs are all line-delimited JSON
 in packaged non-interactive service runtimes, but each stack uses its own field names.
+
+## Development guidance
+
+* New Python orchestration services should use 
+  [`structlog.get_logger`][clp-py-logging] and
+  [`clp_py_utils.clp_logging.configure_logging`][clp-py-logging].
+* New Rust services should use [`clp_rust_utils::logging::set_up_logging`][clp-rust-logging].
+* WebUI server code should log through Fastify's logger (`request.log` or `app.log`).
+* WebUI client `console.*` calls should stay limited to browser diagnostics.
+* Native core binaries should keep their existing `spdlog` setup unless a separate change migrates
+  them to structured logging.
 
 ## Timestamp convention
 
@@ -103,16 +114,6 @@ Native core binaries use `spdlog` text output. Package controller commands and o
 also use human-readable stdlib logging. These tools are not covered by the Python/Rust/WebUI service
 JSON contracts.
 
-## Development guidance
-
-* New Python orchestration services should use 
-  [`clp_py_utils.clp_logging.get_logger`][clp-py-logging] and
-  [`clp_py_utils.clp_logging.configure_logging`][clp-py-logging].
-* New Rust services should use [`clp_rust_utils::logging::set_up_logging`][clp-rust-logging].
-* WebUI server code should log through Fastify's logger (`request.log` or `app.log`).
-* WebUI client `console.*` calls should stay limited to browser diagnostics.
-* Native core binaries should keep their existing `spdlog` setup unless a separate change migrates
-  them to structured logging.
 
 ## Deployment notes
 

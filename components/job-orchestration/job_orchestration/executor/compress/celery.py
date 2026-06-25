@@ -2,6 +2,7 @@ import logging
 
 from celery import Celery, signals
 from clp_py_utils.clp_logging import set_json_formatter_on_handlers
+from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
 
 from job_orchestration.executor.compress import celeryconfig
 
@@ -20,6 +21,15 @@ def setup_json_logging(logger: logging.Logger | None = None, **_: object) -> Non
     """
     if logger is not None:
         set_json_formatter_on_handlers(logger)
+
+@signals.worker_process_init.connect
+def setup_telemetry(**kwargs) -> None:
+    init_telemetry()
+
+
+@signals.worker_process_shutdown.connect
+def teardown_telemetry(**kwargs) -> None:
+    shutdown_telemetry()
 
 
 if "__main__" == __name__:
