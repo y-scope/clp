@@ -269,7 +269,6 @@ private:
     bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
 
-    // Aggregation operator options (shared across all output handlers)
     std::optional<AggregationType> m_aggregation_type;
     int64_t m_count_by_time_bucket_size_ms{};
 };
