@@ -1037,23 +1037,6 @@ class ClpConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_query_pipeline_configuration(self):
-        query_engine = self.webui.query_engine
-        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
-            missing = []
-            if self.query_scheduler is None:
-                missing.append("query_scheduler")
-            if self.query_worker is None:
-                missing.append("query_worker")
-            if self.reducer is None:
-                missing.append("reducer")
-            if missing:
-                raise ValueError(
-                    f"`{', '.join(missing)}` must be configured when webui.query_engine is '{query_engine}'."
-                )
-        return self
-
-    @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
         query_engine = self.webui.query_engine
         storage_engine = self.package.storage_engine
