@@ -51,6 +51,70 @@ package:
 
 :::
 
+:::{tab-item} Single container
+:sync: single-container
+
+From the extracted `clp-text` package directory, set the filesystem log input directory in
+`etc/clp-config.yaml`:
+
+```yaml
+logs_input:
+  type: "fs"
+  directory: "/home/alice/logs"
+```
+
+Keep `logs_input.directory` as the host path. The Docker mount below maps that same host directory
+to the path CLP uses inside the container. For other custom single-container settings, see the
+[single-container image guide][single-container-image].
+
+Create local quick-start credentials and start the image:
+
+```bash
+cat > etc/credentials.yaml <<'EOF'
+database:
+  username: "clp-user"
+  password: "pass"
+  root_username: "root"
+  root_password: "root-pass"
+  spider_username: "spider-user"
+  spider_password: "spider-pass"
+queue:
+  username: "clp-user"
+  password: "pass"
+redis:
+  password: "pass"
+EOF
+
+export CLP_LOGS_INPUT_DIR="/home/alice/logs"
+
+docker run \
+  --detach \
+  --name clp-package-single \
+  --mount type=bind,src="$(realpath etc/clp-config.yaml)",dst=/etc/clp-config.yaml,readonly \
+  --mount type=bind,src="$(realpath etc/credentials.yaml)",dst=/opt/clp/etc/credentials.yaml,readonly \
+  --mount type=bind,src="${CLP_LOGS_INPUT_DIR}",dst="/mnt/logs${CLP_LOGS_INPUT_DIR}",readonly \
+  --publish 127.0.0.1:4000:4000 \
+  clp-package-single:latest
+```
+
+The command assumes the image is available locally as `clp-package-single:latest`.
+
+````{warning}
+**Do not comment out or remove the `package` block in `etc/clp-config.yaml`**; otherwise, the
+storage and query engines will default to `clp-s`, which is optimized for JSON logs rather than
+unstructured text logs.
+
+To use `clp-text`, the `package` block should be configured as follows:
+
+```yaml
+package:
+  storage_engine: "clp"
+  query_engine: "clp"
+```
+````
+
+:::
+
 :::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
@@ -135,6 +199,10 @@ results_cache:
 
 ## Compressing unstructured text logs
 
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+
 To compress some unstructured text logs, run:
 
 ```bash
@@ -150,6 +218,42 @@ Compressed logs will be stored in the directory specified by the `archive_output
 config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defaults to
 `var/data/archives`).
 
+:::
+
+:::{tab-item} Single container
+:sync: single-container
+
+Open [http://localhost:4000/ingest](http://localhost:4000/ingest) and submit a compression job from
+the **Submit Compression Job** form. Select files or directories from the mounted
+`logs_input.directory`; in the example above, that is `/home/alice/logs` on the host and
+`/mnt/logs/home/alice/logs` inside the container.
+
+Use the **Compression Jobs** table on the same page to monitor the job status and compression
+ratio.
+
+:::
+
+:::{tab-item} Kubernetes (`kind`)
+:sync: kind
+
+To compress some unstructured text logs, run:
+
+```bash
+sbin/compress.sh <path1> [<path2> ...]
+```
+
+`<path...>` are paths to unstructured text log files or directories containing such files.
+
+The compression script will output the compression ratio of each dataset you compress, or you can
+use the UI to view overall statistics.
+
+Compressed logs will be stored in the directory specified by the `archive_output.storage.directory`
+config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defaults to
+`var/data/archives`).
+
+:::
+::::
+
 ### Sample logs
 
 For some sample logs, check out the [open-source datasets][datasets].
@@ -158,8 +262,8 @@ For some sample logs, check out the [open-source datasets][datasets].
 
 ## Searching unstructured text logs
 
-You can search your compressed logs from CLP's [UI](#searching-from-the-ui) or the
-[command line](#searching-from-the-command-line).
+You can search your compressed logs from CLP's [UI](#searching-from-the-ui). Docker Compose and
+Kubernetes deployments also support [command-line search](#searching-from-the-command-line).
 
 In clp-text, queries are written as wildcard expressions. A wildcard expression is a plain text
 query where:
@@ -214,6 +318,12 @@ To search your compressed logs from CLP's UI, open the following URL in your bro
 [http://localhost:4000](http://localhost:4000)
 :::
 
+:::{tab-item} Single container
+:sync: single-container
+
+[http://localhost:4000](http://localhost:4000)
+:::
+
 :::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
@@ -257,12 +367,14 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following elemen
 
 :::{note}
 By default, the UI will only return 1,000 of the latest search results. To perform searches which
-return more results, use the [command line](#searching-from-the-command-line).
+return more results with Docker Compose or Kubernetes, use the
+[command line](#searching-from-the-command-line).
 :::
 
 ### Searching from the command line
 
-To search your compressed logs from the command line, run:
+For Docker Compose or Kubernetes deployments, search your compressed logs from the command line by
+running:
 
 ```bash
 sbin/search.sh '<query>'
@@ -297,6 +409,23 @@ sbin/stop-clp.sh
 
 :::
 
+:::{tab-item} Single container
+:sync: single-container
+
+To inspect the running container:
+
+```bash
+docker ps --filter name=clp-package-single
+```
+
+To stop CLP:
+
+```bash
+docker rm --force clp-package-single
+```
+
+:::
+
 :::{tab-item} Kubernetes (`kind`)
 :sync: kind
 
@@ -316,4 +445,5 @@ kind delete cluster --name clp
 ::::
 
 [datasets]: ../resources-datasets.md
+[single-container-image]: ../guides-single-container-image.md
 [text-search-syntax]: ../reference-text-search-syntax.md

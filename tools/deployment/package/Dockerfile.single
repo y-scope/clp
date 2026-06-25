@@ -1,0 +1,58 @@
+ARG CLP_PACKAGE_BASE_IMAGE=clp-package:latest
+FROM ${CLP_PACKAGE_BASE_IMAGE}
+
+USER root
+
+COPY single-container/generate-third-party-notices.sh \
+    /usr/local/bin/clp-single-container-generate-third-party-notices
+COPY single-container/validate-release-licenses.sh \
+    /usr/local/bin/clp-single-container-validate-release-licenses
+RUN apt-get update \
+    && chmod 0755 \
+        /usr/local/bin/clp-single-container-generate-third-party-notices \
+        /usr/local/bin/clp-single-container-validate-release-licenses \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+        ca-certificates \
+        curl \
+        gnupg \
+    && curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc \
+        | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg \
+    && echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse" \
+        > /etc/apt/sources.list.d/mongodb-org-8.0.list \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+        mariadb-server \
+        mongodb-org-server \
+        rabbitmq-server \
+        redis-server \
+        supervisor \
+    && apt-get purge --auto-remove -y \
+        curl \
+        gnupg \
+    && /usr/local/bin/clp-single-container-validate-release-licenses \
+    && /usr/local/bin/clp-single-container-generate-third-party-notices \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY single-container/COMPLIANCE.md /opt/clp/share/doc/clp-single-container/COMPLIANCE.md
+COPY single-container/entrypoint.sh /usr/local/bin/clp-single-container-entrypoint
+COPY single-container/wait-for-files.sh /usr/local/bin/clp-single-container-wait-for-files
+COPY single-container/wait-for-tcp.sh /usr/local/bin/clp-single-container-wait-for-tcp
+COPY single-container/supervisord.conf /etc/supervisor/conf.d/clp-single-container.conf
+RUN chmod 0755 \
+        /usr/local/bin/clp-single-container-entrypoint \
+        /usr/local/bin/clp-single-container-wait-for-files \
+        /usr/local/bin/clp-single-container-wait-for-tcp
+
+ENV CLP_CONFIG_PATH=/etc/clp-config.yaml \
+    CLP_HOME=/opt/clp \
+    MONGODB_CONFIG_OVERRIDE_NOFORK=1 \
+    PYTHONPATH=/opt/clp/lib/python3/site-packages
+
+LABEL org.yscope.clp.third-party-notices="/opt/clp/share/third-party-notices" \
+      org.yscope.clp.single-container.internal-services="mariadb,rabbitmq,redis,mongodb"
+
+EXPOSE 3001 3002 4000 8000
+
+ENTRYPOINT ["/usr/local/bin/clp-single-container-entrypoint"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]

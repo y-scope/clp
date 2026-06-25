@@ -55,6 +55,7 @@ Any design docs describing parts of this project.
 :hidden:
 
 building-package
+building-single-container-image
 :::
 
 :::{toctree}
