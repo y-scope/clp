@@ -17,6 +17,7 @@
 
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
+#include "CommandLineArguments.hpp"
 #include "Defs.hpp"
 #include "FileWriter.hpp"
 #include "search/OutputHandler.hpp"
@@ -385,19 +386,19 @@ private:
 };
 
 /**
- * Output handler that performs a count or count-by-time aggregation and writes the results to
- * standard output as newline-delimited JSON, one object per group.
+ * Output handler that writes a search aggregation's results to standard output as newline-delimited
+ * JSON, one object per group.
  *
- * Mirroring the reducer count handlers: count accumulates through a `reducer::CountOperator`
- * pipeline (yielding a single total), while count-by-time accumulates a count per time bucket. Both
- * are serialized through a `reducer::RecordGroupIterator` in `finish()`.
+ * The aggregation to perform is selected by `AggregationType`. Count accumulates through a
+ * `reducer::CountOperator` pipeline (yielding a single total); count-by-time accumulates a count
+ * per time bucket. Results are serialized through a `reducer::RecordGroupIterator` in `finish()`.
  */
 class AggregationToStdoutOutputHandler : public search::OutputHandler {
 public:
     // Constructors
     AggregationToStdoutOutputHandler(
             std::string_view archive_id,
-            bool count_by_time,
+            CommandLineArguments::AggregationType aggregation_type,
             int64_t count_by_time_bucket_size_ms
     );
 
@@ -421,6 +422,7 @@ public:
 private:
     // Data members
     std::string m_archive_id;
+    CommandLineArguments::AggregationType m_aggregation_type;
     int64_t m_count_by_time_bucket_size_ms;
     reducer::Pipeline m_pipeline;
     std::map<int64_t, int64_t> m_bucket_counts;

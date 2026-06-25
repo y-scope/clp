@@ -241,11 +241,15 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
 
 AggregationToStdoutOutputHandler::AggregationToStdoutOutputHandler(
         string_view archive_id,
-        bool count_by_time,
+        CommandLineArguments::AggregationType aggregation_type,
         int64_t count_by_time_bucket_size_ms
 )
-        : search::OutputHandler(count_by_time, false),
+        : search::OutputHandler(
+                  CommandLineArguments::AggregationType::CountByTime == aggregation_type,
+                  false
+          ),
           m_archive_id{archive_id},
+          m_aggregation_type{aggregation_type},
           m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms},
           m_pipeline{reducer::PipelineInputMode::InterStage} {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
@@ -267,10 +271,10 @@ auto AggregationToStdoutOutputHandler::write(
 }
 
 auto AggregationToStdoutOutputHandler::finish() -> ErrorCode {
-    // count-by-time results are serialized from the bucket counts; count results come from the
-    // CountOperator pipeline. `should_output_metadata()` is true only for count-by-time.
+    // Count-by-time results are serialized from the per-bucket counts; count results come from the
+    // CountOperator pipeline.
     std::unique_ptr<reducer::RecordGroupIterator> results;
-    if (should_output_metadata()) {
+    if (CommandLineArguments::AggregationType::CountByTime == m_aggregation_type) {
         results = std::make_unique<reducer::Int64Int64MapRecordGroupIterator>(
                 m_bucket_counts,
                 reducer::CountOperator::cRecordElementKey

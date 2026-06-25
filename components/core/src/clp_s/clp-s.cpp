@@ -370,8 +370,7 @@ bool search_archive(
                                 output_handler
                                         = std::make_unique<clp_s::AggregationToStdoutOutputHandler>(
                                                 archive_reader->get_archive_id(),
-                                                CommandLineArguments::AggregationType::CountByTime
-                                                        == aggregation_type.value(),
+                                                aggregation_type.value(),
                                                 command_line_arguments
                                                         .get_count_by_time_bucket_size_ms()
                                         );
