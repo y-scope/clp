@@ -1032,29 +1032,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
 
             for (auto const& [output_handler_name, output_handler_options] : output_options_map) {
-                // Validate the requested aggregation (if any) against the selected output handler:
-                // the reducer requires one, the results cache and stdout treat it as optional, and
-                // the file and network handlers do not support it.
-                if (cReducerOutputHandlerName == output_handler_name) {
-                    if (false == m_aggregation_type.has_value()) {
-                        throw std::invalid_argument(
-                                "The reducer output handler currently only supports count and"
-                                " count-by-time aggregations."
-                        );
-                    }
-                } else if ((cFileOutputHandlerName == output_handler_name
-                            || cNetworkOutputHandlerName == output_handler_name)
-                           && m_aggregation_type.has_value())
-                {
-                    throw std::invalid_argument(
-                            fmt::format(
-                                    "The {} output handler does not support count or count-by-time"
-                                    " aggregations.",
-                                    output_handler_name
-                            )
-                    );
-                }
-
                 if (cNetworkOutputHandlerName == output_handler_name) {
                     parse_network_dest_output_handler_options(
                             network_output_handler_options,
@@ -1119,6 +1096,8 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
     po::variables_map parsed_options;
     parse_subcommand_options(options_description, options, parsed_options);
 
+    reject_aggregation_for_handler(cNetworkOutputHandlerName);
+
     if (parsed_options.count("host") == 0) {
         throw std::invalid_argument("host must be specified.");
     }
@@ -1158,6 +1137,18 @@ auto CommandLineArguments::parse_aggregation_options(
     return aggregation_type;
 }
 
+void CommandLineArguments::reject_aggregation_for_handler(std::string_view handler_name) const {
+    if (m_aggregation_type.has_value()) {
+        throw std::invalid_argument(
+                fmt::format(
+                        "The {} output handler does not support count or count-by-time"
+                        " aggregations.",
+                        handler_name
+                )
+        );
+    }
+}
+
 void CommandLineArguments::parse_reducer_output_handler_options(
         po::options_description const& options_description,
         std::vector<std::string> const& options,
@@ -1186,6 +1177,13 @@ void CommandLineArguments::parse_reducer_output_handler_options(
     }
     if (reducer_options.job_id < 0) {
         throw std::invalid_argument("job-id cannot be negative.");
+    }
+
+    if (false == m_aggregation_type.has_value()) {
+        throw std::invalid_argument(
+                "The reducer output handler currently only supports count and count-by-time"
+                " aggregations."
+        );
     }
 }
 
@@ -1227,6 +1225,8 @@ void CommandLineArguments::parse_file_output_handler_options(
 ) {
     po::variables_map parsed_options;
     parse_subcommand_options(options_description, options, parsed_options);
+
+    reject_aggregation_for_handler(cFileOutputHandlerName);
 
     if (parsed_options.count("path") == 0) {
         throw std::invalid_argument("path must be specified.");

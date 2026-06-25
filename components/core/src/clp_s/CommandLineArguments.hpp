@@ -178,6 +178,13 @@ private:
     ) -> std::optional<AggregationType>;
 
     /**
+     * Throws if an aggregation was requested, for output handlers that don't support aggregations.
+     * @param handler_name The name of the output handler, used in the error message.
+     * @throws std::invalid_argument if an aggregation operator was specified.
+     */
+    void reject_aggregation_for_handler(std::string_view handler_name) const;
+
+    /**
      * Validates output options related to the Reducer output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
