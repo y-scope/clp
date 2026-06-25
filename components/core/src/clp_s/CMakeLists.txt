@@ -461,6 +461,8 @@ endif()
 
 set(
         CLP_S_EXE_SOURCES
+        Aggregation.cpp
+        Aggregation.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         ErrorCode.hpp

@@ -3,8 +3,11 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/builder/basic/kvp.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
@@ -237,102 +240,43 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-auto CountStdoutOutputHandler::finish() -> ErrorCode {
-    if (0 == m_count) {
-        return ErrorCode::ErrorCodeSuccess;
+auto StdoutSink::write(AggregationResult const& result) -> void {
+    nlohmann::json document;
+    document[constants::results_cache::search::cArchiveId] = m_archive_id;
+    for (auto const& [key, value] : result) {
+        std::visit([&](auto const& field_value) { document[key] = field_value; }, value);
     }
-
-    nlohmann::json result;
-    result[constants::results_cache::search::cArchiveId] = m_archive_id;
-    result[constants::results_cache::search::cCount] = m_count;
-    std::cout << result.dump() << '\n';
-    return ErrorCode::ErrorCodeSuccess;
+    std::cout << document.dump() << '\n';
 }
 
-auto CountByTimeStdoutOutputHandler::finish() -> ErrorCode {
-    for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
-        nlohmann::json result;
-        result[constants::results_cache::search::cArchiveId] = m_archive_id;
-        result[constants::results_cache::search::cTimestamp] = bucket_timestamp;
-        result[constants::results_cache::search::cCount] = count;
-        std::cout << result.dump() << '\n';
-    }
-    return ErrorCode::ErrorCodeSuccess;
-}
-
-CountResultsCacheOutputHandler::CountResultsCacheOutputHandler(
-        string_view uri,
-        string_view collection,
-        string_view archive_id
-)
-        : search::OutputHandler{false, false},
-          m_archive_id{archive_id} {
+ResultsCacheSink::ResultsCacheSink(string_view uri, string_view collection, string_view archive_id)
+        : m_archive_id{archive_id} {
     m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
 }
 
-auto CountResultsCacheOutputHandler::finish() -> ErrorCode {
-    if (0 == m_count) {
-        return ErrorCode::ErrorCodeSuccess;
-    }
-
-    try {
-        m_collection.insert_one(
-                bsoncxx::builder::basic::make_document(
-                        bsoncxx::builder::basic::kvp(
-                                constants::results_cache::search::cArchiveId,
-                                m_archive_id
-                        ),
-                        bsoncxx::builder::basic::kvp(
-                                constants::results_cache::search::cCount,
-                                m_count
-                        )
-                )
+auto ResultsCacheSink::write(AggregationResult const& result) -> void {
+    bsoncxx::builder::basic::document document;
+    document.append(
+            bsoncxx::builder::basic::kvp(constants::results_cache::search::cArchiveId, m_archive_id)
+    );
+    for (auto const& [key, value] : result) {
+        std::visit(
+                [&](auto const& field_value) {
+                    document.append(bsoncxx::builder::basic::kvp(key, field_value));
+                },
+                value
         );
-    } catch (mongocxx::exception const& e) {
-        return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
-    return ErrorCode::ErrorCodeSuccess;
+    m_results.push_back(document.extract());
 }
 
-CountByTimeResultsCacheOutputHandler::CountByTimeResultsCacheOutputHandler(
-        string_view uri,
-        string_view collection,
-        string_view archive_id,
-        int64_t count_by_time_bucket_size_ms
-)
-        : search::OutputHandler{true, false},
-          m_archive_id{archive_id},
-          m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {
-    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
-}
-
-auto CountByTimeResultsCacheOutputHandler::finish() -> ErrorCode {
-    if (m_bucket_counts.empty()) {
+auto ResultsCacheSink::finish() -> ErrorCode {
+    if (m_results.empty()) {
         return ErrorCode::ErrorCodeSuccess;
     }
 
     try {
-        std::vector<bsoncxx::document::value> documents;
-        documents.reserve(m_bucket_counts.size());
-        for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
-            documents.emplace_back(
-                    bsoncxx::builder::basic::make_document(
-                            bsoncxx::builder::basic::kvp(
-                                    constants::results_cache::search::cArchiveId,
-                                    m_archive_id
-                            ),
-                            bsoncxx::builder::basic::kvp(
-                                    constants::results_cache::search::cTimestamp,
-                                    bucket_timestamp
-                            ),
-                            bsoncxx::builder::basic::kvp(
-                                    constants::results_cache::search::cCount,
-                                    count
-                            )
-                    )
-            );
-        }
-        m_collection.insert_many(documents);
+        m_collection.insert_many(m_results);
     } catch (mongocxx::exception const& e) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
