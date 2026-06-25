@@ -1099,16 +1099,6 @@ class ClpConfig(BaseModel):
             raise ValueError("`redis` must be configured when using Celery orchestration.")
         return self
 
-    @model_validator(mode="after")
-    def disable_unused_services(self):
-        if (
-            self.webui.query_engine == QueryEngine.PRESTO
-            and self.compression_scheduler.type == OrchestrationType.SPIDER
-        ):
-            self.queue = None
-            self.redis = None
-        return self
-
     def transform_for_container(self):
         """
         Converts all relevant directories to absolute paths inside the container, and updates
