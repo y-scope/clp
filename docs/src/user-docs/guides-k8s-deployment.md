@@ -217,7 +217,13 @@ image:
     digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
 
 # Adjust worker concurrency
-workerConcurrency: 16
+scheduling:
+  compressionWorker:
+    slotsPerPod: 16
+  queryWorker:
+    slotsPerPod: 16
+  reducer:
+    slotsPerPod: 16
 
 # Configure CLP settings
 clpConfig:
@@ -414,6 +420,34 @@ To run all worker types in the same node pool:
    ```bash
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
+
+---
+
+### Component resources
+
+Set resource requests and limits for each chart component under the top-level `resources` key.
+Values use standard Kubernetes resource quantities:
+
+```{code-block} yaml
+:caption: resources.yaml
+
+resources:
+  compressionWorker:
+    requests:
+      cpu: "1"
+      memory: "1Gi"
+      ephemeral-storage: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+      ephemeral-storage: "4Gi"
+```
+
+Then install with the values file:
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f resources.yaml
+```
 
 ---
 

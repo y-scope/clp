@@ -43,7 +43,7 @@ public:
         uint64_t batch_size{1000};
         uint64_t max_num_results{1000};
         std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size{};  // Milliseconds
+        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct FileOutputHandlerOptions {
@@ -60,12 +60,12 @@ public:
         int port{-1};
         reducer::job_id_t job_id{-1};
         AggregationType aggregation_type{AggregationType::Count};
-        int64_t count_by_time_bucket_size{};  // Milliseconds
+        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct StdoutOutputHandlerOptions {
         std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size{};  // Milliseconds
+        int64_t count_by_time_bucket_size_ms{};
     };
 
     using OutputHandlerOptionsVariant = std::
@@ -124,6 +124,8 @@ public:
 
     bool get_ignore_case() const { return m_ignore_case; }
 
+    [[nodiscard]] auto get_enable_telemetry() const -> bool { return m_enable_telemetry; }
+
     auto get_output_handler_options() const -> OutputHandlerOptionsVariant const& {
         return m_output_handler_options;
     }
@@ -165,13 +167,13 @@ private:
      * Validates the aggregation options (count and count-by-time) for output handlers that
      * support aggregations.
      * @param parsed_options
-     * @param count_by_time_bucket_size The parsed value of the count-by-time option; only
+     * @param count_by_time_bucket_size_ms The parsed value of the count-by-time option; only
      * validated when that option was specified.
      * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
      */
     [[nodiscard]] static auto parse_aggregation_options(
             boost::program_options::variables_map const& parsed_options,
-            int64_t count_by_time_bucket_size
+            int64_t count_by_time_bucket_size_ms
     ) -> std::optional<AggregationType>;
 
     /**
@@ -269,6 +271,7 @@ private:
     std::optional<epochtime_t> m_search_begin_ts;
     std::optional<epochtime_t> m_search_end_ts;
     bool m_ignore_case{false};
+    bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
 };
 }  // namespace clp_s

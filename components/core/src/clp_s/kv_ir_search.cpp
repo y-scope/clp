@@ -247,25 +247,28 @@ auto search_kv_ir_stream(
     }
 
     auto const& output_handler_options{command_line_arguments.get_output_handler_options()};
-    bool const reducer_aggregation_requested
-            = std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
+    auto const reducer_aggregation_requested{
+            std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
                     output_handler_options
-            );
+            )
+    };
     auto const* results_cache_options
             = std::get_if<CommandLineArguments::ResultsCacheOutputHandlerOptions>(
                     &output_handler_options
             );
-    bool const results_cache_aggregation_requested
-            = nullptr != results_cache_options
-              && results_cache_options->aggregation_type.has_value();
-    auto const* stdout_options
-            = std::get_if<CommandLineArguments::StdoutOutputHandlerOptions>(&output_handler_options);
-    bool const stdout_aggregation_requested
-            = nullptr != stdout_options && stdout_options->aggregation_type.has_value();
+    auto const results_cache_aggregation_requested{
+            nullptr != results_cache_options && results_cache_options->aggregation_type.has_value()
+    };
+    auto const* stdout_options = std::get_if<CommandLineArguments::StdoutOutputHandlerOptions>(
+            &output_handler_options
+    );
+    auto const stdout_aggregation_requested{
+            nullptr != stdout_options && stdout_options->aggregation_type.has_value()
+    };
     if (reducer_aggregation_requested || results_cache_aggregation_requested
         || stdout_aggregation_requested)
     {
-        SPDLOG_ERROR("kv-ir search: Count support is not implemented.");
+        SPDLOG_ERROR("kv-ir search: Aggregation support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};
     }
 

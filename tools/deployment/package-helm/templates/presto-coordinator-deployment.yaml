@@ -34,6 +34,10 @@ spec:
         - name: "presto-coordinator"
           image: "{{ .Values.image.prestoCoordinator.repository }}:{{ .Values.image.prestoCoordinator.tag }}"
           imagePullPolicy: "{{ .Values.image.prestoCoordinator.pullPolicy }}"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "prestoCoordinator"
+            ) | nindent 10 }}
           ports:
             - name: "presto-coord"
               containerPort: 8889

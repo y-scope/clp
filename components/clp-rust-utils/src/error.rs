@@ -13,4 +13,7 @@ pub enum Error {
 
     #[error("`sqlx::Error`: {0}")]
     Sqlx(#[from] sqlx::Error),
+
+    #[error(transparent)]
+    TelemetryExporterBuildError(#[from] opentelemetry_otlp::ExporterBuildError),
 }
