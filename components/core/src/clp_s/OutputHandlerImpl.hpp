@@ -165,11 +165,11 @@ public:
 
     // Constructor
     ResultsCacheOutputHandler(
-            std::string const& uri,
-            std::string const& collection,
+            std::string_view uri,
+            std::string_view collection,
             uint64_t batch_size,
             uint64_t max_num_results,
-            std::string dataset,
+            std::string_view dataset,
             bool should_output_metadata = true
     );
 
@@ -215,7 +215,7 @@ private:
 /**
  * Output handler that performs a count aggregation and sends the results to a reducer.
  */
-class CountReducerOutputHandler : public ::clp_s::search::OutputHandler {
+class CountReducerOutputHandler : public search::OutputHandler {
 public:
     // Constructors
     CountReducerOutputHandler(int reducer_socket_fd);
@@ -248,7 +248,7 @@ private:
  * Output handler that performs a count aggregation bucketed by time and sends the results to a
  * reducer.
  */
-class CountByTimeReducerOutputHandler : public ::clp_s::search::OutputHandler {
+class CountByTimeReducerOutputHandler : public search::OutputHandler {
 public:
     // Constructors
     CountByTimeReducerOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size_ms)
@@ -259,12 +259,12 @@ public:
     // Methods implementing OutputHandler
     auto write(
             std::string_view message,
-            epochtime_t timestamp,
+            epochtime_t timestamp_ms,
             std::string_view archive_id,
             int64_t log_event_idx
     ) -> void override {
         int64_t bucket
-                = (timestamp / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
+                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
         m_bucket_counts[bucket] += 1;
     }
 
@@ -288,7 +288,7 @@ private:
 /**
  * Output handler that performs a count aggregation and writes the results to the results cache.
  */
-class CountResultsCacheOutputHandler : public ::clp_s::search::OutputHandler {
+class CountResultsCacheOutputHandler : public search::OutputHandler {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -300,9 +300,9 @@ public:
 
     // Constructors
     CountResultsCacheOutputHandler(
-            std::string const& uri,
-            std::string const& collection,
-            std::string archive_id
+            std::string_view uri,
+            std::string_view collection,
+            std::string_view archive_id
     );
 
     // Methods implementing OutputHandler
@@ -335,7 +335,7 @@ private:
  * Output handler that performs a count aggregation bucketed by time and writes the results to the
  * results cache.
  */
-class CountByTimeResultsCacheOutputHandler : public ::clp_s::search::OutputHandler {
+class CountByTimeResultsCacheOutputHandler : public search::OutputHandler {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -347,21 +347,21 @@ public:
 
     // Constructors
     CountByTimeResultsCacheOutputHandler(
-            std::string const& uri,
-            std::string const& collection,
-            std::string archive_id,
+            std::string_view uri,
+            std::string_view collection,
+            std::string_view archive_id,
             int64_t count_by_time_bucket_size_ms
     );
 
     // Methods implementing OutputHandler
     auto write(
             std::string_view message,
-            epochtime_t timestamp,
+            epochtime_t timestamp_ms,
             std::string_view archive_id,
             int64_t log_event_idx
     ) -> void override {
         int64_t bucket
-                = (timestamp / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
+                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
         m_bucket_counts[bucket] += 1;
     }
 

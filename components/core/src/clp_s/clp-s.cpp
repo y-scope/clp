@@ -344,7 +344,7 @@ bool search_archive(
                                         = std::make_unique<clp_s::CountResultsCacheOutputHandler>(
                                                 options.uri,
                                                 options.collection,
-                                                std::string{archive_reader->get_archive_id()}
+                                                archive_reader->get_archive_id()
                                         );
                             } else if (CommandLineArguments::AggregationType::CountByTime
                                        == options.aggregation_type.value())
@@ -353,7 +353,7 @@ bool search_archive(
                                         clp_s::CountByTimeResultsCacheOutputHandler
                                 >(options.uri,
                                   options.collection,
-                                  std::string{archive_reader->get_archive_id()},
+                                  archive_reader->get_archive_id(),
                                   options.count_by_time_bucket_size_ms);
                             } else {
                                 SPDLOG_ERROR("Unhandled aggregation type.");

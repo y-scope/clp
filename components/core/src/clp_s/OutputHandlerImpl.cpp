@@ -35,16 +35,22 @@ namespace {
  * @return The collection.
  */
 template <typename OperationFailedT>
-auto connect_to_results_cache(string const& uri, string const& collection, mongocxx::client& client)
-        -> mongocxx::collection;
+auto connect_to_results_cache(
+        string_view uri,
+        string_view collection,
+        mongocxx::client& client
+) -> mongocxx::collection;
 
 template <typename OperationFailedT>
-auto connect_to_results_cache(string const& uri, string const& collection, mongocxx::client& client)
-        -> mongocxx::collection {
+auto connect_to_results_cache(
+        string_view uri,
+        string_view collection,
+        mongocxx::client& client
+) -> mongocxx::collection {
     try {
-        auto mongo_uri = mongocxx::uri{uri};
+        auto mongo_uri = mongocxx::uri{string{uri}};
         client = mongocxx::client(mongo_uri);
-        return client[mongo_uri.database()][collection];
+        return client[mongo_uri.database()][string{collection}];
     } catch (mongocxx::exception const& e) {
         throw OperationFailedT(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
     }
@@ -94,17 +100,17 @@ void NetworkOutputHandler::write(
 }
 
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection,
+        string_view uri,
+        string_view collection,
         uint64_t batch_size,
         uint64_t max_num_results,
-        string dataset,
+        string_view dataset,
         bool should_output_timestamp
 )
         : ::clp_s::search::OutputHandler{should_output_timestamp, true},
           m_batch_size{batch_size},
           m_max_num_results{max_num_results},
-          m_dataset{std::move(dataset)} {
+          m_dataset{dataset} {
     m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
     m_results.reserve(m_batch_size);
 }
@@ -202,7 +208,7 @@ void ResultsCacheOutputHandler::write(
 }
 
 CountReducerOutputHandler::CountReducerOutputHandler(int reducer_socket_fd)
-        : ::clp_s::search::OutputHandler(false, false),
+        : search::OutputHandler(false, false),
           m_reducer_socket_fd(reducer_socket_fd),
           m_pipeline(reducer::PipelineInputMode::InterStage) {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
@@ -237,12 +243,12 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
 }
 
 CountResultsCacheOutputHandler::CountResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection,
-        string archive_id
+        string_view uri,
+        string_view collection,
+        string_view archive_id
 )
-        : ::clp_s::search::OutputHandler{false, false},
-          m_archive_id{std::move(archive_id)} {
+        : search::OutputHandler{false, false},
+          m_archive_id{archive_id} {
     m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
 }
 
@@ -271,13 +277,13 @@ auto CountResultsCacheOutputHandler::finish() -> ErrorCode {
 }
 
 CountByTimeResultsCacheOutputHandler::CountByTimeResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection,
-        string archive_id,
+        string_view uri,
+        string_view collection,
+        string_view archive_id,
         int64_t count_by_time_bucket_size_ms
 )
-        : ::clp_s::search::OutputHandler{true, false},
-          m_archive_id{std::move(archive_id)},
+        : search::OutputHandler{true, false},
+          m_archive_id{archive_id},
           m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {
     m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
 }
