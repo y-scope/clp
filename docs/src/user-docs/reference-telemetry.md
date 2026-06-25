@@ -20,11 +20,41 @@ The following OpenTelemetry metrics are emitted:
 
 Emitted by long-running CLP services to track throughput:
 
-| Component    | Metric                         | Type    | Description                              |
-| ------------ | ------------------------------ | ------- | ---------------------------------------- |
-| log-ingestor | `clp.ingest.total_num_bytes`   | Counter | Total bytes ingested                     |
-| log-ingestor | `clp.ingest.total_num_objects` | Counter | Total objects (log events) ingested      |
-| api-server   | `clp.service.event`            | Counter | Service lifecycle events (e.g., startup) |
+| Component             | Metric                               | Type    | Description                                       |
+| --------------------- | ------------------------------------ | ------- | ------------------------------------------------- |
+| api-server            | `clp.service.event`                  | Counter | Service lifecycle events (e.g., startup)          |
+| compression-scheduler | `clp.compression.tasks.completed`    | Counter | Number of completed compression tasks             |
+| compression-scheduler | `clp.compression.tasks.failed`       | Counter | Number of failed compression tasks                |
+| compression-worker    | `clp.compression.bytes_input_total`  | Counter | Total uncompressed bytes processed by compression |
+| compression-worker    | `clp.compression.bytes_output_total` | Counter | Total compressed bytes output by compression      |
+| log-ingestor          | `clp.ingest.total_num_bytes`         | Counter | Total bytes ingested                              |
+| log-ingestor          | `clp.ingest.total_num_objects`       | Counter | Total objects (log events) ingested               |
+| query-scheduler       | `clp.query.tasks.completed`          | Counter | Number of completed query tasks                   |
+| query-scheduler       | `clp.query.tasks.failed`             | Counter | Number of failed query tasks                      |
+
+#### Operational up-down counters
+
+Emitted by long-running CLP services to track current workload state:
+
+| Component             | Metric                              | Type          | Description                                                    |
+| --------------------- | ----------------------------------- | ------------- | -------------------------------------------------------------- |
+| compression-scheduler | `clp.compression.active_jobs`       | UpDownCounter | Number of active compression jobs                              |
+| compression-scheduler | `clp.compression.outstanding_tasks` | UpDownCounter | Total number of outstanding compression tasks                  |
+| query-scheduler       | `clp.query.active_jobs`             | UpDownCounter | Number of active query jobs                                    |
+| query-scheduler       | `clp.query.outstanding_tasks`       | UpDownCounter | Total number of outstanding tasks across all active query jobs |
+
+#### Operational histograms
+
+Emitted by long-running CLP services to track duration and rate distributions:
+
+| Component             | Metric                          | Type      | Description                                                |
+| --------------------- | ------------------------------- | --------- | ---------------------------------------------------------- |
+| compression-scheduler | `clp.compression.job.duration`  | Histogram | Duration of compression jobs                               |
+| compression-scheduler | `clp.compression.task.duration` | Histogram | Duration of compression tasks                              |
+| compression-worker    | `clp.compression.input_rate`    | Histogram | Rate of uncompressed bytes processed per task              |
+| compression-worker    | `clp.compression.output_rate`   | Histogram | Rate of compressed bytes output per task                   |
+| query-scheduler       | `clp.query.job.duration`        | Histogram | Duration of query jobs                                     |
+| query-scheduler       | `clp.query.task.duration`       | Histogram | Duration of query tasks                                    |
 
 #### Deployment topology gauges
 
@@ -55,8 +85,8 @@ Every metric carries the following resource attributes to identify and contextua
 | `host.cpu.model.id`     | `142`                                      | Inform build target priorities               |
 | `host.cpu.vendor.id`    | `GenuineIntel`                             | Inform build target priorities               |
 
-`service.name` is set via the `OTEL_SERVICE_NAME` environment variable for Rust services and
-hardcoded in the controller's topology metrics payload. `clp.deployment.id`,
+`service.name` is set via the `OTEL_SERVICE_NAME` environment variable for Rust and Python services
+and hardcoded in the controller's topology metrics payload. `clp.deployment.id`,
 `clp.deployment.method`, `clp.storage.engine`, and `service.version` are set via the
 `OTEL_RESOURCE_ATTRIBUTES` environment variable (Docker Compose) or Helm template helpers
 (Kubernetes). The `host.*` attributes are collected by the OpenTelemetry Collector's
@@ -92,6 +122,39 @@ filtering, redaction, aggregation, and forwarding. For a matching baseline, star
 `otel-collector-config.yaml` embedded in `tools/deployment/package-helm/templates/configmap.yaml`
 (Helm).
 :::
+
+## Configuration Settings
+
+You can configure the interval at which metrics are exported for each instrumented component. The
+`telemetry_update_interval_ms` setting allows you to control the export frequency (in milliseconds)
+and defaults to `60000` (60 seconds).
+
+The supported components are `compression_scheduler`, `compression_worker`, `query_scheduler`, and
+`query_worker`.
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+Edit `clp-config.yaml` to set the interval per component:
+
+```yaml
+compression_scheduler:
+  telemetry_update_interval_ms: 60000
+```
+
+:::
+:::{tab-item} Kubernetes
+:sync: k8s
+Edit `values.yaml` to set the interval per component:
+
+```yaml
+clpConfig:
+  compression_scheduler:
+    telemetry_update_interval_ms: 60000
+```
+
+:::
+::::
 
 ## How to disable telemetry
 
