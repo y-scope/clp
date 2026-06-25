@@ -368,15 +368,14 @@ bool search_archive(
                                 output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                             } else if (CommandLineArguments::AggregationType::Count
                                        == aggregation_type.value()) {
-                                output_handler
-                                        = std::make_unique<clp_s::CountToStdoutOutputHandler>(
-                                                archive_reader->get_archive_id()
-                                        );
+                                output_handler = std::make_unique<clp_s::CountStdoutOutputHandler>(
+                                        archive_reader->get_archive_id()
+                                );
                             } else if (CommandLineArguments::AggregationType::CountByTime
                                        == aggregation_type.value())
                             {
                                 output_handler
-                                        = std::make_unique<clp_s::CountByTimeToStdoutOutputHandler>(
+                                        = std::make_unique<clp_s::CountByTimeStdoutOutputHandler>(
                                                 archive_reader->get_archive_id(),
                                                 command_line_arguments
                                                         .get_count_by_time_bucket_size_ms()

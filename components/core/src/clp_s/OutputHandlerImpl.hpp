@@ -389,10 +389,10 @@ private:
  * Output handler that performs a count aggregation and writes the result to standard output as a
  * JSON object.
  */
-class CountToStdoutOutputHandler : public search::OutputHandler {
+class CountStdoutOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    explicit CountToStdoutOutputHandler(std::string_view archive_id)
+    explicit CountStdoutOutputHandler(std::string_view archive_id)
             : search::OutputHandler{false, false},
               m_archive_id{archive_id} {}
 
@@ -423,10 +423,10 @@ private:
  * Output handler that performs a count aggregation bucketed by time and writes the per-bucket
  * results to standard output as newline-delimited JSON, one object per time bucket.
  */
-class CountByTimeToStdoutOutputHandler : public search::OutputHandler {
+class CountByTimeStdoutOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    CountByTimeToStdoutOutputHandler(
+    CountByTimeStdoutOutputHandler(
             std::string_view archive_id,
             int64_t count_by_time_bucket_size_ms
     )

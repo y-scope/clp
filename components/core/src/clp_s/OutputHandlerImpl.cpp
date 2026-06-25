@@ -18,7 +18,6 @@
 #include "../reducer/CountOperator.hpp"
 #include "../reducer/network_utils.hpp"
 #include "../reducer/Record.hpp"
-#include "../reducer/RecordGroup.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
 #include "archive_constants.hpp"
 #include "search/OutputHandler.hpp"
@@ -239,7 +238,7 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-auto CountToStdoutOutputHandler::finish() -> ErrorCode {
+auto CountStdoutOutputHandler::finish() -> ErrorCode {
     if (0 == m_count) {
         return ErrorCode::ErrorCodeSuccess;
     }
@@ -251,7 +250,7 @@ auto CountToStdoutOutputHandler::finish() -> ErrorCode {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-auto CountByTimeToStdoutOutputHandler::finish() -> ErrorCode {
+auto CountByTimeStdoutOutputHandler::finish() -> ErrorCode {
     for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
         nlohmann::json result;
         result[constants::results_cache::search::cArchiveId] = m_archive_id;
