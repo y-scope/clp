@@ -1060,6 +1060,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             std::move(results_cache_options)
                     );
                 } else if (cStdoutCacheOutputHandlerName == output_handler_name) {
+                    if (false == output_handler_options.empty()) {
+                        std::string error_msg{fmt::format(
+                                "stdout output handler does not support \"{}\"",
+                                output_handler_options.front()
+                        )};
+                        throw std::invalid_argument(error_msg);
+                    }
                     m_output_handler_options.emplace<StdoutOutputHandlerOptions>();
                 } else if (cFileOutputHandlerName == output_handler_name) {
                     parse_file_output_handler_options(
