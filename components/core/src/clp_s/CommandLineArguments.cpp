@@ -865,9 +865,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "File output path"
             );
 
-            StdoutOutputHandlerOptions stdout_options{};
-            po::options_description stdout_output_handler_options("Stdout Output Handler Options");
-
             std::vector<std::string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
@@ -964,7 +961,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(network_output_handler_options);
                 visible_options.add(results_cache_output_handler_options);
                 visible_options.add(reducer_output_handler_options);
-                visible_options.add(stdout_output_handler_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -996,7 +992,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     {std::string{cReducerOutputHandlerName}, &reducer_output_handler_options},
                     {std::string{cResultsCacheOutputHandlerName},
                      &results_cache_output_handler_options},
-                    {std::string{cStdoutCacheOutputHandlerName}, &stdout_output_handler_options}
+                    {std::string{cStdoutCacheOutputHandlerName}, nullptr}
             };
             auto const output_options_map{
                     collect_subcommands(subcommands, unrecognized_output_options)
@@ -1087,14 +1083,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             std::move(results_cache_options)
                     );
                 } else if (cStdoutCacheOutputHandlerName == output_handler_name) {
-                    parse_stdout_output_handler_options(
-                            stdout_output_handler_options,
-                            output_handler_options,
-                            stdout_options
-                    );
-                    m_output_handler_options.emplace<StdoutOutputHandlerOptions>(
-                            std::move(stdout_options)
-                    );
+                    m_output_handler_options.emplace<StdoutOutputHandlerOptions>();
                 } else if (cFileOutputHandlerName == output_handler_name) {
                     parse_file_output_handler_options(
                             file_output_handler_options,
@@ -1245,15 +1234,6 @@ void CommandLineArguments::parse_file_output_handler_options(
     if (file_options.output_path.empty()) {
         throw std::invalid_argument("path cannot be an empty string.");
     }
-}
-
-void CommandLineArguments::parse_stdout_output_handler_options(
-        po::options_description const& options_description,
-        std::vector<std::string> const& options,
-        StdoutOutputHandlerOptions& stdout_options
-) {
-    po::variables_map parsed_options;
-    parse_subcommand_options(options_description, options, parsed_options);
 }
 
 void CommandLineArguments::print_basic_usage() const {

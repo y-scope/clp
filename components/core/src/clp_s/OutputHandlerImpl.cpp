@@ -251,22 +251,22 @@ AggregationToStdoutOutputHandler::AggregationToStdoutOutputHandler(
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
-void AggregationToStdoutOutputHandler::write(string_view message) {
+auto AggregationToStdoutOutputHandler::write(string_view message) -> void {
     m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
-void AggregationToStdoutOutputHandler::write(
+auto AggregationToStdoutOutputHandler::write(
         string_view message,
         epochtime_t timestamp_ms,
         string_view archive_id,
         int64_t log_event_idx
-) {
+) -> void {
     int64_t const bucket
             = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
     m_bucket_counts[bucket] += 1;
 }
 
-ErrorCode AggregationToStdoutOutputHandler::finish() {
+auto AggregationToStdoutOutputHandler::finish() -> ErrorCode {
     // count-by-time results are serialized from the bucket counts; count results come from the
     // CountOperator pipeline. `should_output_metadata()` is true only for count-by-time.
     std::unique_ptr<reducer::RecordGroupIterator> results;

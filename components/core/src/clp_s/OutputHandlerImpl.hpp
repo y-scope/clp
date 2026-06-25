@@ -401,23 +401,25 @@ public:
             int64_t count_by_time_bucket_size_ms
     );
 
-    // Methods inherited from OutputHandler
-    void write(
+    // Methods implementing OutputHandler
+    auto write(
             std::string_view message,
             epochtime_t timestamp_ms,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override;
+    ) -> void override;
 
-    void write(std::string_view message) override;
+    auto write(std::string_view message) -> void override;
 
+    // Methods overriding OutputHandler
     /**
      * Serializes the aggregation results to stdout as newline-delimited JSON.
      * @return ErrorCodeSuccess on success
      */
-    ErrorCode finish() override;
+    auto finish() -> ErrorCode override;
 
 private:
+    // Data members
     std::string m_archive_id;
     int64_t m_count_by_time_bucket_size_ms;
     reducer::Pipeline m_pipeline;

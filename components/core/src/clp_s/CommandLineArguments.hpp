@@ -217,19 +217,6 @@ private:
             FileOutputHandlerOptions& file_options
     );
 
-    /**
-     * Validates output options related to the stdout output handler.
-     * @param options_description
-     * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set.
-     * @param stdout_options The parsed representation of the stdout output handler options.
-     */
-    void parse_stdout_output_handler_options(
-            boost::program_options::options_description const& options_description,
-            std::vector<std::string> const& options,
-            StdoutOutputHandlerOptions& stdout_options
-    );
-
     void print_basic_usage() const;
 
     void print_compression_usage() const;
