@@ -352,7 +352,7 @@ tasks:
       - |-
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         cd "{{.SRC_DIR}}"
-        cargo build --no-default-features --release
+        cargo build --release
         mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
         cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
         cp -r "{{.SRC_DIR}}/cxx/log_surgeon" "{{.INSTALL_INCLUDE_DIR}}"
