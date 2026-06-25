@@ -1147,11 +1147,7 @@ auto CommandLineArguments::parse_aggregation_options(
 void CommandLineArguments::reject_aggregation_for_handler(std::string_view handler_name) const {
     if (m_aggregation_type.has_value()) {
         throw std::invalid_argument(
-                fmt::format(
-                        "The {} output handler does not support count or count-by-time"
-                        " aggregations.",
-                        handler_name
-                )
+                fmt::format("The {} output handler does not support aggregations.", handler_name)
         );
     }
 }

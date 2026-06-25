@@ -18,7 +18,6 @@
 #include "../reducer/CountOperator.hpp"
 #include "../reducer/network_utils.hpp"
 #include "../reducer/Record.hpp"
-#include "../reducer/RecordGroupIterator.hpp"
 #include "archive_constants.hpp"
 #include "search/OutputHandler.hpp"
 #include "TraceableException.hpp"

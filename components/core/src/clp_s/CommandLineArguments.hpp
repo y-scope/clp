@@ -178,9 +178,9 @@ private:
     ) -> std::optional<AggregationType>;
 
     /**
-     * Throws if an aggregation was requested, for output handlers that don't support aggregations.
+     * Throws if an aggregation was requested.
      * @param handler_name The name of the output handler, used in the error message.
-     * @throws std::invalid_argument if an aggregation operator was specified.
+     * @throws std::invalid_argument if an aggregation was requested.
      */
     void reject_aggregation_for_handler(std::string_view handler_name) const;
 

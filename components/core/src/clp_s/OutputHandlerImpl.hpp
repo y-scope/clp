@@ -386,8 +386,7 @@ private:
 };
 
 /**
- * Output handler that performs a count aggregation and writes the result to standard output as a
- * JSON object.
+ * Output handler that performs a count aggregation and writes the results to standard output.
  */
 class CountStdoutOutputHandler : public search::OutputHandler {
 public:
@@ -408,7 +407,7 @@ public:
 
     // Methods overriding OutputHandler
     /**
-     * Writes the count to standard output as a JSON object.
+     * Flushes the count.
      * @return ErrorCodeSuccess on success
      */
     auto finish() -> ErrorCode override;
@@ -420,8 +419,8 @@ private:
 };
 
 /**
- * Output handler that performs a count aggregation bucketed by time and writes the per-bucket
- * results to standard output as newline-delimited JSON, one object per time bucket.
+ * Output handler that performs a count aggregation bucketed by time and writes the results to
+ * standard output.
  */
 class CountByTimeStdoutOutputHandler : public search::OutputHandler {
 public:
@@ -450,7 +449,7 @@ public:
 
     // Methods overriding OutputHandler
     /**
-     * Writes the per-bucket counts to standard output as newline-delimited JSON.
+     * Flushes the counts.
      * @return ErrorCodeSuccess on success
      */
     auto finish() -> ErrorCode override;
