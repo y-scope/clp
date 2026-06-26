@@ -753,12 +753,12 @@ class BaseController(ABC):
         client_settings_json_updates = {
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
-            "DefaultMaxNumQueryResults": self._clp_config.webui.default_max_num_query_results,
             "LogsInputType": self._clp_config.logs_input.type,
             "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
+            "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "SqlDbClpArchivesTableName": archives_table_name,
             "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
             "SqlDbClpFilesTableName": files_table_name,
@@ -781,7 +781,7 @@ class BaseController(ABC):
             "MongoDbStreamFilesCollectionName": (
                 self._clp_config.results_cache.stream_collection_name
             ),
-            "DefaultMaxNumQueryResults": self._clp_config.webui.default_max_num_query_results,
+            "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,

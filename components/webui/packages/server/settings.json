@@ -31,5 +31,5 @@
     "PrestoHost": "localhost",
     "PrestoPort": 8889,
 
-    "DefaultMaxNumQueryResults": 1000
+    "PrestoMaxNumSearchResults": 1000
 }

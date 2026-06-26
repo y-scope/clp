@@ -1,7 +1,7 @@
 {
     "ClpStorageEngine": "clp-s",
     "ClpQueryEngine": "clp-s",
-    "DefaultMaxNumQueryResults": 1000,
+    "PrestoMaxNumSearchResults": 1000,
     "LogsInputType": "fs",
     "LogsInputRootDir": "/",
     "MaxDatasetsPerQuery": 10,

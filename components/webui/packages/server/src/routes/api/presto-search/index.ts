@@ -90,9 +90,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 return;
                             }
 
-                            if (storedResultsCount < settings.DefaultMaxNumQueryResults) {
+                            if (storedResultsCount < settings.PrestoMaxNumSearchResults) {
                                 const remainingSlots =
-                                    settings.DefaultMaxNumQueryResults - storedResultsCount;
+                                    settings.PrestoMaxNumSearchResults - storedResultsCount;
                                 const dataToInsert = data.slice(0, remainingSlots);
 
                                 if (0 < dataToInsert.length) {

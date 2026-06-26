@@ -2,7 +2,7 @@ import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {Alert} from "antd";
 
 import {
-    SETTINGS_DEFAULT_MAX_NUM_QUERY_RESULTS,
+    SETTINGS_PRESTO_MAX_NUM_SEARCH_RESULTS,
     SETTINGS_QUERY_ENGINE,
 } from "../../../config";
 import useSearchStore from "../SearchState";
@@ -21,16 +21,16 @@ const ResultsLimitWarning = () => {
 
     const isTruncated = SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
         searchUiState !== SEARCH_UI_STATE.DEFAULT &&
-        numSearchResultsMetadata > SETTINGS_DEFAULT_MAX_NUM_QUERY_RESULTS;
+        numSearchResultsMetadata > SETTINGS_PRESTO_MAX_NUM_SEARCH_RESULTS;
 
     if (false === isTruncated) {
         return null;
     }
 
-    const limit = SETTINGS_DEFAULT_MAX_NUM_QUERY_RESULTS.toLocaleString();
+    const limit = SETTINGS_PRESTO_MAX_NUM_SEARCH_RESULTS.toLocaleString();
     const total = numSearchResultsMetadata.toLocaleString();
     const description = `Results are capped at the configured limit of ${limit} rows. To ` +
-        "retrieve more, increase \"webui.default_max_num_query_results\" in clp-config.yaml and " +
+        "retrieve more, increase \"webui.presto_max_num_search_results\" in clp-config.yaml and " +
         "restart the web UI.";
 
     return (

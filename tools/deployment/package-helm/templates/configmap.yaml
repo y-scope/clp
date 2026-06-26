@@ -223,6 +223,8 @@ data:
       host: "localhost"
       port: 4000
       rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
+      presto_max_num_search_results: {{ .Values.clpConfig.webui.presto_max_num_search_results
+        | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
     {{- with .Values.clpConfig.mcp_server }}
@@ -272,6 +274,8 @@ data:
       {{- end }}
       "MongoDbSearchResultsMetadataCollectionName":
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
+      "PrestoMaxNumSearchResults":
+        {{ .Values.clpConfig.webui.presto_max_num_search_results | int }},
       "SqlDbClpArchivesTableName": "clp_archives",
       "SqlDbClpDatasetsTableName": "clp_datasets",
       "SqlDbClpFilesTableName": "clp_files",
@@ -293,6 +297,8 @@ data:
         {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
       "MongoDbStreamFilesCollectionName":
         {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+      "PrestoMaxNumSearchResults":
+        {{ .Values.clpConfig.webui.presto_max_num_search_results | int }},
       "ClientDir": "/opt/clp/var/www/webui/client",
       "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
       {{- if eq .Values.clpConfig.logs_input.type "fs" }}
