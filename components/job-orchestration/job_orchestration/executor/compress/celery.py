@@ -22,6 +22,7 @@ def setup_json_logging(logger: logging.Logger | None = None, **_: object) -> Non
     if logger is not None:
         set_json_formatter_on_handlers(logger)
 
+
 @signals.worker_process_init.connect
 def setup_telemetry(**kwargs) -> None:
     init_telemetry()
