@@ -146,6 +146,15 @@ Using Presto with CLP via Docker Compose requires:
         retention_period: null
       ```
 
+    * Optional: Disable the native query pipeline to save resources. Note that the API server depends on the native query pipeline, so it must also be disabled.
+
+      ```yaml
+      api_server: null
+      query_scheduler: null
+      query_worker: null
+      reducer: null
+      ```
+
     * Update the `presto` key with the host and port of the Presto cluster. If you follow the
       [Setting up Presto](#setting-up-presto) section, the host is `localhost` and the port is
       `8889`.
