@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <map>
 #include <queue>
 #include <string>
 #include <string_view>
@@ -164,21 +165,28 @@ public:
 
     // Constructor
     ResultsCacheOutputHandler(
-            std::string const& uri,
-            std::string const& collection,
+            std::string_view uri,
+            std::string_view collection,
             uint64_t batch_size,
             uint64_t max_num_results,
-            std::string dataset,
+            std::string_view dataset,
             bool should_output_metadata = true
     );
 
     // Methods inherited from OutputHandler
     /**
-     * Flushes the output handler after each table that gets searched.
-     * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache
+     * No-op for this handler. The results heap is drained in `finish()` so that
+     * `max_num_results` is enforced across all ERTs in the archive.
+     * @return ErrorCodeSuccess
      */
-    ErrorCode flush() override;
+    [[nodiscard]] auto flush() -> ErrorCode override { return ErrorCode::ErrorCodeSuccess; }
+
+    /**
+     * Flushes the output handler after all tables are searched.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache.
+     */
+    auto finish() -> ErrorCode override;
 
     void write(
             std::string_view message,
@@ -207,29 +215,31 @@ private:
 /**
  * Output handler that performs a count aggregation and sends the results to a reducer.
  */
-class CountOutputHandler : public ::clp_s::search::OutputHandler {
+class CountReducerOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    CountOutputHandler(int reducer_socket_fd);
+    CountReducerOutputHandler(int reducer_socket_fd);
 
-    // Methods inherited from OutputHandler
-    void write(
+    // Methods implementing OutputHandler
+    auto write(
             std::string_view message,
             epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override {}
+    ) -> void override {}
 
-    void write(std::string_view message) override;
+    auto write(std::string_view message) -> void override;
 
+    // Methods overriding OutputHandler
     /**
      * Flushes the count.
      * @return ErrorCodeSuccess on success
      * @return ErrorCodeFailureNetwork on network error
      */
-    ErrorCode finish() override;
+    auto finish() -> ErrorCode override;
 
 private:
+    // Data members
     int m_reducer_socket_fd;
     reducer::Pipeline m_pipeline;
 };
@@ -238,38 +248,140 @@ private:
  * Output handler that performs a count aggregation bucketed by time and sends the results to a
  * reducer.
  */
-class CountByTimeOutputHandler : public ::clp_s::search::OutputHandler {
+class CountByTimeReducerOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    CountByTimeOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
+    CountByTimeReducerOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size_ms)
             : search::OutputHandler{true, false},
               m_reducer_socket_fd{reducer_socket_fd},
-              m_count_by_time_bucket_size{count_by_time_bucket_size} {}
+              m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {}
 
-    // Methods inherited from OutputHandler
-    void write(
+    // Methods implementing OutputHandler
+    auto write(
             std::string_view message,
-            epochtime_t timestamp,
+            epochtime_t timestamp_ms,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override {
-        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+    ) -> void override {
+        int64_t bucket
+                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
         m_bucket_counts[bucket] += 1;
     }
 
-    void write(std::string_view message) override {}
+    auto write(std::string_view message) -> void override {}
 
+    // Methods overriding OutputHandler
     /**
      * Flushes the counts.
      * @return ErrorCodeSuccess on success
      * @return ErrorCodeFailureNetwork on network error
      */
-    ErrorCode finish() override;
+    auto finish() -> ErrorCode override;
 
 private:
+    // Data members
     int m_reducer_socket_fd;
     std::map<int64_t, int64_t> m_bucket_counts;
-    int64_t m_count_by_time_bucket_size;
+    int64_t m_count_by_time_bucket_size_ms;
+};
+
+/**
+ * Output handler that performs a count aggregation and writes the results to the results cache.
+ */
+class CountResultsCacheOutputHandler : public search::OutputHandler {
+public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
+
+    // Constructors
+    CountResultsCacheOutputHandler(
+            std::string_view uri,
+            std::string_view collection,
+            std::string_view archive_id
+    );
+
+    // Methods implementing OutputHandler
+    auto write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) -> void override {}
+
+    auto write(std::string_view message) -> void override { m_count += 1; }
+
+    // Methods overriding OutputHandler
+    /**
+     * Flushes the count.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureDbBulkWrite on database error
+     */
+    auto finish() -> ErrorCode override;
+
+private:
+    // Data members
+    mongocxx::client m_client;
+    mongocxx::collection m_collection;
+    std::string m_archive_id;
+    int64_t m_count{};
+};
+
+/**
+ * Output handler that performs a count aggregation bucketed by time and writes the results to the
+ * results cache.
+ */
+class CountByTimeResultsCacheOutputHandler : public search::OutputHandler {
+public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
+
+    // Constructors
+    CountByTimeResultsCacheOutputHandler(
+            std::string_view uri,
+            std::string_view collection,
+            std::string_view archive_id,
+            int64_t count_by_time_bucket_size_ms
+    );
+
+    // Methods implementing OutputHandler
+    auto write(
+            std::string_view message,
+            epochtime_t timestamp_ms,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) -> void override {
+        int64_t bucket
+                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
+        m_bucket_counts[bucket] += 1;
+    }
+
+    auto write(std::string_view message) -> void override {}
+
+    // Methods overriding OutputHandler
+    /**
+     * Flushes the counts.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureDbBulkWrite on database error
+     */
+    auto finish() -> ErrorCode override;
+
+private:
+    // Data members
+    mongocxx::client m_client;
+    mongocxx::collection m_collection;
+    std::string m_archive_id;
+    std::map<int64_t, int64_t> m_bucket_counts;
+    int64_t m_count_by_time_bucket_size_ms;
 };
 
 /**

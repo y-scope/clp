@@ -1,0 +1,13 @@
+{{/*
+Stores a unique instance ID for this Helm deployment. On first install, a UUID is
+generated. On subsequent upgrades, the existing value is read via lookup so the ID
+remains stable across the lifetime of this release.
+*/}}
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: {{ include "clp.fullname" . }}-instance-id
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+data:
+  instanceId: {{ include "clp.instanceId" . | quote }}

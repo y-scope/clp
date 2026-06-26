@@ -1,0 +1,54 @@
+import MongoSocketCollection from "../../../../../../api/socket/MongoSocketCollection";
+import {useCursor} from "../../../../../../api/socket/useCursor";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../../SearchState/index";
+import {SearchResult} from "./typings";
+
+
+/**
+ * Custom hook to get search results for the current searchJobId.
+ *
+ * @return
+ */
+const useSearchResults = () => {
+    const searchJobId = useSearchStore((state) => state.searchJobId);
+    const submittedMaxNumResults = useSearchStore((state) => state.submittedMaxNumResults);
+
+    const searchResultsCursor = useCursor<SearchResult>(
+        () => {
+            // If there is no active search job, there are no results to fetch. The cursor will
+            // return null.
+            if (searchJobId === SEARCH_STATE_DEFAULT.searchJobId) {
+                return null;
+            }
+
+            console.log(
+                `Subscribing to updates to search results with job ID: ${searchJobId}`
+            );
+
+            const options = {
+                sort: [
+                    [
+                        "timestamp",
+                        "desc",
+                    ],
+                    [
+                        "_id",
+                        "desc",
+                    ],
+                ],
+                limit: submittedMaxNumResults,
+            };
+
+            const collection = new MongoSocketCollection(searchJobId);
+            return collection.find({}, options);
+        },
+        [
+            searchJobId,
+            submittedMaxNumResults,
+        ]
+    );
+
+    return searchResultsCursor;
+};
+
+export {useSearchResults};

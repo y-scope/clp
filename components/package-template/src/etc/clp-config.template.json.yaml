@@ -43,6 +43,7 @@ telemetry:
 #  - "queue"
 #  - "redis"
 #  - "results_cache"
+#  - "otel_collector"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -56,6 +57,7 @@ telemetry:
 #  jobs_poll_delay: 0.1  # seconds
 #  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
 #  logging_level: "INFO"
+#  telemetry_update_interval_ms: 60000
 #  type: "celery"  # "celery" or "spider"
 #
 #spider_scheduler:
@@ -71,6 +73,7 @@ telemetry:
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
 #  scheduler_concurrency: 4
+#  telemetry_update_interval_ms: 60000
 #
 #queue:
 #  host: "localhost"
@@ -97,11 +100,20 @@ telemetry:
 #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
 #  retention_period: 60
 #
+#otel_collector:
+#  host: "localhost"
+#  port: 4318
+#
 #compression_worker:
 #  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
+#  telemetry_update_interval_ms: 60000
 #
 #query_worker:
 #  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
 #
 #webui:
 #  host: "localhost"

@@ -1,0 +1,55 @@
+{{- if not .Values.clpConfig.telemetry.disable }}
+apiVersion: "batch/v1"
+kind: "Job"
+metadata:
+  name: {{ include "clp.fullname" . }}-topology-metrics-emitter
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "topology-metrics-emitter"
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "topology-metrics-emitter"
+    spec:
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
+      restartPolicy: "OnFailure"
+      {{- if has "otel_collector" .Values.clpConfig.bundled }}
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "otel-collector"
+          ) | nindent 10 }}
+      {{- end }}
+      containers:
+        - name: "topology-metrics-emitter"
+          image: "{{ .Values.image.curl.repository }}:{{ .Values.image.curl.tag }}"
+          imagePullPolicy: {{ .Values.image.curl.pullPolicy | quote }}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "topologyMetricsEmitter"
+            ) | nindent 10 }}
+          command:
+            - "curl"
+            - "--request"
+            - "POST"
+            - "--fail"
+            - "--header"
+            - "Content-Type: application/json"
+            - "--max-time"
+            - "5"
+            - "--retry"
+            - "1"
+            - "--retry-all-errors"
+            - "--retry-delay"
+            - "1"
+            - "--show-error"
+            - "--silent"
+            - "--data"
+            - {{ include "clp.topologyMetricsPayload" . | quote }}
+            - {{ printf "%s/v1/metrics" (include "clp.otelCollectorUrl" .) | quote }}
+{{- end }}

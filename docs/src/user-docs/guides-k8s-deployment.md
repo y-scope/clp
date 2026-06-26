@@ -195,8 +195,35 @@ image:
     pullPolicy: "Never"  # Use "Never" for local images, "IfNotPresent" for remote
     tag: "latest"
 
+  # Override third-party container images (useful for private registries or AWS Marketplace ECR).
+  # See the chart's values.yaml for the full list of configurable images.
+  mariadb:
+    repository: "mariadb"
+    tag: "10.11.16"
+  mysql:
+    repository: "mysql"
+    tag: "8.0.46"
+  queue:
+    repository: "rabbitmq"
+    tag: "4.2.6"
+  redis:
+    repository: "redis"
+    tag: "7.4.8"
+  resultsCache:
+    repository: "mongo"
+    tag: "8.0.21"
+  kubectl:
+    repository: "bitnami/kubectl"
+    digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
+
 # Adjust worker concurrency
-workerConcurrency: 16
+scheduling:
+  compressionWorker:
+    slotsPerPod: 16
+  queryWorker:
+    slotsPerPod: 16
+  reducer:
+    slotsPerPod: 16
 
 # Configure CLP settings
 clpConfig:
@@ -393,6 +420,34 @@ To run all worker types in the same node pool:
    ```bash
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
+
+---
+
+### Component resources
+
+Set resource requests and limits for each chart component under the top-level `resources` key.
+Values use standard Kubernetes resource quantities:
+
+```{code-block} yaml
+:caption: resources.yaml
+
+resources:
+  compressionWorker:
+    requests:
+      cpu: "1"
+      memory: "1Gi"
+      ephemeral-storage: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+      ephemeral-storage: "4Gi"
+```
+
+Then install with the values file:
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f resources.yaml
+```
 
 ---
 

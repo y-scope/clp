@@ -10,10 +10,10 @@ from tests.utils.utils import resolve_path_env_var
 
 # Make the fixtures defined in `tests/fixtures/` globally available without imports.
 pytest_plugins = [
+    "tests.fixtures.logging",
     "tests.fixtures.sample_datasets",
     "tests.fixtures.path_configs",
-    "tests.fixtures.package_instance",
-    "tests.fixtures.package_test_config",
+    "tests.package_tests.fixtures",
 ]
 
 
@@ -71,16 +71,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default="56000",
         help="Base port for CLP package integration tests.",
     )
-
-
-def pytest_itemcollected(item: pytest.Item) -> None:
-    """
-    Applies ANSI bold and blue formatting to each collected test's node ID, for the purposes of
-    test output readability.
-
-    :param item:
-    """
-    item._nodeid = f"{BOLD}{BLUE}{item.nodeid}{RESET}"  # noqa: SLF001
 
 
 @pytest.hookimpl(tryfirst=True)
