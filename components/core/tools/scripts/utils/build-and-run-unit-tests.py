@@ -172,7 +172,7 @@ def main(argv: list[str]) -> int:
         "--num-jobs",
         type=_positive_int,
         default=None,
-        help="Max number of jobs to run when building. Defaults to min(nproc, available_memory_GB"
+        help="Max number of jobs to run when building. Defaults to min(nproc, memory_limit_GB"
         f" / {MIN_MEMORY_PER_JOB_GB}) with a floor of 1.",
     )
     args_parser.add_argument("--test-spec", help="Catch2 test specification.")

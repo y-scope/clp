@@ -10,7 +10,7 @@
 #
 # Optional environment variables:
 #   CORES        Number of parallel build jobs (default: computed based on CPU
-#                count and available memory, min 2 GB per core)
+#                count and memory limits, min 2 GB per core)
 
 set -o errexit
 set -o nounset
