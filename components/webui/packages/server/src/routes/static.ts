@@ -4,7 +4,10 @@ import {fileURLToPath} from "node:url";
 import {fastifyStatic} from "@fastify/static";
 import {FastifyPluginAsync} from "fastify";
 
-import settings from "../../settings.json" with {type: "json"};
+import {
+    publicSettings,
+    serverSettings,
+} from "../settings.js";
 
 
 /**
@@ -15,15 +18,15 @@ import settings from "../../settings.json" with {type: "json"};
 const routes: FastifyPluginAsync = async (fastify) => {
     const filename = fileURLToPath(import.meta.url);
     const dirname = path.dirname(filename);
-    const rootDirname = path.resolve(dirname, "../../..");
+    const rootDirname = path.resolve(dirname, "../..");
 
-    let streamFilesDir = settings.StreamFilesDir;
+    // Register before other static handlers so this route owns /settings.json.
+    fastify.get("/settings.json", () => publicSettings);
+
+    let streamFilesDir = serverSettings.StreamFilesDir;
 
     // Register /streams only if `streamFilesDir` is set (i.e., FS support is enabled in the
     // package)
-    // Disable no-unnecessary-condition since linter doesn't understand that settings
-    // values are not hardcoded.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (null !== streamFilesDir) {
         if (false === path.isAbsolute(streamFilesDir)) {
             streamFilesDir = path.resolve(rootDirname, streamFilesDir);
@@ -35,7 +38,7 @@ const routes: FastifyPluginAsync = async (fastify) => {
         });
     }
 
-    let logViewerDir = settings.LogViewerDir;
+    let logViewerDir = serverSettings.LogViewerDir;
     if (false === path.isAbsolute(logViewerDir)) {
         logViewerDir = path.resolve(rootDirname, logViewerDir);
     }
@@ -45,9 +48,9 @@ const routes: FastifyPluginAsync = async (fastify) => {
         decorateReply: false,
     });
 
-    let clientDir = settings.ClientDir;
+    let clientDir = serverSettings.ClientDir;
     if (false === path.isAbsolute(clientDir)) {
-        clientDir = path.resolve(rootDirname, settings.ClientDir);
+        clientDir = path.resolve(rootDirname, serverSettings.ClientDir);
     }
 
     await fastify.register(fastifyStatic, {

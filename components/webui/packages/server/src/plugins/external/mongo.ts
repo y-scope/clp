@@ -1,12 +1,13 @@
 import fastifyMongoDb from "@fastify/mongodb";
 
-import settings from "../../../settings.json" with {type: "json"};
+import {serverSettings} from "../../settings.js";
 
 
 export const autoConfig = () => {
     return {
         forceClose: true,
-        url: `mongodb://${settings.MongoDbHost}:${settings.MongoDbPort}/${settings.MongoDbName}?directConnection=true`,
+        url: `mongodb://${serverSettings.MongoDbHost}:${serverSettings.MongoDbPort}/${
+            serverSettings.MongoDbName}?directConnection=true`,
     };
 };
 
