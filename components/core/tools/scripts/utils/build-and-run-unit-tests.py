@@ -73,7 +73,7 @@ def _compute_max_parallel_jobs() -> int:
       3. /proc/meminfo MemTotal (Linux hosts)
       4. Fall back to CPU count with no memory cap
     """
-    cpu_count = os.cpu_count() or 1
+    cpu_count = os.process_cpu_count() or 1
     mem_limit_jobs = cpu_count
 
     # Try cgroup limits first (important for containers where /proc/meminfo shows host memory)
