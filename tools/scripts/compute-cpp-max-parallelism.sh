@@ -23,7 +23,6 @@ compute_cpp_max_parallelism() {
     cpus=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 1)
 
     local mem_limit_kb=""
-    local mem_source=""
 
     # 1. Try cgroup v2 (containers)
     if [ -f /sys/fs/cgroup/memory.max ]; then
@@ -33,7 +32,6 @@ compute_cpp_max_parallelism() {
         if [ -n "$cgroup_max" ] && [ "$cgroup_max" != "max" ]; then
             # Convert bytes to KB
             mem_limit_kb=$((cgroup_max / 1024))
-            mem_source="cgroup-v2"
         fi
     fi
 
@@ -44,7 +42,6 @@ compute_cpp_max_parallelism() {
         # Some systems set a very large limit (e.g., 9223372036854771712) for "unlimited"
         if [ -n "$cgroup_limit" ] && [ "$cgroup_limit" -lt 9223372036854771712 ] 2>/dev/null; then
             mem_limit_kb=$((cgroup_limit / 1024))
-            mem_source="cgroup-v1"
         fi
     fi
 
@@ -54,7 +51,6 @@ compute_cpp_max_parallelism() {
         total_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || true)
         if [ -n "$total_kb" ]; then
             mem_limit_kb=$total_kb
-            mem_source="meminfo"
         fi
     fi
 
