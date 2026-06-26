@@ -31,6 +31,10 @@ UNIT_TEST_TIMEOUT_SECONDS = 60 * 60
 # Minimum memory (in GB) per compilation job.
 MIN_MEMORY_PER_JOB_GB = 2
 
+# cgroup v1 reports this sentinel value (2**63 - 4096) when memory is "unlimited", so any limit at
+# or above it is treated as unbounded.
+_CGROUP_V1_UNLIMITED_SENTINEL = 9223372036854771712
+
 
 def _get_cgroup_memory_limit_kb() -> int | None:
     """Returns the cgroup memory limit in kB, or None if not available or unlimited."""
@@ -49,7 +53,7 @@ def _get_cgroup_memory_limit_kb() -> int | None:
         limit_bytes = Path("/sys/fs/cgroup/memory/memory.limit_in_bytes").read_text().strip()
         limit_int = int(limit_bytes)
         # Some systems use a very large number for "unlimited"
-        if 0 < limit_int < 9223372036854771712:
+        if 0 < limit_int < _CGROUP_V1_UNLIMITED_SENTINEL:
             return limit_int // 1024
     except (OSError, ValueError):
         pass
@@ -58,7 +62,8 @@ def _get_cgroup_memory_limit_kb() -> int | None:
 
 
 def _compute_max_parallel_jobs() -> int:
-    """Computes the maximum number of parallel compilation jobs based on CPU count and available
+    """
+    Computes the maximum number of parallel compilation jobs based on CPU count and available
     memory. Each job gets at least MIN_MEMORY_PER_JOB_GB GB of memory, and the result is floored
     at 1.
 
@@ -91,14 +96,16 @@ def _compute_max_parallel_jobs() -> int:
 
 
 def _positive_int(value: str) -> int:
-    """Argparse type that rejects non-positive integers.
+    """
+    Argparse type that rejects non-positive integers.
 
     Only invoked when --num-jobs is given a value, so the ``None`` default (which
     falls back to :func:`_compute_max_parallel_jobs`) is unaffected.
     """
     ivalue = int(value)
     if ivalue < 1:
-        raise argparse.ArgumentTypeError(f"{value} is not a positive integer (must be >= 1)")
+        message = f"{value} is not a positive integer (must be >= 1)"
+        raise argparse.ArgumentTypeError(message)
     return ivalue
 
 
@@ -170,7 +177,9 @@ def main(argv: list[str]) -> int:
     src_dir: Path = Path(parsed_args.source_dir)
     build_dir: Path = Path(parsed_args.build_dir)
     use_shared_libs: bool = parsed_args.use_shared_libs
-    num_jobs: int = parsed_args.num_jobs if parsed_args.num_jobs is not None else _compute_max_parallel_jobs()
+    num_jobs: int = (
+        parsed_args.num_jobs if parsed_args.num_jobs is not None else _compute_max_parallel_jobs()
+    )
     test_spec: str | None = parsed_args.test_spec
 
     _config_cmake_project(src_dir, build_dir, use_shared_libs)
