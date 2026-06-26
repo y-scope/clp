@@ -1,6 +1,6 @@
 # CLP Package Logging
 
-The CLP package contains multiple runtime stacks, and each stack owns its logging setup. This page
+The CLP package contains multiple components, and each component owns its logging setup. This page
 summarizes the current behavior and the controls developers/operators should use.
 
 ## Developer guidance
@@ -48,7 +48,7 @@ This section explains the logging setup for CLP package components.
 | Package/setup tools           | Package controller, DB initialization scripts                       | Python stdlib logging                                     | Text                             | Script-specific            |
 
 There is no single project-wide JSON schema. Python, Rust, and Pino logs are all line-delimited JSON
-in packaged non-interactive service runtimes, but each stack uses its own field names.
+in packaged non-interactive service runtimes, but each component family uses its own field names.
 
 ## Component details
 
