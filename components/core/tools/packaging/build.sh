@@ -18,7 +18,7 @@
 # Options:
 #   --format FMT    Package format: deb, rpm, apk, or all (default: all)
 #   --arch ARCH     Target architecture: aarch64, x86_64, or all (default: host)
-#   --cores N       Parallel build jobs (default: nproc)
+#   --cores N       Parallel build jobs (default: auto, based on CPU count and memory limits)
 #   --version VER   Package version (default: from taskfile.yaml)
 #   --output DIR    Output directory for packages (default: ./packages)
 #   --clean         Remove build artifacts before building
