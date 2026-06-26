@@ -18,7 +18,7 @@
 # Options:
 #   --format FMT    Package format: deb, rpm, apk, or all (default: all)
 #   --arch ARCH     Target architecture: aarch64, x86_64, or all (default: host)
-#   --cores N       Parallel build jobs (default: nproc)
+#   --cores N       Parallel build jobs (default: auto, based on CPU count and memory limits)
 #   --version VER   Package version (default: from taskfile.yaml)
 #   --output DIR    Output directory for packages (default: ./packages)
 #   --clean         Remove build artifacts before building
@@ -36,7 +36,11 @@ repo_root="$(cd "${script_dir}/../../../.." && pwd)"
 
 # Defaults
 format="all"
-cores="$(nproc 2>/dev/null || echo 4)"
+# Leave cores unset by default so each build container computes its own optimal
+# parallelism from its own CPU and memory (cgroup) limits. A host-computed value
+# would override the container's cgroup detection and would be wrong for
+# cross-architecture builds run under emulation. Use --cores to override.
+cores=""
 version=""
 output_dir="${repo_root}/packages"
 target_arches=""
@@ -126,7 +130,7 @@ fi
 echo "==> CLP Universal Package Build"
 echo "    Formats:  ${format_list[*]}"
 echo "    Version:  ${version}"
-echo "    Cores:    ${cores}"
+echo "    Cores:    ${cores:-auto (computed per container)}"
 echo "    Arches:   ${arch_list[*]}"
 echo "    Output:   ${output_dir}"
 echo ""
@@ -290,7 +294,7 @@ for cur_format in "${format_list[@]}"; do
             ${DOCKER_NETWORK:+--network "${DOCKER_NETWORK}"} \
             -v "${repo_root}:/clp" \
             -w /clp \
-            -e "CORES=${cores}" \
+            ${cores:+-e "CORES=${cores}"} \
             -e "PKG_VERSION=${version}" \
             -e "PKG_ARCH=${pkg_arch}" \
             -e "HOST_UID=$(id -u)" \
