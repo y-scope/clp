@@ -188,7 +188,9 @@ def main(argv: list[str]) -> int:
     # build/test arguments, so the taskfile (and other shells) can reuse this script's
     # parallelism logic without duplicating it in bash.
     if "--compute-max-parallel-jobs" in argv:
-        print(_compute_max_parallel_jobs())
+        # Intentional: prints the computed job count to stdout so shells (e.g.
+        # the taskfile) can capture it.
+        print(_compute_max_parallel_jobs())  # noqa: T201
         return 0
 
     parsed_args = args_parser.parse_args(argv[1:])
