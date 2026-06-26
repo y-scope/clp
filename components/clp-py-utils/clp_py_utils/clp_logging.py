@@ -6,7 +6,7 @@ import pathlib
 from typing import get_args, Literal
 
 import structlog
-from structlog.typing import Processor
+from structlog.typing import FilteringBoundLogger, Processor
 
 LoggingLevel = Literal[
     "INFO",
@@ -58,14 +58,33 @@ _FOREIGN_PRE_CHAIN: tuple[Processor, ...] = (
     ),
 )
 
-structlog.configure(
-    processors=[
-        *_STRUCTLOG_PROCESSORS,
-        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-    ],
-    logger_factory=structlog.stdlib.LoggerFactory(),
-    cache_logger_on_first_use=True,
-)
+def configure_structlog() -> None:
+    """Configure structlog with CLP's default processor chain if it is not already configured."""
+    if not structlog.is_configured():
+        structlog.configure(
+            processors=[
+                *_STRUCTLOG_PROCESSORS,
+                structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+            ],
+            logger_factory=structlog.stdlib.LoggerFactory(),
+            cache_logger_on_first_use=True,
+        )
+
+
+def get_structlog_logger(name: str) -> FilteringBoundLogger:
+    """
+    Configure CLP's structured logging defaults and return a structlog logger for a component.
+
+    CLP uses structlog's stdlib integration, so this first configures the stdlib logger's
+    handlers with structlog's `ProcessFormatter`. Use the returned structlog logger for log calls.
+
+    :param name: Name of the logger to create or retrieve.
+    :return: A structlog logger configured to emit through CLP's JSON formatter.
+    """
+    configure_structlog()
+    stdlib_logger = get_logger(name)
+    configure_logging(stdlib_logger, name)
+    return structlog.get_logger(name)
 
 
 def get_logging_formatter() -> logging.Formatter:
