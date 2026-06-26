@@ -809,6 +809,9 @@ class BaseController(ABC):
             "SqlDbClpFilesTableName": files_table_name,
             "SqlDbClpTablePrefix": table_prefix,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
+            "MongoDbSearchResultsMetadataCollectionName": (
+                self._clp_config.webui.results_metadata_collection_name
+            ),
         }
 
         server_settings_updates = {
@@ -819,9 +822,6 @@ class BaseController(ABC):
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbName": self._clp_config.results_cache.db_name,
             "MongoDbPort": container_clp_config.results_cache.port,
-            "MongoDbSearchResultsMetadataCollectionName": (
-                self._clp_config.webui.results_metadata_collection_name
-            ),
             "MongoDbStreamFilesCollectionName": (
                 self._clp_config.results_cache.stream_collection_name
             ),
