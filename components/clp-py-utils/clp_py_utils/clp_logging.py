@@ -58,6 +58,7 @@ _FOREIGN_PRE_CHAIN: tuple[Processor, ...] = (
     ),
 )
 
+
 def configure_structlog() -> None:
     """Configure structlog with CLP's default processor chain if it is not already configured."""
     if not structlog.is_configured():
