@@ -395,12 +395,8 @@ services:
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams:ro"
       - type: "bind"
-        source: "./var/www/webui/client/settings.json"
-        target: "/opt/clp/var/www/webui/client/settings.json"
-        read_only: true
-      - type: "bind"
-        source: "./var/www/webui/server/dist/settings.json"
-        target: "/opt/clp/var/www/webui/server/dist/settings.json"
+        source: "./etc/webui/settings.json"
+        target: "/opt/clp/etc/webui/settings.json"
         read_only: true
     depends_on:
       db-table-creator:
@@ -409,7 +405,7 @@ services:
         condition: "service_completed_successfully"
     command: [
       "/opt/clp/bin/node-22",
-      "/opt/clp/var/www/webui/server/dist/src/main.js"
+      "/opt/clp/var/www/webui/server/dist/main.js"
     ]
     healthcheck:
       <<: *healthcheck_defaults

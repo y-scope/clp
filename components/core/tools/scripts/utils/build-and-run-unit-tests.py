@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +28,89 @@ logger = logging.getLogger(__name__)
 # One hour timeout to prevent changes with infinite loops from running forever
 UNIT_TEST_TIMEOUT_SECONDS = 60 * 60
 
+# Minimum memory (in GB) per compilation job.
+MIN_MEMORY_PER_JOB_GB = 2
+
+# cgroup v1 reports this sentinel value (2**63 - 4096) when memory is "unlimited", so any limit at
+# or above it is treated as unbounded.
+_CGROUP_V1_UNLIMITED_SENTINEL = 9223372036854771712
+
+
+def _get_cgroup_memory_limit_kb() -> int | None:
+    """Returns the cgroup memory limit in kB, or None if not available or unlimited."""
+    # cgroup v2
+    try:
+        max_bytes = Path("/sys/fs/cgroup/memory.max").read_text().strip()
+        if max_bytes != "max":
+            limit_kb = int(max_bytes) // 1024
+            if limit_kb > 0:
+                return limit_kb
+    except (OSError, ValueError):
+        pass
+
+    # cgroup v1
+    try:
+        limit_bytes = Path("/sys/fs/cgroup/memory/memory.limit_in_bytes").read_text().strip()
+        limit_int = int(limit_bytes)
+        # Some systems use a very large number for "unlimited"
+        if 0 < limit_int < _CGROUP_V1_UNLIMITED_SENTINEL:
+            return limit_int // 1024
+    except (OSError, ValueError):
+        pass
+
+    return None
+
+
+def _compute_max_parallel_jobs() -> int:
+    """
+    Computes the maximum number of parallel compilation jobs based on CPU count and memory
+    limits. Each job gets at least MIN_MEMORY_PER_JOB_GB GB of memory, and the result is floored
+    at 1.
+
+    Memory detection order:
+      1. cgroup v2 memory.max (containers)
+      2. cgroup v1 memory.limit_in_bytes (containers)
+      3. /proc/meminfo MemTotal (Linux hosts)
+      4. Fall back to CPU count with no memory cap
+    """
+    try:
+        cpu_count = len(os.sched_getaffinity(0))
+    except (AttributeError, OSError):
+        cpu_count = os.cpu_count() or 1
+    mem_limit_jobs = cpu_count
+
+    # Try cgroup limits first (important for containers where /proc/meminfo shows host memory)
+    cgroup_kb = _get_cgroup_memory_limit_kb()
+    if cgroup_kb is not None:
+        mem_limit_jobs = max(1, cgroup_kb // (MIN_MEMORY_PER_JOB_GB * 1024 * 1024))
+    else:
+        try:
+            meminfo = Path("/proc/meminfo").read_text()
+            for line in meminfo.splitlines():
+                if line.startswith("MemTotal:"):
+                    total_kb = int(line.split()[1])
+                    mem_limit_jobs = max(1, total_kb // (MIN_MEMORY_PER_JOB_GB * 1024 * 1024))
+                    break
+        except (OSError, ValueError):
+            # /proc/meminfo unavailable (e.g., macOS); fall back to CPU count
+            pass
+
+    return max(1, min(cpu_count, mem_limit_jobs))
+
+
+def _positive_int(value: str) -> int:
+    """
+    Argparse type that rejects non-positive integers.
+
+    Only invoked when --num-jobs is given a value, so the ``None`` default (which
+    falls back to :func:`_compute_max_parallel_jobs`) is unaffected.
+    """
+    ivalue = int(value)
+    if ivalue < 1:
+        message = f"{value} is not a positive integer (must be >= 1)"
+        raise argparse.ArgumentTypeError(message)
+    return ivalue
+
 
 def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool) -> None:
     cmd = [
@@ -41,7 +125,7 @@ def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool)
     subprocess.run(cmd, check=True)
 
 
-def _build_project(build_dir: Path, num_jobs: int | None) -> None:
+def _build_project(build_dir: Path, num_jobs: int) -> None:
     """
     :param build_dir:
     :param num_jobs: Max number of jobs to run when building.
@@ -51,9 +135,8 @@ def _build_project(build_dir: Path, num_jobs: int | None) -> None:
         "--build",
         str(build_dir),
         "--parallel",
+        str(num_jobs),
     ]
-    if num_jobs is not None:
-        cmd.append(str(num_jobs))
     subprocess.run(cmd, check=True)
 
 
@@ -85,15 +168,37 @@ def main(argv: list[str]) -> int:
         help="Build targets by linking against shared libraries.",
     )
     args_parser.add_argument(
-        "--num-jobs", type=int, help="Max number of jobs to run when building."
+        "--num-jobs",
+        type=_positive_int,
+        default=None,
+        help="Max number of jobs to run when building. Defaults to min(nproc, memory_limit_GB"
+        f" / {MIN_MEMORY_PER_JOB_GB}) with a floor of 1.",
     )
     args_parser.add_argument("--test-spec", help="Catch2 test specification.")
+    args_parser.add_argument(
+        "--compute-max-parallel-jobs",
+        action="store_true",
+        help="Print the computed max parallel build jobs (based on CPU count and memory limits,"
+        f" {MIN_MEMORY_PER_JOB_GB} GB/job) and exit, without building or testing. Lets shells"
+        " (e.g. the taskfile) reuse this script's parallelism logic instead of duplicating it.",
+    )
+
+    # Calculator mode: print the computed job count and exit before enforcing the required
+    # build/test arguments, so the taskfile (and other shells) can reuse this script's
+    # parallelism logic without duplicating it in bash.
+    if "--compute-max-parallel-jobs" in argv:
+        # Intentional: prints the computed job count to stdout so shells (e.g.
+        # the taskfile) can capture it.
+        print(_compute_max_parallel_jobs())  # noqa: T201
+        return 0
 
     parsed_args = args_parser.parse_args(argv[1:])
     src_dir: Path = Path(parsed_args.source_dir)
     build_dir: Path = Path(parsed_args.build_dir)
     use_shared_libs: bool = parsed_args.use_shared_libs
-    num_jobs: int | None = parsed_args.num_jobs
+    num_jobs: int = (
+        parsed_args.num_jobs if parsed_args.num_jobs is not None else _compute_max_parallel_jobs()
+    )
     test_spec: str | None = parsed_args.test_spec
 
     _config_cmake_project(src_dir, build_dir, use_shared_libs)
