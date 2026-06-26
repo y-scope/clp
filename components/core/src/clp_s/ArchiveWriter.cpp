@@ -91,14 +91,11 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
         }
     }
     auto var_dict_compressed_size = m_var_dict->close();
-    SPDLOG_INFO("Var count: {}", m_var_dict->get_next_id());
     size_t log_dict_compressed_size{};
     if (nullptr != m_log_shape_dict) {
         log_dict_compressed_size = m_log_shape_dict->close();
-        SPDLOG_INFO("Log shape count: {}", m_log_shape_dict->get_next_id());
     } else {
         log_dict_compressed_size = m_log_dict->close();
-        SPDLOG_INFO("Log shape count: {}", m_log_dict->get_next_id());
     }
     auto array_dict_compressed_size = m_array_dict->close();
     auto schema_tree_compressed_size = m_schema_tree.store(m_archive_path, m_compression_level);

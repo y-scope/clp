@@ -4,16 +4,11 @@
 #include <charconv>
 #include <concepts>
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <string_view>
 #include <system_error>
 
 namespace clp::string_utils {
-struct Stats {
-    static uint64_t m_wildcard_checks;
-};
-
 /**
  * Checks if the given character is an alphabet
  *

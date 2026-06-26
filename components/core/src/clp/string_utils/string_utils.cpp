@@ -75,8 +75,6 @@ inline auto advance_tame_to_next_match(
 }  // namespace
 
 namespace clp::string_utils {
-uint64_t Stats::m_wildcard_checks{0};
-
 auto
 find_first_of(string_view haystack, char const* needles, size_t search_start_pos, size_t& needle_ix)
         -> size_t {
@@ -221,7 +219,6 @@ auto unescape_string(std::string_view str) -> std::string {
 }
 
 auto wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) -> bool {
-    ++Stats::m_wildcard_checks;
     if (case_sensitive_match) {
         return wildcard_match_unsafe_case_sensitive(tame, wild);
     }

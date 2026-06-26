@@ -110,8 +110,6 @@ void Archive::open(string const& path) {
 }
 
 void Archive::close() {
-    SPDLOG_INFO("[stats] log dict size: {}", m_logtype_dictionary.get_entries().size());
-    SPDLOG_INFO("[stats] var dict size: {}", m_var_dictionary.get_entries().size());
     m_logtype_dictionary.close();
     m_var_dictionary.close();
     m_segment_manager.close();

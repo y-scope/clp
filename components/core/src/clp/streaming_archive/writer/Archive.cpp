@@ -225,9 +225,6 @@ void Archive::close() {
     m_logtype_dict_entry.clear();
     m_var_dict.close();
 
-    SPDLOG_INFO("Var count: {}", m_var_dict.get_num_entries());
-    SPDLOG_INFO("Log shape count: {}", m_logtype_dict.get_num_entries());
-
     if (::close(m_segments_dir_fd) != 0) {
         // We've already fsynced, so this error shouldn't affect us. Therefore, just log it.
         SPDLOG_WARN("Error when closing segments directory file descriptor, errno={}", errno);

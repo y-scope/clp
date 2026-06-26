@@ -1,6 +1,5 @@
 #ifndef CLP_S_JSONPARSER_HPP
 #define CLP_S_JSONPARSER_HPP
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -285,7 +284,6 @@ private:
 
     std::unique_ptr<log_surgeon::ParserHandle> m_log_surgeon_parser;
     std::string m_parsing_spec_str;
-    std::chrono::microseconds m_parse_duration{0};
 };
 }  // namespace clp_s
 

@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cctype>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -1490,13 +1489,6 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
 }
 
 auto JsonParser::store() -> std::vector<ArchiveStats> {
-    if (m_archive_options.experimental) {
-        SPDLOG_INFO(
-                "total parsing time: {} ({})",
-                m_parse_duration.count(),
-                std::chrono::duration_cast<std::chrono::duration<double>>(m_parse_duration).count()
-        );
-    }
     m_archive_stats.emplace_back(m_archive_writer->close());
     return std::move(m_archive_stats);
 }
@@ -1512,11 +1504,8 @@ void JsonParser::split_archive() {
 
 auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
         -> ystdlib::error_handling::Result<void> {
-    auto const start{std::chrono::steady_clock::now()};
     size_t parser_pos{0};
     auto const event{m_log_surgeon_parser->next_event(log_msg, &parser_pos)};
-    auto const end{std::chrono::steady_clock::now()};
-    m_parse_duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     if (false == event.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }

@@ -15,7 +15,6 @@
 #include <vector>
 
 #include <log_surgeon/log_surgeon.hpp>
-#include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/string_utils/string_utils.hpp>
@@ -1132,11 +1131,6 @@ auto SchemaMatch::resolve_clpp_query(
             results->add_operand(*leaves_expr);
         }
     }
-    SPDLOG_INFO(
-            "{} interpretations created {} operands.",
-            dq.value()->get_interpretations().size(),
-            results->get_op_list().size()
-    );
     if (results->get_op_list().empty()) {
         return nullptr;
     }

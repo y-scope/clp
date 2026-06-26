@@ -44,13 +44,6 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
-uint64_t QueryRunner::m_dict_id_checks{0};
-uint64_t QueryRunner::m_total_messages_searched{0};
-
-uint64_t QueryRunner::m_int_col_checks{0};
-uint64_t QueryRunner::m_float_col_checks{0};
-uint64_t QueryRunner::m_str_col_checks{0};
-
 namespace {
 /**
  * Wildcard fallback for numeric columns. Converts each value to string via `fmt::format_to_n` and
@@ -62,7 +55,6 @@ auto evaluate_numeric_wildcard_filter(
         ast::FilterOperation op,
         std::shared_ptr<ast::Literal> const& operand,
         std::vector<BaseColumnReader*> const& readers,
-        uint64_t& col_checks,
         uint64_t cur_message
 ) -> bool;
 
@@ -71,7 +63,6 @@ auto evaluate_numeric_wildcard_filter(
         ast::FilterOperation op,
         std::shared_ptr<ast::Literal> const& operand,
         std::vector<BaseColumnReader*> const& readers,
-        uint64_t& col_checks,
         uint64_t cur_message
 ) -> bool {
     std::string query_string;
@@ -79,7 +70,6 @@ auto evaluate_numeric_wildcard_filter(
         return false;
     }
     for (BaseColumnReader* reader : readers) {
-        ++col_checks;
         auto const value{std::get<T>(reader->extract_value(cur_message))};
 
         constexpr size_t cNumericConversionBufferSize{64};
@@ -221,7 +211,6 @@ std::string& QueryRunner::get_cached_decompressed_unstructured_array(int32_t col
 }
 
 bool QueryRunner::filter(uint64_t cur_message) {
-    ++m_total_messages_searched;
     m_cur_message = cur_message;
     m_extracted_unstructured_arrays.clear();
     return evaluate(m_expr.get(), m_schema);
@@ -458,13 +447,11 @@ bool QueryRunner::evaluate_int_filter(
                 op,
                 operand,
                 m_basic_readers[column_id],
-                m_int_col_checks,
                 m_cur_message
         );
     }
 
     for (BaseColumnReader* reader : m_basic_readers[column_id]) {
-        ++m_int_col_checks;
         int64_t value = std::get<int64_t>(reader->extract_value(m_cur_message));
         if (evaluate_int_filter_core(op, value, op_value)) {
             return true;
@@ -506,7 +493,6 @@ bool QueryRunner::evaluate_float_filter(
                 op,
                 operand,
                 m_basic_readers[column_id],
-                m_float_col_checks,
                 m_cur_message
         );
     }
@@ -517,7 +503,6 @@ bool QueryRunner::evaluate_float_filter(
     }
 
     for (BaseColumnReader* reader : m_basic_readers[column_id]) {
-        ++m_float_col_checks;
         double value = std::get<double>(reader->extract_value(m_cur_message));
         if (evaluate_float_filter_core(op, value, op_value)) {
             return true;
@@ -572,7 +557,6 @@ bool QueryRunner::evaluate_clp_string_filter(
         auto vars = reader->get_encoded_vars(m_cur_message);
         if (q->contains_sub_queries()) {
             for (auto const& subquery : q->get_sub_queries()) {
-                ++m_dict_id_checks;
                 if (subquery.matches_logtype(id) && subquery.matches_vars(vars)) {
                     if (subquery.wildcard_match_required()) {
                         matched = clp::string_utils::wildcard_match_unsafe(
@@ -615,7 +599,6 @@ bool QueryRunner::evaluate_var_string_filter(
     }
 
     for (VariableStringColumnReader* reader : readers) {
-        ++m_str_col_checks;
         int64_t id = reader->get_variable_id(m_cur_message);
         bool matched = matching_vars->count(id) > 0;
 
