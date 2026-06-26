@@ -36,10 +36,11 @@ repo_root="$(cd "${script_dir}/../../../.." && pwd)"
 
 # Defaults
 format="all"
-# Compute default parallelism based on CPU count and available memory (min 2 GB per core)
-source "${repo_root}/tools/scripts/compute-cpp-max-parallelism.sh"
-# shellcheck disable=SC2154 # set by the sourced helper above
-cores=$compute_cpp_max_parallelism_result
+# Leave cores unset by default so each build container computes its own optimal
+# parallelism from its own CPU and memory (cgroup) limits. A host-computed value
+# would override the container's cgroup detection and would be wrong for
+# cross-architecture builds run under emulation. Use --cores to override.
+cores=""
 version=""
 output_dir="${repo_root}/packages"
 target_arches=""
@@ -129,7 +130,7 @@ fi
 echo "==> CLP Universal Package Build"
 echo "    Formats:  ${format_list[*]}"
 echo "    Version:  ${version}"
-echo "    Cores:    ${cores}"
+echo "    Cores:    ${cores:-auto (computed per container)}"
 echo "    Arches:   ${arch_list[*]}"
 echo "    Output:   ${output_dir}"
 echo ""
@@ -293,7 +294,7 @@ for cur_format in "${format_list[@]}"; do
             ${DOCKER_NETWORK:+--network "${DOCKER_NETWORK}"} \
             -v "${repo_root}:/clp" \
             -w /clp \
-            -e "CORES=${cores}" \
+            ${cores:+-e "CORES=${cores}"} \
             -e "PKG_VERSION=${version}" \
             -e "PKG_ARCH=${pkg_arch}" \
             -e "HOST_UID=$(id -u)" \
