@@ -182,7 +182,7 @@ private:
      * @param handler_name The name of the output handler, used in the error message.
      * @throws std::invalid_argument if an aggregation was requested.
      */
-    void reject_aggregation_for_handler(std::string_view handler_name) const;
+    auto reject_aggregation_for_handler(std::string_view handler_name) const -> void;
 
     /**
      * Validates output options related to the Reducer output handler.

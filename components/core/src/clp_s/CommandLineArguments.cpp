@@ -1144,7 +1144,8 @@ auto CommandLineArguments::parse_aggregation_options(
     return aggregation_type;
 }
 
-void CommandLineArguments::reject_aggregation_for_handler(std::string_view handler_name) const {
+auto CommandLineArguments::reject_aggregation_for_handler(std::string_view handler_name) const
+        -> void {
     if (m_aggregation_type.has_value()) {
         throw std::invalid_argument(
                 fmt::format("The {} output handler does not support aggregations.", handler_name)

@@ -15,9 +15,10 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 
+#include <clp_s/CommandLineArguments.hpp>
+
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
-#include "CommandLineArguments.hpp"
 #include "Defs.hpp"
 #include "FileWriter.hpp"
 #include "search/OutputHandler.hpp"
