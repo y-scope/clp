@@ -5,7 +5,7 @@ includes:
   toolchains: "../toolchains.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
-  yscope-log-viewer: "./log-viewer.yaml"
+  yscope-log-viewer: "./yscope-log-viewer.yaml"
 
 vars:
   # Directories

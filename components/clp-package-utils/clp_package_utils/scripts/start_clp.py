@@ -2,13 +2,13 @@
 """Script to start the CLP Package."""
 
 import logging
-import os
 import pathlib
 import sys
 
 import click
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
 from clp_py_utils.core import resolve_host_path_in_container
+from clp_py_utils.telemetry_config import is_telemetry_disabled_by_env
 
 from clp_package_utils.cli_utils import RESTART_POLICY
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
@@ -24,9 +24,6 @@ from clp_package_utils.general import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Values accepted by both CLP_DISABLE_TELEMETRY and DO_NOT_TRACK to disable telemetry.
-_TELEMETRY_DISABLE_VALUES = ("1", "true", "yes", "y")
 
 
 TELEMETRY_NOTICE = """
@@ -156,9 +153,7 @@ def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.P
 
     :param config_file_path: for persisting consent.
     """
-    clp_disable_val = os.environ.get("CLP_DISABLE_TELEMETRY", "").strip().lower()
-    dnt_val = os.environ.get("DO_NOT_TRACK", "").strip().lower()
-    if clp_disable_val in _TELEMETRY_DISABLE_VALUES or dnt_val in _TELEMETRY_DISABLE_VALUES:
+    if is_telemetry_disabled_by_env():
         clp_config.telemetry.disable = True
         return
 

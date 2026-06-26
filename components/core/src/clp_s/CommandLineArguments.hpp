@@ -11,9 +11,6 @@
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
-#include <ystdlib/error_handling/Result.hpp>
-
-#include <clp_s/search/OutputHandler.hpp>
 
 #include "../reducer/types.hpp"
 #include "Defs.hpp"
@@ -46,6 +43,8 @@ public:
         std::string dataset;
         uint64_t batch_size{1000};
         uint64_t max_num_results{1000};
+        std::optional<AggregationType> aggregation_type;
+        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct FileOutputHandlerOptions {
@@ -62,7 +61,7 @@ public:
         int port{-1};
         reducer::job_id_t job_id{-1};
         AggregationType aggregation_type{AggregationType::Count};
-        int64_t count_by_time_bucket_size{};  // Milliseconds
+        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct StdoutOutputHandlerOptions {};
@@ -157,12 +156,6 @@ public:
         return m_parsing_spec_path;
     }
 
-    /**
-     * Create the appropriate OutputHandler based on the cli arguments supplied.
-     */
-    [[nodiscard]] auto create_output_handler() const
-            -> ystdlib::error_handling::Result<std::unique_ptr<search::OutputHandler>>;
-
 private:
     // Methods
     /**
@@ -177,6 +170,19 @@ private:
             std::vector<std::string> const& options,
             NetworkOutputHandlerOptions& network_options
     );
+
+    /**
+     * Validates the aggregation options (count and count-by-time) for output handlers that
+     * support aggregations.
+     * @param parsed_options
+     * @param count_by_time_bucket_size_ms The parsed value of the count-by-time option; only
+     * validated when that option was specified.
+     * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
+     */
+    [[nodiscard]] static auto parse_aggregation_options(
+            boost::program_options::variables_map const& parsed_options,
+            int64_t count_by_time_bucket_size_ms
+    ) -> std::optional<AggregationType>;
 
     /**
      * Validates output options related to the Reducer output handler.

@@ -16,7 +16,9 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include <clp_s/ArchiveReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clpp/Defs.hpp>
 
@@ -62,6 +64,14 @@ using clp_s::KvIrSearchErrorEnum;
 
 namespace {
 /**
+ * Create the appropriate OutputHandler based on the cli arguments supplied.
+ */
+[[nodiscard]] auto create_output_handler(
+        CommandLineArguments::OutputHandlerOptionsVariant const& options,
+        std::string_view archive_id
+) -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>>;
+
+/**
  * Compresses the input files specified by the command line arguments into an archive.
  * @param command_line_arguments
  * @return Whether compression was successful
@@ -89,6 +99,101 @@ bool search_archive(
         std::shared_ptr<ast::Expression> expr,
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 );
+
+auto create_output_handler(
+        CommandLineArguments::OutputHandlerOptionsVariant const& options,
+        std::string_view archive_id
+) -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
+    try {
+        return std::visit(
+                clp::overloaded{
+                        [&](CommandLineArguments::FileOutputHandlerOptions const& options)
+                                -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
+                            return std::make_unique<clp_s::FileOutputHandler>(
+                                    options.output_path,
+                                    true
+                            );
+                        },
+                        [&](CommandLineArguments::NetworkOutputHandlerOptions const& options)
+                                -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
+                            return std::make_unique<clp_s::NetworkOutputHandler>(
+                                    options.host,
+                                    options.port
+                            );
+                        },
+                        [&](CommandLineArguments::ReducerOutputHandlerOptions const& options)
+                                -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
+                            auto const reducer_socket_fd{reducer::connect_to_reducer(
+                                    options.host,
+                                    options.port,
+                                    options.job_id
+                            )};
+                            if (-1 == reducer_socket_fd) {
+                                SPDLOG_ERROR("Failed to connect to reducer");
+                                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+                            }
+
+                            if (CommandLineArguments::AggregationType::Count
+                                == options.aggregation_type) {
+                                return std::make_unique<clp_s::CountReducerOutputHandler>(
+                                        reducer_socket_fd
+                                );
+                            }
+                            if (CommandLineArguments::AggregationType::CountByTime
+                                == options.aggregation_type) {
+                                return std::make_unique<clp_s::CountByTimeReducerOutputHandler>(
+                                        reducer_socket_fd,
+                                        options.count_by_time_bucket_size_ms
+                                );
+                            }
+                            SPDLOG_ERROR("Unhandled aggregation type.");
+                            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+                        },
+                        [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
+                                -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
+                            if (false == options.aggregation_type.has_value()) {
+                                return std::make_unique<clp_s::ResultsCacheOutputHandler>(
+                                        options.uri,
+                                        options.collection,
+                                        options.batch_size,
+                                        options.max_num_results,
+                                        options.dataset
+                                );
+                            }
+                            if (CommandLineArguments::AggregationType::Count
+                                == options.aggregation_type.value()) {
+                                return std::make_unique<clp_s::CountResultsCacheOutputHandler>(
+                                        options.uri,
+                                        options.collection,
+                                        archive_id
+                                );
+                            }
+                            if (CommandLineArguments::AggregationType::CountByTime
+                                == options.aggregation_type.value())
+                            {
+                                return std::make_unique<
+                                        clp_s::CountByTimeResultsCacheOutputHandler
+                                >(options.uri,
+                                  options.collection,
+                                  archive_id,
+                                  options.count_by_time_bucket_size_ms);
+                            }
+                            SPDLOG_ERROR("Unhandled aggregation type.");
+                            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+                        },
+                        [&](CommandLineArguments::StdoutOutputHandlerOptions const& /*options*/)
+                                -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
+                            return std::make_unique<clp_s::StandardOutputHandler>();
+                        }
+                },
+                options
+
+        );
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+    }
+}
 
 /**
  * @return -1 if no experimental query found, 0 on success, >0 on failure
@@ -292,8 +397,100 @@ bool search_archive(
     }
     archive_reader->set_projection(projection);
 
-    auto output_handler{command_line_arguments.create_output_handler()};
+    auto output_handler{create_output_handler(
+            command_line_arguments.get_output_handler_options(),
+            archive_reader->get_archive_id()
+    )};
     if (output_handler.has_error()) {
+        /*
+            std::unique_ptr<OutputHandler> output_handler;
+            try {
+                std::visit(
+                        clp::overloaded{
+                                [&](CommandLineArguments::FileOutputHandlerOptions const& options)
+           -> void { output_handler = std::make_unique<clp_s::FileOutputHandler>(
+                                            options.output_path,
+                                            true
+                                    );
+                                },
+                                [&](CommandLineArguments::NetworkOutputHandlerOptions const&
+           options)
+                                        -> void {
+                                    output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
+                                            options.host,
+                                            options.port
+                                    );
+                                },
+                                [&](CommandLineArguments::ReducerOutputHandlerOptions const&
+           options)
+                                        -> void {
+                                    if (CommandLineArguments::AggregationType::Count
+                                        == options.aggregation_type) {
+                                        output_handler =
+           std::make_unique<clp_s::CountReducerOutputHandler>( reducer_socket_fd
+                                        );
+                                    } else if (CommandLineArguments::AggregationType::CountByTime
+                                               == options.aggregation_type)
+                                    {
+                                        output_handler
+                                                =
+           std::make_unique<clp_s::CountByTimeReducerOutputHandler>( reducer_socket_fd,
+                                                        options.count_by_time_bucket_size_ms
+                                                );
+                                    } else {
+                                        SPDLOG_ERROR("Unhandled aggregation type.");
+                                        output_handler = nullptr;
+                                    }
+                                },
+                                [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const&
+           options)
+                                        -> void {
+                                    if (false == options.aggregation_type.has_value()) {
+                                        output_handler =
+           std::make_unique<clp_s::ResultsCacheOutputHandler>( options.uri, options.collection,
+                                                options.batch_size,
+                                                options.max_num_results,
+                                                options.dataset
+                                        );
+                                    } else if (CommandLineArguments::AggregationType::Count
+                                               == options.aggregation_type.value())
+                                    {
+                                        output_handler
+                                                =
+           std::make_unique<clp_s::CountResultsCacheOutputHandler>( options.uri, options.collection,
+                                                        archive_reader->get_archive_id()
+                                                );
+                                    } else if (CommandLineArguments::AggregationType::CountByTime
+                                               == options.aggregation_type.value())
+                                    {
+                                        output_handler = std::make_unique<
+                                                clp_s::CountByTimeResultsCacheOutputHandler
+                                        >(options.uri,
+                                          options.collection,
+                                          archive_reader->get_archive_id(),
+                                          options.count_by_time_bucket_size_ms);
+                                    } else {
+                                        SPDLOG_ERROR("Unhandled aggregation type.");
+                                        output_handler = nullptr;
+                                    }
+                                },
+                                [&](CommandLineArguments::StdoutOutputHandlerOptions const& options)
+                                        -> void {
+                                    output_handler =
+           std::make_unique<clp_s::StandardOutputHandler>();
+                                }
+                        },
+                        command_line_arguments.get_output_handler_options()
+                );
+                if (nullptr == output_handler) {
+                    record_error_and_log(
+                            "output handler creation failed",
+                            "Failed to create output handler."
+                    );
+                    return false;
+                }
+            } catch (std::exception const& e) {
+        */
         record_error_and_log(
                 "output handler creation failed",
                 fmt::format(
@@ -334,12 +531,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
     if (false == cli_args.experimental()) {
         throw std::invalid_argument(fmt::format("--experimental must be set to run {}", query));
     }
-    auto output_handler{cli_args.create_output_handler()};
-    if (output_handler.has_error()) {
-        SPDLOG_ERROR("Failed to create output handler - {}", output_handler.error().message());
-        return 1;
-    }
-    auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
+    auto archive_reader{std::make_shared<clp_s::ArchiveReader>()};
     for (auto const& input_path : cli_args.get_input_paths()) {
         try {
             archive_reader->open(
@@ -351,6 +543,14 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             );
         } catch (std::exception const& e) {
             SPDLOG_ERROR("Failed to open archive - {}", e.what());
+            return 1;
+        }
+        auto output_handler{create_output_handler(
+                cli_args.get_output_handler_options(),
+                archive_reader->get_archive_id()
+        )};
+        if (output_handler.has_error()) {
+            SPDLOG_ERROR("Failed to create output handler - {}", output_handler.error().message());
             return 2;
         }
         auto const shape_stats{archive_reader->get_log_shape_stats()};

@@ -3,22 +3,15 @@
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
-#include <memory>
+#include <optional>
 #include <string_view>
-#include <variant>
 
-#include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
-#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
-#include <clp_s/OutputHandlerImpl.hpp>
-#include <clp_s/search/OutputHandler.hpp>
-#include <clpp/ErrorCode.hpp>
-#include <reducer/network_utils.hpp>
 
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
@@ -849,7 +842,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "count-by-time",
                     po::value<int64_t>(
-                        &reducer_options.count_by_time_bucket_size
+                        &reducer_options.count_by_time_bucket_size_ms
                     )->value_name("SIZE"),
                     "Count the number of results in each time span of the given size (ms)"
             );
@@ -886,6 +879,15 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(
                         &results_cache_options.dataset)->value_name("DATASET"),
                     "The dataset name to include in each result document"
+            )(
+                    "count",
+                    "Count the number of results"
+            )(
+                    "count-by-time",
+                    po::value<int64_t>(
+                        &results_cache_options.count_by_time_bucket_size_ms
+                    )->value_name("SIZE"),
+                    "Count the number of results in each time span of the given size (ms)"
             );
 
             FileOutputHandlerOptions file_options{};
@@ -958,13 +960,24 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 std::cerr << std::endl;
 
                 std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
-                             R"( "level: INFO" and output perform a count aggregation)"
+                             R"( "level: INFO" and output a count aggregation to the reducer)"
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
                           << " " << cReducerOutputHandlerName << " --count"
                           << " --host localhost"
                           << " --port 14009"
                           << " --job-id 1" << std::endl;
+                std::cerr << std::endl;
+
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output a count aggregation to the results cache)"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " " << cResultsCacheOutputHandlerName
+                          << " --uri mongodb://127.0.0.1:27017/test"
+                             " --collection test"
+                             " --count"
+                          << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -1125,6 +1138,30 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
     }
 }
 
+auto CommandLineArguments::parse_aggregation_options(
+        po::variables_map const& parsed_options,
+        int64_t count_by_time_bucket_size_ms
+) -> std::optional<AggregationType> {
+    std::optional<AggregationType> aggregation_type;
+    if (parsed_options.count("count")) {
+        aggregation_type = AggregationType::Count;
+    }
+    if (parsed_options.count("count-by-time")) {
+        if (aggregation_type.has_value()) {
+            throw std::invalid_argument(
+                    "The --count-by-time and --count options are mutually exclusive."
+            );
+        }
+
+        if (count_by_time_bucket_size_ms <= 0) {
+            throw std::invalid_argument("Value for count-by-time must be greater than zero.");
+        }
+
+        aggregation_type = AggregationType::CountByTime;
+    }
+    return aggregation_type;
+}
+
 void CommandLineArguments::parse_reducer_output_handler_options(
         po::options_description const& options_description,
         std::vector<std::string> const& options,
@@ -1155,32 +1192,16 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         throw std::invalid_argument("job-id cannot be negative.");
     }
 
-    bool has_aggregation{};
-    if (parsed_options.count("count")) {
-        reducer_options.aggregation_type = AggregationType::Count;
-        has_aggregation = true;
-    }
-    if (parsed_options.count("count-by-time")) {
-        if (has_aggregation) {
-            throw std::invalid_argument(
-                    "The --count-by-time and --count options are mutually exclusive."
-            );
-        }
-
-        if (reducer_options.count_by_time_bucket_size <= 0) {
-            throw std::invalid_argument("Value for count-by-time must be greater than zero.");
-        }
-
-        reducer_options.aggregation_type = AggregationType::CountByTime;
-        has_aggregation = true;
-    }
-
-    if (false == has_aggregation) {
+    auto const aggregation_type{
+            parse_aggregation_options(parsed_options, reducer_options.count_by_time_bucket_size_ms)
+    };
+    if (false == aggregation_type.has_value()) {
         throw std::invalid_argument(
                 "The reducer output handler currently only supports count and"
                 " count-by-time aggregations."
         );
     }
+    reducer_options.aggregation_type = aggregation_type.value();
 }
 
 void CommandLineArguments::parse_results_cache_output_handler_options(
@@ -1212,6 +1233,11 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
     if (0 == results_cache_options.max_num_results) {
         throw std::invalid_argument("max-num-results cannot be 0.");
     }
+
+    results_cache_options.aggregation_type = parse_aggregation_options(
+            parsed_options,
+            results_cache_options.count_by_time_bucket_size_ms
+    );
 }
 
 void CommandLineArguments::parse_file_output_handler_options(
@@ -1248,85 +1274,5 @@ void CommandLineArguments::print_search_usage() const {
               << " s [OPTIONS] ARCHIVES_DIR KQL_QUERY"
                  " [OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS]]"
               << std::endl;
-}
-
-auto CommandLineArguments::create_output_handler() const
-        -> ystdlib::error_handling::Result<std::unique_ptr<search::OutputHandler>> {
-    try {
-        return std::visit(
-                clp::overloaded{
-                        [&](CommandLineArguments::FileOutputHandlerOptions const& options)
-                                -> ystdlib::error_handling::
-                                        Result<std::unique_ptr<search::OutputHandler>> {
-                                            return std::make_unique<clp_s::FileOutputHandler>(
-                                                    options.output_path,
-                                                    true
-                                            );
-                                        },
-                        [&](CommandLineArguments::NetworkOutputHandlerOptions const& options)
-                                -> ystdlib::error_handling::
-                                        Result<std::unique_ptr<search::OutputHandler>> {
-                                            return std::make_unique<clp_s::NetworkOutputHandler>(
-                                                    options.host,
-                                                    options.port
-                                            );
-                                        },
-                        [&](
-                                CommandLineArguments::ReducerOutputHandlerOptions const& options
-                        ) -> ystdlib::error_handling::
-                                  Result<std::unique_ptr<search::OutputHandler>> {
-                                      auto const reducer_socket_fd{reducer::connect_to_reducer(
-                                              options.host,
-                                              options.port,
-                                              options.job_id
-                                      )};
-                                      if (-1 == reducer_socket_fd) {
-                                          SPDLOG_ERROR("Failed to connect to reducer");
-                                          return clpp::ClppErrorCode{
-                                                  clpp::ClppErrorCodeEnum::BadParam
-                                          };
-                                      }
-
-                                      if (CommandLineArguments::AggregationType::Count
-                                          == options.aggregation_type) {
-                                          return std::make_unique<clp_s::CountOutputHandler>(
-                                                  reducer_socket_fd
-                                          );
-                                      }
-                                      if (CommandLineArguments::AggregationType::CountByTime
-                                          == options.aggregation_type) {
-                                          return std::make_unique<clp_s::CountByTimeOutputHandler>(
-                                                  reducer_socket_fd,
-                                                  options.count_by_time_bucket_size
-                                          );
-                                      }
-                                      SPDLOG_ERROR("Unhandled aggregation type.");
-                                      return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-                                  },
-                        [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
-                                -> ystdlib::error_handling::Result<
-                                        std::unique_ptr<search::OutputHandler>
-                                > {
-                            return std::make_unique<clp_s::ResultsCacheOutputHandler>(
-                                    options.uri,
-                                    options.collection,
-                                    options.batch_size,
-                                    options.max_num_results,
-                                    options.dataset
-                            );
-                        },
-                        [&](CommandLineArguments::StdoutOutputHandlerOptions const& /*options*/)
-                                -> ystdlib::error_handling::
-                                        Result<std::unique_ptr<search::OutputHandler>> {
-                                            return std::make_unique<clp_s::StandardOutputHandler>();
-                                        }
-                },
-                get_output_handler_options()
-
-        );
-    } catch (std::exception const& e) {
-        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
-    }
 }
 }  // namespace clp_s

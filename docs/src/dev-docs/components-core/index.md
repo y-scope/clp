@@ -58,7 +58,6 @@ The task will download, build, and install (within the build directory) the foll
 | [utfcpp](https://github.com/nemtrif/utfcpp)                              | v4.0.6         |
 | [xxHash](https://github.com/Cyan4973/xxHash)                             | v0.8.3         |
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp)                           | v0.7.0         |
-| [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer)        | 3abe4cc        |
 | [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp)                    | 9ed78cd        |
 | [zlib](https://github.com/madler/zlib)                                   | v1.3.1         |
 | [zstd](https://github.com/facebook/zstd)                                 | v1.5.7         |
