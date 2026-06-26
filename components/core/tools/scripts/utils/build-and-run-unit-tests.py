@@ -176,6 +176,20 @@ def main(argv: list[str]) -> int:
         f" / {MIN_MEMORY_PER_JOB_GB}) with a floor of 1.",
     )
     args_parser.add_argument("--test-spec", help="Catch2 test specification.")
+    args_parser.add_argument(
+        "--compute-max-parallel-jobs",
+        action="store_true",
+        help="Print the computed max parallel build jobs (based on CPU count and memory limits,"
+        f" {MIN_MEMORY_PER_JOB_GB} GB/job) and exit, without building or testing. Lets shells"
+        " (e.g. the taskfile) reuse this script's parallelism logic instead of duplicating it.",
+    )
+
+    # Calculator mode: print the computed job count and exit before enforcing the required
+    # build/test arguments, so the taskfile (and other shells) can reuse this script's
+    # parallelism logic without duplicating it in bash.
+    if "--compute-max-parallel-jobs" in argv:
+        print(_compute_max_parallel_jobs())
+        return 0
 
     parsed_args = args_parser.parse_args(argv[1:])
     src_dir: Path = Path(parsed_args.source_dir)
