@@ -63,8 +63,8 @@ def _get_cgroup_memory_limit_kb() -> int | None:
 
 def _compute_max_parallel_jobs() -> int:
     """
-    Computes the maximum number of parallel compilation jobs based on CPU count and available
-    memory. Each job gets at least MIN_MEMORY_PER_JOB_GB GB of memory, and the result is floored
+    Computes the maximum number of parallel compilation jobs based on CPU count and memory
+    limits. Each job gets at least MIN_MEMORY_PER_JOB_GB GB of memory, and the result is floored
     at 1.
 
     Memory detection order:
