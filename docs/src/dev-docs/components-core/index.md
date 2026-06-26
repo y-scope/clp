@@ -111,7 +111,7 @@ the relevant paths on your machine.
 
 * Build:
   ```shell
-  make -j$(nproc)
+  cmake --build . --parallel "$(getconf _NPROCESSORS_ONLN)"
   ```
 
   > **NOTE:** If the build runs out of memory, reduce parallelism by capping based on total memory
