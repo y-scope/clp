@@ -7,7 +7,7 @@ import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import {publicSettings} from "../../../settings.js";
 import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../../../typings/compression.js";
 
 
@@ -31,7 +31,10 @@ class CompressionJobDbManager {
      * @return
      */
     static create (fastify: FastifyInstance): CompressionJobDbManager {
-        return new CompressionJobDbManager(fastify.mysql, settings.SqlDbCompressionJobsTableName);
+        return new CompressionJobDbManager(
+            fastify.mysql,
+            publicSettings.SqlDbCompressionJobsTableName
+        );
     }
 
     /**

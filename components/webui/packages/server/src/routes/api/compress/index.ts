@@ -12,7 +12,10 @@ import {
 import {ErrorSchema} from "@webui/common/schemas/error";
 import {constants} from "http2";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import {
+    publicSettings,
+    serverSettings,
+} from "../../../settings.js";
 import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
 
 
@@ -29,11 +32,11 @@ const DEFAULT_COMPRESSION_JOB_CONFIG: ClpIoConfig = Object.freeze({
         unstructured: true,
     },
     output: {
-        compression_level: settings.ArchiveOutputCompressionLevel,
-        target_archive_size: settings.ArchiveOutputTargetArchiveSize,
-        target_dictionaries_size: settings.ArchiveOutputTargetDictionariesSize,
-        target_encoded_file_size: settings.ArchiveOutputTargetEncodedFileSize,
-        target_segment_size: settings.ArchiveOutputTargetSegmentSize,
+        compression_level: serverSettings.ArchiveOutputCompressionLevel,
+        target_archive_size: serverSettings.ArchiveOutputTargetArchiveSize,
+        target_dictionaries_size: serverSettings.ArchiveOutputTargetDictionariesSize,
+        target_encoded_file_size: serverSettings.ArchiveOutputTargetEncodedFileSize,
+        target_segment_size: serverSettings.ArchiveOutputTargetSegmentSize,
     },
 });
 
@@ -72,10 +75,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             // eslint-disable-next-line no-warning-comments
             // TODO: Add support for S3 input
             (jobConfig.input as ClpIoFsInputConfig).paths_to_compress = paths.map(
-                (path) => join(settings.LogsInputRootDir, path)
+                (path) => join(publicSettings.LogsInputRootDir ?? "", path)
             );
 
-            if (CLP_STORAGE_ENGINES.CLP_S === settings.ClpStorageEngine as CLP_STORAGE_ENGINES) {
+            const clpStorageEngine = publicSettings.ClpStorageEngine;
+            if (CLP_STORAGE_ENGINES.CLP_S === clpStorageEngine) {
                 jobConfig.input.unstructured = false;
                 if ("string" !== typeof dataset || 0 === dataset.length) {
                     request.log.error("Unable to submit compression job to the SQL database");

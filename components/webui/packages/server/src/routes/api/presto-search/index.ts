@@ -14,7 +14,7 @@ import {
 } from "@webui/common/schemas/presto-search";
 import {constants} from "http2";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import {publicSettings} from "../../../settings.js";
 import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
 
@@ -39,7 +39,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     }
 
     const searchResultsMetadataCollection = mongoDb.collection<SearchResultsMetadataDocument>(
-        settings.MongoDbSearchResultsMetadataCollectionName
+        publicSettings.MongoDbSearchResultsMetadataCollectionName
     );
 
     /**

@@ -124,8 +124,7 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/clp-package-image.id"
       - "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/clp-config.schema.json"
-      - "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
-      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
+      - "{{.G_WEBUI_BUILD_DIR}}/settings.json"
       - "{{.TASKFILE}}"
       - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
@@ -156,12 +155,8 @@ tasks:
         "{{.OUTPUT_DIR}}/usr/share/config-schemas/"
       - >-
         rsync --archive --mkpath
-        "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
-        "{{.OUTPUT_DIR}}/var/www/webui/client/"
-      - >-
-        rsync --archive --mkpath
-        "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
-        "{{.OUTPUT_DIR}}/var/www/webui/server/dist/"
+        "{{.G_WEBUI_BUILD_DIR}}/settings.json"
+        "{{.OUTPUT_DIR}}/etc/webui/"
       - >-
         rsync --archive
         "tools/deployment/package/"
@@ -271,6 +266,7 @@ tasks:
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
       - "{{.G_WEBUI_SRC_DIR}}/packages/*/dist/**/*"
+      - "{{.G_WEBUI_SRC_DIR}}/settings.json"
       - "{{.TASKFILE}}"
     dir: "{{.G_WEBUI_SRC_DIR}}"
     generates:
@@ -292,6 +288,7 @@ tasks:
         --prod
         --filter=@webui/server
         '{{.OUTPUT_DIR}}/server'
+      - "rsync -a 'settings.json' '{{.OUTPUT_DIR}}/settings.json'"
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
