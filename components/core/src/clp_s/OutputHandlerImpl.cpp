@@ -3,7 +3,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 #include <bsoncxx/builder/basic/document.hpp>
@@ -12,9 +11,7 @@
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
-#include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
-#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../clp/networking/socket_utils.hpp"
@@ -22,6 +19,7 @@
 #include "../reducer/network_utils.hpp"
 #include "../reducer/Record.hpp"
 #include "archive_constants.hpp"
+#include "ResultsCacheUtils.hpp"
 #include "search/OutputHandler.hpp"
 #include "TraceableException.hpp"
 
@@ -29,32 +27,6 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
-namespace {
-/**
- * Connects to the results cache and returns the requested collection.
- * @tparam OperationFailedT The type of exception to throw on failure.
- * @param uri
- * @param collection
- * @param client Returns the connected client.
- * @return The collection.
- */
-template <typename OperationFailedT>
-auto connect_to_results_cache(string_view uri, string_view collection, mongocxx::client& client)
-        -> mongocxx::collection;
-
-template <typename OperationFailedT>
-auto connect_to_results_cache(string_view uri, string_view collection, mongocxx::client& client)
-        -> mongocxx::collection {
-    try {
-        auto mongo_uri = mongocxx::uri{string{uri}};
-        client = mongocxx::client(mongo_uri);
-        return client[mongo_uri.database()][string{collection}];
-    } catch (mongocxx::exception const& e) {
-        throw OperationFailedT(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
-    }
-}
-}  // namespace
-
 void FileOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
@@ -240,46 +212,4 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-auto StdoutSink::write(AggregationResult const& result) -> void {
-    nlohmann::json document;
-    document[constants::results_cache::search::cArchiveId] = m_archive_id;
-    for (auto const& [key, value] : result) {
-        std::visit([&](auto const& field_value) { document[key] = field_value; }, value);
-    }
-    std::cout << document.dump() << '\n';
-}
-
-ResultsCacheSink::ResultsCacheSink(string_view uri, string_view collection, string_view archive_id)
-        : m_archive_id{archive_id} {
-    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
-}
-
-auto ResultsCacheSink::write(AggregationResult const& result) -> void {
-    bsoncxx::builder::basic::document document;
-    document.append(
-            bsoncxx::builder::basic::kvp(constants::results_cache::search::cArchiveId, m_archive_id)
-    );
-    for (auto const& [key, value] : result) {
-        std::visit(
-                [&](auto const& field_value) {
-                    document.append(bsoncxx::builder::basic::kvp(key, field_value));
-                },
-                value
-        );
-    }
-    m_results.push_back(document.extract());
-}
-
-auto ResultsCacheSink::finish() -> ErrorCode {
-    if (m_results.empty()) {
-        return ErrorCode::ErrorCodeSuccess;
-    }
-
-    try {
-        m_collection.insert_many(m_results);
-    } catch (mongocxx::exception const& e) {
-        return ErrorCode::ErrorCodeFailureDbBulkWrite;
-    }
-    return ErrorCode::ErrorCodeSuccess;
-}
 }  // namespace clp_s

@@ -463,6 +463,8 @@ set(
         CLP_S_EXE_SOURCES
         Aggregation.cpp
         Aggregation.hpp
+        AggregationSink.cpp
+        AggregationSink.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         ErrorCode.hpp
@@ -470,6 +472,7 @@ set(
         kv_ir_search.hpp
         OutputHandlerImpl.cpp
         OutputHandlerImpl.hpp
+        ResultsCacheUtils.hpp
         TraceableException.hpp
 )
 
