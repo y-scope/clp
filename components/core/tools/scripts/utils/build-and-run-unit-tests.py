@@ -73,11 +73,10 @@ def _compute_max_parallel_jobs() -> int:
       3. /proc/meminfo MemTotal (Linux hosts)
       4. Fall back to CPU count with no memory cap
     """
-    # os.process_cpu_count() (Python 3.13+) respects taskset/cgroup CPU limits, so it's more
-    # accurate than os.cpu_count() in containers; fall back to the latter on older Pythons (the
-    # project supports >=3.10).
-    get_cpu_count = getattr(os, "process_cpu_count", os.cpu_count)
-    cpu_count = get_cpu_count() or 1
+    try:
+        cpu_count = len(os.sched_getaffinity(0))
+    except (AttributeError, OSError):
+        cpu_count = os.cpu_count() or 1
     mem_limit_jobs = cpu_count
 
     # Try cgroup limits first (important for containers where /proc/meminfo shows host memory)
