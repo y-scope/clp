@@ -11,32 +11,55 @@ inputs:
   run_command:
     description: "Command to execute"
     required: true
+  arch:
+    description: >-
+      Target architecture (e.g. "amd64" or "arm64") when consuming a single arch of a
+      multi-arch image. When set and using a published image, the bare multi-arch tag
+      ":main" is pulled (Docker auto-selects the runner's arch). When set and using a
+      locally-built image, the arch-suffixed artifact/image (e.g. "<image_name>-amd64")
+      produced by clp-core-build-containers is loaded. When empty, the bare image_name
+      is used (legacy behaviour).
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
-    - if: "inputs.use_published_image == 'false'"
-      uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
-      with:
-        name: "${{inputs.image_name}}"
-        path: "/tmp"
-
-    - if: "inputs.use_published_image == 'false'"
-      name: "Load image"
-      run: "docker load --input '/tmp/${{inputs.image_name}}.tar'"
-      shell: "bash"
-
     - id: "get_image_props"
       run: |
+        arch="${{inputs.arch}}"
+        if [[ -n "$arch" ]]; then
+          arch_suffix="-${arch}"
+        else
+          arch_suffix=""
+        fi
+
         if [[ "${{inputs.use_published_image}}" == "true" ]] ; then
           # Docker doesn't support repository names with uppercase characters, so we convert to
-          # lowercase here.
+          # lowercase here. The published image is a multi-arch manifest tagged ":main", so Docker
+          # auto-selects the runner's architecture on pull.
           repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
           echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}:main" \
             >> "$GITHUB_OUTPUT"
         else
-          echo "qualified_image_name=${{inputs.image_name}}:latest" >> "$GITHUB_OUTPUT"
+          # The locally-built image (from clp-core-build-containers) is tagged/loaded under
+          # an arch-suffixed name when `arch` is set.
+          local_name="${{inputs.image_name}}${arch_suffix}"
+          echo "artifact_name=${local_name}" >> "$GITHUB_OUTPUT"
+          echo "tar_path=/tmp/${local_name}.tar" >> "$GITHUB_OUTPUT"
+          echo "qualified_image_name=${local_name}:latest" >> "$GITHUB_OUTPUT"
         fi
+      shell: "bash"
+
+    - if: "inputs.use_published_image == 'false'"
+      uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+      with:
+        name: "${{steps.get_image_props.outputs.artifact_name}}"
+        path: "/tmp"
+
+    - if: "inputs.use_published_image == 'false'"
+      name: "Load image"
+      run: "docker load --input '${{steps.get_image_props.outputs.tar_path}}'"
       shell: "bash"
 
     - run: "./tools/scripts/deps-download/init.sh"
