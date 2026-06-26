@@ -726,19 +726,10 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
-        client_settings_json_path = (
-            self._clp_home / "var" / "www" / "webui" / "client" / "settings.json"
-        )
-        server_settings_json_path = (
-            self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
-        )
-        validate_webui_config(
-            self._clp_config,
-            client_settings_json_path,
-            server_settings_json_path,
-        )
+        settings_json_path = self._clp_home / "etc" / "webui" / "settings.json"
+        validate_webui_config(self._clp_config, settings_json_path)
 
-        # Read, update, and write back client's and server's settings.json
+        # Read, update, and write back the Web UI settings.json
         clp_db_connection_params = self._clp_config.database.get_clp_connection_params_and_type(
             True
         )
@@ -750,38 +741,67 @@ class BaseController(ABC):
             archives_table_name = get_archives_table_name(table_prefix, None)
             files_table_name = get_files_table_name(table_prefix, None)
 
-        client_settings_json_updates = {
-            "ClpStorageEngine": self._clp_config.package.storage_engine,
+        logs_input_root_dir = (
+            str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            if StorageType.FS == self._clp_config.logs_input.type
+            else None
+        )
+
+        stream_storage = self._clp_config.stream_output.storage
+        stream_files_dir = None
+        stream_files_s3_path_prefix = None
+        stream_files_s3_profile = None
+        stream_files_s3_region = None
+        if StorageType.FS == stream_storage.type:
+            stream_files_dir = str(container_clp_config.stream_output.get_directory())
+        elif StorageType.S3 == stream_storage.type:
+            s3_config = stream_storage.s3_config
+            stream_files_s3_path_prefix = f"{s3_config.bucket}/{s3_config.key_prefix}"
+
+            auth = s3_config.aws_authentication
+            stream_files_s3_profile = auth.profile if AwsAuthType.profile == auth.type else None
+            stream_files_s3_region = s3_config.region_code
+
+        query_engine = self._clp_config.package.query_engine
+        presto_host = None
+        presto_port = None
+        if QueryEngine.PRESTO == query_engine:
+            presto_host = container_clp_config.presto.host
+            presto_port = container_clp_config.presto.port
+
+        public_settings_updates = {
             "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpStorageEngine": self._clp_config.package.storage_engine,
+            "LogsInputRootDir": logs_input_root_dir,
             "LogsInputType": self._clp_config.logs_input.type,
             "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
-            "MongoDbSearchResultsMetadataCollectionName": (
-                self._clp_config.webui.results_metadata_collection_name
-            ),
             "SqlDbClpArchivesTableName": archives_table_name,
             "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
             "SqlDbClpFilesTableName": files_table_name,
             "SqlDbClpTablePrefix": table_prefix,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-        }
-
-        server_settings_json_updates = {
-            "SqlDbHost": container_clp_config.database.host,
-            "SqlDbPort": container_clp_config.database.port,
-            "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
-            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
-            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-            "MongoDbHost": container_clp_config.results_cache.host,
-            "MongoDbPort": container_clp_config.results_cache.port,
-            "MongoDbName": self._clp_config.results_cache.db_name,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
+        }
+
+        server_settings_updates = {
+            "SqlDbHost": container_clp_config.database.host,
+            "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
+            "SqlDbPort": container_clp_config.database.port,
+            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+            "MongoDbHost": container_clp_config.results_cache.host,
+            "MongoDbName": self._clp_config.results_cache.db_name,
+            "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbStreamFilesCollectionName": (
                 self._clp_config.results_cache.stream_collection_name
             ),
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
+            "StreamFilesDir": stream_files_dir,
+            "StreamFilesS3PathPrefix": stream_files_s3_path_prefix,
+            "StreamFilesS3Profile": stream_files_s3_profile,
+            "StreamFilesS3Region": stream_files_s3_region,
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
             "ArchiveOutputCompressionLevel": self._clp_config.archive_output.compression_level,
             "ArchiveOutputTargetArchiveSize": self._clp_config.archive_output.target_archive_size,
@@ -792,63 +812,20 @@ class BaseController(ABC):
                 self._clp_config.archive_output.target_encoded_file_size
             ),
             "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
-            "ClpQueryEngine": self._clp_config.package.query_engine,
-            "ClpStorageEngine": self._clp_config.package.storage_engine,
+            "PrestoHost": presto_host,
+            "PrestoPort": presto_port,
         }
 
-        stream_storage = self._clp_config.stream_output.storage
-        if StorageType.S3 == stream_storage.type:
-            s3_config = stream_storage.s3_config
-            server_settings_json_updates["StreamFilesDir"] = None
-            server_settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
-            server_settings_json_updates["StreamFilesS3PathPrefix"] = (
-                f"{s3_config.bucket}/{s3_config.key_prefix}"
-            )
-            auth = s3_config.aws_authentication
-            if AwsAuthType.profile == auth.type:
-                server_settings_json_updates["StreamFilesS3Profile"] = auth.profile
-            else:
-                server_settings_json_updates["StreamFilesS3Profile"] = None
-        elif StorageType.FS == stream_storage.type:
-            server_settings_json_updates["StreamFilesDir"] = str(
-                container_clp_config.stream_output.get_directory()
-            )
-            server_settings_json_updates["StreamFilesS3Region"] = None
-            server_settings_json_updates["StreamFilesS3PathPrefix"] = None
-            server_settings_json_updates["StreamFilesS3Profile"] = None
-
-        query_engine = self._clp_config.package.query_engine
-        if QueryEngine.PRESTO == query_engine:
-            server_settings_json_updates["PrestoHost"] = container_clp_config.presto.host
-            server_settings_json_updates["PrestoPort"] = container_clp_config.presto.port
-        else:
-            server_settings_json_updates["PrestoHost"] = None
-            server_settings_json_updates["PrestoPort"] = None
-
-        if StorageType.FS == self._clp_config.logs_input.type:
-            client_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
-            server_settings_json_updates["LogsInputRootDir"] = str(CONTAINER_INPUT_LOGS_ROOT_DIR)
-        else:
-            client_settings_json_updates["LogsInputRootDir"] = None
-            server_settings_json_updates["LogsInputRootDir"] = None
-
-        resolved_client_settings_json_path = resolve_host_path_in_container(
-            client_settings_json_path
+        settings_json_updates = {
+            "public": public_settings_updates,
+            "server": server_settings_updates,
+        }
+        resolved_settings_json_path = resolve_host_path_in_container(settings_json_path)
+        settings_json = self._read_and_update_settings_json(
+            resolved_settings_json_path, settings_json_updates
         )
-        client_settings_json = self._read_and_update_settings_json(
-            resolved_client_settings_json_path, client_settings_json_updates
-        )
-        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
-            client_settings_json_file.write(json.dumps(client_settings_json))
-
-        resolved_server_settings_json_path = resolve_host_path_in_container(
-            server_settings_json_path
-        )
-        server_settings_json = self._read_and_update_settings_json(
-            resolved_server_settings_json_path, server_settings_json_updates
-        )
-        with open(resolved_server_settings_json_path, "w") as settings_json_file:
-            settings_json_file.write(json.dumps(server_settings_json))
+        with resolved_settings_json_path.open("w") as settings_json_file:
+            settings_json_file.write(json.dumps(settings_json))
 
         env_vars = EnvVarsDict()
 
@@ -1060,7 +1037,7 @@ class BaseController(ABC):
         :param settings_file_path:
         :param updates:
         """
-        with open(settings_file_path, "r") as settings_json_file:
+        with settings_file_path.open("r") as settings_json_file:
             settings_object = json.loads(settings_json_file.read())
         self._update_settings_object("", settings_object, updates)
 

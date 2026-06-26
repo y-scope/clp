@@ -1,7 +1,7 @@
 import type {CompressionMetadata} from "@webui/common/schemas/compress-metadata";
 import {RowDataPacket} from "mysql2";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import {publicSettings} from "../../../settings.js";
 
 
 enum COMPRESSION_JOBS_TABLE_COLUMN_NAMES {
@@ -36,7 +36,7 @@ const getCompressionMetadataQuery = () => `
         ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE},
         ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.COMPRESSED_SIZE},
         ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.CLP_CONFIG}
-    FROM ${settings.SqlDbCompressionJobsTableName}
+    FROM ${publicSettings.SqlDbCompressionJobsTableName}
     ORDER BY ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.ID} DESC
     LIMIT ${COMPRESSION_METADATA_QUERY_LIMIT};
 `;
