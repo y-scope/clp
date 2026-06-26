@@ -47,9 +47,18 @@ vars:
   G_PACKAGE_VERSION: "0.12.1-dev"
 
   # Build parameters
-  # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
-  G_CPP_MAX_PARALLELISM_PER_BUILD_TASK: >-
-    {{default "" (env "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK")}}
+  # NOTE: If CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK is set, it takes precedence. Otherwise, we cap
+  # parallelism at min(cpu_count, memory_limit_GB / 2) with a floor of 1, so that each compilation
+  # job gets at least 2 GB of memory. The computation is delegated to build-and-run-unit-tests.py
+  # (via --compute-max-parallel-jobs) to keep a single source of truth.
+  G_CPP_MAX_PARALLELISM_PER_BUILD_TASK:
+    sh: |
+      if [ -n "${CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK:-}" ]; then
+        echo "${CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK}"
+      else
+        python3 "{{.ROOT_DIR}}/components/core/tools/scripts/utils/build-and-run-unit-tests.py" \
+          --compute-max-parallel-jobs
+      fi
 
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
