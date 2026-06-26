@@ -18,7 +18,7 @@ LoggingLevel = Literal[
 ]
 
 # Processor chain for events emitted through structlog loggers before they reach
-# ``ProcessorFormatter``.
+# `ProcessorFormatter`.
 _STRUCTLOG_PROCESSORS: tuple[Processor, ...] = (
     structlog.stdlib.filter_by_level,
     structlog.contextvars.merge_contextvars,
@@ -38,7 +38,7 @@ _STRUCTLOG_PROCESSORS: tuple[Processor, ...] = (
     ),
 )
 
-# Processor chain for stdlib ``LogRecord`` objects that did not originate from structlog.
+# Processor chain for stdlib `LogRecord` objects that did not originate from structlog.
 _FOREIGN_PRE_CHAIN: tuple[Processor, ...] = (
     structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_logger_name,
