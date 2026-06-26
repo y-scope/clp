@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cctype>
-#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -36,6 +35,7 @@
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
+#include <clp/string_utils/string_utils.hpp>
 #include <clp/StringReader.hpp>
 #include <clp/time_types.hpp>
 #include <clp_s/archive_constants.hpp>
@@ -1660,9 +1660,7 @@ auto JsonParser::try_add_float_value(
         std::string_view rule_name
 ) -> std::optional<SchemaNode::id_t> {
     double double_value{};
-    auto const* const lexeme_end{lexeme.data() + lexeme.size()};
-    auto const result{std::from_chars(lexeme.data(), lexeme_end, double_value)};
-    if (result.ptr != lexeme_end || std::errc{} != result.ec) {
+    if (false == clp::string_utils::convert_string_to_double(lexeme, double_value)) {
         return std::nullopt;
     }
 
