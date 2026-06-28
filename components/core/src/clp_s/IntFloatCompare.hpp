@@ -15,9 +15,9 @@
 // Adapted from SQLite's `sqlite3IntFloatCompare`:
 // https://github.com/sqlite/sqlite/blob/master/src/vdbeaux.c
 namespace clp_s {
-// Doubles span a far wider range than `int64_t`, so a double can be larger or smaller than any
-// `int64_t`. These constants bracket the `int64_t` range, letting the comparisons below detect such
-// out-of-range doubles before converting them to `int64_t` (which would overflow).
+// Doubles span a far wider range than `int64_t`. These constants bracket the `int64_t` range,
+// letting the comparisons below detect out-of-range doubles before converting them to `int64_t`
+// (which would overflow).
 
 // `2^63`, one greater than `INT64_MAX`: any double `>=` this is larger than every `int64_t`. We use
 // `2^63` rather than `INT64_MAX` because `2^63` is exactly representable as a double and `INT64_MAX`
@@ -67,8 +67,7 @@ constexpr double cInt64Min{-9223372036854775808.0};
 }
 
 /**
- * Compares a double against an integer exactly. The mirror image of the `int64_t`/`double` overload;
- * see it for the rationale.
+ * Compares a double against an integer exactly.
  * @param lhs
  * @param rhs
  * @return Whether `lhs < rhs`.
