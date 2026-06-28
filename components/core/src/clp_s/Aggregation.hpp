@@ -10,7 +10,7 @@
 #include <variant>
 #include <vector>
 
-#include "Defs.hpp"
+#include <clp_s/Defs.hpp>
 
 namespace clp_s {
 /**

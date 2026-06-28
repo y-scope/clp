@@ -211,5 +211,4 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     }
     return ErrorCode::ErrorCodeSuccess;
 }
-
 }  // namespace clp_s

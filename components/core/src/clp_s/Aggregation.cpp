@@ -11,9 +11,9 @@
 
 #include <nlohmann/json.hpp>
 
-#include "archive_constants.hpp"
-#include "IntFloatCompare.hpp"
-#include "search/ast/SearchUtils.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/IntFloatCompare.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
 
 using std::string;
 using std::string_view;
@@ -63,7 +63,11 @@ MinMaxAggregation::MinMaxAggregation(bool find_max, string_view field)
 auto MinMaxAggregation::beats_extreme(Extreme candidate) const -> bool {
     auto const& current{m_extreme.value()};
     if (m_find_max) {
-        return std::visit([](auto cand, auto cur) { return is_less(cur, cand); }, candidate, current);
+        return std::visit(
+                [](auto cand, auto cur) { return is_less(cur, cand); },
+                candidate,
+                current
+        );
     }
     return std::visit([](auto cand, auto cur) { return is_less(cand, cur); }, candidate, current);
 }

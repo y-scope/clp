@@ -9,9 +9,9 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 
-#include "Aggregation.hpp"
-#include "ErrorCode.hpp"
-#include "TraceableException.hpp"
+#include <clp_s/Aggregation.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
 /**

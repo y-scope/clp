@@ -9,7 +9,7 @@
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/uri.hpp>
 
-#include "ErrorCode.hpp"
+#include <clp_s/ErrorCode.hpp>
 
 namespace clp_s {
 /**
