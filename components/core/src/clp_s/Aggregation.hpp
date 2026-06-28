@@ -19,9 +19,7 @@ namespace clp_s {
 using AggregationValue = std::variant<int64_t, double, std::string>;
 
 /**
- * One aggregation result document: an ordered list of typed key-value pairs. A sink serializes
- * these to its destination (JSON for stdout, BSON for the results cache); the archive id is added
- * by the sink, not the aggregator.
+ * One aggregation result document: an ordered list of typed key-value pairs.
  */
 using AggregationResult = std::vector<std::pair<std::string, AggregationValue>>;
 
@@ -70,9 +68,7 @@ private:
 };
 
 /**
- * Tracks the minimum or maximum value of a target field across matched records. Integer fields are
- * compared exactly and only degraded to a (lossy) double comparison when comparing against a
- * floating-point value, so integer fields aren't degraded to `double`.
+ * Tracks the minimum or maximum value of a target field across matched records.
  */
 class MinMaxAggregation {
 public:
@@ -101,9 +97,7 @@ private:
 };
 
 /**
- * A search aggregation to perform. Replaces a `(type, params)` representation: each alternative
- * carries exactly the fields its aggregation needs, and `std::visit` dispatches `add_record` /
- * `get_results` to the active one.
+ * A search aggregation to perform.
  */
 using Aggregation = std::variant<CountAggregation, CountByTimeAggregation, MinMaxAggregation>;
 

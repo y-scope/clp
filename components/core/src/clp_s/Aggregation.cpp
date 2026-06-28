@@ -1,5 +1,6 @@
 #include "Aggregation.hpp"
 
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -48,10 +49,7 @@ MinMaxAggregation::MinMaxAggregation(bool find_max, string_view field)
                 descriptor_namespace
         ))
     {
-        // A malformed field tokenizes to nothing, so `add_record` never matches and min/max yields
-        // no result. The field is validated during command-line parsing, so this is just defensive.
-        m_field_path.clear();
-        return;
+        throw std::invalid_argument("Invalid --min/--max field: " + string{field});
     }
     if (false == descriptor_namespace.empty()) {
         // Namespaced fields (e.g. the auto-generated `@` namespace) are marshalled under a
