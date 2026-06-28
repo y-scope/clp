@@ -103,7 +103,7 @@ using Aggregation = std::variant<CountAggregation, CountByTimeAggregation, MinMa
 
 /**
  * @param aggregation
- * @return Whether the aggregation needs per-record metadata (i.e. the timestamp).
+ * @return Whether the aggregation needs per-record metadata.
  */
 [[nodiscard]] auto aggregation_needs_metadata(Aggregation const& aggregation) -> bool;
 

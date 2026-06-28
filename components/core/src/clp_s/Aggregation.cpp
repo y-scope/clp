@@ -54,17 +54,14 @@ MinMaxAggregation::MinMaxAggregation(bool find_max, string_view field)
         throw std::invalid_argument("Invalid --min/--max field: " + string{field});
     }
     if (false == descriptor_namespace.empty()) {
-        // Namespaced fields (e.g. the auto-generated `@` namespace) are marshalled under a
-        // top-level object keyed by the namespace string, so navigate into it first.
+        // The tokenizer strips the namespace prefix out of the path, but namespaced fields live
+        // under a top-level object keyed by that namespace. Prepend it back so the path matches.
         m_field_path.insert(m_field_path.begin(), descriptor_namespace);
     }
 }
 
 auto MinMaxAggregation::beats_extreme(Extreme candidate) const -> bool {
     auto const& current{m_extreme.value()};
-    // `is_less` compares every `int64_t`/`double` combination exactly (no lossy casts). A candidate
-    // beats the current maximum when the current value is smaller, and the current minimum when the
-    // candidate is smaller.
     if (m_find_max) {
         return std::visit([](auto cand, auto cur) { return is_less(cur, cand); }, candidate, current);
     }
