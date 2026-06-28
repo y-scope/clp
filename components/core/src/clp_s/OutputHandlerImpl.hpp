@@ -292,8 +292,6 @@ private:
 
 /**
  * Output handler that runs a search `Aggregation` and writes its results to an `AggregationSink`.
- * The aggregation (the *what*) and the sink (the *where*) compose: adding an aggregation is one
- * `Aggregation` alternative, adding a destination is one `AggregationSink`.
  */
 class AggregationOutputHandler : public search::OutputHandler {
 public:
@@ -393,4 +391,3 @@ private:
 }  // namespace clp_s
 
 #endif  // CLP_S_OUTPUTHANDLERIMPL_HPP
-    

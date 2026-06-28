@@ -95,4 +95,5 @@ constexpr double cInt64Min{-9223372036854775808.0};
     return lhs < truncated;
 }
 }  // namespace clp_s
+
 #endif  // CLP_S_INTFLOATCOMPARE_HPP
