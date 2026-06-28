@@ -248,7 +248,7 @@ auto search_kv_ir_stream(
 
     if (command_line_arguments.get_aggregation().has_value()) {
         SPDLOG_ERROR("kv-ir search: Aggregation support is not implemented.");
-        return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};
+        return KvIrSearchError{KvIrSearchErrorEnum::AggregationSupportNotImplemented};
     }
 
     auto const raw_reader{
@@ -313,8 +313,8 @@ auto KvIrSearchErrorCategory::message(KvIrSearchErrorEnum error_enum) const -> s
     switch (error_enum) {
         case KvIrSearchErrorEnum::ClpLegacyError:
             return "clp legacy error.";
-        case KvIrSearchErrorEnum::CountSupportNotImplemented:
-            return "Count support is not implemented.";
+        case KvIrSearchErrorEnum::AggregationSupportNotImplemented:
+            return "Aggregation support is not implemented.";
         case KvIrSearchErrorEnum::DeserializerCreationFailure:
             return "Failed to create `clp::ffi::ir_stream::Deserializer`.";
         case KvIrSearchErrorEnum::ProjectionSupportNotImplemented:

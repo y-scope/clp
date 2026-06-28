@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -317,13 +318,20 @@ bool search_archive(
                                 output_handler = std::make_unique<clp_s::CountReducerOutputHandler>(
                                         reducer_socket_fd
                                 );
-                            } else {
+                            } else if (std::holds_alternative<clp_s::CountByTimeAggregation>(
+                                               aggregation
+                                       )) {
                                 output_handler
                                         = std::make_unique<clp_s::CountByTimeReducerOutputHandler>(
                                                 reducer_socket_fd,
                                                 std::get<clp_s::CountByTimeAggregation>(aggregation)
                                                         .get_bucket_size_ms()
                                         );
+                            } else {
+                                throw std::invalid_argument(
+                                        "The reducer output handler only supports the count and "
+                                        "count-by-time aggregations."
+                                );
                             }
                         },
                         [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
@@ -514,7 +522,8 @@ int main(int argc, char const* argv[]) {
 
                 if (KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented} == error
                     || KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType} == error
-                    || KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented} == error)
+                    || KvIrSearchError{KvIrSearchErrorEnum::AggregationSupportNotImplemented}
+                               == error)
                 {
                     // These errors are treated as non-fatal because they result from unsupported
                     // features. However, this approach may cause archives with this extension to be

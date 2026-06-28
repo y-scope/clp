@@ -55,6 +55,7 @@ auto ResultsCacheSink::finish() -> ErrorCode {
 
     try {
         m_collection.insert_many(m_results);
+        m_results.clear();
     } catch (mongocxx::exception const& e) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }

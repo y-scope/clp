@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -51,7 +52,11 @@ public:
     static constexpr bool cNeedsMetadata = true;
     static constexpr bool cNeedsMarshalledRecord = false;
 
-    explicit CountByTimeAggregation(int64_t bucket_size_ms) : m_bucket_size_ms{bucket_size_ms} {}
+    explicit CountByTimeAggregation(int64_t bucket_size_ms) : m_bucket_size_ms{bucket_size_ms} {
+        if (bucket_size_ms <= 0) {
+            throw std::invalid_argument("CountByTimeAggregation bucket size must be positive.");
+        }
+    }
 
     [[nodiscard]] auto get_bucket_size_ms() const -> int64_t { return m_bucket_size_ms; }
 
