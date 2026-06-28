@@ -25,7 +25,7 @@ public:
     // Destructor
     virtual ~AggregationSink() = default;
 
-    // Delete copy and move
+    // Explicitly disable copy and move constructor/assignment
     AggregationSink(AggregationSink const&) = delete;
     auto operator=(AggregationSink const&) -> AggregationSink& = delete;
     AggregationSink(AggregationSink&&) = delete;
@@ -33,7 +33,7 @@ public:
 
     // Methods
     /**
-     * Writes one result document. The archive id is added by the sink.
+     * Writes one result document.
      * @param result
      */
     virtual auto write(AggregationResult const& result) -> void = 0;
@@ -87,7 +87,7 @@ public:
     auto write(AggregationResult const& result) -> void override;
 
     /**
-     * Flushes the buffered result documents to the results cache.
+     * Flushes the buffered result documents.
      * @return ErrorCodeSuccess on success
      * @return ErrorCodeFailureDbBulkWrite on database error
      */
