@@ -24,6 +24,9 @@ constexpr double cInt64Min{-9223372036854775808.0};
  * `lhs` to a double would be lossy above `2^53`, so we instead range-check `rhs` against the
  * `int64_t` bounds and then compare integer parts exactly, letting the fractional part of `rhs`
  * break ties.
+ *
+ * Based on SQLite's `sqlite3IntFloatCompare`:
+ * https://github.com/sqlite/sqlite/blob/master/src/vdbeaux.c
  * @param lhs
  * @param rhs
  * @return Whether `lhs < rhs`.
