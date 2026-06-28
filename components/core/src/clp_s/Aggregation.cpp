@@ -12,7 +12,7 @@
 #include <nlohmann/json.hpp>
 
 #include "archive_constants.hpp"
-#include "NumericCompare.hpp"
+#include "IntFloatCompare.hpp"
 #include "search/ast/SearchUtils.hpp"
 
 using std::string;
