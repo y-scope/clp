@@ -8,7 +8,7 @@ summarizes the current behavior and the controls developers/operators should use
 This section gives guidance on how to set up and use loggers when writing a new component.
 
 :::{note}
-When modifying an existing service, follow its current logging setup.
+When modifying an existing component, follow its current logging setup.
 :::
 
 ### Python
