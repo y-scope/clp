@@ -73,9 +73,9 @@ struct QueryShapeMetrics {
  * Record counts produced while searching a single archive.
  */
 struct SearchResultMetrics {
-    uint64_t num_total_archive_records{};
-    uint64_t num_candidate_records_after_schema_matching{};
-    uint64_t num_records_matching_query{};
+    uint64_t num_archive_records{};
+    uint64_t num_archive_records_matching_schemas{};
+    uint64_t num_archive_records_matching_query{};
     uint64_t num_matched_schemas{};
     uint64_t num_schemas_with_matches{};
 };
