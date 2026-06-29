@@ -157,15 +157,13 @@ private:
     );
 
     /**
-     * Builds the requested aggregation (count, count-by-time, min, or max) from the parsed options.
+     * Builds the requested aggregation from the parsed options.
      * @param parsed_options
-     * @param count_by_time_bucket_size_ms The parsed value of the count-by-time option; only
-     * validated when that option was specified.
-     * @param aggregation_field The parsed value of the min/max option; only validated when one of
-     * those options was specified.
-     * @return The requested aggregation, or std::nullopt if no aggregation was requested.
-     * @throws std::invalid_argument if more than one aggregation is specified, the count-by-time
-     * bucket size is non-positive, or a min/max field is missing or contains wildcards.
+     * @param count_by_time_bucket_size_ms Bucket size for count-by-time. Only used by that option.
+     * @param aggregation_field Field for min/max. Only used by those options.
+     * @return The requested aggregation, or std::nullopt if none was requested.
+     * @throws std::invalid_argument if multiple aggregations are specified, the bucket size is
+     * non-positive, or a min/max field is empty or contains wildcards.
      */
     [[nodiscard]] static auto parse_aggregation_options(
             boost::program_options::variables_map const& parsed_options,
@@ -178,7 +176,7 @@ private:
      * @param handler_name The name of the output handler, used in the error message.
      * @throws std::invalid_argument if an aggregation was requested.
      */
-    void reject_aggregation_for_handler(std::string_view handler_name) const;
+    auto reject_aggregation_for_handler(std::string_view handler_name) const -> void;
 
     /**
      * Validates output options related to the Reducer output handler.

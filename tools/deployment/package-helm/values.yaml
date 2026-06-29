@@ -197,6 +197,7 @@ clpConfig:
 
   query_scheduler:
     jobs_poll_delay: 0.1  # seconds
+    max_datasets_per_query: 10  # Set to null to disable the limit
     num_archives_to_search_per_sub_job: 16
     logging_level: "INFO"
     scheduler_concurrency: 4
@@ -256,8 +257,9 @@ clpConfig:
   webui:
     query_engine: "clp-s"
     port: 30000
-    results_metadata_collection_name: "results-metadata"
+    presto_max_num_search_results: 1000
     rate_limit: 1000
+    results_metadata_collection_name: "results-metadata"
 
   mcp_server: null
   #   port: 30800
