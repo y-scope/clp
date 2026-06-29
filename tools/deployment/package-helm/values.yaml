@@ -257,8 +257,9 @@ clpConfig:
   webui:
     query_engine: "clp-s"
     port: 30000
-    results_metadata_collection_name: "results-metadata"
+    presto_max_num_search_results: 1000
     rate_limit: 1000
+    results_metadata_collection_name: "results-metadata"
 
   mcp_server: null
   #   port: 30800
