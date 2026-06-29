@@ -116,10 +116,13 @@ Configuration:
 * Configure log filtering with [tracing_subscriber::EnvFilter](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html).
   Filter directives are read from the `RUST_LOG` environment variable to determine which spans and
   events are enabled.
-* In the package manifests, `log_ingestor` exposes a deployment setting through
-  `CLP_LOG_INGESTOR_LOGGING_LEVEL` in Docker Compose and
-  `clpConfig.log_ingestor.logging_level` in Helm. `api_server` currently runs with
-  `RUST_LOG=INFO`.
+* In the package manifests, `log_ingestor` exposes its logging level as a deployment setting:
+  * `CLP_LOG_INGESTOR_LOGGING_LEVEL` in Docker Compose.
+  * `clpConfig.log_ingestor.logging_level` in Helm.
+
+  The value is passed to `RUST_LOG` to configure the log filtering.
+* `api_server` currently runs with `RUST_LOG=INFO`, but does not expose the logging level as a
+  configurable deployment setting.
 * `CLP_LOGS_DIR`, when set, adds an hourly non-blocking rolling file appender.
 
 ### WebUI
