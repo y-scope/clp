@@ -102,7 +102,7 @@ Emitted per-archive according to a configurable sampling probability.
 | `clp.query.num_archive_records`                         | Int64   | Total number of records                                                       |
 | `clp.query.num_archive_records_matching_schemas`        | Int64   | Total number of candidate records after schema matching                       |
 | `clp.query.num_archive_records_matching_query`          | Int64   | Total number of records matching the query                                    |
-| `clp.query.num_matched_schemas`                         | Int64   | Total number of schema matched by schema matching                             |
+| `clp.query.num_matched_schemas`                         | Int64   | Total number of schemas matched by schema matching                            |
 | `clp.query.num_schemas_with_matches`                    | Int64   | Total number of schemas containing at least one matching record               |
 | `clp.query.termination_stage`                           | String  | The stage at which the query terminated                                       | 
 
@@ -111,7 +111,7 @@ The termination stage can be one of:
 | Stage                                         | Description                                                                      |
 | --------------------------------------------- | -------------------------------------------------------------------------------- |
 | `range_index_matching`                        | Early termination after examining the archive's range index                      |
-| `time_range_matching`                         | Early termination after examining the archive's archive time-range               |
+| `time_range_matching`                         | Early termination after examining the archive's time-range                       |
 | `schema_matching`                             | Early termination after resolving the query against the archive's schema         |
 | `time_range_matching_after_column_resolution` | Early termination after re-examining the archive's time-range                    |
 | `dictionary_search`                           | Early termination after searching the archive's dictionaries                     |
