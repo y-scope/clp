@@ -1,39 +1,34 @@
 #ifndef CLP_S_RESULTSCACHEUTILS_HPP
 #define CLP_S_RESULTSCACHEUTILS_HPP
 
-#include <string>
 #include <string_view>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
-#include <mongocxx/exception/exception.hpp>
-#include <mongocxx/uri.hpp>
 
 #include <clp_s/ErrorCode.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
+class ResultsCacheConnectionError : public TraceableException {
+public:
+    ResultsCacheConnectionError(ErrorCode error_code, char const* const filename, int line_number)
+            : TraceableException{error_code, filename, line_number} {}
+};
+
 /**
  * Connects to the results cache and returns the requested collection.
- * @tparam OperationFailedT The type of exception to throw on failure.
  * @param uri
  * @param collection
  * @param client Returns the connected client.
  * @return The collection.
+ * @throw ResultsCacheConnectionError if connecting to the results cache fails.
  */
-template <typename OperationFailedT>
-auto connect_to_results_cache(
+[[nodiscard]] auto connect_to_results_cache(
         std::string_view uri,
         std::string_view collection,
         mongocxx::client& client
-) -> mongocxx::collection {
-    try {
-        auto mongo_uri = mongocxx::uri{std::string{uri}};
-        client = mongocxx::client(mongo_uri);
-        return client[mongo_uri.database()][std::string{collection}];
-    } catch (mongocxx::exception const& e) {
-        throw OperationFailedT(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
-    }
-}
+) -> mongocxx::collection;
 }  // namespace clp_s
 
 #endif  // CLP_S_RESULTSCACHEUTILS_HPP

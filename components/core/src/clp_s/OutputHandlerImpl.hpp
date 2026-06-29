@@ -161,13 +161,6 @@ public:
         }
     };
 
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
-
     // Constructor
     ResultsCacheOutputHandler(
             std::string_view uri,

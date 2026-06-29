@@ -11,7 +11,6 @@
 
 #include <clp_s/Aggregation.hpp>
 #include <clp_s/ErrorCode.hpp>
-#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
 /**
@@ -68,14 +67,6 @@ private:
  */
 class ResultsCacheSink : public AggregationSink {
 public:
-    // Types
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
-
     // Constructors
     ResultsCacheSink(
             std::string_view uri,

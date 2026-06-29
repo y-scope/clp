@@ -23,8 +23,8 @@ namespace clp_s {
 // `2^63` rather than `INT64_MAX` because `2^63` is exactly representable as a double and
 // `INT64_MAX` is not.
 constexpr double cInt64UpperBound{9223372036854775808.0};
-// `-2^63`, equal to `INT64_MIN`: any double `<` this is smaller than every `int64_t`. Both `-2^63`
-// and `INT64_MIN` are the same value and are exactly representable as a double.
+// `-2^63`, which equals `INT64_MIN` and is exactly representable as a double: any double `<` this
+// is smaller than every `int64_t`.
 constexpr double cInt64Min{-9223372036854775808.0};
 
 [[nodiscard]] inline auto is_less(int64_t lhs, int64_t rhs) -> bool {
@@ -56,13 +56,13 @@ constexpr double cInt64Min{-9223372036854775808.0};
     if (rhs < cInt64Min) {
         return false;
     }
-    // `rhs` is within the `int64_t` range, so truncating it toward zero and casting is exact.
+    // `rhs` is in `int64_t` range, so its truncated value fits an `int64_t` with no rounding.
     auto const truncated{std::trunc(rhs)};
     auto const rhs_int{static_cast<int64_t>(truncated)};
     if (lhs != rhs_int) {
         return lhs < rhs_int;
     }
-    // Same integer part: `lhs < rhs` exactly when `rhs` has a positive fractional part.
+    // Equal integer parts: `lhs < rhs` only if `rhs` carries a fractional remainder.
     return rhs > truncated;
 }
 
@@ -73,25 +73,20 @@ constexpr double cInt64Min{-9223372036854775808.0};
  * @return Whether `lhs < rhs`.
  */
 [[nodiscard]] inline auto is_less(double lhs, int64_t rhs) -> bool {
-    // NaN is unordered, so it is never less than anything.
     if (std::isnan(lhs)) {
         return false;
     }
-    // `lhs` is larger than every `int64_t`, so it cannot be less than `rhs`.
     if (lhs >= cInt64UpperBound) {
         return false;
     }
-    // `lhs` is smaller than every `int64_t`, so it must be less than `rhs`.
     if (lhs < cInt64Min) {
         return true;
     }
-    // `lhs` is within the `int64_t` range, so truncating it toward zero and casting is exact.
     auto const truncated{std::trunc(lhs)};
     auto const lhs_int{static_cast<int64_t>(truncated)};
     if (lhs_int != rhs) {
         return lhs_int < rhs;
     }
-    // Same integer part: `lhs < rhs` exactly when `lhs` has a negative fractional part.
     return lhs < truncated;
 }
 }  // namespace clp_s

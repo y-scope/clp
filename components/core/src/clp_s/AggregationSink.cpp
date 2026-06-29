@@ -29,7 +29,7 @@ auto StdoutSink::write(AggregationResult const& result) -> void {
 
 ResultsCacheSink::ResultsCacheSink(string_view uri, string_view collection, string_view archive_id)
         : m_archive_id{archive_id} {
-    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
+    m_collection = connect_to_results_cache(uri, collection, m_client);
 }
 
 auto ResultsCacheSink::write(AggregationResult const& result) -> void {

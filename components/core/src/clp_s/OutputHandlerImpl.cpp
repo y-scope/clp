@@ -81,7 +81,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
           m_batch_size{batch_size},
           m_max_num_results{max_num_results},
           m_dataset{dataset} {
-    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
+    m_collection = connect_to_results_cache(uri, collection, m_client);
     m_results.reserve(m_batch_size);
 }
 

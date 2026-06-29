@@ -472,6 +472,7 @@ set(
         kv_ir_search.hpp
         OutputHandlerImpl.cpp
         OutputHandlerImpl.hpp
+        ResultsCacheUtils.cpp
         ResultsCacheUtils.hpp
         TraceableException.hpp
 )

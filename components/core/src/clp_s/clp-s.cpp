@@ -309,8 +309,6 @@ bool search_archive(
                             );
                         },
                         [&](CommandLineArguments::ReducerOutputHandlerOptions const&) -> void {
-                            // The reducer only supports count and count-by-time; min/max are
-                            // rejected during command-line parsing.
                             auto const& aggregation{
                                     command_line_arguments.get_aggregation().value()
                             };
