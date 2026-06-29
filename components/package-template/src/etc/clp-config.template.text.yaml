@@ -15,6 +15,7 @@ webui:
 #  port: 4000
 #  results_metadata_collection_name: "results-metadata"
 #  rate_limit: 1000
+#  presto_max_num_search_results: 1000
 
 # API server config
 api_server: null

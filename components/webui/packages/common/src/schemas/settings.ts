@@ -25,6 +25,8 @@ const WebuiPublicSettingsSchema = Type.Object({
         Type.Null(),
     ]),
 
+    PrestoMaxNumSearchResults: Type.Integer({minimum: 1}),
+
     SqlDbClpArchivesTableName: Type.String(),
     SqlDbClpDatasetsTableName: Type.String(),
     SqlDbClpFilesTableName: Type.String(),

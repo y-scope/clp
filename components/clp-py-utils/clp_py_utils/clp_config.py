@@ -735,6 +735,7 @@ class WebUi(BaseModel):
     query_engine: QueryEngineStr = QueryEngine.CLP_S
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
+    presto_max_num_search_results: PositiveInt = 1000
 
 
 class SweepInterval(BaseModel):

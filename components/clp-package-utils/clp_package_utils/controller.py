@@ -804,6 +804,7 @@ class BaseController(ABC):
             "LogsInputRootDir": logs_input_root_dir,
             "LogsInputType": self._clp_config.logs_input.type,
             "MaxDatasetsPerQuery": max_datasets_per_query,
+            "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "SqlDbClpArchivesTableName": archives_table_name,
             "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
             "SqlDbClpFilesTableName": files_table_name,
