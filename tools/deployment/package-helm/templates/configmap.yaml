@@ -222,9 +222,9 @@ data:
     webui:
       host: "localhost"
       port: 4000
-      rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       presto_max_num_search_results: {{ .Values.clpConfig.webui.presto_max_num_search_results
         | int }}
+      rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
     {{- with .Values.clpConfig.mcp_server }}
