@@ -1135,9 +1135,9 @@ class WorkerConfig(BaseModel):
     tmp_directory: SerializablePath = ClpConfig().tmp_directory
 
     # Only needed by query workers.
+    query_worker: QueryWorker = QueryWorker()
     stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
-    query_worker: QueryWorker = QueryWorker()
 
 
 def _validate_directory(value: Any):
