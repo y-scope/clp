@@ -12,7 +12,9 @@ When modifying an existing service, follow its current logging setup.
 :::
 
 ### Python
+
 New Python orchestration services should use:
+
   ```python
   from clp_py_utils.clp_logging import get_structlog_logger
 
@@ -21,18 +23,23 @@ New Python orchestration services should use:
   ```
 
 ### Rust
+
 New Rust HTTP services should initialize `tracing` at process startup with
   [`clp_rust_utils::logging::set_up_logging`][clp-rust-logging] and keep the returned guard alive
   for the lifetime of the process:
+
   ```rust
   let _guard = clp_rust_utils::logging::set_up_logging("service_name.log");
   tracing::info!("Server started at {addr}");
   ```
+
 Prefer structured logging over formatting values directly into the message field.
 
 ### WebUI
+
 WebUI server code should use Fastify's Pino logger. Use `request.log` for request-scoped
 logs and `app.log` for startup, shutdown, and application-level logs:
+
   ```typescript
   request.log.info({searchJobId}, "Search submitted");
   request.log.error(err, "Failed to submit search");
@@ -42,6 +49,7 @@ WebUI client `console.*` calls should stay limited to browser diagnostics. Do no
 console output for service logs, audit events, or telemetry that operators need to collect.
 
 ### Core
+
 Native core binaries should continue using `spdlog` and their existing entry-point logger setup.
 Prefer `spdlog` from core C++ code rather than introducing another logging stack.
 
@@ -50,7 +58,9 @@ Prefer UTC service timestamps. Convert to local time in log viewers or aggregati
 :::
 
 ## Component-specific logging
+
 This section explains the logging setup for CLP package components.
+
 | Component family              | Components                                                            | Logger                                                    | Format                           | Level control              |
 |-------------------------------|---------------------------------------------------------------------|-----------------------------------------------------------|----------------------------------|----------------------------|
 | Python orchestration services | `compression_scheduler`, `query_scheduler`, `compression_worker`, `query_worker`, `reducer`, `garbage_collector`, `mcp_server` | [`structlog` with stdlib logging compatibility][clp-py-logging]              | JSON                             | `CLP_LOGGING_LEVEL`        |
@@ -161,7 +171,6 @@ Example:
 Native core binaries use `spdlog` text output. Package controller commands and one-shot setup scripts
 also use human-readable stdlib logging. These tools are not covered by the Python/Rust/WebUI service
 JSON contracts.
-
 
 ## Deployment notes
 
