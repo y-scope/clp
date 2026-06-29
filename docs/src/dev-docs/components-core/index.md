@@ -111,8 +111,12 @@ the relevant paths on your machine.
 
 * Build:
   ```shell
-  make -j
+  cmake --build . --parallel "$(getconf _NPROCESSORS_ONLN)"
   ```
+
+  > **NOTE:** If the build runs out of memory, reduce parallelism by capping based on total memory
+  > (at least 2 GB per core). For example, on a machine with 8 GB of memory:
+  > `cmake --build . --parallel 4`
 
 ## Test
 
