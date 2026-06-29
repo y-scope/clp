@@ -99,9 +99,9 @@ Emitted per-archive according to a configurable sampling probability.
 | `clp.query.num_predicates`                              | Int64   | Total number of predicates in the query                                       |
 | `clp.query.contains_or_clause`                          | Boolean | Whether the query contains an OR clause                                       |
 | `clp.query.time_range_millis`                           | Int64   | Time range of the query in milliseconds                                       |
-| `clp.query.num_archive_records`                   | Int64   | Total number of records                                                       |
-| `clp.query.num_archive_records_matching_schemas` | Int64   | Total number of candidate records after schema matching                       |
-| `clp.query.num_archive_records_matching_query`                  | Int64   | Total number of records matching the query                                    |
+| `clp.query.num_archive_records`                         | Int64   | Total number of records                                                       |
+| `clp.query.num_archive_records_matching_schemas`        | Int64   | Total number of candidate records after schema matching                       |
+| `clp.query.num_archive_records_matching_query`          | Int64   | Total number of records matching the query                                    |
 | `clp.query.num_matched_schemas`                         | Int64   | Total number of schema matched by schema matching                             |
 | `clp.query.num_schemas_with_matches`                    | Int64   | Total number of schemas containing at least one matching record               |
 | `clp.query.termination_stage`                           | String  | The stage at which the query terminated                                       | 
