@@ -4,34 +4,46 @@ The CLP package contains multiple components, and each component owns its loggin
 summarizes the current behavior and the controls developers/operators should use.
 
 ## Developer guidance
+
 This section gives guidance on how to set up and use loggers when writing a new component.
 
-* New Python orchestration services should use:
+:::{note}
+When modifying an existing service, follow its current logging setup.
+:::
+
+### Python
+New Python orchestration services should use:
   ```python
   from clp_py_utils.clp_logging import get_structlog_logger
 
   log = get_structlog_logger("service_name")
   log.info("hello, %s!", "world")
   ```
-* New Rust HTTP services should initialize `tracing` at process startup with
+
+### Rust
+New Rust HTTP services should initialize `tracing` at process startup with
   [`clp_rust_utils::logging::set_up_logging`][clp-rust-logging] and keep the returned guard alive
   for the lifetime of the process:
   ```rust
   let _guard = clp_rust_utils::logging::set_up_logging("service_name.log");
   tracing::info!("Server started at {addr}");
   ```
-  * Prefer structured logging over formatting values directly into the message field, for example:
-    
-  logs and `app.log` for startup, shutdown, and application-level logs:
+Prefer structured logging over formatting values directly into the message field.
+
+### WebUI
+WebUI server code should use Fastify's Pino logger. Use `request.log` for request-scoped
+logs and `app.log` for startup, shutdown, and application-level logs:
   ```typescript
   request.log.info({searchJobId}, "Search submitted");
   request.log.error(err, "Failed to submit search");
   ```
-* WebUI client `console.*` calls should stay limited to browser diagnostics. Do not rely on browser
-  console output for service logs, audit events, or telemetry that operators need to collect.
-* Native core binaries should continue using `spdlog` and their existing entry-point logger setup.
-  Prefer `spdlog` from core C++ code rather than introducing another logging stack unless a separate
-  migration moves that binary family to structured logging.
+
+WebUI client `console.*` calls should stay limited to browser diagnostics. Do not rely on browser
+console output for service logs, audit events, or telemetry that operators need to collect.
+
+### Core
+Native core binaries should continue using `spdlog` and their existing entry-point logger setup.
+Prefer `spdlog` from core C++ code rather than introducing another logging stack.
 
 :::{note}
 Prefer UTC service timestamps. Convert to local time in log viewers or aggregation systems.
@@ -113,7 +125,7 @@ Example:
 
 Configuration:
 
-* Configure log filtering with [tracing_subscriber::EnvFilter](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html).
+* Configure log filtering with [tracing_subscriber::EnvFilter][EnvFilter].
   Filter directives are read from the `RUST_LOG` environment variable to determine which spans and
   events are enabled.
 * In the package manifests, `log_ingestor` exposes a deployment setting through
@@ -156,5 +168,6 @@ JSON contracts.
 * Helm deployments should use pod stdout through `kubectl logs` or the cluster log
   collector. File logging is template-specific.
 
+[EnvFilter]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html
 [clp-py-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-py-utils/clp_py_utils/clp_logging.py
 [clp-rust-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-rust-utils/src/logging.rs
