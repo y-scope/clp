@@ -169,8 +169,7 @@ bool search_archive(
         }
         SearchResultMetrics metrics;
         for (auto const schema_id : archive_reader->get_schema_ids()) {
-            metrics.num_total_archive_records
-                    += archive_reader->get_num_messages_for_schema(schema_id);
+            metrics.num_archive_records += archive_reader->get_num_messages_for_schema(schema_id);
         }
         telemetry_span->set_termination_stage(termination_stage);
         telemetry_span->set_search_result_metrics(metrics);
