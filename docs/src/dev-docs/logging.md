@@ -20,7 +20,8 @@ This section gives guidance on how to set up and use loggers when writing a new 
   let _guard = clp_rust_utils::logging::set_up_logging("service_name.log");
   tracing::info!("Server started at {addr}");
   ```
-* WebUI server code should log through Fastify's Pino logger. Use `request.log` for request-scoped
+  * Prefer structured logging over formatting values directly into the message field, for example:
+    
   logs and `app.log` for startup, shutdown, and application-level logs:
   ```typescript
   request.log.info({searchJobId}, "Search submitted");
@@ -57,7 +58,7 @@ The following sections describe the behavior and controls for each component fam
 ### Python orchestration services
 
 These services use [`clp_py_utils.clp_logging`][clp-py-logging] and emit one JSON object per log
-record. Records include:
+record. Each record includes the following fields:
 
 | Field             | Description                                                          |
 |-------------------|----------------------------------------------------------------------|
@@ -90,9 +91,9 @@ Configuration:
 
 ### Rust HTTP services
 
-These services use
-[`clp_rust_utils::logging::set_up_logging`][clp-rust-logging], which configures
-`tracing_subscriber` JSON output that includes:
+These services use [`clp_rust_utils::logging::set_up_logging`][clp-rust-logging], which configures
+`tracing_subscriber` to emit one JSON object per log record. Each record includes the following
+fields:
 
 | Field         | Description                                                |
 |---------------|------------------------------------------------------------|
@@ -106,13 +107,15 @@ Example:
 
 <!-- markdownlint-disable MD013 -->
 ```json
-{"timestamp":"2026-06-26T13:06:48.621307Z","level":"INFO","fields":{"message":"Server started at 0.0.0.0:3001"},"filename":"components/api-server/src/bin/api_server.rs","line_number":81}
+{"timestamp":"2026-06-26T13:06:48.621307","level":"INFO","fields":{"message":"Spawned SQS listener task.","job_id":"3","task_id":"0"},"filename":"components/log-ingestor/src/ingestion_job/sqs_listener.rs","line_number":320}
 ```
 <!-- markdownlint-enable MD013 -->
 
 Configuration:
 
-* `RUST_LOG` uses `tracing_subscriber::EnvFilter` syntax.
+* Configure log filtering with [tracing_subscriber::EnvFilter](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html).
+  Filter directives are read from the `RUST_LOG` environment variable to determine which spans and
+  events are enabled.
 * In the package manifests, `log_ingestor` exposes a deployment setting through
   `CLP_LOG_INGESTOR_LOGGING_LEVEL` in Docker Compose and
   `clpConfig.log_ingestor.logging_level` in Helm. `api_server` currently runs with
