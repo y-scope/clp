@@ -1,6 +1,7 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -75,6 +76,10 @@ public:
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
 
+    // Static data members
+    static constexpr std::string_view cLogShapeStatsQuery{"stats.log_shapes"};
+    static constexpr std::string_view cSchemaTreeStatsQuery{"stats.schema_tree"};
+
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]);
 
@@ -144,6 +149,12 @@ public:
     std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
+
+    [[nodiscard]] auto experimental() const -> bool { return m_experimental; }
+
+    [[nodiscard]] auto get_parsing_spec() const -> std::optional<Path> {
+        return m_parsing_spec_path;
+    }
 
 private:
     // Methods
@@ -221,6 +232,13 @@ private:
 
     void print_search_usage() const;
 
+    /**
+     * Validate the use of experimental features. Requires the program options to have been parsed.
+     * @throws std::invalid_argument if any experimental feature is used without setting the
+     * experimetnal flag.
+     */
+    auto validate_experimental() const -> void;
+
     // Variables
     std::string m_program_name;
     Command m_command;
@@ -257,6 +275,10 @@ private:
     bool m_ignore_case{false};
     bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
+
+    // clpp variables
+    bool m_experimental{false};
+    std::optional<Path> m_parsing_spec_path;
 };
 }  // namespace clp_s
 

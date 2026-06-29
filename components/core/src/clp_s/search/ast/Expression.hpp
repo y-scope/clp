@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <list>
 #include <memory>
+#include <optional>
 
 #include "Literal.hpp"
 #include "Value.hpp"

@@ -1,16 +1,17 @@
 #ifndef CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 #define CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include "../../ErrorCode.hpp"
-#include "../../TraceableException.hpp"
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TraceableException.hpp>
+
 #include "Literal.hpp"
 
 namespace clp_s::search::ast {
@@ -119,6 +120,8 @@ DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors);
  */
 class ColumnDescriptor : public Literal {
 public:
+    using id_t = uint32_t;
+
     /**
      * Creates a ColumnDescriptor literal from a list of escaped tokens.
      *
@@ -163,10 +166,17 @@ public:
     }
 
     /**
-     * Deep copy of this ColumnDescriptor
-     * @return A deep copy of this Column descriptor
+     * Deep copy of this ColumnDescriptor. The id is preserved, so the copy
+     * represents the same logical column (needed for OrOfAndForm distribution).
      */
-    std::shared_ptr<ColumnDescriptor> copy();
+    [[nodiscard]] auto copy() const -> std::shared_ptr<ColumnDescriptor>;
+
+    /**
+     * Deep copy of this ColumnDescriptor with a new id. Use this when the
+     * copy represents a different logical column that needs its own identity in
+     * SchemaMatch's m_descriptor_to_schema.
+     */
+    [[nodiscard]] auto copy_with_new_id() const -> std::shared_ptr<ColumnDescriptor>;
 
     /**
      * Get iterators to this Column's list of descriptors
@@ -217,13 +227,13 @@ public:
     /**
      * @return the CLJ column Id this Column represents. Garbage value if it was never set.
      */
-    int32_t get_column_id() const { return m_id; }
+    auto get_column_id() const -> int32_t { return m_schema_col_id; }
 
     /**
      * Set the CLJ column Id this column represents
      * @param id the CLJ column Id to set this column to
      */
-    void set_column_id(int32_t id) { m_id = id; }
+    auto set_column_id(int32_t id) -> void { m_schema_col_id = id; }
 
     /**
      * Get the list of unresolved tokens used for array search
@@ -282,6 +292,22 @@ public:
         m_namespace = descriptor_namespace;
     }
 
+    /**
+     * Whether this column was resolved by CLPP decomposition. CLPP-resolved
+     * columns have their schema mappings stored in SchemaMatch's m_descriptor_to_schema
+     * and must not be re-registered in m_column_to_descriptor, which would cause
+     * populate_schema_mapping to inflate the mappings to all schemas containing the node
+     * rather than just the matched schemas.
+     */
+    [[nodiscard]] auto is_clpp_resolved() const -> bool { return m_is_clpp_resolved; }
+
+    /**
+     * Mark this column as resolved by CLPP decomposition.
+     */
+    auto set_clpp_resolved(bool resolved) -> void { m_is_clpp_resolved = resolved; }
+
+    [[nodiscard]] auto get_id() const -> id_t { return m_id; }
+
     auto get_subtree_type() const -> std::optional<std::string> const& { return m_subtree_type; }
 
     auto set_subtree_type(std::optional<std::string> subtree_type) {
@@ -289,19 +315,27 @@ public:
     }
 
 private:
+    // Static data members
+    static id_t m_next_id;
+
+    // Data members
     DescriptorList m_descriptors;  // list of descriptors describing the column
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
     std::string m_namespace;
     literal_type_bitmask_t m_flags;  // set of types this column can match
-    int32_t m_id;  // unambiguous CLJ column id this column represents. May be unset.
-    bool m_unresolved_descriptors;  // true if contains wildcards
-    bool m_pure_wildcard;  // true if column is single wildcard
+    int32_t m_schema_col_id{-1};  // unambiguous CLJ column id this column represents. May be unset.
+    bool m_unresolved_descriptors{false};  // true if contains wildcards
+    bool m_pure_wildcard{false};  // true if column is single wildcard
     std::optional<std::string> m_subtree_type;  // optional subtree type to resolve against
+
+    // true if resolved by CLPP decomposition
+    bool m_is_clpp_resolved{false};
+    uint64_t m_id;
 
     // Constructors
     explicit ColumnDescriptor(std::vector<std::string> const&, std::string_view);
 
-    explicit ColumnDescriptor(DescriptorList const&, std::string_view);
+    explicit ColumnDescriptor(DescriptorList descriptors, std::string_view descriptor_namespace);
 
     /**
      * Scan the list of descriptors to check if they contain wildcards and

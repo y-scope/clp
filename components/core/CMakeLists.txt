@@ -197,9 +197,9 @@ if(CLP_NEED_FMT)
 endif()
 
 if(CLP_NEED_LOG_SURGEON)
-    find_package(log_surgeon REQUIRED)
-    if(log_surgeon_FOUND)
-        message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+    find_package(log-surgeon REQUIRED)
+    if(log-surgeon_FOUND)
+        message(STATUS "Found log-surgeon ${log-surgeon_VERSION}")
     endif()
 endif()
 
@@ -357,6 +357,7 @@ add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
 add_subdirectory(src/glt/glt)
 add_subdirectory(src/clp/make_dictionaries_readable)
+add_subdirectory(src/clpp)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
@@ -541,8 +542,6 @@ set(SOURCE_FILES_unitTest
         src/clp/LibarchiveFileReader.hpp
         src/clp/LibarchiveReader.cpp
         src/clp/LibarchiveReader.hpp
-        src/clp/LogSurgeonReader.cpp
-        src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
         src/clp/LogTypeDictionaryEntry.hpp
         src/clp/LogTypeDictionaryEntryReq.hpp
@@ -732,7 +731,7 @@ if(CLP_ENABLE_TESTS)
             ${CURL_LIBRARIES}
             date::date
             fmt::fmt
-            log_surgeon::log_surgeon
+            log-surgeon::log-surgeon
             LibArchive::LibArchive
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient

@@ -96,6 +96,7 @@ set(
         ../DictionaryReader.hpp
         ../DictionaryEntry.cpp
         ../DictionaryEntry.hpp
+        ../ErrorCode.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
@@ -112,8 +113,6 @@ set(
         ../SchemaReader.hpp
         ../SchemaTree.cpp
         ../SchemaTree.hpp
-        ../search/ast/SearchUtils.cpp
-        ../search/ast/SearchUtils.hpp
         ../TimestampDictionaryReader.cpp
         ../TimestampDictionaryReader.hpp
         ../TimestampEntry.cpp
@@ -145,7 +144,9 @@ if(CLP_BUILD_EXECUTABLES)
                 Boost::program_options Boost::url
                 ${CURL_LIBRARIES}
                 clp::string_utils
+                clp_s::search::ast
                 clp_s::timestamp_parser
+                clpp::core
                 date::date
                 MariaDBClient::MariaDBClient
                 msgpack-cxx

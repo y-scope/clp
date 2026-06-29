@@ -10,6 +10,9 @@
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
 #include "FileReader.hpp"
@@ -261,7 +264,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     }
 
     po::options_description general_options("General options");
-    general_options.add_options()("help,h", "Print help");
+    general_options.add_options()("help,h", "Print help")(
+            "experimental",
+            po::bool_switch(&m_experimental),
+            "Enable experimental features to be used."
+    );
 
     char command_input;
     po::options_description general_positional_options("General positional options");
@@ -427,12 +434,21 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
+            po::options_description experimental_options("Experimental Options");
+            std::string parsing_spec_path{};
+            experimental_options.add_options()(
+                    "parsing-specification",
+                    po::value<std::string>(&parsing_spec_path)->value_name("PATH"),
+                    "Path to a log-surgeon parsing specification. See documentation for details."
+            );
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("input-paths", -1);
 
             po::options_description all_compression_options;
             all_compression_options.add(compression_options);
+            all_compression_options.add(experimental_options);
             all_compression_options.add(compression_positional_options);
 
             std::vector<std::string> unrecognized_options
@@ -458,6 +474,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(compression_options);
+                visible_options.add(experimental_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -564,6 +581,17 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
+
+            if (m_experimental ^ (false == parsing_spec_path.empty())) {
+                throw std::invalid_argument(
+                        "--experimental and --parsing-specification must both be non-empty to use "
+                        "log-surgeon for compression"
+                );
+            }
+
+            if (false == parsing_spec_path.empty()) {
+                m_parsing_spec_path = get_path_object_for_raw_path(parsing_spec_path);
+            }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;
