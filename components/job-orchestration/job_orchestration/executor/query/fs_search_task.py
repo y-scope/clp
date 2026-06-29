@@ -110,7 +110,7 @@ def _make_core_clp_s_command_and_env_vars(
     if not is_telemetry_disabled_by_env():
         enable_telemetry = random.choices(
             [True, False],
-            cum_weights=[worker_config.query_worker.search_sampling_probability, 1.0],
+            cum_weights=[worker_config.query_worker.query_trace_sampling_probability, 1.0],
             k=1,
         )[0]
         if enable_telemetry:

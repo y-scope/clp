@@ -460,7 +460,7 @@ class CompressionWorker(WorkerConfigBase):
 
 class QueryWorker(WorkerConfigBase):
     telemetry_update_interval_ms: PositiveInt = 60000
-    search_sampling_probability: PositiveUnitFloat = 0.01
+    query_trace_sampling_probability: PositiveUnitFloat = 0.01
 
 
 class Redis(BaseModel):

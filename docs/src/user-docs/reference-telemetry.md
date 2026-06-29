@@ -215,7 +215,7 @@ Edit `clp-config.yaml` to set the sampling probability:
 
 ```yaml
 query_worker:
-  search_sampling_probability: 0.01
+  query_trace_sampling_probability: 0.01
 ```
 
 :::
@@ -226,7 +226,7 @@ Edit `values.yaml` to set the sampling probability:
 ```yaml
 clpConfig:
   query_worker:
-    search_sampling_probability: 0.01
+    query_trace_sampling_probability: 0.01
 ```
 
 :::
