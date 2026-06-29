@@ -7,7 +7,7 @@ import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import {serverSettings} from "../../../settings.js";
 import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
@@ -37,7 +37,7 @@ class QueryJobDbManager {
      * @return
      */
     static create (fastify: FastifyInstance): QueryJobDbManager {
-        return new QueryJobDbManager(fastify.mysql, settings.SqlDbQueryJobsTableName);
+        return new QueryJobDbManager(fastify.mysql, serverSettings.SqlDbQueryJobsTableName);
     }
 
     /**

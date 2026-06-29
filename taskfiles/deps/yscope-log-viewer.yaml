@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  G_DEPS_LOG_VIEWER_SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/packages/yscope-log-viewer"
+  G_DEPS_YSCOPE_LOG_VIEWER_SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/packages/yscope-log-viewer"
 
 tasks:
   default:
@@ -19,8 +19,8 @@ tasks:
             - ".turbo"
             - "dist"
             - "node_modules"
-          CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
-          FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
-          OUTPUT_DIR: "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}"
+          CHECKSUM_FILE: "{{.G_DEPS_DIR}}/yscope-log-viewer.md5"
+          FILE_SHA256: "ba306d91cfc7129de6d1dfedf41210ced0391074cf0843dc6f6d6cf068e16b4e"
+          OUTPUT_DIR: "{{.G_DEPS_YSCOPE_LOG_VIEWER_SRC_DIR}}"
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
-          URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/f9b46d2.tar.gz"
