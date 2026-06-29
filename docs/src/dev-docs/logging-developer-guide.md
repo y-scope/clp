@@ -1,10 +1,10 @@
-# Developer Guide: Writing Logs
+# Developer Guide: Writing logs
 
-This guide provides the language-specific setup instructions and standards required
-to initialize loggers and emit diagnostic logs when developing or modifying CLP components.
+This guide provides language-specific setup instructions and standards for initializing loggers and
+emitting diagnostic logs when developing or modifying CLP components.
 
 :::{note}
-Always prefer UTC service timestamps. Timezone conversions should be handled
+Always prefer UTC service timestamps. Time zone conversions should be handled
 downstream in log viewers or aggregation systems.
 :::
 
@@ -52,14 +52,19 @@ logs and `app.log` for startup, shutdown, and application-level logs:
   app.log.info("WebUI server listening on port 3000");
   ```
 
-WebUI client code may use `console.*` for browser diagnostics. Logs that operators need to
-collect, search, or alert on should be emitted by the WebUI server.
+WebUI client code should use `console.*` for browser diagnostics:
 
-## Core & Setup Tool
+  ```typescript
+  console.error("Failed to submit query:", err);
+  ```
 
-* Native core binaries (`clp`, `clp-s`, `glt`, native `reducer_server`) should continue using spdlog
-and their existing entry-point logger setup.
-* Package/setup tools (DB initialization scripts, package controllers) should use standard Python
-logger.
+## Core and setup tools
+
+* Native core binaries (`clp`, `clp-s`, `glt`, native `reducer_server`) should continue using
+  [`spdlog`][spdlog] and the `spdlog` initialization already defined in each binary's startup code.
+* Package/setup tools (DB initialization scripts, package controllers) should use the
+  [standard Python logger][stdlogger].
 
 [clp-rust-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-rust-utils/src/logging.rs
+[spdlog]: https://github.com/gabime/spdlog
+[stdlogger]: https://docs.python.org/3/library/logging.html
