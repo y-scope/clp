@@ -1,3 +1,5 @@
+"""Celery app configuration for compression task execution."""
+
 import logging
 
 from celery import Celery, signals
