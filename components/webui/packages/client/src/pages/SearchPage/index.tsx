@@ -26,7 +26,7 @@ const SearchPage = () => {
             {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO && <ProgressBar/>}
             <div className={styles["searchPageContainer"]}>
                 <SearchControls/>
-                <ResultsLimitWarning/>
+                {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO && <ResultsLimitWarning/>}
                 {(SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ||
                   PRESTO_SQL_INTERFACE.GUIDED === sqlInterface) &&
                   <SearchResultsTimeline/>}
