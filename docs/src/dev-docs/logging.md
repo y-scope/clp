@@ -51,7 +51,6 @@ console output for service logs, audit events, or telemetry that operators need 
 ### Core
 
 Native core binaries should continue using `spdlog` and their existing entry-point logger setup.
-Prefer `spdlog` from core C++ code rather than introducing another logging stack.
 
 :::{note}
 Prefer UTC service timestamps. Convert to local time in log viewers or aggregation systems.
@@ -155,9 +154,6 @@ The WebUI server uses Fastify's Pino logger:
 * Interactive terminals use `pino-pretty` for developer-readable output.
 * `LOG_LEVEL` controls the server log level and defaults to `info`.
 
-The WebUI client logs to the browser console. Treat client `console.*` output as browser diagnostics,
-not service logs.
-
 Example:
 
 <!-- markdownlint-disable MD013 -->
@@ -166,7 +162,10 @@ Example:
 ```
 <!-- markdownlint-enable MD013 -->
 
-### Native core binaries and package tools
+The WebUI client logs to the browser console. Treat client `console.*` output as browser diagnostics,
+not service logs.
+
+### Core and package tools
 
 Native core binaries use `spdlog` text output. Package controller commands and one-shot setup scripts
 also use human-readable stdlib logging. These tools are not covered by the Python/Rust/WebUI service
