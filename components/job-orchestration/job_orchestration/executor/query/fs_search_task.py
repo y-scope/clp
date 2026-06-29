@@ -106,6 +106,7 @@ def _make_core_clp_s_command_and_env_vars(
             archive_id,
         ))
         # fmt: on
+
     if not is_telemetry_disabled_by_env():
         enable_telemetry = random.choices(
             [True, False],

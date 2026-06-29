@@ -71,7 +71,7 @@ Emitted once at startup by the controller to record deployment sizing:
 
 ### Traces
 
-The following OpenTelemetry traces are emitted:
+The following OpenTelemetry traces are emitted.
 
 #### Archive-level search
 
@@ -116,7 +116,6 @@ The termination stage can be one of:
 | `time_range_matching_after_column_resolution` | Early termination after re-examining time-range      |
 | `dictionary_search`                           | Early termination after dictionary search            |
 | `ert_scan`                                    | Termination after decompression and scan             |
-
 
 ### Resource attributes
 
@@ -205,9 +204,9 @@ clpConfig:
 :::
 ::::
 
-The `query_worker` component also supports exporting traces with detailed search metrics on
+The `query_worker` component also supports exporting traces with detailed metrics about querying
 individual archives; you can configure the sampling probability for these traces in the
-configuration. 
+configuration.
 
 ::::{tab-set}
 :::{tab-item} Docker Compose
@@ -232,6 +231,7 @@ clpConfig:
 
 :::
 ::::
+
 ## How to disable telemetry
 
 Any **one** of the following methods is sufficient:
