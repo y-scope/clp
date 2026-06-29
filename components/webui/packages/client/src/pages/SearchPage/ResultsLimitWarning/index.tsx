@@ -13,6 +13,8 @@ import {SEARCH_UI_STATE} from "../SearchState/typings";
  * Displays a warning when the number of matched results exceeds the configured maximum, indicating
  * that the displayed results have been truncated and how to raise the limit.
  *
+ * NOTE: Currently this is only supported for Presto.
+ *
  * @return
  */
 const ResultsLimitWarning = () => {
