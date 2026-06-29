@@ -77,7 +77,7 @@ def get_structlog_logger(name: str) -> FilteringBoundLogger:
     Configure CLP's structured logging defaults and return a structlog logger for a component.
 
     CLP uses structlog's stdlib integration, so this first configures the stdlib logger's
-    handlers with structlog's `ProcessFormatter`. Use the returned structlog logger for log calls.
+    handlers with structlog's `ProcessorFormatter`. Use the returned structlog logger for log calls.
 
     :param name: Name of the logger to create or retrieve.
     :return: A structlog logger configured to emit through CLP's JSON formatter.
