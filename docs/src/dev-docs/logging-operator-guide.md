@@ -1,54 +1,79 @@
-# Operator Guide: Consuming CLP Logs
+# Operator guide: Consuming CLP logs
 
 This guide details how to configure internal log levels, capture service logs,
 and understand the component-specific log structures emitted by a running CLP deployment.
+The table below provides a high-level overview of the logging behaviors
+across all component families:
 
 | Component family              | Components                                                            | Logger                                                    | Format                           | Level control              |
 |-------------------------------|---------------------------------------------------------------------|-----------------------------------------------------------|----------------------------------|----------------------------|
 | Python orchestration services | `compression_scheduler`, `query_scheduler`, `compression_worker`, `query_worker`, `reducer`, `garbage_collector`, `mcp_server` | [`structlog` with stdlib logging compatibility][clp-py-logging]              | JSON                             | `CLP_LOGGING_LEVEL`        |
 | Rust HTTP services            | `api_server`, `log_ingestor`                                        | [`clp_rust_utils::logging`][clp-rust-logging] / `tracing` | JSON                             | `RUST_LOG`                 |
-| WebUI server                  | Fastify server                                                      | Fastify/Pino                                              | JSON in prod; pretty text in dev | `LOG_LEVEL`                |
+| WebUI server                  | Fastify server                                                      | [Fastify/Pino][pino]                                              | JSON or pretty text | `LOG_LEVEL`                |
 | WebUI client                  | Browser app                                                         | Browser console                                           | Browser console output           | Browser/devtools dependent |
 | Native core binaries          | `clp`, `clp-s`, `glt`, native `reducer_server`                      | `spdlog`                                                  | Text                             | Binary-specific            |
 | Package/setup tools           | Package controller, DB initialization scripts                       | Python stdlib logging                                     | Text                             | Script-specific            |
 
-:::{note}
-There is no single project-wide JSON schema. Python, Rust, and Pino logs are all line-delimited JSON
-in packaged non-interactive service runtimes, but each component family uses its own field names.
-:::
+## Log level configuration
 
-## Configuration
-
-### Log Level Configuration
+This section covers how to modify logging verbosity for different components.
+Use the following environment variables and settings to filter
+logs for each component family:
 
 * **Python orchestration services**: `CLP_LOGGING_LEVEL` supports `DEBUG`, `INFO`, `WARN`, `WARNING`, `ERROR`, and `CRITICAL`.
   Missing or invalid values default to `INFO`.
-  * `CLP_LOGS_DIR`, when set, adds a file handler at `<CLP_LOGS_DIR>/<component_name>.log` in
-  addition to stdout.
 * **Rust HTTP services**: Configure log filtering with [tracing_subscriber::EnvFilter][EnvFilter].
   Filter directives are read from the `RUST_LOG` environment variable to determine which spans and
   events are enabled.
-  * *Note on `log_ingestor`*: Level is exposed via CLP_LOG_INGESTOR_LOGGING_LEVEL (Docker Compose) or clpConfig.log_ingestor.logging_level (Helm), which is then passed to RUST_LOG.
-  * *Note on `api_server`*: Currently runs hardcoded at INFO and does not expose a deployment setting.
-* **WebUI**: `LOG_LEVEL` controls the Pino server log level (defaults to `info`). *Warning: Be mindful of environment variable collisions with LOG_LEVEL in shared container spaces.*
+  * *`log-ingestor`*: Log level is exposed via `CLP_LOG_INGESTOR_LOGGING_LEVEL`
+  (Docker Compose) or `clpConfig.log_ingestor.logging_level` (Helm), which is
+  then passed to `RUST_LOG`.
+  * *`api-server`*: Log level is hardcoded to `INFO` and does not expose a deployment
+  variable for configuration.
+* **WebUI**: `LOG_LEVEL` controls the Pino server log level (defaults to `info`).
+:::{warning}
+`LOG_LEVEL` is a generic environment variable. Be mindful of environment
+variable collisions with other tools or container settings.
+:::
 
-### Deployment Notes and Log output
+## Log routing and collection
 
-* **`docker-compose`**: Service stdout is available via `docker compose logs`. If `CLP_LOGS_DIR` is set,
-logs are additionally written to `<CLP_LOGS_DIR>/<component_name>.log` (which mounts to `./var/log`
-via `CLP_LOGS_DIR_HOST`).
-*Note: For Rust components, this adds an hourly non-blocking rolling file appender.*
-* **`helm`**: Rely on pod stdout via `kubectl logs` or a cluster log collector (e.g., Fluent Bit).
-File logging is template-specific.
-* **WebUI**:
-  * **Server**: Server: In non-interactive deployments, the Fastify server emits Pino JSON directly to `stdout`. If run in an interactive terminal (e.g., local development), it uses pino-pretty for human-readable output.
-  * **Client**: Browser logs (`console.*`) remain local to the user's browser devtools and are *not* captured by backend service telemetry. Treat these purely as local diagnostics.
-* **Core**: Native binaries (clp, clp-s, etc.) emit standard human-readable text. Currently, Python orchestration services invoke native core binaries (clp, clp-s, etc.) as subprocesses and the core binaries' human-readable `spdlog` text is piped into the Python logger's output stream as a single multi-line JSON record.
-* **Setup tools**: Package controller scripts emit standard human-readable text. They do not adhere to the JSON schemas used by the orchestration services and rely strictly on standard output streams.
+Access to CLP package logs is entirely dependent on where the component is executed.
 
-## Component-Specific Logging details
+### Containerized services
 
-The following sections describe the behavior for each component family.
+For continuously running deployed services such as Python orchestration services, Rust HTTP services, and WebUI server, log routing depends on the orchestrator:
+
+* **Docker Compose**: Logs are available using `docker compose logs`. If `CLP_LOGS_DIR` is set,
+logs are additionally written to `<CLP_LOGS_DIR>/<component_name>.log`. This directory mounts to the host via `CLP_LOGS_DIR_HOST` (defaults to `./var/log`).
+:::{note}
+For Rust services, setting `CLP_LOGS_DIR` enables file logging with hourly log rotation and a
+non-blocking file writer.
+:::
+* **Kubernetes/Helm**: Logs are accessible using `kubectl logs` or a cluster log collector (e.g., Fluent Bit).
+File logging is only enabled for templates that set `CLP_LOGS_DIR` and mount a log volume.
+
+### Standalone tools
+
+* **Core binaries**: Running standalone binaries (`clp`, `clp-s`, etc.) emits
+unstructured `spdlog` text to `stdout`.
+:::{note}
+*When deployed*, Python orchestration services invoke these binaries as subprocesses.
+Consequently, the core binaries' unstructured log text is captured and written to the
+Python logger's output stream as a single multi-line JSON record. These appear alongside
+normal container logs in Docker or Kubernetes.
+:::
+* **WebUI client**: WebUI client (`console.*`) logs remain local to the user's browser devtools
+and are *not* captured by any backend telemetry service. They should be treated
+purely as local diagnostics.
+* **Package scripts**: Package controller commands and one-shot
+setup scripts emit unstructured Python stdlib logs to `stdout`.
+
+## Component-specific log schemas
+
+There is no single project-wide JSON schema. Python, Rust, and Pino logs are all line-delimited JSON
+in packaged non-interactive service runtimes, but each component family uses its own field names.
+The following sections describe the log schema for each component family.
 
 ### Python orchestration services
 
@@ -99,10 +124,13 @@ Example:
 ```
 <!-- markdownlint-enable MD013 -->
 
-### WebUI
+### WebUI server
 
-The WebUI server uses Fastify's Pino logger where each record includes the
-following fields:
+The WebUI server uses Fastify's Pino logger. When the server runs without an interactive terminal,
+such as in Docker Compose or Kubernetes, it emits one JSON object per log record. When `stdout` is an
+interactive terminal, it uses `pino-pretty` for human-readable output.
+
+Each JSON record includes the following fields:
 
 | Field          | Description                                             |
 |----------------|---------------------------------------------------------|
@@ -126,10 +154,11 @@ Example:
 
 ### Core and package tools
 
-Native core binaries use `spdlog` text output. Package controller commands and one-shot setup scripts
-also use human-readable stdlib logging. These tools are not covered by the Python/Rust/WebUI service
-JSON contracts.
+Native core binaries emit unstructured `spdlog` text logs. Package controller commands and one-shot
+setup scripts also emit unstructured Python stdlib logs. These tools do not follow the JSON log
+formats described for Python orchestration services, Rust HTTP services, or the WebUI server.
 
-[EnvFilter]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html
 [clp-py-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-py-utils/clp_py_utils/clp_logging.py
 [clp-rust-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-rust-utils/src/logging.rs
+[pino]: https://fastify.dev/docs/v2.15.x/Documentation/Logging/
+[EnvFilter]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html

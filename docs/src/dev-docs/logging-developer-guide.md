@@ -1,4 +1,4 @@
-# Developer Guide: Writing logs
+# Developer guide: Writing logs
 
 This guide provides language-specific setup instructions and standards for initializing loggers and
 emitting diagnostic logs when developing or modifying CLP components.
@@ -33,7 +33,7 @@ New Rust HTTP services should initialize `tracing` at process startup using
 
   ```rust
   let _guard = clp_rust_utils::logging::set_up_logging("service_name.log");
-  
+
   // Choose structured logging over formatting values directly into the message field.
   tracing::info!(server_address = %addr, "Server started.");
   ```
