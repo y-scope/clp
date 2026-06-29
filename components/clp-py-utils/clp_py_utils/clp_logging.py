@@ -6,7 +6,8 @@ import pathlib
 from typing import get_args, Literal
 
 import structlog
-from structlog.typing import FilteringBoundLogger, Processor
+from structlog.stdlib import BoundLogger
+from structlog.typing import Processor
 
 LoggingLevel = Literal[
     "INFO",
@@ -68,16 +69,17 @@ def configure_structlog() -> None:
                 structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
             ],
             logger_factory=structlog.stdlib.LoggerFactory(),
+            wrapper_class=BoundLogger,
             cache_logger_on_first_use=True,
         )
 
 
-def get_structlog_logger(name: str) -> FilteringBoundLogger:
+def get_structlog_logger(name: str) -> BoundLogger:
     """
     Configure CLP's structured logging defaults and return a structlog logger for a component.
 
     CLP uses structlog's stdlib integration, so this first configures the stdlib logger's
-    handlers with structlog's `ProcessFormatter`. Use the returned structlog logger for log calls.
+    handlers with structlog's `ProcessorFormatter`. Use the returned structlog logger for log calls.
 
     :param name: Name of the logger to create or retrieve.
     :return: A structlog logger configured to emit through CLP's JSON formatter.
@@ -85,7 +87,7 @@ def get_structlog_logger(name: str) -> FilteringBoundLogger:
     configure_structlog()
     stdlib_logger = get_logger(name)
     configure_logging(stdlib_logger, name)
-    return structlog.get_logger(name)
+    return structlog.stdlib.get_logger(name)
 
 
 def get_logging_formatter() -> logging.Formatter:
