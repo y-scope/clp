@@ -10,7 +10,7 @@ viewers or aggregation systems.
 
 ## Python
 
-New Python orchestration services should use `structlog` for structured JSON logging and bind
+Python orchestration services should use `structlog` for structured JSON logging and bind
 context variables where appropriate.
 
 ```python
@@ -27,7 +27,7 @@ Existing Python services use stdlib loggers whose handlers are configured with s
 
 ## Rust
 
-New Rust HTTP services should initialize `tracing` at process startup using
+Rust HTTP services should initialize `tracing` at process startup using
 [`clp_rust_utils::logging::set_up_logging`][clp-rust-logging] and keep the returned guard alive
 for the lifetime of the process:
 

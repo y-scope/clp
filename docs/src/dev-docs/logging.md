@@ -1,6 +1,6 @@
 # CLP Package logging
 
-The CLP Package utilizes a polyglot architecture, meaning each component family manages its own
+The CLP Package utilizes a polyglot architecture, meaning each component manages its own
 logging stack. There is **no single project-wide JSON schema**.
 
 This document is divided into two sections:
