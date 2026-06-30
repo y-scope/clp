@@ -15,7 +15,6 @@ import {
 import {constants} from "http2";
 
 import {publicSettings} from "../../../settings.js";
-import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
 
 
@@ -91,9 +90,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 return;
                             }
 
-                            if (storedResultsCount < MAX_PRESTO_SEARCH_RESULTS) {
+                            if (storedResultsCount < publicSettings.PrestoMaxNumSearchResults) {
                                 const remainingSlots =
-                                    MAX_PRESTO_SEARCH_RESULTS - storedResultsCount;
+                                    publicSettings.PrestoMaxNumSearchResults - storedResultsCount;
                                 const dataToInsert = data.slice(0, remainingSlots);
 
                                 if (0 < dataToInsert.length) {

@@ -8,6 +8,8 @@
 
         "MaxDatasetsPerQuery": 10,
 
+        "PrestoMaxNumSearchResults": 1000,
+
         "SqlDbClpArchivesTableName": "clp_archives",
         "SqlDbClpDatasetsTableName": "clp_datasets",
         "SqlDbClpFilesTableName": "clp_files",
