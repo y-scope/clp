@@ -146,7 +146,8 @@ Using Presto with CLP via Docker Compose requires:
         retention_period: null
       ```
 
-    * Optional: Disable the native query pipeline to save resources. Note that the API server depends on the native query pipeline, so it must also be disabled.
+    * Optional: Disable the native query pipeline to save resources. Note that the API server depends on the native
+      query pipeline, so it must also be disabled altogether.
 
       ```yaml
       api_server: null

@@ -1112,7 +1112,7 @@ class ClpConfig(BaseModel):
             self.query_scheduler.transform_for_container()
         if self.reducer is not None:
             self.reducer.transform_for_container()
-        if self.webui.query_engine == QueryEngine.PRESTO and self.presto is not None:
+        if self.presto is not None:
             self.presto.transform_for_container()
 
 
