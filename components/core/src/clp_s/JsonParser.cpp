@@ -701,7 +701,7 @@ bool JsonParser::ingest() {
                 auto log_text_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
                                             std::string const& file_name) -> bool {
                     SPDLOG_ERROR(
-                            "Direct ingestion of unstructured logtext is not supported from"
+                            "Direct ingestion of unstructured log-text is not supported from"
                             " archive member {}",
                             file_name
                     );
