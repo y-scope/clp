@@ -35,7 +35,7 @@ for the lifetime of the process:
 let _guard = clp_rust_utils::logging::set_up_logging("service_name.log");
 
 // Choose structured logging over formatting values directly into the message field.
-tracing::info!(server_address = %addr, "Server started.");
+tracing::info!(job_id = compression_job_id, "Compression job completed.");
 ```
 
 ## WebUI
