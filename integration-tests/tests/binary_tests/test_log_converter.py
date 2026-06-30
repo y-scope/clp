@@ -34,7 +34,7 @@ def test_log_converter_transform(
     text_singlefile: SampleDataset,
 ) -> None:
     """
-    Validate that converted logs from the core binary `log-converter` can be ingested successfully
+    Validates that converted logs from the core binary `log-converter` can be ingested successfully
     by `clp-s`, for both raw directory and `.tar.gz` archive inputs.
 
     :param input_type: "directory" for raw logs dir, "tar_gz" for a `.tar.gz` archive.
@@ -53,15 +53,15 @@ def test_log_converter_transform(
             / f"clp-s-{text_singlefile.dataset_name}-input.tar.gz"
         )
         create_tar_gz_from_dir(text_singlefile.logs_path, tar_gz_path)
-        logs_source_dir = tar_gz_path
+        logs_source_path = tar_gz_path
         test_name_suffix = "-tar-gz"
-    else:
-        logs_source_dir = text_singlefile.logs_path
+    else: # input_type == "directory"
+        logs_source_path = text_singlefile.logs_path
         test_name_suffix = ""
 
     test_paths = ConversionTestPathConfig(
         test_name=f"clp-s-{text_singlefile.dataset_name}{test_name_suffix}",
-        logs_source_dir=logs_source_dir,
+        logs_source_path=logs_source_path,
         num_log_events=num_log_events,
         integration_test_path_config=integration_test_path_config,
     )
@@ -77,7 +77,7 @@ def _convert_and_compress(
 ) -> None:
     log_converter_bin_path = str(clp_core_path_config.log_converter_binary_path)
     clp_s_bin_path = str(clp_core_path_config.clp_s_binary_path)
-    src_path = str(test_paths.logs_source_dir)
+    src_path = str(test_paths.logs_source_path)
     conversion_path = str(test_paths.conversion_dir)
     compression_path = str(test_paths.compression_dir)
     conversion_action = NonClpAction(

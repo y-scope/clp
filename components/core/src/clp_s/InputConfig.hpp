@@ -180,19 +180,20 @@ void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> con
  * @param path The path to the archive.
  * @param default_file_path The path name to use when this is a single compressed file.
  * @param json_handler Called for each JSON file in an archive.
- * @param kvir_handler Called for each KV-IR file in an archive.
- * @param logtext_handler Called for each log-text file in an archive.
+ * @param kv_ir_handler Called for each KV-IR file in an archive.
+ * @param log_text_handler Called for each log-text file in an archive.
  * @param empty_file_handler Called for each empty file in an archive.
  * @return Whether all of the files in the archive were processed successfully.
  */
-[[nodiscard]] auto try_process_archive_with_libarchive(
+[[nodiscard]] auto try_process_general_purpose_archive_with_libarchive(
         std::shared_ptr<clp::ReaderInterface> reader,
         Path const& path,
         std::string const& default_file_path,
         std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)> json_handler,
-        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)> kvir_handler,
         std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
-                logtext_handler,
+                kv_ir_handler,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
+                log_text_handler,
         std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
                 empty_file_handler
 ) -> bool;

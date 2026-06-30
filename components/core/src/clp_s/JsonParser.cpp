@@ -670,7 +670,7 @@ bool JsonParser::ingest() {
                 break;
             case FileType::LogText:
                 SPDLOG_ERROR(
-                        "Direct ingestion of unstructured logtext is not supported from input {}",
+                        "Direct ingestion of unstructured log-text is not supported from input {}",
                         path.path
                 );
                 std::ignore = m_archive_writer->close();
@@ -693,29 +693,29 @@ bool JsonParser::ingest() {
                     return ingest_json(reader, path, file_name, archive_creator_id);
                 };
 
-                auto kvir_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
-                                        std::string const& file_name) -> bool {
+                auto kv_ir_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                         std::string const& file_name) -> bool {
                     return ingest_kvir(reader, path, file_name, archive_creator_id);
                 };
 
-                auto logtext_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
-                                           std::string const& file_name) -> bool {
+                auto log_text_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                            std::string const& file_name) -> bool {
                     SPDLOG_ERROR(
-                            "Direct ingestion of unstructured logtext is not supported from "
-                            "archive member {}",
+                            "Direct ingestion of unstructured logtext is not supported from"
+                            " archive member {}",
                             file_name
                     );
                     return false;
                 };
 
                 if (false == nested_readers.empty()
-                    && try_process_archive_with_libarchive(
+                    && try_process_general_purpose_archive_with_libarchive(
                             nested_readers.back(),
                             path,
                             file_name_in_metadata,
                             json_handler,
-                            kvir_handler,
-                            logtext_handler,
+                            kv_ir_handler,
+                            log_text_handler,
                             json_handler
                     ))
                 {

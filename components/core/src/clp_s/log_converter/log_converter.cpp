@@ -77,8 +77,8 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
                     return false;
                 }
 
-                auto logtext_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
-                                           std::string const& file_path) -> bool {
+                auto log_text_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                            std::string const& file_path) -> bool {
                     // Use member path for output filename
                     auto const convert_result{log_converter.convert_file(
                             path,
@@ -103,21 +103,21 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
                 auto other_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
                                          std::string const& file_path) -> bool {
                     SPDLOG_ERROR(
-                            "Received input that was not unstructured logtext: {}.",
+                            "Received input that was not unstructured log-text: {}.",
                             file_path
                     );
                     return false;
                 };
 
                 if (false == nested_readers.empty()
-                    && clp_s::try_process_archive_with_libarchive(
+                    && clp_s::try_process_general_purpose_archive_with_libarchive(
                             nested_readers.back(),
                             path,
                             path.path,
                             other_handler,
                             other_handler,
-                            logtext_handler,
-                            logtext_handler
+                            log_text_handler,
+                            log_text_handler
                     ))
                 {
                     break;

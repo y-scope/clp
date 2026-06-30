@@ -404,14 +404,15 @@ auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) ->
 }  // namespace
 
 #if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
-auto try_process_archive_with_libarchive(
+auto try_process_general_purpose_archive_with_libarchive(
         std::shared_ptr<clp::ReaderInterface> reader,
         Path const& path,
         std::string const& default_file_path,
         std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)> json_handler,
-        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)> kvir_handler,
         std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
-                logtext_handler,
+                kv_ir_handler,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
+                log_text_handler,
         std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
                 empty_file_handler
 ) -> bool {
@@ -431,7 +432,7 @@ auto try_process_archive_with_libarchive(
             break;
         }
         if (clp::ErrorCode_Success != err) {
-            SPDLOG_ERROR("Failed to read next entry in archive {}", path.path);
+            SPDLOG_ERROR("Failed to read entry in archive {}", path.path);
             libarchive_reader.close();
             return false;
         }
@@ -449,10 +450,10 @@ auto try_process_archive_with_libarchive(
                 success = json_handler(nested_readers.back(), file_path);
                 break;
             case FileType::KeyValueIr:
-                success = kvir_handler(nested_readers.back(), file_path);
+                success = kv_ir_handler(nested_readers.back(), file_path);
                 break;
             case FileType::LogText:
-                success = logtext_handler(nested_readers.back(), file_path);
+                success = log_text_handler(nested_readers.back(), file_path);
                 break;
             case FileType::EmptyFile:
                 success = empty_file_handler(nested_readers.back(), file_path);
@@ -482,7 +483,7 @@ auto try_process_archive_with_libarchive(
     return true;
 }
 #else
-auto try_process_archive_with_libarchive(
+auto try_process_general_purpose_archive_with_libarchive(
         [[maybe_unused]] std::shared_ptr<clp::ReaderInterface> reader,
         [[maybe_unused]] Path const& path,
         [[maybe_unused]] std::string const& default_file_path,
@@ -491,10 +492,10 @@ auto try_process_archive_with_libarchive(
         > json_handler,
         [[maybe_unused]] std::function<
                 bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
-        > kvir_handler,
+        > kv_ir_handler,
         [[maybe_unused]] std::function<
                 bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
-        > logtext_handler,
+        > log_text_handler,
         [[maybe_unused]] std::function<
                 bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)
         > empty_file_handler
