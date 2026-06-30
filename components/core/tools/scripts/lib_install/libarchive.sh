@@ -44,8 +44,8 @@ if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   install_cmd_args+=("sudo")
 fi
 
-# Get number of cpu cores
-num_cpus=$(grep -c ^processor /proc/cpuinfo)
+# Get number of cpu cores (memory-capped parallelism is handled in taskfile-driven builds)
+num_cpus=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 1)
 
 # Download
 mkdir -p $temp_dir

@@ -93,6 +93,7 @@ NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=Tr
 NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
+PositiveUnitFloat = Annotated[float, Field(ge=0, le=1)]
 # Specific types
 # TODO: Replace this with pydantic_extra_types.domain.DomainStr.
 DomainStr = NonEmptyStr
@@ -427,6 +428,7 @@ class CompressionScheduler(BaseModel):
     max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
     type: OrchestrationTypeStr = OrchestrationType.CELERY
+    telemetry_update_interval_ms: PositiveInt = 60000
 
 
 class QueryScheduler(BaseModel):
@@ -439,6 +441,7 @@ class QueryScheduler(BaseModel):
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
     scheduler_concurrency: PositiveInt = 4
+    telemetry_update_interval_ms: PositiveInt = 60000
 
     def transform_for_container(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME
@@ -452,11 +455,12 @@ class WorkerConfigBase(BaseModel):
 
 
 class CompressionWorker(WorkerConfigBase):
-    pass
+    telemetry_update_interval_ms: PositiveInt = 60000
 
 
 class QueryWorker(WorkerConfigBase):
-    pass
+    telemetry_update_interval_ms: PositiveInt = 60000
+    query_trace_sampling_probability: PositiveUnitFloat = 0.01
 
 
 class Redis(BaseModel):
@@ -762,6 +766,7 @@ class WebUi(BaseModel):
     port: Port = DEFAULT_PORT
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
+    presto_max_num_search_results: PositiveInt = 1000
 
 
 class SweepInterval(BaseModel):
@@ -1131,6 +1136,7 @@ class WorkerConfig(BaseModel):
     tmp_directory: SerializablePath = ClpConfig().tmp_directory
 
     # Only needed by query workers.
+    query_worker: QueryWorker = QueryWorker()
     stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
 
