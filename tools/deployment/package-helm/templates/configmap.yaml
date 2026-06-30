@@ -146,6 +146,7 @@ data:
       task_soft_time_limit: {{ .task_soft_time_limit | int }}
       task_time_limit: {{ .task_time_limit | int }}
       telemetry_update_interval_ms: {{ .telemetry_update_interval_ms | int }}
+      query_trace_sampling_probability: {{ .query_trace_sampling_probability | float64 }}
     {{- end }}
     queue:
       host: "{{ include "clp.queueHost" . }}"
@@ -222,6 +223,8 @@ data:
     webui:
       host: "localhost"
       port: 4000
+      presto_max_num_search_results: {{ .Values.clpConfig.webui.presto_max_num_search_results
+        | int }}
       rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name
         | quote }}
@@ -260,87 +263,100 @@ data:
     systemLog:
       timeStampFormat: iso8601-local
 
-  webui-client-settings.json: |
+  webui-settings.json: |
     {
-      "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
-      "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
-      "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
-      {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-      "LogsInputRootDir": "/mnt/logs",
-      {{- else }}
-      "LogsInputRootDir": null,
-      {{- end }}
-      "MongoDbSearchResultsMetadataCollectionName":
-        {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
-      "SqlDbClpArchivesTableName": "clp_archives",
-      "SqlDbClpDatasetsTableName": "clp_datasets",
-      "SqlDbClpFilesTableName": "clp_files",
-      "SqlDbClpTablePrefix": "clp_",
-      "SqlDbCompressionJobsTableName": "compression_jobs"
-    }
+      "public": {
+        "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
+        "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
 
-  webui-server-settings.json: |
-    {
-      "SqlDbHost": "{{ include "clp.databaseHost" . }}",
-      "SqlDbPort": {{ include "clp.databasePort" . | int }},
-      "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
-      "SqlDbQueryJobsTableName": "query_jobs",
-      "SqlDbCompressionJobsTableName": "compression_jobs",
-      "MongoDbHost": "{{ include "clp.resultsCacheHost" . }}",
-      "MongoDbPort": {{ include "clp.resultsCachePort" . | int }},
-      "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
-      "MongoDbSearchResultsMetadataCollectionName":
-        {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }},
-      "MongoDbStreamFilesCollectionName":
-        {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
-      "ClientDir": "/opt/clp/var/www/webui/client",
-      "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
-      {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-      "LogsInputRootDir": "/mnt/logs",
-      {{- else }}
-      "LogsInputRootDir": null,
-      {{- end }}
-      {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
-      "StreamFilesDir": "/var/data/streams",
-      {{- else }}
-      "StreamFilesDir": null,
-      {{- end }}
-      "StreamTargetUncompressedSize":
-        {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
-      {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
-      {{- with .Values.clpConfig.stream_output.storage.s3_config }}
-      "StreamFilesS3Region": {{ .region_code | default "null" | quote }},
-      "StreamFilesS3PathPrefix": {{ printf "%s/%s" .bucket .key_prefix | quote }},
-      {{- if eq .aws_authentication.type "profile" }}
-      "StreamFilesS3Profile": {{ .aws_authentication.profile | quote }},
-      {{- else }}
-      "StreamFilesS3Profile": null,
-      {{- end }}
-      {{- end }}{{/* with .Values.clpConfig.stream_output.storage.s3_config */}}
-      {{- else }}
-      "StreamFilesS3Region": null,
-      "StreamFilesS3PathPrefix": null,
-      "StreamFilesS3Profile": null,
-      {{- end }}
-      "ArchiveOutputCompressionLevel":
-        {{ .Values.clpConfig.archive_output.compression_level | int }},
-      "ArchiveOutputTargetArchiveSize":
-        {{ .Values.clpConfig.archive_output.target_archive_size | int }},
-      "ArchiveOutputTargetDictionariesSize":
-        {{ .Values.clpConfig.archive_output.target_dictionaries_size | int }},
-      "ArchiveOutputTargetEncodedFileSize":
-        {{ .Values.clpConfig.archive_output.target_encoded_file_size | int }},
-      "ArchiveOutputTargetSegmentSize":
-        {{ .Values.clpConfig.archive_output.target_segment_size | int }},
-      "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
-      "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
-      {{- if .Values.clpConfig.presto }}
-      "PrestoHost": "{{ include "clp.prestoHost" . }}",
-      "PrestoPort": {{ include "clp.prestoPort" . | int }}
-      {{- else }}
-      "PrestoHost": null,
-      "PrestoPort": null
-      {{- end }}
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        "LogsInputRootDir": "/mnt/logs",
+        {{- else }}
+        "LogsInputRootDir": null,
+        {{- end }}
+        "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
+
+        {{- with .Values.clpConfig.query_scheduler.max_datasets_per_query }}
+        "MaxDatasetsPerQuery": {{ . | int }},
+        {{- else }}
+        "MaxDatasetsPerQuery": null,
+        {{- end }}
+
+        "PrestoMaxNumSearchResults":
+          {{ .Values.clpConfig.webui.presto_max_num_search_results | int }},
+
+        "SqlDbClpArchivesTableName": "clp_archives",
+        "SqlDbClpDatasetsTableName": "clp_datasets",
+        "SqlDbClpFilesTableName": "clp_files",
+        "SqlDbClpTablePrefix": "clp_",
+        "SqlDbCompressionJobsTableName": "compression_jobs",
+
+        "MongoDbSearchResultsMetadataCollectionName":
+          {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
+      },
+      "server": {
+        "SqlDbHost": "{{ include "clp.databaseHost" . }}",
+        "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
+        "SqlDbPort": {{ include "clp.databasePort" . | int }},
+
+        "SqlDbQueryJobsTableName": "query_jobs",
+
+        "MongoDbHost": "{{ include "clp.resultsCacheHost" . }}",
+        "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
+        "MongoDbPort": {{ include "clp.resultsCachePort" . | int }},
+
+        "MongoDbStreamFilesCollectionName":
+          {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+
+        "ClientDir": "/opt/clp/var/www/webui/client",
+        "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
+        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+        "StreamFilesDir": "/var/data/streams",
+        {{- else }}
+        "StreamFilesDir": null,
+        {{- end }}
+
+        {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
+        {{- with .Values.clpConfig.stream_output.storage.s3_config }}
+        "StreamFilesS3PathPrefix": {{ printf "%s/%s" .bucket .key_prefix | quote }},
+        {{- if eq .aws_authentication.type "profile" }}
+        "StreamFilesS3Profile": {{ .aws_authentication.profile | quote }},
+        {{- else }}
+        "StreamFilesS3Profile": null,
+        {{- end }}
+        {{- if .region_code }}
+        "StreamFilesS3Region": {{ .region_code | quote }},
+        {{- else }}
+        "StreamFilesS3Region": null,
+        {{- end }}
+        {{- end }}{{/* with .Values.clpConfig.stream_output.storage.s3_config */}}
+        {{- else }}
+        "StreamFilesS3PathPrefix": null,
+        "StreamFilesS3Profile": null,
+        "StreamFilesS3Region": null,
+        {{- end }}
+        "StreamTargetUncompressedSize":
+          {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
+
+        "ArchiveOutputCompressionLevel":
+          {{ .Values.clpConfig.archive_output.compression_level | int }},
+        "ArchiveOutputTargetArchiveSize":
+          {{ .Values.clpConfig.archive_output.target_archive_size | int }},
+        "ArchiveOutputTargetDictionariesSize":
+          {{ .Values.clpConfig.archive_output.target_dictionaries_size | int }},
+        "ArchiveOutputTargetEncodedFileSize":
+          {{ .Values.clpConfig.archive_output.target_encoded_file_size | int }},
+        "ArchiveOutputTargetSegmentSize":
+          {{ .Values.clpConfig.archive_output.target_segment_size | int }},
+
+        {{- if .Values.clpConfig.presto }}
+        "PrestoHost": "{{ include "clp.prestoHost" . }}",
+        "PrestoPort": {{ include "clp.prestoPort" . | int }}
+        {{- else }}
+        "PrestoHost": null,
+        "PrestoPort": null
+        {{- end }}
+      }
     }
 
 {{- if and .Values.clpConfig.presto (has "presto" .Values.clpConfig.bundled) }}

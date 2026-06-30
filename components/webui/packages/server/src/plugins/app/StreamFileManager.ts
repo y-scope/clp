@@ -6,7 +6,7 @@ import {
 } from "fastify";
 import fp from "fastify-plugin";
 
-import settings from "../../../settings.json" with {type: "json"};
+import {serverSettings} from "../../settings.js";
 import {
     StreamFileMetadata,
     StreamFilesCollection,
@@ -39,7 +39,7 @@ class StreamFileManager {
         }
         const streamFilesCollection =
             app.mongo.db.collection<StreamFileMetadata>(
-                settings.MongoDbStreamFilesCollectionName
+                serverSettings.MongoDbStreamFilesCollectionName
             );
 
         return new StreamFileManager({
