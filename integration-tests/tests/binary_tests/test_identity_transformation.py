@@ -99,7 +99,7 @@ def test_clp_s_identity_transform(
         create_tar_gz_from_dir(json_multifile.logs_path, tar_gz_path)
         logs_source_path = tar_gz_path
         test_name_suffix = "-tar-gz"
-    else: # input_type == "directory"
+    else:  # input_type == "directory"
         logs_source_path = json_multifile.logs_path
         test_name_suffix = ""
 

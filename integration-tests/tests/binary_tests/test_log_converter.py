@@ -55,7 +55,7 @@ def test_log_converter_transform(
         create_tar_gz_from_dir(text_singlefile.logs_path, tar_gz_path)
         logs_source_path = tar_gz_path
         test_name_suffix = "-tar-gz"
-    else: # input_type == "directory"
+    else:  # input_type == "directory"
         logs_source_path = text_singlefile.logs_path
         test_name_suffix = ""
 
