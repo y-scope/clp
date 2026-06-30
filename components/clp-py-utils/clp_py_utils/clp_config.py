@@ -93,6 +93,7 @@ NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=Tr
 NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
+PositiveUnitFloat = Annotated[float, Field(ge=0, le=1)]
 # Specific types
 # TODO: Replace this with pydantic_extra_types.domain.DomainStr.
 DomainStr = NonEmptyStr
@@ -429,6 +430,7 @@ class CompressionWorker(WorkerConfigBase):
 
 class QueryWorker(WorkerConfigBase):
     telemetry_update_interval_ms: PositiveInt = 60000
+    query_trace_sampling_probability: PositiveUnitFloat = 0.01
 
 
 class Redis(BaseModel):
@@ -1120,6 +1122,7 @@ class WorkerConfig(BaseModel):
     tmp_directory: SerializablePath = ClpConfig().tmp_directory
 
     # Only needed by query workers.
+    query_worker: QueryWorker = QueryWorker()
     stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
 

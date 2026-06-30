@@ -62,11 +62,13 @@ constexpr std::string_view cAttrPredicateTypesExists{"clp.query.predicate_types.
 constexpr std::string_view cAttrNumPredicates{"clp.query.num_predicates"};
 constexpr std::string_view cAttrContainsOrClause{"clp.query.contains_or_clause"};
 constexpr std::string_view cAttrTimeRangeMillis{"clp.query.time_range_millis"};
-constexpr std::string_view cAttrTotalArchiveRecords{"clp.query.num_total_archive_records"};
-constexpr std::string_view cAttrCandidateRecordsAfterSchemaMatching{
-        "clp.query.num_candidate_records_after_schema_matching"
+constexpr std::string_view cAttrNumArchiveRecords{"clp.query.num_archive_records"};
+constexpr std::string_view cAttrNumArchiveRecordsMatchingSchemas{
+        "clp.query.num_archive_records_matching_schemas"
 };
-constexpr std::string_view cAttrRecordsMatchingQuery{"clp.query.num_records_matching_query"};
+constexpr std::string_view cAttrNumArchiveRecordsMatchingQuery{
+        "clp.query.num_archive_records_matching_query"
+};
 constexpr std::string_view cAttrNumMatchedSchemas{"clp.query.num_matched_schemas"};
 constexpr std::string_view cAttrNumSchemasWithMatches{"clp.query.num_schemas_with_matches"};
 constexpr std::string_view cAttrTerminationStage{"clp.query.termination_stage"};
@@ -309,16 +311,16 @@ public:
 
     auto set_search_result_metrics(SearchResultMetrics const& metrics) -> void {
         m_span->SetAttribute(
-                to_nostd_string_view(cAttrTotalArchiveRecords),
-                to_int64_attribute(metrics.num_total_archive_records)
+                to_nostd_string_view(cAttrNumArchiveRecords),
+                to_int64_attribute(metrics.num_archive_records)
         );
         m_span->SetAttribute(
-                to_nostd_string_view(cAttrCandidateRecordsAfterSchemaMatching),
-                to_int64_attribute(metrics.num_candidate_records_after_schema_matching)
+                to_nostd_string_view(cAttrNumArchiveRecordsMatchingSchemas),
+                to_int64_attribute(metrics.num_archive_records_matching_schemas)
         );
         m_span->SetAttribute(
-                to_nostd_string_view(cAttrRecordsMatchingQuery),
-                to_int64_attribute(metrics.num_records_matching_query)
+                to_nostd_string_view(cAttrNumArchiveRecordsMatchingQuery),
+                to_int64_attribute(metrics.num_archive_records_matching_query)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumMatchedSchemas),

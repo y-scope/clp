@@ -69,6 +69,54 @@ Emitted once at startup by the controller to record deployment sizing:
 | `clp.deployment.reducer_replicas`               | Gauge | Number of reducer replicas            |
 | `clp.deployment.reducer_concurrency`            | Gauge | Reducer concurrency                   |
 
+### Traces
+
+The following OpenTelemetry traces are emitted.
+
+#### Archive-level search
+
+Emitted per-archive according to a configurable sampling probability.
+
+| Attribute                                               | Type    | Description                                                                   |
+| ------------------------------------------------------- | ------- | ----------------------------------------------------------------------------- |
+| `clp.query.success`                                     | Boolean | Whether the search completed successfully                                     |
+| `clp.query.error`                                       | String  | The error message, if a failure occurred                                      |
+| `clp.query.query_hash`                                  | Int64   | A hash of the query string                                                    |
+| `clp.query.query_id`                                    | String  | The ID of the query job                                                       |
+| `clp.query.task_id`                                     | String  | The ID of the task in the query job                                           |
+| `clp.query.archive_id_hash`                             | Int64   | A hash of the archive ID                                                      |
+| `clp.query.column_types.num_pure_wildcard`              | Int64   | Number of column descriptors in the query that are only a wildcard            |
+| `clp.query.column_types.num_some_wildcard`              | Int64   | Number of column descriptors in the query that mix wildcards and literals     |
+| `clp.query.column_types.num_no_wildcard`                | Int64   | Number of column descriptors in the query that contain no wildcards           |
+| `clp.query.predicate_types.num_string`                  | Int64   | Number of comparisons between a column and a string literal with no wildcards |
+| `clp.query.predicate_types.num_string_with_wildcard`    | Int64   | Number of comparisons between a column and a string literal with wildcards    |
+| `clp.query.predicate_types.num_int`                     | Int64   | Number of comparisons between a column and an integer literal                 |
+| `clp.query.predicate_types.num_float`                   | Int64   | Number of comparisons between a column and a float literal                    |
+| `clp.query.predicate_types.num_null`                    | Int64   | Number of comparisons between a column and a null literal                     |
+| `clp.query.predicate_types.num_exact_match`             | Int64   | Number of equality predicates                                                 |
+| `clp.query.predicate_types.num_range`                   | Int64   | Number of range predicates                                                    |
+| `clp.query.predicate_types.num_exists`                  | Int64   | Number of field-existence predicates                                          |
+| `clp.query.num_predicates`                              | Int64   | Total number of predicates in the query                                       |
+| `clp.query.contains_or_clause`                          | Boolean | Whether the query contains an OR clause                                       |
+| `clp.query.time_range_millis`                           | Int64   | Time range of the query in milliseconds                                       |
+| `clp.query.num_archive_records`                         | Int64   | Total number of records                                                       |
+| `clp.query.num_archive_records_matching_schemas`        | Int64   | Total number of candidate records after schema matching                       |
+| `clp.query.num_archive_records_matching_query`          | Int64   | Total number of records matching the query                                    |
+| `clp.query.num_matched_schemas`                         | Int64   | Total number of schemas matched by schema matching                            |
+| `clp.query.num_schemas_with_matches`                    | Int64   | Total number of schemas containing at least one matching record               |
+| `clp.query.termination_stage`                           | String  | The stage at which the query terminated                                       | 
+
+The termination stage can be one of:
+
+| Stage                                         | Description                                                                      |
+| --------------------------------------------- | -------------------------------------------------------------------------------- |
+| `range_index_matching`                        | Early termination after examining the archive's range index                      |
+| `time_range_matching`                         | Early termination after examining the archive's time-range                       |
+| `schema_matching`                             | Early termination after resolving the query against the archive's schema         |
+| `time_range_matching_after_column_resolution` | Early termination after re-examining the archive's time-range                    |
+| `dictionary_search`                           | Early termination after searching the archive's dictionaries                     |
+| `ert_scan`                                    | Termination after decompressing and scanning the archive's encoded-record tables |
+
 ### Resource attributes
 
 Every metric carries the following resource attributes to identify and contextualize the deployment:
@@ -151,6 +199,34 @@ Edit `values.yaml` to set the interval per component:
 clpConfig:
   compression_scheduler:
     telemetry_update_interval_ms: 60000
+```
+
+:::
+::::
+
+The `query_worker` component also supports exporting traces with detailed metrics about querying
+individual archives; you can configure the sampling probability for these traces in the
+configuration.
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+Edit `clp-config.yaml` to set the sampling probability:
+
+```yaml
+query_worker:
+  query_trace_sampling_probability: 0.01
+```
+
+:::
+:::{tab-item} Kubernetes
+:sync: k8s
+Edit `values.yaml` to set the sampling probability:
+
+```yaml
+clpConfig:
+  query_worker:
+    query_trace_sampling_probability: 0.01
 ```
 
 :::

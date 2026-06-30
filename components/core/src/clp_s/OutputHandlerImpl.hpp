@@ -15,6 +15,8 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 
+#include <clp_s/CommandLineArguments.hpp>
+
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
 #include "Defs.hpp"
@@ -382,6 +384,82 @@ private:
     std::string m_archive_id;
     std::map<int64_t, int64_t> m_bucket_counts;
     int64_t m_count_by_time_bucket_size_ms;
+};
+
+/**
+ * Output handler that performs a count aggregation and writes the results to standard output.
+ */
+class CountStdoutOutputHandler : public search::OutputHandler {
+public:
+    // Constructors
+    explicit CountStdoutOutputHandler(std::string_view archive_id)
+            : search::OutputHandler{false, false},
+              m_archive_id{archive_id} {}
+
+    // Methods implementing OutputHandler
+    auto write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) -> void override {}
+
+    auto write(std::string_view message) -> void override { m_count += 1; }
+
+    // Methods overriding OutputHandler
+    /**
+     * Flushes the count.
+     * @return ErrorCodeSuccess on success
+     */
+    auto finish() -> ErrorCode override;
+
+private:
+    // Data members
+    std::string m_archive_id;
+    int64_t m_count{};
+};
+
+/**
+ * Output handler that performs a count aggregation bucketed by time and writes the results to
+ * standard output.
+ */
+class CountByTimeStdoutOutputHandler : public search::OutputHandler {
+public:
+    // Constructors
+    CountByTimeStdoutOutputHandler(
+            std::string_view archive_id,
+            int64_t count_by_time_bucket_size_ms
+    )
+            : search::OutputHandler{true, false},
+              m_archive_id{archive_id},
+              m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {}
+
+    // Methods implementing OutputHandler
+    auto write(
+            std::string_view message,
+            epochtime_t timestamp_ms,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) -> void override {
+        int64_t const bucket
+                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
+        m_bucket_counts[bucket] += 1;
+    }
+
+    auto write(std::string_view message) -> void override {}
+
+    // Methods overriding OutputHandler
+    /**
+     * Flushes the counts.
+     * @return ErrorCodeSuccess on success
+     */
+    auto finish() -> ErrorCode override;
+
+private:
+    // Data members
+    std::string m_archive_id;
+    int64_t m_count_by_time_bucket_size_ms;
+    std::map<int64_t, int64_t> m_bucket_counts;
 };
 
 /**

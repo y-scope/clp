@@ -145,6 +145,7 @@ data:
       task_soft_time_limit: {{ .task_soft_time_limit | int }}
       task_time_limit: {{ .task_time_limit | int }}
       telemetry_update_interval_ms: {{ .telemetry_update_interval_ms | int }}
+      query_trace_sampling_probability: {{ .query_trace_sampling_probability | float64 }}
     {{- end }}
     queue:
       host: "{{ include "clp.queueHost" . }}"
