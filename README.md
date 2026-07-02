@@ -54,7 +54,7 @@ features:
   buffer enough logs. More details on IR versus archives can be found in this
   [Uber Engineering Blog][uber-blog].
 
-- **[Log Viewer][log-viewer]**: the compressed IR can be viewed in a web-based log viewer. Compared
+- **[Log Viewer][yscope-log-viewer]**: the compressed IR can be viewed in a web-based log viewer. Compared
   to viewing the logs in an editor, CLP's log viewer supports advanced features like filtering logs
   based on log level verbosity (e.g., only displaying logs with log level equal or higher than
   ERROR). These features are possible because CLP's logging libraries parse the logs before
@@ -114,7 +114,7 @@ If you would like a feature or want to report a bug, please file an issue and we
 [datasets]: https://docs.yscope.com/clp/main/user-docs/resources-datasets
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [log-surgeon]: https://github.com/y-scope/log-surgeon
-[log-viewer]: https://github.com/y-scope/yscope-log-viewer
+[yscope-log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [log4j1-appenders]: https://github.com/y-scope/log4j1-appenders
 [log4j2-appenders]: https://github.com/y-scope/log4j2-appenders
 [logback-appenders]: https://github.com/y-scope/logback-appenders

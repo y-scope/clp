@@ -6,10 +6,10 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "pnpm run build -w --preserveWatchOutput",
-    "dev:start": "fastify start --ignore-watch=.ts$ -w -l info -P dist/src/app.js",
+    "dev:start": "fastify start --ignore-watch=.ts$ -w -l info -P dist/app.js",
     "dev": "pnpm run build && concurrently -k -p \"[{name}]\" -n \"TypeScript,App\" -c \"yellow.bold,cyan.bold\" \"pnpm run build:watch\" \"pnpm run dev:start\"",
-    "start": "pnpm run build && fastify start -l info dist/src/app.js",
-    "standalone": "pnpm run build && node --env-file=.env dist/src/main.js",
+    "start": "pnpm run build && fastify start -l info dist/app.js",
+    "standalone": "pnpm run build && node dist/main.js",
     "lint:check": "eslint . --max-warnings 0",
     "lint:fix": "pnpm run lint:check --fix",
     "test": "tap --include='**/*test.ts'"

@@ -1,39 +1,26 @@
+import type {WebuiPublicSettings} from "@webui/common/schemas/settings";
 import axios from "axios";
 
-
-type Settings = {
-    ClpStorageEngine: string;
-    ClpQueryEngine: string;
-    LogsInputType: string;
-    LogsInputRootDir: string | null;
-    MaxDatasetsPerQuery: number | null;
-    MongoDbSearchResultsMetadataCollectionName: string;
-    SqlDbClpArchivesTableName: string;
-    SqlDbClpDatasetsTableName: string;
-    SqlDbClpFilesTableName: string;
-    SqlDbClpTablePrefix: string;
-    SqlDbCompressionJobsTableName: string;
-};
 
 /**
  * Loads application settings from a `settings.json` file.
  *
- * This function fetches a JSON file named `settings.json` from the server
- * and parses its contents into a `Settings` object.
+ * This function fetches a JSON file named `settings.json` from the server and parses its contents
+ * into a `WebuiPublicSettings` object.
  *
  * @return
  * @throws {Error} If the fetch or JSON parsing fails, an error is thrown with the original cause.
  */
-const loadSettings = async (): Promise<Settings> => {
+const loadSettings = async (): Promise<WebuiPublicSettings> => {
     try {
-        const response = await axios.get<Settings>("settings.json");
+        const response = await axios.get<WebuiPublicSettings>("settings.json");
         return response.data;
     } catch (e: unknown) {
         throw new Error("Failed to fetch settings.", {cause: e});
     }
 };
 
-const settings: Settings = await loadSettings();
+const settings: WebuiPublicSettings = await loadSettings();
 
 
 export {settings};

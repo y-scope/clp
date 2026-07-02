@@ -57,6 +57,7 @@ telemetry:
 #  jobs_poll_delay: 0.1  # seconds
 #  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
 #  logging_level: "INFO"
+#  telemetry_update_interval_ms: 60000
 #  type: "celery"  # "celery" or "spider"
 #
 #spider_scheduler:
@@ -72,6 +73,7 @@ telemetry:
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
 #  scheduler_concurrency: 4
+#  telemetry_update_interval_ms: 60000
 #
 #queue:
 #  host: "localhost"
@@ -106,17 +108,20 @@ telemetry:
 #  logging_level: "INFO"
 #  task_soft_time_limit: 600  # A value of 0 disables the limit
 #  task_time_limit: 1200  # A value of 0 disables the limit
+#  telemetry_update_interval_ms: 60000
 #
 #query_worker:
 #  logging_level: "INFO"
 #  task_soft_time_limit: 600  # A value of 0 disables the limit
 #  task_time_limit: 1200  # A value of 0 disables the limit
+#  query_trace_sampling_probability: 0.01
 #
 #webui:
 #  host: "localhost"
 #  port: 4000
 #  results_metadata_collection_name: "results-metadata"
 #  rate_limit: 1000
+#  presto_max_num_search_results: 1000
 #
 #mcp_server: null
 #
