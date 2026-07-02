@@ -83,43 +83,66 @@ struct NamedTimezone {
     std::string_view offset_str;
 };
 
-constexpr std::array<NamedTimezone, 10> cNamedTimezones = {{
-    {"EDT", "-0400"},
-    {"EST", "-0500"},
-    {"CDT", "-0500"},
-    {"CST", "-0600"},
-    {"MDT", "-0600"},
-    {"MST", "-0700"},
-    {"PDT", "-0700"},
-    {"PST", "-0800"},
-    {"UT", "+0000"},
-    {"GMT", "+0000"}
-}};
+constexpr std::array<NamedTimezone, 10> cNamedTimezones
+        = {{{"EDT", "-0400"},
+            {"EST", "-0500"},
+            {"CDT", "-0500"},
+            {"CST", "-0600"},
+            {"MDT", "-0600"},
+            {"MST", "-0700"},
+            {"PDT", "-0700"},
+            {"PST", "-0800"},
+            {"UT", "+0000"},
+            {"GMT", "+0000"}}};
 
 constexpr std::array cDefaultDateTimePatterns{
         // RFC 2822 / 822 patterns (16 variations)
         // With Seconds, 4-digit Year
-        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"},
-        std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"},
-        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"},
-        std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"},
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
+        },
+        std::string_view{
+                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
+        },
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
+        },
+        std::string_view{
+                R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
+        },
 
         // With Seconds, 2-digit Year
-        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"},
-        std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"},
-        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"},
-        std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"},
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"
+        },
+        std::string_view{
+                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"
+        },
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"
+        },
+        std::string_view{
+                R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"
+        },
 
         // Without Seconds, 4-digit Year
-        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"},
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"
+        },
         std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"},
-        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"},
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"
+        },
         std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"},
 
         // Without Seconds, 2-digit Year
-        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"},
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"
+        },
         std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"},
-        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"},
+        std::string_view{
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"
+        },
         std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"},
         std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\O{,.}\?\Z)"},
         std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\Z)"},
@@ -1188,18 +1211,14 @@ auto TimestampPattern::create(std::string_view pattern)
                         bracket_pattern.size() - comma_idx - 2ULL
                 )};
 
-                auto const [extracted_offset_str, extracted_offset]
-                        = YSTDLIB_ERROR_HANDLING_TRYX(
-                                extract_timezone_offset_in_minutes(offset_str)
-                        );
+                auto const [extracted_offset_str, extracted_offset] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_timezone_offset_in_minutes(offset_str)
+                );
                 if (extracted_offset_str.size() != offset_str.size()) {
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
                 }
 
-                optional_timezone_size_and_offset.emplace(
-                        name_str.size(),
-                        extracted_offset
-                );
+                optional_timezone_size_and_offset.emplace(name_str.size(), extracted_offset);
                 pattern_idx += bracket_pattern.size();
                 uses_date_type_representation = true;
                 break;
@@ -1787,18 +1806,15 @@ auto parse_timestamp(
 
                 auto const [name_size, extracted_timezone_offset]
                         = optional_timezone_size_and_offset.value();
-                
+
                 auto const expected_name{raw_pattern.substr(pattern_idx + 2ULL, name_size)};
-                if (false
-                    == timestamp.substr(timestamp_idx)
-                               .starts_with(expected_name))
-                {
+                if (false == timestamp.substr(timestamp_idx).starts_with(expected_name)) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 optional_timezone_offset_in_minutes = extracted_timezone_offset;
                 timestamp_idx += name_size;
-                
+
                 auto const closing_brace_idx{raw_pattern.find('}', pattern_idx)};
                 if (std::string_view::npos == closing_brace_idx) {
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
@@ -1827,10 +1843,14 @@ auto parse_timestamp(
                     for (auto const& tz : cNamedTimezones) {
                         if (remaining_unparsed_content.starts_with(tz.name)) {
                             timestamp_idx += tz.name.size();
-                            timezone_pattern.append(fmt::format(R"(\o{{{},{}}})", tz.name, tz.offset_str));
-                            remaining_unparsed_content = remaining_unparsed_content.substr(tz.name.size());
-                            
-                            auto const offset_res = extract_timezone_offset_in_minutes(tz.offset_str);
+                            timezone_pattern.append(
+                                    fmt::format(R"(\o{{{},{}}})", tz.name, tz.offset_str)
+                            );
+                            remaining_unparsed_content
+                                    = remaining_unparsed_content.substr(tz.name.size());
+
+                            auto const offset_res
+                                    = extract_timezone_offset_in_minutes(tz.offset_str);
                             if (false == offset_res.has_error()) {
                                 optional_timezone_offset_in_minutes = offset_res.value().second;
                             }
