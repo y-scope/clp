@@ -1202,6 +1202,9 @@ auto TimestampPattern::create(std::string_view pattern)
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
                 }
                 auto const name_str{bracket_pattern.substr(1ULL, comma_idx - 1ULL)};
+                if (name_str.empty()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
                 auto const offset_str{bracket_pattern.substr(
                         comma_idx + 1ULL,
                         bracket_pattern.size() - comma_idx - 2ULL
