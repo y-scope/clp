@@ -1169,6 +1169,9 @@ auto TimestampPattern::create(std::string_view pattern)
                 uses_number_type_representation = true;
                 break;
             case 'z': {  // Timezone offset.
+                if (optional_timezone_size_and_offset.has_value()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
                 auto const timezone_bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
                         extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
                 )};
@@ -1194,6 +1197,9 @@ auto TimestampPattern::create(std::string_view pattern)
                 break;
             }
             case 'o': {  // Named time-zone with specific offset.
+                if (optional_timezone_size_and_offset.has_value()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
                 auto const bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
                         extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
                 )};
