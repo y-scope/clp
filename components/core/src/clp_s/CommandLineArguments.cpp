@@ -5,6 +5,7 @@
 #include <iostream>
 #include <optional>
 #include <string_view>
+#include <variant>
 
 #include <boost/program_options.hpp>
 #include <fmt/format.h>
@@ -13,6 +14,7 @@
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
 #include "FileReader.hpp"
+#include "search/ast/SearchUtils.hpp"
 
 namespace po = boost::program_options;
 
@@ -772,6 +774,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             search_options.add(match_options);
 
+            int64_t count_by_time_bucket_size_ms{};
+            std::string aggregation_field;
             po::options_description aggregation_options("Aggregation Controls");
             // clang-format off
             aggregation_options.add_options()(
@@ -779,8 +783,16 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "Count the number of results"
             )(
                 "count-by-time",
-                po::value<int64_t>(&m_count_by_time_bucket_size_ms)->value_name("SIZE"),
+                po::value<int64_t>(&count_by_time_bucket_size_ms)->value_name("SIZE"),
                 "Count the number of results in each time span of the given size (ms)"
+            )(
+                "min",
+                po::value<std::string>(&aggregation_field)->value_name("FIELD"),
+                "Find the minimum value of the given field"
+            )(
+                "max",
+                po::value<std::string>(&aggregation_field)->value_name("FIELD"),
+                "Find the maximum value of the given field"
             );
             // clang-format on
             search_options.add(aggregation_options);
@@ -1026,9 +1038,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("clp-s only supports one output handler at a time");
             }
 
-            m_aggregation_type = parse_aggregation_options(
+            m_aggregation = parse_aggregation_options(
                     parsed_command_line_options,
-                    m_count_by_time_bucket_size_ms
+                    count_by_time_bucket_size_ms,
+                    aggregation_field
             );
 
             for (auto const& [output_handler_name, output_handler_options] : output_options_map) {
@@ -1122,31 +1135,50 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
 
 auto CommandLineArguments::parse_aggregation_options(
         po::variables_map const& parsed_options,
-        int64_t count_by_time_bucket_size_ms
-) -> std::optional<AggregationType> {
-    std::optional<AggregationType> aggregation_type;
-    if (parsed_options.count("count")) {
-        aggregation_type = AggregationType::Count;
-    }
-    if (parsed_options.count("count-by-time")) {
-        if (aggregation_type.has_value()) {
+        int64_t count_by_time_bucket_size_ms,
+        std::string_view aggregation_field
+) -> std::optional<Aggregation> {
+    std::optional<Aggregation> aggregation;
+    auto const set_aggregation = [&](Aggregation value) {
+        if (aggregation.has_value()) {
             throw std::invalid_argument(
-                    "The --count-by-time and --count options are mutually exclusive."
+                    "The --count, --count-by-time, --min, and --max options are mutually exclusive."
             );
         }
+        aggregation = std::move(value);
+    };
+    auto const validate_aggregation_field = [&]() {
+        if (aggregation_field.empty()) {
+            throw std::invalid_argument("The --min and --max options require a field.");
+        }
+        if (search::ast::has_unescaped_wildcards(aggregation_field)) {
+            throw std::invalid_argument("The --min and --max field must not contain wildcards.");
+        }
+    };
 
+    if (parsed_options.count("count")) {
+        set_aggregation(CountAggregation{});
+    }
+    if (parsed_options.count("count-by-time")) {
         if (count_by_time_bucket_size_ms <= 0) {
             throw std::invalid_argument("Value for count-by-time must be greater than zero.");
         }
-
-        aggregation_type = AggregationType::CountByTime;
+        set_aggregation(CountByTimeAggregation{count_by_time_bucket_size_ms});
     }
-    return aggregation_type;
+    if (parsed_options.count("min")) {
+        validate_aggregation_field();
+        set_aggregation(MinMaxAggregation{false, aggregation_field});
+    }
+    if (parsed_options.count("max")) {
+        validate_aggregation_field();
+        set_aggregation(MinMaxAggregation{true, aggregation_field});
+    }
+    return aggregation;
 }
 
 auto CommandLineArguments::reject_aggregation_for_handler(std::string_view handler_name) const
         -> void {
-    if (m_aggregation_type.has_value()) {
+    if (m_aggregation.has_value()) {
         throw std::invalid_argument(
                 fmt::format("The {} output handler does not support aggregations.", handler_name)
         );
@@ -1183,7 +1215,9 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         throw std::invalid_argument("job-id cannot be negative.");
     }
 
-    if (false == m_aggregation_type.has_value()) {
+    if (false == m_aggregation.has_value()
+        || std::holds_alternative<MinMaxAggregation>(m_aggregation.value()))
+    {
         throw std::invalid_argument(
                 "The reducer output handler currently only supports count and count-by-time"
                 " aggregations."

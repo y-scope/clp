@@ -12,6 +12,7 @@
 #include <boost/program_options/variables_map.hpp>
 
 #include "../reducer/types.hpp"
+#include "Aggregation.hpp"
 #include "Defs.hpp"
 #include "InputConfig.hpp"
 
@@ -29,11 +30,6 @@ public:
         Compress = 'c',
         Extract = 'x',
         Search = 's'
-    };
-
-    enum class AggregationType : uint8_t {
-        Count,
-        CountByTime,
     };
 
     struct ResultsCacheOutputHandlerOptions {
@@ -123,12 +119,8 @@ public:
         return m_output_handler_options;
     }
 
-    [[nodiscard]] auto get_aggregation_type() const -> std::optional<AggregationType> const& {
-        return m_aggregation_type;
-    }
-
-    [[nodiscard]] auto get_count_by_time_bucket_size_ms() const -> int64_t {
-        return m_count_by_time_bucket_size_ms;
+    [[nodiscard]] auto get_aggregation() const -> std::optional<Aggregation> const& {
+        return m_aggregation;
     }
 
     [[nodiscard]] auto get_retain_float_format() const -> bool {
@@ -165,17 +157,19 @@ private:
     );
 
     /**
-     * Validates the aggregation options (count and count-by-time) for output handlers that
-     * support aggregations.
+     * Builds the requested aggregation from the parsed options.
      * @param parsed_options
-     * @param count_by_time_bucket_size_ms The parsed value of the count-by-time option; only
-     * validated when that option was specified.
-     * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
+     * @param count_by_time_bucket_size_ms Bucket size for count-by-time. Only used by that option.
+     * @param aggregation_field Field for min/max. Only used by those options.
+     * @return The requested aggregation, or std::nullopt if none was requested.
+     * @throws std::invalid_argument if multiple aggregations are specified, the bucket size is
+     * non-positive, or a min/max field is empty or contains wildcards.
      */
     [[nodiscard]] static auto parse_aggregation_options(
             boost::program_options::variables_map const& parsed_options,
-            int64_t count_by_time_bucket_size_ms
-    ) -> std::optional<AggregationType>;
+            int64_t count_by_time_bucket_size_ms,
+            std::string_view aggregation_field
+    ) -> std::optional<Aggregation>;
 
     /**
      * Throws if an aggregation was requested.
@@ -269,8 +263,7 @@ private:
     bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
 
-    std::optional<AggregationType> m_aggregation_type;
-    int64_t m_count_by_time_bucket_size_ms{};
+    std::optional<Aggregation> m_aggregation;
 };
 }  // namespace clp_s
 

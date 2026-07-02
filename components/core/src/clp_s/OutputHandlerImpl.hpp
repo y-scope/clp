@@ -7,14 +7,20 @@
 
 #include <iostream>
 #include <map>
+#include <memory>
 #include <queue>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
+#include <variant>
 #include <vector>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 
+#include <clp_s/Aggregation.hpp>
+#include <clp_s/AggregationSink.hpp>
 #include <clp_s/CommandLineArguments.hpp>
 
 #include "../reducer/Pipeline.hpp"
@@ -158,13 +164,6 @@ public:
         }
     };
 
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
-
     // Constructor
     ResultsCacheOutputHandler(
             std::string_view uri,
@@ -288,72 +287,18 @@ private:
 };
 
 /**
- * Output handler that performs a count aggregation and writes the results to the results cache.
+ * Output handler that runs a search `Aggregation` and writes its results to an `AggregationSink`.
+ * @tparam AggT The concrete aggregator, selected at construction by
+ * `make_aggregation_output_handler`.
  */
-class CountResultsCacheOutputHandler : public search::OutputHandler {
+template <AggregatorReq AggT>
+class AggregationOutputHandler : public search::OutputHandler {
 public:
-    // Types
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
-
     // Constructors
-    CountResultsCacheOutputHandler(
-            std::string_view uri,
-            std::string_view collection,
-            std::string_view archive_id
-    );
-
-    // Methods implementing OutputHandler
-    auto write(
-            std::string_view message,
-            epochtime_t timestamp,
-            std::string_view archive_id,
-            int64_t log_event_idx
-    ) -> void override {}
-
-    auto write(std::string_view message) -> void override { m_count += 1; }
-
-    // Methods overriding OutputHandler
-    /**
-     * Flushes the count.
-     * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on database error
-     */
-    auto finish() -> ErrorCode override;
-
-private:
-    // Data members
-    mongocxx::client m_client;
-    mongocxx::collection m_collection;
-    std::string m_archive_id;
-    int64_t m_count{};
-};
-
-/**
- * Output handler that performs a count aggregation bucketed by time and writes the results to the
- * results cache.
- */
-class CountByTimeResultsCacheOutputHandler : public search::OutputHandler {
-public:
-    // Types
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
-
-    // Constructors
-    CountByTimeResultsCacheOutputHandler(
-            std::string_view uri,
-            std::string_view collection,
-            std::string_view archive_id,
-            int64_t count_by_time_bucket_size_ms
-    );
+    AggregationOutputHandler(AggT aggregation, std::unique_ptr<AggregationSink> sink)
+            : search::OutputHandler{AggT::cNeedsMetadata, AggT::cNeedsMarshalledRecord},
+              m_aggregation{std::move(aggregation)},
+              m_sink{std::move(sink)} {}
 
     // Methods implementing OutputHandler
     auto write(
@@ -362,105 +307,50 @@ public:
             std::string_view archive_id,
             int64_t log_event_idx
     ) -> void override {
-        int64_t bucket
-                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
-        m_bucket_counts[bucket] += 1;
+        m_aggregation.add_record(message, timestamp_ms);
     }
 
-    auto write(std::string_view message) -> void override {}
+    auto write(std::string_view message) -> void override { m_aggregation.add_record(message, 0); }
 
     // Methods overriding OutputHandler
     /**
-     * Flushes the counts.
+     * Drains the aggregation's results into the sink.
      * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on database error
+     * @return The sink's error code on failure
      */
-    auto finish() -> ErrorCode override;
+    auto finish() -> ErrorCode override {
+        for (auto const& result : m_aggregation.get_results()) {
+            m_sink->write(result);
+        }
+        return m_sink->finish();
+    }
 
 private:
     // Data members
-    mongocxx::client m_client;
-    mongocxx::collection m_collection;
-    std::string m_archive_id;
-    std::map<int64_t, int64_t> m_bucket_counts;
-    int64_t m_count_by_time_bucket_size_ms;
+    AggT m_aggregation;
+    std::unique_ptr<AggregationSink> m_sink;
 };
 
 /**
- * Output handler that performs a count aggregation and writes the results to standard output.
+ * Builds the `AggregationOutputHandler` specialization for `aggregation`'s active alternative.
+ * @param aggregation The aggregation to run.
+ * @param sink The destination for the aggregation's results.
+ * @return The constructed output handler.
  */
-class CountStdoutOutputHandler : public search::OutputHandler {
-public:
-    // Constructors
-    explicit CountStdoutOutputHandler(std::string_view archive_id)
-            : search::OutputHandler{false, false},
-              m_archive_id{archive_id} {}
-
-    // Methods implementing OutputHandler
-    auto write(
-            std::string_view message,
-            epochtime_t timestamp,
-            std::string_view archive_id,
-            int64_t log_event_idx
-    ) -> void override {}
-
-    auto write(std::string_view message) -> void override { m_count += 1; }
-
-    // Methods overriding OutputHandler
-    /**
-     * Flushes the count.
-     * @return ErrorCodeSuccess on success
-     */
-    auto finish() -> ErrorCode override;
-
-private:
-    // Data members
-    std::string m_archive_id;
-    int64_t m_count{};
-};
-
-/**
- * Output handler that performs a count aggregation bucketed by time and writes the results to
- * standard output.
- */
-class CountByTimeStdoutOutputHandler : public search::OutputHandler {
-public:
-    // Constructors
-    CountByTimeStdoutOutputHandler(
-            std::string_view archive_id,
-            int64_t count_by_time_bucket_size_ms
-    )
-            : search::OutputHandler{true, false},
-              m_archive_id{archive_id},
-              m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {}
-
-    // Methods implementing OutputHandler
-    auto write(
-            std::string_view message,
-            epochtime_t timestamp_ms,
-            std::string_view archive_id,
-            int64_t log_event_idx
-    ) -> void override {
-        int64_t const bucket
-                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
-        m_bucket_counts[bucket] += 1;
-    }
-
-    auto write(std::string_view message) -> void override {}
-
-    // Methods overriding OutputHandler
-    /**
-     * Flushes the counts.
-     * @return ErrorCodeSuccess on success
-     */
-    auto finish() -> ErrorCode override;
-
-private:
-    // Data members
-    std::string m_archive_id;
-    int64_t m_count_by_time_bucket_size_ms;
-    std::map<int64_t, int64_t> m_bucket_counts;
-};
+[[nodiscard]] inline auto
+make_aggregation_output_handler(Aggregation aggregation, std::unique_ptr<AggregationSink> sink)
+        -> std::unique_ptr<search::OutputHandler> {
+    return std::visit(
+            [&](auto&& agg) -> std::unique_ptr<search::OutputHandler> {
+                using AggT = std::decay_t<decltype(agg)>;
+                return std::make_unique<AggregationOutputHandler<AggT>>(
+                        std::move(agg),
+                        std::move(sink)
+                );
+            },
+            std::move(aggregation)
+    );
+}
 
 /**
  * Output handler that records all results in a provided vector.
