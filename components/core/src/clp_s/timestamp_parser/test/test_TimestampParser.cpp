@@ -450,7 +450,10 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {" UTC+04Z", R"(\Z)", R"( UTC\z{+04}Z)"},
                 {"+04Z", R"(\Z)", R"(\z{+04}Z)"},
                 {" +04Z", R"(\Z)", R"( \z{+04}Z)"},
-                {" Z", R"(\Z)", R"( Z)"}
+                {" Z", R"(\Z)", R"( Z)"},
+                {"EST", R"(\Z)", R"(\o{EST,-0500})"},
+                {"UT", R"(\Z)", R"(\o{UT,+0000})"},
+                {" GMT", R"(\Z)", R"( \o{GMT,+0000})"}
         };
         assert_transformations_are_expected(timezone_transformations);
 
@@ -600,6 +603,21 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"Jan 21 11:56:42 UTC-0130",
                  R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{-0130})",
                  1'776'402'000'000'000},
+                {"Jan 21 11:56:42 EST",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S \o{EST,-0500})",
+                 1'789'002'000'000'000},
+                {"Jan 21 11:56:42 UT",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S \o{UT,+0000})",
+                 1'771'002'000'000'000},
+                {"Jan 21 11:56:42 GMT",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S \o{GMT,+0000})",
+                 1'771'002'000'000'000},
+                {"Thu, 21 Dec 2000 16:01:07 +0200",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \z{+0200})",
+                 977407267000000000},
+                {"Thu, 21 Dec 2000 16:01:07 EST",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \o{EST,-0500})",
+                 977432467000000000},
                 {"Jan 21 11:56:42 UTC+01",
                  R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{+01})",
                  1'767'402'000'000'000},

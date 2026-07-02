@@ -194,11 +194,12 @@ private:
  * - \C Epoch miCroseconds.
  * - \N Epoch Nanoseconds.
  * - \z{...} Specific timezone, described by content between {}.
+ * - \o{...,...} Named time-zone with specific offset, described by name and offset between {}.
  * - \\ Literal backslash.
  *
  * We also support the following CAT sequences:
  *
- * - \Z Generic timezone -- resolves to literal content, and potentially \z{...}.
+ * - \Z Generic timezone -- resolves to literal content, and potentially \z{...} or \o{...,...}.
  * - \? Generic fractional second -- resolves to \3, \6, \9, or \T.
  * - \P Unknown-precision epoch time -- resolves to \E, \L, \C, or \N based on a heuristic.
  * - \O{...} One of several literal characters, described by content between {}.

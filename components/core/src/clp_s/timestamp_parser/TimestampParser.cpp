@@ -78,7 +78,49 @@ constexpr std::string_view cUtc{"UTC"};
 constexpr std::string_view cSpace{" "};
 constexpr std::string_view cZulu{"Z"};
 
+struct NamedTimezone {
+    std::string_view name;
+    std::string_view offset_str;
+};
+
+constexpr std::array<NamedTimezone, 10> cNamedTimezones = {{
+    {"EDT", "-0400"},
+    {"EST", "-0500"},
+    {"CDT", "-0500"},
+    {"CST", "-0600"},
+    {"MDT", "-0600"},
+    {"MST", "-0700"},
+    {"PDT", "-0700"},
+    {"PST", "-0800"},
+    {"UT", "+0000"},
+    {"GMT", "+0000"}
+}};
+
 constexpr std::array cDefaultDateTimePatterns{
+        // RFC 2822 / 822 patterns (16 variations)
+        // With Seconds, 4-digit Year
+        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"},
+        std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"},
+        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"},
+        std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"},
+
+        // With Seconds, 2-digit Year
+        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"},
+        std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"},
+        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"},
+        std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"},
+
+        // Without Seconds, 4-digit Year
+        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"},
+        std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"},
+        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"},
+        std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \Z)"},
+
+        // Without Seconds, 2-digit Year
+        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"},
+        std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"},
+        std::string_view{R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"},
+        std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \Z)"},
         std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\O{,.}\?\Z)"},
         std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\Z)"},
         std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\O{,.}\?)"},
@@ -786,6 +828,20 @@ auto marshal_date_time_timestamp(
                 pattern_idx += timezone_pattern_size + 2ULL;
                 break;
             }
+            case 'o': {  // Named time-zone with specific offset.
+                auto const timezone_offset{pattern.get_optional_timezone_size_and_offset()};
+                if (false == timezone_offset.has_value()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                auto const name_size{timezone_offset.value().first};
+                buffer.append(raw_pattern.substr(pattern_idx + 2ULL, name_size));
+                auto const closing_brace_idx{raw_pattern.find('}', pattern_idx)};
+                if (std::string_view::npos == closing_brace_idx) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                pattern_idx = closing_brace_idx;
+                break;
+            }
             case '\\': {
                 buffer.append(cJsonEscapedBackslash);
                 break;
@@ -1115,6 +1171,36 @@ auto TimestampPattern::create(std::string_view pattern)
                         extracted_timezone_offset
                 );
                 pattern_idx += timezone_bracket_pattern.size();
+                uses_date_type_representation = true;
+                break;
+            }
+            case 'o': {  // Named time-zone with specific offset.
+                auto const bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
+                )};
+                auto const comma_idx{bracket_pattern.find(',')};
+                if (std::string_view::npos == comma_idx) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                auto const name_str{bracket_pattern.substr(1ULL, comma_idx - 1ULL)};
+                auto const offset_str{bracket_pattern.substr(
+                        comma_idx + 1ULL,
+                        bracket_pattern.size() - comma_idx - 2ULL
+                )};
+
+                auto const [extracted_offset_str, extracted_offset]
+                        = YSTDLIB_ERROR_HANDLING_TRYX(
+                                extract_timezone_offset_in_minutes(offset_str)
+                        );
+                if (extracted_offset_str.size() != offset_str.size()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+
+                optional_timezone_size_and_offset.emplace(
+                        name_str.size(),
+                        extracted_offset
+                );
+                pattern_idx += bracket_pattern.size();
                 uses_date_type_representation = true;
                 break;
             }
@@ -1691,6 +1777,35 @@ auto parse_timestamp(
                 pattern_idx += extracted_timezone_size + 2ULL;
                 break;
             }
+            case 'o': {  // Named time-zone with specific offset.
+                auto const& optional_timezone_size_and_offset{
+                        pattern.get_optional_timezone_size_and_offset()
+                };
+                if (false == optional_timezone_size_and_offset.has_value()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+
+                auto const [name_size, extracted_timezone_offset]
+                        = optional_timezone_size_and_offset.value();
+                
+                auto const expected_name{raw_pattern.substr(pattern_idx + 2ULL, name_size)};
+                if (false
+                    == timestamp.substr(timestamp_idx)
+                               .starts_with(expected_name))
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                optional_timezone_offset_in_minutes = extracted_timezone_offset;
+                timestamp_idx += name_size;
+                
+                auto const closing_brace_idx{raw_pattern.find('}', pattern_idx)};
+                if (std::string_view::npos == closing_brace_idx) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                pattern_idx = closing_brace_idx;
+                break;
+            }
             case 'Z': {  // Generic timezone.
                 std::string timezone_pattern;
                 auto remaining_unparsed_content{timestamp.substr(timestamp_idx)};
@@ -1707,6 +1822,27 @@ auto parse_timestamp(
                     timezone_pattern.append(cUtc);
                     timestamp_idx += cUtc.size();
                     remaining_unparsed_content = remaining_unparsed_content.substr(cUtc.size());
+                } else {
+                    bool matched_named_timezone = false;
+                    for (auto const& tz : cNamedTimezones) {
+                        if (remaining_unparsed_content.starts_with(tz.name)) {
+                            timestamp_idx += tz.name.size();
+                            timezone_pattern.append(fmt::format(R"(\o{{{},{}}})", tz.name, tz.offset_str));
+                            remaining_unparsed_content = remaining_unparsed_content.substr(tz.name.size());
+                            
+                            auto const offset_res = extract_timezone_offset_in_minutes(tz.offset_str);
+                            if (false == offset_res.has_error()) {
+                                optional_timezone_offset_in_minutes = offset_res.value().second;
+                            }
+                            matched_named_timezone = true;
+                            break;
+                        }
+                    }
+                    if (matched_named_timezone) {
+                        cat_sequence_replacements
+                                .emplace_back(pattern_idx - 1, 2ULL, std::move(timezone_pattern));
+                        break;
+                    }
                 }
 
                 auto const extracted_timezone_result{
