@@ -81,19 +81,20 @@ constexpr std::string_view cZulu{"Z"};
 struct NamedTimezone {
     std::string_view name;
     std::string_view offset_str;
+    int offset_minutes;
 };
 
 constexpr std::array<NamedTimezone, 10> cNamedTimezones
-        = {{{"EDT", "-0400"},
-            {"EST", "-0500"},
-            {"CDT", "-0500"},
-            {"CST", "-0600"},
-            {"MDT", "-0600"},
-            {"MST", "-0700"},
-            {"PDT", "-0700"},
-            {"PST", "-0800"},
-            {"UT", "+0000"},
-            {"GMT", "+0000"}}};
+        = {{{"EDT", "-0400", -240},
+            {"EST", "-0500", -300},
+            {"CDT", "-0500", -300},
+            {"CST", "-0600", -360},
+            {"MDT", "-0600", -360},
+            {"MST", "-0700", -420},
+            {"PDT", "-0700", -420},
+            {"PST", "-0800", -480},
+            {"UT", "+0000", 0},
+            {"GMT", "+0000", 0}}};
 
 constexpr std::array cDefaultDateTimePatterns{
         // RFC 2822 / 822 patterns (16 variations: with or without day of week, with or without
@@ -1844,11 +1845,7 @@ auto parse_timestamp(
                             remaining_unparsed_content
                                     = remaining_unparsed_content.substr(tz.name.size());
 
-                            auto const offset_res
-                                    = extract_timezone_offset_in_minutes(tz.offset_str);
-                            if (false == offset_res.has_error()) {
-                                optional_timezone_offset_in_minutes = offset_res.value().second;
-                            }
+                            optional_timezone_offset_in_minutes = tz.offset_minutes;
                             matched_named_timezone = true;
                             break;
                         }
