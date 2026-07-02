@@ -14,12 +14,13 @@
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/ResultsCacheUtils.hpp>
+
 #include "../clp/networking/socket_utils.hpp"
 #include "../reducer/CountOperator.hpp"
 #include "../reducer/network_utils.hpp"
 #include "../reducer/Record.hpp"
 #include "archive_constants.hpp"
-#include "ResultsCacheUtils.hpp"
 #include "search/OutputHandler.hpp"
 #include "TraceableException.hpp"
 

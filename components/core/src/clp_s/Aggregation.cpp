@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -118,19 +117,5 @@ auto MinMaxAggregation::get_results() const -> std::vector<AggregationResult> {
     };
     result.emplace_back(key, value);
     return {std::move(result)};
-}
-
-auto aggregation_needs_metadata(Aggregation const& aggregation) -> bool {
-    return std::visit(
-            [](auto const& agg) { return std::decay_t<decltype(agg)>::cNeedsMetadata; },
-            aggregation
-    );
-}
-
-auto aggregation_needs_marshalled_record(Aggregation const& aggregation) -> bool {
-    return std::visit(
-            [](auto const& agg) { return std::decay_t<decltype(agg)>::cNeedsMarshalledRecord; },
-            aggregation
-    );
 }
 }  // namespace clp_s

@@ -21,14 +21,16 @@ public:
     // Constructors
     AggregationSink() = default;
 
-    // Destructor
-    virtual ~AggregationSink() = default;
-
-    // Explicitly disable copy and move constructor/assignment
+    // Delete copy constructor and assignment operator
     AggregationSink(AggregationSink const&) = delete;
     auto operator=(AggregationSink const&) -> AggregationSink& = delete;
+
+    // Delete move constructor and assignment operator
     AggregationSink(AggregationSink&&) = delete;
     auto operator=(AggregationSink&&) -> AggregationSink& = delete;
+
+    // Destructor
+    virtual ~AggregationSink() = default;
 
     // Methods
     /**

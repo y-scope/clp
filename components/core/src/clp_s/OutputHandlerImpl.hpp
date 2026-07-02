@@ -11,17 +11,20 @@
 #include <queue>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 #include <variant>
 #include <vector>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 
+#include <clp_s/Aggregation.hpp>
+#include <clp_s/AggregationSink.hpp>
+#include <clp_s/CommandLineArguments.hpp>
+
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
-#include "Aggregation.hpp"
-#include "AggregationSink.hpp"
-#include "CommandLineArguments.hpp"
 #include "Defs.hpp"
 #include "FileWriter.hpp"
 #include "search/OutputHandler.hpp"
@@ -285,12 +288,15 @@ private:
 
 /**
  * Output handler that runs a search `Aggregation` and writes its results to an `AggregationSink`.
+ * @tparam AggT The concrete aggregator, selected at construction by
+ * `make_aggregation_output_handler`.
  */
+template <AggregatorReq AggT>
 class AggregationOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    AggregationOutputHandler(Aggregation aggregation, std::unique_ptr<AggregationSink> sink)
-            : search::OutputHandler{aggregation_needs_metadata(aggregation), aggregation_needs_marshalled_record(aggregation)},
+    AggregationOutputHandler(AggT aggregation, std::unique_ptr<AggregationSink> sink)
+            : search::OutputHandler{AggT::cNeedsMetadata, AggT::cNeedsMarshalledRecord},
               m_aggregation{std::move(aggregation)},
               m_sink{std::move(sink)} {}
 
@@ -301,15 +307,10 @@ public:
             std::string_view archive_id,
             int64_t log_event_idx
     ) -> void override {
-        std::visit(
-                [&](auto& aggregation) { aggregation.add_record(message, timestamp_ms); },
-                m_aggregation
-        );
+        m_aggregation.add_record(message, timestamp_ms);
     }
 
-    auto write(std::string_view message) -> void override {
-        std::visit([&](auto& aggregation) { aggregation.add_record(message, 0); }, m_aggregation);
-    }
+    auto write(std::string_view message) -> void override { m_aggregation.add_record(message, 0); }
 
     // Methods overriding OutputHandler
     /**
@@ -318,11 +319,7 @@ public:
      * @return The sink's error code on failure
      */
     auto finish() -> ErrorCode override {
-        auto const results{std::visit(
-                [](auto& aggregation) { return aggregation.get_results(); },
-                m_aggregation
-        )};
-        for (auto const& result : results) {
+        for (auto const& result : m_aggregation.get_results()) {
             m_sink->write(result);
         }
         return m_sink->finish();
@@ -330,9 +327,30 @@ public:
 
 private:
     // Data members
-    Aggregation m_aggregation;
+    AggT m_aggregation;
     std::unique_ptr<AggregationSink> m_sink;
 };
+
+/**
+ * Builds the `AggregationOutputHandler` specialization for `aggregation`'s active alternative.
+ * @param aggregation The aggregation to run.
+ * @param sink The destination for the aggregation's results.
+ * @return The constructed output handler.
+ */
+[[nodiscard]] inline auto
+make_aggregation_output_handler(Aggregation aggregation, std::unique_ptr<AggregationSink> sink)
+        -> std::unique_ptr<search::OutputHandler> {
+    return std::visit(
+            [&](auto&& agg) -> std::unique_ptr<search::OutputHandler> {
+                using AggT = std::decay_t<decltype(agg)>;
+                return std::make_unique<AggregationOutputHandler<AggT>>(
+                        std::move(agg),
+                        std::move(sink)
+                );
+            },
+            std::move(aggregation)
+    );
+}
 
 /**
  * Output handler that records all results in a provided vector.

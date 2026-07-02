@@ -1,6 +1,7 @@
 #ifndef CLP_S_AGGREGATION_HPP
 #define CLP_S_AGGREGATION_HPP
 
+#include <concepts>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -23,6 +24,31 @@ using AggregationValue = std::variant<int64_t, double, std::string>;
  * One aggregation result document: an ordered list of typed key-value pairs.
  */
 using AggregationResult = std::vector<std::pair<std::string, AggregationValue>>;
+
+/**
+ * Requirement for the search aggregator interface.
+ * @tparam AggregatorType The type of the aggregator.
+ */
+template <typename AggregatorType>
+concept AggregatorReq
+        = requires(AggregatorType aggregator, std::string_view message, epochtime_t timestamp_ms) {
+              /**
+               * Folds one matched record into the running aggregate.
+               */
+              { aggregator.add_record(message, timestamp_ms) } -> std::same_as<void>;
+
+              /**
+               * @return The aggregate's result documents.
+               */
+              { aggregator.get_results() } -> std::same_as<std::vector<AggregationResult>>;
+
+              /**
+               * Whether the caller must supply per-record metadata and the marshalled record,
+               * respectively.
+               */
+              { AggregatorType::cNeedsMetadata } -> std::convertible_to<bool>;
+              { AggregatorType::cNeedsMarshalledRecord } -> std::convertible_to<bool>;
+          };
 
 /**
  * Counts the number of matched records.
@@ -105,18 +131,6 @@ private:
  * A search aggregation to perform.
  */
 using Aggregation = std::variant<CountAggregation, CountByTimeAggregation, MinMaxAggregation>;
-
-/**
- * @param aggregation
- * @return Whether the aggregation needs per-record metadata.
- */
-[[nodiscard]] auto aggregation_needs_metadata(Aggregation const& aggregation) -> bool;
-
-/**
- * @param aggregation
- * @return Whether the aggregation needs each matched record marshalled into its JSON message.
- */
-[[nodiscard]] auto aggregation_needs_marshalled_record(Aggregation const& aggregation) -> bool;
 }  // namespace clp_s
 
 #endif  // CLP_S_AGGREGATION_HPP

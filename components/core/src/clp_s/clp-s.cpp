@@ -343,7 +343,7 @@ bool search_archive(
                                         options.dataset
                                 );
                             } else {
-                                output_handler = std::make_unique<clp_s::AggregationOutputHandler>(
+                                output_handler = clp_s::make_aggregation_output_handler(
                                         aggregation.value(),
                                         std::make_unique<clp_s::ResultsCacheSink>(
                                                 options.uri,
@@ -358,7 +358,7 @@ bool search_archive(
                             if (false == aggregation.has_value()) {
                                 output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                             } else {
-                                output_handler = std::make_unique<clp_s::AggregationOutputHandler>(
+                                output_handler = clp_s::make_aggregation_output_handler(
                                         aggregation.value(),
                                         std::make_unique<clp_s::StdoutSink>(
                                                 archive_reader->get_archive_id()
