@@ -1,4 +1,4 @@
-"""Functions and classes to facilitate CLP package search."""
+"""Classes to facilitate CLP package search testing."""
 
 import logging
 import re
@@ -31,7 +31,7 @@ class SearchArgs(CmdArgs):
 
     script_path: Path
     config: Path
-    wildcard_query: str
+    query: str
     raw: bool = True
     dataset: str | None = None
     file_path: Path | None = None
@@ -71,7 +71,7 @@ class SearchArgs(CmdArgs):
         if self.raw:
             cmd.append("--raw")
 
-        cmd.append(self.wildcard_query)
+        cmd.append(self.query)
 
         return cmd
 
@@ -91,7 +91,7 @@ def search_clp_package(
     clp_package: ClpPackage,
     dataset: SampleDataset,
     search_type: ClpPackageSearchType,
-    wildcard_query: str,
+    query: str,
 ) -> ClpAction:
     """
     Performs the specified search on the dataset using the CLP package.
@@ -99,7 +99,7 @@ def search_clp_package(
     :param clp_package:
     :param dataset:
     :param search_type:
-    :param wildcard_query:
+    :param query:
     :return: The `ClpAction` instance that runs the search.
     """
     logger.info(
@@ -108,22 +108,22 @@ def search_clp_package(
         dataset.dataset_name,
     )
 
-    args: SearchArgs = _construct_args(clp_package, dataset, search_type, wildcard_query)
-    return ClpAction(cmd=args.to_cmd(), args=args)
+    args: SearchArgs = _construct_args(clp_package, dataset, search_type, query)
+    return ClpAction.from_args(args)
 
 
 def _construct_args(
     clp_package: ClpPackage,
     dataset: SampleDataset,
     search_type: ClpPackageSearchType,
-    wildcard_query: str,
+    query: str,
 ) -> SearchArgs:
     """Construct the `SearchArgs` object for the specified search on the dataset."""
     path_config = clp_package.path_config
     args = SearchArgs(
         script_path=path_config.search_path,
         config=clp_package.temp_config_file_path,
-        wildcard_query=wildcard_query,
+        query=query,
     )
 
     if clp_package.clp_config.package.storage_engine == StorageEngine.CLP_S:
@@ -133,7 +133,7 @@ def _construct_args(
         case ClpPackageSearchType.BASIC:
             pass
         case ClpPackageSearchType.FILE_PATH:
-            args.file_path = dataset.logs_path / dataset.metadata.single_match_file
+            pytest.fail("FILE_PATH search not yet implemented.")
         case ClpPackageSearchType.IGNORE_CASE:
             args.ignore_case = True
         case ClpPackageSearchType.COUNT_RESULTS:
@@ -168,9 +168,9 @@ def verify_search_action(
         original_dataset.dataset_name,
     )
 
-    returncode_result = action.verify_returncode()
-    if not returncode_result:
-        return returncode_result
+    result = action.verify_returncode()
+    if not result:
+        return result
 
     args = action.args
     assert isinstance(args, SearchArgs)
@@ -208,7 +208,7 @@ def _construct_grep_verification_cmd(
     return [
         get_binary_path("grep"),
         *grep_cmd_options,
-        args.wildcard_query,
+        args.query,
         str(path_for_grep),
     ]
 

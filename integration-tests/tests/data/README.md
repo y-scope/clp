@@ -35,8 +35,7 @@ following rules must be observed:
            "str",
            "str",
            ...
-       ],
-       "single_match_wildcard_query": "str"
+       ]
    }
    ```
 
@@ -49,7 +48,6 @@ following rules must be observed:
    | `end_ts` | The latest timestamp present in the dataset (ms). |
    | `logs_subdir` | The name of the subdirectory containing logs. |
    | `file_names` | A list of the files within `logs_subdir`. |
-   | `single_match_wildcard_query` | A wildcard query that matches exactly one log message in the dataset. |
 
 ## Accessing sample datasets within the testing system
 
