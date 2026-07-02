@@ -4,7 +4,7 @@ import {
 } from "@fastify/mysql";
 import {FastifyInstance} from "fastify";
 
-import settings from "../../../settings.json" with {type: "json"};
+import {serverSettings} from "../../settings.js";
 
 
 // The typing of `@fastify/mysql` needs to be manually specified.
@@ -17,10 +17,10 @@ declare module "fastify" {
 
 export const autoConfig = (fastify: FastifyInstance) => {
     return {
-        database: settings.SqlDbName,
-        host: settings.SqlDbHost,
+        database: serverSettings.SqlDbName,
+        host: serverSettings.SqlDbHost,
         password: fastify.config.CLP_DB_PASS,
-        port: settings.SqlDbPort,
+        port: serverSettings.SqlDbPort,
         promise: true,
         user: fastify.config.CLP_DB_USER,
     };

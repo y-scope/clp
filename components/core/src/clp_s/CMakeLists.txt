@@ -140,6 +140,17 @@ if(CLP_BUILD_CLP_S_ENABLE_CURL)
         list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_CURL_SOURCES})
 endif()
 
+set(
+        CLP_S_CLP_LIBARCHIVE_SOURCES
+        ../clp/LibarchiveReader.cpp
+        ../clp/LibarchiveReader.hpp
+        ../clp/LibarchiveFileReader.cpp
+        ../clp/LibarchiveFileReader.hpp
+)
+if(CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE)
+        list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_LIBARCHIVE_SOURCES})
+endif()
+
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
 if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         add_library(
@@ -171,6 +182,13 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                         ${CURL_LIBRARIES}
                         PRIVATE
                         OpenSSL::Crypto
+                )
+        endif()
+        if(CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PUBLIC
+                        LibArchive::LibArchive
                 )
         endif()
 endif()
@@ -247,6 +265,7 @@ if(CLP_BUILD_CLP_S_IO)
                 clp_s_io
                 PRIVATE
                 CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+                CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE}>
         )
         target_compile_features(clp_s_io PRIVATE cxx_std_20)
         target_include_directories(clp_s_io PUBLIC ../)

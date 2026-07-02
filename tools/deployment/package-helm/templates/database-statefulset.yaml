@@ -45,6 +45,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "root_password"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "database"
+            ) | nindent 10 }}
           ports:
             - name: "database"
               containerPort: 3306
