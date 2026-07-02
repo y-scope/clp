@@ -89,7 +89,6 @@ class SampleDatasetMetadata(BaseModel):
     end_ts: int
     logs_subdir: str
     file_names: list[str]
-    single_match_wildcard_query: str
 
 
 @dataclass

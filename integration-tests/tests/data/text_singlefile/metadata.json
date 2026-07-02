@@ -7,6 +7,5 @@
     "logs_subdir": "logs",
     "file_names": [
         "simple.txt"
-    ],
-    "single_match_wildcard_query": "TEST1"
+    ]
 }
