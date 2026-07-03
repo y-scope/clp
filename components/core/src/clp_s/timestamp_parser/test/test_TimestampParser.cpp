@@ -652,6 +652,121 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"Jan 21 11:56:42 UTC+0130",
                  R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UTC\z{+0130})",
                  1'765'602'000'000'000},
+
+                // Year 1950 (RFC 2822 4-digit year)
+                {"Sun, 01 Jan 1950 00:00:00 UTC",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S UTC)",
+                 -631'152'000'000'000'000},
+                // Year 1969 (RFC 2822 4-digit year)
+                {"Wed, 31 Dec 1969 23:59:59 UTC",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S UTC)",
+                 -1'000'000'000},
+                // Year 2000 (RFC 2822 4-digit year, leap year, Feb 29)
+                {"Tue, 29 Feb 2000 12:00:00 UTC",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S UTC)",
+                 951'825'600'000'000'000},
+                // Year 2038 (Unix epoch 32-bit overflow)
+                {"Tue, 19 Jan 2038 03:14:07 UTC",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S UTC)",
+                 2'147'483'647'000'000'000},
+
+                // Year 1969 (\y 2-digit year)
+                {"01 Jan 69 00:00:00 UTC",
+                 R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\S UTC)",
+                 -31'536'000'000'000'000},
+                // Year 2068 (\y 2-digit year max boundary)
+                {"31 Dec 68 23:59:59 UTC",
+                 R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\S UTC)",
+                 3'124'223'999'000'000'000},
+                // Year 2000 (\y 2-digit year min boundary)
+                {"01 Jan 00 00:00:00 UTC",
+                 R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\S UTC)",
+                 946'684'800'000'000'000},
+
+                // Exhaustive RFC 2822 / 822 Variations (16 variations)
+                {"Sat, 09 Mar 2024 15:04:05 -0500",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \z{-0500})",
+                 1'710'014'645'000'000'000},
+                {"Sat, 09 Mar 2024 15:04 -0500",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \z{-0500})",
+                 1'710'014'640'000'000'000},
+                {"Sat, 09 Mar 24 15:04:05 -0500",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\S \z{-0500})",
+                 1'710'014'645'000'000'000},
+                {"Sat, 09 Mar 24 15:04 -0500",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \z{-0500})",
+                 1'710'014'640'000'000'000},
+                {"Sat,  9 Mar 2024 15:04:05 -0500",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \z{-0500})",
+                 1'710'014'645'000'000'000},
+                {"Sat,  9 Mar 2024 15:04 -0500",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \z{-0500})",
+                 1'710'014'640'000'000'000},
+                {"Sat,  9 Mar 24 15:04:05 -0500",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\S \z{-0500})",
+                 1'710'014'645'000'000'000},
+                {"Sat,  9 Mar 24 15:04 -0500",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \z{-0500})",
+                 1'710'014'640'000'000'000},
+                {"09 Mar 2024 15:04:05 -0500",
+                 R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \z{-0500})",
+                 1'710'014'645'000'000'000},
+                {"09 Mar 2024 15:04 -0500",
+                 R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \z{-0500})",
+                 1'710'014'640'000'000'000},
+                {"09 Mar 24 15:04:05 -0500",
+                 R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\S \z{-0500})",
+                 1'710'014'645'000'000'000},
+                {"09 Mar 24 15:04 -0500",
+                 R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \z{-0500})",
+                 1'710'014'640'000'000'000},
+                {" 9 Mar 2024 15:04:05 -0500",
+                 R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \z{-0500})",
+                 1'710'014'645'000'000'000},
+                {" 9 Mar 2024 15:04 -0500",
+                 R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M \z{-0500})",
+                 1'710'014'640'000'000'000},
+                {" 9 Mar 24 15:04:05 -0500",
+                 R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\S \z{-0500})",
+                 1'710'014'645'000'000'000},
+                {" 9 Mar 24 15:04 -0500",
+                 R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M \z{-0500})",
+                 1'710'014'640'000'000'000},
+
+                // Leap Year
+                {"Sun, 29 Feb 2004 23:59:59 PST",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \o{PST,-0800})",
+                 1'078'127'999'000'000'000},
+
+                // Leap Second
+                {"Sun, 29 Feb 2004 23:59:60 PST",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\J \o{PST,-0800})",
+                 1'078'127'999'000'000'000},
+
+                // Timezone edge cases
+                {"Thu, 15 Oct 2015 10:00:00 -1200",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \z{-1200})",
+                 1'444'946'400'000'000'000},
+                {"Thu, 15 Oct 2015 10:00:00 +1400",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \z{+1400})",
+                 1'444'852'800'000'000'000},
+
+                // DST Spring Forward (1 second apart across DST boundary)
+                {"Sun, 10 Mar 2024 01:59:59 EST",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \o{EST,-0500})",
+                 1'710'053'999'000'000'000},
+                {"Sun, 10 Mar 2024 03:00:00 EDT",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \o{EDT,-0400})",
+                 1'710'054'000'000'000'000},
+
+                // DST Fall Back (1 second apart across DST boundary)
+                {"Sun, 03 Nov 2024 01:59:59 EDT",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \o{EDT,-0400})",
+                 1'730'613'599'000'000'000},
+                {"Sun, 03 Nov 2024 01:00:00 EST",
+                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \o{EST,-0500})",
+                 1'730'613'600'000'000'000},
+
                 {"1895-11-20T21:55:46,010", R"(\Y-\m-\dT\H:\M:\S,\3)", -2'338'769'053'990'000'000},
                 {"2016-12-31T23:59:59,999Z", R"(\Y-\m-\dT\H:\M:\S,\3Z)", 1'483'228'799'999'000'000},
                 {"2016-12-31T23:59:60,999Z", R"(\Y-\m-\dT\H:\M:\J,\3Z)", 1'483'228'799'999'000'000},
@@ -705,6 +820,9 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                     quoted_content,
                     generated_pattern
             )};
+            if (!searched_result.has_value()) {
+                UNSCOPED_INFO("Failed to match pattern for string: " << expected_result.timestamp);
+            }
             REQUIRE(searched_result.has_value());
             // NOLINTBEGIN(bugprone-unchecked-optional-access)
             REQUIRE(expected_result.epoch_timestamp == searched_result.value().first);

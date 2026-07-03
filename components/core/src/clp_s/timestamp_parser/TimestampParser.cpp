@@ -1843,6 +1843,7 @@ auto parse_timestamp(
                     timezone_pattern.append(cUtc);
                     timestamp_idx += cUtc.size();
                     remaining_unparsed_content = remaining_unparsed_content.substr(cUtc.size());
+                    optional_timezone_offset_in_minutes = 0;
                 } else if (remaining_unparsed_content.starts_with(cUt)) {
                     timezone_pattern.append(cUt);
                     timestamp_idx += cUt.size();
