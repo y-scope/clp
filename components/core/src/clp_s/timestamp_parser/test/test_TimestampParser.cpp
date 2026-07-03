@@ -177,6 +177,31 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE(result.has_error());
             REQUIRE(ErrorCode{ErrorCodeEnum::InvalidEscapeSequence} == result.error());
         }
+
+        std::vector<std::string> const invalid_timestamp_pattern_templates{
+                R"(\o{,-0500})",  // Empty timezone name
+                R"(\z{-0500}\o{EST,-0500})",  // Duplicate timezone
+                R"(\z{-0500}\z{-0400})",  // Duplicate timezone
+                R"(\o{EST,-0500}\o{UT,+0000})",  // Duplicate timezone
+                R"(\o{EST})",  // Missing comma
+                R"(\o{})",  // Empty brackets
+                R"(\o{EST,-0500,abc})",  // Extra text after offset
+        };
+        for (auto const& invalid_timestamp_pattern_template : invalid_timestamp_pattern_templates) {
+            auto const result{TimestampPattern::create(invalid_timestamp_pattern_template)};
+            REQUIRE(result.has_error());
+            REQUIRE(ErrorCode{ErrorCodeEnum::InvalidTimestampPattern} == result.error());
+        }
+
+        std::vector<std::string> const invalid_timezone_offset_templates{
+                R"(\o{EST,-abc})",  // Invalid offset format
+                R"(\o{EST,})",  // Missing offset
+        };
+        for (auto const& invalid_timezone_offset_template : invalid_timezone_offset_templates) {
+            auto const result{TimestampPattern::create(invalid_timezone_offset_template)};
+            REQUIRE(result.has_error());
+            REQUIRE(ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset} == result.error());
+        }
     }
 
     SECTION("Escape sequence accepts valid content.") {
