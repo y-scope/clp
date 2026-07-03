@@ -28,7 +28,7 @@ Existing Python services use stdlib loggers whose handlers are configured with s
 ## Rust
 
 Rust HTTP services should initialize `tracing` at process startup using
-[`clp_rust_utils::logging::set_up_logging`][clp-rust-logging] and keep the returned guard alive
+[`clp_rust_utils::logging::set_up_logging`][clp-rust-logging] and keep the returned guards alive
 for the lifetime of the process:
 
 ```rust
