@@ -8,6 +8,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from pydantic import BaseModel
@@ -76,6 +77,22 @@ class IntegrationTestPathConfig:
         return [self.test_data_dir]
 
 
+class EpochMsTimestampFormat(BaseModel):
+    """A timestamp encoded as an integer number of milliseconds since the UNIX epoch."""
+
+    kind: Literal["epoch_ms"]
+
+
+class StrptimeTimestampFormat(BaseModel):
+    """A timestamp encoded as a string parseable by a `datetime.strptime` pattern."""
+
+    kind: Literal["strptime"]
+    pattern: str
+
+
+TimestampFormat = EpochMsTimestampFormat | StrptimeTimestampFormat
+
+
 class SampleDatasetMetadata(BaseModel):
     """
     Metadata for a sample dataset. All `<dataset_name>/metadata.json` files must conform to this
@@ -85,6 +102,7 @@ class SampleDatasetMetadata(BaseModel):
     dataset_name: str
     unstructured: bool
     timestamp_key: str | None
+    timestamp_format: TimestampFormat | None
     begin_ts: int
     end_ts: int
     logs_subdir: str
