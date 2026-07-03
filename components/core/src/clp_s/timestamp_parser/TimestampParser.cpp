@@ -77,6 +77,8 @@ constexpr std::array cPlusMinus
 constexpr std::string_view cUtc{"UTC"};
 constexpr std::string_view cSpace{" "};
 constexpr std::string_view cZulu{"Z"};
+constexpr std::string_view cUt{"UT"};
+constexpr std::string_view cGmt{"GMT"};
 
 struct NamedTimezone {
     std::string_view name;
@@ -84,7 +86,7 @@ struct NamedTimezone {
     int offset_minutes;
 };
 
-constexpr std::array<NamedTimezone, 10> cNamedTimezones
+constexpr std::array<NamedTimezone, 8> cNamedTimezones
         = {{{"EDT", "-0400", -240},
             {"EST", "-0500", -300},
             {"CDT", "-0500", -300},
@@ -92,9 +94,7 @@ constexpr std::array<NamedTimezone, 10> cNamedTimezones
             {"MDT", "-0600", -360},
             {"MST", "-0700", -420},
             {"PDT", "-0700", -420},
-            {"PST", "-0800", -480},
-            {"UT", "+0000", 0},
-            {"GMT", "+0000", 0}}};
+            {"PST", "-0800", -480}}};
 
 constexpr std::array cDefaultDateTimePatterns{
         // RFC 2822 / 822 patterns (16 variations: with or without day of week, with or without
@@ -1843,6 +1843,20 @@ auto parse_timestamp(
                     timezone_pattern.append(cUtc);
                     timestamp_idx += cUtc.size();
                     remaining_unparsed_content = remaining_unparsed_content.substr(cUtc.size());
+                } else if (remaining_unparsed_content.starts_with(cUt)) {
+                    timezone_pattern.append(cUt);
+                    timestamp_idx += cUt.size();
+                    optional_timezone_offset_in_minutes = 0;
+                    cat_sequence_replacements
+                            .emplace_back(pattern_idx - 1, 2ULL, std::move(timezone_pattern));
+                    break;
+                } else if (remaining_unparsed_content.starts_with(cGmt)) {
+                    timezone_pattern.append(cGmt);
+                    timestamp_idx += cGmt.size();
+                    optional_timezone_offset_in_minutes = 0;
+                    cat_sequence_replacements
+                            .emplace_back(pattern_idx - 1, 2ULL, std::move(timezone_pattern));
+                    break;
                 } else {
                     bool matched_named_timezone = false;
                     for (auto const& tz : cNamedTimezones) {

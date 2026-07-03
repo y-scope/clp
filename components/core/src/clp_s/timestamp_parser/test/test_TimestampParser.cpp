@@ -452,8 +452,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {" +04Z", R"(\Z)", R"( \z{+04}Z)"},
                 {" Z", R"(\Z)", R"( Z)"},
                 {"EST", R"(\Z)", R"(\o{EST,-0500})"},
-                {"UT", R"(\Z)", R"(\o{UT,+0000})"},
-                {" GMT", R"(\Z)", R"( \o{GMT,+0000})"}
+                {"UT", R"(\Z)", R"(UT)"},
+                {" GMT", R"(\Z)", R"( GMT)"}
         };
         assert_transformations_are_expected(timezone_transformations);
 
@@ -607,10 +607,10 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                  R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S \o{EST,-0500})",
                  1'789'002'000'000'000},
                 {"Jan 21 11:56:42 UT",
-                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S \o{UT,+0000})",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S UT)",
                  1'771'002'000'000'000},
                 {"Jan 21 11:56:42 GMT",
-                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S \o{GMT,+0000})",
+                 R"(\B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \d \H:\M:\S GMT)",
                  1'771'002'000'000'000},
                 {"Thu, 21 Dec 2000 16:01:07 +0200",
                  R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\S \z{+0200})",
