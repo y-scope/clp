@@ -36,10 +36,8 @@ def verify_search_clp_json(
     results. Verification is performed as follows:
 
     1. The query string from the search action is parsed into a key-value pair.
-    2. The dataset's log entries are gathered into a list of dicts: read directly from the original
-       JSONL files for a structured dataset, or recovered by re-running the search with a match-all
-       query for an unstructured dataset (whose original logs aren't JSON).
-    3. The list of dicts is searched for entries that match the key-value pair.
+    2. The dataset's log entries are loaded into a list of dicts for processing.
+    3. The list of dicts is searched for entries that match or contain the key-value pair.
     4. The found entries are compared against the original search action's output. For a count-style
        search (`--count`), the number of found entries is compared against the reported count;
        otherwise the set of found entries is compared against the set of output logs.
@@ -49,19 +47,16 @@ def verify_search_clp_json(
     :param dataset:
     :return: A `ClpVerificationResult` indicating the success or failure of the verification.
     """
-    # Verify that the action's arguments are of the expected type.
     args = action.args
     if not isinstance(args, SearchArgs):
         err_msg = "Verification expects a 'SearchArgs' action."
         raise TypeError(err_msg)
 
-    # Construct KV-pair from query.
     kv_pair = _construct_kv_pair_from_query(args.query)
 
-    # Convert original logs to list[dict] objects for processing.
     metadata: SampleDatasetMetadata = dataset.metadata
     if metadata.unstructured:
-        # Get the structured version of the unstructured data. Could use log-converter directly.
+        # Use search.sh to get the structured version of the unstructured data.
         supporting_search_args: SearchArgs = SearchArgs(
             script_path=clp_package.path_config.search_path,
             config=clp_package.temp_config_file_path,
@@ -82,12 +77,10 @@ def verify_search_clp_json(
     else:
         all_logs = _load_all_jsonl_logs_from_dataset(dataset)
 
-    # Find entries that match the kv_pair from the original query.
     found_entries: list[dict[str, Any]] = _search_all_logs_for_kv_pair(
         all_logs, kv_pair, args, metadata
     )
 
-    # Compare the found entries with the search action output.
     search_output = action.completed_proc.stdout
     if args.is_count_query:
         expected_count = str(len(found_entries)) + "\n"
@@ -152,7 +145,7 @@ def _strip_surrounding_quotes(text: str) -> str:
     Removes a single pair of matching surrounding quotes (`"` or `'`) from `text`, if present.
 
     :param text:
-    :return: The modified text string.
+    :return: The processed text string.
     """
     if len(text) >= MIN_QUOTED_LENGTH and text[0] == text[-1] and text[0] in ('"', "'"):
         return text[1:-1]
@@ -185,18 +178,14 @@ def _search_all_logs_for_kv_pair(
     metadata: SampleDatasetMetadata,
 ) -> list[dict[str, Any]]:
     """
-    Searches `all_logs` for entries that contain `kv_pair`, then applies the same time-range filter
-    the search applied (`--begin-time`/`--end-time`). Both the key and the value in `kv_pair` may
-    contain `WILDCARD_MULTIMATCH_CHAR`, which matches zero or more characters. Following the
-    semantics of the package's `--ignore-case` flag, `args.ignore_case` makes value matching (but
-    not key matching) case-insensitive. When `args` specifies a time range, `metadata`'s timestamp
-    key and format are used to read and interpret each entry's timestamp.
+    Searches `all_logs` for entries that contain `kv_pair`. The search respects the various
+    constraints posed by the content of `kv_pair`, `args` and `metadata`.
 
     :param all_logs:
     :param kv_pair:
     :param args:
     :param metadata:
-    :return: A list of dicts that contain the `kv_pair` and fall within the search's time range.
+    :return: A list of dicts that contain the `kv_pair` when searched w.r.t. the constraints.
     """
     key, value = kv_pair
     key_regex = _convert_wildcard_to_regex(str(key), ignore_case=False)
@@ -216,8 +205,8 @@ def _search_all_logs_for_kv_pair(
         timestamp_format = metadata.timestamp_format
         if timestamp_key is None or timestamp_format is None:
             pytest.fail(
-                "Time-range search verification requires a structured dataset whose metadata"
-                " defines a top-level 'timestamp_key' and a 'timestamp_format'."
+                "clp-json time-range search verification requires the original dataset's metadata"
+                " to define a top-level 'timestamp_key' and a 'timestamp_format'."
             )
 
         found_entries = _filter_entries_by_time_range(
@@ -257,10 +246,8 @@ def _filter_entries_by_time_range(
 ) -> list[dict[str, Any]]:
     """
     Filters `entries` down to those whose timestamp falls within the inclusive `[begin_ts, end_ts]`
-    range, mirroring the package's `--begin-time`/`--end-time` semantics. `begin_ts` and `end_ts`
-    are epoch-millisecond bounds, either of which may be `None` to leave that end unbounded. Each
-    entry's timestamp is read from the top-level `timestamp_key` and interpreted according to
-    `timestamp_format`.
+    range. Each entry's timestamp is read from the top-level `timestamp_key` and interpreted
+    according to `timestamp_format`.
 
     :param entries:
     :param timestamp_key:
@@ -285,10 +272,8 @@ def _resolve_timestamp_to_ms(
     timestamp_format: TimestampFormat,
 ) -> int:
     """
-    Resolves a log entry's raw timestamp value into epoch milliseconds according to
-    `timestamp_format`. For an `epoch_ms` format, `raw_timestamp` must be an integer number of
-    milliseconds; for a `strptime` format, it must be a string parseable by the format's pattern.
-    `timestamp_key` is only used to contextualize failure messages.
+    Converts a log entry's raw timestamp value into UNIX epoch ms according to `timestamp_format`,
+    if not already given in UNIX epoch ms.
 
     :param raw_timestamp:
     :param timestamp_key:
@@ -298,15 +283,15 @@ def _resolve_timestamp_to_ms(
     if isinstance(timestamp_format, EpochMsTimestampFormat):
         if not isinstance(raw_timestamp, int):
             pytest.fail(
-                f"Log entry timestamp '{raw_timestamp}' under key '{timestamp_key}' is not an"
-                " integer, which the 'epoch_ms' timestamp kind requires."
+                f"Log entry timestamp '{raw_timestamp}' under key '{timestamp_key}' should be an"
+                " integer, but it is not."
             )
         return raw_timestamp
 
     if not isinstance(raw_timestamp, str):
         pytest.fail(
-            f"Log entry timestamp '{raw_timestamp}' under key '{timestamp_key}' is not a string,"
-            " which the 'strptime' timestamp kind requires."
+            f"Log entry timestamp '{raw_timestamp}' under key '{timestamp_key}' should be a string,"
+            " but it is not."
         )
 
     try:

@@ -78,13 +78,13 @@ class IntegrationTestPathConfig:
 
 
 class EpochMsTimestampFormat(BaseModel):
-    """A timestamp encoded as an integer number of milliseconds since the UNIX epoch."""
+    """Indicates a timestamp encoded as an integer number of milliseconds since the UNIX epoch."""
 
     kind: Literal["epoch_ms"]
 
 
 class StrptimeTimestampFormat(BaseModel):
-    """A timestamp encoded as a string parseable by a `datetime.strptime` pattern."""
+    """Indicates a timestamp encoded as a string parseable by a `datetime.strptime` pattern."""
 
     kind: Literal["strptime"]
     pattern: str

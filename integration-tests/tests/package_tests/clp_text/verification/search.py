@@ -14,9 +14,7 @@ from tests.utils.classes import (
     SampleDataset,
     TimestampFormat,
 )
-from tests.utils.utils import (
-    get_binary_path,
-)
+from tests.utils.utils import get_binary_path
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +28,7 @@ def verify_search_clp_text(
     results. Verification is performed as follows:
 
     1. A grep command written with respect to the original search arguments is run on the dataset.
-    2. The grep output lines are filtered by time range when the search specifies one
-       (`--begin-time`/`--end-time`).
-    3. The filtered grep lines are compared against the original search action's output. For a
+    2. The filtered grep lines are compared against the original search action's output. For a
        count-style search (`--count`), the number of matched lines is compared against the reported
        count; otherwise the set of matched lines is compared against the set of output lines.
 
@@ -40,13 +36,11 @@ def verify_search_clp_text(
     :param dataset:
     :return: A `ClpVerificationResult` indicating the success or failure of the verification.
     """
-    # Verify that the action's arguments are of the expected type.
     args = action.args
     if not isinstance(args, SearchArgs):
         err_msg = "Verification expects a 'SearchArgs' action."
         raise TypeError(err_msg)
 
-    # Construct and run grep command.
     grep_action = NonClpAction(cmd=_construct_grep_verification_cmd(args, dataset))
     grep_action.check_returncode(dependent_action=action)
     grep_lines = grep_action.completed_proc.stdout.splitlines()
@@ -57,7 +51,6 @@ def verify_search_clp_text(
             grep_lines, dataset.metadata.timestamp_format, args.begin_ts, args.end_ts
         )
 
-    # Compare the matched grep lines with the search action output.
     search_output = action.completed_proc.stdout
     if args.is_count_query:
         expected_count = str(len(grep_lines)) + "\n"
@@ -125,10 +118,8 @@ def _filter_lines_by_time_range(
 ) -> list[str]:
     """
     Filters `lines` down to those whose leading timestamp falls within the inclusive
-    `[begin_ts, end_ts]` range, mirroring the package's `--begin-time`/`--end-time` semantics.
-    `begin_ts` and `end_ts` are epoch-millisecond bounds, either of which may be `None` to leave
-    that end unbounded. Each line must begin with a whitespace-delimited timestamp token interpreted
-    according to `timestamp_format`.
+    `[begin_ts, end_ts]` range. Each line must begin with a whitespace-delimited timestamp token
+    interpreted according to `timestamp_format`.
 
     :param lines:
     :param timestamp_format:
@@ -138,8 +129,8 @@ def _filter_lines_by_time_range(
     """
     if timestamp_format is None:
         pytest.fail(
-            "clp-text time-range search verification requires the dataset's metadata to define a"
-            " 'timestamp_format'."
+            "clp-text time-range search verification requires the original dataset's metadata to"
+            " define a 'timestamp_format'."
         )
 
     filtered_entries: list[str] = []

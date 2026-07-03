@@ -4,9 +4,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from tests.utils.classes import (
-    CmdArgs,
-)
+from tests.utils.classes import CmdArgs
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +14,8 @@ DEFAULT_COUNT_BY_TIME_INTERVAL = 10
 
 def parse_timestamp_to_epoch_ms(timestamp: str, strptime_pattern: str) -> int:
     """
-    Parses `timestamp` using the `datetime.strptime` pattern `strptime_pattern` into an integer
-    number of milliseconds since the UNIX epoch. A timestamp without an offset in the pattern is
-    interpreted as UTC, while a pattern that captures an offset (e.g. `%z`) is honoured. This is the
-    single strptime-parsing mechanism shared by the clp-json and clp-text time-range verifiers so
-    that both agree on epoch conversion.
+    Parses `timestamp` using `strptime_pattern` into an integer number of milliseconds since the
+    UNIX epoch. A timestamp without an offset in the pattern is interpreted as UTC.
 
     :param timestamp:
     :param strptime_pattern:

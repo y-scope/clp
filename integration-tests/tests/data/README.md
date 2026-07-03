@@ -63,6 +63,9 @@ following rules must be observed:
    | `kind` | `"epoch_ms"` for epoch ms timestamps, or `"strptime"` for formatted strings. |
    | `pattern` | (`strptime` only) The Python [`strptime`][strptime] pattern for the timestamp. |
 
+3. For **structured** datasets: files in the dataset must be `.jsonl`, with only one log record per
+   line.
+
 ## Time-range search verification
 
 Search verification reproduces the package's `--begin-time`/`--end-time` filter by independently
@@ -71,15 +74,14 @@ following restrictions must be observed:
 
 1. `begin_ts` must equal the earliest timestamp present in the dataset, and `end_ts` the latest.
 2. `begin_ts` must be less than or equal to `end_ts`.
-3. For **structured** datasets:
+3. `timestamp_format` must not be `null`.
+4. For **structured** datasets:
    * `timestamp_key` must not be `null`, and must be a *top-level* key. Nested/dotted keys are
      not supported.
-   * `timestamp_format` must not be `null`.
    * Each log in the dataset must contain `timestamp_key`.
-4. For **unstructured** datasets:
-   * `timestamp_format` must not be `null`.
+5. For **unstructured** datasets:
    * Every log line must begin with a single whitespace-delimited timestamp token written in the
-     format described by `timestamp_format`.
+     format described by `timestamp_format.pattern`.
 
 ## Accessing sample datasets within the testing system
 
