@@ -12,6 +12,7 @@
 namespace clp_s {
 class ResultsCacheConnectionError : public TraceableException {
 public:
+    // Constructors
     ResultsCacheConnectionError(ErrorCode error_code, char const* const filename, int line_number)
             : TraceableException{error_code, filename, line_number} {}
 };

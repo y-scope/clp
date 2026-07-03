@@ -287,9 +287,8 @@ private:
 };
 
 /**
- * Output handler that runs a search `Aggregation` and writes its results to an `AggregationSink`.
- * @tparam AggT The concrete aggregator, selected at construction by
- * `make_aggregation_output_handler`.
+ * Output handler that runs an `Aggregation` and writes its results to an `AggregationSink`.
+ * @tparam AggT The type of aggregator to run.
  */
 template <AggregatorReq AggT>
 class AggregationOutputHandler : public search::OutputHandler {
@@ -332,7 +331,7 @@ private:
 };
 
 /**
- * Builds the `AggregationOutputHandler` specialization for `aggregation`'s active alternative.
+ * Creates an output handler that runs the given aggregation.
  * @param aggregation The aggregation to run.
  * @param sink The destination for the aggregation's results.
  * @return The constructed output handler.

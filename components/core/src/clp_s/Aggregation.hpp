@@ -26,27 +26,33 @@ using AggregationValue = std::variant<int64_t, double, std::string>;
 using AggregationResult = std::vector<std::pair<std::string, AggregationValue>>;
 
 /**
- * Requirement for the search aggregator interface.
+ * Requirements a type must satisfy to be used as an aggregator.
  * @tparam AggregatorType The type of the aggregator.
  */
 template <typename AggregatorType>
 concept AggregatorReq
         = requires(AggregatorType aggregator, std::string_view message, epochtime_t timestamp_ms) {
               /**
-               * Folds one matched record into the running aggregate.
+               * Adds a record to the aggregate.
+               * @param message The message in the log event.
+               * @param timestamp_ms The timestamp of the log event.
                */
               { aggregator.add_record(message, timestamp_ms) } -> std::same_as<void>;
 
               /**
-               * @return The aggregate's result documents.
+               * Gets the aggregate's results.
+               * @return The result documents produced by the aggregation.
                */
               { aggregator.get_results() } -> std::same_as<std::vector<AggregationResult>>;
 
               /**
-               * Whether the caller must supply per-record metadata and the marshalled record,
-               * respectively.
+               * Whether the caller must supply per-record metadata.
                */
               { AggregatorType::cNeedsMetadata } -> std::convertible_to<bool>;
+
+              /**
+               * Whether the caller must supply the marshalled record.
+               */
               { AggregatorType::cNeedsMarshalledRecord } -> std::convertible_to<bool>;
           };
 
@@ -128,7 +134,7 @@ private:
 };
 
 /**
- * A search aggregation to perform.
+ * One of the supported aggregations that a search can apply to its matched records.
  */
 using Aggregation = std::variant<CountAggregation, CountByTimeAggregation, MinMaxAggregation>;
 }  // namespace clp_s

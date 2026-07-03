@@ -14,7 +14,7 @@
 
 namespace clp_s {
 /**
- * Consumes a search aggregation's result documents and writes them to a destination.
+ * Consumes an aggregation's result documents and writes them to a destination.
  */
 class AggregationSink {
 public:
@@ -35,13 +35,13 @@ public:
     // Methods
     /**
      * Writes one result document.
-     * @param result
+     * @param result The result document to write.
      */
     virtual auto write(AggregationResult const& result) -> void = 0;
 
     /**
      * Flushes any buffered results.
-     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeSuccess on success or relevant error code on error
      */
     [[nodiscard]] virtual auto finish() -> ErrorCode = 0;
 };
