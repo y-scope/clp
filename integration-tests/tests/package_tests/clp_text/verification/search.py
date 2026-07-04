@@ -167,12 +167,13 @@ def _parse_leading_timestamp_ms(line: str, timestamp_format: TimestampFormat) ->
 
 def _extract_count_from_search_output(search_output: str) -> str:
     """
-    Extracts the count reported by a count-style search.
+    Extracts the total count reported by a count-style search. A count-by-time search reports a
+    separate count for each time bucket, so all per-bucket counts are summed.
 
     :param search_output:
-    :return: The reported count, followed by a newline.
+    :return: The total reported count, followed by a newline.
     """
-    match = re.search(r"count: (\d+)", search_output)
-    if match:
-        return match.group(1) + "\n"
+    matches = re.findall(r"count: (\d+)", search_output)
+    if matches:
+        return str(sum(int(count) for count in matches)) + "\n"
     pytest.fail(f"The search result '{search_output}' wasn't in the correct format.")

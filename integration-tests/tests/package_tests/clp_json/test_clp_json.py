@@ -49,29 +49,12 @@ def test_clp_json_compression_json_multifile(
     json_multifile: SampleDataset,
 ) -> None:
     """
-    Validate that the `clp-json` package successfully compresses the `json-multifile` dataset.
+    Validate that the `clp-json` package successfully compresses the `json_multifile` dataset.
 
     :param clp_package:
     :param json_multifile:
     """
-    metadata: SampleDatasetMetadata = json_multifile.metadata
-    args: CompressArgs = CompressArgs(
-        script_path=clp_package.path_config.compress_path,
-        config=clp_package.temp_config_file_path,
-        dataset=metadata.dataset_name,
-        timestamp_key=metadata.timestamp_key,
-        unstructured=metadata.unstructured,
-        paths=[json_multifile.logs_path],
-    )
-
-    logger.info("Compressing the 'json_multifile' dataset with the 'clp-json' package.")
-    action = ClpAction.from_args(args)
-    result = action.verify_returncode()
-    assert result, result.failure_message
-
-    logger.info("Verifying the compression of the 'json_multifile' dataset.")
-    result = verify_compress_structured_clp_json(action, clp_package, json_multifile)
-    assert result, result.failure_message
+    _compress_structured_dataset(clp_package, json_multifile)
 
 
 @pytest.mark.compression
@@ -81,80 +64,79 @@ def test_clp_json_compression_text_multifile(
     text_multifile: SampleDataset,
 ) -> None:
     """
-    Validate that the `clp-json` package successfully compresses the `text-multifile` dataset as
+    Validate that the `clp-json` package successfully compresses the `text_multifile` dataset as
     unstructured text.
 
     :param clp_package:
     :param text_multifile:
     """
-    metadata: SampleDatasetMetadata = text_multifile.metadata
-    args: CompressArgs = CompressArgs(
-        script_path=clp_package.path_config.compress_path,
-        config=clp_package.temp_config_file_path,
-        dataset=metadata.dataset_name,
-        timestamp_key=metadata.timestamp_key,
-        unstructured=metadata.unstructured,
-        paths=[text_multifile.logs_path],
-    )
-
-    logger.info("Compressing the 'text_multifile' dataset with the 'clp-json' package.")
-    action = ClpAction.from_args(args)
-    result = action.verify_returncode()
-    assert result, result.failure_message
-
-    logger.info("Verifying the compression of the 'text_multifile' dataset.")
-    result = verify_compress_unstructured_clp_json(action, clp_package, text_multifile)
-    assert result, result.failure_message
+    _compress_unstructured_dataset(clp_package, text_multifile)
 
 
 @pytest.mark.search
 @pytest.mark.usefixtures("clear_package_archives")
-def test_clp_json_search_json_multifile(
+def test_clp_json_search_basic_json_multifile(
     clp_package: ClpPackage,
     json_multifile: SampleDataset,
 ) -> None:
     """
-    Validate that the `clp-json` package successfully searches the `json-multifile` dataset.
+    Validate that the `clp-json` package performs a basic search on the `json_multifile` dataset.
 
     :param clp_package:
     :param json_multifile:
     """
-    metadata: SampleDatasetMetadata = json_multifile.metadata
-    compress_args: CompressArgs = CompressArgs(
-        script_path=clp_package.path_config.compress_path,
-        config=clp_package.temp_config_file_path,
-        dataset=metadata.dataset_name,
-        timestamp_key=metadata.timestamp_key,
-        unstructured=metadata.unstructured,
-        paths=[json_multifile.logs_path],
-    )
+    _compress_structured_dataset(clp_package, json_multifile)
+    _search_basic(clp_package, json_multifile, 'detail: "*maximum dynamic*"')
 
-    logger.info("Compressing the 'json_multifile' dataset with the 'clp-json' package.")
-    compress_action = ClpAction.from_args(compress_args)
-    compress_result = compress_action.verify_returncode()
-    assert compress_result, compress_result.failure_message
 
-    logger.info("Verifying the compression of the 'json_multifile' dataset.")
-    compress_result = verify_compress_structured_clp_json(
-        compress_action, clp_package, json_multifile
-    )
-    assert compress_result, compress_result.failure_message
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_ignore_case_json_multifile(
+    clp_package: ClpPackage,
+    json_multifile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a case-insensitive search on the `json_multifile`
+    dataset.
 
-    search_args: SearchArgs = SearchArgs(
-        script_path=clp_package.path_config.search_path,
-        config=clp_package.temp_config_file_path,
-        query='detail: "*maximum dynamic*"',
-        dataset=metadata.dataset_name,
-    )
+    :param clp_package:
+    :param json_multifile:
+    """
+    _compress_structured_dataset(clp_package, json_multifile)
+    _search_ignore_case(clp_package, json_multifile, 'detail: "*mAxImUm DyNaMiC*"')
 
-    logger.info("Searching the 'json_multifile' dataset with the 'clp-json' package.")
-    search_action = ClpAction.from_args(search_args)
-    search_result = search_action.verify_returncode()
-    assert search_result, search_result.failure_message
 
-    logger.info("Verifying the search results for the 'json_multifile' dataset.")
-    search_result = verify_search_clp_json(search_action, clp_package, json_multifile)
-    assert search_result, search_result.failure_message
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_count_results_json_multifile(
+    clp_package: ClpPackage,
+    json_multifile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a count search on the `json_multifile` dataset.
+
+    :param clp_package:
+    :param json_multifile:
+    """
+    _compress_structured_dataset(clp_package, json_multifile)
+    _search_count_results(clp_package, json_multifile, 'detail: "*maximum dynamic*"')
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_count_by_time_json_multifile(
+    clp_package: ClpPackage,
+    json_multifile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a count-by-time search on the `json_multifile`
+    dataset.
+
+    :param clp_package:
+    :param json_multifile:
+    """
+    _compress_structured_dataset(clp_package, json_multifile)
+    _search_count_by_time(clp_package, json_multifile, 'mission: "STS-135"', 10)
 
 
 @pytest.mark.search
@@ -165,97 +147,228 @@ def test_clp_json_search_time_range_json_multifile(
 ) -> None:
     """
     Validate that the `clp-json` package honours `--begin-time`/`--end-time` when searching the
-    `json-multifile` dataset. The time range is a strict sub-range of the dataset's span
+    `json_multifile` dataset. The time range is a strict sub-range of the dataset's span
     (`[begin_ts + 1, end_ts - 1]`), which is guaranteed to exclude the earliest and latest records.
 
     :param clp_package:
     :param json_multifile:
     """
+    _compress_structured_dataset(clp_package, json_multifile)
     metadata: SampleDatasetMetadata = json_multifile.metadata
-    compress_args: CompressArgs = CompressArgs(
-        script_path=clp_package.path_config.compress_path,
-        config=clp_package.temp_config_file_path,
-        dataset=metadata.dataset_name,
-        timestamp_key=metadata.timestamp_key,
-        unstructured=metadata.unstructured,
-        paths=[json_multifile.logs_path],
-    )
-
-    logger.info("Compressing the 'json_multifile' dataset with the 'clp-json' package.")
-    compress_action = ClpAction.from_args(compress_args)
-    compress_result = compress_action.verify_returncode()
-    assert compress_result, compress_result.failure_message
-
-    logger.info("Verifying the compression of the 'json_multifile' dataset.")
-    compress_result = verify_compress_structured_clp_json(
-        compress_action, clp_package, json_multifile
-    )
-    assert compress_result, compress_result.failure_message
-
-    search_args: SearchArgs = SearchArgs(
-        script_path=clp_package.path_config.search_path,
-        config=clp_package.temp_config_file_path,
-        query='mission: "STS-135"',
-        dataset=metadata.dataset_name,
-        begin_ts=metadata.begin_ts + 1,
-        end_ts=metadata.end_ts - 1,
-    )
-
-    logger.info(
-        "Searching the 'json_multifile' dataset over a time range with the 'clp-json' package."
-    )
-    search_action = ClpAction.from_args(search_args)
-    search_result = search_action.verify_returncode()
-    assert search_result, search_result.failure_message
-
-    logger.info("Verifying the time-range search results for the 'json_multifile' dataset.")
-    search_result = verify_search_clp_json(search_action, clp_package, json_multifile)
-    assert search_result, search_result.failure_message
+    begin_ts = metadata.begin_ts + 1
+    end_ts = metadata.end_ts - 1
+    _search_time_range(clp_package, json_multifile, 'mission: "STS-135"', begin_ts, end_ts)
 
 
 @pytest.mark.search
 @pytest.mark.usefixtures("clear_package_archives")
-def test_clp_json_search_text_multifile(
+def test_clp_json_search_basic_text_multifile(
     clp_package: ClpPackage,
     text_multifile: SampleDataset,
 ) -> None:
     """
-    Validate that the `clp-json` package successfully searches the `text-multifile` dataset.
+    Validate that the `clp-json` package performs a basic search on the `text_multifile` dataset.
 
     :param clp_package:
     :param text_multifile:
     """
+    _compress_unstructured_dataset(clp_package, text_multifile)
+    _search_basic(clp_package, text_multifile, "*Saturn*")
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_ignore_case_text_multifile(
+    clp_package: ClpPackage,
+    text_multifile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a case-insensitive search on the `text_multifile`
+    dataset.
+
+    :param clp_package:
+    :param text_multifile:
+    """
+    _compress_unstructured_dataset(clp_package, text_multifile)
+    _search_ignore_case(clp_package, text_multifile, "*sAtUrN*")
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_count_results_text_multifile(
+    clp_package: ClpPackage,
+    text_multifile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a count search on the `text_multifile` dataset.
+
+    :param clp_package:
+    :param text_multifile:
+    """
+    _compress_unstructured_dataset(clp_package, text_multifile)
+    _search_count_results(clp_package, text_multifile, "*apollo-17*")
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_count_by_time_text_multifile(
+    clp_package: ClpPackage,
+    text_multifile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a count-by-time search on the `text_multifile`
+    dataset.
+
+    :param clp_package:
+    :param text_multifile:
+    """
+    _compress_unstructured_dataset(clp_package, text_multifile)
+    _search_count_by_time(clp_package, text_multifile, "*apollo-17*", 10)
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_time_range_text_multifile(
+    clp_package: ClpPackage,
+    text_multifile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package honours `--begin-time`/`--end-time` when searching the
+    `text_multifile` dataset. The time range is a strict sub-range of the dataset's span
+    (`[begin_ts + 1, end_ts - 1]`), which is guaranteed to exclude the earliest and latest records.
+
+    :param clp_package:
+    :param text_multifile:
+    """
+    _compress_unstructured_dataset(clp_package, text_multifile)
     metadata: SampleDatasetMetadata = text_multifile.metadata
-    args: CompressArgs = CompressArgs(
+    begin_ts = metadata.begin_ts + 1
+    end_ts = metadata.end_ts - 1
+    _search_time_range(clp_package, text_multifile, "*", begin_ts, end_ts)
+
+
+def _compress_structured_dataset(clp_package: ClpPackage, dataset: SampleDataset) -> None:
+    action = _run_compress(clp_package, dataset)
+
+    logger.info("Verifying the compression of the '%s' dataset.", dataset.metadata.dataset_name)
+    result = verify_compress_structured_clp_json(action, clp_package, dataset)
+    assert result, result.failure_message
+
+
+def _compress_unstructured_dataset(clp_package: ClpPackage, dataset: SampleDataset) -> None:
+    action = _run_compress(clp_package, dataset)
+
+    logger.info("Verifying the compression of the '%s' dataset.", dataset.metadata.dataset_name)
+    result = verify_compress_unstructured_clp_json(action, clp_package, dataset)
+    assert result, result.failure_message
+
+
+def _search_basic(clp_package: ClpPackage, dataset: SampleDataset, query: str) -> None:
+    logger.info("Performing BASIC search on the '%s' dataset.", dataset.metadata.dataset_name)
+    _run_search(clp_package, dataset, query)
+
+
+def _search_ignore_case(clp_package: ClpPackage, dataset: SampleDataset, query: str) -> None:
+    logger.info("Performing IGNORE-CASE search on the '%s' dataset.", dataset.metadata.dataset_name)
+    _run_search(clp_package, dataset, query, ignore_case=True)
+
+
+def _search_count_results(clp_package: ClpPackage, dataset: SampleDataset, query: str) -> None:
+    logger.info("Performing COUNT search on the '%s' dataset.", dataset.metadata.dataset_name)
+    _run_search(clp_package, dataset, query, count=True)
+
+
+def _search_count_by_time(
+    clp_package: ClpPackage, dataset: SampleDataset, query: str, time_interval: int
+) -> None:
+    logger.info(
+        "Performing COUNT-BY-TIME search on the '%s' dataset.", dataset.metadata.dataset_name
+    )
+    _run_search(clp_package, dataset, query, count_by_time=time_interval)
+
+
+def _search_time_range(
+    clp_package: ClpPackage,
+    dataset: SampleDataset,
+    query: str,
+    begin_ts: int | None,
+    end_ts: int | None,
+) -> None:
+    logger.info("Performing TIME-RANGE search on the '%s' dataset.", dataset.metadata.dataset_name)
+    _run_search(clp_package, dataset, query, begin_ts=begin_ts, end_ts=end_ts)
+
+
+def _run_compress(clp_package: ClpPackage, dataset: SampleDataset) -> ClpAction:
+    """
+    Compresses `dataset` with the `clp-json` package and verifies the action's exit code. This is
+    the mode-agnostic mechanism shared by the module's compression helpers; the caller is
+    responsible for verifying the compressed output.
+
+    :param clp_package:
+    :param dataset:
+    :return: The completed compression action, ready to be passed to a verification helper.
+    """
+    metadata: SampleDatasetMetadata = dataset.metadata
+    args = CompressArgs(
         script_path=clp_package.path_config.compress_path,
         config=clp_package.temp_config_file_path,
         dataset=metadata.dataset_name,
         timestamp_key=metadata.timestamp_key,
         unstructured=metadata.unstructured,
-        paths=[text_multifile.logs_path],
+        paths=[dataset.logs_path],
     )
 
-    logger.info("Compressing the 'text_multifile' dataset with the 'clp-json' package.")
+    logger.info("Compressing the '%s' dataset with the 'clp-json' package.", metadata.dataset_name)
     action = ClpAction.from_args(args)
     result = action.verify_returncode()
     assert result, result.failure_message
 
-    logger.info("Verifying the compression of the 'text_multifile' dataset.")
-    result = verify_compress_unstructured_clp_json(action, clp_package, text_multifile)
-    assert result, result.failure_message
+    return action
 
-    search_args: SearchArgs = SearchArgs(
+
+def _run_search(  # noqa: PLR0913
+    clp_package: ClpPackage,
+    dataset: SampleDataset,
+    query: str,
+    *,
+    ignore_case: bool = False,
+    count: bool = False,
+    count_by_time: int | None = None,
+    begin_ts: int | None = None,
+    end_ts: int | None = None,
+) -> None:
+    """
+    Searches `dataset` with the `clp-json` package for `query` and verifies both the action's exit
+    code and its output. This is the mode-agnostic mechanism shared by the module's search helpers;
+    the caller selects the search variant via the keyword-only flags and logs the variant being
+    performed.
+
+    :param clp_package:
+    :param dataset:
+    :param query:
+    :param ignore_case:
+    :param count:
+    :param count_by_time:
+    :param begin_ts:
+    :param end_ts:
+    """
+    metadata: SampleDatasetMetadata = dataset.metadata
+    args = SearchArgs(
         script_path=clp_package.path_config.search_path,
         config=clp_package.temp_config_file_path,
-        query="*Saturn*",
+        query=query,
         dataset=metadata.dataset_name,
+        ignore_case=ignore_case,
+        count=count,
+        count_by_time=count_by_time,
+        begin_ts=begin_ts,
+        end_ts=end_ts,
     )
 
-    logger.info("Searching the 'text_multifile' dataset with the 'clp-json' package.")
-    search_action = ClpAction.from_args(search_args)
-    search_result = search_action.verify_returncode()
-    assert search_result, search_result.failure_message
+    action = ClpAction.from_args(args)
+    result = action.verify_returncode()
+    assert result, result.failure_message
 
-    logger.info("Verifying the search results for the 'text_multifile' dataset.")
-    search_result = verify_search_clp_json(search_action, clp_package, text_multifile)
-    assert search_result, search_result.failure_message
+    logger.info("Verifying the search results on the '%s' dataset.", metadata.dataset_name)
+    verification = verify_search_clp_json(action, clp_package, dataset)
+    assert verification, verification.failure_message

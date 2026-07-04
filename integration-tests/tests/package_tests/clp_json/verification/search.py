@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 WILDCARD_MULTIMATCH_CHAR = "*"
 KV_DELIMITER_COLON = ":"
 MIN_QUOTED_LENGTH = 2
+UNSTRUCTURED_TIMESTAMP_KEY = "timestamp"
 
 
 def verify_search_clp_json(
@@ -201,13 +202,13 @@ def _search_all_logs_for_kv_pair(
 
     # Filter the found entries if a time-range filter was used in the original query.
     if args.begin_ts is not None or args.end_ts is not None:
-        timestamp_key = metadata.timestamp_key
         timestamp_format = metadata.timestamp_format
-        if timestamp_key is None or timestamp_format is None:
+        if timestamp_format is None:
             pytest.fail(
                 "clp-json time-range search verification requires the original dataset's metadata"
-                " to define a top-level 'timestamp_key' and a 'timestamp_format'."
+                " to define a 'timestamp_format'."
             )
+        timestamp_key = _resolve_timestamp_key(metadata)
 
         found_entries = _filter_entries_by_time_range(
             found_entries,
@@ -218,6 +219,28 @@ def _search_all_logs_for_kv_pair(
         )
 
     return found_entries
+
+
+def _resolve_timestamp_key(metadata: SampleDatasetMetadata) -> str:
+    """
+    Resolves the top-level key under which each entry's timestamp is stored in the clp-json
+    structured representation. Unstructured logs are assigned the `UNSTRUCTURED_TIMESTAMP_KEY` key
+    when compressed with clp-json, whereas structured datasets carry the `timestamp_key` declared
+    in their metadata.
+
+    :param metadata:
+    :return: The top-level timestamp key.
+    """
+    if metadata.unstructured:
+        return UNSTRUCTURED_TIMESTAMP_KEY
+
+    if metadata.timestamp_key is None:
+        pytest.fail(
+            "clp-json time-range search verification of a structured dataset requires the original"
+            " dataset's metadata to define a top-level 'timestamp_key'."
+        )
+
+    return metadata.timestamp_key
 
 
 def _convert_wildcard_to_regex(pattern: str, ignore_case: bool) -> re.Pattern[str]:
@@ -305,14 +328,15 @@ def _resolve_timestamp_to_ms(
 
 def _extract_count_from_search_output(search_output: str) -> str:
     """
-    Extracts the count reported by a count-style search.
+    Extracts the total count reported by a count-style search. A count-by-time search reports a
+    separate count for each time bucket, so all per-bucket counts are summed.
 
     :param search_output:
-    :return: The reported count, followed by a newline.
+    :return: The total reported count, followed by a newline.
     """
-    match = re.search(r"count: (\d+)", search_output)
-    if match:
-        return match.group(1) + "\n"
+    matches = re.findall(r"count: (\d+)", search_output)
+    if matches:
+        return str(sum(int(count) for count in matches)) + "\n"
     pytest.fail(f"The search result '{search_output}' wasn't in the correct format.")
 
 
