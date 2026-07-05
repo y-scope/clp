@@ -140,11 +140,12 @@ public:
             };
             for (size_t bit_idx{}; bit_idx < max_bit; ++bit_idx) {
                 auto const current_bit{static_cast<BitmapComponentType>(1) << bit_idx};
-                if (0 != (current_component & current_bit)) {
-                    auto const current_idx{bit_idx + (cNumBitsPerComponent * component_idx)};
-                    if (YSTDLIB_ERROR_HANDLING_TRYX(set_bit_visitor(current_idx))) {
-                        new_component |= current_bit;
-                    }
+                if (0 == (current_component & current_bit)) {
+                    continue;
+                }
+                auto const current_idx{bit_idx + (cNumBitsPerComponent * component_idx)};
+                if (YSTDLIB_ERROR_HANDLING_TRYX(set_bit_visitor(current_idx))) {
+                    new_component |= current_bit;
                 }
             }
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
