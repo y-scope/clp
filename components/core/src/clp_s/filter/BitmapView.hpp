@@ -173,7 +173,7 @@ private:
 
         auto const component_idx{bit_idx / cNumBitsPerComponent};
         auto const bit_offset{bit_idx % cNumBitsPerComponent};
-        auto const bit_mask{static_cast<BitmapComponentType>(1) << bit_offset};
+        BitmapComponentType const bit_mask{static_cast<BitmapComponentType>(1) << bit_offset};
         return {component_idx, bit_mask};
     }
 
