@@ -247,6 +247,72 @@ def test_clp_json_search_time_range_text_multifile(
     _search_time_range(clp_package, text_multifile, "*", begin_ts, end_ts)
 
 
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_basic_text_singlefile(
+    clp_package: ClpPackage,
+    text_singlefile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a basic search on the `text_singlefile` dataset.
+
+    :param clp_package:
+    :param text_singlefile:
+    """
+    _compress_unstructured_dataset(clp_package, text_singlefile)
+    _search_basic(clp_package, text_singlefile, "*TEST1*")
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_ignore_case_text_singlefile(
+    clp_package: ClpPackage,
+    text_singlefile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a case-insensitive search on the
+    `text_singlefile` dataset.
+
+    :param clp_package:
+    :param text_singlefile:
+    """
+    _compress_unstructured_dataset(clp_package, text_singlefile)
+    _search_ignore_case(clp_package, text_singlefile, "*tEsT1*")
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_count_results_text_singlefile(
+    clp_package: ClpPackage,
+    text_singlefile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a count search on the `text_singlefile` dataset.
+
+    :param clp_package:
+    :param text_singlefile:
+    """
+    _compress_unstructured_dataset(clp_package, text_singlefile)
+    _search_count_results(clp_package, text_singlefile, "*TEST*")
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search_count_by_time_text_singlefile(
+    clp_package: ClpPackage,
+    text_singlefile: SampleDataset,
+) -> None:
+    """
+    Validate that the `clp-json` package performs a count-by-time search on the `text_singlefile`
+    dataset.
+
+    :param clp_package:
+    :param text_singlefile:
+    """
+    _compress_unstructured_dataset(clp_package, text_singlefile)
+    _search_count_by_time(clp_package, text_singlefile, "*TEST*", 10)
+
+
 def _compress_structured_dataset(clp_package: ClpPackage, dataset: SampleDataset) -> None:
     action = _run_compress(clp_package, dataset)
 
