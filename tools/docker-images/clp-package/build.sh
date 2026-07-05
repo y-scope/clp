@@ -36,6 +36,15 @@ build_cmd=(
     --file "${script_dir}/Dockerfile"
 )
 
+ubuntu_version_codename="jammy"
+if [[ -f /etc/os-release ]]; then
+    host_codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+    if [[ -n "$host_codename" ]]; then
+        ubuntu_version_codename="$host_codename"
+    fi
+fi
+build_cmd+=(--build-arg "UBUNTU_VERSION_CODENAME=${ubuntu_version_codename}")
+
 if command -v git >/dev/null && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null;
 then
     build_cmd+=(
@@ -50,7 +59,10 @@ if [[ -s "$temp_iid_file" ]]; then
     new_image_id="$(<"$temp_iid_file")"
     echo "$new_image_id" > "$iid_file"
 
-    user="${USER:-$(id -un 2>/dev/null || whoami 2>/dev/null || echo unknown)}"
+    user="${USER:-$(whoami 2>/dev/null)}" \
+        || user=$(id -un 2>/dev/null) \
+        || user=$(id -u 2>/dev/null) \
+        || user="unknown";
     short_id="${new_image_id#sha256:}"
     short_id="${short_id:0:4}"
     docker tag "$new_image_id" "clp-package:dev-${user}-${short_id}"

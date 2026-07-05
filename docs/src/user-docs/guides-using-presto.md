@@ -96,9 +96,10 @@ Once the pods are ready, you can [query your logs through Presto](#querying-your
 using CLP's Web UI.
 
 :::{note}
-When using Kubernetes, Presto worker scheduling can be configured using the `prestoWorker.scheduling`
-key in Helm values. See the [worker scheduling][k8s-scheduling] section of the Kubernetes deployment
-guide for details.
+When using Kubernetes, Presto worker scheduling can be configured using the
+`scheduling.prestoWorker` key in Helm values. Presto coordinator scheduling uses
+`scheduling.prestoCoordinator`. See the [component scheduling][k8s-scheduling] section of the
+Kubernetes deployment guide for details.
 :::
 
 ## Docker Compose
@@ -124,11 +125,10 @@ Using Presto with CLP via Docker Compose requires:
    but don't start the package just yet.
 2. Before starting the package, update the package's config file (`etc/clp-config.yaml`) as follows:
 
-    * Set the `package.query_engine` key to `"presto"`.
+    * Set the `webui.query_engine` key to `"presto"`.
 
       ```yaml
-      package:
-        storage_engine: "clp-s"
+      webui:
         query_engine: "presto"
       ```
 
@@ -144,6 +144,16 @@ Using Presto with CLP via Docker Compose requires:
       #
       #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
         retention_period: null
+      ```
+
+    * Optional: Disable the native query pipeline to save resources. Note that the API server depends on the native
+      query pipeline, so it must also be disabled altogether.
+
+      ```yaml
+      api_server: null
+      query_scheduler: null
+      query_worker: null
+      reducer: null
       ```
 
     * Update the `presto` key with the host and port of the Presto cluster. If you follow the
@@ -317,7 +327,7 @@ These limitations will be addressed in a future release of the Presto integratio
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
 [k8s-deployment]: guides-k8s-deployment.md
-[k8s-scheduling]: guides-k8s-deployment.md#worker-scheduling
+[k8s-scheduling]: guides-k8s-deployment.md#component-scheduling
 [postgresql]: https://zenodo.org/records/10516401
 [Presto]: https://prestodb.io/
 [y-scope/presto#8]: https://github.com/y-scope/presto/issues/8

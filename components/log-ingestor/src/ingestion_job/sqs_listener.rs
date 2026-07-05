@@ -11,6 +11,7 @@ use clp_rust_utils::{
     s3::ObjectMetadata,
     sqs::event::{Record, S3},
 };
+use non_empty_string::NonEmptyString;
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 
@@ -102,6 +103,7 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + 
     /// * Forwards the following `aws_sdk_sqs` methods' return values on failure:
     ///   * [`DeleteMessageBatchFluentBuilder::send`]
     ///   * [`DeleteMessageBatchRequestEntryBuilder::build`]
+    /// * Forwards [`Self::extract_object_metadata`]'s return values on failure.
     /// * Forwards [`SqsListenerState::ingest`]'s return values on failure.
     async fn process_sqs_response(&self, response: ReceiveMessageOutput) -> Result<bool> {
         let Some(messages) = response.messages else {
@@ -183,6 +185,9 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + 
     /// Extracts S3 object metadata from the given SQS record if it corresponds to a relevant
     /// object.
     ///
+    /// The object key in an S3 event notification is URL-encoded (e.g., spaces are encoded as `+`).
+    /// It is decoded before being matched against the listener's configuration and returned.
+    ///
     /// # Returns
     ///
     /// * `Some(ObjectMetadata)` if the record corresponds to a relevant object.
@@ -190,16 +195,30 @@ impl<SqsClientManager: AwsClientManagerType<Client>, State: IngestionJobState + 
     ///   * The event is not an object creation event.
     ///   * The bucket name does not match the listener's configuration.
     ///   * [`Self::is_relevant_object`] evaluates to `false`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the decoded key is empty after URL decoding. This should be unreachable at runtime
+    /// since the decoding result of a non-empty string should always be a non-empty string.
     fn extract_object_metadata(&self, record: Record) -> Option<ObjectMetadata> {
         if !record.event_name.starts_with("ObjectCreated:")
             || self.config.get().base.bucket_name != record.s3.bucket.name.as_str()
-            || !self.is_relevant_object(record.s3.object.key.as_str())
         {
             return None;
         }
+
+        let (decoded_key, _) =
+            url::form_urlencoded::parse(record.s3.object.key.as_bytes()).next()?;
+        let key =
+            NonEmptyString::new(decoded_key.into_owned()).expect("decoded key must be non-empty");
+
+        if !self.is_relevant_object(key.as_str()) {
+            return None;
+        }
+
         Some(ObjectMetadata {
             bucket: record.s3.bucket.name,
-            key: record.s3.object.key,
+            key,
             size: record.s3.object.size,
         })
     }

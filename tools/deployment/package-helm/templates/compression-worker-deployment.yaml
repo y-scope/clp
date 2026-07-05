@@ -6,7 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "compression-worker"
 spec:
-  replicas: {{ .Values.compressionWorker.replicas }}
+  replicas: {{ .Values.scheduling.compressionWorker.replicas }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
@@ -25,9 +25,12 @@ spec:
       terminationGracePeriodSeconds: 60
       containers:
         - name: "compression-worker"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            - name: "OTEL_METRIC_EXPORT_INTERVAL"
+              value: {{ .Values.clpConfig.compression_worker.telemetry_update_interval_ms | quote }}
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
                 "root" .
@@ -41,10 +44,14 @@ spec:
               value: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
             - name: "CLP_LOGS_DIR"
               value: "/var/log/compression_worker"
-            - name: "CLP_WORKER_LOG_PATH"
-              value: "/dev/stdout"
+            - name: "OTEL_SERVICE_NAME"
+              value: "compression-worker"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "compressionWorker"
+            ) | nindent 10 }}
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-worker"
@@ -73,7 +80,7 @@ spec:
               ) | quote }}
               mountPath: "/var/data/staged-archives"
             {{- end }}
-            {{- if .Values.clpConfig.aws_config_directory }}
+            {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.logs_input.type "fs" }}
@@ -84,10 +91,13 @@ spec:
             "/opt/clp/lib/python3/site-packages/bin/celery",
             "-A", "job_orchestration.executor.compress",
             "worker",
-            "--concurrency", "{{ .Values.workerConcurrency }}",
+            "--concurrency", "{{ include "clp.schedulingSlotsPerPod" (dict
+              "root" .
+              "component" "compressionWorker"
+            ) }}",
             "--loglevel", "WARNING",
             "-Q", "compression",
-            "-n", "compression-worker"
+            "-n", "compression-worker@%h"
           ]
       volumes:
         - name: {{ include "clp.volumeName" (dict
@@ -116,7 +126,7 @@ spec:
           ) | quote }}
           emptyDir: {}
         {{- end }}
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}

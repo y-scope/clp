@@ -29,11 +29,13 @@ jobs:
 
       - name: "Check if the generated code is the latest"
         shell: "bash"
-        run:
-          |
-          git status --porcelain \
-            docs/src/_static/generated \
-            docs/src/_static/generated \
-            | grep . > /dev/null \
-              && exit 1 \
-              || exit 0
+        run: |-
+          stale_files="$(git status --porcelain docs/src/_static/generated)"
+          if [[ -n "${stale_files}" ]]; then
+            echo >&2 "ERROR: The following generated files are out of date:"
+            echo >&2 "${stale_files}"
+            echo >&2 ""
+            echo >&2 "Please run 'task codegen:openapi' locally and commit the updated files."
+            git diff >&2 docs/src/_static/generated
+            exit 1
+          fi

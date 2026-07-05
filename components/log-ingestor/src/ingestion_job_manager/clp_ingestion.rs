@@ -422,6 +422,7 @@ impl ClpDbIngestionConnector {
             db_pool: self.db_pool.clone(),
         };
         let base_config = config.as_base_config();
+        let buffer_config = config.as_buffer_config();
 
         let submitter = CompressionJobSubmitter::new(
             compression_state.clone(),
@@ -431,9 +432,9 @@ impl ClpDbIngestionConnector {
         );
 
         let listener = Listener::spawn(
-            Buffer::new(submitter, base_config.buffer_config.flush_threshold_bytes),
-            Duration::from_secs(base_config.buffer_config.timeout_sec),
-            base_config.buffer_config.channel_capacity,
+            Buffer::new(submitter, buffer_config.flush_threshold_bytes),
+            Duration::from_secs(buffer_config.timeout_sec),
+            buffer_config.channel_capacity,
         )?;
         let ingestion_state = ClpIngestionState {
             job_id,
@@ -818,6 +819,10 @@ impl ClpIngestionState {
                     size: object.size,
                 });
             }
+            crate::telemetry::record_s3_ingestion(
+                chunk.iter().map(|o| o.size).sum(),
+                chunk.len() as u64,
+            );
         }
 
         Ok(buffer_entries)

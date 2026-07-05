@@ -49,7 +49,8 @@ rpm_version="${PKG_VERSION/-/\~}"
 
 # --- Bundle binaries and libraries --------------------------------------------
 
-STAGING_DIR="${staging}" \
+DESTDIR="${staging}" \
+PREFIX=/usr \
 BIN_DIR="${BIN_DIR}" \
     "${script_dir}/../common/bundle-libs.sh"
 

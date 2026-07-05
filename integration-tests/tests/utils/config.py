@@ -1,21 +1,12 @@
 """Define all python classes used in `integration-tests`."""
 
-import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 
-import yaml
-from clp_py_utils.clp_config import (
-    CLP_DEFAULT_LOG_DIRECTORY_PATH,
-    CLP_SHARED_CONFIG_FILENAME,
-    ClpConfig,
-)
-
+from tests.utils.classes import IntegrationTestPathConfig
 from tests.utils.utils import (
-    clear_directory,
     remove_path,
     validate_dir_exists,
-    validate_file_exists,
 )
 
 
@@ -61,268 +52,10 @@ class ClpCorePathConfig:
         """:return: The absolute path to the core binary `clp-s`."""
         return self.clp_core_bins_dir / "clp-s"
 
-
-@dataclass(frozen=True)
-class PackagePathConfig:
-    """Path configuration for the CLP package."""
-
-    #: Root directory containing all CLP package contents.
-    clp_package_dir: Path
-
-    #: Root directory where all package test scripts and data are stored.
-    package_test_scripts_dir: Path
-
-    #: Root directory for package tests output.
-    test_root_dir: InitVar[Path]
-
-    #: Directory to store temporary package config files.
-    temp_config_dir: Path = field(init=False, repr=True)
-
-    #: Directory where decompressed logs will be stored.
-    package_decompression_dir: Path = field(init=False, repr=True)
-
-    #: Directory where the CLP package writes logs.
-    clp_log_dir: Path = field(init=False, repr=True)
-
-    def __post_init__(self, test_root_dir: Path) -> None:
-        """Validates init values and initializes attributes."""
-        # Validate that the CLP package directory exists and contains required directories.
-        clp_package_dir = self.clp_package_dir
-        validate_dir_exists(clp_package_dir)
-
-        required_dirs = ["etc", "sbin"]
-        missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
-        if len(missing_dirs) > 0:
-            err_msg = (
-                f"CLP package at {clp_package_dir} is incomplete."
-                f" Missing directories: {', '.join(missing_dirs)}"
-            )
-            raise RuntimeError(err_msg)
-
-        # Validate directory for package test scripts.
-        validate_dir_exists(self.package_test_scripts_dir)
-
-        # Initialize directory for package test output.
-        validate_dir_exists(test_root_dir)
-        object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
-        object.__setattr__(
-            self, "package_decompression_dir", test_root_dir / "package-decompressed-logs"
-        )
-
-        # Initialize log directory for the package.
-        object.__setattr__(
-            self,
-            "clp_log_dir",
-            clp_package_dir / CLP_DEFAULT_LOG_DIRECTORY_PATH,
-        )
-
-        # Create directories if they do not already exist.
-        self.temp_config_dir.mkdir(parents=True, exist_ok=True)
-        self.clp_log_dir.mkdir(parents=True, exist_ok=True)
-
     @property
-    def start_script_path(self) -> Path:
-        """:return: The absolute path to the package start script."""
-        return self.clp_package_dir / "sbin" / "start-clp.sh"
-
-    @property
-    def stop_script_path(self) -> Path:
-        """:return: The absolute path to the package stop script."""
-        return self.clp_package_dir / "sbin" / "stop-clp.sh"
-
-    @property
-    def compress_script_path(self) -> Path:
-        """:return: The absolute path to the package compress script."""
-        return self.clp_package_dir / "sbin" / "compress.sh"
-
-    @property
-    def decompress_script_path(self) -> Path:
-        """:return: The absolute path to the package decompress script."""
-        return self.clp_package_dir / "sbin" / "decompress.sh"
-
-    @property
-    def clp_json_test_data_path(self) -> Path:
-        """:return: The absolute path to the data for clp-json tests."""
-        return self.package_test_scripts_dir / "clp_json" / "data"
-
-    @property
-    def clp_text_test_data_path(self) -> Path:
-        """:return: The absolute path to the data for clp-text tests."""
-        return self.package_test_scripts_dir / "clp_text" / "data"
-
-    def clear_package_archives(self) -> None:
-        """Removes the contents of `clp-package/var/data/archives`."""
-        archives_dir = self.clp_package_dir / "var" / "data" / "archives"
-        clear_directory(archives_dir)
-
-
-@dataclass(frozen=True)
-class PackageCompressionJob:
-    """A compression job for a package test."""
-
-    #: The absolute path to the dataset (either a file or directory).
-    path_to_original_dataset: Path
-
-    #: Options to specify in the compression command.
-    options: list[str] | None
-
-    #: Positional arguments to specify in the compression command (do not put paths to compress)
-    positional_args: list[str] | None
-
-
-@dataclass(frozen=True)
-class PackageModeConfig:
-    """Mode configuration for the CLP package."""
-
-    #: Name of the package operation mode.
-    mode_name: str
-
-    #: The Pydantic representation of the package operation mode.
-    clp_config: ClpConfig
-
-    #: The list of CLP components that this package needs.
-    component_list: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class PackageTestConfig:
-    """Metadata for a specific test of the CLP package."""
-
-    #: Path configuration for this package test.
-    path_config: PackagePathConfig
-
-    #: Mode configuration for this package test.
-    mode_config: PackageModeConfig
-
-    #: The base port from which all port assignments are derived.
-    base_port: int
-
-    def __post_init__(self) -> None:
-        """Write the temporary config file for this package test."""
-        self._write_temp_config_file()
-
-    @property
-    def temp_config_file_path(self) -> Path:
-        """:return: The absolute path to the temporary configuration file for the package."""
-        return self.path_config.temp_config_dir / f"clp-config-{self.mode_config.mode_name}.yaml"
-
-    def _write_temp_config_file(self) -> None:
-        """Writes the temporary config file for this package test."""
-        temp_config_file_path = self.temp_config_file_path
-
-        payload = self.mode_config.clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
-
-        tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
-        with tmp_path.open("w", encoding="utf-8") as f:
-            yaml.safe_dump(payload, f, sort_keys=False)
-        tmp_path.replace(temp_config_file_path)
-
-
-@dataclass(frozen=True)
-class PackageInstance:
-    """Metadata for a running instance of the CLP package."""
-
-    #: The configuration for this package instance.
-    package_test_config: PackageTestConfig
-
-    #: The instance ID of the running package.
-    clp_instance_id: str = field(init=False, repr=True)
-
-    #: The path to the .clp-config.yaml file constructed by the package during spin up.
-    shared_config_file_path: Path = field(init=False, repr=True)
-
-    def __post_init__(self) -> None:
-        """Validates init values and initializes attributes."""
-        # Validate that the temp config file exists.
-        validate_file_exists(self.package_test_config.temp_config_file_path)
-
-        # Set clp_instance_id from instance-id file.
-        path_config = self.package_test_config.path_config
-        clp_instance_id_file_path = path_config.clp_log_dir / "instance-id"
-        validate_file_exists(clp_instance_id_file_path)
-        clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
-        object.__setattr__(self, "clp_instance_id", clp_instance_id)
-
-        # Set shared_config_file_path and validate it exists.
-        shared_config_file_path = path_config.clp_log_dir / CLP_SHARED_CONFIG_FILENAME
-        validate_file_exists(shared_config_file_path)
-        object.__setattr__(self, "shared_config_file_path", shared_config_file_path)
-
-    @staticmethod
-    def _get_clp_instance_id(clp_instance_id_file_path: Path) -> str:
-        """
-        Reads the CLP instance ID from the given file and validates its format.
-
-        :param clp_instance_id_file_path:
-        :return: The 4-character hexadecimal instance ID.
-        :raise ValueError: If the file cannot be read or contents are not a 4-character hex string.
-        """
-        try:
-            contents = clp_instance_id_file_path.read_text(encoding="utf-8").strip()
-        except OSError as err:
-            err_msg = f"Cannot read instance-id file '{clp_instance_id_file_path}'"
-            raise ValueError(err_msg) from err
-
-        if not re.fullmatch(r"[0-9a-fA-F]{4}", contents):
-            err_msg = (
-                f"Invalid instance ID in {clp_instance_id_file_path}: expected a 4-character"
-                f" hexadecimal string, but read {contents}."
-            )
-            raise ValueError(err_msg)
-
-        return contents
-
-
-@dataclass(frozen=True)
-class IntegrationTestPathConfig:
-    """Path configuration for CLP integration tests."""
-
-    #: Default directory for integration test output.
-    test_root_dir: Path
-
-    #: Directory to store the downloaded logs.
-    logs_download_dir: Path = field(init=False, repr=True)
-
-    #: Optional initialization value used to set `logs_download_dir`.
-    logs_download_dir_init: InitVar[Path | None] = None
-
-    def __post_init__(self, logs_download_dir_init: Path | None) -> None:
-        """Initialize and create required directories for integration tests."""
-        if logs_download_dir_init is not None:
-            object.__setattr__(self, "logs_download_dir", logs_download_dir_init)
-        else:
-            object.__setattr__(self, "logs_download_dir", self.test_root_dir / "downloads")
-
-        self.test_root_dir.mkdir(parents=True, exist_ok=True)
-        self.logs_download_dir.mkdir(parents=True, exist_ok=True)
-
-
-@dataclass(frozen=True)
-class IntegrationTestLogs:
-    """Metadata for the downloaded logs used for integration tests."""
-
-    #:
-    name: str
-    #:
-    tarball_url: str
-    integration_test_path_config: InitVar[IntegrationTestPathConfig]
-    #:
-    tarball_path: Path = field(init=False, repr=True)
-    #:
-    extraction_dir: Path = field(init=False, repr=True)
-
-    def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
-        """Initialize and set tarball and extraction paths for integration test logs."""
-        name = self.name.strip()
-        if 0 == len(name):
-            err_msg = "`name` cannot be empty."
-            raise ValueError(err_msg)
-        logs_download_dir = integration_test_path_config.logs_download_dir
-        validate_dir_exists(logs_download_dir)
-
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "tarball_path", logs_download_dir / f"{name}.tar.gz")
-        object.__setattr__(self, "extraction_dir", logs_download_dir / name)
+    def log_converter_binary_path(self) -> Path:
+        """:return: The absolute path to the core binary `log-converter`."""
+        return self.clp_core_bins_dir / "log-converter"
 
 
 @dataclass(frozen=True)
@@ -331,8 +64,8 @@ class CompressionTestPathConfig:
 
     #:
     test_name: str
-    #: Directory containing the original (uncompressed) log files used by this test.
-    logs_source_dir: Path
+    #: Directory containing the original log files used by this test.
+    logs_source_path: Path
     integration_test_path_config: InitVar[IntegrationTestPathConfig]
     #: Path to store compressed archives generated by the test.
     compression_dir: Path = field(init=False, repr=True)
@@ -345,16 +78,51 @@ class CompressionTestPathConfig:
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-        test_root_dir = integration_test_path_config.test_root_dir
-        validate_dir_exists(test_root_dir)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
 
         object.__setattr__(self, "test_name", test_name)
-        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
         object.__setattr__(
-            self, "decompression_dir", test_root_dir / f"{test_name}-decompressed-logs"
+            self, "decompression_dir", test_cache_dir / f"{test_name}-decompressed-logs"
         )
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this compression test."""
         remove_path(self.compression_dir)
         remove_path(self.decompression_dir)
+
+
+@dataclass(frozen=True)
+class ConversionTestPathConfig:
+    """Per-test path configuration for conversion workflow artifacts."""
+
+    #:
+    test_name: str
+    #: Directory containing the original log files used by this test.
+    logs_source_path: Path
+    integration_test_path_config: InitVar[IntegrationTestPathConfig]
+    #: Path to store converted kv-ir files generated by the test.
+    conversion_dir: Path = field(init=False, repr=True)
+    #: Path to store compressed archives generated by the test.
+    compression_dir: Path = field(init=False, repr=True)
+    #: Optional number of log events in the converted logs.
+    num_log_events: int | None = None
+
+    def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
+        """Initialize and set required directory paths for conversion tests."""
+        test_name = self.test_name.strip()
+        if 0 == len(test_name):
+            err_msg = "`test_name` cannot be empty."
+            raise ValueError(err_msg)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
+
+        object.__setattr__(self, "test_name", test_name)
+        object.__setattr__(self, "conversion_dir", test_cache_dir / f"{test_name}-converted")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
+
+    def clear_test_outputs(self) -> None:
+        """Remove any existing output directories created by this conversion test."""
+        remove_path(self.conversion_dir)
+        remove_path(self.compression_dir)

@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include <simdjson.h>
+
 #include "../clp/ReaderInterface.hpp"
 
 namespace clp_s {
@@ -60,6 +62,14 @@ public:
      */
     [[maybe_unused]] static auto
     check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader) -> bool;
+
+    /**
+     * Checks if a reader is a `clp::NetworkReader` that has encountered a transient (retryable)
+     * CURL error such as HTTP 500, 502, 503, 504, SSL connection reset, or empty reply.
+     * @param reader The open reader which may have experienced a CURL error.
+     * @return Whether a retryable CURL error has occurred on the reader.
+     */
+    [[nodiscard]] static auto is_retryable_curl_error(clp::ReaderInterface const* reader) -> bool;
 };
 
 class UriUtils {
@@ -126,6 +136,37 @@ private:
         auto hex = char_to_hex(c);
         destination.append(hex.data(), hex.size());
     }
+};
+
+/**
+ * A reusable JSON string escaper backed by `simdjson::builder::string_builder`.
+ */
+class SimdJsonStringEscaper {
+public:
+    // Constructor
+    SimdJsonStringEscaper() = default;
+
+    // Delete copy constructor and assignment operator
+    SimdJsonStringEscaper(SimdJsonStringEscaper const&) = delete;
+    auto operator=(SimdJsonStringEscaper const&) -> SimdJsonStringEscaper& = delete;
+
+    // Default move constructor and assignment operator
+    SimdJsonStringEscaper(SimdJsonStringEscaper&&) noexcept = default;
+    auto operator=(SimdJsonStringEscaper&&) noexcept -> SimdJsonStringEscaper& = default;
+
+    // Destructor
+    ~SimdJsonStringEscaper() = default;
+
+    /**
+     * Escapes a string according to JSON string escaping rules and appends the escaped string to
+     * the destination buffer.
+     * @param destination
+     * @param source
+     */
+    void escape(std::string& destination, std::string_view const source);
+
+private:
+    simdjson::builder::string_builder m_builder{};
 };
 
 enum EvaluatedValue {

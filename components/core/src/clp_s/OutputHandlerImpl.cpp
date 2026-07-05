@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
@@ -10,6 +11,7 @@
 #include <mongocxx/instance.hpp>
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../clp/networking/socket_utils.hpp"
@@ -24,6 +26,32 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
+namespace {
+/**
+ * Connects to the results cache and returns the requested collection.
+ * @tparam OperationFailedT The type of exception to throw on failure.
+ * @param uri
+ * @param collection
+ * @param client Returns the connected client.
+ * @return The collection.
+ */
+template <typename OperationFailedT>
+auto connect_to_results_cache(string_view uri, string_view collection, mongocxx::client& client)
+        -> mongocxx::collection;
+
+template <typename OperationFailedT>
+auto connect_to_results_cache(string_view uri, string_view collection, mongocxx::client& client)
+        -> mongocxx::collection {
+    try {
+        auto mongo_uri = mongocxx::uri{string{uri}};
+        client = mongocxx::client(mongo_uri);
+        return client[mongo_uri.database()][string{collection}];
+    } catch (mongocxx::exception const& e) {
+        throw OperationFailedT(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
+    }
+}
+}  // namespace
+
 void FileOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
@@ -67,28 +95,22 @@ void NetworkOutputHandler::write(
 }
 
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection,
+        string_view uri,
+        string_view collection,
         uint64_t batch_size,
         uint64_t max_num_results,
-        string dataset,
+        string_view dataset,
         bool should_output_timestamp
 )
         : ::clp_s::search::OutputHandler{should_output_timestamp, true},
           m_batch_size{batch_size},
           m_max_num_results{max_num_results},
-          m_dataset{std::move(dataset)} {
-    try {
-        auto mongo_uri = mongocxx::uri(uri);
-        m_client = mongocxx::client(mongo_uri);
-        m_collection = m_client[mongo_uri.database()][collection];
-        m_results.reserve(m_batch_size);
-    } catch (mongocxx::exception const& e) {
-        throw OperationFailed(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
-    }
+          m_dataset{dataset} {
+    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
+    m_results.reserve(m_batch_size);
 }
 
-ErrorCode ResultsCacheOutputHandler::flush() {
+ErrorCode ResultsCacheOutputHandler::finish() {
     size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
@@ -180,18 +202,18 @@ void ResultsCacheOutputHandler::write(
     }
 }
 
-CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
-        : ::clp_s::search::OutputHandler(false, false),
+CountReducerOutputHandler::CountReducerOutputHandler(int reducer_socket_fd)
+        : search::OutputHandler(false, false),
           m_reducer_socket_fd(reducer_socket_fd),
           m_pipeline(reducer::PipelineInputMode::InterStage) {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
-void CountOutputHandler::write(string_view message) {
+auto CountReducerOutputHandler::write(string_view message) -> void {
     m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
-ErrorCode CountOutputHandler::finish() {
+auto CountReducerOutputHandler::finish() -> ErrorCode {
     if (false
         == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
     {
@@ -200,7 +222,7 @@ ErrorCode CountOutputHandler::finish() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-ErrorCode CountByTimeOutputHandler::finish() {
+auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,
@@ -211,6 +233,108 @@ ErrorCode CountByTimeOutputHandler::finish() {
         ))
     {
         return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+auto CountStdoutOutputHandler::finish() -> ErrorCode {
+    if (0 == m_count) {
+        return ErrorCode::ErrorCodeSuccess;
+    }
+
+    nlohmann::json result;
+    result[constants::results_cache::search::cArchiveId] = m_archive_id;
+    result[constants::results_cache::search::cCount] = m_count;
+    std::cout << result.dump() << '\n';
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+auto CountByTimeStdoutOutputHandler::finish() -> ErrorCode {
+    for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
+        nlohmann::json result;
+        result[constants::results_cache::search::cArchiveId] = m_archive_id;
+        result[constants::results_cache::search::cTimestamp] = bucket_timestamp;
+        result[constants::results_cache::search::cCount] = count;
+        std::cout << result.dump() << '\n';
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+CountResultsCacheOutputHandler::CountResultsCacheOutputHandler(
+        string_view uri,
+        string_view collection,
+        string_view archive_id
+)
+        : search::OutputHandler{false, false},
+          m_archive_id{archive_id} {
+    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
+}
+
+auto CountResultsCacheOutputHandler::finish() -> ErrorCode {
+    if (0 == m_count) {
+        return ErrorCode::ErrorCodeSuccess;
+    }
+
+    try {
+        m_collection.insert_one(
+                bsoncxx::builder::basic::make_document(
+                        bsoncxx::builder::basic::kvp(
+                                constants::results_cache::search::cArchiveId,
+                                m_archive_id
+                        ),
+                        bsoncxx::builder::basic::kvp(
+                                constants::results_cache::search::cCount,
+                                m_count
+                        )
+                )
+        );
+    } catch (mongocxx::exception const& e) {
+        return ErrorCode::ErrorCodeFailureDbBulkWrite;
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+CountByTimeResultsCacheOutputHandler::CountByTimeResultsCacheOutputHandler(
+        string_view uri,
+        string_view collection,
+        string_view archive_id,
+        int64_t count_by_time_bucket_size_ms
+)
+        : search::OutputHandler{true, false},
+          m_archive_id{archive_id},
+          m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {
+    m_collection = connect_to_results_cache<OperationFailed>(uri, collection, m_client);
+}
+
+auto CountByTimeResultsCacheOutputHandler::finish() -> ErrorCode {
+    if (m_bucket_counts.empty()) {
+        return ErrorCode::ErrorCodeSuccess;
+    }
+
+    try {
+        std::vector<bsoncxx::document::value> documents;
+        documents.reserve(m_bucket_counts.size());
+        for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
+            documents.emplace_back(
+                    bsoncxx::builder::basic::make_document(
+                            bsoncxx::builder::basic::kvp(
+                                    constants::results_cache::search::cArchiveId,
+                                    m_archive_id
+                            ),
+                            bsoncxx::builder::basic::kvp(
+                                    constants::results_cache::search::cTimestamp,
+                                    bucket_timestamp
+                            ),
+                            bsoncxx::builder::basic::kvp(
+                                    constants::results_cache::search::cCount,
+                                    count
+                            )
+                    )
+            );
+        }
+        m_collection.insert_many(documents);
+    } catch (mongocxx::exception const& e) {
+        return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
     return ErrorCode::ErrorCodeSuccess;
 }

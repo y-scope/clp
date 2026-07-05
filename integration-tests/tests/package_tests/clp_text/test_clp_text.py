@@ -3,87 +3,58 @@
 import logging
 
 import pytest
-from clp_py_utils.clp_config import (
-    ClpConfig,
-    Package,
-    QueryEngine,
-    StorageEngine,
-)
 
-from tests.utils.asserting_utils import (
-    validate_package_instance,
-    verify_package_compression,
-)
-from tests.utils.clp_mode_utils import CLP_BASE_COMPONENTS
-from tests.utils.config import PackageCompressionJob, PackageInstance, PackageModeConfig
-from tests.utils.package_utils import run_package_compression_script
+from tests.package_tests.classes import ClpPackage
+from tests.package_tests.clp_text.utils.mode import CLP_TEXT_MODE
+from tests.package_tests.clp_text.verification.compress import verify_compress_clp_text
+from tests.package_tests.utils.compress import CompressArgs
+from tests.utils.classes import ClpAction, SampleDataset
 
 logger = logging.getLogger(__name__)
-
-
-# Mode description for this module.
-CLP_TEXT_MODE = PackageModeConfig(
-    mode_name="clp-text",
-    clp_config=ClpConfig(
-        package=Package(
-            storage_engine=StorageEngine.CLP,
-            query_engine=QueryEngine.CLP,
-        ),
-        api_server=None,
-        log_ingestor=None,
-    ),
-    component_list=(*CLP_BASE_COMPONENTS,),
-)
-
 
 # Pytest markers for this module.
 pytestmark = [
     pytest.mark.package,
     pytest.mark.clp_text,
-    pytest.mark.parametrize("fixt_package_test_config", [CLP_TEXT_MODE], indirect=True),
+    pytest.mark.parametrize(
+        "clp_package", [CLP_TEXT_MODE], indirect=True, ids=[CLP_TEXT_MODE.mode_name]
+    ),
 ]
 
 
-@pytest.mark.startup
-def test_clp_text_startup(fixt_package_instance: PackageInstance) -> None:
-    """Tests package startup."""
-    logger.info("Starting test: 'test_clp_text_startup'")
+@pytest.mark.startstop
+def test_clp_text_startstop(clp_package: ClpPackage) -> None:
+    """
+    Validate that the `clp-text` package successfully starts up.
 
-    validate_package_instance(fixt_package_instance)
-
-    logger.info("Test complete: 'test_clp_text_startup'")
+    :param clp_package:
+    """
+    assert clp_package
 
 
 @pytest.mark.compression
-def test_clp_text_compression_text_multifile(fixt_package_instance: PackageInstance) -> None:
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_text_compression_text_multifile(
+    clp_package: ClpPackage,
+    text_multifile: SampleDataset,
+) -> None:
     """
     Validate that the `clp-text` package successfully compresses the `text-multifile` dataset.
 
-    :param fixt_package_instance:
+    :param clp_package:
+    :param text_multifile:
     """
-    logger.info("Starting test: 'test_clp_text_compression_text_multifile'")
-
-    validate_package_instance(fixt_package_instance)
-
-    # Clear archives before compressing.
-    package_test_config = fixt_package_instance.package_test_config
-    package_path_config = package_test_config.path_config
-    package_path_config.clear_package_archives()
-
-    # Compress a dataset.
-    compression_job = PackageCompressionJob(
-        path_to_original_dataset=(
-            package_path_config.clp_text_test_data_path / "text-multifile" / "logs"
-        ),
-        options=None,
-        positional_args=None,
+    args = CompressArgs(
+        script_path=clp_package.path_config.compress_path,
+        config=clp_package.temp_config_file_path,
+        paths=[text_multifile.logs_path],
     )
-    run_package_compression_script(compression_job, package_test_config)
 
-    # Check the correctness of compression.
-    verify_package_compression(compression_job.path_to_original_dataset, package_test_config)
+    logger.info("Compressing the 'text_multifile' dataset with the 'clp-text' package.")
+    action = ClpAction.from_args(args)
+    result = action.verify_returncode()
+    assert result, result.failure_message
 
-    # Clear archives.
-    package_path_config.clear_package_archives()
-
-    logger.info("Test complete: 'test_clp_text_compression_text_multifile'")
+    logger.info("Verifying the compression of the 'text_multifile' dataset.")
+    result = verify_compress_clp_text(action, clp_package, text_multifile)
+    assert result, result.failure_message

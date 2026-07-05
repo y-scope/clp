@@ -1,13 +1,16 @@
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
-#include <iostream>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
+#include <variant>
 
+#include <fmt/format.h>
 #include <mongocxx/instance.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -16,6 +19,10 @@
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
+#include <clp/type_utils.hpp>
+#include <clp_s/search/SearchTelemetry.hpp>
+#include <clp_s/search/TelemetryContext.hpp>
+
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
@@ -64,17 +71,20 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 
 /**
  * Searches the given archive.
+ *
  * @param command_line_arguments
  * @param archive_reader
- * @param expr A copy of the search AST which may be modified
+ * @param expr A copy of the search AST which may be modified.
  * @param reducer_socket_fd
- * @return Whether the search succeeded
+ * @param telemetry_span The span to record search telemetry onto, or null if telemetry is disabled.
+ * @return Whether the search succeeded.
  */
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
         std::shared_ptr<ast::Expression> expr,
-        int reducer_socket_fd
+        int reducer_socket_fd,
+        std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 );
 
 bool compress(CommandLineArguments const& command_line_arguments) {
@@ -126,9 +136,44 @@ bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
         std::shared_ptr<ast::Expression> expr,
-        int reducer_socket_fd
+        int reducer_socket_fd,
+        std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 ) {
     auto const& query = command_line_arguments.get_query();
+    if (nullptr != telemetry_span) {
+        telemetry_span->set_query_context(query);
+        telemetry_span->set_archive_context(archive_reader->get_archive_id());
+    }
+    auto const record_error_and_log
+            = [&](std::string_view error_message, std::string_view log_message) {
+                  SPDLOG_ERROR("{}", log_message);
+                  if (nullptr != telemetry_span) {
+                      telemetry_span->set_error(error_message);
+                  }
+              };
+    auto const record_early_termination = [&](std::string_view termination_stage) {
+        if (nullptr == telemetry_span) {
+            return;
+        }
+        try {
+            if (auto const result{archive_reader->read_metadata()}; result.has_error()) {
+                auto const error{result.error()};
+                SPDLOG_WARN(
+                        "Failed to read archive metadata for search telemetry - ({}) {}",
+                        error.category().name(),
+                        error.message()
+                );
+            }
+        } catch (std::exception const& e) {
+            SPDLOG_WARN("Failed to read archive metadata for search telemetry - {}", e.what());
+        }
+        SearchResultMetrics metrics;
+        for (auto const schema_id : archive_reader->get_schema_ids()) {
+            metrics.num_archive_records += archive_reader->get_num_messages_for_schema(schema_id);
+        }
+        telemetry_span->set_termination_stage(termination_stage);
+        telemetry_span->set_search_result_metrics(metrics);
+    };
 
     auto timestamp_dict = archive_reader->get_timestamp_dictionary();
     AddTimestampConditions add_timestamp_conditions(
@@ -138,12 +183,15 @@ bool search_archive(
     );
     if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
     {
-        SPDLOG_ERROR(
-                "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative "
-                "timestamp column was found for this archive",
-                query,
-                command_line_arguments.get_search_begin_ts().value_or(cEpochTimeMin),
-                command_line_arguments.get_search_end_ts().value_or(cEpochTimeMax)
+        record_error_and_log(
+                "no authoritative timestamp column",
+                fmt::format(
+                        "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative"
+                        " timestamp column was found for this archive",
+                        query,
+                        command_line_arguments.get_search_begin_ts().value_or(cEpochTimeMin),
+                        command_line_arguments.get_search_end_ts().value_or(cEpochTimeMax)
+                )
         );
         return false;
     }
@@ -151,8 +199,20 @@ bool search_archive(
     if (expr = clp_s::search::ast::preprocess_query(expr);
         std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
     {
-        SPDLOG_ERROR("Query '{}' is logically false", query);
+        record_error_and_log(
+                "query is logically false",
+                fmt::format("Query '{}' is logically false", query)
+        );
         return false;
+    }
+    if (nullptr != telemetry_span) {
+        telemetry_span->set_query_shape_metrics(
+                QueryShapeMetrics::create(
+                        expr,
+                        command_line_arguments.get_search_begin_ts(),
+                        command_line_arguments.get_search_end_ts()
+                )
+        );
     }
 
     EvaluateRangeIndexFilters metadata_filter_pass{
@@ -160,6 +220,7 @@ bool search_archive(
             false == command_line_arguments.get_ignore_case()
     };
     if (expr = metadata_filter_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+        record_early_termination(cTerminationStageRangeIndexMatching);
         SPDLOG_INFO("No matching metadata ranges for query '{}'", query);
         return true;
     }
@@ -168,6 +229,7 @@ bool search_archive(
     // the timestamp index
     EvaluateTimestampIndex timestamp_index(timestamp_dict);
     if (clp_s::EvaluatedValue::False == timestamp_index.run(expr)) {
+        record_early_termination(cTerminationStageTimeRangeMatching);
         SPDLOG_INFO("No matching timestamp ranges for query '{}'", query);
         return true;
     }
@@ -185,6 +247,7 @@ bool search_archive(
             archive_reader->get_schema_map()
     );
     if (expr = match_pass->run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+        record_early_termination(cTerminationStageSchemaMatching);
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
     }
@@ -206,7 +269,10 @@ bool search_archive(
                         descriptor_namespace
                 ))
             {
-                SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
+                record_error_and_log(
+                        "projection column tokenization failed",
+                        fmt::format("Can not tokenize invalid column: \"{}\"", column)
+                );
                 return false;
             }
             projection->add_column(
@@ -217,7 +283,7 @@ bool search_archive(
             );
         }
     } catch (std::exception const& e) {
-        SPDLOG_ERROR("{}", e.what());
+        record_error_and_log("projection resolution failed", e.what());
         return false;
     }
     projection->resolve_columns(archive_reader->get_schema_tree());
@@ -225,50 +291,114 @@ bool search_archive(
 
     std::unique_ptr<OutputHandler> output_handler;
     try {
-        switch (command_line_arguments.get_output_handler_type()) {
-            case CommandLineArguments::OutputHandlerType::File:
-                output_handler = std::make_unique<clp_s::FileOutputHandler>(
-                        command_line_arguments.get_file_output_path(),
-                        true
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
-                        command_line_arguments.get_network_dest_host(),
-                        command_line_arguments.get_network_dest_port()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Reducer:
-                if (command_line_arguments.do_count_results_aggregation()) {
-                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
-                } else if (command_line_arguments.do_count_by_time_aggregation()) {
-                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
-                            reducer_socket_fd,
-                            command_line_arguments.get_count_by_time_bucket_size()
-                    );
-                } else {
-                    SPDLOG_ERROR("Unhandled aggregation type.");
-                    return false;
-                }
-                break;
-            case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
-                        command_line_arguments.get_mongodb_uri(),
-                        command_line_arguments.get_mongodb_collection(),
-                        command_line_arguments.get_batch_size(),
-                        command_line_arguments.get_max_num_results(),
-                        command_line_arguments.get_dataset()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Stdout:
-                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
-                break;
-            default:
-                SPDLOG_ERROR("Unhandled OutputHandlerType.");
-                return false;
+        std::visit(
+                clp::overloaded{
+                        [&](CommandLineArguments::FileOutputHandlerOptions const& options) -> void {
+                            output_handler = std::make_unique<clp_s::FileOutputHandler>(
+                                    options.output_path,
+                                    true
+                            );
+                        },
+                        [&](CommandLineArguments::NetworkOutputHandlerOptions const& options)
+                                -> void {
+                            output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
+                                    options.host,
+                                    options.port
+                            );
+                        },
+                        [&](CommandLineArguments::ReducerOutputHandlerOptions const&) -> void {
+                            auto const& aggregation_type
+                                    = command_line_arguments.get_aggregation_type();
+                            if (CommandLineArguments::AggregationType::Count == aggregation_type) {
+                                output_handler = std::make_unique<clp_s::CountReducerOutputHandler>(
+                                        reducer_socket_fd
+                                );
+                            } else if (CommandLineArguments::AggregationType::CountByTime
+                                       == aggregation_type) {
+                                output_handler
+                                        = std::make_unique<clp_s::CountByTimeReducerOutputHandler>(
+                                                reducer_socket_fd,
+                                                command_line_arguments
+                                                        .get_count_by_time_bucket_size_ms()
+                                        );
+                            } else {
+                                SPDLOG_ERROR("Unhandled aggregation type.");
+                                output_handler = nullptr;
+                            }
+                        },
+                        [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
+                                -> void {
+                            auto const& aggregation_type
+                                    = command_line_arguments.get_aggregation_type();
+                            if (false == aggregation_type.has_value()) {
+                                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
+                                        options.uri,
+                                        options.collection,
+                                        options.batch_size,
+                                        options.max_num_results,
+                                        options.dataset
+                                );
+                            } else if (CommandLineArguments::AggregationType::Count
+                                       == aggregation_type.value()) {
+                                output_handler
+                                        = std::make_unique<clp_s::CountResultsCacheOutputHandler>(
+                                                options.uri,
+                                                options.collection,
+                                                archive_reader->get_archive_id()
+                                        );
+                            } else if (CommandLineArguments::AggregationType::CountByTime
+                                       == aggregation_type.value())
+                            {
+                                output_handler = std::make_unique<
+                                        clp_s::CountByTimeResultsCacheOutputHandler
+                                >(options.uri,
+                                  options.collection,
+                                  archive_reader->get_archive_id(),
+                                  command_line_arguments.get_count_by_time_bucket_size_ms());
+                            } else {
+                                SPDLOG_ERROR("Unhandled aggregation type.");
+                                output_handler = nullptr;
+                            }
+                        },
+                        [&](CommandLineArguments::StdoutOutputHandlerOptions const&) -> void {
+                            auto const& aggregation_type
+                                    = command_line_arguments.get_aggregation_type();
+                            if (false == aggregation_type.has_value()) {
+                                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
+                            } else if (CommandLineArguments::AggregationType::Count
+                                       == aggregation_type.value()) {
+                                output_handler = std::make_unique<clp_s::CountStdoutOutputHandler>(
+                                        archive_reader->get_archive_id()
+                                );
+                            } else if (CommandLineArguments::AggregationType::CountByTime
+                                       == aggregation_type.value())
+                            {
+                                output_handler
+                                        = std::make_unique<clp_s::CountByTimeStdoutOutputHandler>(
+                                                archive_reader->get_archive_id(),
+                                                command_line_arguments
+                                                        .get_count_by_time_bucket_size_ms()
+                                        );
+                            } else {
+                                SPDLOG_ERROR("Unhandled aggregation type.");
+                                output_handler = nullptr;
+                            }
+                        }
+                },
+                command_line_arguments.get_output_handler_options()
+        );
+        if (nullptr == output_handler) {
+            record_error_and_log(
+                    "output handler creation failed",
+                    "Failed to create output handler."
+            );
+            return false;
         }
     } catch (std::exception const& e) {
-        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        record_error_and_log(
+                "output handler creation failed",
+                fmt::format("Failed to create output handler - {}", e.what())
+        );
         return false;
     }
 
@@ -280,7 +410,15 @@ bool search_archive(
             std::move(output_handler),
             command_line_arguments.get_ignore_case()
     );
-    return output.filter();
+    auto const success{output.filter()};
+    if (nullptr != telemetry_span) {
+        if (false == success) {
+            telemetry_span->set_error("archive filtering failed");
+        }
+        telemetry_span->set_termination_stage(output.get_termination_stage());
+        telemetry_span->set_search_result_metrics(output.get_result_metrics());
+    }
+    return success;
 }
 }  // namespace
 
@@ -309,6 +447,11 @@ int main(int argc, char const* argv[]) {
         case CommandLineArguments::ParsingResult::Success:
             // Continue processing
             break;
+    }
+
+    std::optional<TelemetryContext> telemetry_context;
+    if (command_line_arguments.get_enable_telemetry()) {
+        telemetry_context.emplace();
     }
 
     if (CommandLineArguments::Command::Compress == command_line_arguments.get_command()) {
@@ -356,14 +499,15 @@ int main(int argc, char const* argv[]) {
         }
 
         int reducer_socket_fd{-1};
-        if (command_line_arguments.get_output_handler_type()
-            == CommandLineArguments::OutputHandlerType::Reducer)
+        if (std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
+                    command_line_arguments.get_output_handler_options()
+            ))
         {
-            reducer_socket_fd = reducer::connect_to_reducer(
-                    command_line_arguments.get_reducer_host(),
-                    command_line_arguments.get_reducer_port(),
-                    command_line_arguments.get_job_id()
-            );
+            auto const& options{std::get<CommandLineArguments::ReducerOutputHandlerOptions>(
+                    command_line_arguments.get_output_handler_options()
+            )};
+            reducer_socket_fd
+                    = reducer::connect_to_reducer(options.host, options.port, options.job_id);
             if (-1 == reducer_socket_fd) {
                 SPDLOG_ERROR("Failed to connect to reducer");
                 return 1;
@@ -420,10 +564,17 @@ int main(int argc, char const* argv[]) {
                 }
             }
 
+            std::shared_ptr<SearchTelemetrySpan> telemetry_span;
+            if (command_line_arguments.get_enable_telemetry()) {
+                telemetry_span = std::make_shared<SearchTelemetrySpan>();
+            }
             try {
                 archive_reader->open(input_path, command_line_arguments.get_network_auth());
             } catch (std::exception const& e) {
                 SPDLOG_ERROR("Failed to open archive - {}", e.what());
+                if (nullptr != telemetry_span) {
+                    telemetry_span->set_error("failed to open archive");
+                }
                 return 1;
             }
             if (false
@@ -431,7 +582,8 @@ int main(int argc, char const* argv[]) {
                         command_line_arguments,
                         archive_reader,
                         expr->copy(),
-                        reducer_socket_fd
+                        reducer_socket_fd,
+                        telemetry_span
                 ))
             {
                 return 1;

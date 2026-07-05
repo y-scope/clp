@@ -39,7 +39,7 @@ public:
      * - ErrorCodeEnum::CorruptFilterPayload for malformed payload fields.
      * - ErrorCodeEnum::ReadFailure for truncated/failed reads.
      */
-    [[nodiscard]] static auto try_read_from_file(clp::ReaderInterface& reader)
+    [[nodiscard]] static auto try_read(clp::ReaderInterface& reader)
             -> ystdlib::error_handling::Result<BloomFilter>;
 
     // Methods
@@ -59,7 +59,7 @@ public:
      * Writes a serialized representation of a bloom filter to a writer.
      * @param writer
      */
-    auto write_to_file(clp::WriterInterface& writer) const -> void;
+    auto write(clp::WriterInterface& writer) const -> void;
 
 private:
     /**
