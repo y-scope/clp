@@ -1,6 +1,6 @@
 set(
         CLP_S_FILTER_SOURCES
-	BitmapView.hpp
+        BitmapView.hpp
         BloomFilter.cpp
         BloomFilter.hpp
         ErrorCode.cpp

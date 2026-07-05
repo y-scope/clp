@@ -3,7 +3,9 @@
 
 #include <concepts>
 #include <cstddef>
+#include <span>
 #include <system_error>
+#include <tuple>
 
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -19,7 +21,7 @@ namespace clp_s::filter {
  * indicating the failure.
  */
 template <typename SetBitVisitor>
-concept SetBitVisitorConcept = requires(SetBitVisitor bit_handler, size_t bit_idx) {
+concept SetBitVisitorReq = requires(SetBitVisitor bit_handler, size_t bit_idx) {
     { bit_handler(bit_idx) } -> std::same_as<ystdlib::error_handling::Result<bool>>;
 };
 
@@ -33,25 +35,30 @@ concept SetBitVisitorConcept = requires(SetBitVisitor bit_handler, size_t bit_id
 template <clp::IntegerType BitmapComponentType>
 class BitmapView {
 public:
-    // Static constants
-    static constexpr size_t cNumBitsPerComponent{sizeof(BitmapComponentType) * 8};
-
     // Factory methods
     /**
      * Creates a bitmap over the given array.
      *
-     * @param bitmap_array A pointer to the underlying array backing the bitmap.
+     * @param bitmap_span A span of the underlying data backing the bitmap.
      * @param num_bits The number of bits in the bitmap.
      * @return A result containing the newly created BitmapView, or an error code indicating the
      * failure:
-     * - std::errc::invalid_argument if either `bitmap_array` is null or `num_bits` is zero.
+     * - std::errc::invalid_argument if either `bitmap_span` is too small for the number of bits,
+     * or `num_bits` is zero.
      */
-    [[nodiscard]] static auto create(BitmapComponentType* bitmap_array, size_t num_bits)
+    [[nodiscard]] static auto create(std::span<BitmapComponentType> bitmap_span, size_t num_bits)
             -> ystdlib::error_handling::Result<BitmapView> {
-        if (nullptr == bitmap_array || 0 == num_bits) {
+        size_t const expected_bitmap_span_length{
+                (num_bits / cNumBitsPerComponent) + (num_bits % cNumBitsPerComponent > 0 ? 1 : 0)
+        };
+        if (0 == num_bits || bitmap_span.size() < expected_bitmap_span_length) {
             return std::errc::invalid_argument;
         }
-        return BitmapView{bitmap_array, num_bits};
+
+        if (bitmap_span.size() > expected_bitmap_span_length) {
+            bitmap_span = bitmap_span.subspan(0, expected_bitmap_span_length);
+        }
+        return BitmapView{bitmap_span, num_bits};
     }
 
     // Constructors
@@ -61,6 +68,9 @@ public:
     auto operator=(BitmapView const&) -> BitmapView& = default;
     auto operator=(BitmapView&&) noexcept -> BitmapView& = default;
 
+    // Destructor
+    ~BitmapView() = default;
+
     // Methods
     /**
      * @return The number of bits in the bitmap.
@@ -68,44 +78,32 @@ public:
     [[nodiscard]] auto get_num_bits() const -> size_t { return m_num_bits; }
 
     /**
-     * @param index
+     * @param bit_idx
      * @return The value of the bit at the requested position, or an error code indicating the
      * failure:
-     * - std::errc::result_out_of_range if the index is beyond the end of the bitmap.
+     * - Forwards get_component_idx_and_bitmask's return values on failure.
      */
-    [[nodiscard]] auto test_bit(size_t index) const -> ystdlib::error_handling::Result<bool> {
-        if (index >= m_num_bits) {
-            return std::errc::result_out_of_range;
-        }
-
-        auto const component_idx{index / cNumBitsPerComponent};
-        auto const bit_offset{index % cNumBitsPerComponent};
-        auto const bit_mask{static_cast<BitmapComponentType>(1) << bit_offset};
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        return 0 != (m_bitmap_array[component_idx] & bit_mask);
+    [[nodiscard]] auto test_bit(size_t bit_idx) const -> ystdlib::error_handling::Result<bool> {
+        auto const [component_idx, bit_mask]
+                = YSTDLIB_ERROR_HANDLING_TRYX(get_component_idx_and_bitmask(bit_idx));
+        return 0 != (m_bitmap_span[component_idx] & bit_mask);
     }
 
     /**
      * Sets a bit at a given index to the given value.
-     * @param index
+     * @param bit_idx
      * @param value
      * @return A void result on success, or an error code indicating the failure:
-     * - std::errc::result_out_of_range if the index is beyond the end of the bitmap.
+     * - Forwards get_component_idx_and_bitmask's return values on failure.
      */
-    [[nodiscard]] auto set_bit(size_t index, bool value) -> ystdlib::error_handling::Result<void> {
-        if (index >= m_num_bits) {
-            return std::errc::result_out_of_range;
-        }
-
-        auto const component_idx{index / cNumBitsPerComponent};
-        auto const bit_offset{index % cNumBitsPerComponent};
-        auto const bit_mask{static_cast<BitmapComponentType>(1) << bit_offset};
+    [[nodiscard]] auto set_bit(size_t bit_idx, bool value)
+            -> ystdlib::error_handling::Result<void> {
+        auto const [component_idx, bit_mask]
+                = YSTDLIB_ERROR_HANDLING_TRYX(get_component_idx_and_bitmask(bit_idx));
         if (value) {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            m_bitmap_array[component_idx] |= bit_mask;
+            m_bitmap_span[component_idx] |= bit_mask;
         } else {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            m_bitmap_array[component_idx] &= ~bit_mask;
+            m_bitmap_span[component_idx] &= ~bit_mask;
         }
         return ystdlib::error_handling::success();
     }
@@ -120,19 +118,17 @@ public:
      * @return A void result on success, or an error code indicating the failure:
      * - Forwards `set_bit_visitor`'s return values on failure.
      */
-    template <SetBitVisitorConcept SetBitVisitor>
+    template <SetBitVisitorReq SetBitVisitor>
     [[nodiscard]] auto filter_set_bits(SetBitVisitor set_bit_visitor)
             -> ystdlib::error_handling::Result<void> {
-        for (size_t component_idx{}; component_idx < m_bitmap_array_length; ++component_idx) {
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            if (BitmapComponentType{} == m_bitmap_array[component_idx]) {
+        for (size_t component_idx{}; component_idx < m_bitmap_span.size(); ++component_idx) {
+            if (BitmapComponentType{} == m_bitmap_span[component_idx]) {
                 continue;
             }
 
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            auto const current_component{m_bitmap_array[component_idx]};
+            auto const current_component{m_bitmap_span[component_idx]};
             BitmapComponentType new_component{};
-            auto const last_component_idx{m_bitmap_array_length - 1};
+            auto const last_component_idx{m_bitmap_span.size() - 1};
             auto const max_bit{
                     last_component_idx == component_idx
                             ? m_num_bits - (cNumBitsPerComponent * last_component_idx)
@@ -148,26 +144,42 @@ public:
                     new_component |= current_bit;
                 }
             }
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-            m_bitmap_array[component_idx] = new_component;
+            m_bitmap_span[component_idx] = new_component;
         }
         return ystdlib::error_handling::success();
     }
 
 private:
+    // Static constants
+    static constexpr size_t cNumBitsPerComponent{sizeof(BitmapComponentType) * 8};
+
     // Constructors
-    BitmapView(BitmapComponentType* bitmap_array, size_t num_bits)
-            : m_bitmap_array(bitmap_array),
-              m_num_bits{num_bits},
-              m_bitmap_array_length{
-                      (num_bits / cNumBitsPerComponent)
-                      + (num_bits % cNumBitsPerComponent > 0 ? 1 : 0)
-              } {}
+    BitmapView(std::span<BitmapComponentType> bitmap_span, size_t num_bits)
+            : m_bitmap_span{bitmap_span},
+              m_num_bits{num_bits} {}
+
+    // Methods
+    /**
+     * @param bit_idx
+     * @return A result containing a tuple of the component index and bitmask for the given bit
+     * index, or an error code indicating the failure:
+     * - std::errc::result_out_of_range if the bit index is beyond the end of the bitmap.
+     */
+    [[nodiscard]] auto get_component_idx_and_bitmask(size_t bit_idx) const
+            -> ystdlib::error_handling::Result<std::tuple<size_t, BitmapComponentType>> {
+        if (bit_idx >= m_num_bits) {
+            return std::errc::result_out_of_range;
+        }
+
+        auto const component_idx{bit_idx / cNumBitsPerComponent};
+        auto const bit_offset{bit_idx % cNumBitsPerComponent};
+        auto const bit_mask{static_cast<BitmapComponentType>(1) << bit_offset};
+        return {component_idx, bit_mask};
+    }
 
     // Data members
-    BitmapComponentType* m_bitmap_array{};
+    std::span<BitmapComponentType> m_bitmap_span{};
     size_t m_num_bits{};
-    size_t m_bitmap_array_length{};
 };
 }  // namespace clp_s::filter
 

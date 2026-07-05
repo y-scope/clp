@@ -40,16 +40,17 @@ auto set_bits_in_bitmap(
 }
 }  // namespace
 
-TEST_CASE("BitmapView create rejects null storage", "[clp_s][filter]") {
+TEST_CASE("BitmapView create rejects undersized storage", "[clp_s][filter]") {
     constexpr size_t cNumBits{64};
-    auto result = clp_s::filter::BitmapView<uint64_t>::create(nullptr, cNumBits);
+    std::array<uint8_t, (cNumBits / sizeof(uint8_t)) - 1> storage{};
+    auto result = clp_s::filter::BitmapView<uint8_t>::create(storage, cNumBits);
     REQUIRE(result.has_error());
     REQUIRE(std::errc::invalid_argument == result.error());
 }
 
 TEST_CASE("BitmapView create rejects zero bits", "[clp_s][filter]") {
     std::array<uint64_t, 1> storage{};
-    auto result = clp_s::filter::BitmapView<uint64_t>::create(storage.data(), 0);
+    auto result = clp_s::filter::BitmapView<uint64_t>::create(storage, 0);
     REQUIRE(result.has_error());
     REQUIRE(std::errc::invalid_argument == result.error());
 }
@@ -61,7 +62,7 @@ TEST_CASE(
     constexpr size_t cNumBits{7};
     std::array<uint8_t, 1> storage{};
 
-    auto result = clp_s::filter::BitmapView<uint8_t>::create(storage.data(), cNumBits);
+    auto result = clp_s::filter::BitmapView<uint8_t>::create(storage, cNumBits);
     REQUIRE_FALSE(result.has_error());
     REQUIRE(cNumBits == result.value().get_num_bits());
 }
@@ -72,7 +73,7 @@ TEST_CASE("BitmapView test_bit reads back a known bit pattern", "[clp_s][filter]
     std::array<uint8_t, 1> storage{};
     set_bits_in_bitmap(bit_positions, storage);
 
-    auto result = clp_s::filter::BitmapView<uint8_t>::create(storage.data(), cNumBits);
+    auto result = clp_s::filter::BitmapView<uint8_t>::create(storage, cNumBits);
     REQUIRE_FALSE(result.has_error());
     auto const& view = result.value();
 
@@ -93,7 +94,7 @@ TEST_CASE(
     constexpr size_t cNumBits{13};
     std::array<uint64_t, 1> storage{};
 
-    auto result = clp_s::filter::BitmapView<uint64_t>::create(storage.data(), cNumBits);
+    auto result = clp_s::filter::BitmapView<uint64_t>::create(storage, cNumBits);
     REQUIRE_FALSE(result.has_error());
 
     auto const set_result = result.value().set_bit(cNumBits, true);
@@ -107,7 +108,7 @@ TEST_CASE("BitmapView filter_set_bits only visits bits that are already set", "[
     std::array<uint8_t, 1> storage{};
     set_bits_in_bitmap(bit_positions, storage);
 
-    auto result = clp_s::filter::BitmapView<uint8_t>::create(storage.data(), cNumBits);
+    auto result = clp_s::filter::BitmapView<uint8_t>::create(storage, cNumBits);
     REQUIRE_FALSE(result.has_error());
     auto view = result.value();
 
@@ -137,7 +138,7 @@ TEST_CASE(
     std::array<uint64_t, 2> storage{};
     set_bits_in_bitmap(bit_positions, storage);
 
-    auto result = clp_s::filter::BitmapView<uint64_t>::create(storage.data(), cNumBits);
+    auto result = clp_s::filter::BitmapView<uint64_t>::create(storage, cNumBits);
     REQUIRE_FALSE(result.has_error());
     auto view = result.value();
 
