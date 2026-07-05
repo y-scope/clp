@@ -42,7 +42,8 @@ auto set_bits_in_bitmap(
 
 TEST_CASE("BitmapView create rejects undersized storage", "[clp_s][filter]") {
     constexpr size_t cNumBits{64};
-    std::array<uint8_t, (cNumBits / sizeof(uint8_t)) - 1> storage{};
+    constexpr size_t cRequiredBytesFor64Bits{8};
+    std::array<uint8_t, cRequiredBytesFor64Bits - 1> storage{};
     auto result = clp_s::filter::BitmapView<uint8_t>::create(storage, cNumBits);
     REQUIRE(result.has_error());
     REQUIRE(std::errc::invalid_argument == result.error());
