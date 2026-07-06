@@ -1,21 +1,29 @@
-"""Functions and classes to facilitate CLP package archive-manager."""
+"""Command argument model for the CLP package archive-manager."""
 
-import logging
-import re
 from pathlib import Path
 
-import pytest
 from strenum import StrEnum
 
 from tests.package_tests.classes import ClpPackage
 from tests.utils.classes import (
     ClpAction,
-    ClpVerificationResult,
     CmdArgs,
     SampleDataset,
 )
 
-logger = logging.getLogger(__name__)
+
+class ClpPackageArchiveManagerCommand(StrEnum):
+    """Commands supported by the CLP package's archive-manager."""
+
+    FIND_COMMAND = "find"
+    DEL_COMMAND = "del"
+
+
+class ClpPackageArchiveManagerDelSubcommand(StrEnum):
+    """Subcommands supported by the CLP package's archive-manager 'del' command."""
+
+    BY_IDS_COMMAND = "by-ids"
+    BY_FILTER_COMMAND = "by-filter"
 
 
 class ArchiveManagerArgs(CmdArgs):
@@ -24,7 +32,7 @@ class ArchiveManagerArgs(CmdArgs):
     script_path: Path
     config: Path
     dataset: str | None = None
-    subcommand: str
+    command: str
     del_subcommand: str | None = None
     ids: list[str] | None = None
     begin_ts: int | None = None
@@ -42,7 +50,7 @@ class ArchiveManagerArgs(CmdArgs):
             cmd.append("--dataset")
             cmd.append(self.dataset)
 
-        cmd.append(self.subcommand)
+        cmd.append(self.command)
 
         if self.del_subcommand:
             cmd.append(self.del_subcommand)
@@ -58,21 +66,7 @@ class ArchiveManagerArgs(CmdArgs):
         return cmd
 
 
-class ClpPackageArchiveManagerSubcommand(StrEnum):
-    """Subcommands supported by the CLP package's archive-manager."""
-
-    FIND_COMMAND = "find"
-    DEL_COMMAND = "del"
-
-
-class ClpPackageArchiveManagerDelSubcommand(StrEnum):
-    """Subcommands supported by the CLP package's archive-manager 'del' command."""
-
-    BY_IDS_COMMAND = "by-ids"
-    BY_FILTER_COMMAND = "by-filter"
-
-
-def archive_manager_find(
+def run_archive_manager_find(
     clp_package: ClpPackage,
     dataset: SampleDataset | None = None,
     begin_ts: int | None = None,
@@ -85,15 +79,12 @@ def archive_manager_find(
     :param dataset:
     :param begin_ts:
     :param end_ts:
-    :return: The `ClpAction` instance that runs the operation.
+    :return: The `ClpAction` instance that runs the 'find'.
     """
-    logger.info("Performing 'FIND' operation with archive-manager.")
-
-    path_config = clp_package.path_config
     args = ArchiveManagerArgs(
-        script_path=path_config.archive_manager_path,
+        script_path=clp_package.path_config.archive_manager_path,
         config=clp_package.temp_config_file_path,
-        subcommand=ClpPackageArchiveManagerSubcommand.FIND_COMMAND,
+        command=ClpPackageArchiveManagerCommand.FIND_COMMAND,
         dataset=dataset.dataset_name if dataset is not None else None,
         begin_ts=begin_ts,
         end_ts=end_ts,
@@ -101,7 +92,7 @@ def archive_manager_find(
     return ClpAction.from_args(args)
 
 
-def archive_manager_del_by_ids(
+def run_archive_manager_del_by_ids(
     clp_package: ClpPackage,
     ids: list[str],
     dataset: SampleDataset | None = None,
@@ -112,273 +103,41 @@ def archive_manager_del_by_ids(
     :param clp_package:
     :param ids:
     :param dataset:
-    :return: The `ClpAction` instance that runs the deletion.
+    :return: The `ClpAction` instance that runs the 'del by-ids'.
     """
-    logger.info("Performing 'DEL_BY_IDS' operation with archive-manager.")
-
-    if not ids:
-        pytest.fail(
-            "archive_manager_del_by_ids requires at least one archive ID; got an empty list."
-        )
-
-    path_config = clp_package.path_config
     args = ArchiveManagerArgs(
-        script_path=path_config.archive_manager_path,
+        script_path=clp_package.path_config.archive_manager_path,
         config=clp_package.temp_config_file_path,
-        subcommand=ClpPackageArchiveManagerSubcommand.DEL_COMMAND,
-        dataset=dataset.dataset_name if dataset is not None else None,
+        command=ClpPackageArchiveManagerCommand.DEL_COMMAND,
         del_subcommand=ClpPackageArchiveManagerDelSubcommand.BY_IDS_COMMAND,
+        dataset=dataset.dataset_name if dataset is not None else None,
         ids=ids,
     )
     return ClpAction.from_args(args)
 
 
-def archive_manager_del_by_filter(
+def run_archive_manager_del_by_filter(
     clp_package: ClpPackage,
-    begin_ts: int | None,
-    end_ts: int,
     dataset: SampleDataset | None = None,
+    begin_ts: int | None = None,
+    end_ts: int | None = None,
 ) -> ClpAction:
     """
-    Runs an archive-manager 'del by-filter' operation.
+    Runs an archive-manager 'del by-filter' operation over the given time range.
 
     :param clp_package:
+    :param dataset:
     :param begin_ts:
     :param end_ts:
-    :param dataset:
-    :return: The `ClpAction` instance that runs the deletion.
+    :return: The `ClpAction` instance that runs the 'del by-filter'.
     """
-    logger.info("Performing 'DEL_BY_FILTER' operation with archive-manager.")
-
-    path_config = clp_package.path_config
     args = ArchiveManagerArgs(
-        script_path=path_config.archive_manager_path,
+        script_path=clp_package.path_config.archive_manager_path,
         config=clp_package.temp_config_file_path,
-        subcommand=ClpPackageArchiveManagerSubcommand.DEL_COMMAND,
-        dataset=dataset.dataset_name if dataset is not None else None,
+        command=ClpPackageArchiveManagerCommand.DEL_COMMAND,
         del_subcommand=ClpPackageArchiveManagerDelSubcommand.BY_FILTER_COMMAND,
+        dataset=dataset.dataset_name if dataset is not None else None,
         begin_ts=begin_ts,
         end_ts=end_ts,
     )
     return ClpAction.from_args(args)
-
-
-def verify_archive_manager_find_action(
-    action: ClpAction,
-    clp_package: ClpPackage,
-    dataset: SampleDataset | None = None,
-) -> ClpVerificationResult:
-    """
-    Verifies the archive-manager 'find' action with the following procedure:
-
-    1. Reconstructs the full set of archives with two complementary 'find' calls (one for archives
-       before `begin_ts` and one for archives after `end_ts`)
-    2. Performs an unfiltered 'find' over all archives.
-    3. Compares the two above sets.
-
-    :param action:
-    :param clp_package:
-    :param dataset:
-    :return: A `ClpVerificationResult` indicating the success or failure of the verification.
-    """
-    logger.info("Verifying archive-manager 'FIND'.")
-
-    returncode_result = action.verify_returncode()
-    if not returncode_result:
-        return returncode_result
-
-    args = action.args
-    assert isinstance(args, ArchiveManagerArgs)
-
-    begin_ts = args.begin_ts if args.begin_ts is not None else 0
-    end_ts = args.end_ts
-    assembled_archive_id_list: list[str] = []
-
-    # Find archives before begin_ts.
-    if begin_ts > 0:
-        find_before_action = archive_manager_find(
-            clp_package=clp_package,
-            dataset=dataset,
-            begin_ts=0,
-            end_ts=begin_ts,
-        )
-        find_before_result = find_before_action.verify_returncode()
-        if not find_before_result:
-            return action.fail_verification(
-                "During archive-manager 'find' verification, supporting call to archive-manager"
-                " 'find' returned a non-zero exit code.",
-                supporting_action=find_before_action,
-            )
-        assembled_archive_id_list.extend(extract_archive_ids_from_find_output(find_before_action))
-
-    # Add the archives from the original command.
-    assembled_archive_id_list.extend(extract_archive_ids_from_find_output(action))
-
-    # Find archives after end_ts.
-    if end_ts is not None:
-        find_after_action = archive_manager_find(
-            clp_package=clp_package,
-            dataset=dataset,
-            begin_ts=end_ts,
-        )
-        find_after_result = find_after_action.verify_returncode()
-        if not find_after_result:
-            return action.fail_verification(
-                "During archive-manager 'find' verification, supporting call to archive-manager"
-                " 'find' returned a non-zero exit code.",
-                supporting_action=find_after_action,
-            )
-        assembled_archive_id_list.extend(extract_archive_ids_from_find_output(find_after_action))
-
-    # Find all.
-    find_all_action = archive_manager_find(
-        clp_package=clp_package,
-        dataset=dataset,
-    )
-    find_all_result = find_all_action.verify_returncode()
-    if not find_all_result:
-        return action.fail_verification(
-            "During archive-manager 'find' verification, supporting call to archive-manager"
-            " 'find' returned a non-zero exit code.",
-            supporting_action=find_all_action,
-        )
-    all_archive_ids_list = extract_archive_ids_from_find_output(find_all_action)
-
-    # Compare.
-    assembled_archive_id_list.sort()
-    all_archive_ids_list.sort()
-    if assembled_archive_id_list == all_archive_ids_list:
-        return action.pass_verification()
-
-    return action.fail_verification(
-        "Archive-manager 'find' verification failure: mismatch between the assembled archive ID"
-        f" list '{assembled_archive_id_list}' and the list of all archive IDs"
-        f" '{all_archive_ids_list}'",
-        supporting_action=find_all_action,
-    )
-
-
-def verify_archive_manager_del_by_ids_action(
-    action: ClpAction,
-    clp_package: ClpPackage,
-    dataset: SampleDataset | None = None,
-) -> ClpVerificationResult:
-    """
-    Verifies the archive-manager 'del by-ids' action by querying the current set of archives with
-    'find' and confirming that none of the IDs that were targeted for deletion remain.
-
-    :param action:
-    :param clp_package:
-    :param dataset:
-    :return: A `ClpVerificationResult` indicating the success or failure of the verification.
-    """
-    logger.info("Verifying archive-manager 'DEL_BY_IDS'.")
-
-    returncode_result = action.verify_returncode()
-    if not returncode_result:
-        return returncode_result
-
-    args = action.args
-    assert isinstance(args, ArchiveManagerArgs)
-
-    find_all_action = archive_manager_find(clp_package=clp_package, dataset=dataset)
-    find_result = verify_archive_manager_find_action(find_all_action, clp_package, dataset)
-    if not find_result:
-        return action.fail_verification(
-            "During archive-manager 'del' verification, supporting call to archive-manager 'find'"
-            f" could not be verified: '{find_result.failure_message}'",
-            supporting_action=find_all_action,
-        )
-
-    current_ids = extract_archive_ids_from_find_output(find_all_action)
-    if args.ids and any(item in current_ids for item in args.ids):
-        return action.fail_verification(
-            "Archive-manager 'del by-ids' verification failure: Some archives that were"
-            " specified for deletion are still present in the metadata database.",
-            supporting_action=find_all_action,
-        )
-
-    return action.pass_verification()
-
-
-def verify_archive_manager_del_by_filter_action(
-    action: ClpAction,
-    clp_package: ClpPackage,
-    dataset: SampleDataset | None = None,
-) -> ClpVerificationResult:
-    """
-    Verifies the archive-manager 'del by-filter' action by running a 'find' with the same time-range
-    filter that was used for deletion, and confirming that no archives remain within that range.
-
-    :param action:
-    :param clp_package:
-    :param dataset:
-    :return: A `ClpVerificationResult` indicating the success or failure of the verification.
-    """
-    logger.info("Verifying archive-manager 'DEL_BY_FILTER'.")
-
-    returncode_result = action.verify_returncode()
-    if not returncode_result:
-        return returncode_result
-
-    args = action.args
-    assert isinstance(args, ArchiveManagerArgs)
-
-    find_action = archive_manager_find(
-        clp_package=clp_package,
-        dataset=dataset,
-        begin_ts=args.begin_ts,
-        end_ts=args.end_ts,
-    )
-    find_result = verify_archive_manager_find_action(find_action, clp_package, dataset)
-    if not find_result:
-        return action.fail_verification(
-            "During archive-manager 'del' verification, supporting call to archive-manager 'find'"
-            f" could not be verified: '{find_result.failure_message}'",
-            supporting_action=find_action,
-        )
-
-    current_ids = extract_archive_ids_from_find_output(find_action)
-    if len(current_ids) > 0:
-        return action.fail_verification(
-            "Archive-manager 'del by-filter' verification failure: Some archives that"
-            " should have been deleted were not deleted.",
-            supporting_action=find_action,
-        )
-
-    return action.pass_verification()
-
-
-def extract_archive_ids_from_find_output(
-    action: ClpAction,
-) -> list[str]:
-    """
-    Extracts archive IDs from the output of an archive-manager 'find' action.
-
-    :param action:
-    :return: A list of archive IDs extracted from the action's output.
-    """
-    output_archive_id_list: list[str] = []
-    output_lines = action.get_output().splitlines()
-
-    num_archive_ids = 0
-    filtered_lines = []
-    for line in output_lines:
-        match = re.search(r"Found (\d+) archives within the specified time range", line)
-        if match:
-            num_archive_ids = int(match.group(1))
-        else:
-            filtered_lines.append(line)
-
-    if num_archive_ids == 0:
-        return output_archive_id_list
-
-    uuid_pattern = re.compile(
-        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-    )
-    for line in filtered_lines:
-        match = uuid_pattern.search(line)
-        if match:
-            output_archive_id_list.append(match.group(0))
-
-    return sorted(output_archive_id_list)
