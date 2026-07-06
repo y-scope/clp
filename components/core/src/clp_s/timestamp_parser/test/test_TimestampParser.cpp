@@ -185,6 +185,9 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 R"(\o{EST,-0500}\o{UT,+0000})",
                 R"(\o{EST})",
                 R"(\o{})",
+                R"(\o{EST,})",
+                R"(\o{ES T,-0500})",
+                R"(\o{EST, -0500})",
                 R"(\o{EST,-0500,abc})",
         };
         for (auto const& invalid_timestamp_pattern_template : invalid_timestamp_pattern_templates) {
@@ -195,7 +198,6 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
 
         std::vector<std::string> const invalid_timezone_offset_templates{
                 R"(\o{EST,-abc})",
-                R"(\o{EST,})",
         };
         for (auto const& invalid_timezone_offset_template : invalid_timezone_offset_templates) {
             auto const result{TimestampPattern::create(invalid_timezone_offset_template)};
