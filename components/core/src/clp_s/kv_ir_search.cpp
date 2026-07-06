@@ -246,11 +246,8 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
     }
 
-    if (std::holds_alternative<CommandLineArguments::ReducerOutputHandlerOptions>(
-                command_line_arguments.get_output_handler_options()
-        ))
-    {
-        SPDLOG_ERROR("kv-ir search: Count support is not implemented.");
+    if (command_line_arguments.get_aggregation_type().has_value()) {
+        SPDLOG_ERROR("kv-ir search: Aggregation support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};
     }
 

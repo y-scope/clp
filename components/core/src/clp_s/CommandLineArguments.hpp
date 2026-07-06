@@ -57,8 +57,6 @@ public:
         std::string host;
         int port{-1};
         reducer::job_id_t job_id{-1};
-        AggregationType aggregation_type{AggregationType::Count};
-        int64_t count_by_time_bucket_size{};  // Milliseconds
     };
 
     struct StdoutOutputHandlerOptions {};
@@ -125,6 +123,14 @@ public:
         return m_output_handler_options;
     }
 
+    [[nodiscard]] auto get_aggregation_type() const -> std::optional<AggregationType> const& {
+        return m_aggregation_type;
+    }
+
+    [[nodiscard]] auto get_count_by_time_bucket_size_ms() const -> int64_t {
+        return m_count_by_time_bucket_size_ms;
+    }
+
     [[nodiscard]] auto get_retain_float_format() const -> bool {
         return false == m_no_retain_float_format;
     }
@@ -157,6 +163,26 @@ private:
             std::vector<std::string> const& options,
             NetworkOutputHandlerOptions& network_options
     );
+
+    /**
+     * Validates the aggregation options (count and count-by-time) for output handlers that
+     * support aggregations.
+     * @param parsed_options
+     * @param count_by_time_bucket_size_ms The parsed value of the count-by-time option; only
+     * validated when that option was specified.
+     * @return The requested aggregation type, or std::nullopt if no aggregation was requested.
+     */
+    [[nodiscard]] static auto parse_aggregation_options(
+            boost::program_options::variables_map const& parsed_options,
+            int64_t count_by_time_bucket_size_ms
+    ) -> std::optional<AggregationType>;
+
+    /**
+     * Throws if an aggregation was requested.
+     * @param handler_name The name of the output handler, used in the error message.
+     * @throws std::invalid_argument if an aggregation was requested.
+     */
+    auto reject_aggregation_for_handler(std::string_view handler_name) const -> void;
 
     /**
      * Validates output options related to the Reducer output handler.
@@ -242,6 +268,9 @@ private:
     bool m_ignore_case{false};
     bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
+
+    std::optional<AggregationType> m_aggregation_type;
+    int64_t m_count_by_time_bucket_size_ms{};
 };
 }  // namespace clp_s
 

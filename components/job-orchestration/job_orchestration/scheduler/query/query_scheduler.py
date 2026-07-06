@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import atexit
 import concurrent.futures
 import contextlib
 import datetime
@@ -45,6 +46,8 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import ConnectionPoolWrapper, SqlAdapter
+from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
+from opentelemetry import metrics
 from pydantic import ValidationError
 
 from job_orchestration.executor.query.celery import app
@@ -96,6 +99,61 @@ active_archive_json_extractions: dict[str, list[str]] = {}
 reducer_connection_queue: asyncio.Queue | None = None
 
 _MULTIPROCESSING_START_METHOD = "spawn"
+
+# OpenTelemetry metrics
+meter = metrics.get_meter(__name__)
+
+
+def _observe_active_jobs(_options: metrics.CallbackOptions):
+    yield metrics.Observation(len(active_jobs))
+
+
+def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
+    try:
+        jobs = list(active_jobs.values())
+    except RuntimeError:
+        return
+    num_outstanding_tasks = 0
+    for job in jobs:
+        if isinstance(job, SearchJob):
+            num_outstanding_tasks += job.num_archives_to_search - job.num_archives_searched
+        else:
+            num_outstanding_tasks += 1
+    yield metrics.Observation(num_outstanding_tasks)
+
+
+meter.create_observable_up_down_counter(
+    "clp.query.active_jobs",
+    unit="{job}",
+    callbacks=[_observe_active_jobs],
+    description="Number of active query jobs",
+)
+meter.create_observable_up_down_counter(
+    "clp.query.outstanding_tasks",
+    unit="{task}",
+    callbacks=[_observe_outstanding_tasks],
+    description="Total number of outstanding tasks across all active query jobs",
+)
+tasks_completed_counter = meter.create_counter(
+    "clp.query.tasks.completed",
+    unit="{task}",
+    description="Number of completed query tasks",
+)
+tasks_failed_counter = meter.create_counter(
+    "clp.query.tasks.failed",
+    unit="{task}",
+    description="Number of failed query tasks",
+)
+job_duration_histogram = meter.create_histogram(
+    "clp.query.job.duration",
+    unit="s",
+    description="Duration of query jobs",
+)
+task_duration_histogram = meter.create_histogram(
+    "clp.query.task.duration",
+    unit="s",
+    description="Duration of query tasks",
+)
 
 
 class DispatchExecutor:
@@ -893,10 +951,14 @@ async def handle_finished_search_job(
         task_result = QueryTaskResult.model_validate(task_result_obj)
         task_id = task_result.task_id
         task_status = task_result.status
+
+        task_duration_histogram.record(task_result.duration)
         if not task_status == QueryTaskStatus.SUCCEEDED:
+            tasks_failed_counter.add(1)
             new_job_status = QueryJobStatus.FAILED
             logger.error(f"Search task job-{job_id}-task-{task_id} failed. ")
         else:
+            tasks_completed_counter.add(1)
             job.num_archives_searched += 1
             logger.info(
                 f"Search task job-{job_id}-task-{task_id} succeeded in "
@@ -947,14 +1009,16 @@ async def handle_finished_search_job(
 
     # We set the status regardless of the job's previous status to handle the case where the
     # job is cancelled (status = CANCELLING) while we're in this method.
+    duration = (datetime.datetime.now() - job.start_time).total_seconds()
     if set_job_or_task_status(
         db_conn,
         QUERY_JOBS_TABLE_NAME,
         job_id,
         new_job_status,
         num_tasks_completed=job.num_archives_searched,
-        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        duration=duration,
     ):
+        job_duration_histogram.record(duration)
         if new_job_status == QueryJobStatus.SUCCEEDED:
             logger.info(f"Completed job {job_id}.")
         elif reducer_failed:
@@ -983,15 +1047,20 @@ async def handle_finished_stream_extraction_job(
     else:
         task_result = QueryTaskResult.model_validate(task_results[0])
         task_id = task_result.task_id
+
+        task_duration_histogram.record(task_result.duration)
         if not QueryTaskStatus.SUCCEEDED == task_result.status:
+            tasks_failed_counter.add(1)
             logger.error(f"Extraction task job-{job_id}-task-{task_id} failed. ")
             new_job_status = QueryJobStatus.FAILED
         else:
+            tasks_completed_counter.add(1)
             logger.info(
                 f"Extraction task job-{job_id}-task-{task_id} succeeded in "
                 f"{task_result.duration} second(s)."
             )
 
+    duration = (datetime.datetime.now() - job.start_time).total_seconds()
     if set_job_or_task_status(
         db_conn,
         QUERY_JOBS_TABLE_NAME,
@@ -999,8 +1068,9 @@ async def handle_finished_stream_extraction_job(
         new_job_status,
         QueryJobStatus.RUNNING,
         num_tasks_completed=num_tasks,
-        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        duration=duration,
     ):
+        job_duration_histogram.record(duration)
         if new_job_status == QueryJobStatus.SUCCEEDED:
             logger.info(f"Completed stream extraction job {job_id}.")
         else:
@@ -1162,6 +1232,9 @@ async def main(argv: list[str]) -> int:
     except Exception:
         logger.exception(f"Failed to initialize {QUERY_SCHEDULER_COMPONENT_NAME}.")
         return -1
+
+    init_telemetry()
+    atexit.register(shutdown_telemetry)
 
     reducer_connection_queue = asyncio.Queue(32)
 
