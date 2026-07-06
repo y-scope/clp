@@ -14,8 +14,7 @@ import {
 } from "@webui/common/schemas/presto-search";
 import {constants} from "http2";
 
-import settings from "../../../../settings.json" with {type: "json"};
-import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
+import {publicSettings} from "../../../settings.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
 
 
@@ -39,7 +38,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     }
 
     const searchResultsMetadataCollection = mongoDb.collection<SearchResultsMetadataDocument>(
-        settings.MongoDbSearchResultsMetadataCollectionName
+        publicSettings.MongoDbSearchResultsMetadataCollectionName
     );
 
     /**
@@ -91,9 +90,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 return;
                             }
 
-                            if (storedResultsCount < MAX_PRESTO_SEARCH_RESULTS) {
+                            if (storedResultsCount < publicSettings.PrestoMaxNumSearchResults) {
                                 const remainingSlots =
-                                    MAX_PRESTO_SEARCH_RESULTS - storedResultsCount;
+                                    publicSettings.PrestoMaxNumSearchResults - storedResultsCount;
                                 const dataToInsert = data.slice(0, remainingSlots);
 
                                 if (0 < dataToInsert.length) {

@@ -646,13 +646,13 @@ def validate_output_storage_config(clp_config: ClpConfig) -> None:
 
 def validate_webui_config(
     clp_config: ClpConfig,
-    client_settings_json_path: pathlib.Path,
-    server_settings_json_path: pathlib.Path,
+    settings_json_path: pathlib.Path,
 ):
-    for path in [client_settings_json_path, server_settings_json_path]:
-        resolved_path = resolve_host_path_in_container(path)
-        if not resolved_path.exists():
-            raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
+    resolved_path = resolve_host_path_in_container(settings_json_path)
+    if not resolved_path.exists():
+        raise ValueError(
+            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
+        )
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
 
@@ -729,7 +729,7 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
 
 
 def validate_retention_config(clp_config: ClpConfig) -> None:
-    clp_query_engine = clp_config.package.query_engine
+    clp_query_engine = clp_config.webui.query_engine
     if is_retention_period_configured(clp_config) and clp_query_engine == QueryEngine.PRESTO:
         raise ValueError(
             f"Retention control is not supported with query_engine `{clp_query_engine}`"

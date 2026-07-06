@@ -31,6 +31,7 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from opentelemetry import metrics
 
 from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.constants import CompressionTaskStatus
@@ -43,6 +44,29 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
+
+meter = metrics.get_meter(__name__)
+bytes_input_counter = meter.create_counter(
+    "clp.compression.bytes_input_total",
+    unit="By",
+    description="Total uncompressed bytes processed by compression",
+)
+bytes_output_counter = meter.create_counter(
+    "clp.compression.bytes_output_total",
+    unit="By",
+    description="Total compressed bytes output by compression",
+)
+
+input_rate_histogram = meter.create_histogram(
+    "clp.compression.input_rate",
+    unit="By/s",
+    description="Rate of uncompressed bytes processed per task",
+)
+output_rate_histogram = meter.create_histogram(
+    "clp.compression.output_rate",
+    unit="By/s",
+    description="Rate of compressed bytes output per task",
+)
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -365,7 +389,11 @@ def run_clp(
         if StorageEngine.CLP_S != clp_storage_engine:
             error_msg = f"S3 storage is not supported for storage engine: {clp_storage_engine}."
             logger.error(error_msg)
-            return False, {"error_message": error_msg}
+            return False, {
+                "total_uncompressed_size": 0,
+                "total_compressed_size": 0,
+                "error_message": error_msg,
+            }
 
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
@@ -388,7 +416,11 @@ def run_clp(
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
-        return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
+        return False, {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": f"Unsupported storage engine {clp_storage_engine}",
+        }
 
     # Generate list of logs to compress
     input_type = clp_config.input.type
@@ -400,7 +432,11 @@ def run_clp(
     else:
         error_msg = f"Unsupported input type: {input_type}."
         logger.error(error_msg)
-        return False, {"error_message": error_msg}
+        return False, {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": error_msg,
+        }
 
     conversion_cmd = None
     converted_inputs_dir = None
@@ -668,5 +704,18 @@ def compression_entry_point(
 
     if CompressionTaskStatus.FAILED == compression_task_status:
         compression_task_result.error_message = worker_output["error_message"]
+
+    status_str = (
+        "success" if CompressionTaskStatus.SUCCEEDED == compression_task_status else "failure"
+    )
+    attributes = {"status": status_str}
+    bytes_input_counter.add(worker_output["total_uncompressed_size"], attributes)
+    bytes_output_counter.add(worker_output["total_compressed_size"], attributes)
+
+    # Record the actual throughput of this task in the rate histograms.
+    # Guard against zero duration to avoid division by zero.
+    if duration > 0:
+        input_rate_histogram.record(worker_output["total_uncompressed_size"] / duration, attributes)
+        output_rate_histogram.record(worker_output["total_compressed_size"] / duration, attributes)
 
     return compression_task_result.model_dump()
