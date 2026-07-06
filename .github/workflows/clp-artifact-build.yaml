@@ -728,6 +728,29 @@ jobs:
         shell: "bash"
         run: "uv run pytest"
 
+      # Print the captured subprocess logs directly into the run output so failures are visible
+      # without downloading an artifact.
+      - name: "Dump the integration-test subprocess logs on failure"
+        if: "failure()"
+        shell: "bash"
+        run: |-
+          shopt -s nullglob
+          for log_file in build/integration_tests/test_logs/*/subprocess_output/*.log; do
+            echo "::group::${log_file}"
+            cat "${log_file}"
+            echo "::endgroup::"
+          done
+
+      # Upload the per-run test logs (including the captured `start-clp.sh`/`stop-clp.sh` subprocess
+      # output) so failures can be diagnosed from the Actions run page without runner access.
+      - name: "Upload the integration-test logs"
+        if: "always()"
+        uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
+        with:
+          name: "clp-integration-test-logs"
+          path: "build/integration_tests/test_logs"
+          retention-days: 3
+
   package-image:
     name: "package-image-${{matrix.arch}}"
     # NOTE: The aarch64 job is skipped on PRs, so we accept both 'success' and 'skipped'.
