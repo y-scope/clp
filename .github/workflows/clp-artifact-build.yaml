@@ -715,6 +715,14 @@ jobs:
             "https://astral.sh/uv/0.8.0/install.sh" | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      # The `mariadb` Python driver (a transitive dependency of `job-orchestration`) is only
+      # published as a source distribution and must compile against MariaDB Connector/C, which
+      # provides the `mariadb_config` helper. Install it so `uv` can build the driver. The tests run
+      # directly on the runner (not in a container) so `start-clp` can reach the host Docker daemon.
+      - name: "Install the MariaDB Connector/C development files"
+        shell: "bash"
+        run: "sudo apt-get update && sudo apt-get install --yes libmariadb-dev"
+
       - name: "Run the integration tests"
         working-directory: "integration-tests"
         shell: "bash"
