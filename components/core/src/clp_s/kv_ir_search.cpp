@@ -246,7 +246,7 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
     }
 
-    if (command_line_arguments.get_aggregation().has_value()) {
+    if (command_line_arguments.get_aggregator().has_value()) {
         SPDLOG_ERROR("kv-ir search: Aggregation support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::AggregationSupportNotImplemented};
     }

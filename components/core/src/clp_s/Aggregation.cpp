@@ -18,7 +18,7 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
-auto CountAggregation::get_results() const -> std::vector<AggregationResult> {
+auto CountAggregator::get_results() const -> std::vector<AggregationResult> {
     if (0 == m_count) {
         return {};
     }
@@ -27,7 +27,7 @@ auto CountAggregation::get_results() const -> std::vector<AggregationResult> {
     return {std::move(result)};
 }
 
-auto CountByTimeAggregation::get_results() const -> std::vector<AggregationResult> {
+auto CountByTimeAggregator::get_results() const -> std::vector<AggregationResult> {
     std::vector<AggregationResult> results;
     results.reserve(m_bucket_counts.size());
     for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
@@ -39,7 +39,9 @@ auto CountByTimeAggregation::get_results() const -> std::vector<AggregationResul
     return results;
 }
 
-MinMaxAggregation::MinMaxAggregation(bool find_max, string_view field)
+// The tokenizer strips a field's namespace prefix out of the path, but namespaced fields live under
+// a top-level object keyed by that namespace, so the namespace is prepended back onto the path.
+MinMaxAggregator::MinMaxAggregator(bool find_max, string_view field)
         : m_find_max{find_max},
           m_field{field} {
     string descriptor_namespace;
@@ -53,13 +55,11 @@ MinMaxAggregation::MinMaxAggregation(bool find_max, string_view field)
         throw std::invalid_argument("Invalid --min/--max field: " + string{field});
     }
     if (false == descriptor_namespace.empty()) {
-        // The tokenizer strips the namespace prefix out of the path, but namespaced fields live
-        // under a top-level object keyed by that namespace. Prepend it back so the path matches.
         m_field_path.insert(m_field_path.begin(), descriptor_namespace);
     }
 }
 
-auto MinMaxAggregation::beats_extreme(Extreme candidate) const -> bool {
+auto MinMaxAggregator::beats_extreme(Extreme candidate) const -> bool {
     auto const& current{m_extreme.value()};
     if (m_find_max) {
         return std::visit(
@@ -71,7 +71,7 @@ auto MinMaxAggregation::beats_extreme(Extreme candidate) const -> bool {
     return std::visit([](auto cand, auto cur) { return is_less(cand, cur); }, candidate, current);
 }
 
-auto MinMaxAggregation::add_record(string_view message, epochtime_t) -> void {
+auto MinMaxAggregator::add_record(string_view message, epochtime_t) -> void {
     nlohmann::json doc;
     try {
         doc = nlohmann::json::parse(message);
@@ -102,7 +102,7 @@ auto MinMaxAggregation::add_record(string_view message, epochtime_t) -> void {
     }
 }
 
-auto MinMaxAggregation::get_results() const -> std::vector<AggregationResult> {
+auto MinMaxAggregator::get_results() const -> std::vector<AggregationResult> {
     if (false == m_extreme.has_value()) {
         return {};
     }

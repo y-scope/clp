@@ -16,12 +16,12 @@
 
 namespace clp_s {
 /**
- * A single typed value in an aggregation result document.
+ * A single typed value in an aggregation's result document.
  */
 using AggregationValue = std::variant<int64_t, double, std::string>;
 
 /**
- * One aggregation result document: an ordered list of typed key-value pairs.
+ * One aggregation's result document: an ordered list of typed key-value pairs.
  */
 using AggregationResult = std::vector<std::pair<std::string, AggregationValue>>;
 
@@ -30,43 +30,47 @@ using AggregationResult = std::vector<std::pair<std::string, AggregationValue>>;
  * @tparam AggregatorType The type of the aggregator.
  */
 template <typename AggregatorType>
-concept AggregatorReq
-        = requires(AggregatorType aggregator, std::string_view message, epochtime_t timestamp_ms) {
-              /**
-               * Adds a record to the aggregate.
-               * @param message The message in the log event.
-               * @param timestamp_ms The timestamp of the log event.
-               */
-              { aggregator.add_record(message, timestamp_ms) } -> std::same_as<void>;
+concept AggregatorReq = requires(
+        AggregatorType aggregator,
+        std::string_view message,
+        epochtime_t timestamp_millisecs
+) {
+    /**
+     * Adds a record to the aggregate.
+     * @param message The message in the log event.
+     * @param timestamp_millisecs The timestamp of the log event.
+     */
+    { aggregator.add_record(message, timestamp_millisecs) } -> std::same_as<void>;
 
-              /**
-               * Gets the aggregate's results.
-               * @return The result documents produced by the aggregation.
-               */
-              { aggregator.get_results() } -> std::same_as<std::vector<AggregationResult>>;
+    /**
+     * Gets the aggregate's results.
+     * @return The result documents produced by the aggregation.
+     */
+    { aggregator.get_results() } -> std::same_as<std::vector<AggregationResult>>;
 
-              /**
-               * Whether the caller must supply per-record metadata.
-               */
-              { AggregatorType::cNeedsMetadata } -> std::convertible_to<bool>;
+    /**
+     * Whether the caller must supply per-record metadata.
+     */
+    { AggregatorType::cNeedsMetadata } -> std::convertible_to<bool>;
 
-              /**
-               * Whether the caller must supply the marshalled record.
-               */
-              { AggregatorType::cNeedsMarshalledRecord } -> std::convertible_to<bool>;
-          };
+    /**
+     * Whether the caller must supply the marshalled record.
+     */
+    { AggregatorType::cNeedsMarshalledRecord } -> std::convertible_to<bool>;
+};
 
 /**
  * Counts the number of matched records.
  */
-class CountAggregation {
+class CountAggregator {
 public:
-    static constexpr bool cNeedsMetadata = false;
-    static constexpr bool cNeedsMarshalledRecord = false;
+    static constexpr bool cNeedsMetadata{false};
+    static constexpr bool cNeedsMarshalledRecord{false};
 
-    auto
-    add_record([[maybe_unused]] std::string_view message, [[maybe_unused]] epochtime_t timestamp_ms)
-            -> void {
+    auto add_record(
+            [[maybe_unused]] std::string_view message,
+            [[maybe_unused]] epochtime_t timestamp_millisecs
+    ) -> void {
         m_count += 1;
     }
 
@@ -79,42 +83,48 @@ private:
 /**
  * Counts the number of matched records in each time bucket of a fixed size.
  */
-class CountByTimeAggregation {
+class CountByTimeAggregator {
 public:
-    static constexpr bool cNeedsMetadata = true;
-    static constexpr bool cNeedsMarshalledRecord = false;
+    static constexpr bool cNeedsMetadata{true};
+    static constexpr bool cNeedsMarshalledRecord{false};
 
-    explicit CountByTimeAggregation(int64_t bucket_size_ms) : m_bucket_size_ms{bucket_size_ms} {
-        if (bucket_size_ms <= 0) {
-            throw std::invalid_argument("CountByTimeAggregation bucket size must be positive.");
+    explicit CountByTimeAggregator(int64_t bucket_size_millisecs)
+            : m_bucket_size_millisecs{bucket_size_millisecs} {
+        if (bucket_size_millisecs <= 0) {
+            throw std::invalid_argument("CountByTimeAggregator bucket size must be positive.");
         }
     }
 
-    [[nodiscard]] auto get_bucket_size_ms() const -> int64_t { return m_bucket_size_ms; }
+    [[nodiscard]] auto get_bucket_size_millisecs() const -> int64_t {
+        return m_bucket_size_millisecs;
+    }
 
-    auto add_record([[maybe_unused]] std::string_view message, epochtime_t timestamp_ms) -> void {
-        int64_t const bucket = (timestamp_ms / m_bucket_size_ms) * m_bucket_size_ms;
+    auto add_record([[maybe_unused]] std::string_view message, epochtime_t timestamp_millisecs)
+            -> void {
+        int64_t const bucket
+                = (timestamp_millisecs / m_bucket_size_millisecs) * m_bucket_size_millisecs;
         m_bucket_counts[bucket] += 1;
     }
 
     [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
 
 private:
-    int64_t m_bucket_size_ms;
+    int64_t m_bucket_size_millisecs;
     std::map<int64_t, int64_t> m_bucket_counts;
 };
 
 /**
  * Tracks the minimum or maximum value of a target field across matched records.
  */
-class MinMaxAggregation {
+class MinMaxAggregator {
 public:
-    static constexpr bool cNeedsMetadata = false;
-    static constexpr bool cNeedsMarshalledRecord = true;
+    static constexpr bool cNeedsMetadata{false};
+    static constexpr bool cNeedsMarshalledRecord{true};
 
-    MinMaxAggregation(bool find_max, std::string_view field);
+    MinMaxAggregator(bool find_max, std::string_view field);
 
-    auto add_record(std::string_view message, [[maybe_unused]] epochtime_t timestamp_ms) -> void;
+    auto add_record(std::string_view message, [[maybe_unused]] epochtime_t timestamp_millisecs)
+            -> void;
 
     [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
 
@@ -136,7 +146,7 @@ private:
 /**
  * One of the supported aggregations that a search can apply to its matched records.
  */
-using Aggregation = std::variant<CountAggregation, CountByTimeAggregation, MinMaxAggregation>;
+using Aggregator = std::variant<CountAggregator, CountByTimeAggregator, MinMaxAggregator>;
 }  // namespace clp_s
 
 #endif  // CLP_S_AGGREGATION_HPP

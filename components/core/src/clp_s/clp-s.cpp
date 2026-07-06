@@ -308,21 +308,19 @@ bool search_archive(
                             );
                         },
                         [&](CommandLineArguments::ReducerOutputHandlerOptions const&) -> void {
-                            auto const& aggregation{
-                                    command_line_arguments.get_aggregation().value()
-                            };
-                            if (std::holds_alternative<clp_s::CountAggregation>(aggregation)) {
+                            auto const& aggregator{command_line_arguments.get_aggregator().value()};
+                            if (std::holds_alternative<clp_s::CountAggregator>(aggregator)) {
                                 output_handler = std::make_unique<clp_s::CountReducerOutputHandler>(
                                         reducer_socket_fd
                                 );
-                            } else if (std::holds_alternative<clp_s::CountByTimeAggregation>(
-                                               aggregation
+                            } else if (std::holds_alternative<clp_s::CountByTimeAggregator>(
+                                               aggregator
                                        )) {
                                 output_handler
                                         = std::make_unique<clp_s::CountByTimeReducerOutputHandler>(
                                                 reducer_socket_fd,
-                                                std::get<clp_s::CountByTimeAggregation>(aggregation)
-                                                        .get_bucket_size_ms()
+                                                std::get<clp_s::CountByTimeAggregator>(aggregator)
+                                                        .get_bucket_size_millisecs()
                                         );
                             } else {
                                 throw std::invalid_argument(
@@ -333,8 +331,8 @@ bool search_archive(
                         },
                         [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
                                 -> void {
-                            auto const& aggregation{command_line_arguments.get_aggregation()};
-                            if (false == aggregation.has_value()) {
+                            auto const& aggregator{command_line_arguments.get_aggregator()};
+                            if (false == aggregator.has_value()) {
                                 output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
                                         options.uri,
                                         options.collection,
@@ -344,7 +342,7 @@ bool search_archive(
                                 );
                             } else {
                                 output_handler = clp_s::make_aggregation_output_handler(
-                                        aggregation.value(),
+                                        aggregator.value(),
                                         std::make_unique<clp_s::ResultsCacheSink>(
                                                 options.uri,
                                                 options.collection,
@@ -354,12 +352,12 @@ bool search_archive(
                             }
                         },
                         [&](CommandLineArguments::StdoutOutputHandlerOptions const&) -> void {
-                            auto const& aggregation{command_line_arguments.get_aggregation()};
-                            if (false == aggregation.has_value()) {
+                            auto const& aggregator{command_line_arguments.get_aggregator()};
+                            if (false == aggregator.has_value()) {
                                 output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                             } else {
                                 output_handler = clp_s::make_aggregation_output_handler(
-                                        aggregation.value(),
+                                        aggregator.value(),
                                         std::make_unique<clp_s::StdoutSink>(
                                                 archive_reader->get_archive_id()
                                         )
