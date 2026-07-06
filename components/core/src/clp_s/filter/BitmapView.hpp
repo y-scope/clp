@@ -28,7 +28,7 @@ concept SetBitVisitorReq = requires(SetBitVisitor bit_handler, size_t bit_idx) {
 /**
  * Non-owning view over a bitmap backed by an external array.
  *
- * Bits are assumed to be ordered within each array element from least-significant bit to
+ * Bits are assumed to be ordered within each array element from the least-significant bit to the
  * most-significant bit. Bits beyond the end of the bitmap that fit into the array are expected to
  * be zero.
  */
@@ -44,7 +44,7 @@ public:
      * @return A result containing the newly created BitmapView, or an error code indicating the
      * failure:
      * - std::errc::invalid_argument if either `bitmap_span` is too small for the number of bits,
-     * or `num_bits` is zero.
+     *   or `num_bits` is zero.
      */
     [[nodiscard]] static auto create(std::span<BitmapComponentType> bitmap_span, size_t num_bits)
             -> ystdlib::error_handling::Result<BitmapView> {
@@ -81,7 +81,7 @@ public:
      * @param bit_idx
      * @return The value of the bit at the requested position, or an error code indicating the
      * failure:
-     * - Forwards get_component_idx_and_bitmask's return values on failure.
+     * - Forwards `get_component_idx_and_bitmask`'s return values on failure.
      */
     [[nodiscard]] auto test_bit(size_t bit_idx) const -> ystdlib::error_handling::Result<bool> {
         auto const [component_idx, bit_mask]
@@ -94,7 +94,7 @@ public:
      * @param bit_idx
      * @param value
      * @return A void result on success, or an error code indicating the failure:
-     * - Forwards get_component_idx_and_bitmask's return values on failure.
+     * - Forwards `get_component_idx_and_bitmask`'s return values on failure.
      */
     [[nodiscard]] auto set_bit(size_t bit_idx, bool value)
             -> ystdlib::error_handling::Result<void> {
@@ -112,7 +112,7 @@ public:
      * Runs a visitor function over every set bit in the bitmap, modifying the state of each such
      * bit according to the return value of the visitor.
      *
-     * Note: on error, some updates for set bits may be lost.
+     * Note: On error, some updates for set bits may be lost.
      *
      * @param set_bit_visitor
      * @return A void result on success, or an error code indicating the failure:
