@@ -35,31 +35,32 @@ task deps:core
 
 The task will download, build, and install (within the build directory) the following libraries:
 
-| Library                                                               | Version/commit |
-|-----------------------------------------------------------------------|----------------|
-| [abseil-cpp](https://github.com/abseil/abseil-cpp)                    | 20250512.0     |
-| [ANTLR](https://www.antlr.org)                                        | v4.13.2        |
-| [Boost](https://github.com/boostorg/boost)                            | v1.87.0        |
-| [Catch2](https://github.com/catchorg/Catch2)                          | v3.8.0         |
-| [date](https://github.com/HowardHinnant/date)                         | v3.0.1         |
-| [fmt](https://github.com/fmtlib/fmt)                                  | v11.2.0        |
-| [liblzma](https://github.com/tukaani-project/xz)                      | v5.8.1         |
-| [log-surgeon](https://github.com/y-scope/log-surgeon)                 | 840f262        |
-| [lz4](https://github.com/lz4/lz4)                                     | v1.10.0        |
-| [microsoft.gsl](https://github.com/microsoft/GSL)                     | v4.0.0         |
-| [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r4.1.1         |
-| [msgpack-cxx](https://github.com/msgpack/msgpack-c/tree/cpp_master)   | v7.0.0         |
-| [nlohmann_json](https://github.com/nlohmann/json)                     | v3.11.3        |
-| [simdjson](https://github.com/simdjson/simdjson)                      | v3.13.0        |
-| [spdlog](https://github.com/gabime/spdlog)                            | v1.15.3        |
-| [SQLite3](https://www.sqlite.org/download.html)                       | v3.36.0        |
-| [utfcpp](https://github.com/nemtrif/utfcpp)                           | v4.0.6         |
-| [xxHash](https://github.com/Cyan4973/xxHash)                          | v0.8.3         |
-| [yaml-cpp](https://github.com/jbeder/yaml-cpp)                        | v0.7.0         |
-| [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer)     | 3abe4cc        |
-| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp)                 | 9ed78cd        |
-| [zlib](https://github.com/madler/zlib)                                | v1.3.1         |
-| [zstd](https://github.com/facebook/zstd)                              | v1.5.7         |
+| Library                                                                  | Version/commit |
+|--------------------------------------------------------------------------|----------------|
+| [abseil-cpp](https://github.com/abseil/abseil-cpp)                       | 20250512.0     |
+| [ANTLR](https://www.antlr.org)                                           | v4.13.2        |
+| [Boost](https://github.com/boostorg/boost)                               | v1.87.0        |
+| [Catch2](https://github.com/catchorg/Catch2)                             | v3.8.0         |
+| [date](https://github.com/HowardHinnant/date)                            | v3.0.1         |
+| [fmt](https://github.com/fmtlib/fmt)                                     | v11.2.0        |
+| [liblzma](https://github.com/tukaani-project/xz)                         | v5.8.1         |
+| [log-surgeon](https://github.com/y-scope/log-surgeon)                    | 840f262        |
+| [lz4](https://github.com/lz4/lz4)                                        | v1.10.0        |
+| [microsoft.gsl](https://github.com/microsoft/GSL)                        | v4.0.0         |
+| [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)          | r4.1.1         |
+| [msgpack-cxx](https://github.com/msgpack/msgpack-c/tree/cpp_master)      | v7.0.0         |
+| [nlohmann_json](https://github.com/nlohmann/json)                        | v3.11.3        |
+| [opentelemetry-cpp](https://github.com/open-telemetry/opentelemetry-cpp) | v1.27.0        |
+| [Protobuf](https://github.com/protocolbuffers/protobuf)                  | v31.1          |
+| [simdjson](https://github.com/simdjson/simdjson)                         | v4.6.4         |
+| [spdlog](https://github.com/gabime/spdlog)                               | v1.15.3        |
+| [SQLite3](https://www.sqlite.org/download.html)                          | v3.36.0        |
+| [utfcpp](https://github.com/nemtrif/utfcpp)                              | v4.0.6         |
+| [xxHash](https://github.com/Cyan4973/xxHash)                             | v0.8.3         |
+| [yaml-cpp](https://github.com/jbeder/yaml-cpp)                           | v0.7.0         |
+| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp)                    | 9ed78cd        |
+| [zlib](https://github.com/madler/zlib)                                   | v1.3.1         |
+| [zstd](https://github.com/facebook/zstd)                                 | v1.5.7         |
 
 ### Environment
 
@@ -110,8 +111,12 @@ the relevant paths on your machine.
 
 * Build:
   ```shell
-  make -j
+  cmake --build . --parallel "$(getconf _NPROCESSORS_ONLN)"
   ```
+
+  > **NOTE:** If the build runs out of memory, reduce parallelism by capping based on total memory
+  > (at least 2 GB per core). For example, on a machine with 8 GB of memory:
+  > `cmake --build . --parallel 4`
 
 ## Test
 

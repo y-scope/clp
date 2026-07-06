@@ -31,7 +31,9 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from opentelemetry import metrics
 
+from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
@@ -42,6 +44,29 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
+
+meter = metrics.get_meter(__name__)
+bytes_input_counter = meter.create_counter(
+    "clp.compression.bytes_input_total",
+    unit="By",
+    description="Total uncompressed bytes processed by compression",
+)
+bytes_output_counter = meter.create_counter(
+    "clp.compression.bytes_output_total",
+    unit="By",
+    description="Total compressed bytes output by compression",
+)
+
+input_rate_histogram = meter.create_histogram(
+    "clp.compression.input_rate",
+    unit="By/s",
+    description="Rate of uncompressed bytes processed per task",
+)
+output_rate_histogram = meter.create_histogram(
+    "clp.compression.output_rate",
+    unit="By/s",
+    description="Rate of compressed bytes output per task",
+)
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -364,7 +389,11 @@ def run_clp(
         if StorageEngine.CLP_S != clp_storage_engine:
             error_msg = f"S3 storage is not supported for storage engine: {clp_storage_engine}."
             logger.error(error_msg)
-            return False, {"error_message": error_msg}
+            return False, {
+                "total_uncompressed_size": 0,
+                "total_compressed_size": 0,
+                "error_message": error_msg,
+            }
 
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
@@ -387,7 +416,11 @@ def run_clp(
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
-        return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
+        return False, {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": f"Unsupported storage engine {clp_storage_engine}",
+        }
 
     # Generate list of logs to compress
     input_type = clp_config.input.type
@@ -399,7 +432,11 @@ def run_clp(
     else:
         error_msg = f"Unsupported input type: {input_type}."
         logger.error(error_msg)
-        return False, {"error_message": error_msg}
+        return False, {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": error_msg,
+        }
 
     conversion_cmd = None
     converted_inputs_dir = None
@@ -428,17 +465,23 @@ def run_clp(
                     converted_inputs_dir,
                 )
 
-    # Open stderr log file
-    stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
-    stderr_log_file = open(stderr_log_path, "w")
+    # Open log files
+    compression_log_path = logs_dir / f"{instance_id_str}-stderr.log"
+    compression_log_file = open(compression_log_path, "w")
+    conversion_log_path = logs_dir / f"{instance_id_str}-conversion-stderr.log"
+    conversion_log_file = open(conversion_log_path, "w")
 
     conversion_return_code = 0
     if conversion_cmd is not None:
         logger.debug("Execute log-converter with command: %s", conversion_cmd)
         conversion_proc = subprocess.Popen(
-            conversion_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file, env=conversion_env
+            conversion_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=conversion_log_file,
+            env=conversion_env,
         )
         conversion_return_code = conversion_proc.wait()
+    conversion_log_file.close()
 
     try:
         if conversion_return_code != 0:
@@ -448,15 +491,20 @@ def run_clp(
             worker_output = {
                 "total_uncompressed_size": 0,
                 "total_compressed_size": 0,
-                "error_message": f"Check logs in {stderr_log_path}",
+                "error_message": f"Check logs in {conversion_log_path}",
             }
+            log_file_contents(logger, conversion_log_path)
+
             return CompressionTaskStatus.FAILED, worker_output
 
         # Start compression
         logger.debug("Compressing...")
         compression_successful = False
         proc = subprocess.Popen(
-            compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file, env=compression_env
+            compression_cmd,
+            stdout=subprocess.PIPE,
+            stderr=compression_log_file,
+            env=compression_env,
         )
 
         # Compute the total amount of data compressed
@@ -535,7 +583,7 @@ def run_clp(
                             subprocess.run(
                                 indexer_cmd,
                                 stdout=subprocess.DEVNULL,
-                                stderr=stderr_log_file,
+                                stderr=compression_log_file,
                                 check=True,
                                 env=indexer_env,
                             )
@@ -558,7 +606,8 @@ def run_clp(
         logger.debug("Compressed.")
     finally:
         cleanup_temporary_files()
-        stderr_log_file.close()
+        compression_log_file.close()
+        log_file_contents(logger, compression_log_path)
 
     worker_output = {
         "total_uncompressed_size": total_uncompressed_size,
@@ -569,7 +618,7 @@ def run_clp(
         return CompressionTaskStatus.SUCCEEDED, worker_output
     error_msgs = []
     if compression_successful is False:
-        error_msgs.append(f"See logs {stderr_log_path}")
+        error_msgs.append(f"See logs {compression_log_path}")
     if s3_error is not None:
         error_msgs.append(s3_error)
     worker_output["error_message"] = "\n".join(error_msgs)
@@ -655,5 +704,18 @@ def compression_entry_point(
 
     if CompressionTaskStatus.FAILED == compression_task_status:
         compression_task_result.error_message = worker_output["error_message"]
+
+    status_str = (
+        "success" if CompressionTaskStatus.SUCCEEDED == compression_task_status else "failure"
+    )
+    attributes = {"status": status_str}
+    bytes_input_counter.add(worker_output["total_uncompressed_size"], attributes)
+    bytes_output_counter.add(worker_output["total_compressed_size"], attributes)
+
+    # Record the actual throughput of this task in the rate histograms.
+    # Guard against zero duration to avoid division by zero.
+    if duration > 0:
+        input_rate_histogram.record(worker_output["total_uncompressed_size"] / duration, attributes)
+        output_rate_histogram.record(worker_output["total_compressed_size"] / duration, attributes)
 
     return compression_task_result.model_dump()

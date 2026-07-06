@@ -49,8 +49,8 @@ tasks:
   webui-generate-parser:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/client/src/sql-parser"
-      OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/client/src/sql-parser/generated"
+      SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/packages/client/src/sql-parser"
+      OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/packages/client/src/sql-parser/generated"
     deps:
       - ":deps:antlr-jar"
       - task: ":utils:checksum:validate"

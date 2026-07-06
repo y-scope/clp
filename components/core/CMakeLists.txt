@@ -210,9 +210,22 @@ if(CLP_NEED_NLOHMANN_JSON)
     endif()
 endif()
 
+if(CLP_NEED_OPENTELEMETRY_CPP)
+    # NOTE: We don't restrict the discovery to specific `COMPONENTS` because the OTLP HTTP exporter
+    # and trace SDK targets are required in addition to the API, and the package config exports all
+    # built targets regardless.
+    find_package(opentelemetry-cpp CONFIG REQUIRED)
+    if(opentelemetry-cpp_FOUND)
+        message(STATUS "Found opentelemetry-cpp ${opentelemetry-cpp_VERSION}")
+    endif()
+endif()
+
 if(CLP_NEED_SIMDJSON)
     find_package(simdjson REQUIRED)
     if(simdjson_FOUND)
+        if(simdjson_VERSION VERSION_LESS 4.0.0)
+            message(FATAL_ERROR "simdjson >= 4.0.0 is required, found ${simdjson_VERSION}")
+        endif()
         message(STATUS "Found simdjson ${simdjson_VERSION}")
     endif()
 endif()

@@ -48,9 +48,12 @@ spec:
         {{- end }}
       containers:
         - name: "query-scheduler"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            - name: "OTEL_METRIC_EXPORT_INTERVAL"
+              value: {{ .Values.clpConfig.query_scheduler.telemetry_update_interval_ms | quote }}
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
                 "root" .
@@ -68,8 +71,14 @@ spec:
                   key: "username"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
+            - name: "OTEL_SERVICE_NAME"
+              value: "query-scheduler"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "queryScheduler"
+            ) | nindent 10 }}
           ports:
             - name: "query-scheduler"
               containerPort: 7000

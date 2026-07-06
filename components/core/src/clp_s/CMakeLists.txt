@@ -13,8 +13,6 @@ set(
         ../clp/BufferedReader.hpp
         ../clp/BufferReader.cpp
         ../clp/BufferReader.hpp
-        ../clp/cli_utils.cpp
-        ../clp/cli_utils.hpp
         ../clp/Defs.h
         ../clp/EncodedVariableInterpreter.cpp
         ../clp/EncodedVariableInterpreter.hpp
@@ -69,6 +67,8 @@ set(
         ../clp/FileDescriptor.hpp
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
+        ../clp/FileWriter.cpp
+        ../clp/FileWriter.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
         ../clp/SchemaSearcher.cpp
@@ -98,7 +98,10 @@ set(
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_archive/Constants.hpp
         ../clp/streaming_compression/Constants.hpp
+        ../clp/streaming_compression/Compressor.hpp
         ../clp/streaming_compression/Decompressor.hpp
+        ../clp/streaming_compression/zstd/Compressor.cpp
+        ../clp/streaming_compression/zstd/Compressor.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/StringReader.cpp
@@ -137,6 +140,17 @@ if(CLP_BUILD_CLP_S_ENABLE_CURL)
         list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_CURL_SOURCES})
 endif()
 
+set(
+        CLP_S_CLP_LIBARCHIVE_SOURCES
+        ../clp/LibarchiveReader.cpp
+        ../clp/LibarchiveReader.hpp
+        ../clp/LibarchiveFileReader.cpp
+        ../clp/LibarchiveFileReader.hpp
+)
+if(CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE)
+        list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_LIBARCHIVE_SOURCES})
+endif()
+
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
 if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         add_library(
@@ -168,6 +182,13 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                         ${CURL_LIBRARIES}
                         PRIVATE
                         OpenSSL::Crypto
+                )
+        endif()
+        if(CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PUBLIC
+                        LibArchive::LibArchive
                 )
         endif()
 endif()
@@ -244,18 +265,19 @@ if(CLP_BUILD_CLP_S_IO)
                 clp_s_io
                 PRIVATE
                 CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+                CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE}>
         )
         target_compile_features(clp_s_io PRIVATE cxx_std_20)
         target_include_directories(clp_s_io PUBLIC ../)
         target_link_libraries(
                 clp_s_io
                 PUBLIC
+                simdjson::simdjson
                 zstd::libzstd_static
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
-                simdjson::simdjson
                 spdlog::spdlog
         )
 endif()
@@ -393,6 +415,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
+                simdjson::simdjson
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
