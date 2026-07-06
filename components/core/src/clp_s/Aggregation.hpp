@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -134,9 +135,30 @@ private:
 };
 
 /**
+ * Collects the distinct values of a target field across matched records.
+ */
+class UniqueAggregation {
+public:
+    static constexpr bool cNeedsMetadata = false;
+    static constexpr bool cNeedsMarshalledRecord = true;
+
+    explicit UniqueAggregation(std::string_view field);
+
+    auto add_record(std::string_view message, [[maybe_unused]] epochtime_t timestamp_ms) -> void;
+
+    [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
+
+private:
+    std::string m_field;
+    std::vector<std::string> m_field_path;
+    std::set<AggregationValue> m_values;
+};
+
+/**
  * One of the supported aggregations that a search can apply to its matched records.
  */
-using Aggregation = std::variant<CountAggregation, CountByTimeAggregation, MinMaxAggregation>;
+using Aggregation = std::
+        variant<CountAggregation, CountByTimeAggregation, MinMaxAggregation, UniqueAggregation>;
 }  // namespace clp_s
 
 #endif  // CLP_S_AGGREGATION_HPP
