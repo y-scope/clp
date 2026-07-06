@@ -824,6 +824,20 @@ jobs:
         shell: "bash"
         run: "./tools/docker-images/clp-package/build.sh"
 
+      # TEMPORARY DIAGNOSTIC: report the runtime image's Python version and the compiled
+      # `pydantic_core` extension baked into it. If the interpreter version and the `cpython-3XX`
+      # tag in the `.so` filename disagree, `python-libs` was built with a mismatched Python.
+      - name: "DIAGNOSTIC: inspect the runtime image's pydantic_core"
+        if: "matrix.arch == 'amd64'"
+        shell: "bash"
+        run: |-
+          image_id="$(cat build/clp-package-image.id)"
+          echo "== Runtime image Python version =="
+          docker run --rm --entrypoint bash "$image_id" -c "python3 --version"
+          echo "== pydantic_core contents in the image =="
+          docker run --rm --entrypoint bash "$image_id" \
+            -c "ls -l /opt/clp/lib/python3/site-packages/pydantic_core/"
+
       - name: "Assemble the package directory for the integration tests"
         if: "matrix.arch == 'amd64'"
         uses: "./.github/actions/run-on-image"
