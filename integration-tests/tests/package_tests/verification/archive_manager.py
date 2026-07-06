@@ -36,9 +36,9 @@ def verify_archive_manager_find(
         err_msg = "Verification expects an 'ArchiveManagerArgs' action."
         raise TypeError(err_msg)
 
-    returncode_result = action.verify_returncode()
-    if not returncode_result:
-        return returncode_result
+    result = action.verify_returncode()
+    if not result:
+        return result
 
     args = action.args
     begin_ts = args.begin_ts if args.begin_ts is not None else 0
@@ -127,9 +127,9 @@ def verify_archive_manager_del_by_ids(
         err_msg = "Verification expects an 'ArchiveManagerArgs' action."
         raise TypeError(err_msg)
 
-    returncode_result = action.verify_returncode()
-    if not returncode_result:
-        return returncode_result
+    result = action.verify_returncode()
+    if not result:
+        return result
 
     args = action.args
     find_all_action = run_archive_manager_find(clp_package=clp_package, dataset=dataset)
@@ -170,9 +170,9 @@ def verify_archive_manager_del_by_filter(
         err_msg = "Verification expects an 'ArchiveManagerArgs' action."
         raise TypeError(err_msg)
 
-    returncode_result = action.verify_returncode()
-    if not returncode_result:
-        return returncode_result
+    result = action.verify_returncode()
+    if not result:
+        return result
 
     args = action.args
     find_action = run_archive_manager_find(
