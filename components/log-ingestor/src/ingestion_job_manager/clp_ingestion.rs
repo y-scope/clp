@@ -22,7 +22,7 @@ use clp_rust_utils::{
 };
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
-use sqlx::MySqlPool;
+use sqlx::{Acquire as _, MySqlPool};
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 use tokio::sync::mpsc;
 
@@ -1071,7 +1071,8 @@ impl ClpCompressionState {
     /// * [`anyhow::Error`] if one or more object metadata rows fail to be updated in the DB.
     /// * Forwards [`clp_rust_utils::serde::BrotliMsgpack::serialize`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`sqlx::Pool::acquire`]'s return values on failure.
+    /// * Forwards [`sqlx::Acquire::begin`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
     ///
     /// # Panics
@@ -1081,6 +1082,7 @@ impl ClpCompressionState {
         &self,
         io_config: ClpIoConfig,
     ) -> anyhow::Result<CompressionJobId> {
+        const SET_READ_COMMITTED: &str = "SET TRANSACTION ISOLATION LEVEL READ COMMITTED";
         const COMPRESSION_JOB_SUBMISSION_QUERY: &str = formatcp!(
             r"INSERT INTO {table} (`clp_config`) VALUES (?)",
             table = CLP_COMPRESSION_JOB_TABLE_NAME
@@ -1093,7 +1095,9 @@ impl ClpCompressionState {
             }
         };
 
-        let mut tx = self.db_pool.begin().await?;
+        let mut conn = self.db_pool.acquire().await?;
+        sqlx::query(SET_READ_COMMITTED).execute(&mut *conn).await?;
+        let mut tx = conn.begin().await?;
 
         // Submit compression job
         let result = sqlx::query(COMPRESSION_JOB_SUBMISSION_QUERY)
@@ -1107,10 +1111,10 @@ impl ClpCompressionState {
 
         // Update compression job ID for ingested objects.
         // NOTE: We batch the update to avoid hitting the maximum placeholder limit of MySQL. The
-        // batch size is chosen to be 10000, which is conservative enough to avoid hitting the limit
-        // while also minimizing the number of batches for typical use cases. If the number of
+        // batch size is chosen to be 1000, which is conservative enough to avoid hitting the limit
+        // while keeping each UPDATE's lock footprint small under concurrency. If the number of
         // placeholders per update changes, we may need to adjust the batch size accordingly.
-        for chunk in object_metadata_ids.chunks(10000) {
+        for chunk in object_metadata_ids.chunks(1000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
                 r"UPDATE `{table}` ",
                 table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
