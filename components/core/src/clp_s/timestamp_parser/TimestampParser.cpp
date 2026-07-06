@@ -98,28 +98,28 @@ constexpr std::array<NamedTimezone, 8> cNamedTimezones
 
 constexpr std::array cDefaultDateTimePatterns{
         std::string_view{
-                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"
         },
         std::string_view{
-                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
+                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"
         },
         std::string_view{
-                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"
         },
         std::string_view{
-                R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
+                R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"
         },
         std::string_view{
-                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"
         },
         std::string_view{
-                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"
+                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"
         },
         std::string_view{
-                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"
+                R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"
         },
         std::string_view{
-                R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s \Z)"
+                R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"
         },
 
         std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\O{,.}\?\Z)"},
