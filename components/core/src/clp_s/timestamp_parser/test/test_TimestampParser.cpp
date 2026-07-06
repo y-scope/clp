@@ -179,13 +179,13 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         }
 
         std::vector<std::string> const invalid_timestamp_pattern_templates{
-                R"(\o{,-0500})",  // Empty timezone name
-                R"(\z{-0500}\o{EST,-0500})",  // Duplicate timezone
-                R"(\z{-0500}\z{-0400})",  // Duplicate timezone
-                R"(\o{EST,-0500}\o{UT,+0000})",  // Duplicate timezone
-                R"(\o{EST})",  // Missing comma
-                R"(\o{})",  // Empty brackets
-                R"(\o{EST,-0500,abc})",  // Extra text after offset
+                R"(\o{,-0500})",
+                R"(\z{-0500}\o{EST,-0500})",
+                R"(\z{-0500}\z{-0400})",
+                R"(\o{EST,-0500}\o{UT,+0000})",
+                R"(\o{EST})",
+                R"(\o{})",
+                R"(\o{EST,-0500,abc})",
         };
         for (auto const& invalid_timestamp_pattern_template : invalid_timestamp_pattern_templates) {
             auto const result{TimestampPattern::create(invalid_timestamp_pattern_template)};
@@ -194,8 +194,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         }
 
         std::vector<std::string> const invalid_timezone_offset_templates{
-                R"(\o{EST,-abc})",  // Invalid offset format
-                R"(\o{EST,})",  // Missing offset
+                R"(\o{EST,-abc})",
+                R"(\o{EST,})",
         };
         for (auto const& invalid_timezone_offset_template : invalid_timezone_offset_templates) {
             auto const result{TimestampPattern::create(invalid_timezone_offset_template)};
@@ -802,7 +802,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                     quoted_content,
                     generated_pattern
             )};
-            if (!searched_result.has_value()) {
+            if (false == searched_result.has_value()) {
                 UNSCOPED_INFO("Failed to match pattern for string: " << expected_result.timestamp);
             }
             REQUIRE(searched_result.has_value());

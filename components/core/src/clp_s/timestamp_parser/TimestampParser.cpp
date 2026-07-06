@@ -97,8 +97,6 @@ constexpr std::array<NamedTimezone, 8> cNamedTimezones
             {"PST", "-0800", -480}}};
 
 constexpr std::array cDefaultDateTimePatterns{
-        // RFC 2822 / 822 patterns (16 variations: with or without day of week, with or without
-        // comma, with or without seconds, with or without timezone offset)
         std::string_view{
                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s \Z)"
         },
