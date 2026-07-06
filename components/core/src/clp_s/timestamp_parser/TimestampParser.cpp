@@ -1826,14 +1826,12 @@ auto parse_timestamp(
                 } else if (remaining_unparsed_content.starts_with(cUt)) {
                     timezone_pattern.append(cUt);
                     timestamp_idx += cUt.size();
-                    optional_timezone_offset_in_minutes = 0;
                     cat_sequence_replacements
                             .emplace_back(pattern_idx - 1, 2ULL, std::move(timezone_pattern));
                     break;
                 } else if (remaining_unparsed_content.starts_with(cGmt)) {
                     timezone_pattern.append(cGmt);
                     timestamp_idx += cGmt.size();
-                    optional_timezone_offset_in_minutes = 0;
                     cat_sequence_replacements
                             .emplace_back(pattern_idx - 1, 2ULL, std::move(timezone_pattern));
                     break;
