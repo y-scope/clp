@@ -348,6 +348,7 @@ bool search_archive(
                                         std::make_unique<clp_s::ResultsCacheSink>(
                                                 options.uri,
                                                 options.collection,
+                                                options.batch_size,
                                                 archive_reader->get_archive_id()
                                         )
                                 );

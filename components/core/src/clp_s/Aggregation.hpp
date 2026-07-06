@@ -19,7 +19,7 @@ namespace clp_s {
 /**
  * A single typed value in an aggregation result document.
  */
-using AggregationValue = std::variant<int64_t, double, std::string>;
+using AggregationValue = std::variant<int64_t, double, std::string, bool>;
 
 /**
  * One aggregation result document: an ordered list of typed key-value pairs.

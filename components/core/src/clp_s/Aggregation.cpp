@@ -161,8 +161,10 @@ auto UniqueAggregation::add_record(string_view message, epochtime_t) -> void {
         m_values.emplace(node->get<double>());
     } else if (node->is_string()) {
         m_values.emplace(node->get<string>());
+    } else if (node->is_boolean()) {
+        m_values.emplace(node->get<bool>());
     }
-    // Values that aren't scalars (e.g. objects, arrays, booleans, or null) are ignored.
+    // Values that aren't scalars (e.g. objects, arrays, or null) are ignored.
 }
 
 auto UniqueAggregation::get_results() const -> std::vector<AggregationResult> {
