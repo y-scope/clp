@@ -45,8 +45,9 @@ For continuously running deployed services such as Python orchestration services
 * **Docker Compose**: Logs are available using `docker compose logs`. If `CLP_LOGS_DIR` is set,
 logs are additionally written to `<CLP_LOGS_DIR>/<component_name>.log`. This directory mounts to the host via `CLP_LOGS_DIR_HOST` (defaults to `./var/log`).
   :::{note}
-  For Rust services, setting `CLP_LOGS_DIR` enables file logging with hourly log rotation and a
-  non-blocking file writer.
+  For Rust services, `stdout` logging is sent through a background writer configured to avoid
+  dropped log records. Setting `CLP_LOGS_DIR` additionally enables file logging with hourly log
+  rotation and the same lossless background writer behavior.
   :::
 * **Kubernetes/Helm**: Logs are accessible using `kubectl logs` or a cluster log collector (e.g., Fluent Bit). File
   logging is only enabled for templates that set `CLP_LOGS_DIR` and mount a log volume.
