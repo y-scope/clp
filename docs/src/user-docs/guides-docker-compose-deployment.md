@@ -102,7 +102,7 @@ To configure CLP for multi-host deployment, you'll need to:
    * Create any necessary directories
    * Generate an `.env` file with all necessary environment variables
    * Create `var/log/.clp-config.yaml` (the container-specific configuration file)
-   * Create `var/www/webui/server/dist/settings.json` (the `webui` server's configuration file)
+   * Create `etc/webui/settings.json` (the `webui` server's configuration file)
 
 ### Distributing the set-up package
 
@@ -136,7 +136,7 @@ services.
 
 :::{note}
 For **clp-json + Presto** deployments (`package.storage_engine`: `clp-s` with
-`package.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
+`webui.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
 `reducer` services.
 :::
 

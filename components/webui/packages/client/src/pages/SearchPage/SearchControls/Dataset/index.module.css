@@ -1,0 +1,21 @@
+.datasetContainer {
+    display: flex;
+    max-width: 250px;
+}
+
+.selectContainer {
+    min-width: 108px;
+}
+
+.selectContainerExpanded {
+    width: 230px;
+}
+
+.select {
+    width: 100%;
+}
+
+.select :global(.ant-select-selector) {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}

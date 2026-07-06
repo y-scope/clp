@@ -93,7 +93,7 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
             &client,
             &self.config.base.bucket_name,
             &self.config.base.key_prefix,
-            self.start_after.take(),
+            &self.start_after,
             async move |page: Vec<ObjectMetadata>| -> Result<(bool, NonEmptyString)> {
                 let last_ingested_key =
                     page.last().expect("`page` should not be empty").key.clone();
@@ -102,7 +102,11 @@ impl<S3ClientManager: AwsClientManagerType<Client>, State: IngestionJobState + S
             },
         )
         .await?;
-        self.start_after = last_scanned_key;
+        if last_scanned_key.is_some() {
+            // NOTE: We should only update the last scanned key if the current scan results in new
+            // objects ingested.
+            self.start_after = last_scanned_key;
+        }
         Ok(())
     }
 
