@@ -22,6 +22,9 @@ inputs:
     description: >-
       Platform version codename (e.g. jammy, noble) used as the runtime image base version.
     required: true
+  push_image:
+    description: "Whether to publish the package image"
+    required: true
 
 runs:
   using: "composite"
@@ -30,6 +33,7 @@ runs:
       uses: "docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2"
 
     - name: "Login to Image Registry"
+      if: "inputs.push_image == 'true'"
       uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
       with:
         registry: "${{inputs.image_registry}}"
@@ -78,8 +82,21 @@ runs:
           exit 1
         fi
 
+    - name: "Compute image output properties"
+      id: "output-properties"
+      shell: "bash"
+      run: |
+        image_name="${{steps.compute-meta.outputs.IMAGE_NAME}}"
+        if [[ "${{inputs.push_image}}" == "true" ]]; then
+          echo "image_output=type=registry" >> "$GITHUB_OUTPUT"
+        else
+          # Suffix with arch so the amd64/arm64 tars don't collide.
+          image_path="/tmp/${image_name}-${{inputs.arch}}.tar"
+          echo "image_path=${image_path}" >> "$GITHUB_OUTPUT"
+          echo "image_output=type=docker,dest=${image_path}" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: "Build and Push"
-      if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
       uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
       with:
         context: "./"
@@ -88,8 +105,16 @@ runs:
         # Disable provenance to create a simple image instead of a manifest list.
         # This allows `docker manifest create` to combine the per-arch images later.
         provenance: false
-        push: true
+        outputs: "${{steps.output-properties.outputs.image_output}}"
         tags: "${{steps.extract-gh-meta.outputs.tags}}"
         labels: "${{steps.extract-gh-meta.outputs.labels}}"
         build-args: |
           UBUNTU_VERSION_CODENAME=${{inputs.platform_version_codename}}
+
+    - name: "Upload package image as artifact"
+      if: "inputs.push_image == 'false'"
+      uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+      with:
+        name: "${{steps.compute-meta.outputs.IMAGE_NAME}}-${{inputs.arch}}"
+        path: "${{steps.output-properties.outputs.image_path}}"
+        retention-days: 1
