@@ -33,7 +33,6 @@ build = [
   "auditwheel>=6.6.0",
   "build>=1.4.0",
   "patchelf>=0.17.2.4",
-  "scikit-build-core==1.0.0",
 ]
 dev = [
   "mypy>=1.16.0",
