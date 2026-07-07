@@ -10,7 +10,6 @@ import subprocess
 import time
 import uuid
 from abc import ABC, abstractmethod
-from types import MappingProxyType
 from typing import Any
 
 from clp_py_utils.clp_config import (
@@ -33,7 +32,6 @@ from clp_py_utils.clp_config import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
-    DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
@@ -186,7 +184,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = DB_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
 
@@ -272,7 +270,7 @@ class BaseController(ABC):
             )
             return EnvVarsDict()
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
 
@@ -361,7 +359,7 @@ class BaseController(ABC):
             )
             return EnvVarsDict()
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
 
@@ -399,7 +397,7 @@ class BaseController(ABC):
             )
             return EnvVarsDict()
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
 
@@ -465,7 +463,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = RESULTS_CACHE_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
 
@@ -498,7 +496,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -529,13 +527,22 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        if self._clp_config.query_scheduler is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_QUERY_SCHEDULER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_QUERY_SCHEDULER_ENABLED": "1",
+        }
 
         # Logging config
         env_vars |= {
@@ -559,7 +566,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = COMPRESSION_WORKER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -596,13 +603,22 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_WORKER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        if self._clp_config.query_worker is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_QUERY_WORKER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_QUERY_WORKER_ENABLED": "1",
+        }
 
         # Logging config
         env_vars |= {
@@ -631,13 +647,22 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDUCER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        if self._clp_config.reducer is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_REDUCER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_REDUCER_ENABLED": "1",
+        }
 
         # Logging config
         env_vars |= {
@@ -660,9 +685,9 @@ class BaseController(ABC):
         """
         component_name = API_SERVER_COMPONENT_NAME
         if self._clp_config.api_server is None:
-            logger.info(f"The API Server is not configured, skipping {component_name} creation...")
+            logger.info("The API Server is not configured, skipping %s creation...", component_name)
             return EnvVarsDict({"CLP_API_SERVER_ENABLED": "0"})
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -723,7 +748,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = WEBUI_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
         settings_json_path = self._clp_home / "etc" / "webui" / "settings.json"
@@ -762,19 +787,24 @@ class BaseController(ABC):
             stream_files_s3_profile = auth.profile if AwsAuthType.profile == auth.type else None
             stream_files_s3_region = s3_config.region_code
 
-        query_engine = self._clp_config.package.query_engine
+        query_engine = self._clp_config.webui.query_engine
         presto_host = None
         presto_port = None
         if QueryEngine.PRESTO == query_engine:
             presto_host = container_clp_config.presto.host
             presto_port = container_clp_config.presto.port
 
+        max_datasets_per_query = None
+        if self._clp_config.query_scheduler is not None:
+            max_datasets_per_query = self._clp_config.query_scheduler.max_datasets_per_query
+
         public_settings_updates = {
-            "ClpQueryEngine": self._clp_config.package.query_engine,
+            "ClpQueryEngine": self._clp_config.webui.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "LogsInputRootDir": logs_input_root_dir,
             "LogsInputType": self._clp_config.logs_input.type,
-            "MaxDatasetsPerQuery": self._clp_config.query_scheduler.max_datasets_per_query,
+            "MaxDatasetsPerQuery": max_datasets_per_query,
+            "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "SqlDbClpArchivesTableName": archives_table_name,
             "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
             "SqlDbClpFilesTableName": files_table_name,
@@ -850,9 +880,9 @@ class BaseController(ABC):
         """
         component_name = MCP_SERVER_COMPONENT_NAME
         if self._clp_config.mcp_server is None:
-            logger.info(f"The MCP Server is not configured, skipping {component_name} creation...")
+            logger.info("The MCP Server is not configured, skipping %s creation...", component_name)
             return EnvVarsDict()
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         validate_mcp_server_config(self._clp_config, logs_dir)
@@ -897,7 +927,7 @@ class BaseController(ABC):
                 }
             )
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -959,7 +989,7 @@ class BaseController(ABC):
             logger.info("Telemetry is disabled, skipping %s environment setup...", component_name)
             return EnvVarsDict()
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
 
@@ -1067,16 +1097,6 @@ class BaseController(ABC):
                 self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
             else:
                 settings[key] = value
-
-
-_DEPLOYMENT_TYPE_TO_COMPOSE_FILE: MappingProxyType[DeploymentType, str] = MappingProxyType(
-    {
-        DeploymentType.BASE: "docker-compose-base.yaml",
-        DeploymentType.FULL: "docker-compose.yaml",
-        DeploymentType.SPIDER_BASE: "docker-compose-spider-base.yaml",
-        DeploymentType.SPIDER_FULL: "docker-compose-spider.yaml",
-    }
-)
 
 
 class DockerComposeController(BaseController):
@@ -1211,8 +1231,8 @@ class DockerComposeController(BaseController):
             should_compose_project_be_running=False, project_name=self._project_name
         )
 
-        deployment_type = self._clp_config.get_deployment_type()
-        logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
+        orchestration_type = self._clp_config.compression_scheduler.type
+        logger.info("Starting CLP using Docker Compose (%s orchestration)...", orchestration_type)
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
@@ -1270,7 +1290,9 @@ class DockerComposeController(BaseController):
         """
         :return: The Docker Compose file name to use based on the config.
         """
-        return _DEPLOYMENT_TYPE_TO_COMPOSE_FILE[self._clp_config.get_deployment_type()]
+        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
+            return "docker-compose-spider.yaml"
+        return "docker-compose.yaml"
 
     def _emit_topology_metrics(self) -> None:
         timestamp_ns = int(time.time() * 1e9)
@@ -1291,10 +1313,16 @@ class DockerComposeController(BaseController):
         # NOTE: Replicas are hardcoded to 1 until multi-container workers land (see #1424).
         add_gauge("clp.deployment.compression_worker_replicas", 1)
         add_gauge("clp.deployment.compression_worker_concurrency", num_workers)
-        add_gauge("clp.deployment.query_worker_replicas", 1)
-        add_gauge("clp.deployment.query_worker_concurrency", num_workers)
-        add_gauge("clp.deployment.reducer_replicas", 1)
-        add_gauge("clp.deployment.reducer_concurrency", num_workers)
+
+        query_worker_replicas = 0 if self._clp_config.query_worker is None else 1
+        query_worker_concurrency = 0 if self._clp_config.query_worker is None else num_workers
+        add_gauge("clp.deployment.query_worker_replicas", query_worker_replicas)
+        add_gauge("clp.deployment.query_worker_concurrency", query_worker_concurrency)
+
+        reducer_replicas = 0 if self._clp_config.reducer is None else 1
+        reducer_concurrency = 0 if self._clp_config.reducer is None else num_workers
+        add_gauge("clp.deployment.reducer_replicas", reducer_replicas)
+        add_gauge("clp.deployment.reducer_concurrency", reducer_concurrency)
 
         payload = {
             "resourceMetrics": [

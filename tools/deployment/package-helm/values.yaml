@@ -249,6 +249,7 @@ clpConfig:
     task_soft_time_limit: 0  # A value of 0 disables the limit
     task_time_limit: 0  # A value of 0 disables the limit
     telemetry_update_interval_ms: 60000
+    query_trace_sampling_probability: 0.01
 
   reducer:
     logging_level: "INFO"
@@ -257,8 +258,9 @@ clpConfig:
   webui:
     query_engine: "clp-s"
     port: 30000
-    results_metadata_collection_name: "results-metadata"
+    presto_max_num_search_results: 1000
     rate_limit: 1000
+    results_metadata_collection_name: "results-metadata"
 
   mcp_server: null
   #   port: 30800
