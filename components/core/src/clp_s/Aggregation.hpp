@@ -144,7 +144,7 @@ private:
 };
 
 /**
- * One of the supported aggregations that a search can apply to its matched records.
+ * One of the supported aggregators that a search can apply to its matched records.
  */
 using Aggregator = std::variant<CountAggregator, CountByTimeAggregator, MinMaxAggregator>;
 }  // namespace clp_s
