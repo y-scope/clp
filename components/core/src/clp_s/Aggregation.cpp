@@ -39,8 +39,6 @@ auto CountByTimeAggregator::get_results() const -> std::vector<AggregationResult
     return results;
 }
 
-// The tokenizer strips a field's namespace prefix out of the path, but namespaced fields live under
-// a top-level object keyed by that namespace, so the namespace is prepended back onto the path.
 MinMaxAggregator::MinMaxAggregator(bool find_max, string_view field)
         : m_find_max{find_max},
           m_field{field} {
@@ -55,7 +53,10 @@ MinMaxAggregator::MinMaxAggregator(bool find_max, string_view field)
         throw std::invalid_argument("Invalid --min/--max field: " + string{field});
     }
     if (false == descriptor_namespace.empty()) {
-        m_field_path.insert(m_field_path.begin(), descriptor_namespace);
+        throw std::invalid_argument(
+                "The --min/--max field must be in the default namespace; namespaced fields (e.g. "
+                "the auto-generated \"@\" namespace) are not supported."
+        );
     }
 }
 
