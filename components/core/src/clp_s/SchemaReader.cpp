@@ -21,6 +21,7 @@
 #include <clp_s/search/Projection.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
+#include <clpp/LogShapeUtils.hpp>
 
 namespace clp_s {
 namespace {
@@ -1353,15 +1354,15 @@ auto SchemaReader::reconstruct_log_shape(
     std::string raw_text;
     size_t pos{0};
     while (pos < template_to_scan.size()) {
-        auto pct{template_to_scan.find('%', pos)};
+        auto pct{clpp::find_placeholder_delimiter(template_to_scan, pos)};
         if (std::string_view::npos == pct) {
-            raw_text.append(template_to_scan.substr(pos));
+            raw_text.append(clpp::unescape_shape_text(template_to_scan.substr(pos)));
             break;
         }
-        raw_text.append(template_to_scan.substr(pos, pct - pos));
+        raw_text.append(clpp::unescape_shape_text(template_to_scan.substr(pos, pct - pos)));
         auto end_pct{template_to_scan.find('%', pct + 1)};
         if (std::string_view::npos == end_pct) {
-            raw_text.append(template_to_scan.substr(pct));
+            raw_text.append(clpp::unescape_shape_text(template_to_scan.substr(pct)));
             break;
         }
         auto const fqn{std::string(template_to_scan.substr(pct + 1, end_pct - pct - 1))};

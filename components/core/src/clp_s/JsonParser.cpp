@@ -52,7 +52,7 @@
 #include <clpp/DecomposedQuery.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
-#include <clpp/ParentRuleShapes.hpp>
+#include <clpp/LogShapeUtils.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -1511,7 +1511,6 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     }
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
 
-    // This log shape isn't escaped yet be careful
     std::string log_shape{};
     log_shape.reserve(log_msg.size());
     size_t log_msg_pos{0};
@@ -1557,13 +1556,17 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         }
         m_current_schema.insert_unordered(node_id);
 
-        log_shape.append(log_msg.substr(log_msg_pos, match->range.start - log_msg_pos));
+        log_shape.append(
+                clpp::escape_shape_text(
+                        log_msg.substr(log_msg_pos, match->range.start - log_msg_pos)
+                )
+        );
         log_shape.append(
                 fmt::format("%{}%", match->ffi_pointers.fully_qualified_name.as_cpp_view())
         );
         log_msg_pos = match->range.end;
     }
-    log_shape.append(log_msg.substr(log_msg_pos));
+    log_shape.append(clpp::escape_shape_text(log_msg.substr(log_msg_pos)));
 
     auto [log_shape_id, new_log_shape]{
             YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_log_shape_dict(log_shape))
@@ -1576,39 +1579,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     ));
 
     if (new_log_shape) {
-        clpp::ParentRuleShapes parent_shapes;
-        std::vector<std::pair<size_t, size_t>> og_parent_match_pos;
-        for (auto const& match : event->get_all_matches()) {
-            if (match.is_leaf) {
-                continue;
-            }
-            parent_shapes.emplace_parent_rule_shape(
-                    match.ffi_pointers.fully_qualified_name.as_cpp_view(),
-                    match.range.start,
-                    match.range.end - match.range.start
-            );
-            og_parent_match_pos.emplace_back(match.range.start, match.range.end);
-        }
-        for (size_t i{0};; ++i) {
-            auto const leaf_match{event->get_leaf_match(i)};
-            if (false == leaf_match.has_value()) {
-                break;
-            }
-            auto const old_size{leaf_match->range.end - leaf_match->range.start};
-            auto const new_size{
-                    leaf_match->ffi_pointers.fully_qualified_name.as_cpp_view().size() + 2
-            };
-            // clpp TODO: this is "dangerous" and should be fixed, but if the matches are
-            // hitting the boundary of size_t we probably have bigger problems.
-            auto const diff{static_cast<int64_t>(old_size) - static_cast<int64_t>(new_size)};
-            for (size_t j{0}; j < og_parent_match_pos.size(); ++j) {
-                if (leaf_match->range.start < og_parent_match_pos.at(j).first) {
-                    parent_shapes.at(j).m_start -= diff;
-                } else if (leaf_match->range.end <= og_parent_match_pos.at(j).second) {
-                    parent_shapes.at(j).m_size -= diff;
-                }
-            }
-        }
+        auto parent_shapes{clpp::build_parent_rule_shapes(*event, log_shape)};
         YSTDLIB_ERROR_HANDLING_TRYV(
                 m_archive_writer->update_parent_rule_shapes(log_shape_id, parent_shapes)
         );

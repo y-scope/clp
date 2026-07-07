@@ -10,6 +10,7 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clpp/ErrorCode.hpp>
+#include <clpp/LogShapeUtils.hpp>
 
 namespace clpp {
 auto DecomposedQuery::decompose_query(
@@ -32,7 +33,7 @@ auto DecomposedQuery::decompose_query(
         std::vector<LeafQuery> leaf_queries;
         for (auto const& sub_query : sub_queries) {
             if (sub_query.qualified_name.empty()) {
-                shape_query.append(sub_query.value);
+                shape_query.append(clpp::escape_shape_text(sub_query.value));
             } else {
                 leaf_queries.emplace_back(sub_query.qualified_name, sub_query.value);
                 shape_query.append(fmt::format("%{}%", sub_query.qualified_name));

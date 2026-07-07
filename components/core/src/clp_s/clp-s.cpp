@@ -558,15 +558,14 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             auto shape_dict{archive_reader->get_log_shape_dictionary()};
             shape_dict->read_entries();
             for (clpp::log_shape_id_t i{0}; i < shape_stats.size(); ++i) {
-                output_handler.value()->write(
-                        fmt::format(
-                                "{{\"id\":{},\"count\":{},\"{}\":\"{}\"}}\n",
-                                i,
-                                shape_stats.at(i).get_count(),
-                                clpp::cShapeFunction,
-                                shape_dict->get_entry(i).get_value()
-                        )
-                );
+                nlohmann::json entry{
+                        {"id", i},
+                        {"count", shape_stats.at(i).get_count()},
+                        {std::string{clpp::cShapeFunction},
+                         std::string{shape_dict->get_entry(i).get_value()}}
+                };
+                output_handler.value()->write(entry.dump());
+                output_handler.value()->write("\n");
             }
         } else if (CommandLineArguments::cSchemaTreeStatsQuery == query) {
             auto nodes{nlohmann::json::array()};
