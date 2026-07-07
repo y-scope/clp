@@ -1094,8 +1094,8 @@ impl ClpCompressionState {
             }
         };
 
-        // Run the submission at `READ COMMITTED` to avoid the gap/next-key locks that serialize
-        // concurrent submissions under the default `REPEATABLE READ`.
+        // Run the submission transaction at `READ COMMITTED` to avoid the gap/next-key locks that
+        // serialize concurrent submissions under the default `REPEATABLE READ`.
         run_read_committed_tx(self.db_pool.clone(), async |conn| {
             let mut tx = Connection::begin(conn).await?;
 
