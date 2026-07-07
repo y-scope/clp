@@ -132,7 +132,7 @@ private:
     using Extreme = std::variant<int64_t, double>;
 
     /**
-     * @param candidate
+     * @param candidate The value to compare against the current extreme.
      * @return Whether `candidate` is more extreme (per the min/max mode) than the current extreme.
      */
     [[nodiscard]] auto beats_extreme(Extreme candidate) const -> bool;
