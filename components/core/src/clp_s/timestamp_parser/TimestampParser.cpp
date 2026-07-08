@@ -835,7 +835,7 @@ auto marshal_date_time_timestamp(
                         pattern_idx + 2ULL,
                         optional_timezone_info->timestamp_length
                 ));
-                pattern_idx += optional_timezone_info->pattern_length + 2ULL;
+                pattern_idx += optional_timezone_info->pattern_length;
                 break;
             }
             case 'o': {  // Named time-zone with specific offset.
@@ -846,7 +846,7 @@ auto marshal_date_time_timestamp(
                         pattern_idx + 2ULL,
                         optional_timezone_info->timestamp_length
                 ));
-                pattern_idx += optional_timezone_info->pattern_length + 2ULL;
+                pattern_idx += optional_timezone_info->pattern_length;
                 break;
             }
             case '\\': {
@@ -1179,7 +1179,7 @@ auto TimestampPattern::create(std::string_view pattern)
                 optional_timezone_info.emplace(
                         TimezoneInfo{
                                 extracted_timezone_str.size(),
-                                timezone_str.size(),
+                                timezone_bracket_pattern.size(),
                                 extracted_timezone_offset
                         }
                 );
@@ -1219,11 +1219,7 @@ auto TimestampPattern::create(std::string_view pattern)
                 }
 
                 optional_timezone_info.emplace(
-                        TimezoneInfo{
-                                name_str.size(),
-                                bracket_pattern_content.size(),
-                                extracted_offset
-                        }
+                        TimezoneInfo{name_str.size(), bracket_pattern.size(), extracted_offset}
                 );
                 pattern_idx += bracket_pattern.size();
                 uses_date_type_representation = true;
@@ -1796,7 +1792,7 @@ auto parse_timestamp(
 
                 optional_timezone_offset_in_minutes = timezone_info.offset;
                 timestamp_idx += timezone_info.timestamp_length;
-                pattern_idx += timezone_info.pattern_length + 2ULL;
+                pattern_idx += timezone_info.pattern_length;
                 break;
             }
             case 'o': {  // Named time-zone with specific offset.
@@ -1815,7 +1811,7 @@ auto parse_timestamp(
 
                 optional_timezone_offset_in_minutes = timezone_info.offset;
                 timestamp_idx += timezone_info.timestamp_length;
-                pattern_idx += timezone_info.pattern_length + 2ULL;
+                pattern_idx += timezone_info.pattern_length;
                 break;
             }
             case 'Z': {  // Generic timezone.

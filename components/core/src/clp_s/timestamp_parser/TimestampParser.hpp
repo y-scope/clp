@@ -17,7 +17,7 @@ namespace clp_s::timestamp_parser {
 struct TimezoneInfo {
     // Length of the timezone content consumed/emitted in the timestamp.
     size_t timestamp_length;
-    // Length of the content inside the timezone specifier's `{}` in the pattern.
+    // Length of the timezone specifier's `{...}` sequence in the pattern.
     size_t pattern_length;
     int offset;
 };
