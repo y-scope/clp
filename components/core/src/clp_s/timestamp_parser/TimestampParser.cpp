@@ -134,27 +134,19 @@ constexpr std::array cDefaultDateTimePatterns{
         std::string_view{
                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"
         },
-        std::string_view{
-                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"
-        },
+        std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"},
         std::string_view{
                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"
         },
-        std::string_view{
-                R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"
-        },
+        std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M:\s\Z)"},
         std::string_view{
                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"
         },
-        std::string_view{
-                R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"
-        },
+        std::string_view{R"(\d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"},
         std::string_view{
                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"
         },
-        std::string_view{
-                R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"
-        },
+        std::string_view{R"(\e \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \y \H:\M:\s\Z)"},
         std::string_view{
                 R"(\A{Sun,Mon,Tue,Wed,Thu,Fri,Sat}, \d \B{Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec} \Y \H:\M\Z)"
         },
@@ -1184,11 +1176,13 @@ auto TimestampPattern::create(std::string_view pattern)
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
                 }
 
-                optional_timezone_info.emplace(TimezoneInfo{
-                        extracted_timezone_str.size(),
-                        timezone_str.size(),
-                        extracted_timezone_offset
-                });
+                optional_timezone_info.emplace(
+                        TimezoneInfo{
+                                extracted_timezone_str.size(),
+                                timezone_str.size(),
+                                extracted_timezone_offset
+                        }
+                );
                 pattern_idx += timezone_bracket_pattern.size();
                 uses_date_type_representation = true;
                 break;
@@ -1224,11 +1218,13 @@ auto TimestampPattern::create(std::string_view pattern)
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
                 }
 
-                optional_timezone_info.emplace(TimezoneInfo{
-                        name_str.size(),
-                        bracket_pattern_content.size(),
-                        extracted_offset
-                });
+                optional_timezone_info.emplace(
+                        TimezoneInfo{
+                                name_str.size(),
+                                bracket_pattern_content.size(),
+                                extracted_offset
+                        }
+                );
                 pattern_idx += bracket_pattern.size();
                 uses_date_type_representation = true;
                 break;
