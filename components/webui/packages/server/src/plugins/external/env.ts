@@ -1,4 +1,6 @@
-/* eslint-disable sort-keys */
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+
 import env from "@fastify/env";
 
 
@@ -20,6 +22,9 @@ declare module "fastify" {
 }
 
 
+const compiledDirname = path.dirname(fileURLToPath(import.meta.url));
+const sourceWebuiRoot = path.resolve(compiledDirname, "../../../../..");
+
 const schema = {
     type: "object",
     required: [
@@ -28,6 +33,7 @@ const schema = {
         "CLP_DB_USER",
         "CLP_DB_PASS",
     ],
+    /* eslint-disable sort-keys */
     properties: {
         // Network
         PORT: {
@@ -84,6 +90,7 @@ const schema = {
             default: 1_000,
             minimum: 1,
         },
+        /* eslint-enable sort-keys */
     },
 };
 
@@ -91,11 +98,11 @@ export const autoConfig = {
     confKey: "config",
     schema: schema,
 
-    // Needed to read .env in root folder
+    // Load secrets and env-only overrides from the WebUI root.
     dotenv: {
         path: [
-            ".env",
-            ".env.local",
+            path.join(sourceWebuiRoot, ".env"),
+            path.join(sourceWebuiRoot, ".env.local"),
         ],
         override: true,
     },

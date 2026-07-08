@@ -93,6 +93,7 @@ NonEmptyStr = Annotated[str, StringConstraints(min_length=1, strip_whitespace=Tr
 NonNegativeInt = Annotated[int, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
+PositiveUnitFloat = Annotated[float, Field(ge=0, le=1)]
 # Specific types
 # TODO: Replace this with pydantic_extra_types.domain.DomainStr.
 DomainStr = NonEmptyStr
@@ -108,13 +109,6 @@ LoggingLevelRust = Literal[
     "TRACE",
     "OFF",
 ]
-
-
-class DeploymentType(KebabCaseStrEnum):
-    BASE = auto()
-    FULL = auto()
-    SPIDER_BASE = auto()
-    SPIDER_FULL = auto()
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -178,29 +172,6 @@ AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
 
 class Package(BaseModel):
     storage_engine: StorageEngineStr = StorageEngine.CLP_S
-    query_engine: QueryEngineStr = QueryEngine.CLP_S
-
-    @model_validator(mode="after")
-    def validate_query_engine_package_compatibility(self):
-        query_engine = self.query_engine
-        storage_engine = self.storage_engine
-
-        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
-            if query_engine != storage_engine:
-                raise ValueError(
-                    f"query_engine '{query_engine}' is only compatible with "
-                    f"storage_engine '{query_engine}'."
-                )
-        elif query_engine == QueryEngine.PRESTO:
-            if storage_engine != StorageEngine.CLP_S:
-                raise ValueError(
-                    f"query_engine '{QueryEngine.PRESTO}' is only compatible with "
-                    f"storage_engine '{StorageEngine.CLP_S}'."
-                )
-        else:
-            raise ValueError(f"Unsupported query_engine '{query_engine}'.")
-
-        return self
 
 
 class ClpDbUserType(KebabCaseStrEnum):
@@ -459,6 +430,7 @@ class CompressionWorker(WorkerConfigBase):
 
 class QueryWorker(WorkerConfigBase):
     telemetry_update_interval_ms: PositiveInt = 60000
+    query_trace_sampling_probability: PositiveUnitFloat = 0.01
 
 
 class Redis(BaseModel):
@@ -762,8 +734,10 @@ class WebUi(BaseModel):
 
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
+    query_engine: QueryEngineStr = QueryEngine.CLP_S
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
+    presto_max_num_search_results: PositiveInt = 1000
 
 
 class SweepInterval(BaseModel):
@@ -844,14 +818,14 @@ class ClpConfig(BaseModel):
     # Default to use celery backend
     queue: Queue | None = Queue()
     redis: Redis | None = Redis()
-    reducer: Reducer = Reducer()
+    reducer: Reducer | None = Reducer()
     results_cache: ResultsCache = ResultsCache()
     otel_collector: OtelCollector = OtelCollector()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     spider_scheduler: SpiderScheduler | None = None
-    query_scheduler: QueryScheduler = QueryScheduler()
+    query_scheduler: QueryScheduler | None = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
-    query_worker: QueryWorker = QueryWorker()
+    query_worker: QueryWorker | None = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
     api_server: ApiServer | None = ApiServer()
@@ -1037,15 +1011,6 @@ class ClpConfig(BaseModel):
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
-    def get_deployment_type(self) -> DeploymentType:
-        if OrchestrationType.SPIDER == self.compression_scheduler.type:
-            if QueryEngine.PRESTO == self.package.query_engine:
-                return DeploymentType.SPIDER_BASE
-            return DeploymentType.SPIDER_FULL
-        if QueryEngine.PRESTO == self.package.query_engine:
-            return DeploymentType.BASE
-        return DeploymentType.FULL
-
     def dump_to_primitive_dict(self):
         custom_serialized_fields = {"database", "queue", "redis"}
         d = self.model_dump(exclude=custom_serialized_fields)
@@ -1066,12 +1031,34 @@ class ClpConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_presto_config(self):
-        query_engine = self.package.query_engine
+        query_engine = self.webui.query_engine
         presto = self.presto
         if query_engine == QueryEngine.PRESTO and presto is None:
             raise ValueError(
                 f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_query_engine_package_compatibility(self):
+        query_engine = self.webui.query_engine
+        storage_engine = self.package.storage_engine
+
+        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
+            if query_engine != storage_engine:
+                raise ValueError(
+                    f"query_engine '{query_engine}' is only compatible with "
+                    f"storage_engine '{query_engine}'."
+                )
+        elif query_engine == QueryEngine.PRESTO:
+            if storage_engine != StorageEngine.CLP_S:
+                raise ValueError(
+                    f"query_engine '{QueryEngine.PRESTO}' is only compatible with "
+                    f"storage_engine '{StorageEngine.CLP_S}'."
+                )
+        else:
+            raise ValueError(f"Unsupported query_engine '{query_engine}'.")
+
         return self
 
     @model_validator(mode="after")
@@ -1121,9 +1108,11 @@ class ClpConfig(BaseModel):
             self.spider_scheduler.transform_for_container()
         self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
         self.otel_collector.transform_for_container(BundledService.OTEL_COLLECTOR in self.bundled)
-        self.query_scheduler.transform_for_container()
-        self.reducer.transform_for_container()
-        if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:
+        if self.query_scheduler is not None:
+            self.query_scheduler.transform_for_container()
+        if self.reducer is not None:
+            self.reducer.transform_for_container()
+        if self.presto is not None:
             self.presto.transform_for_container()
 
 
@@ -1133,6 +1122,7 @@ class WorkerConfig(BaseModel):
     tmp_directory: SerializablePath = ClpConfig().tmp_directory
 
     # Only needed by query workers.
+    query_worker: QueryWorker = QueryWorker()
     stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
 

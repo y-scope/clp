@@ -11,6 +11,7 @@
 #include <mongocxx/instance.hpp>
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../clp/networking/socket_utils.hpp"
@@ -232,6 +233,29 @@ auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
         ))
     {
         return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+auto CountStdoutOutputHandler::finish() -> ErrorCode {
+    if (0 == m_count) {
+        return ErrorCode::ErrorCodeSuccess;
+    }
+
+    nlohmann::json result;
+    result[constants::results_cache::search::cArchiveId] = m_archive_id;
+    result[constants::results_cache::search::cCount] = m_count;
+    std::cout << result.dump() << '\n';
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+auto CountByTimeStdoutOutputHandler::finish() -> ErrorCode {
+    for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
+        nlohmann::json result;
+        result[constants::results_cache::search::cArchiveId] = m_archive_id;
+        result[constants::results_cache::search::cTimestamp] = bucket_timestamp;
+        result[constants::results_cache::search::cCount] = count;
+        std::cout << result.dump() << '\n';
     }
     return ErrorCode::ErrorCodeSuccess;
 }

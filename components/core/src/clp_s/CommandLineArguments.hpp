@@ -43,8 +43,6 @@ public:
         std::string dataset;
         uint64_t batch_size{1000};
         uint64_t max_num_results{1000};
-        std::optional<AggregationType> aggregation_type;
-        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct FileOutputHandlerOptions {
@@ -60,8 +58,6 @@ public:
         std::string host;
         int port{-1};
         reducer::job_id_t job_id{-1};
-        AggregationType aggregation_type{AggregationType::Count};
-        int64_t count_by_time_bucket_size_ms{};
     };
 
     struct StdoutOutputHandlerOptions {};
@@ -132,6 +128,14 @@ public:
         return m_output_handler_options;
     }
 
+    [[nodiscard]] auto get_aggregation_type() const -> std::optional<AggregationType> const& {
+        return m_aggregation_type;
+    }
+
+    [[nodiscard]] auto get_count_by_time_bucket_size_ms() const -> int64_t {
+        return m_count_by_time_bucket_size_ms;
+    }
+
     [[nodiscard]] auto get_retain_float_format() const -> bool {
         return false == m_no_retain_float_format;
     }
@@ -183,6 +187,13 @@ private:
             boost::program_options::variables_map const& parsed_options,
             int64_t count_by_time_bucket_size_ms
     ) -> std::optional<AggregationType>;
+
+    /**
+     * Throws if an aggregation was requested.
+     * @param handler_name The name of the output handler, used in the error message.
+     * @throws std::invalid_argument if an aggregation was requested.
+     */
+    auto reject_aggregation_for_handler(std::string_view handler_name) const -> void;
 
     /**
      * Validates output options related to the Reducer output handler.
@@ -279,6 +290,10 @@ private:
     // clpp variables
     bool m_experimental{false};
     std::optional<Path> m_parsing_spec_path;
+
+    // Aggregation variables
+    std::optional<AggregationType> m_aggregation_type;
+    int64_t m_count_by_time_bucket_size_ms{};
 };
 }  // namespace clp_s
 
