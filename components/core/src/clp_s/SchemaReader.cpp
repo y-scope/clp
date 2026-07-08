@@ -305,7 +305,11 @@ bool SchemaReader::get_next_message(std::string& message) {
     }
 
     if (false == m_serializer_initialized) {
-        initialize_serializer();
+        if (auto const result{initialize_serializer()}; result.has_error()) {
+            throw std::runtime_error(
+                    "initialize_serializer failed with: " + result.error().message()
+            );
+        }
     }
     message = generate_json_string(m_cur_message);
 
@@ -328,7 +332,11 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass& filter) {
 
     if (m_should_marshal_records) {
         if (false == m_serializer_initialized) {
-            initialize_serializer();
+            if (auto const result{initialize_serializer()}; result.has_error()) {
+                throw std::runtime_error(
+                        "initialize_serializer failed with: " + result.error().message()
+                );
+            }
         }
         message = generate_json_string(m_cur_message);
 
@@ -352,7 +360,11 @@ bool SchemaReader::get_next_message_with_metadata(
 
     if (m_should_marshal_records) {
         if (false == m_serializer_initialized) {
-            initialize_serializer();
+            if (auto const result{initialize_serializer()}; result.has_error()) {
+                throw std::runtime_error(
+                        "initialize_serializer failed with: " + result.error().message()
+                );
+            }
         }
         message = generate_json_string(m_cur_message);
 
@@ -386,7 +398,11 @@ bool SchemaReader::get_next_message_with_metadata(
 
     if (m_should_marshal_records) {
         if (false == m_serializer_initialized) {
-            initialize_serializer();
+            if (auto const result{initialize_serializer()}; result.has_error()) {
+                throw std::runtime_error(
+                        "initialize_serializer failed with: " + result.error().message()
+                );
+            }
         }
         message = generate_json_string(m_cur_message);
 
@@ -740,9 +756,9 @@ size_t SchemaReader::generate_structured_object_template(
     return column_idx;
 }
 
-void SchemaReader::initialize_serializer() {
+auto SchemaReader::initialize_serializer() -> ystdlib::error_handling::Result<void> {
     if (m_serializer_initialized) {
-        return;
+        return ystdlib::error_handling::success();
     }
 
     m_serializer_initialized = true;
@@ -772,6 +788,18 @@ void SchemaReader::initialize_serializer() {
                     need_log_message = true;
                 }
             }
+            // Shape projection of a ParentRule is exclusive to the node itself, so
+            // is_node_projected on its leaves does not flag the LogMessage; detect projected
+            // ParentRule scopes directly and ensure the LogMessage (and the scope's tree path) is
+            // materialized.
+            YSTDLIB_ERROR_HANDLING_TRYV(
+                    for_each_parent_rule_scope(schema, root_id, [&](auto parent_rule_id, auto) {
+                        if (m_projection->matches_node(parent_rule_id)) {
+                            generate_local_tree(parent_rule_id);
+                            need_log_message = true;
+                        }
+                    })
+            );
             if (need_log_message && false == m_projection->matches_node(root_id)) {
                 generate_local_tree(root_id);
             }
@@ -789,6 +817,7 @@ void SchemaReader::initialize_serializer() {
     {
         generate_json_template(subtree_root);
     }
+    return ystdlib::error_handling::success();
 }
 
 void SchemaReader::generate_json_template(int32_t id) {
@@ -915,59 +944,63 @@ auto SchemaReader::compute_log_message_modes(SchemaNode::id_t log_msg_node_id) -
 auto SchemaReader::scan_child_projection_modes(
         std::span<SchemaNode::id_t> schema,
         SchemaNode::id_t log_msg_node_id
-) -> ChildProjectionModes {
+) -> ystdlib::error_handling::Result<ChildProjectionModes> {
     ChildProjectionModes modes;
+    if (m_projection) {
+        // ParentRule scopes are stored as delimiters, not node-ID entries, so the flat node-ID
+        // loop below cannot see them; scan them via for_each_parent_rule_scope.
+        YSTDLIB_ERROR_HANDLING_TRYV(
+                for_each_parent_rule_scope(schema, log_msg_node_id, [&](auto parent_rule_id, auto) {
+                    if (search::Projection::Mode::ReturnSelectedColumns
+                                == m_projection->get_projection_mode()
+                        && m_projection->matches_node(parent_rule_id))
+                    {
+                        modes.any_child_projected = true;
+                    }
+                    if (m_projection->has_any_projection(parent_rule_id)) {
+                        modes.any_child_projected = true;
+                    }
+                    if (m_projection->is_projected_as(
+                                parent_rule_id,
+                                search::Projection::NodeProjection::Decomposed
+                        ))
+                    {
+                        modes.any_child_decomposed = true;
+                    }
+                    if (m_projection->is_projected_as(
+                                parent_rule_id,
+                                search::Projection::NodeProjection::Shape
+                        ))
+                    {
+                        modes.any_child_shape = true;
+                    }
+                })
+        );
+    }
     for (auto global_column_id : schema) {
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             continue;
         }
         auto const& node{m_global_schema_tree->get_node(global_column_id)};
-        bool child_would_emit{false};
-        if (m_projection) {
-            if (search::Projection::Mode::ReturnSelectedColumns
-                        == m_projection->get_projection_mode()
-                && m_projection->matches_node(global_column_id))
-            {
-                child_would_emit = true;
-            }
-            if (NodeType::ParentRule == node.get_type()) {
-                if (m_projection->has_any_projection(global_column_id)) {
-                    child_would_emit = true;
-                }
-            }
-            if (NodeType::LogTypeID == node.get_type()) {
-                if (m_projection->is_projected_as(
+        if (m_projection
+            && search::Projection::Mode::ReturnSelectedColumns
+                       == m_projection->get_projection_mode()
+            && m_projection->matches_node(global_column_id))
+        {
+            modes.any_child_projected = true;
+        }
+        if (NodeType::LogTypeID == node.get_type()) {
+            if (m_projection
+                && (m_projection->is_projected_as(
                             log_msg_node_id,
                             search::Projection::NodeProjection::Decomposed
                     )
                     || m_projection->is_projected_as(
                             log_msg_node_id,
                             search::Projection::NodeProjection::Shape
-                    ))
-                {
-                    child_would_emit = true;
-                }
-            }
-        }
-        if (child_would_emit) {
-            modes.any_child_projected = true;
-        }
-        if (NodeType::ParentRule == node.get_type()) {
-            if (m_projection
-                && m_projection->is_projected_as(
-                        global_column_id,
-                        search::Projection::NodeProjection::Decomposed
-                ))
+                    )))
             {
-                modes.any_child_decomposed = true;
-            }
-            if (m_projection
-                && m_projection->is_projected_as(
-                        global_column_id,
-                        search::Projection::NodeProjection::Shape
-                ))
-            {
-                modes.any_child_shape = true;
+                modes.any_child_projected = true;
             }
         }
     }
@@ -1064,7 +1097,7 @@ auto SchemaReader::collect_leaf_entries(
 
         auto const& node{m_global_schema_tree->get_node(global_column_id)};
 
-        if (NodeType::ParentRule == node.get_type() || NodeType::LogTypeID == node.get_type()) {
+        if (NodeType::LogTypeID == node.get_type()) {
             continue;
         }
 
@@ -1197,7 +1230,9 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
         m_reconstruction_targets.emplace_back(log_msg_node_id, "");
     }
 
-    auto const child_modes{scan_child_projection_modes(schema, log_msg_node_id)};
+    auto const child_modes{
+            YSTDLIB_ERROR_HANDLING_TRYX(scan_child_projection_modes(schema, log_msg_node_id))
+    };
     bool const has_any_decomposed{modes.has_decomposed || child_modes.any_child_decomposed};
     bool const has_any_shape{modes.has_shape || child_modes.any_child_shape};
 
@@ -1234,23 +1269,27 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
 
     absl::flat_hash_set<SchemaNode::id_t> emitted_schema_parent_rules;
 
+    // ParentRule scopes are unordered-object delimiters rather than node-ID entries; recurse into
+    // each (including nested scopes) to emit its shape/default field. Leaf arrays are emitted
+    // separately below by collect_leaf_entries + emit_grouped_leaf_entries.
+    YSTDLIB_ERROR_HANDLING_TRYV(
+            for_each_parent_rule_scope(schema, log_msg_node_id, [&](auto parent_rule_id, auto) {
+                emit_parent_rule_shape(
+                        log_msg_node_id,
+                        parent_rule_id,
+                        log_shape_id,
+                        found_log_shape_id,
+                        emitted_schema_parent_rules
+                );
+            })
+    );
+
     for (auto global_column_id : schema) {
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             continue;
         }
 
         auto const& node{m_global_schema_tree->get_node(global_column_id)};
-
-        if (NodeType::ParentRule == node.get_type()) {
-            emit_parent_rule_shape(
-                    log_msg_node_id,
-                    global_column_id,
-                    log_shape_id,
-                    found_log_shape_id,
-                    emitted_schema_parent_rules
-            );
-            continue;
-        }
 
         if (NodeType::LogTypeID == node.get_type()) {
             if (m_projection

@@ -1,12 +1,12 @@
 #include "JsonParser.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <string>
@@ -35,21 +35,20 @@
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
 #include <clp/string_utils/string_utils.hpp>
-#include <clp/StringReader.hpp>
 #include <clp/time_types.hpp>
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveWriter.hpp>
 #include <clp_s/Defs.hpp>
-#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/FloatFormatEncoding.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/JsonFileIterator.hpp>
 #include <clp_s/ParsedMessage.hpp>
+#include <clp_s/Schema.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/Utils.hpp>
-#include <clpp/DecomposedQuery.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
 #include <clpp/LogShapeUtils.hpp>
@@ -150,6 +149,108 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
         -> bool {
     auto const restore_result{restore_encoded_float(value, format)};
     return false == restore_result.has_error() && float_str == restore_result.value();
+}
+
+// TODO clpp: might be better to move all this into clpp/
+
+/**
+ * An open `ParentRule` unordered-object scope during `parse_log_message`. `match` borrows from
+ * the log_surgeon event (valid only for one `parse_log_message` call) and identifies the scope;
+ * `schema_start` is passed to `Schema::end_unordered_object` to close it.
+ */
+struct ParentScope {
+    log_surgeon::Match const* match;
+    size_t schema_start;
+    SchemaNode::id_t tree_node_id;
+};
+
+/**
+ * Collects the chain of ancestor matches that become `ParentRule` schema-tree nodes for a leaf,
+ * in root->leaf order.
+ *
+ * If the leaf is a root rule (`sub_rule_id == 0`) it has no parent-rule nodes and `chain` is left
+ * empty. Otherwise every ancestor from the leaf's parent up to and including the root-rule
+ * ancestor becomes a node: the walk stops at a root-rule ancestor (`sub_rule_id == 0`), or — for
+ * a sub-rule whose parent is a root rule (`parent_id == 0`) — after also including that root-rule
+ * parent.
+ *
+ * @param leaf The leaf match whose ancestor chain to collect.
+ * @param chain Output vector; cleared and filled with ancestor `Match` pointers in root->leaf
+ *     order. The pointers borrow from the log_surgeon event that produced `leaf`.
+ */
+auto
+collect_parent_chain(log_surgeon::Match const& leaf, std::vector<log_surgeon::Match const*>& chain)
+        -> void {
+    chain.clear();
+    if (0 == leaf.sub_rule_id) {
+        return;
+    }
+    auto const* cur{leaf.ffi_pointers.parent};
+    while (true) {
+        chain.push_back(cur);
+        if (0 == cur->sub_rule_id) {
+            break;
+        }
+        if (0 == cur->parent_id) {
+            chain.push_back(cur->ffi_pointers.parent);
+            break;
+        }
+        cur = cur->ffi_pointers.parent;
+    }
+    std::reverse(chain.begin(), chain.end());
+}
+
+/**
+ * Syncs the stack of open `ParentRule` scopes against a leaf's ancestor chain by `Match` identity:
+ * closes scopes whose position in the chain diverged, then opens one unordered-object scope per
+ * new ancestor. Returns the schema-tree node ID the leaf should attach to — the innermost open
+ * scope, or `log_msg_node_id` when no scope is open.
+ *
+ * The sync compares `Match const*` pointers, which is valid across sibling leaves because
+ * log-surgeon stores each `Match` in a stable `Vec` for the event's lifetime: a shared ancestor is
+ * the same `Match` object (same address) on every leaf that descends from it, not a re-emitted
+ * copy.
+ *
+ * @param open_scopes The current stack of open scopes; mutated in place.
+ * @param parent_chain The leaf's ancestor chain in root->leaf order (borrowed from the event).
+ * @param log_msg_node_id The `LogMessage` tree node ID owning the top-level scope.
+ * @param archive_writer Used to add `ParentRule` tree nodes for newly opened scopes.
+ * @param current_schema Used to open/close unordered-object scopes.
+ * @return The schema-tree node ID the leaf attaches to.
+ */
+auto sync_open_scopes_to_chain(
+        std::vector<ParentScope>& open_scopes,
+        std::vector<log_surgeon::Match const*> const& parent_chain,
+        SchemaNode::id_t log_msg_node_id,
+        ArchiveWriter& archive_writer,
+        Schema& current_schema
+) -> SchemaNode::id_t {
+    size_t common{0};
+    while (common < open_scopes.size() && common < parent_chain.size()
+           && open_scopes.at(common).match == parent_chain.at(common))
+    {
+        ++common;
+    }
+    while (open_scopes.size() > common) {
+        current_schema.end_unordered_object(open_scopes.back().schema_start);
+        open_scopes.pop_back();
+    }
+    for (size_t j{common}; j < parent_chain.size(); ++j) {
+        auto const* ancestor{parent_chain.at(j)};
+        auto const ancestor_parent_node_id{
+                open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id
+        };
+        auto const node_id{archive_writer.add_node(
+                ancestor_parent_node_id,
+                NodeType::ParentRule,
+                ancestor->ffi_pointers.rule_name.as_cpp_view()
+        )};
+        auto const schema_start{current_schema.start_unordered_object(NodeType::ParentRule)};
+        open_scopes.push_back(
+                {.match = ancestor, .schema_start = schema_start, .tree_node_id = node_id}
+        );
+    }
+    return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
 }
 }  // namespace
 
@@ -1514,13 +1615,22 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     std::string log_shape{};
     log_shape.reserve(log_msg.size());
     size_t log_msg_pos{0};
+    std::vector<log_surgeon::Match const*> parent_chain;
+    std::vector<ParentScope> open_scopes;
     for (size_t i{0};; ++i) {
         auto const match{event->get_leaf_match(i)};
         if (false == match.has_value()) {
             break;
         }
 
-        auto parent_node_id{get_parent_schema_node(match.value(), log_msg_node_id)};
+        collect_parent_chain(match.value(), parent_chain);
+        auto const parent_node_id{sync_open_scopes_to_chain(
+                open_scopes,
+                parent_chain,
+                log_msg_node_id,
+                *m_archive_writer,
+                m_current_schema
+        )};
 
         auto const rule_name{match->ffi_pointers.rule_name.as_cpp_view()};
         auto const lexeme{match->ffi_pointers.lexeme.as_cpp_view()};
@@ -1568,6 +1678,13 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
     }
     log_shape.append(clpp::escape_shape_text(log_msg.substr(log_msg_pos)));
 
+    // Close remaining scopes so `LogType`/`LogTypeID` stay direct children of the `LogMessage`
+    // span rather than nesting inside a parent-rule scope.
+    while (false == open_scopes.empty()) {
+        m_current_schema.end_unordered_object(open_scopes.back().schema_start);
+        open_scopes.pop_back();
+    }
+
     auto [log_shape_id, new_log_shape]{
             YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_log_shape_dict(log_shape))
     };
@@ -1587,31 +1704,6 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
 
     m_current_schema.end_unordered_object(msg_obj);
     return ystdlib::error_handling::success();
-}
-
-auto
-JsonParser::get_parent_schema_node(log_surgeon::Match const match, SchemaNode::id_t root_node_id)
-        -> SchemaNode::id_t {
-    if (0 == match.sub_rule_id) {
-        return root_node_id;
-    }
-
-    if (0 == match.parent_id) {
-        auto node_id{m_archive_writer->add_node(
-                root_node_id,
-                NodeType::ParentRule,
-                match.ffi_pointers.parent->ffi_pointers.rule_name.as_cpp_view()
-        )};
-        m_current_schema.insert_unordered(node_id);
-        return node_id;
-    }
-    auto node_id{m_archive_writer->add_node(
-            get_parent_schema_node(*match.ffi_pointers.parent, root_node_id),
-            NodeType::ParentRule,
-            match.ffi_pointers.parent->ffi_pointers.rule_name.as_cpp_view()
-    )};
-    m_current_schema.insert_unordered(node_id);
-    return node_id;
 }
 
 auto JsonParser::try_add_float_value(

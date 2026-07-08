@@ -18,12 +18,14 @@
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/TraceableException.hpp>
 #include <clpp/Defs.hpp>
+#include <clpp/ErrorCode.hpp>
 #include <clpp/ParentRuleShapes.hpp>
 
 #include "ColumnReader.hpp"
 #include "DictionaryReader.hpp"
 #include "FileReader.hpp"
 #include "JsonSerializer.hpp"
+#include "Schema.hpp"
 #include "SchemaTree.hpp"
 #include "search/Projection.hpp"
 #include "ZstdDecompressor.hpp"
@@ -277,8 +279,11 @@ public:
 
     /**
      * Initializes all internal data structures required to serialize records.
+     * @return A void result on success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Corrupt if a `ParentRule` scope in a schema cannot be resolved to a
+     *   schema-tree node, which indicates a corrupt or inconsistent archive.
      */
-    void initialize_serializer();
+    [[nodiscard]] auto initialize_serializer() -> ystdlib::error_handling::Result<void>;
 
     /**
      * Marks a column as timestamp
@@ -449,12 +454,14 @@ private:
      * Scans the schema children of a LogMessage to determine which projection modes are active.
      * @param schema The schema span containing the LogMessage's children.
      * @param log_msg_node_id The LogMessage node ID.
-     * @return The aggregated child projection modes.
+     * @return The aggregated child projection modes, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Corrupt if a `ParentRule` scope cannot be resolved to a schema-tree
+     *   node, which indicates a corrupt or inconsistent archive.
      */
     [[nodiscard]] auto scan_child_projection_modes(
             std::span<SchemaNode::id_t> schema,
             SchemaNode::id_t log_msg_node_id
-    ) -> ChildProjectionModes;
+    ) -> ystdlib::error_handling::Result<ChildProjectionModes>;
 
     /**
      * Emits the default reconstruction and/or shape field for a ParentRule node.
@@ -471,6 +478,62 @@ private:
             bool found_log_shape_id,
             absl::flat_hash_set<SchemaNode::id_t>& emitted_parent_rules
     );
+
+    /**
+     * Visits every `ParentRule` unordered-object scope contained in `schema`, recursing into nested
+     * scopes, and invokes `visit` with the resolved schema-tree node ID of the scope and the
+     * sub-span it owns.
+     *
+     * `ParentRule` scopes are stored as unordered-object delimiters, which carry only a NodeType
+     * and length rather than a node ID, so the owning tree node is recovered by walking up from the
+     * scope's first leaf to the nearest `ParentRule` ancestor of `tree_root`.
+     *
+     * @param schema The schema span to walk.
+     * @param tree_root The schema-tree node owning `schema` (the LogMessage for the top-level call,
+     *     the owning `ParentRule` for nested calls).
+     * @param visit Invoked as `visit(parent_rule_id, sub_span)` for each `ParentRule` scope, in
+     *     depth-first schema order.
+     * @tparam Visit Callable accepting `(SchemaNode::id_t, std::span<SchemaNode::id_t>)`.
+     * @return A void result on success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Corrupt if a `ParentRule` unordered-object scope cannot be resolved to
+     *   a schema-tree node (the scope's first leaf has no matching `ParentRule` ancestor of
+     *   `tree_root`), which indicates a corrupt or inconsistent archive.
+     */
+    template <typename Visit>
+    auto for_each_parent_rule_scope(
+            std::span<SchemaNode::id_t> schema,
+            SchemaNode::id_t tree_root,
+            Visit&& visit
+    ) -> ystdlib::error_handling::Result<void> {
+        for (size_t i{0}; i < schema.size(); ++i) {
+            auto const entry{schema[i]};
+            if (false == Schema::schema_entry_is_unordered_object(entry)) {
+                continue;
+            }
+            auto const length{Schema::get_unordered_object_length(entry)};
+            if (NodeType::ParentRule != Schema::get_unordered_object_type(entry)) {
+                i += length;
+                continue;
+            }
+            auto const sub_span{schema.subspan(i + 1, length)};
+            auto const parent_rule_id{m_global_schema_tree->find_matching_subtree_root_in_subtree(
+                    tree_root,
+                    get_first_column_in_span(sub_span),
+                    NodeType::ParentRule
+            )};
+            if (-1 == parent_rule_id) {
+                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Corrupt};
+            }
+            visit(parent_rule_id, sub_span);
+            if (auto const recurse{for_each_parent_rule_scope(sub_span, parent_rule_id, visit)};
+                recurse.has_error())
+            {
+                return recurse.error();
+            }
+            i += length;
+        }
+        return ystdlib::error_handling::success();
+    }
 
     /**
      * Emits the shape constant string field for a LogTypeID node.

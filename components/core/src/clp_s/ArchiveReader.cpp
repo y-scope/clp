@@ -25,6 +25,26 @@
 #include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
+namespace {
+/**
+ * Determines whether an unordered-object subtree should be registered in
+ * `m_global_id_to_unordered_object` for later lookup by its tree-node ID.
+ *
+ * `ParentRule` tree nodes are globally deduped by `(parent, key, type)`, so repeated same-named
+ * parent matches within a single message share one node ID. `mark_unordered_object` keys the map
+ * by that ID with silent `emplace` dedup, so a second occurrence would overwrite the first
+ * occurrence's schema span — and no consumer looks up a `ParentRule` by ID today (the recursive
+ * `SchemaReader` walks carry the owning node through the tree instead). Excluding `ParentRule`
+ * keeps the map 1:1 for the nodes consumers do look up (`LogMessage`, `StructuredArray`, `Object`).
+ *
+ * @param subtree_root_type The node type of the unordered-object subtree root.
+ * @return true if the subtree should be marked, false otherwise.
+ */
+[[nodiscard]] auto should_mark_unordered_object(NodeType subtree_root_type) -> bool {
+    return NodeType::ParentRule != subtree_root_type;
+}
+}  // namespace
+
 void ArchiveReader::open(Path const& archive_path, Options const& options) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
@@ -430,7 +450,11 @@ void ArchiveReader::append_unordered_reader_columns(
         }
     }
 
-    if (should_marshal_records) {
+    if (should_marshal_records
+        && should_mark_unordered_object(
+                m_schema_tree->get_node(mst_subtree_root_node_id).get_type()
+        ))
+    {
         reader.mark_unordered_object(object_begin_pos, mst_subtree_root_node_id, schema_ids);
     }
 }
