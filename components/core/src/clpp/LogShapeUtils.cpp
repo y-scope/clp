@@ -22,6 +22,10 @@ struct RawShapeOffset {
 };
 }  // namespace
 
+// The closing placeholder delimiter is always the next '%' after the opening one as a qualified
+// name cannot contain a delimiter. Using `find_placeholder_delimiter` to find the closing delimiter
+// can incorrectly treat the closing and opening delimiters of adjacent placeholders (e.g.
+// `%var%%var%`) as an escaped literal as the two delimiters appear as `%%`.
 auto build_parent_rule_shapes(log_surgeon::EventHandle const& event, std::string_view log_shape)
         -> ParentRuleShapes {
     std::vector<RawShapeOffset> raw_shape_offsets{{0, 0}};
@@ -33,7 +37,7 @@ auto build_parent_rule_shapes(log_surgeon::EventHandle const& event, std::string
         if (std::string_view::npos == open) {
             break;
         }
-        auto const close{find_placeholder_delimiter(log_shape, open + 1)};
+        auto const close{log_shape.find('%', open + 1)};
         if (std::string_view::npos == close) {
             break;
         }
