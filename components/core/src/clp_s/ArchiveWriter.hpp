@@ -184,14 +184,6 @@ public:
             -> SchemaNode::id_t;
 
     /**
-     * @return The root node ID of the LogType sub-tree.
-     * @return -1 if the sub-tree does not exist.
-     */
-    auto get_logtype_node() -> SchemaNode::id_t {
-        return m_schema_tree.get_subtree_node_id(constants::cDefaultNamespace, NodeType::LogType);
-    }
-
-    /**
      * Checks if a leaf key with a given parent node id matches the authoritative timestamp column.
      * @param parent_node_id
      * @param key
