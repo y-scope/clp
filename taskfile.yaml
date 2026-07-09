@@ -173,9 +173,8 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   core:
-    cmds:
-      - task: "core-generate"
-      - task: "core-build"
+    deps:
+      - "core-build"
 
   core-generate:
     internal: true
@@ -198,6 +197,8 @@ tasks:
   core-build:
     internal: true
     sources: *core_source_files
+    deps:
+      - "core-generate"
     generates:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
