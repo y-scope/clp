@@ -9,6 +9,28 @@ import zstandard as zstd
 ZSTD_COMPRESSION_LEVEL = 3
 
 
+def serialize(data: Any) -> bytes:
+    """
+    Serializes data as zstd-compressed MessagePack.
+
+    :param data:
+    :return: The serialized bytes.
+    """
+    packed = msgpack.packb(data)
+    return _get_compressor().compress(packed)
+
+
+def deserialize(data: bytes) -> Any:
+    """
+    Deserializes zstd-compressed MessagePack data.
+
+    :param data:
+    :return: The deserialized data.
+    """
+    decompressed = _get_decompressor().decompress(data)
+    return msgpack.unpackb(decompressed)
+
+
 class _Compressor(Protocol):
     def compress(self, data: bytes) -> bytes:
         """
@@ -53,25 +75,3 @@ def _get_decompressor() -> _Decompressor:
         decompressor = zstd.ZstdDecompressor()
         _context.decompressor = decompressor
     return decompressor
-
-
-def serialize(data: Any) -> bytes:
-    """
-    Serializes data as zstd-compressed MessagePack.
-
-    :param data:
-    :return: The serialized bytes.
-    """
-    packed = msgpack.packb(data)
-    return _get_compressor().compress(packed)
-
-
-def deserialize(data: bytes) -> Any:
-    """
-    Deserializes zstd-compressed MessagePack data.
-
-    :param data:
-    :return: The deserialized data.
-    """
-    decompressed = _get_decompressor().decompress(data)
-    return msgpack.unpackb(decompressed)
