@@ -11,10 +11,11 @@
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/search/ast/SearchUtils.hpp>
+
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
 #include "FileReader.hpp"
-#include "search/ast/SearchUtils.hpp"
 
 namespace po = boost::program_options;
 
@@ -774,7 +775,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             search_options.add(match_options);
 
-            int64_t count_by_time_bucket_size_ms{};
+            int64_t count_by_time_bucket_size_millisecs{};
             std::string aggregation_field;
             po::options_description aggregation_options("Aggregation Controls");
             // clang-format off
@@ -783,7 +784,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "Count the number of results"
             )(
                 "count-by-time",
-                po::value<int64_t>(&count_by_time_bucket_size_ms)->value_name("SIZE"),
+                po::value<int64_t>(&count_by_time_bucket_size_millisecs)->value_name("SIZE"),
                 "Count the number of results in each time span of the given size (ms)"
             )(
                 "min",
@@ -968,6 +969,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
                           << " --count" << std::endl;
+                std::cerr << std::endl;
+
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output the maximum value of field "latency" to)"
+                             " stdout"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " --max latency" << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -1042,9 +1051,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("clp-s only supports one output handler at a time");
             }
 
-            m_aggregation = parse_aggregation_options(
+            m_aggregator = parse_aggregation_options(
                     parsed_command_line_options,
-                    count_by_time_bucket_size_ms,
+                    count_by_time_bucket_size_millisecs,
                     aggregation_field
             );
 
@@ -1139,18 +1148,18 @@ void CommandLineArguments::parse_network_dest_output_handler_options(
 
 auto CommandLineArguments::parse_aggregation_options(
         po::variables_map const& parsed_options,
-        int64_t count_by_time_bucket_size_ms,
+        int64_t count_by_time_bucket_size_millisecs,
         std::string_view aggregation_field
-) -> std::optional<Aggregation> {
-    std::optional<Aggregation> aggregation;
-    auto const set_aggregation = [&](Aggregation value) {
-        if (aggregation.has_value()) {
+) -> std::optional<Aggregator> {
+    std::optional<Aggregator> aggregator;
+    auto const set_aggregator = [&](Aggregator value) {
+        if (aggregator.has_value()) {
             throw std::invalid_argument(
                     "The --count, --count-by-time, --min, --max, and --unique options are mutually"
                     " exclusive."
             );
         }
-        aggregation = std::move(value);
+        aggregator = std::move(value);
     };
     auto const validate_aggregation_field = [&]() {
         if (aggregation_field.empty()) {
@@ -1164,32 +1173,32 @@ auto CommandLineArguments::parse_aggregation_options(
     };
 
     if (parsed_options.count("count")) {
-        set_aggregation(CountAggregation{});
+        set_aggregator(CountAggregator{});
     }
     if (parsed_options.count("count-by-time")) {
-        if (count_by_time_bucket_size_ms <= 0) {
+        if (count_by_time_bucket_size_millisecs <= 0) {
             throw std::invalid_argument("Value for count-by-time must be greater than zero.");
         }
-        set_aggregation(CountByTimeAggregation{count_by_time_bucket_size_ms});
+        set_aggregator(CountByTimeAggregator{count_by_time_bucket_size_millisecs});
     }
     if (parsed_options.count("min")) {
         validate_aggregation_field();
-        set_aggregation(MinMaxAggregation{false, aggregation_field});
+        set_aggregator(MinMaxAggregator{false, aggregation_field});
     }
     if (parsed_options.count("max")) {
         validate_aggregation_field();
-        set_aggregation(MinMaxAggregation{true, aggregation_field});
+        set_aggregator(MinMaxAggregator{true, aggregation_field});
     }
     if (parsed_options.count("unique")) {
         validate_aggregation_field();
-        set_aggregation(UniqueAggregation{aggregation_field});
+        set_aggregator(UniqueAggregator{aggregation_field});
     }
-    return aggregation;
+    return aggregator;
 }
 
 auto CommandLineArguments::reject_aggregation_for_handler(std::string_view handler_name) const
         -> void {
-    if (m_aggregation.has_value()) {
+    if (m_aggregator.has_value()) {
         throw std::invalid_argument(
                 fmt::format("The {} output handler does not support aggregations.", handler_name)
         );
@@ -1226,9 +1235,9 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         throw std::invalid_argument("job-id cannot be negative.");
     }
 
-    if (false == m_aggregation.has_value()
-        || (false == std::holds_alternative<CountAggregation>(m_aggregation.value())
-            && false == std::holds_alternative<CountByTimeAggregation>(m_aggregation.value())))
+    if (false == m_aggregator.has_value()
+        || (false == std::holds_alternative<CountAggregator>(m_aggregator.value())
+            && false == std::holds_alternative<CountByTimeAggregator>(m_aggregator.value())))
     {
         throw std::invalid_argument(
                 "The reducer output handler currently only supports count and count-by-time"

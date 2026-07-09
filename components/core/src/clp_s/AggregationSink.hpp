@@ -10,7 +10,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 
-#include <clp_s/Aggregation.hpp>
+#include <clp_s/aggregators.hpp>
 #include <clp_s/ErrorCode.hpp>
 
 namespace clp_s {
@@ -80,7 +80,8 @@ public:
 
     // Methods implementing AggregationSink
     /**
-     * Buffers a result document, flushing the buffer to the database once it reaches the batch size.
+     * Buffers a result document, flushing the buffer to the database once it reaches the batch
+     * size.
      * @param result The result document to write.
      */
     auto write(AggregationResult const& result) -> void override;

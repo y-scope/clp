@@ -1,5 +1,5 @@
-#ifndef CLP_S_INTFLOATCOMPARE_HPP
-#define CLP_S_INTFLOATCOMPARE_HPP
+#ifndef CLP_S_INT_FLOAT_COMPARE_HPP
+#define CLP_S_INT_FLOAT_COMPARE_HPP
 
 #include <cmath>
 #include <cstdint>
@@ -23,6 +23,7 @@ namespace clp_s {
 // `2^63` rather than `INT64_MAX` because `2^63` is exactly representable as a double and
 // `INT64_MAX` is not.
 constexpr double cInt64UpperBound{9223372036854775808.0};
+
 // `-2^63`, which equals `INT64_MIN` and is exactly representable as a double: any double `<` this
 // is smaller than every `int64_t`.
 constexpr double cInt64Min{-9223372036854775808.0};
@@ -36,38 +37,37 @@ constexpr double cInt64Min{-9223372036854775808.0};
 }
 
 /**
- * Compares an integer against a double exactly. After ruling out doubles that fall outside the
- * `int64_t` range, `rhs` is split into its integer and fractional parts: the integer parts are
- * compared directly, and the fractional part of `rhs` breaks ties.
+ * Compares an integer and a double exactly, without a cast that would lose precision. If `rhs` is
+ * greater than every `int64_t`, `lhs < rhs` is true; if `rhs` is less than every `int64_t`, it is
+ * false. Otherwise `rhs` is truncated to a whole number and compared to `lhs`; on a tie, `lhs` is
+ * smaller only when `rhs` has a positive fractional part.
  * @param lhs
  * @param rhs
  * @return Whether `lhs < rhs`.
  */
 [[nodiscard]] inline auto is_less(int64_t lhs, double rhs) -> bool {
-    // NaN is unordered, so it is never less than anything.
     if (std::isnan(rhs)) {
         return false;
     }
-    // `rhs` is larger than every `int64_t`, so `lhs` must be less than it.
     if (rhs >= cInt64UpperBound) {
         return true;
     }
-    // `rhs` is smaller than every `int64_t`, so `lhs` cannot be less than it.
     if (rhs < cInt64Min) {
         return false;
     }
-    // `rhs` is in `int64_t` range, so its truncated value fits an `int64_t` with no rounding.
     auto const truncated{std::trunc(rhs)};
     auto const rhs_int{static_cast<int64_t>(truncated)};
     if (lhs != rhs_int) {
         return lhs < rhs_int;
     }
-    // Equal integer parts: `lhs < rhs` only if `rhs` carries a fractional remainder.
     return rhs > truncated;
 }
 
 /**
- * Compares a double against an integer exactly.
+ * Compares a double and an integer exactly, without a cast that would lose precision. If `lhs` is
+ * greater than every `int64_t`, `lhs < rhs` is false; if `lhs` is less than every `int64_t`, it is
+ * true. Otherwise `lhs` is truncated to a whole number and compared to `rhs`; on a tie, `lhs` is
+ * smaller only when it has a negative fractional part.
  * @param lhs
  * @param rhs
  * @return Whether `lhs < rhs`.
@@ -91,4 +91,4 @@ constexpr double cInt64Min{-9223372036854775808.0};
 }
 }  // namespace clp_s
 
-#endif  // CLP_S_INTFLOATCOMPARE_HPP
+#endif  // CLP_S_INT_FLOAT_COMPARE_HPP

@@ -19,8 +19,8 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 
-#include <clp_s/Aggregation.hpp>
 #include <clp_s/AggregationSink.hpp>
+#include <clp_s/aggregators.hpp>
 #include <clp_s/CommandLineArguments.hpp>
 
 #include "../reducer/Pipeline.hpp"
@@ -252,20 +252,23 @@ private:
 class CountByTimeReducerOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    CountByTimeReducerOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size_ms)
+    CountByTimeReducerOutputHandler(
+            int reducer_socket_fd,
+            int64_t count_by_time_bucket_size_millisecs
+    )
             : search::OutputHandler{true, false},
               m_reducer_socket_fd{reducer_socket_fd},
-              m_count_by_time_bucket_size_ms{count_by_time_bucket_size_ms} {}
+              m_count_by_time_bucket_size_millisecs{count_by_time_bucket_size_millisecs} {}
 
     // Methods implementing OutputHandler
     auto write(
             std::string_view message,
-            epochtime_t timestamp_ms,
+            epochtime_t timestamp_millisecs,
             std::string_view archive_id,
             int64_t log_event_idx
     ) -> void override {
-        int64_t bucket
-                = (timestamp_ms / m_count_by_time_bucket_size_ms) * m_count_by_time_bucket_size_ms;
+        int64_t bucket = (timestamp_millisecs / m_count_by_time_bucket_size_millisecs)
+                         * m_count_by_time_bucket_size_millisecs;
         m_bucket_counts[bucket] += 1;
     }
 
@@ -283,7 +286,7 @@ private:
     // Data members
     int m_reducer_socket_fd;
     std::map<int64_t, int64_t> m_bucket_counts;
-    int64_t m_count_by_time_bucket_size_ms;
+    int64_t m_count_by_time_bucket_size_millisecs;
 };
 
 /**
@@ -294,22 +297,22 @@ template <AggregatorReq AggT>
 class AggregationOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    AggregationOutputHandler(AggT aggregation, std::unique_ptr<AggregationSink> sink)
+    AggregationOutputHandler(AggT aggregator, std::unique_ptr<AggregationSink> sink)
             : search::OutputHandler{AggT::cNeedsMetadata, AggT::cNeedsMarshalledRecord},
-              m_aggregation{std::move(aggregation)},
+              m_aggregator{std::move(aggregator)},
               m_sink{std::move(sink)} {}
 
     // Methods implementing OutputHandler
     auto write(
             std::string_view message,
-            epochtime_t timestamp_ms,
+            epochtime_t timestamp_millisecs,
             std::string_view archive_id,
             int64_t log_event_idx
     ) -> void override {
-        m_aggregation.add_record(message, timestamp_ms);
+        m_aggregator.add_record(message, timestamp_millisecs);
     }
 
-    auto write(std::string_view message) -> void override { m_aggregation.add_record(message, 0); }
+    auto write(std::string_view message) -> void override { m_aggregator.add_record(message, 0); }
 
     // Methods overriding OutputHandler
     /**
@@ -318,7 +321,7 @@ public:
      * @return The sink's error code on failure
      */
     auto finish() -> ErrorCode override {
-        for (auto const& result : m_aggregation.get_results()) {
+        for (auto const& result : m_aggregator.get_results()) {
             m_sink->write(result);
         }
         return m_sink->finish();
@@ -326,18 +329,18 @@ public:
 
 private:
     // Data members
-    AggT m_aggregation;
+    AggT m_aggregator;
     std::unique_ptr<AggregationSink> m_sink;
 };
 
 /**
  * Creates an output handler that runs the given aggregation.
- * @param aggregation The aggregation to run.
+ * @param aggregator The aggregation to run.
  * @param sink The destination for the aggregation's results.
  * @return The constructed output handler.
  */
 [[nodiscard]] inline auto
-make_aggregation_output_handler(Aggregation aggregation, std::unique_ptr<AggregationSink> sink)
+make_aggregation_output_handler(Aggregator aggregator, std::unique_ptr<AggregationSink> sink)
         -> std::unique_ptr<search::OutputHandler> {
     return std::visit(
             [&](auto&& agg) -> std::unique_ptr<search::OutputHandler> {
@@ -347,7 +350,7 @@ make_aggregation_output_handler(Aggregation aggregation, std::unique_ptr<Aggrega
                         std::move(sink)
                 );
             },
-            std::move(aggregation)
+            std::move(aggregator)
     );
 }
 

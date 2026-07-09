@@ -1,4 +1,4 @@
-#include "Aggregation.hpp"
+#include "aggregators.hpp"
 
 #include <cstdint>
 #include <stdexcept>
@@ -11,7 +11,7 @@
 #include <nlohmann/json.hpp>
 
 #include <clp_s/archive_constants.hpp>
-#include <clp_s/IntFloatCompare.hpp>
+#include <clp_s/int_float_compare.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 
 using std::string;
@@ -23,7 +23,8 @@ namespace {
  * Tokenizes an aggregation's target field into its path components.
  * @param field
  * @param field_path Returns the tokenized path components.
- * @throws std::invalid_argument if `field` cannot be tokenized.
+ * @throws std::invalid_argument if `field` cannot be tokenized, or if it is in a non-default
+ * namespace.
  */
 auto tokenize_aggregation_field(string_view field, std::vector<string>& field_path) -> void {
     string descriptor_namespace;
@@ -33,9 +34,10 @@ auto tokenize_aggregation_field(string_view field, std::vector<string>& field_pa
         throw std::invalid_argument("Invalid aggregation field: " + string{field});
     }
     if (false == descriptor_namespace.empty()) {
-        // The tokenizer strips the namespace prefix out of the path, but namespaced fields live
-        // under a top-level object keyed by that namespace. Prepend it back so the path matches.
-        field_path.insert(field_path.begin(), descriptor_namespace);
+        throw std::invalid_argument(
+                "The aggregation field must be in the default namespace; namespaced fields (e.g. "
+                "the auto-generated \"@\" namespace) are not supported."
+        );
     }
 }
 
@@ -48,11 +50,9 @@ auto tokenize_aggregation_field(string_view field, std::vector<string>& field_pa
  * @return nullptr if `message` is not valid JSON, or if any path component is missing or traverses
  * a non-object.
  */
-auto find_field_node(
-        string_view message,
-        std::vector<string> const& field_path,
-        nlohmann::json& doc
-) -> nlohmann::json const* {
+auto
+find_field_node(string_view message, std::vector<string> const& field_path, nlohmann::json& doc)
+        -> nlohmann::json const* {
     try {
         doc = nlohmann::json::parse(message);
     } catch (nlohmann::json::exception const&) {
@@ -74,7 +74,7 @@ auto find_field_node(
 }
 }  // namespace
 
-auto CountAggregation::get_results() const -> std::vector<AggregationResult> {
+auto CountAggregator::get_results() const -> std::vector<AggregationResult> {
     if (0 == m_count) {
         return {};
     }
@@ -83,7 +83,7 @@ auto CountAggregation::get_results() const -> std::vector<AggregationResult> {
     return {std::move(result)};
 }
 
-auto CountByTimeAggregation::get_results() const -> std::vector<AggregationResult> {
+auto CountByTimeAggregator::get_results() const -> std::vector<AggregationResult> {
     std::vector<AggregationResult> results;
     results.reserve(m_bucket_counts.size());
     for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
@@ -95,13 +95,13 @@ auto CountByTimeAggregation::get_results() const -> std::vector<AggregationResul
     return results;
 }
 
-MinMaxAggregation::MinMaxAggregation(bool find_max, string_view field)
+MinMaxAggregator::MinMaxAggregator(bool find_max, string_view field)
         : m_find_max{find_max},
           m_field{field} {
     tokenize_aggregation_field(field, m_field_path);
 }
 
-auto MinMaxAggregation::beats_extreme(Extreme candidate) const -> bool {
+auto MinMaxAggregator::beats_extreme(Extreme candidate) const -> bool {
     auto const& current{m_extreme.value()};
     if (m_find_max) {
         return std::visit(
@@ -113,7 +113,7 @@ auto MinMaxAggregation::beats_extreme(Extreme candidate) const -> bool {
     return std::visit([](auto cand, auto cur) { return is_less(cand, cur); }, candidate, current);
 }
 
-auto MinMaxAggregation::add_record(string_view message, epochtime_t) -> void {
+auto MinMaxAggregator::add_record(string_view message, epochtime_t) -> void {
     nlohmann::json doc;
     auto const* const node{find_field_node(message, m_field_path, doc)};
     if (nullptr == node || false == node->is_number()) {
@@ -127,7 +127,7 @@ auto MinMaxAggregation::add_record(string_view message, epochtime_t) -> void {
     }
 }
 
-auto MinMaxAggregation::get_results() const -> std::vector<AggregationResult> {
+auto MinMaxAggregator::get_results() const -> std::vector<AggregationResult> {
     if (false == m_extreme.has_value()) {
         return {};
     }
@@ -144,11 +144,11 @@ auto MinMaxAggregation::get_results() const -> std::vector<AggregationResult> {
     return {std::move(result)};
 }
 
-UniqueAggregation::UniqueAggregation(string_view field) : m_field{field} {
+UniqueAggregator::UniqueAggregator(string_view field) : m_field{field} {
     tokenize_aggregation_field(field, m_field_path);
 }
 
-auto UniqueAggregation::add_record(string_view message, epochtime_t) -> void {
+auto UniqueAggregator::add_record(string_view message, epochtime_t) -> void {
     nlohmann::json doc;
     auto const* const node{find_field_node(message, m_field_path, doc)};
     if (nullptr == node) {
@@ -166,7 +166,7 @@ auto UniqueAggregation::add_record(string_view message, epochtime_t) -> void {
     }
 }
 
-auto UniqueAggregation::get_results() const -> std::vector<AggregationResult> {
+auto UniqueAggregator::get_results() const -> std::vector<AggregationResult> {
     std::vector<AggregationResult> results;
     results.reserve(m_values.size());
     for (auto const& value : m_values) {

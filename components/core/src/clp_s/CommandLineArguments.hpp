@@ -11,8 +11,9 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+#include <clp_s/aggregators.hpp>
+
 #include "../reducer/types.hpp"
-#include "Aggregation.hpp"
 #include "Defs.hpp"
 #include "InputConfig.hpp"
 
@@ -119,8 +120,8 @@ public:
         return m_output_handler_options;
     }
 
-    [[nodiscard]] auto get_aggregation() const -> std::optional<Aggregation> const& {
-        return m_aggregation;
+    [[nodiscard]] auto get_aggregator() const -> std::optional<Aggregator> const& {
+        return m_aggregator;
     }
 
     [[nodiscard]] auto get_retain_float_format() const -> bool {
@@ -159,7 +160,8 @@ private:
     /**
      * Builds the requested aggregation from the parsed options.
      * @param parsed_options
-     * @param count_by_time_bucket_size_ms Bucket size for count-by-time. Only used by that option.
+     * @param count_by_time_bucket_size_millisecs Bucket size for count-by-time. Only used by that
+     * option.
      * @param aggregation_field Field for min/max/unique. Only used by those options.
      * @return The requested aggregation, or std::nullopt if none was requested.
      * @throws std::invalid_argument if multiple aggregations are specified, the bucket size is
@@ -167,9 +169,9 @@ private:
      */
     [[nodiscard]] static auto parse_aggregation_options(
             boost::program_options::variables_map const& parsed_options,
-            int64_t count_by_time_bucket_size_ms,
+            int64_t count_by_time_bucket_size_millisecs,
             std::string_view aggregation_field
-    ) -> std::optional<Aggregation>;
+    ) -> std::optional<Aggregator>;
 
     /**
      * Throws if an aggregation was requested.
@@ -263,7 +265,7 @@ private:
     bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
 
-    std::optional<Aggregation> m_aggregation;
+    std::optional<Aggregator> m_aggregator;
 };
 }  // namespace clp_s
 
