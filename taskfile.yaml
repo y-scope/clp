@@ -178,7 +178,7 @@ tasks:
 
   core-generate:
     internal: true
-    run: once
+    run: "once"
     sources: &core_source_files
       - "{{.G_DEPS_CPP_CHECKSUM_FILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"
@@ -197,7 +197,7 @@ tasks:
 
   core-build:
     internal: true
-    run: once
+    run: "once"
     sources: *core_source_files
     deps:
       - "core-generate"
