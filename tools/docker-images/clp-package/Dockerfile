@@ -43,7 +43,7 @@ COPY --link --chown=${UID} ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/
     lib/
 COPY --link --chown=${UID} ./build/spider/spider-build/src/spider/spider_scheduler bin/
 COPY --link --chown=${UID} ./build/spider/spider-build/src/spider/spider_worker bin/
-COPY --link --chown=${UID} ./build/nodejs-22/bin/node bin/node-22
+COPY --link --chown=${UID} ./build/nodejs/bin/node bin/node
 COPY --link --chown=${UID} ./build/python-libs/ lib/python3/site-packages/
 COPY --link --chown=${UID} ./build/rust-targets/release/api_server bin/
 COPY --link --chown=${UID} ./build/rust-targets/release/log-ingestor bin/

@@ -283,7 +283,7 @@ tasks:
       - "rsync -a 'packages/client/dist/' '{{.OUTPUT_DIR}}/client/'"
       - "rsync -a 'packages/yscope-log-viewer/dist/' '{{.OUTPUT_DIR}}/yscope-log-viewer/'"
       - >-
-        PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH
+        PATH='{{.G_NODEJS_BIN_DIR}}':$PATH
         pnpm deploy
         --prod
         --filter=@webui/server
@@ -458,7 +458,7 @@ tasks:
     deps:
       - "init"
       - "deps:yscope-log-viewer:source"
-      - "toolchains:nodejs-22"
+      - "toolchains:nodejs"
     cmds:
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm run build"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm run build"

@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@smithy/types": "^4.14.3",
-    "@types/node": "22.19.7",
+    "@types/node": "24.13.2",
     "@types/presto-client": "^1.0.2",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.4",

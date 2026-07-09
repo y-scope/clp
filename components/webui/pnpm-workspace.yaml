@@ -9,6 +9,9 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 
+overrides:
+  '@types/node': "24.13.2"
+
 # Required for pnpm deploy on v10+ when deploying workspace packages.
 injectWorkspacePackages: true
 

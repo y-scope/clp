@@ -7,9 +7,9 @@ includes:
 vars:
   G_HELM_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/helm"
   G_HELM_TOOLCHAIN_ENV_FILE: "{{.G_HELM_TOOLCHAIN_DIR}}/env"
-  G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
-  G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
-  G_NODEJS_22_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/nodejs-22.md5"
+  G_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs"
+  G_NODEJS_BIN_DIR: "{{.G_NODEJS_BUILD_DIR}}/bin"
+  G_NODEJS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/nodejs.md5"
   G_RUST_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/rust"
   G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_DIR}}/env"
 
@@ -57,13 +57,13 @@ tasks:
         export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
         EOF
 
-  nodejs-22:
+  nodejs:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_NODEJS_22_CHECKSUM_FILE}}"
+      CHECKSUM_FILE: "{{.G_NODEJS_CHECKSUM_FILE}}"
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
-      NODEJS_VERSION: "v22.20.0"
-      OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
+      NODEJS_VERSION: "v24.18.0"
+      OUTPUT_DIR: "{{.G_NODEJS_BUILD_DIR}}"
     run: "once"
     cmds:
       - task: "remote:download-and-extract-tar"
@@ -71,13 +71,13 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           FILE_SHA256: >-
             {{- if and (eq OS "linux") (eq .NODEJS_ARCH "x64") -}}
-              00bbd05e306ea68b6e13e17360d0e2f680b493ef95f2fea1c4296ff7437530bc
+              55aa7153f9d88f28d765fcdad5ae6945b5c0f98a36881703817e4c450fa76742
             {{- else if and (eq OS "linux") (eq .NODEJS_ARCH "arm64") -}}
-              06907b9c088ce62305bc1530e5c1ae1510245114645768f7750c349c5b6fe667
+              58c9520501f6ae2b52d5b210444e24b9d0c029a58c5011b797bc1fe7105886f6
             {{- else if and (eq OS "darwin") (eq .NODEJS_ARCH "arm64") -}}
-              f2ed1fbdfb79afb9343dfbb609efde657b41e7efcd5215264ce78f8906356b4d
+              4477b9f78efb77744cf5eb57a0e9594dba66466b38b4e93fa9f35cb907a095a6
             {{- else if and (eq OS "darwin") (eq .NODEJS_ARCH "x64") -}}
-              2a291f0a9555f5d6685d96ce9429da3d0ea3cd896c012702c6ee0015f818684e
+              4a3b6bc81542154430825128d9a279e8b364e8d90581544e506ef7579fd1ab6f
             {{- else -}}
               unsupported
             {{- end }}
@@ -85,8 +85,8 @@ tasks:
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
           URL: >-
             https://nodejs.org/dist/{{.NODEJS_VERSION}}/node-{{.NODEJS_VERSION}}-{{OS}}-{{.NODEJS_ARCH}}.tar.xz
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack enable"
-      - "cd '{{.G_WEBUI_SRC_DIR}}' && PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH corepack install"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH corepack enable"
+      - "cd '{{.G_WEBUI_SRC_DIR}}' && PATH='{{.G_NODEJS_BIN_DIR}}':$PATH corepack install"
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
