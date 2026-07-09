@@ -9,8 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import brotli
-import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
     ClpConfig,
@@ -34,6 +32,7 @@ from clp_py_utils.core import (
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SqlAdapter
 from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
+from clp_py_utils.zstd_msgpack import deserialize as deserialize_zstd_msgpack
 from opentelemetry import metrics
 from pydantic import ValidationError
 
@@ -393,9 +392,7 @@ def _schedule_job(
     """
     job_id = job_row["id"]
     try:
-        clp_io_config = ClpIoConfig.model_validate(
-            msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
-        )
+        clp_io_config = ClpIoConfig.model_validate(deserialize_zstd_msgpack(job_row["clp_config"]))
     except Exception:
         logger.exception("Failed to decompress clp_config for job %s", job_id)
         update_compression_job_metadata(
