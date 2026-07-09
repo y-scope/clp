@@ -12,7 +12,7 @@
 namespace clpp {
 /**
  * Escape literal '%' as '%%' in static text portions of a log shape template.
- * This ensures the placeholder delimiters (%qualified-name%) are unambiguous.
+ * This ensures the placeholder delimiters (%column-name%) are unambiguous.
  *
  * @param text The static text to escape.
  * @return A copy of `text` with every '%' doubled to '%%'.
@@ -54,7 +54,7 @@ namespace clpp {
 /**
  * Find the next placeholder delimiter ('%') in an escaped shape.
  * Skips '%%' (escaped literal percent) sequences, so the only characters this
- * returns are the lone '%' characters that delimit `%qualified-name%` placeholders.
+ * returns are the lone '%' characters that delimit `%column-name%` placeholders.
  *
  * @param text The escaped template string to scan.
  * @param pos  The starting position for the scan.

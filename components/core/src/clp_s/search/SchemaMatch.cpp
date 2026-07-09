@@ -1007,9 +1007,9 @@ SchemaMatch::find_child_nodes_by_key_name(SchemaNode::id_t parent_id, std::strin
 }
 
 auto
-SchemaMatch::lookup_decomposed_query(std::string const& qualified_name, std::string const& query)
+SchemaMatch::lookup_decomposed_query(std::string const& column_name, std::string const& query)
         -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*> {
-    if (auto entry{m_decomposed_query_cache.find({qualified_name, query})};
+    if (auto entry{m_decomposed_query_cache.find({column_name, query})};
         m_decomposed_query_cache.end() != entry)
     {
         return &entry->second;
@@ -1035,11 +1035,11 @@ SchemaMatch::lookup_decomposed_query(std::string const& qualified_name, std::str
 
     return &m_decomposed_query_cache
                     .emplace(
-                            std::pair{qualified_name, query},
+                            std::pair{column_name, query},
                             YSTDLIB_ERROR_HANDLING_TRYX(
                                     clpp::DecomposedQuery::decompose_query(
                                             *m_parser,
-                                            qualified_name,
+                                            column_name,
                                             query
                                     )
                             )
@@ -1063,12 +1063,12 @@ auto SchemaMatch::resolve_clpp_query(
         log_shape_dict.read_entries();
     }
 
-    auto qualified_name{m_tree->build_qualified_name(root_node_id)};
+    auto column_name{m_tree->build_column_name(root_node_id)};
 
     auto match_and_create_exists_filter{
             [&](auto const& matcher) -> std::shared_ptr<ast::Expression> {
                 auto matched_schema_ids{
-                        find_schemas_matching_predicate(qualified_name, log_shape_dict, matcher)
+                        find_schemas_matching_predicate(column_name, log_shape_dict, matcher)
                 };
                 if (matched_schema_ids.empty()) {
                     return nullptr;
@@ -1102,7 +1102,7 @@ auto SchemaMatch::resolve_clpp_query(
     std::string query;
     operand.as_var_string(query, filter.get_operation());
 
-    auto dq{lookup_decomposed_query(qualified_name, query)};
+    auto dq{lookup_decomposed_query(column_name, query)};
     if (dq.has_error()) {
         return nullptr;
     }
@@ -1110,7 +1110,7 @@ auto SchemaMatch::resolve_clpp_query(
     auto results{ast::OrExpr::create()};
     for (auto const& interpretation : dq.value()->get_interpretations()) {
         auto matched_schema_ids{find_schemas_matching_predicate(
-                qualified_name,
+                column_name,
                 log_shape_dict,
                 [&](std::string_view value) -> bool {
                     return clp::string_utils::wildcard_match_unsafe(

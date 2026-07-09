@@ -154,8 +154,8 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
 // TODO clpp: might be better to move all this into clpp/
 
 /**
- * An open `ParentRule` unordered-object scope during `parse_log_message`. `match` borrows from
- * the log_surgeon event (valid only for one `parse_log_message` call) and identifies the scope;
+ * An open `ParentRule` unordered-object scope during `parse_str_field`. `match` borrows from
+ * the log_surgeon event (valid only for one `parse_str_field` call) and identifies the scope;
  * `schema_start` is passed to `Schema::end_unordered_object` to close it.
  */
 struct ParentScope {
@@ -489,11 +489,11 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                                 NodeType::LogMessage,
                                 cur_key
                         );
-                        if (auto const result{parse_log_message(value, node_id)};
+                        if (auto const result{parse_str_field(value, node_id)};
                             result.has_error())
                         {
                             throw(std::runtime_error(
-                                    "parse_log_message failed with: " + result.error().message()
+                                    "parse_str_field failed with: " + result.error().message()
                             ));
                         }
                     } else {
@@ -610,11 +610,11 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                     if (m_archive_options.experimental) {
                         node_id = m_archive_writer
                                           ->add_node(parent_node_id, NodeType::LogMessage, "");
-                        if (auto const result{parse_log_message(value, node_id)};
+                        if (auto const result{parse_str_field(value, node_id)};
                             result.has_error())
                         {
                             throw(std::runtime_error(
-                                    "parse_log_message failed with: " + result.error().message()
+                                    "parse_str_field failed with: " + result.error().message()
                             ));
                         }
                     } else {
@@ -817,11 +817,11 @@ void JsonParser::parse_line(
                                 NodeType::LogMessage,
                                 cur_key
                         );
-                        if (auto const result{parse_log_message(value, node_id)};
+                        if (auto const result{parse_str_field(value, node_id)};
                             result.has_error())
                         {
                             throw(std::runtime_error(
-                                    "parse_log_message failed with: " + result.error().message()
+                                    "parse_str_field failed with: " + result.error().message()
                             ));
                         }
                         m_current_schema.insert_unordered(node_id);
@@ -1650,17 +1650,17 @@ void JsonParser::split_archive() {
     }
 }
 
-auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
+auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t log_msg_node_id)
         -> ystdlib::error_handling::Result<void> {
     size_t parser_pos{0};
-    auto const event{m_log_surgeon_parser->next_event(log_msg, &parser_pos)};
+    auto const event{m_log_surgeon_parser->next_event(str_field, &parser_pos)};
     if (false == event.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
 
     std::string log_shape{};
-    log_shape.reserve(log_msg.size());
+    log_shape.reserve(str_field.size());
     size_t log_msg_pos{0};
     std::vector<log_surgeon::Match const*> parent_chain;
     std::vector<ParentScope> open_scopes;
@@ -1715,7 +1715,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
 
         log_shape.append(
                 clpp::escape_shape_text(
-                        log_msg.substr(log_msg_pos, match->range.start - log_msg_pos)
+                        str_field.substr(log_msg_pos, match->range.start - log_msg_pos)
                 )
         );
         log_shape.append(
@@ -1723,7 +1723,7 @@ auto JsonParser::parse_log_message(std::string_view log_msg, SchemaNode::id_t lo
         );
         log_msg_pos = match->range.end;
     }
-    log_shape.append(clpp::escape_shape_text(log_msg.substr(log_msg_pos)));
+    log_shape.append(clpp::escape_shape_text(str_field.substr(log_msg_pos)));
 
     // Close remaining scopes so `LogType`/`LogTypeID` stay direct children of the `LogMessage`
     // span rather than nesting inside a parent-rule scope.

@@ -275,13 +275,13 @@ auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
                 break;
             }
             case JsonSerializer::Op::AddReconstructedLogShapeField: {
-                auto const& [log_msg_id, parent_rule_fqn]{
+                auto const& [log_msg_id, parent_rule_column_name]{
                         m_reconstruction_targets[reconstruction_target_index]
                 };
                 ++reconstruction_target_index;
                 m_json_serializer.append_key();
                 m_json_serializer.append_quoted_value(
-                        reconstruct_log_shape(log_msg_id, parent_rule_fqn, message_index)
+                        reconstruct_log_shape(log_msg_id, parent_rule_column_name, message_index)
                 );
                 break;
             }
@@ -1044,19 +1044,19 @@ void SchemaReader::emit_parent_rule_shape(
     };
 
     if (pr_has_default) {
-        auto const parent_fqn{m_global_schema_tree->build_qualified_name(global_column_id)};
+        auto const parent_column_name{m_global_schema_tree->build_column_name(global_column_id)};
         m_json_serializer.add_special_key(node.get_key_name());
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.emplace_back(log_msg_node_id, parent_fqn);
+        m_reconstruction_targets.emplace_back(log_msg_node_id, parent_column_name);
     }
     if (pr_has_decomposed || pr_has_shape) {
         if (found_log_shape_id && nullptr != m_log_shape_dict && nullptr != m_parent_rule_shapes
             && log_shape_id < m_parent_rule_shapes->size())
         {
             auto const& metadata{m_parent_rule_shapes->at(log_shape_id)};
-            auto const parent_fqn{m_global_schema_tree->build_qualified_name(global_column_id)};
+            auto const parent_column_name{m_global_schema_tree->build_column_name(global_column_id)};
             for (auto const& match : metadata.get()) {
-                if (match.m_name == parent_fqn) {
+                if (match.m_name == parent_column_name) {
                     auto const& log_shape_template{m_log_shape_dict->get_value(log_shape_id)};
                     if (match.m_start < log_shape_template.size()
                         && match.m_start + match.m_size <= log_shape_template.size())
@@ -1146,7 +1146,7 @@ auto SchemaReader::collect_leaf_entries(
                     LeafEntry{
                             global_column_id,
                             column_idx,
-                            m_global_schema_tree->build_qualified_name(global_column_id),
+                            m_global_schema_tree->build_column_name(global_column_id),
                             node.get_type()
                     }
             );
@@ -1159,16 +1159,16 @@ auto SchemaReader::collect_leaf_entries(
 auto SchemaReader::emit_grouped_leaf_entries(std::vector<LeafEntry>& entries)
         -> ystdlib::error_handling::Result<void> {
     std::stable_sort(entries.begin(), entries.end(), [](auto const& a, auto const& b) -> bool {
-        return a.fqn < b.fqn;
+        return a.column_name < b.column_name;
     });
 
     for (size_t i{0}; i < entries.size();) {
-        auto const& fqn{entries[i].fqn};
-        m_json_serializer.add_special_key(fqn);
+        auto const& column_name{entries[i].column_name};
+        m_json_serializer.add_special_key(column_name);
         m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
 
         size_t j{i};
-        while (j < entries.size() && entries[j].fqn == fqn) {
+        while (j < entries.size() && entries[j].column_name == column_name) {
             switch (entries[j].type) {
                 case NodeType::DeltaInteger:
                 case NodeType::Integer: {
@@ -1321,7 +1321,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
 
 auto SchemaReader::reconstruct_log_shape(
         SchemaNode::id_t log_msg_node_id,
-        std::string_view parent_rule_fqn,
+        std::string_view parent_rule_column_name,
         uint64_t message_index
 ) -> std::string {
     auto log_msg_it{m_global_id_to_unordered_object.find(log_msg_node_id)};
@@ -1344,14 +1344,14 @@ auto SchemaReader::reconstruct_log_shape(
     }
 
     std::string_view template_to_scan{log_shape_template};
-    if (false == parent_rule_fqn.empty()) {
+    if (false == parent_rule_column_name.empty()) {
         if (nullptr == m_parent_rule_shapes) {
             return {};
         }
         auto const& metadata{m_parent_rule_shapes->at(log_shape_id)};
         bool found_match{false};
         for (auto const& match : metadata.get()) {
-            if (match.m_name == parent_rule_fqn) {
+            if (match.m_name == parent_rule_column_name) {
                 if (match.m_start < log_shape_template.size()
                     && match.m_start + match.m_size <= log_shape_template.size())
                 {
@@ -1370,7 +1370,7 @@ auto SchemaReader::reconstruct_log_shape(
     }
 
     size_t column_idx{log_msg_it->second.first};
-    std::unordered_map<std::string, std::vector<std::string>> fqn_to_values;
+    std::unordered_map<std::string, std::vector<std::string>> column_name_to_values;
     for (auto global_column_id : schema) {
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             continue;
@@ -1381,15 +1381,15 @@ auto SchemaReader::reconstruct_log_shape(
         {
             continue;
         }
-        auto fqn{m_global_schema_tree->build_qualified_name(global_column_id)};
+        auto column_name{m_global_schema_tree->build_column_name(global_column_id)};
         auto* column{m_columns[column_idx]};
         std::string value;
         column->extract_string_value_into_buffer(message_index, value);
-        fqn_to_values[fqn].push_back(std::move(value));
+        column_name_to_values[column_name].push_back(std::move(value));
         ++column_idx;
     }
 
-    std::unordered_map<std::string, size_t> fqn_to_next_index;
+    std::unordered_map<std::string, size_t> column_name_to_next_index;
     std::string raw_text;
     size_t pos{0};
     while (pos < template_to_scan.size()) {
@@ -1404,17 +1404,17 @@ auto SchemaReader::reconstruct_log_shape(
             raw_text.append(clpp::unescape_shape_text(template_to_scan.substr(pct)));
             break;
         }
-        auto const fqn{std::string(template_to_scan.substr(pct + 1, end_pct - pct - 1))};
-        auto it{fqn_to_values.find(fqn)};
-        if (fqn_to_values.end() != it) {
-            auto& next_index{fqn_to_next_index[fqn]};
+        auto const column_name{std::string(template_to_scan.substr(pct + 1, end_pct - pct - 1))};
+        auto it{column_name_to_values.find(column_name)};
+        if (column_name_to_values.end() != it) {
+            auto& next_index{column_name_to_next_index[column_name]};
             if (next_index < it->second.size()) {
                 raw_text.append(it->second[next_index++]);
             } else {
-                raw_text.append("%").append(fqn).append("%");
+                raw_text.append("%").append(column_name).append("%");
             }
         } else {
-            raw_text.append("%").append(fqn).append("%");
+            raw_text.append("%").append(column_name).append("%");
         }
         pos = end_pct + 1;
     }

@@ -252,12 +252,12 @@ public:
     }
 
     /**
-     * Builds the fully qualified name for a node by walking up to (but not including) the
+     * Builds the column name for a node by walking up to (but not including) the
      * LogMessage ancestor and concatenating key names with ".".
      * @param node_id The node ID to start from.
-     * @return The dot-delimited FQN.
+     * @return The dot-delimited column name.
      */
-    [[nodiscard]] auto build_qualified_name(SchemaNode::id_t node_id) const -> std::string;
+    [[nodiscard]] auto build_column_name(SchemaNode::id_t node_id) const -> std::string;
 
     /**
      * Finds an ancestor node within a subtree that matches the given type. When multiple matching

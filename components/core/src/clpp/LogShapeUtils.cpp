@@ -22,7 +22,7 @@ struct RawShapeOffset {
 };
 }  // namespace
 
-// The closing placeholder delimiter is always the next '%' after the opening one as a qualified
+// The closing placeholder delimiter is always the next '%' after the opening one as a column
 // name cannot contain a delimiter. Using `find_placeholder_delimiter` to find the closing delimiter
 // can incorrectly treat the closing and opening delimiters of adjacent placeholders (e.g.
 // `%var%%var%`) as an escaped literal as the two delimiters appear as `%%`.

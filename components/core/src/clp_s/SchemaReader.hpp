@@ -407,16 +407,16 @@ private:
     [[nodiscard]] auto is_node_projected(SchemaNode::id_t node_id) -> bool;
 
     /**
-     * Reconstructs the text for a LogMessage or ParentRule from its shape by replacing %fqn%
+     * Reconstructs the text for a LogMessage or ParentRule from its shape by replacing %column-name%
      * placeholders with the column/leaf values.
      * @param log_msg_node_id The LogMessage node ID.
-     * @param parent_rule_fqn The FQN of a ParentRule to reconstruct, or empty for the full message.
+     * @param parent_rule_column_name The column name of a ParentRule to reconstruct, or empty for the full message.
      * @param message_index The index of the message to reconstruct.
      * @return The reconstructed raw log text.
      */
     [[nodiscard]] auto reconstruct_log_shape(
             SchemaNode::id_t log_msg_node_id,
-            std::string_view parent_rule_fqn,
+            std::string_view parent_rule_column_name,
             uint64_t message_index
     ) -> std::string;
 
@@ -438,7 +438,7 @@ private:
     struct LeafEntry {
         SchemaNode::id_t global_column_id;
         size_t column_idx;
-        std::string fqn;
+        std::string column_name;
         NodeType type;
     };
 
@@ -558,7 +558,7 @@ private:
     ) -> std::vector<LeafEntry>;
 
     /**
-     * Sorts, groups by FQN, and emits leaf entries as JSON array fields.
+     * Sorts, groups by column name, and emits leaf entries as JSON array fields.
      * @param entries The leaf entries to emit (sorted in-place).
      * @return A void result on success, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Unsupported if an unsupported column type is encountered.

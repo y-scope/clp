@@ -220,17 +220,17 @@ private:
     auto add_metadata_field(std::string_view const field_name, NodeType type) -> SchemaNode::id_t;
 
     /**
-     * Parse an unstructured log message using log surgeon and store its components in the current
-     * parsed message, clp-s schema, and dictionaries.
-     * @param log_msg The unstructured log message to parse.
-     * @param parent_node_id The parent clp-s node ID.
+     * Parse a string field as an unstructured log message using log surgeon and store its
+     * components in the current parsed message, clp-s schema, and dictionaries.
+     * @param str_field
+     * @param parent_node_id
      * @return A result containing an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if parsing fails.
      * - Forwards `store_capture_groups`'s return values on failure.
      * - Forwards `m_archive_writer->update_log_shape_dict`'s return values on failure.
      * - Forwards `m_archive_writer->update_parent_rule_shapes`'s return values on failure.
      */
-    auto parse_log_message(std::string_view log_msg, SchemaNode::id_t log_msg_node_id)
+    auto parse_str_field(std::string_view str_field, SchemaNode::id_t log_msg_node_id)
             -> ystdlib::error_handling::Result<void>;
 
     /**

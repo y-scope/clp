@@ -158,7 +158,7 @@ auto SchemaTree::store(std::string const& archives_dir, int compression_level) -
     return compressed_size;
 }
 
-auto SchemaTree::build_qualified_name(int32_t node_id) const -> std::string {
+auto SchemaTree::build_column_name(int32_t node_id) const -> std::string {
     std::vector<std::string_view> names;
     auto cur_id{node_id};
     while (-1 != cur_id) {
@@ -170,14 +170,14 @@ auto SchemaTree::build_qualified_name(int32_t node_id) const -> std::string {
         cur_id = node.get_parent_id();
     }
 
-    std::string qualified_name;
+    std::string column_name;
     for (auto it{names.rbegin()}; names.rend() != it; ++it) {
         if (names.rbegin() != it) {
-            qualified_name.append(".");
+            column_name.append(".");
         }
-        qualified_name.append(*it);
+        column_name.append(*it);
     }
-    return qualified_name;
+    return column_name;
 }
 
 auto SchemaTree::find_matching_subtree_root_in_subtree(

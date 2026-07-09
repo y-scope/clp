@@ -121,11 +121,13 @@ private:
      * descriptors for each matching schema-tree node at the leaf position.
      * Computes the common prefix between the column's existing descriptor tokens and the
      * rule names, then resolves the remaining (non-overlapping) segments through the schema
-     * tree.
+     * tree. The returned ColumnDescriptor is a clp-s field path: the unresolved rule-name
+     * segments are appended to the input column's descriptor tokens, so the result is a
+     * column descriptor rather than a rule name.
      *
      * @param column The original column descriptor triggering clpp decomposition.
      * @param root_node_id The schema node where decomposition is rooted.
-     * @param rule_names The split rule names from the log-surgeon FQN.
+     * @param rule_names The split rule names from the log-surgeon qualified name.
      * @return A vector of (column, node_id) pairs, or std::nullopt if any rule name cannot be
      * resolved in the schema tree.
      */
@@ -157,30 +159,30 @@ private:
      * Iterates the log shape dictionary and returns schema IDs whose log shapes match a
      * predicate. For LogMessage nodes, the predicate receives the full log-shape value. For
      * ParentRule nodes, the predicate receives the log shape substring for the parent rule match of
-     * `qualified_name`.
+     * `column_name`.
      * @tparam Matcher A callable `bool(std::string_view)` returning true if the argument matches.
-     * @param qualified_name The fully qualified name of the node (empty for LogMessage).
+     * @param column_name The column name of the node (empty for LogMessage).
      * @param log_shape_dict The log shape dictionary to scan.
      * @param matcher A Matcher returning true if a predicate matches a log-shape.
      * @return The set of schema IDs whose log shapes matched.
      */
     template <StringViewPredicate Matcher>
     auto find_schemas_matching_predicate(
-            std::string_view qualified_name,
+            std::string_view column_name,
             clp_s::LogShapeDictionaryReader& log_shape_dict,
             Matcher const& matcher
     ) -> std::unordered_set<int32_t>;
 
     /**
      * Looks up a decomposed clpp query from the cache, lazily initializing the log-surgeon
-     * parser and parsing specificatino on first use. The cache is keyed on the fully qualified
+     * parser and parsing specificatino on first use. The cache is keyed on the
      * column name and the raw query string.
-     * @param qualified_name The fully qualified dot-separated column name (e.g.
+     * @param column_name The dot-separated column name (e.g.
      * "message.block_id").
      * @param query The raw CLP-string query text.
      * @return A pointer to the cached DecomposedQuery on success.
      */
-    auto lookup_decomposed_query(std::string const& qualified_name, std::string const& query)
+    auto lookup_decomposed_query(std::string const& column_name, std::string const& query)
             -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*>;
 
     /**
@@ -358,21 +360,21 @@ private:
 
 template <StringViewPredicate Matcher>
 auto SchemaMatch::find_schemas_matching_predicate(
-        std::string_view qualified_name,
+        std::string_view column_name,
         clp_s::LogShapeDictionaryReader& log_shape_dict,
         Matcher const& matcher
 ) -> std::unordered_set<int32_t> {
     std::vector<clpp::log_shape_id_t> matched_shape_ids;
     for (auto const& log_shape : log_shape_dict.get_entries()) {
         auto const log_shape_str{std::string_view{log_shape.get_value()}};
-        if (qualified_name.empty()) {
+        if (column_name.empty()) {
             if (matcher(log_shape_str)) {
                 matched_shape_ids.emplace_back(log_shape.get_id());
             }
         } else {
             auto shapes{m_archive_reader->get_parent_rule_shapes().at(log_shape.get_id())};
             for (auto const& parent_match : shapes.get()) {
-                if (qualified_name == parent_match.m_name
+                if (column_name == parent_match.m_name
                     && matcher(log_shape_str.substr(parent_match.m_start, parent_match.m_size)))
                 {
                     matched_shape_ids.emplace_back(log_shape.get_id());

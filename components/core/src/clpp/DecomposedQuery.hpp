@@ -48,7 +48,7 @@ public:
     }
 
     /**
-     * Splits a fully qualified dot-separated rule name into its segments.
+     * Splits a qualified dot-separated rule name into its segments.
      * @param qualified_name
      * @return The list of rule name segments starting from the root rule.
      */
