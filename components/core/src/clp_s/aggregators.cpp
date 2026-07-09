@@ -1,4 +1,4 @@
-#include "Aggregation.hpp"
+#include "aggregators.hpp"
 
 #include <cstdint>
 #include <stdexcept>
@@ -11,7 +11,7 @@
 #include <nlohmann/json.hpp>
 
 #include <clp_s/archive_constants.hpp>
-#include <clp_s/IntFloatCompare.hpp>
+#include <clp_s/int_float_compare.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 
 using std::string;

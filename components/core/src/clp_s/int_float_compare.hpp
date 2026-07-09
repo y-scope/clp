@@ -1,5 +1,5 @@
-#ifndef CLP_S_INTFLOATCOMPARE_HPP
-#define CLP_S_INTFLOATCOMPARE_HPP
+#ifndef CLP_S_INT_FLOAT_COMPARE_HPP
+#define CLP_S_INT_FLOAT_COMPARE_HPP
 
 #include <cmath>
 #include <cstdint>
@@ -23,6 +23,7 @@ namespace clp_s {
 // `2^63` rather than `INT64_MAX` because `2^63` is exactly representable as a double and
 // `INT64_MAX` is not.
 constexpr double cInt64UpperBound{9223372036854775808.0};
+
 // `-2^63`, which equals `INT64_MIN` and is exactly representable as a double: any double `<` this
 // is smaller than every `int64_t`.
 constexpr double cInt64Min{-9223372036854775808.0};
@@ -90,4 +91,4 @@ constexpr double cInt64Min{-9223372036854775808.0};
 }
 }  // namespace clp_s
 
-#endif  // CLP_S_INTFLOATCOMPARE_HPP
+#endif  // CLP_S_INT_FLOAT_COMPARE_HPP

@@ -11,7 +11,7 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include <clp_s/Aggregation.hpp>
+#include <clp_s/aggregators.hpp>
 
 #include "../reducer/types.hpp"
 #include "Defs.hpp"

@@ -1,5 +1,5 @@
-#ifndef CLP_S_AGGREGATION_HPP
-#define CLP_S_AGGREGATION_HPP
+#ifndef CLP_S_AGGREGATORS_HPP
+#define CLP_S_AGGREGATORS_HPP
 
 #include <concepts>
 #include <cstdint>
@@ -64,9 +64,11 @@ concept AggregatorReq = requires(
  */
 class CountAggregator {
 public:
+    // Static constants
     static constexpr bool cNeedsMetadata{false};
     static constexpr bool cNeedsMarshalledRecord{false};
 
+    // Methods
     auto add_record(
             [[maybe_unused]] std::string_view message,
             [[maybe_unused]] epochtime_t timestamp_millisecs
@@ -77,6 +79,7 @@ public:
     [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
 
 private:
+    // Data members
     int64_t m_count{};
 };
 
@@ -85,9 +88,11 @@ private:
  */
 class CountByTimeAggregator {
 public:
+    // Static constants
     static constexpr bool cNeedsMetadata{true};
     static constexpr bool cNeedsMarshalledRecord{false};
 
+    // Constructors
     explicit CountByTimeAggregator(int64_t bucket_size_millisecs)
             : m_bucket_size_millisecs{bucket_size_millisecs} {
         if (bucket_size_millisecs <= 0) {
@@ -95,6 +100,7 @@ public:
         }
     }
 
+    // Methods
     [[nodiscard]] auto get_bucket_size_millisecs() const -> int64_t {
         return m_bucket_size_millisecs;
     }
@@ -109,6 +115,7 @@ public:
     [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
 
 private:
+    // Data members
     int64_t m_bucket_size_millisecs;
     std::map<int64_t, int64_t> m_bucket_counts;
 };
@@ -118,25 +125,31 @@ private:
  */
 class MinMaxAggregator {
 public:
+    // Static constants
     static constexpr bool cNeedsMetadata{false};
     static constexpr bool cNeedsMarshalledRecord{true};
 
+    // Constructors
     MinMaxAggregator(bool find_max, std::string_view field);
 
+    // Methods
     auto add_record(std::string_view message, [[maybe_unused]] epochtime_t timestamp_millisecs)
             -> void;
 
     [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
 
 private:
+    // Types
     using Extreme = std::variant<int64_t, double>;
 
+    // Methods
     /**
      * @param candidate The value to compare against the current extreme.
      * @return Whether `candidate` is more extreme (per the min/max mode) than the current extreme.
      */
     [[nodiscard]] auto beats_extreme(Extreme candidate) const -> bool;
 
+    // Data members
     bool m_find_max;
     std::string m_field;
     std::vector<std::string> m_field_path;
@@ -149,4 +162,4 @@ private:
 using Aggregator = std::variant<CountAggregator, CountByTimeAggregator, MinMaxAggregator>;
 }  // namespace clp_s
 
-#endif  // CLP_S_AGGREGATION_HPP
+#endif  // CLP_S_AGGREGATORS_HPP

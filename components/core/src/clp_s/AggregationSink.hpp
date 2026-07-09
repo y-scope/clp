@@ -9,7 +9,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 
-#include <clp_s/Aggregation.hpp>
+#include <clp_s/aggregators.hpp>
 #include <clp_s/ErrorCode.hpp>
 
 namespace clp_s {
