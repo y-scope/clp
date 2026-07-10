@@ -3,7 +3,7 @@
     "unstructured": true,
     "timestamp_key": null,
     "timestamp_format": {
-        "kind": "strptime",
+        "type": "strptime",
         "pattern": "%Y-%m-%dT%H:%M:%S.%f"
     },
     "begin_ts": 92554380000,

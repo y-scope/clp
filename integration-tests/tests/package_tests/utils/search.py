@@ -9,9 +9,6 @@ from tests.utils.classes import CmdArgs
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_COUNT_BY_TIME_INTERVAL = 10
-
-
 def parse_timestamp_to_epoch_ms(timestamp: str, strptime_pattern: str) -> int:
     """
     Parses `timestamp` using `strptime_pattern` into an integer number of milliseconds since the

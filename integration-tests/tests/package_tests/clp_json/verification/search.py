@@ -21,8 +21,10 @@ from tests.utils.classes import (
 logger = logging.getLogger(__name__)
 
 
+ESCAPE_CHAR = "\\"
+KV_DELIMITER = ":"
+WILDCARD_SINGLEMATCH_CHAR = "?"
 WILDCARD_MULTIMATCH_CHAR = "*"
-KV_DELIMITER_COLON = ":"
 MIN_QUOTED_LENGTH = 2
 UNSTRUCTURED_TIMESTAMP_KEY = "timestamp"
 
@@ -36,7 +38,9 @@ def verify_search_clp_json(
     Verifies that the search action performed on the `clp-json` package returns the expected
     results. Verification is performed as follows:
 
-    1. The query string from the search action is parsed into a key-value pair.
+    1. The query string from the search action is parsed into a key-value pair. Note that the query
+       string must not be a composite query, i.e., queries with `AND`, `OR`, or other logical
+       operators are not supported for verification.
     2. The dataset's log entries are loaded into a list of dicts for processing.
     3. The list of dicts is searched for entries that match or contain the key-value pair.
     4. The found entries are compared against the original search action's output. For a count-style
@@ -76,7 +80,7 @@ def verify_search_clp_json(
         supporting_output = supporting_search_action.completed_proc.stdout
         all_logs = [json.loads(line) for line in supporting_output.splitlines() if line.strip()]
     else:
-        all_logs = _load_all_jsonl_logs_from_dataset(dataset)
+        all_logs = _load_all_json_logs_from_dataset(dataset)
 
     found_entries: list[dict[str, Any]] = _search_all_logs_for_kv_pair(
         all_logs, kv_pair, args, metadata
@@ -107,36 +111,41 @@ def verify_search_clp_json(
 
 def _construct_kv_pair_from_query(query: str) -> tuple[str, Any]:
     """
-    Constructs a key-value pair from a query string. The query is split on the first
-    `KV_DELIMITER_COLON` that is not inside a quoted group (`"..."` or `'...'`).
+    Constructs a key-value pair from a query string. The query is split on the first `KV_DELIMITER`
+    that is not inside a quoted group (`"..."` or `'...'`).
 
     :param query:
-    :return: `(KEY, VALUE)` if `KV_DELIMITER_COLON` is present, else
-        `(WILDCARD_MULTIMATCH_CHAR, VALUE)`.
+    :return: `(KEY, VALUE)` if `KV_DELIMITER` is present, else `(WILDCARD_MULTIMATCH_CHAR, VALUE)`.
     """
-    colon_index = _find_unquoted_colon(query)
-    if colon_index is None:
+    kv_delimiter_index = _find_unquoted_kv_delimiter(query)
+    if kv_delimiter_index is None:
         return WILDCARD_MULTIMATCH_CHAR, _strip_surrounding_quotes(query.strip())
-    key = _strip_surrounding_quotes(query[:colon_index].strip())
-    value = _strip_surrounding_quotes(query[colon_index + 1 :].strip())
+    key = _strip_surrounding_quotes(query[:kv_delimiter_index].strip())
+    value = _strip_surrounding_quotes(query[kv_delimiter_index + 1 :].strip())
     return key, value
 
 
-def _find_unquoted_colon(query: str) -> int | None:
+def _find_unquoted_kv_delimiter(query: str) -> int | None:
     """
-    Finds the first colon in `query` that is not inside a quoted group (`"..."` or `'...'`).
+    Finds the first unescaped instance of `KV_DELIMITER` in `query` that is not inside a quoted
+    group (`"..."` or `'...'`).
 
     :param query:
-    :return: The index of the first unquoted colon, or `None` if there is none.
+    :return: Index of the first unescaped unquoted `KV_DELIMITER`, or `None` if there is none.
     """
     open_quote: str | None = None
+    escaped = False
     for index, char in enumerate(query):
-        if open_quote is not None:
+        if escaped:
+            escaped = False
+        elif char == ESCAPE_CHAR:
+            escaped = True
+        elif open_quote is not None:
             if char == open_quote:
                 open_quote = None
         elif char in ('"', "'"):
             open_quote = char
-        elif char == KV_DELIMITER_COLON:
+        elif char == KV_DELIMITER:
             return index
     return None
 
@@ -153,12 +162,12 @@ def _strip_surrounding_quotes(text: str) -> str:
     return text
 
 
-def _load_all_jsonl_logs_from_dataset(dataset: SampleDataset) -> list[dict[str, Any]]:
+def _load_all_json_logs_from_dataset(dataset: SampleDataset) -> list[dict[str, Any]]:
     """
-    Loads every JSONL log from a dataset into a single list of dicts.
+    Loads every line-delimited JSON log from a dataset into a single list of dicts.
 
     :param dataset:
-    :return: A list of dicts, each of which represents a JSONL record.
+    :return: A list of dicts, each of which represents a line-delimited JSON record.
     """
     records: list[dict[str, Any]] = []
     for path in dataset.metadata.file_names:
@@ -253,11 +262,27 @@ def _convert_wildcard_to_regex(pattern: str, ignore_case: bool) -> re.Pattern[st
     :param ignore_case:
     :return: A compiled regex pattern.
     """
-    regex = ".*".join(re.escape(segment) for segment in pattern.split(WILDCARD_MULTIMATCH_CHAR))
+    regex_parts: list[str] = []
+    index = 0
+    while index < len(pattern):
+        char = pattern[index]
+        if char == ESCAPE_CHAR and index + 1 < len(pattern):
+            regex_parts.append(re.escape(pattern[index + 1]))
+            index += 2
+        elif char == WILDCARD_MULTIMATCH_CHAR:
+            regex_parts.append(".*")
+            index += 1
+        elif char == WILDCARD_SINGLEMATCH_CHAR:
+            regex_parts.append(".")
+            index += 1
+        else:
+            regex_parts.append(re.escape(char))
+            index += 1
+
     flags = re.DOTALL
     if ignore_case:
         flags |= re.IGNORECASE
-    return re.compile(regex, flags)
+    return re.compile("".join(regex_parts), flags)
 
 
 def _filter_entries_by_time_range(

@@ -51,20 +51,20 @@ following rules must be observed:
    | `logs_subdir` | The name of the subdirectory containing logs. |
    | `file_names` | A list of the files within `logs_subdir`. |
 
-   `timestamp_format` is a field tagged by by `kind` and containing `pattern` if applicable:
+   `timestamp_format` is a field tagged by by `type` and containing `pattern` if applicable:
 
    ```json
-   {"kind": "epoch_ms"}
-   {"kind": "strptime", "pattern": "str"}
+   {"type": "epoch_ms"}
+   {"type": "strptime", "pattern": "str"}
    ```
 
    | Field | Description |
    | --- | --- |
-   | `kind` | `"epoch_ms"` for epoch ms timestamps, or `"strptime"` for formatted strings. |
+   | `type` | `"epoch_ms"` for epoch ms timestamps, or `"strptime"` for formatted strings. |
    | `pattern` | (`strptime` only) The Python [`strptime`][strptime] pattern for the timestamp. |
 
-3. For **structured** datasets: files in the dataset must be `.jsonl`, with only one log record per
-   line.
+3. For **structured** datasets: files in the dataset must be in line-delimited JSON (only one log
+   record per line).
 
 ## Time-range search verification
 

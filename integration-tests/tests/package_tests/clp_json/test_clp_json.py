@@ -105,3 +105,20 @@ def test_clp_json_compression_text_multifile(
     logger.info("Verifying the compression of the 'text_multifile' dataset.")
     result = verify_compress_unstructured_clp_json(action, clp_package, text_multifile)
     assert result, result.failure_message
+
+
+@pytest.mark.search
+@pytest.mark.usefixtures("clear_package_archives")
+def test_clp_json_search(clp_package: ClpPackage) -> None:
+    """
+    Validate that the `clp-json` package successfully searches some dataset.
+
+    :param clp_package:
+    """
+    # TODO: compress a dataset
+
+    # TODO: check the correctness of the compression
+
+    # TODO: search through that dataset and check the correctness of the search results.
+
+    assert clp_package

@@ -3,7 +3,7 @@
     "unstructured": false,
     "timestamp_key": "timestamp",
     "timestamp_format": {
-        "kind": "epoch_ms"
+        "type": "epoch_ms"
     },
     "begin_ts": 1310138944000,
     "end_ts": 1311208074120,
