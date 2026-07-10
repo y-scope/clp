@@ -44,7 +44,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.12.1-dev"
+  G_PACKAGE_VERSION: "0.13.0"
 
   # Build parameters
   # NOTE: If CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK is set, it takes precedence. Otherwise, we cap
