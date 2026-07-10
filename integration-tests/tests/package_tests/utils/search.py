@@ -1,28 +1,11 @@
 """Classes to facilitate CLP package search testing."""
 
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 from tests.utils.classes import CmdArgs
 
 logger = logging.getLogger(__name__)
-
-
-def parse_timestamp_to_epoch_ms(timestamp: str, strptime_pattern: str) -> int:
-    """
-    Parses `timestamp` using `strptime_pattern` into an integer number of milliseconds since the
-    UNIX epoch. A timestamp without an offset in the pattern is interpreted as UTC.
-
-    :param timestamp:
-    :param strptime_pattern:
-    :raises ValueError: If `timestamp` doesn't match `strptime_pattern`.
-    :return: The parsed timestamp as an integer number of milliseconds since the UNIX epoch.
-    """
-    parsed = datetime.strptime(timestamp, strptime_pattern)  # noqa: DTZ007
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return round(parsed.timestamp() * 1000)
 
 
 class SearchArgs(CmdArgs):

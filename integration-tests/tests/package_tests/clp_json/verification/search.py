@@ -8,15 +8,15 @@ from typing import Any
 import pytest
 
 from tests.package_tests.classes import ClpPackage
-from tests.package_tests.utils.search import parse_timestamp_to_epoch_ms, SearchArgs
+from tests.package_tests.utils.search import SearchArgs
 from tests.utils.classes import (
     ClpAction,
     ClpVerificationResult,
-    EpochMsTimestampFormat,
     SampleDataset,
     SampleDatasetMetadata,
-    TimestampFormat,
 )
+from tests.utils.timestamps import TimestampFormat
+from tests.utils.utils import strip_surrounding_quotes
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ ESCAPE_CHAR = "\\"
 KV_DELIMITER = ":"
 WILDCARD_SINGLEMATCH_CHAR = "?"
 WILDCARD_MULTIMATCH_CHAR = "*"
-MIN_QUOTED_LENGTH = 2
 UNSTRUCTURED_TIMESTAMP_KEY = "timestamp"
 
 
@@ -119,9 +118,9 @@ def _construct_kv_pair_from_query(query: str) -> tuple[str, Any]:
     """
     kv_delimiter_index = _find_unquoted_kv_delimiter(query)
     if kv_delimiter_index is None:
-        return WILDCARD_MULTIMATCH_CHAR, _strip_surrounding_quotes(query.strip())
-    key = _strip_surrounding_quotes(query[:kv_delimiter_index].strip())
-    value = _strip_surrounding_quotes(query[kv_delimiter_index + 1 :].strip())
+        return WILDCARD_MULTIMATCH_CHAR, strip_surrounding_quotes(query.strip())
+    key = strip_surrounding_quotes(query[:kv_delimiter_index].strip())
+    value = strip_surrounding_quotes(query[kv_delimiter_index + 1 :].strip())
     return key, value
 
 
@@ -148,18 +147,6 @@ def _find_unquoted_kv_delimiter(query: str) -> int | None:
         elif char == KV_DELIMITER:
             return index
     return None
-
-
-def _strip_surrounding_quotes(text: str) -> str:
-    """
-    Removes a single pair of matching surrounding quotes (`"` or `'`) from `text`, if present.
-
-    :param text:
-    :return: The processed text string.
-    """
-    if len(text) >= MIN_QUOTED_LENGTH and text[0] == text[-1] and text[0] in ('"', "'"):
-        return text[1:-1]
-    return text
 
 
 def _load_all_json_logs_from_dataset(dataset: SampleDataset) -> list[dict[str, Any]]:
@@ -308,47 +295,17 @@ def _filter_entries_by_time_range(
     for entry in entries:
         if timestamp_key not in entry:
             pytest.fail(f"Log entry '{entry}' is missing the timestamp key '{timestamp_key}'.")
-        timestamp = _resolve_timestamp_to_ms(entry[timestamp_key], timestamp_key, timestamp_format)
+        raw_timestamp = entry[timestamp_key]
+        try:
+            timestamp = timestamp_format.to_epoch_ms(raw_timestamp)
+        except (TypeError, ValueError) as e:
+            pytest.fail(
+                f"Failed to resolve log entry timestamp '{raw_timestamp}' under key"
+                f" '{timestamp_key}': {e}"
+            )
         if (begin_ts is None or begin_ts <= timestamp) and (end_ts is None or timestamp <= end_ts):
             filtered_entries.append(entry)
     return filtered_entries
-
-
-def _resolve_timestamp_to_ms(
-    raw_timestamp: Any,
-    timestamp_key: str,
-    timestamp_format: TimestampFormat,
-) -> int:
-    """
-    Converts a log entry's raw timestamp value into UNIX epoch ms according to `timestamp_format`,
-    if not already given in UNIX epoch ms.
-
-    :param raw_timestamp:
-    :param timestamp_key:
-    :param timestamp_format:
-    :return: The timestamp as an integer number of milliseconds since the UNIX epoch.
-    """
-    if isinstance(timestamp_format, EpochMsTimestampFormat):
-        if not isinstance(raw_timestamp, int):
-            pytest.fail(
-                f"Log entry timestamp '{raw_timestamp}' under key '{timestamp_key}' should be an"
-                " integer, but it is not."
-            )
-        return raw_timestamp
-
-    if not isinstance(raw_timestamp, str):
-        pytest.fail(
-            f"Log entry timestamp '{raw_timestamp}' under key '{timestamp_key}' should be a string,"
-            " but it is not."
-        )
-
-    try:
-        return parse_timestamp_to_epoch_ms(raw_timestamp, timestamp_format.pattern)
-    except ValueError:
-        pytest.fail(
-            f"Failed to parse log entry timestamp '{raw_timestamp}' under key '{timestamp_key}'"
-            f" using pattern '{timestamp_format.pattern}'."
-        )
 
 
 def _extract_count_from_search_output(search_output: str) -> str:

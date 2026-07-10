@@ -8,13 +8,13 @@ import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 
 import pytest
 from pydantic import BaseModel
 from typing_extensions import Self
 
 from tests.conftest import get_test_log_dir
+from tests.utils.timestamps import TimestampFormat  # noqa: TC001
 from tests.utils.utils import validate_dir_exists, validate_file_exists
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
@@ -75,22 +75,6 @@ class IntegrationTestPathConfig:
     def _static_paths(self) -> list[Path]:
         """:return: List of paths that must exist on disk at construction time."""
         return [self.test_data_dir]
-
-
-class EpochMsTimestampFormat(BaseModel):
-    """Indicates a timestamp encoded as an integer number of milliseconds since the UNIX epoch."""
-
-    type: Literal["epoch_ms"]
-
-
-class StrptimeTimestampFormat(BaseModel):
-    """Indicates a timestamp encoded as a string parseable by a `datetime.strptime` pattern."""
-
-    type: Literal["strptime"]
-    pattern: str
-
-
-TimestampFormat = EpochMsTimestampFormat | StrptimeTimestampFormat
 
 
 class SampleDatasetMetadata(BaseModel):

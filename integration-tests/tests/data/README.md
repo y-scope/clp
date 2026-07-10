@@ -69,8 +69,8 @@ following rules must be observed:
 ## Time-range search verification
 
 Search verification reproduces the package's `--begin-time`/`--end-time` filter by independently
-determining each log event's timestamp. For a dataset to be usable in a time-range search test, the
-following restrictions must be observed:
+determining each log event's timestamp. For a dataset to be usable **in a time-range search test**,
+the following restrictions must be observed:
 
 1. `begin_ts` must equal the earliest timestamp present in the dataset, and `end_ts` the latest.
 2. `begin_ts` must be less than or equal to `end_ts`.

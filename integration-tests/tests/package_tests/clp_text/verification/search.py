@@ -5,15 +5,14 @@ import re
 
 import pytest
 
-from tests.package_tests.utils.search import parse_timestamp_to_epoch_ms, SearchArgs
+from tests.package_tests.utils.search import SearchArgs
 from tests.utils.classes import (
     ClpAction,
     ClpVerificationResult,
-    EpochMsTimestampFormat,
     NonClpAction,
     SampleDataset,
-    TimestampFormat,
 )
+from tests.utils.timestamps import TimestampFormat
 from tests.utils.utils import get_binary_path
 
 logger = logging.getLogger(__name__)
@@ -153,11 +152,11 @@ def _parse_leading_timestamp_ms(line: str, timestamp_format: TimestampFormat) ->
     :return: The parsed timestamp as an integer number of milliseconds since the UNIX epoch.
     """
     token = line.split(maxsplit=1)[0]
-    if isinstance(timestamp_format, EpochMsTimestampFormat):
+    if timestamp_format.type == "epoch_ms":
         return int(token)
 
     try:
-        return parse_timestamp_to_epoch_ms(token, timestamp_format.pattern)
+        return timestamp_format.to_epoch_ms(token)
     except ValueError:
         pytest.fail(
             f"Failed to parse timestamp token '{token}' from line '{line}' using pattern"
