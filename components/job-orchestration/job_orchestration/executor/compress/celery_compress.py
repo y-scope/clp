@@ -38,3 +38,6 @@ def compress(
         except SoftTimeLimitExceeded:
             logger.exception("Compression task exceeded soft time limit.")
             raise
+        except Exception:
+            logger.exception("Compression task failed with an unexpected exception.")
+            raise

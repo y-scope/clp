@@ -36,15 +36,19 @@ def compress(
     job_id_int = int(job_id)
     task_id_int = int(task_id)
     with bound_contextvars(job_id=job_id_int, task_id=task_id_int):
-        result_as_json_str = json.dumps(
-            compression_entry_point(
-                job_id_int,
-                task_id_int,
-                clp_io_config_json.decode("utf-8"),
-                paths_to_compress_json.decode("utf-8"),
-                json.loads(clp_metadata_db_connection_config_json.decode("utf-8")),
-                logger,
+        try:
+            result_as_json_str = json.dumps(
+                compression_entry_point(
+                    job_id_int,
+                    task_id_int,
+                    clp_io_config_json.decode("utf-8"),
+                    paths_to_compress_json.decode("utf-8"),
+                    json.loads(clp_metadata_db_connection_config_json.decode("utf-8")),
+                    logger,
+                )
             )
-        )
+        except Exception:
+            logger.exception("Compression task failed with an unexpected exception.")
+            raise
 
     return result_as_json_str.encode("utf-8")
