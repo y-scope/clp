@@ -338,9 +338,7 @@ def search(
     dataset: str | None = None,
 ) -> dict[str, Any]:
     with bound_contextvars(
-        **_get_search_task_log_context(
-            job_id, task_id, job_config_blob, archive_id, dataset
-        )
+        **_get_search_task_log_context(job_id, task_id, job_config_blob, archive_id, dataset)
     ):
         try:
             return search_entry_point(

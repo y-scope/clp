@@ -296,9 +296,7 @@ class IrExtractionHandle(StreamExtractionHandle):
         active_file_split_ir_extractions[file_split_id].append(self._job_id)
 
     def create_stream_extraction_job(self) -> QueryJob:
-        logger.info(
-            f"Creating IR extraction job for file_split: {self.__file_split_id}"
-        )
+        logger.info(f"Creating IR extraction job for file_split: {self.__file_split_id}")
         return ExtractIrJob(
             id=self._job_id,
             extract_ir_config=self.__job_config,
@@ -521,8 +519,8 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                     job_id,
                     QueryJobStatus.CANCELLED,
                     QueryJobStatus.CANCELLING,
-                **set_job_or_task_status_kwargs,
-            ):
+                    **set_job_or_task_status_kwargs,
+                ):
                     logger.info("Cancelled job.")
                 else:
                     logger.error("Failed to cancel job.")
@@ -994,9 +992,7 @@ async def handle_finished_search_job(
             else:
                 tasks_completed_counter.add(1)
                 job.num_archives_searched += 1
-                logger.info(
-                    f"Search task succeeded in {task_result.duration} second(s)."
-                )
+                logger.info(f"Search task succeeded in {task_result.duration} second(s).")
 
     if new_job_status != QueryJobStatus.FAILED:
         max_num_results = job.search_config.max_num_results
@@ -1073,9 +1069,7 @@ async def handle_finished_stream_extraction_job(
 
     num_tasks = len(task_results)
     if 1 != num_tasks:
-        logger.error(
-            f"Unexpected number of tasks for extraction job. Expected 1, got {num_tasks}."
-        )
+        logger.error(f"Unexpected number of tasks for extraction job. Expected 1, got {num_tasks}.")
         new_job_status = QueryJobStatus.FAILED
     else:
         task_result = QueryTaskResult.model_validate(task_results[0])
@@ -1089,9 +1083,7 @@ async def handle_finished_stream_extraction_job(
                 new_job_status = QueryJobStatus.FAILED
             else:
                 tasks_completed_counter.add(1)
-                logger.info(
-                    f"Extraction task succeeded in {task_result.duration} second(s)."
-                )
+                logger.info(f"Extraction task succeeded in {task_result.duration} second(s).")
 
     duration = (datetime.datetime.now() - job.start_time).total_seconds()
     if set_job_or_task_status(
@@ -1120,9 +1112,7 @@ async def handle_finished_stream_extraction_job(
     waiting_jobs.remove(job_id)
     for waiting_job in waiting_jobs:
         with bound_contextvars(job_id=waiting_job):
-            logger.info(
-                f"Setting waiting job status to {new_job_status.to_str()}."
-            )
+            logger.info(f"Setting waiting job status to {new_job_status.to_str()}.")
             set_job_or_task_status(
                 db_conn,
                 QUERY_JOBS_TABLE_NAME,

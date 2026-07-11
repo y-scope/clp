@@ -331,9 +331,7 @@ def extract_stream(
     dataset: str | None = None,
 ) -> dict[str, Any]:
     with bound_contextvars(
-        **_get_extract_stream_task_log_context(
-            job_id, task_id, query_job_type, archive_id, dataset
-        )
+        **_get_extract_stream_task_log_context(job_id, task_id, query_job_type, archive_id, dataset)
     ):
         try:
             return extract_stream_entry_point(
