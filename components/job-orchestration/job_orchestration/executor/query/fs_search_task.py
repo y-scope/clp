@@ -22,18 +22,43 @@ from clp_py_utils.s3_utils import (
 )
 from clp_py_utils.sql_adapter import SqlAdapter
 from clp_py_utils.telemetry_config import is_telemetry_disabled_by_env
+from structlog.contextvars import bound_contextvars
 
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
+    get_query_hash,
     report_task_failure,
     run_query_task,
 )
 from job_orchestration.executor.utils import load_worker_config
+from job_orchestration.scheduler.constants import QueryJobType
 from job_orchestration.scheduler.job_config import SearchJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
+
+
+def _get_search_task_log_context(
+    job_id: str,
+    task_id: int,
+    job_config_blob: bytes,
+    archive_id: str,
+    dataset: str | None,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {
+        "job_id": job_id,
+        "task_id": task_id,
+        "query_job_type": QueryJobType.SEARCH_OR_AGGREGATION.to_str(),
+        "archive_id": archive_id,
+    }
+    if dataset is not None:
+        context["dataset"] = dataset
+
+    search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
+    context["query"] = search_config.query_string
+    context["query_hash"] = get_query_hash(search_config.query_string)
+    return context
 
 
 def _make_core_clp_command_and_env_vars(
@@ -238,7 +263,7 @@ def search_entry_point(
     clp_logging_level = os.getenv("CLP_LOGGING_LEVEL")
     set_logging_level(logger, clp_logging_level)
 
-    logger.info(f"Started {task_name} task for job {job_id}")
+    logger.info(f"Started {task_name} task")
 
     start_time = datetime.datetime.now()
     sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
@@ -312,16 +337,24 @@ def search(
     results_cache_uri: str,
     dataset: str | None = None,
 ) -> dict[str, Any]:
-    try:
-        return search_entry_point(
-            job_id,
-            task_id,
-            job_config_blob,
-            archive_id,
-            clp_metadata_db_conn_params,
-            results_cache_uri,
-            dataset,
+    with bound_contextvars(
+        **_get_search_task_log_context(
+            job_id, task_id, job_config_blob, archive_id, dataset
         )
-    except SoftTimeLimitExceeded:
-        logger.exception(f"Search task job_id={job_id} task_id={task_id} exceeded soft time limit.")
-        raise
+    ):
+        try:
+            return search_entry_point(
+                job_id,
+                task_id,
+                job_config_blob,
+                archive_id,
+                clp_metadata_db_conn_params,
+                results_cache_uri,
+                dataset,
+            )
+        except SoftTimeLimitExceeded:
+            logger.exception("Search task exceeded soft time limit.")
+            raise
+        except Exception:
+            logger.exception("Search task failed with an unexpected exception.")
+            raise

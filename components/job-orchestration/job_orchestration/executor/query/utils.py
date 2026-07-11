@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import logging
 import os
 import signal
@@ -13,6 +14,10 @@ from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
+
+
+def get_query_hash(query_string: str) -> str:
+    return hashlib.sha256(query_string.encode("utf-8")).hexdigest()
 
 
 def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Path:
@@ -91,12 +96,10 @@ def run_query_task(
     return_code = task_proc.returncode
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
-        logger.error(
-            f"{task_name} task {task_id} failed for job {job_id} - return_code={return_code}"
-        )
+        logger.error(f"{task_name} task failed - return_code={return_code}")
     else:
         task_status = QueryTaskStatus.SUCCEEDED
-        logger.info(f"{task_name} task {task_id} completed for job {job_id}")
+        logger.info(f"{task_name} task completed")
 
     clo_log_file.close()
     if 0 != return_code:
