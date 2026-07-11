@@ -296,7 +296,7 @@ class IrExtractionHandle(StreamExtractionHandle):
         active_file_split_ir_extractions[file_split_id].append(self._job_id)
 
     def create_stream_extraction_job(self) -> QueryJob:
-        logger.info(f"Creating IR extraction job for file_split: {self.__file_split_id}")
+        logger.info("Creating IR extraction job for file_split: %s", self.__file_split_id)
         return ExtractIrJob(
             id=self._job_id,
             extract_ir_config=self.__job_config,
@@ -341,7 +341,7 @@ class JsonExtractionHandle(StreamExtractionHandle):
         active_archive_json_extractions[archive_id].append(self._job_id)
 
     def create_stream_extraction_job(self) -> QueryJob:
-        logger.info(f"Creating json extraction job on archive: {self._archive_id}")
+        logger.info("Creating json extraction job on archive: %s", self._archive_id)
         return ExtractJsonJob(
             id=self._job_id,
             extract_json_config=self.__job_config,
@@ -785,7 +785,7 @@ async def acquire_reducer_for_job(job: SearchJob):
     job.state = InternalJobState.WAITING_FOR_DISPATCH
     job.reducer_acquisition_task = None
 
-    logger.info(f"Got reducer at {reducer_host}:{reducer_port}")
+    logger.info("Got reducer at %s:%s", reducer_host, reducer_port)
 
 
 def dispatch_job_and_update_db(
@@ -877,7 +877,7 @@ def handle_pending_query_jobs(
                     # NOTE: We're skipping the job for this iteration, but its status will remain
                     # unchanged. So this log will print again in the next iteration unless the user
                     # cancels the job.
-                    logger.error(f"Unexpected job type: {job_type}, skipping job")
+                    logger.error("Unexpected job type: %s, skipping job", job_type)
                     continue
 
         futures = []
@@ -992,7 +992,7 @@ async def handle_finished_search_job(
             else:
                 tasks_completed_counter.add(1)
                 job.num_archives_searched += 1
-                logger.info(f"Search task succeeded in {task_result.duration} second(s).")
+                logger.info("Search task succeeded in %s second(s).", task_result.duration)
 
     if new_job_status != QueryJobStatus.FAILED:
         max_num_results = job.search_config.max_num_results
@@ -1069,7 +1069,9 @@ async def handle_finished_stream_extraction_job(
 
     num_tasks = len(task_results)
     if 1 != num_tasks:
-        logger.error(f"Unexpected number of tasks for extraction job. Expected 1, got {num_tasks}.")
+        logger.error(
+            "Unexpected number of tasks for extraction job. Expected 1, got %s.", num_tasks
+        )
         new_job_status = QueryJobStatus.FAILED
     else:
         task_result = QueryTaskResult.model_validate(task_results[0])
@@ -1083,7 +1085,7 @@ async def handle_finished_stream_extraction_job(
                 new_job_status = QueryJobStatus.FAILED
             else:
                 tasks_completed_counter.add(1)
-                logger.info(f"Extraction task succeeded in {task_result.duration} second(s).")
+                logger.info("Extraction task succeeded in %s second(s).", task_result.duration)
 
     duration = (datetime.datetime.now() - job.start_time).total_seconds()
     if set_job_or_task_status(
@@ -1112,7 +1114,7 @@ async def handle_finished_stream_extraction_job(
     waiting_jobs.remove(job_id)
     for waiting_job in waiting_jobs:
         with bound_contextvars(job_id=waiting_job):
-            logger.info(f"Setting waiting job status to {new_job_status.to_str()}.")
+            logger.info("Setting waiting job status to %s.", new_job_status.to_str())
             set_job_or_task_status(
                 db_conn,
                 QUERY_JOBS_TABLE_NAME,
@@ -1140,7 +1142,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                         job.current_sub_job_async_task_result
                     )
                 except Exception as e:
-                    logger.error(f"Job failed: {e}.")
+                    logger.error("Job failed: %s.", e)
                     # Clean up
                     if QueryJobType.SEARCH_OR_AGGREGATION == job.get_type():
                         if job.reducer_handler_msg_queues is not None:
@@ -1169,7 +1171,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 elif job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
                     await handle_finished_stream_extraction_job(db_conn, job, returned_results)
                 else:
-                    logger.error(f"Unexpected job type: {job_type}, skipping job")
+                    logger.error("Unexpected job type: %s, skipping job", job_type)
 
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):

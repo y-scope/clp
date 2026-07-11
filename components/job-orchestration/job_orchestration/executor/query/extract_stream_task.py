@@ -218,7 +218,7 @@ def extract_stream_entry_point(
     clp_logging_level = os.getenv("CLP_LOGGING_LEVEL")
     set_logging_level(logger, clp_logging_level)
 
-    logger.info(f"Started {task_name} task")
+    logger.info("Started %s task", task_name)
 
     start_time = datetime.datetime.now()
     task_status: QueryTaskStatus

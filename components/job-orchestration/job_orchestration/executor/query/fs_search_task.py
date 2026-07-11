@@ -263,7 +263,7 @@ def search_entry_point(
     clp_logging_level = os.getenv("CLP_LOGGING_LEVEL")
     set_logging_level(logger, clp_logging_level)
 
-    logger.info(f"Started {task_name} task")
+    logger.info("Started %s task", task_name)
 
     start_time = datetime.datetime.now()
     sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))

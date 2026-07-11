@@ -96,10 +96,10 @@ def run_query_task(
     return_code = task_proc.returncode
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
-        logger.error(f"{task_name} task failed - return_code={return_code}")
+        logger.error("%s task failed - return_code=%s", task_name, return_code)
     else:
         task_status = QueryTaskStatus.SUCCEEDED
-        logger.info(f"{task_name} task completed")
+        logger.info("%s task completed", task_name)
 
     clo_log_file.close()
     if 0 != return_code:
