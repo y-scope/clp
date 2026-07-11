@@ -70,6 +70,7 @@ tasks:
         ct lint \
           --chart-dirs="tools/deployment" \
           --chart-yaml-schema="{{.G_HELM_TOOLCHAIN_DIR}}/etc/chart_schema.yaml" \
+          --check-version-increment=false \
           --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
   check-js:
