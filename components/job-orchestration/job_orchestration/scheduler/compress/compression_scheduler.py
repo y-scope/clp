@@ -36,6 +36,7 @@ from clp_py_utils.sql_adapter import SqlAdapter
 from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
 from opentelemetry import metrics
 from pydantic import ValidationError
+from structlog.contextvars import bound_contextvars
 
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.compress.task_manager.celery_task_manager import CeleryTaskManager
@@ -392,123 +393,126 @@ def _schedule_job(
     dataset.
     """
     job_id = job_row["id"]
-    try:
-        clp_io_config = ClpIoConfig.model_validate(
-            msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
-        )
-    except Exception:
-        logger.exception("Failed to decompress clp_config for job %s", job_id)
-        update_compression_job_metadata(
-            db_context,
-            job_id,
-            {
-                "status": CompressionJobStatus.FAILED,
-                "status_msg": "Failed to decompress job config. The config data may have been"
-                " corrupted or truncated.",
-            },
-        )
-        return
-    input_config = clp_io_config.input
-
-    # Prepare paths buffer
-    paths_to_compress_buffer = PathsToCompressBuffer(
-        maintain_file_ordering=False,
-        empty_directories_allowed=True,
-        scheduling_job_id=job_id,
-        clp_io_config=clp_io_config,
-        clp_metadata_db_connection_config=clp_metadata_db_connection_config,
-    )
-
-    # Process input paths
-    input_type = input_config.type
-    if input_type == InputType.FS.value:
-        invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
-        if len(invalid_path_messages) > 0:
-            user_log_relative_path = _write_user_failure_log(
-                title="Failed input paths log.",
-                content=invalid_path_messages,
-                logs_directory=clp_config.logs_directory,
-                job_id=job_id,
-                filename_suffix="failed_paths",
-            )
-            if user_log_relative_path is None:
-                err_msg = "Failed to write user log for invalid input paths."
-                raise RuntimeError(err_msg)
-
-            error_msg = (
-                "At least one of your input paths could not be processed."
-                f" See the error log at '{user_log_relative_path}' inside your configured logs"
-                " directory (`logs_directory`) for more details."
-            )
-
-            update_compression_job_metadata(
-                db_context,
-                job_id,
-                {
-                    "status": CompressionJobStatus.FAILED,
-                    "status_msg": error_msg,
-                },
-            )
-            return
-    elif input_type == InputType.S3.value:
+    with bound_contextvars(job_id=job_id):
         try:
-            _process_s3_input(input_config, paths_to_compress_buffer)
-        except Exception as err:
-            logger.exception("Failed to process S3 input")
+            clp_io_config = ClpIoConfig.model_validate(
+                msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
+            )
+        except Exception:
+            logger.exception("Failed to decompress clp_config")
             update_compression_job_metadata(
                 db_context,
                 job_id,
                 {
                     "status": CompressionJobStatus.FAILED,
-                    "status_msg": f"S3 Failure: {err}",
+                    "status_msg": "Failed to decompress job config. The config data may have been"
+                    " corrupted or truncated.",
                 },
             )
             return
-    elif input_type == InputType.S3_OBJECT_METADATA.value:
-        try:
-            _process_s3_object_metadata_input(input_config, paths_to_compress_buffer, db_context)
-        except Exception as err:
-            logger.exception("Failed to process S3 object metadata input for job %s", job_id)
-            update_compression_job_metadata(
-                db_context,
-                job_id,
-                {
-                    "status": CompressionJobStatus.FAILED,
-                    "status_msg": f"S3 object metadata input failure: {err}",
-                },
-            )
-            return
-    else:
-        logger.error("Unsupported input type %s", input_type)
-        update_compression_job_metadata(
-            db_context,
-            job_id,
-            {
-                "status": CompressionJobStatus.FAILED,
-                "status_msg": f"Unsupported input type: {input_type}",
-            },
-        )
-        return
-    paths_to_compress_buffer.flush()
+        input_config = clp_io_config.input
 
-    if StorageEngine.CLP_S == clp_config.package.storage_engine:
-        table_prefix = clp_metadata_db_connection_config["table_prefix"]
-        dataset = clp_io_config.input.dataset
-        _ensure_dataset_exists(
+        # Prepare paths buffer
+        paths_to_compress_buffer = PathsToCompressBuffer(
+            maintain_file_ordering=False,
+            empty_directories_allowed=True,
+            scheduling_job_id=job_id,
+            clp_io_config=clp_io_config,
+            clp_metadata_db_connection_config=clp_metadata_db_connection_config,
+        )
+
+        # Process input paths
+        input_type = input_config.type
+        if input_type == InputType.FS.value:
+            invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
+            if len(invalid_path_messages) > 0:
+                user_log_relative_path = _write_user_failure_log(
+                    title="Failed input paths log.",
+                    content=invalid_path_messages,
+                    logs_directory=clp_config.logs_directory,
+                    job_id=job_id,
+                    filename_suffix="failed_paths",
+                )
+                if user_log_relative_path is None:
+                    err_msg = "Failed to write user log for invalid input paths."
+                    raise RuntimeError(err_msg)
+
+                error_msg = (
+                    "At least one of your input paths could not be processed."
+                    f" See the error log at '{user_log_relative_path}' inside your configured logs"
+                    " directory (`logs_directory`) for more details."
+                )
+
+                update_compression_job_metadata(
+                    db_context,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": error_msg,
+                    },
+                )
+                return
+        elif input_type == InputType.S3.value:
+            try:
+                _process_s3_input(input_config, paths_to_compress_buffer)
+            except Exception as err:
+                logger.exception("Failed to process S3 input")
+                update_compression_job_metadata(
+                    db_context,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": f"S3 Failure: {err}",
+                    },
+                )
+                return
+        elif input_type == InputType.S3_OBJECT_METADATA.value:
+            try:
+                _process_s3_object_metadata_input(
+                    input_config, paths_to_compress_buffer, db_context
+                )
+            except Exception as err:
+                logger.exception("Failed to process S3 object metadata input")
+                update_compression_job_metadata(
+                    db_context,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": f"S3 object metadata input failure: {err}",
+                    },
+                )
+                return
+        else:
+            logger.error("Unsupported input type %s", input_type)
+            update_compression_job_metadata(
+                db_context,
+                job_id,
+                {
+                    "status": CompressionJobStatus.FAILED,
+                    "status_msg": f"Unsupported input type: {input_type}",
+                },
+            )
+            return
+        paths_to_compress_buffer.flush()
+
+        if StorageEngine.CLP_S == clp_config.package.storage_engine:
+            table_prefix = clp_metadata_db_connection_config["table_prefix"]
+            dataset = clp_io_config.input.dataset
+            _ensure_dataset_exists(
+                clp_config,
+                db_context,
+                table_prefix,
+                dataset,
+                existing_datasets,
+            )
+
+        _batch_and_submit_tasks(
             clp_config,
+            task_manager,
             db_context,
-            table_prefix,
-            dataset,
-            existing_datasets,
+            job_id,
+            paths_to_compress_buffer,
         )
-
-    _batch_and_submit_tasks(
-        clp_config,
-        task_manager,
-        db_context,
-        job_id,
-        paths_to_compress_buffer,
-    )
 
 
 def poll_running_jobs(
@@ -527,59 +531,63 @@ def poll_running_jobs(
     logger.debug("Poll running jobs")
     jobs_to_delete = []
     for job_id, job in scheduled_jobs.items():
-        job_success = True
-        duration = 0.0
-        error_messages: list[str] = []
-        num_tasks_in_batch = 0
+        with bound_contextvars(job_id=job_id):
+            job_success = True
+            duration = 0.0
+            error_messages: list[str] = []
+            num_tasks_in_batch = 0
 
-        try:
-            returned_results = job.result_handle.get_result()
-            if returned_results is None:
+            try:
+                returned_results = job.result_handle.get_result()
+                if returned_results is None:
+                    continue
+
+                duration = (
+                    datetime.datetime.now(datetime.timezone.utc) - job.start_time
+                ).total_seconds()
+                # Check for finished jobs
+                num_tasks_in_batch = len(returned_results)
+                for task_result in returned_results:
+                    with bound_contextvars(task_id=task_result.task_id):
+                        task_duration_histogram.record(task_result.duration)
+                        if task_result.status == CompressionTaskStatus.SUCCEEDED:
+                            tasks_completed_counter.add(1)
+                            logger.info(
+                                "Compression task completed in %s second(s).",
+                                task_result.duration,
+                            )
+                        else:
+                            tasks_failed_counter.add(1)
+                            job_success = False
+                            error_messages.append(
+                                f"task {task_result.task_id}: {task_result.error_message}"
+                            )
+                            logger.error(
+                                "Compression task failed with error: %s.",
+                                task_result.error_message,
+                            )
+
+            except Exception:
+                logger.exception("Error while getting results")
+                job_success = False
+
+            if not job_success:
+                _handle_failed_compression_job(logs_directory, db_context, job_id, error_messages)
+                job_duration_histogram.record(duration)
+                jobs_to_delete.append(job_id)
                 continue
 
-            duration = (
-                datetime.datetime.now(datetime.timezone.utc) - job.start_time
-            ).total_seconds()
-            # Check for finished jobs
-            num_tasks_in_batch = len(returned_results)
-            for task_result in returned_results:
-                task_duration_histogram.record(task_result.duration)
-                if task_result.status == CompressionTaskStatus.SUCCEEDED:
-                    tasks_completed_counter.add(1)
-                    logger.info(
-                        f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
-                        f" {task_result.duration} second(s)."
-                    )
-                else:
-                    tasks_failed_counter.add(1)
-                    job_success = False
-                    error_messages.append(
-                        f"task {task_result.task_id}: {task_result.error_message}"
-                    )
-                    logger.error(
-                        f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
-                        f" error: {task_result.error_message}."
-                    )
+            job.num_tasks_completed += num_tasks_in_batch
 
-        except Exception:
-            logger.exception("Error while getting results for job %s", job_id)
-            job_success = False
-
-        if not job_success:
-            _handle_failed_compression_job(logs_directory, db_context, job_id, error_messages)
-            job_duration_histogram.record(duration)
-            jobs_to_delete.append(job_id)
-            continue
-
-        job.num_tasks_completed += num_tasks_in_batch
-
-        if len(job.remaining_tasks) > 0:
-            _dispatch_next_task_batch(task_manager, db_context, job, max_concurrent_tasks_per_job)
-        else:
-            # All tasks completed successfully
-            _complete_compression_job(db_context, job_id, job.num_tasks_total, duration)
-            job_duration_histogram.record(duration)
-            jobs_to_delete.append(job_id)
+            if len(job.remaining_tasks) > 0:
+                _dispatch_next_task_batch(
+                    task_manager, db_context, job, max_concurrent_tasks_per_job
+                )
+            else:
+                # All tasks completed successfully
+                _complete_compression_job(db_context, job_id, job.num_tasks_total, duration)
+                job_duration_histogram.record(duration)
+                jobs_to_delete.append(job_id)
 
     for job_id in jobs_to_delete:
         del scheduled_jobs[job_id]
@@ -751,8 +759,7 @@ def _batch_and_submit_tasks(
 
     _update_tasks_status_to_running(db_context, tasks_to_submit)
     logger.info(
-        "Dispatched job %s with %s tasks (%s remaining).",
-        job_id,
+        "Dispatched job with %s tasks (%s remaining).",
         len(tasks_to_submit),
         len(remaining_tasks),
     )
@@ -769,7 +776,7 @@ def _complete_compression_job(
     :param num_tasks_total:
     :param duration:
     """
-    logger.info("Job %s succeeded (%s tasks completed).", job_id, num_tasks_total)
+    logger.info("Job succeeded (%s tasks completed).", num_tasks_total)
     update_compression_job_metadata(
         db_context,
         job_id,
@@ -796,8 +803,7 @@ def _dispatch_next_task_batch(
     """
     job_id = job.id
     logger.info(
-        "Job %s batch completed. Dispatching next batch (%s/%s tasks completed).",
-        job_id,
+        "Job batch completed. Dispatching next batch (%s/%s tasks completed).",
         job.num_tasks_completed,
         job.num_tasks_total,
     )
@@ -814,8 +820,7 @@ def _dispatch_next_task_batch(
     job.result_handle = task_manager.submit(tasks_to_submit)
     _update_tasks_status_to_running(db_context, tasks_to_submit)
     logger.info(
-        "Dispatched next batch for job %s with %s tasks (%s remaining).",
-        job_id,
+        "Dispatched next batch with %s tasks (%s remaining).",
         len(tasks_to_submit),
         len(job.remaining_tasks),
     )
@@ -859,7 +864,7 @@ def _handle_failed_compression_job(
     :param job_id:
     :param error_messages:
     """
-    logger.error("Job %s failed. See worker logs or status_msg for details.", job_id)
+    logger.error("Job failed. See worker logs or status_msg for details.")
 
     error_log_relative_path = _write_user_failure_log(
         title="Compression task errors.",
