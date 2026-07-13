@@ -31,7 +31,9 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from opentelemetry import metrics
 
+from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
@@ -42,6 +44,29 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.scheduler.utils import is_s3_based_input
+
+meter = metrics.get_meter(__name__)
+bytes_input_counter = meter.create_counter(
+    "clp.compression.bytes_input_total",
+    unit="By",
+    description="Total uncompressed bytes processed by compression",
+)
+bytes_output_counter = meter.create_counter(
+    "clp.compression.bytes_output_total",
+    unit="By",
+    description="Total compressed bytes output by compression",
+)
+
+input_rate_histogram = meter.create_histogram(
+    "clp.compression.input_rate",
+    unit="By/s",
+    description="Rate of uncompressed bytes processed per task",
+)
+output_rate_histogram = meter.create_histogram(
+    "clp.compression.output_rate",
+    unit="By/s",
+    description="Rate of compressed bytes output per task",
+)
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -364,7 +389,11 @@ def run_clp(
         if StorageEngine.CLP_S != clp_storage_engine:
             error_msg = f"S3 storage is not supported for storage engine: {clp_storage_engine}."
             logger.error(error_msg)
-            return False, {"error_message": error_msg}
+            return False, {
+                "total_uncompressed_size": 0,
+                "total_compressed_size": 0,
+                "error_message": error_msg,
+            }
 
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
@@ -387,7 +416,11 @@ def run_clp(
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
-        return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
+        return False, {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": f"Unsupported storage engine {clp_storage_engine}",
+        }
 
     # Generate list of logs to compress
     input_type = clp_config.input.type
@@ -399,7 +432,11 @@ def run_clp(
     else:
         error_msg = f"Unsupported input type: {input_type}."
         logger.error(error_msg)
-        return False, {"error_message": error_msg}
+        return False, {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": error_msg,
+        }
 
     conversion_cmd = None
     converted_inputs_dir = None
@@ -418,141 +455,159 @@ def run_clp(
 
     def cleanup_temporary_files():
         if logs_list_path is not None:
-            logs_list_path.unlink()
+            logs_list_path.unlink(missing_ok=True)
         if converted_inputs_dir is not None:
-            shutil.rmtree(converted_inputs_dir)
+            try:
+                shutil.rmtree(converted_inputs_dir)
+            except OSError:
+                logger.exception(
+                    "Failed to clean up temporary directory: %s",
+                    converted_inputs_dir,
+                )
 
-    # Open stderr log file
-    stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
-    stderr_log_file = open(stderr_log_path, "w")
+    # Open log files
+    compression_log_path = logs_dir / f"{instance_id_str}-stderr.log"
+    compression_log_file = open(compression_log_path, "w")
+    conversion_log_path = logs_dir / f"{instance_id_str}-conversion-stderr.log"
+    conversion_log_file = open(conversion_log_path, "w")
 
     conversion_return_code = 0
     if conversion_cmd is not None:
         logger.debug("Execute log-converter with command: %s", conversion_cmd)
         conversion_proc = subprocess.Popen(
-            conversion_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file, env=conversion_env
+            conversion_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=conversion_log_file,
+            env=conversion_env,
         )
         conversion_return_code = conversion_proc.wait()
+    conversion_log_file.close()
 
-    if conversion_return_code != 0:
-        cleanup_temporary_files()
-        logger.error(
-            f"Failed to convert unstructured log text, return_code={conversion_return_code}"
+    try:
+        if conversion_return_code != 0:
+            logger.error(
+                f"Failed to convert unstructured log text, return_code={conversion_return_code}"
+            )
+            worker_output = {
+                "total_uncompressed_size": 0,
+                "total_compressed_size": 0,
+                "error_message": f"Check logs in {conversion_log_path}",
+            }
+            log_file_contents(logger, conversion_log_path)
+
+            return CompressionTaskStatus.FAILED, worker_output
+
+        # Start compression
+        logger.debug("Compressing...")
+        compression_successful = False
+        proc = subprocess.Popen(
+            compression_cmd,
+            stdout=subprocess.PIPE,
+            stderr=compression_log_file,
+            env=compression_env,
         )
-        worker_output = {
-            "total_uncompressed_size": 0,
-            "total_compressed_size": 0,
-            "error_message": f"Check logs in {stderr_log_path}",
-        }
-        stderr_log_file.close()
-        return CompressionTaskStatus.FAILED, worker_output
 
-    # Start compression
-    logger.debug("Compressing...")
-    compression_successful = False
-    proc = subprocess.Popen(
-        compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file, env=compression_env
-    )
+        # Compute the total amount of data compressed
+        last_archive_stats = None
+        last_line_decoded = False
+        total_uncompressed_size = 0
+        total_compressed_size = 0
 
-    # Compute the total amount of data compressed
-    last_archive_stats = None
-    last_line_decoded = False
-    total_uncompressed_size = 0
-    total_compressed_size = 0
+        # Handle job metadata update and S3 write if enabled
+        s3_error = None
+        while not last_line_decoded:
+            stats: dict[str, Any] | None = None
 
-    # Handle job metadata update and S3 write if enabled
-    s3_error = None
-    while not last_line_decoded:
-        stats: dict[str, Any] | None = None
+            line = proc.stdout.readline()
+            if not line:
+                last_line_decoded = True
+            else:
+                stats = json.loads(line.decode("utf-8"))
 
-        line = proc.stdout.readline()
-        if not line:
-            last_line_decoded = True
-        else:
-            stats = json.loads(line.decode("utf-8"))
+            if last_archive_stats is not None and (
+                None is stats or stats["id"] != last_archive_stats["id"]
+            ):
+                archive_id = last_archive_stats["id"]
+                archive_path = archive_output_dir / archive_id
+                if enable_s3_write:
+                    if s3_error is None:
+                        logger.info(f"Uploading archive {archive_id} to S3...")
+                        try:
+                            _upload_archive_to_s3(s3_config, archive_path, archive_id, dataset)
+                            logger.info(f"Finished uploading archive {archive_id} to S3.")
+                        except Exception as err:
+                            logger.exception(f"Failed to upload archive {archive_id}")
+                            s3_error = str(err)
+                            # NOTE: It's possible `proc` finishes before we call `terminate` on it,
+                            # in which case the process will still return success.
+                            proc.terminate()
 
-        if last_archive_stats is not None and (
-            None is stats or stats["id"] != last_archive_stats["id"]
-        ):
-            archive_id = last_archive_stats["id"]
-            archive_path = archive_output_dir / archive_id
-            if enable_s3_write:
                 if s3_error is None:
-                    logger.info(f"Uploading archive {archive_id} to S3...")
-                    try:
-                        _upload_archive_to_s3(s3_config, archive_path, archive_id, dataset)
-                        logger.info(f"Finished uploading archive {archive_id} to S3.")
-                    except Exception as err:
-                        logger.exception(f"Failed to upload archive {archive_id}")
-                        s3_error = str(err)
-                        # NOTE: It's possible `proc` finishes before we call `terminate` on it, in
-                        # which case the process will still return success.
-                        proc.terminate()
+                    # We've started a new archive so add the previous archive's last reported size
+                    # to the total
+                    total_uncompressed_size += last_archive_stats["uncompressed_size"]
+                    total_compressed_size += last_archive_stats["size"]
+                    with (
+                        closing(sql_adapter.create_connection(True)) as db_conn,
+                        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+                    ):
+                        table_prefix = clp_metadata_db_connection_config["table_prefix"]
+                        if StorageEngine.CLP_S == clp_storage_engine:
+                            update_archive_metadata(
+                                db_cursor, table_prefix, dataset, last_archive_stats
+                            )
+                        update_job_metadata(
+                            db_cursor,
+                            job_id,
+                            last_archive_stats,
+                        )
+                        db_conn.commit()
 
-            if s3_error is None:
-                # We've started a new archive so add the previous archive's last reported size to
-                # the total
-                total_uncompressed_size += last_archive_stats["uncompressed_size"]
-                total_compressed_size += last_archive_stats["size"]
-                with (
-                    closing(sql_adapter.create_connection(True)) as db_conn,
-                    closing(db_conn.cursor(dictionary=True)) as db_cursor,
-                ):
-                    table_prefix = clp_metadata_db_connection_config["table_prefix"]
                     if StorageEngine.CLP_S == clp_storage_engine:
-                        update_archive_metadata(
-                            db_cursor, table_prefix, dataset, last_archive_stats
+                        indexer_cmd = [
+                            str(clp_home / "bin" / "indexer"),
+                            *_get_db_connection_args_for_clp_cmd(clp_metadata_db_connection_config),
+                            dataset,
+                            archive_path,
+                        ]
+
+                        # Set environment variables for database credentials
+                        indexer_env = dict(os.environ)
+                        indexer_env.update(
+                            _get_db_connection_env_vars_for_clp_cmd(
+                                clp_metadata_db_connection_config
+                            )
                         )
-                    update_job_metadata(
-                        db_cursor,
-                        job_id,
-                        last_archive_stats,
-                    )
-                    db_conn.commit()
 
-                if StorageEngine.CLP_S == clp_storage_engine:
-                    indexer_cmd = [
-                        str(clp_home / "bin" / "indexer"),
-                        *_get_db_connection_args_for_clp_cmd(clp_metadata_db_connection_config),
-                        dataset,
-                        archive_path,
-                    ]
+                        try:
+                            subprocess.run(
+                                indexer_cmd,
+                                stdout=subprocess.DEVNULL,
+                                stderr=compression_log_file,
+                                check=True,
+                                env=indexer_env,
+                            )
+                        except subprocess.CalledProcessError:
+                            logger.exception("Failed to index archive.")
 
-                    # Set environment variables for database credentials
-                    indexer_env = dict(os.environ)
-                    indexer_env.update(
-                        _get_db_connection_env_vars_for_clp_cmd(clp_metadata_db_connection_config)
-                    )
+                if enable_s3_write:
+                    archive_path.unlink()
 
-                    try:
-                        subprocess.run(
-                            indexer_cmd,
-                            stdout=subprocess.DEVNULL,
-                            stderr=stderr_log_file,
-                            check=True,
-                            env=indexer_env,
-                        )
-                    except subprocess.CalledProcessError:
-                        logger.exception("Failed to index archive.")
+            last_archive_stats = stats
 
-            if enable_s3_write:
-                archive_path.unlink()
+        # Wait for compression to finish
+        return_code = proc.wait()
 
-        last_archive_stats = stats
+        if 0 != return_code:
+            logger.error(f"Failed to compress, return_code={return_code!s}")
+        else:
+            compression_successful = True
 
-    # Wait for compression to finish
-    return_code = proc.wait()
-
-    if 0 != return_code:
-        logger.error(f"Failed to compress, return_code={return_code!s}")
-    else:
-        compression_successful = True
+        logger.debug("Compressed.")
+    finally:
         cleanup_temporary_files()
-
-    logger.debug("Compressed.")
-
-    # Close stderr log file
-    stderr_log_file.close()
+        compression_log_file.close()
+        log_file_contents(logger, compression_log_path)
 
     worker_output = {
         "total_uncompressed_size": total_uncompressed_size,
@@ -563,7 +618,7 @@ def run_clp(
         return CompressionTaskStatus.SUCCEEDED, worker_output
     error_msgs = []
     if compression_successful is False:
-        error_msgs.append(f"See logs {stderr_log_path}")
+        error_msgs.append(f"See logs {compression_log_path}")
     if s3_error is not None:
         error_msgs.append(s3_error)
     worker_output["error_message"] = "\n".join(error_msgs)
@@ -606,7 +661,7 @@ def compression_entry_point(
     sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_connection_config))
 
     start_time = datetime.datetime.now()
-    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
+    logger.info("COMPRESSION STARTED.")
     compression_task_status, worker_output = run_clp(
         worker_config,
         clp_io_config,
@@ -620,7 +675,7 @@ def compression_entry_point(
         logger,
     )
     duration = (datetime.datetime.now() - start_time).total_seconds()
-    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+    logger.info("COMPRESSION COMPLETED.")
 
     with (
         closing(sql_adapter.create_connection(True)) as db_conn,
@@ -649,5 +704,18 @@ def compression_entry_point(
 
     if CompressionTaskStatus.FAILED == compression_task_status:
         compression_task_result.error_message = worker_output["error_message"]
+
+    status_str = (
+        "success" if CompressionTaskStatus.SUCCEEDED == compression_task_status else "failure"
+    )
+    attributes = {"status": status_str}
+    bytes_input_counter.add(worker_output["total_uncompressed_size"], attributes)
+    bytes_output_counter.add(worker_output["total_compressed_size"], attributes)
+
+    # Record the actual throughput of this task in the rate histograms.
+    # Guard against zero duration to avoid division by zero.
+    if duration > 0:
+        input_rate_histogram.record(worker_output["total_uncompressed_size"] / duration, attributes)
+        output_rate_histogram.record(worker_output["total_compressed_size"] / duration, attributes)
 
     return compression_task_result.model_dump()

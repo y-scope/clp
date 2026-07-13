@@ -1,0 +1,22 @@
+{
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputLogs": "new-only",
+      "outputs": ["dist/**"]
+    },
+    "lint:check": {
+      "dependsOn": ["^build"]
+    },
+    "lint:fix": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["build"]
+    }
+  }
+}

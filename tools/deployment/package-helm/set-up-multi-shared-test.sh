@@ -46,11 +46,11 @@ sleep 2
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
-    --set "compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
-    --set "queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
-    --set "reducer.replicas=${REDUCER_REPLICAS}" \
-    --set "prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
+    --set "scheduling.compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
+    --set "scheduling.queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
+    --set "scheduling.reducer.replicas=${REDUCER_REPLICAS}" \
+    --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
     $(get_presto_helm_args) \
-    $(get_image_helm_args "${CLUSTER_NAME}" "${CLP_PACKAGE_IMAGE}")
+    $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
 
 wait_for_cluster_ready

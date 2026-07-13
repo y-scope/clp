@@ -73,19 +73,12 @@ tasks:
           --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
   check-js:
-    sources: &js_source_files
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.G_WEBUI_SRC_DIR}}/**/*"
-      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/*"
-      - "{{.ROOT_TASKFILE}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "js"
         vars:
           LINT_CMD: "check"
 
   fix-js:
-    sources: *js_source_files
     cmds:
       - task: "js"
         vars:
@@ -408,7 +401,6 @@ tasks:
             - "clp_s/BufferViewReader.hpp"
             - "clp_s/clp-s.cpp"
             - "clp_s/ColumnWriter.cpp"
-            - "clp_s/ColumnWriter.hpp"
             - "clp_s/CommandLineArguments.cpp"
             - "clp_s/CommandLineArguments.hpp"
             - "clp_s/Compressor.hpp"
@@ -445,7 +437,6 @@ tasks:
             - "clp_s/ReaderUtils.cpp"
             - "clp_s/ReaderUtils.hpp"
             - "clp_s/Schema.cpp"
-            - "clp_s/Schema.hpp"
             - "clp_s/SchemaMap.cpp"
             - "clp_s/SchemaMap.hpp"
             - "clp_s/SchemaReader.cpp"
@@ -759,11 +750,11 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_CMD"]
-    deps: [":webui-node-modules"]
+    deps: [":toolchains:nodejs-22"]
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     cmds:
-      - |-
-        cd "{{.G_WEBUI_SRC_DIR}}"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run "lint:{{.LINT_CMD}}"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm run lint:{{.LINT_CMD}}"
 
   py:
     internal: true

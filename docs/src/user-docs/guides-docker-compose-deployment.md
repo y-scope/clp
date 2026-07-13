@@ -85,6 +85,10 @@ To configure CLP for multi-host deployment, you'll need to:
    * When using local filesystem storage (i.e., not S3), set `logs_input.directory`,
      `archive_output.storage.directory`, and `stream_output.storage.directory` to directories on the
      shared filesystem.
+   * (Optional) set `scheduler_concurrency` under `query_scheduler` to control
+     the size of the process pool used by the query scheduler. Higher
+     concurrency can help improve throughput when many query jobs can be
+     run concurrently in larger clusters.
 
 4. Set up the CLP package's environment:
 
@@ -98,7 +102,7 @@ To configure CLP for multi-host deployment, you'll need to:
    * Create any necessary directories
    * Generate an `.env` file with all necessary environment variables
    * Create `var/log/.clp-config.yaml` (the container-specific configuration file)
-   * Create `var/www/webui/server/dist/settings.json` (the `webui` server's configuration file)
+   * Create `etc/webui/settings.json` (the `webui` server's configuration file)
 
 ### Distributing the set-up package
 
@@ -132,7 +136,7 @@ services.
 
 :::{note}
 For **clp-json + Presto** deployments (`package.storage_engine`: `clp-s` with
-`package.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
+`webui.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
 `reducer` services.
 :::
 

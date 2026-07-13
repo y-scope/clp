@@ -30,7 +30,9 @@ shown below.
 }%%
 flowchart LR
     filter-relevant-changes --> centos-stream-9-deps-image
+    filter-relevant-changes --> manylinux_2_28-aarch64-deps-image
     filter-relevant-changes --> manylinux_2_28-x86_64-deps-image
+    filter-relevant-changes --> musllinux_1_2-aarch64-deps-image
     filter-relevant-changes --> musllinux_1_2-x86_64-deps-image
     filter-relevant-changes --> ubuntu-jammy-deps-image
     filter-relevant-changes --> centos-stream-9-binaries
@@ -51,8 +53,12 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   the following jobs should run.
 * `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
   build CLP-core in a CentOS Stream 9 x86 environment.
+* `manylinux_2_28-aarch64-deps-image`: Builds a container image containing the dependencies
+  necessary to build CLP-core in a manylinux_2_28 arm64 environment.
 * `manylinux_2_28-x86_64-deps-image`: Builds a container image containing the dependencies necessary
   to build CLP-core in a manylinux_2_28 x86 environment.
+* `musllinux_1_2-aarch64-deps-image`: Builds a container image containing the dependencies necessary
+  to build CLP-core in a musllinux_1_2 arm64 environment.
 * `musllinux_1_2-x86_64-deps-image`: Builds a container image containing the dependencies necessary
   to build CLP-core in a musllinux_1_2 x86 environment.
 * `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build

@@ -21,6 +21,7 @@ pub struct Config {
     pub stream_output: StreamOutput,
     pub logs_input: LogsInput,
     pub archive_output: ArchiveOutput,
+    pub telemetry: Telemetry,
 }
 
 impl Default for Config {
@@ -37,6 +38,7 @@ impl Default for Config {
                 config: FsIngestion::default(),
             },
             archive_output: ArchiveOutput::default(),
+            telemetry: Telemetry::default(),
         }
     }
 }
@@ -226,10 +228,6 @@ impl Default for StreamOutputStorage {
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
-    #[serde(rename = "buffer_flush_timeout")]
-    pub buffer_flush_timeout_sec: u64,
-    pub buffer_flush_threshold: u64,
-    pub channel_capacity: usize,
     pub logging_level: String,
 }
 
@@ -238,9 +236,6 @@ impl Default for LogIngestor {
         Self {
             host: "localhost".to_owned(),
             port: 3002,
-            buffer_flush_timeout_sec: 300,
-            buffer_flush_threshold: 4096 * 1024 * 1024, // 4 GiB
-            channel_capacity: 10,
             logging_level: "INFO".to_owned(),
         }
     }
@@ -314,6 +309,23 @@ pub enum LogsInput {
         #[serde(flatten)]
         config: S3Ingestion,
     },
+}
+
+/// Mirror of `clp_py_utils.clp_config.Telemetry`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct Telemetry {
+    pub disable: bool,
+    pub endpoint: String,
+}
+
+impl Default for Telemetry {
+    fn default() -> Self {
+        Self {
+            disable: false,
+            endpoint: "https://telemetry.yscope.io".to_owned(),
+        }
+    }
 }
 
 #[cfg(test)]

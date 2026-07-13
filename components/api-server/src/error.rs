@@ -31,8 +31,17 @@ pub enum ClientError {
     #[error("Invalid dataset name")]
     InvalidDatasetName,
 
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
     #[error("Dataset not found: {0}")]
     DatasetNotFound(String),
+
+    #[error("Invalid search job config: {0}")]
+    InvalidSearchJobConfig(String),
+
+    #[error(transparent)]
+    Telemetry(#[from] opentelemetry_otlp::ExporterBuildError),
 }
 
 /// Empty trait to mark errors that indicate malformed data.
@@ -76,6 +85,7 @@ impl From<clp_rust_utils::Error> for ClientError {
             }
             clp_rust_utils::Error::Io(error) => error.into(),
             clp_rust_utils::Error::Sqlx(error) => error.into(),
+            clp_rust_utils::Error::TelemetryExporterBuildError(error) => Self::Telemetry(error),
         }
     }
 }

@@ -19,10 +19,14 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "queue"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "queue"
+        ) | nindent 6 }}
       containers:
         - name: "queue"
-          image: "rabbitmq:3.9.8"
-          imagePullPolicy: "Always"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "queue") | quote }}
+          imagePullPolicy: {{ .Values.image.queue.pullPolicy | quote }}
           env:
             - name: "RABBITMQ_DEFAULT_USER"
               valueFrom:
@@ -38,6 +42,10 @@ spec:
               value: "-"
             - name: "RABBITMQ_SASL_LOGS"
               value: "-"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "queue"
+            ) | nindent 10 }}
           ports:
             - name: "queue"
               containerPort: 5672

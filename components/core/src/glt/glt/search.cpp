@@ -2,6 +2,7 @@
 
 #include <sys/stat.h>
 
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 
@@ -489,7 +490,7 @@ bool search(CommandLineArguments& command_line_args) {
         SPDLOG_ERROR(
                 "'{}' does not exist or cannot be accessed - {}.",
                 archives_dir.c_str(),
-                strerror(errno)
+                std::strerror(errno)
         );
         return false;
     } else if (S_ISDIR(archives_dir_stat.st_mode) == false) {

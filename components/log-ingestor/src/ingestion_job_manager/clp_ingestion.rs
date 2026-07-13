@@ -22,7 +22,7 @@ use clp_rust_utils::{
 };
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
-use sqlx::MySqlPool;
+use sqlx::{Connection, MySqlPool};
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 use tokio::sync::mpsc;
 
@@ -156,11 +156,8 @@ impl ClpIngestionJobContext {
 /// Connector for managing ingestion jobs in CLP DB.
 pub struct ClpDbIngestionConnector {
     db_pool: MySqlPool,
-    channel_capacity: usize,
     aws_authentication: AwsAuthentication,
     archive_output_config: ArchiveOutput,
-    buffer_flush_timeout: Duration,
-    buffer_flush_threshold: u64,
 }
 
 impl ClpDbIngestionConnector {
@@ -192,11 +189,6 @@ impl ClpDbIngestionConnector {
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
     ) -> anyhow::Result<(Self, LogIngestorRecoveryContext)> {
-        let log_ingestor_config = clp_config
-            .log_ingestor
-            .as_ref()
-            .expect("log_ingestor configuration is missing");
-
         let aws_authentication = match clp_config.logs_input {
             LogsInput::S3 { config } => config.aws_authentication,
             LogsInput::Fs { .. } => {
@@ -218,11 +210,8 @@ impl ClpDbIngestionConnector {
 
         let connector = Self {
             db_pool: mysql_pool,
-            channel_capacity: log_ingestor_config.channel_capacity,
             aws_authentication,
             archive_output_config: clp_config.archive_output.clone(),
-            buffer_flush_timeout: Duration::from_secs(log_ingestor_config.buffer_flush_timeout_sec),
-            buffer_flush_threshold: log_ingestor_config.buffer_flush_threshold,
         };
 
         let unfinished_compression_jobs = connector.get_unfinished_compression_jobs().await?;
@@ -251,6 +240,7 @@ impl ClpDbIngestionConnector {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
     /// * Forwards [`serde_json::to_string`]'s return values on failure.
+    /// * Forwards [`Self::create_clp_ingestion_context`]'s return values on failure.
     pub async fn create_ingestion_job(
         &self,
         config: S3IngestionJobConfig,
@@ -280,7 +270,7 @@ impl ClpDbIngestionConnector {
 
         tx.commit().await?;
 
-        Ok(self.create_clp_ingestion_context(job_id, config))
+        self.create_clp_ingestion_context(job_id, config)
     }
 
     /// Gets the status of an ingestion job with the given ID from CLP DB.
@@ -416,40 +406,48 @@ impl ClpDbIngestionConnector {
     ///
     /// A [`ClpIngestionJobContext`] instance, with a newly created listener for receiving ingested
     /// object metadata for compression job submission.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Listener::spawn`]'s return values on failure.
     fn create_clp_ingestion_context(
         &self,
         job_id: IngestionJobId,
         config: S3IngestionJobConfig,
-    ) -> ClpIngestionJobContext {
+    ) -> anyhow::Result<ClpIngestionJobContext> {
         let compression_state = ClpCompressionState {
             ingestion_job_id: job_id,
             db_pool: self.db_pool.clone(),
         };
+        let base_config = config.as_base_config();
+        let buffer_config = config.as_buffer_config();
 
         let submitter = CompressionJobSubmitter::new(
             compression_state.clone(),
             self.aws_authentication.clone(),
             &self.archive_output_config,
-            config.as_base_config(),
+            base_config,
         );
 
         let listener = Listener::spawn(
-            Buffer::new(submitter, self.buffer_flush_threshold),
-            self.buffer_flush_timeout,
-            self.channel_capacity,
-        );
+            Buffer::new(submitter, buffer_config.flush_threshold_bytes),
+            Duration::from_secs(buffer_config.timeout_sec),
+            buffer_config.channel_capacity,
+        )?;
         let ingestion_state = ClpIngestionState {
             job_id,
             db_pool: self.db_pool.clone(),
             sender: listener.get_new_sender(),
         };
 
-        ClpIngestionJobContext {
+        Ok(ClpIngestionJobContext {
             config,
             ingestion_state,
             compression_state,
             listener,
-        }
+        })
     }
 
     /// Loads ingestion contexts for all ingestion jobs from CLP DB.
@@ -500,7 +498,7 @@ impl ClpDbIngestionConnector {
                 );
                 continue;
             };
-            recoverable_ingestion_jobs.push(self.create_clp_ingestion_context(job_id, config));
+            self.try_add_ingestion_job_context(job_id, config, &mut recoverable_ingestion_jobs);
         }
 
         let running_jod_id_and_config: Vec<(IngestionJobId, String)> = sqlx::query_as(formatcp!(
@@ -542,7 +540,7 @@ impl ClpDbIngestionConnector {
                 }
                 other @ S3IngestionJobConfig::SqsListener(_) => other,
             };
-            recoverable_ingestion_jobs.push(self.create_clp_ingestion_context(job_id, config));
+            self.try_add_ingestion_job_context(job_id, config, &mut recoverable_ingestion_jobs);
         }
 
         // Load inactive ingestion jobs.
@@ -571,7 +569,7 @@ impl ClpDbIngestionConnector {
                 );
                 continue;
             };
-            inactive_ingestion_jobs.push(self.create_clp_ingestion_context(job_id, config));
+            self.try_add_ingestion_job_context(job_id, config, &mut inactive_ingestion_jobs);
         }
 
         Ok((recoverable_ingestion_jobs, inactive_ingestion_jobs))
@@ -657,6 +655,30 @@ impl ClpDbIngestionConnector {
             })?);
         }
         Ok(config)
+    }
+
+    /// Attempts to create a CLP ingestion context for an ingestion job with the given ID and
+    /// config, and adds the context to the provided buffer.
+    ///
+    /// # NOTE
+    ///
+    /// This method logs errors instead of returning them to the caller to allow best-effort loading
+    /// of ingestion jobs during service start.
+    fn try_add_ingestion_job_context(
+        &self,
+        job_id: IngestionJobId,
+        config: S3IngestionJobConfig,
+        ingestion_job_buffer: &mut Vec<ClpIngestionJobContext>,
+    ) {
+        match self.create_clp_ingestion_context(job_id, config) {
+            Ok(context) => ingestion_job_buffer.push(context),
+            Err(e) => tracing::error!(
+                job_id = ? job_id,
+                error = ? e,
+                "Failed to create CLP ingestion context for an ingestion job during service start. \
+                    The job will be skipped."
+            ),
+        }
     }
 }
 
@@ -797,6 +819,10 @@ impl ClpIngestionState {
                     size: object.size,
                 });
             }
+            crate::telemetry::record_s3_ingestion(
+                chunk.iter().map(|o| o.size).sum(),
+                chunk.len() as u64,
+            );
         }
 
         Ok(buffer_entries)
@@ -1045,8 +1071,9 @@ impl ClpCompressionState {
     /// * [`anyhow::Error`] if one or more object metadata rows fail to be updated in the DB.
     /// * Forwards [`clp_rust_utils::serde::BrotliMsgpack::serialize`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`sqlx::Connection::begin`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
+    /// * Forwards [`run_read_committed_tx`]'s return values on failure.
     ///
     /// # Panics
     ///
@@ -1067,56 +1094,61 @@ impl ClpCompressionState {
             }
         };
 
-        let mut tx = self.db_pool.begin().await?;
+        // Run the submission transaction at `READ COMMITTED` to avoid the gap/next-key locks that
+        // serialize concurrent submissions under the default `REPEATABLE READ`.
+        run_read_committed_tx(self.db_pool.clone(), async |conn| {
+            let mut tx = Connection::begin(conn).await?;
 
-        // Submit compression job
-        let result = sqlx::query(COMPRESSION_JOB_SUBMISSION_QUERY)
-            .bind(clp_rust_utils::serde::BrotliMsgpack::serialize(&io_config)?)
-            .execute(&mut *tx)
-            .await?;
-        let compression_job_id =
-            CompressionJobId::try_from(result.last_insert_id()).map_err(|_| {
-                anyhow::anyhow!("The retrieved ID overflows: {}", result.last_insert_id())
-            })?;
+            // Submit compression job
+            let result = sqlx::query(COMPRESSION_JOB_SUBMISSION_QUERY)
+                .bind(clp_rust_utils::serde::BrotliMsgpack::serialize(&io_config)?)
+                .execute(&mut *tx)
+                .await?;
+            let compression_job_id =
+                CompressionJobId::try_from(result.last_insert_id()).map_err(|_| {
+                    anyhow::anyhow!("The retrieved ID overflows: {}", result.last_insert_id())
+                })?;
 
-        // Update compression job ID for ingested objects.
-        // NOTE: We batch the update to avoid hitting the maximum placeholder limit of MySQL. The
-        // batch size is chosen to be 10000, which is conservative enough to avoid hitting the limit
-        // while also minimizing the number of batches for typical use cases. If the number of
-        // placeholders per update changes, we may need to adjust the batch size accordingly.
-        for chunk in object_metadata_ids.chunks(10000) {
-            let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
-                r"UPDATE `{table}` ",
-                table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
-            ));
-            query_builder
-                .push("SET `compression_job_id` = ")
-                .push_bind(compression_job_id);
-            query_builder
-                .push(", `status` = ")
-                .push_bind(IngestedS3ObjectMetadataStatus::Submitted);
-            query_builder.push(" WHERE `id` IN (");
-            let mut separated_ids = query_builder.separated(", ");
-            for id in chunk {
-                separated_ids.push_bind(id);
-            }
-            query_builder.push(")");
-            query_builder
-                .push(" AND `status` = ")
-                .push_bind(IngestedS3ObjectMetadataStatus::Buffered);
-
-            let result = query_builder.build().execute(&mut *tx).await?;
-            if result.rows_affected()
-                != u64::try_from(chunk.len()).expect("size conversion should always succeed")
-            {
-                return Err(anyhow::anyhow!(
-                    "Failed to update compression job ID for some objects."
+            // Update compression job ID for ingested objects.
+            // NOTE: We batch the update to avoid hitting the maximum placeholder limit of MySQL.
+            // The batch size of 1000 is conservative enough to avoid the limit while keeping each
+            // UPDATE's lock footprint small under concurrency. If the number of placeholders per
+            // update changes, we may need to adjust the batch size accordingly.
+            for chunk in object_metadata_ids.chunks(1000) {
+                let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
+                    r"UPDATE `{table}` ",
+                    table = INGESTED_S3_OBJECT_METADATA_TABLE_NAME,
                 ));
-            }
-        }
+                query_builder
+                    .push("SET `compression_job_id` = ")
+                    .push_bind(compression_job_id);
+                query_builder
+                    .push(", `status` = ")
+                    .push_bind(IngestedS3ObjectMetadataStatus::Submitted);
+                query_builder.push(" WHERE `id` IN (");
+                let mut separated_ids = query_builder.separated(", ");
+                for id in chunk {
+                    separated_ids.push_bind(id);
+                }
+                query_builder.push(")");
+                query_builder
+                    .push(" AND `status` = ")
+                    .push_bind(IngestedS3ObjectMetadataStatus::Buffered);
 
-        tx.commit().await?;
-        Ok(compression_job_id)
+                let result = query_builder.build().execute(&mut *tx).await?;
+                if result.rows_affected()
+                    != u64::try_from(chunk.len()).expect("size conversion should always succeed")
+                {
+                    return Err(anyhow::anyhow!(
+                        "Failed to update compression job ID for some objects."
+                    ));
+                }
+            }
+
+            tx.commit().await?;
+            Ok(compression_job_id)
+        })
+        .await
     }
 
     /// Waits for the compression job to finish and updates the status of submitted object metadata.
@@ -1481,6 +1513,53 @@ async fn update_job_status(
     tx.commit().await?;
     tracing::info!(job_id = ? job_id, status = ? status, "Ingestion job status updated.");
     Ok(())
+}
+
+/// Runs `tx` on a freshly acquired pooled connection whose next transaction uses the `READ
+/// COMMITTED` isolation level.
+///
+/// A `SET TRANSACTION ISOLATION LEVEL READ COMMITTED` statement is issued on the connection before
+/// `tx` runs. Because it omits `SESSION`/`GLOBAL`, it applies only to the next transaction started
+/// on that connection. `tx` is expected to begin exactly one transaction to consume the setting,
+/// and to commit or roll it back itself.
+///
+/// If `tx` returns an error, the connection is detached from the pool and closed rather than being
+/// released back into it. This ensures a failed attempt can never hand a later, unrelated borrower
+/// a connection still carrying the pending isolation change (or a half-open transaction).
+///
+/// # Type Parameters
+///
+/// * `ReturnType` - The return type of `tx`.
+/// * `TransactionType` - The type of `tx`, which is an async function that takes a mutable
+///   reference to the connection.
+///
+/// # Returns
+///
+/// The value returned by `tx` on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`sqlx::Pool::acquire`]'s return values on failure.
+/// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+/// * Forwards `tx`'s return values on failure.
+async fn run_read_committed_tx<ReturnType, TransactionType>(
+    pool: MySqlPool,
+    tx: TransactionType,
+) -> anyhow::Result<ReturnType>
+where
+    for<'connection_lifetime> TransactionType:
+        AsyncFnOnce(&'connection_lifetime mut sqlx::MySqlConnection) -> anyhow::Result<ReturnType>,
+{
+    const SET_READ_COMMITTED: &str = "SET TRANSACTION ISOLATION LEVEL READ COMMITTED";
+    let mut conn = pool.acquire().await?;
+    sqlx::query(SET_READ_COMMITTED).execute(&mut *conn).await?;
+    let result = tx(&mut *conn).await;
+    if result.is_err() {
+        let _ = conn.detach().close().await;
+    }
+    result
 }
 
 #[cfg(test)]

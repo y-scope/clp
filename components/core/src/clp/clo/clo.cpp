@@ -1,3 +1,4 @@
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -143,7 +144,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         if (auto const error_code = create_directory(output_dir.string(), 0700, true);
             ErrorCode_Success != error_code)
         {
-            SPDLOG_ERROR("Failed to create {} - {}", output_dir.string(), strerror(errno));
+            SPDLOG_ERROR("Failed to create {} - {}", output_dir.string(), std::strerror(errno));
             return false;
         }
 

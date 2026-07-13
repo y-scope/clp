@@ -354,7 +354,7 @@ bool TimestampPattern::parse_timestamp(
                     case 'B': {  // Month name
                         bool match_found = false;
                         for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
-                            size_t const length = strlen(cMonthNames[month_ix]);
+                            size_t const length = std::strlen(cMonthNames[month_ix]);
                             if (0 == line.compare(line_ix, length, cMonthNames[month_ix])) {
                                 month = month_ix + 1;
                                 match_found = true;
@@ -369,7 +369,7 @@ bool TimestampPattern::parse_timestamp(
                     case 'b': {  // Abbreviated month name
                         bool match_found = false;
                         for (int month_ix = 0; !match_found && month_ix < cNumMonths; ++month_ix) {
-                            size_t const length = strlen(cAbbrevMonthNames[month_ix]);
+                            size_t const length = std::strlen(cAbbrevMonthNames[month_ix]);
                             if (0 == line.compare(line_ix, length, cAbbrevMonthNames[month_ix])) {
                                 month = month_ix + 1;
                                 match_found = true;
@@ -453,7 +453,7 @@ bool TimestampPattern::parse_timestamp(
                     case 'a': {  // Abbreviated day of week
                         bool match_found = false;
                         for (int day_ix = 0; !match_found && day_ix < cNumDaysInWeek; ++day_ix) {
-                            size_t const abbrev_length = strlen(cAbbrevDaysOfWeek[day_ix]);
+                            size_t const abbrev_length = std::strlen(cAbbrevDaysOfWeek[day_ix]);
                             if (0
                                 == line.compare(line_ix, abbrev_length, cAbbrevDaysOfWeek[day_ix]))
                             {

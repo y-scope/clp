@@ -1,0 +1,16 @@
+{
+    "dataset_name": "text_multifile",
+    "unstructured": true,
+    "timestamp_key": null,
+    "begin_ts": 92554380000,
+    "end_ts": 93596007004,
+    "logs_subdir": "logs",
+    "file_names": [
+        "apollo-17_day01.txt",
+        "apollo-17_day04.txt",
+        "apollo-17_day07.txt",
+        "apollo-17_day10.txt",
+        "apollo-17_day13.txt"
+    ],
+    "single_match_wildcard_query": "Saturn"
+}

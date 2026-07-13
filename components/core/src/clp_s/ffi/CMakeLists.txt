@@ -6,7 +6,7 @@ set(
         sfa/ClpArchiveReader.hpp
 )
 
-if(CLP_BUILD_CLP_S_ARCHIVEREADER)
+if(CLP_BUILD_CLP_S_FFI_SFA)
         add_library(
                 clp_s_ffi_sfa
                 ${CLP_S_FFI_SFA_SOURCES}

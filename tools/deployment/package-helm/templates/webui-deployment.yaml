@@ -17,6 +17,10 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "webui"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "webui"
+        ) | nindent 6 }}
       serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 60
       initContainers:
@@ -25,14 +29,10 @@ spec:
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
-        - {{- include "clp.waitFor" (dict
-            "root" .
-            "type" "job"
-            "name" "results-cache-indices-creator"
-          ) | nindent 10 }}
+        - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "webui"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_PASS"
@@ -57,26 +57,26 @@ spec:
               value: {{ .Values.clpConfig.webui.rate_limit | quote }}
             {{- with .Values.clpConfig.stream_output.storage }}
             {{- if and (eq .type "s3") (eq .s3_config.aws_authentication.type "credentials") }}
-            - name: "AWS_ACCESS_KEY_ID"
+            - name: "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID"
               value: {{ .s3_config.aws_authentication.credentials.access_key_id | quote }}
-            - name: "AWS_SECRET_ACCESS_KEY"
+            - name: "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY"
               value: {{ .s3_config.aws_authentication.credentials.secret_access_key | quote }}
             {{- end }}{{/* if and (eq .type "s3")
                                   (eq .s3_config.aws_authentication.type "credentials") */}}
             {{- end }}{{/* with .Values.clpConfig.stream_output.storage */}}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "webui"
+            ) | nindent 10 }}
           ports:
             - name: "webui"
               containerPort: 4000
           volumeMounts:
-            - name: "client-settings"
-              mountPath: "/opt/clp/var/www/webui/client/settings.json"
-              subPath: "webui-client-settings.json"
+            - name: "webui-settings"
+              mountPath: "/opt/clp/etc/webui/settings.json"
+              subPath: "webui-settings.json"
               readOnly: true
-            - name: "server-settings"
-              mountPath: "/opt/clp/var/www/webui/server/dist/settings.json"
-              subPath: "webui-server-settings.json"
-              readOnly: true
-            {{- if .Values.clpConfig.aws_config_directory }}
+            {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.logs_input.type "fs" }}
@@ -91,23 +91,21 @@ spec:
             {{- end }}
           command: [
             "/opt/clp/bin/node-22",
-            "/opt/clp/var/www/webui/server/dist/src/main.js"
+            "/opt/clp/var/www/webui/server/dist/main.js"
           ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            tcpSocket: &webui-health-check
+            httpGet: &webui-health-check
+              path: "/"
               port: "webui"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            tcpSocket: *webui-health-check
+            httpGet: *webui-health-check
       volumes:
-        - name: "client-settings"
+        - name: "webui-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "server-settings"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}

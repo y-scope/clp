@@ -149,16 +149,40 @@ aws_authentication:
 `<profile-name>` should be the name of an existing [AWS CLI profile](index.md#named-profiles).
 
 In addition, the *top-level* config `aws_config_directory` must be set to the directory containing
-the profile configurations (typically `~/.aws`):
+the profile configurations:
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
+
+Typically `~/.aws`:
 
 ```yaml
 aws_config_directory: "<aws-config-dir>"
 ```
 
-:::{note}
+```{note}
 If profiles are not used for AWS authentication, `aws_config_directory` should be commented or set
 to `null`.
+```
+
 :::
+
+:::{tab-item} Kubernetes (Helm)
+:sync: kind
+
+Provide your AWS config file contents via `--set-file`:
+
+```bash
+helm install <release> clp/clp \
+  --set-file clpConfig.aws_config.credentials=$HOME/.aws/credentials \
+  --set-file clpConfig.aws_config.config=$HOME/.aws/config
+```
+
+See [Installing the Helm chart][k8s-install-helm-chart] for details.
+
+:::
+::::
 
 ### env_vars
 
@@ -198,4 +222,5 @@ Credentials are resolved in priority order. Common sources include:
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [boto3-credentials]: https://docs.aws.amazon.com/boto3/latest/guide/credentials.html#configuring-credentials
+[k8s-install-helm-chart]: ../../guides-k8s-deployment.md#installing-the-helm-chart
 [rust-sdk-credentials]: https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credproviders.html

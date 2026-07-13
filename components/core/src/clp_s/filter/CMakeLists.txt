@@ -1,9 +1,16 @@
 set(
         CLP_S_FILTER_SOURCES
+        BitmapView.hpp
         BloomFilter.cpp
         BloomFilter.hpp
         ErrorCode.cpp
         ErrorCode.hpp
+        FilterBuilder.cpp
+        FilterBuilder.hpp
+        FilterOptions.cpp
+        FilterOptions.hpp
+        FilterReader.cpp
+        FilterReader.hpp
         HashAlgorithm.cpp
         HashAlgorithm.hpp
         XxHash.cpp
@@ -25,6 +32,7 @@ if(CLP_BUILD_CLP_S_FILTER)
                 ystdlib::containers
                 ystdlib::error_handling
                 PRIVATE
+                clp::string_utils
                 xxHash::xxhash
         )
 endif()

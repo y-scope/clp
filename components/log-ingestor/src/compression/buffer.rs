@@ -58,7 +58,7 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     ///
     /// # Returns
     ///
-    /// `Ok(())` on success.
+    /// Whether a submission was triggered by reaching the size threshold.
     ///
     /// # Errors
     ///
@@ -68,17 +68,19 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
     pub async fn add(
         &mut self,
         object_metadata_to_ingest: Vec<CompressionBufferEntry>,
-    ) -> Result<()> {
+    ) -> Result<bool> {
+        let mut submission_triggered = false;
         for entry in object_metadata_to_ingest {
             self.total_size += entry.size;
             self.buf.push(entry.id);
 
             if self.total_size >= self.size_threshold {
                 self.submit().await?;
+                submission_triggered = true;
             }
         }
 
-        Ok(())
+        Ok(submission_triggered)
     }
 
     /// Submits the buffered object metadata for processing.
@@ -99,6 +101,13 @@ impl<Submitter: BufferSubmitter> Buffer<Submitter> {
         self.submitter.submit(&self.buf).await?;
         self.clear();
         Ok(())
+    }
+
+    /// # Returns
+    ///
+    /// Whether the buffer is empty.
+    pub const fn is_empty(&self) -> bool {
+        self.buf.is_empty()
     }
 
     fn clear(&mut self) {

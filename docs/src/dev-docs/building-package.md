@@ -5,11 +5,10 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 
 ## Requirements
 
-* An x86_64 Ubuntu 22.04 (Jammy) machine or container
-  * At runtime, the CLP package uses an Ubuntu Jammy container, so we need to build in a matching
-    environment.
-  * It should be possible to build a package for a different environment, it just requires a some
-    extra configuration.
+* An amd64 or arm64 Ubuntu machine or container
+  * The package build creates a runtime image using the host Ubuntu version codename by default, so
+    host-built artifacts and the runtime image use matching Ubuntu environments.
+  * To reproduce official release package tarballs, use an amd64 Ubuntu 22.04 (Jammy) environment.
 * [Docker]
   * `containerd.io` >= 1.7.18
   * `docker-buildx-plugin` >= 0.15.1
@@ -44,7 +43,7 @@ There are two flavors of the CLP package:
 
 :::{note}
 Both flavors contain the same binaries but are configured with different values for the
-`package.storage_engine` and `package.query_engine` key.
+`package.storage_engine` and `webui.query_engine` keys.
 :::
 
 To build the package, run:
@@ -78,6 +77,16 @@ where `<flavor>` is `json` or `text`.
 
 The tar will be written to `build/clp-<flavor>-<os>-<arch>-v<version>.tar.gz`, with appropriate
 values for the fields in angle brackets.
+
+## Config overrides
+
+To persist custom config or credentials across rebuilds, place overrides in
+`components/package-template/src/etc/`:
+
+* `clp-config.yaml` overrides the template-generated config.
+* `credentials.yaml` overrides the auto-generated credentials.
+
+These files are git-ignored.
 
 ## Cleanup
 

@@ -7,7 +7,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "presto-worker"
 spec:
-  replicas: {{ .Values.prestoWorker.replicas }}
+  replicas: {{ .Values.scheduling.prestoWorker.replicas }}
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
@@ -31,8 +31,13 @@ spec:
             "name" "presto-coordinator"
           ) | nindent 10 }}
         - name: "setup-configs"
-          image: "bitnami/kubectl:latest"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "kubectl") | quote }}
+          imagePullPolicy: {{ .Values.image.kubectl.pullPolicy | quote }}
           command: ["/bin/sh", "/scripts/presto-worker-setup-configs.sh"]
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "prestoWorkerSetupConfigs"
+            ) | nindent 10 }}
           volumeMounts:
             - name: "presto-config"
               mountPath: "/etc/presto-config"
@@ -46,6 +51,10 @@ spec:
         - name: "presto-worker"
           image: "{{ .Values.image.prestoWorker.repository }}:{{ .Values.image.prestoWorker.tag }}"
           imagePullPolicy: "{{ .Values.image.prestoWorker.pullPolicy }}"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "prestoWorker"
+            ) | nindent 10 }}
           ports:
             - name: "presto-worker"
               containerPort: 8889
