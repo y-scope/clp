@@ -101,4 +101,5 @@ logging
 design-kv-ir-streams/index
 design-metadata-db
 design-parsing-wildcard-queries
+design-retain-float-format
 :::
