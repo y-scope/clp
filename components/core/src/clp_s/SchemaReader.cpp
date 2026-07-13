@@ -1054,7 +1054,9 @@ void SchemaReader::emit_parent_rule_shape(
             && log_shape_id < m_parent_rule_shapes->size())
         {
             auto const& metadata{m_parent_rule_shapes->at(log_shape_id)};
-            auto const parent_column_name{m_global_schema_tree->build_column_name(global_column_id)};
+            auto const parent_column_name{
+                    m_global_schema_tree->build_column_name(global_column_id)
+            };
             for (auto const& match : metadata.get()) {
                 if (match.m_name == parent_column_name) {
                     auto const& log_shape_template{m_log_shape_dict->get_value(log_shape_id)};

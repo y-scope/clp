@@ -94,8 +94,8 @@ public:
      * @param lazy
      */
     auto read_log_type_dictionary(bool lazy = false) -> void {
-        if (nullptr != m_log_shape_dict) {
-            m_log_shape_dict->read_entries(lazy);
+        if (m_clpp.has_value()) {
+            m_clpp->log_shape_dict->read_entries(lazy);
         } else {
             m_log_dict->read_entries(lazy);
         }
@@ -161,7 +161,10 @@ public:
     std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
 
     auto get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictionaryReader> {
-        return m_log_shape_dict;
+        if (false == m_clpp.has_value()) {
+            return nullptr;
+        }
+        return m_clpp->log_shape_dict;
     }
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
@@ -238,6 +241,14 @@ public:
     }
 
 private:
+    // Types
+    struct Clpp {
+        std::shared_ptr<LogShapeDictionaryReader> log_shape_dict;
+        std::optional<clpp::LogShapeStatArray> log_shape_stats;
+        std::optional<clpp::ParentRuleShapesArray> parent_rule_shapes;
+    };
+
+    // Methods
     /**
      * Reads archive metadata and prepares the archive reader for subsequent archive reads.
      */
@@ -314,6 +325,7 @@ private:
      */
     auto read_parent_rule_shapes() -> ystdlib::error_handling::Result<clpp::ParentRuleShapesArray>;
 
+    // Data members
     bool m_is_open;
     std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
@@ -337,9 +349,7 @@ private:
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
 
-    std::shared_ptr<LogShapeDictionaryReader> m_log_shape_dict;
-    std::optional<clpp::LogShapeStatArray> m_log_shape_stats;
-    std::optional<clpp::ParentRuleShapesArray> m_parent_rule_shapes;
+    std::optional<Clpp> m_clpp;
     Options m_options;
 };
 }  // namespace clp_s

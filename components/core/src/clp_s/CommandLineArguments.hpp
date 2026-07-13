@@ -37,6 +37,10 @@ public:
         CountByTime,
     };
 
+    struct ExperimentalOptions {
+        Path parsing_spec_path;
+    };
+
     struct ResultsCacheOutputHandlerOptions {
         std::string uri;
         std::string collection;
@@ -154,10 +158,8 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
-    [[nodiscard]] auto experimental() const -> bool { return m_experimental; }
-
-    [[nodiscard]] auto get_parsing_spec() const -> std::optional<Path> {
-        return m_parsing_spec_path;
+    [[nodiscard]] auto experimental() const -> std::optional<ExperimentalOptions> const& {
+        return m_experimental;
     }
 
 private:
@@ -287,13 +289,11 @@ private:
     bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
 
-    // clpp variables
-    bool m_experimental{false};
-    std::optional<Path> m_parsing_spec_path;
-
     // Aggregation variables
     std::optional<AggregationType> m_aggregation_type;
     int64_t m_count_by_time_bucket_size_ms{};
+
+    std::optional<ExperimentalOptions> m_experimental;
 };
 }  // namespace clp_s
 

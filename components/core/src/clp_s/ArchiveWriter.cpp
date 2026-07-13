@@ -16,20 +16,20 @@
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/ColumnWriter.hpp>
 #include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryWriter.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/FileWriter.hpp>
 #include <clp_s/ParsedMessage.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TraceableException.hpp>
+#include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
 #include <clpp/LogShapeStat.hpp>
 #include <clpp/ParentRuleShapes.hpp>
-
-#include "clp_s/ColumnWriter.hpp"
-#include "clp_s/DictionaryWriter.hpp"
 
 namespace clp_s {
 void ArchiveWriter::open(ArchiveWriterOption const& option) {
@@ -70,10 +70,8 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 
     std::string log_dict_path = m_archive_path + constants::cArchiveLogDictFile;
     if (option.experimental) {
-        m_log_shape_dict = std::make_shared<VariableDictionaryWriter>();
-        m_log_shape_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
-        m_log_shape_stats = clpp::LogShapeStatArray();
-        m_parent_rule_shapes = clpp::ParentRuleShapesArray();
+        m_clpp.emplace(std::make_shared<VariableDictionaryWriter>());
+        m_clpp->log_shape_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
     } else {
         m_log_dict = std::make_shared<LogTypeDictionaryWriter>();
         m_log_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
@@ -84,7 +82,8 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 }
 
-auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
+auto ArchiveWriter::close(std::optional<std::string_view> parsing_spec_str, bool is_split)
+        -> ArchiveStats {
     if (m_range_open) {
         if (auto const rc = close_current_range(); ErrorCodeSuccess != rc) {
             throw OperationFailed(rc, __FILENAME__, __LINE__);
@@ -92,8 +91,8 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     }
     auto var_dict_compressed_size = m_var_dict->close();
     size_t log_dict_compressed_size{};
-    if (nullptr != m_log_shape_dict) {
-        log_dict_compressed_size = m_log_shape_dict->close();
+    if (m_clpp.has_value()) {
+        log_dict_compressed_size = m_clpp->log_shape_dict->close();
     } else {
         log_dict_compressed_size = m_log_dict->close();
     }
@@ -108,11 +107,10 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             {constants::cArchiveTableMetadataFile, table_metadata_compressed_size},
             {constants::cArchiveVarDictFile, var_dict_compressed_size},
             {constants::cArchiveLogDictFile, log_dict_compressed_size},
-            {constants::cArchiveArrayDictFile, array_dict_compressed_size},
-            {constants::cArchiveTablesFile, table_compressed_size}
+            {constants::cArchiveArrayDictFile, array_dict_compressed_size}
     };
 
-    if (m_parent_rule_shapes) {
+    if (m_clpp.has_value()) {
         auto compressed_size{close_parent_rule_shapes()};
         if (compressed_size.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
@@ -121,10 +119,8 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
                 std::string(constants::cArchiveParentRuleShapesFile),
                 compressed_size.value()
         );
-    }
 
-    if (m_log_shape_stats) {
-        auto compressed_size{close_log_shape_stats()};
+        compressed_size = close_log_shape_stats();
         if (compressed_size.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
@@ -132,12 +128,19 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
                 std::string(constants::cArchiveLogShapeStatsFile),
                 compressed_size.value()
         );
+
+        if (false == parsing_spec_str.has_value() || parsing_spec_str.value().empty()) {
+            SPDLOG_ERROR("A non-empty parsing specification is required for CLP+ archives.");
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
+        auto const parsing_spec_compressed_size{store_parsing_spec(parsing_spec_str.value())};
+        files.emplace_back(
+                std::string(constants::cArchiveParsingSpecFile),
+                parsing_spec_compressed_size
+        );
     }
 
-    if (false == m_parsing_spec_str.empty()) {
-        auto compressed_size{store_parsing_spec()};
-        files.emplace_back(std::string(constants::cArchiveParsingSpecFile), compressed_size);
-    }
+    files.emplace_back(constants::cArchiveTablesFile, table_compressed_size);
 
     uint64_t offset = 0;
     for (auto& file : files) {
@@ -353,8 +356,8 @@ bool ArchiveWriter::matches_timestamp(int parent_node_id, std::string_view key) 
 
 size_t ArchiveWriter::get_data_size() {
     size_t log_dict_size{};
-    if (nullptr != m_log_shape_dict) {
-        log_dict_size = m_log_shape_dict->get_data_size();
+    if (m_clpp.has_value()) {
+        log_dict_size = m_clpp->log_shape_dict->get_data_size();
     } else {
         log_dict_size = m_log_dict->get_data_size();
     }
@@ -539,28 +542,28 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
 auto
 ArchiveWriter::update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
         -> ystdlib::error_handling::Result<void> {
-    if (false == m_parent_rule_shapes.has_value()) {
+    if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
-    m_parent_rule_shapes->at_or_create(id, shapes);
+    m_clpp->parent_rule_shapes.at_or_create(id, shapes);
     return ystdlib::error_handling::success();
 }
 
 auto ArchiveWriter::update_log_shape_dict(std::string_view log_shape)
-        -> ystdlib::error_handling::Result<std::tuple<clpp::log_shape_id_t, bool>> {
-    if (nullptr == m_log_shape_dict || false == m_log_shape_stats.has_value()) {
+        -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>> {
+    if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
     clpp::log_shape_id_t id{};
-    bool new_entry{m_log_shape_dict->add_entry(log_shape, id)};
-    m_log_shape_stats->at_or_create(id).increment_count();
+    bool new_entry{m_clpp->log_shape_dict->add_entry(log_shape, id)};
+    m_clpp->log_shape_stats.at_or_create(id).increment_count();
     return {id, new_entry};
 }
 
 auto ArchiveWriter::close_parent_rule_shapes() -> ystdlib::error_handling::Result<size_t> {
-    if (false == m_parent_rule_shapes.has_value()) {
+    if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
@@ -572,18 +575,18 @@ auto ArchiveWriter::close_parent_rule_shapes() -> ystdlib::error_handling::Resul
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    YSTDLIB_ERROR_HANDLING_TRYX(m_parent_rule_shapes->compress(compressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_clpp->parent_rule_shapes.compress(compressor));
 
     compressor.close();
     auto compressed_size{writer.get_pos()};
     writer.close();
 
-    m_parent_rule_shapes->clear();
+    m_clpp->parent_rule_shapes.clear();
     return compressed_size;
 }
 
 auto ArchiveWriter::close_log_shape_stats() -> ystdlib::error_handling::Result<size_t> {
-    if (false == m_log_shape_stats.has_value()) {
+    if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
@@ -595,21 +598,17 @@ auto ArchiveWriter::close_log_shape_stats() -> ystdlib::error_handling::Result<s
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    YSTDLIB_ERROR_HANDLING_TRYX(m_log_shape_stats->compress(compressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_clpp->log_shape_stats.compress(compressor));
 
     compressor.close();
     auto compressed_size{writer.get_pos()};
     writer.close();
 
-    m_log_shape_stats->clear();
+    m_clpp->log_shape_stats.clear();
     return compressed_size;
 }
 
-auto ArchiveWriter::store_parsing_spec() -> size_t {
-    if (m_parsing_spec_str.empty()) {
-        return 0;
-    }
-
+auto ArchiveWriter::store_parsing_spec(std::string_view parsing_spec_str) -> size_t {
     FileWriter writer{};
     writer.open(
             m_archive_path + std::string{constants::cArchiveParsingSpecFile},
@@ -618,8 +617,8 @@ auto ArchiveWriter::store_parsing_spec() -> size_t {
 
     ZstdCompressor compressor{};
     compressor.open(writer, m_compression_level);
-    compressor.write_numeric_value(static_cast<uint64_t>(m_parsing_spec_str.size()));
-    compressor.write(m_parsing_spec_str.data(), m_parsing_spec_str.size());
+    compressor.write_numeric_value(static_cast<uint64_t>(parsing_spec_str.size()));
+    compressor.write(parsing_spec_str.data(), parsing_spec_str.size());
 
     compressor.close();
     auto compressed_size{writer.get_pos()};

@@ -102,9 +102,11 @@ auto ArchiveReader::initialize_archive_reader() -> void {
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
     if (m_options.m_experimental) {
+        m_clpp.emplace();
         // TODO clpp: inlined get_variable_dictionary_reader
-        m_log_shape_dict = std::make_shared<LogShapeDictionaryReader>(*m_archive_reader_adaptor);
-        m_log_shape_dict->open(constants::cArchiveLogDictFile);
+        m_clpp->log_shape_dict
+                = std::make_shared<LogShapeDictionaryReader>(*m_archive_reader_adaptor);
+        m_clpp->log_shape_dict->open(constants::cArchiveLogDictFile);
     } else {
         m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
     }
@@ -112,7 +114,7 @@ auto ArchiveReader::initialize_archive_reader() -> void {
 
     // TODO clpp: cannot read on demand as the streams are left open by the time we know to read
     // shape info.
-    if (m_options.m_experimental) {
+    if (m_clpp.has_value()) {
         std::ignore = get_parent_rule_shapes();
     }
 }
@@ -239,8 +241,8 @@ void ArchiveReader::read_dictionaries_and_metadata() {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
     m_var_dict->read_entries();
-    if (m_options.m_experimental) {
-        m_log_shape_dict->read_entries();
+    if (m_clpp.has_value()) {
+        m_clpp->log_shape_dict->read_entries();
     } else {
         m_log_dict->read_entries();
     }
@@ -248,25 +250,31 @@ void ArchiveReader::read_dictionaries_and_metadata() {
 }
 
 auto ArchiveReader::get_log_shape_stats() -> clpp::LogShapeStatArray const& {
-    if (false == m_log_shape_stats.has_value()) {
+    if (false == m_clpp.has_value()) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    if (false == m_clpp->log_shape_stats.has_value()) {
         auto result{read_log_shape_stats()};
         if (result.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
-        m_log_shape_stats = result.value();
+        m_clpp->log_shape_stats = result.value();
     }
-    return m_log_shape_stats.value();
+    return m_clpp->log_shape_stats.value();
 }
 
 auto ArchiveReader::get_parent_rule_shapes() -> clpp::ParentRuleShapesArray const& {
-    if (false == m_parent_rule_shapes.has_value()) {
+    if (false == m_clpp.has_value()) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    if (false == m_clpp->parent_rule_shapes.has_value()) {
         auto result{read_parent_rule_shapes()};
         if (result.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
-        m_parent_rule_shapes = result.value();
+        m_clpp->parent_rule_shapes = result.value();
     }
-    return m_parent_rule_shapes.value();
+    return m_clpp->parent_rule_shapes.value();
 }
 
 void ArchiveReader::open_packed_streams() {
@@ -473,8 +481,8 @@ void ArchiveReader::initialize_schema_reader(
             schema.get_ordered_schema_view(),
             m_id_to_schema_metadata[schema_id].num_messages(),
             should_marshal_records,
-            m_options.m_experimental ? m_log_shape_dict.get() : nullptr,
-            m_options.m_experimental ? &get_parent_rule_shapes() : nullptr
+            m_clpp.has_value() ? m_clpp->log_shape_dict.get() : nullptr,
+            m_clpp.has_value() ? &get_parent_rule_shapes() : nullptr
     );
     auto timestamp_column_ids
             = get_timestamp_dictionary()->get_authoritative_timestamp_column_ids();
@@ -540,16 +548,16 @@ void ArchiveReader::close() {
     m_is_open = false;
 
     m_var_dict->close();
-    if (nullptr != m_log_shape_dict) {
-        m_log_shape_dict->close();
+    if (m_clpp.has_value()) {
+        m_clpp->log_shape_dict->close();
+        if (m_clpp->log_shape_stats) {
+            m_clpp->log_shape_stats->clear();
+        }
+        if (m_clpp->parent_rule_shapes) {
+            m_clpp->parent_rule_shapes->clear();
+        }
     } else {
         m_log_dict->close();
-    }
-    if (m_parent_rule_shapes.has_value()) {
-        m_parent_rule_shapes->clear();
-    }
-    if (m_log_shape_stats.has_value()) {
-        m_log_shape_stats->clear();
     }
     m_array_dict->close();
 

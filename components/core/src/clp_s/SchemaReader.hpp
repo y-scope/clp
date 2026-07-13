@@ -407,10 +407,11 @@ private:
     [[nodiscard]] auto is_node_projected(SchemaNode::id_t node_id) -> bool;
 
     /**
-     * Reconstructs the text for a LogMessage or ParentRule from its shape by replacing %column-name%
-     * placeholders with the column/leaf values.
+     * Reconstructs the text for a LogMessage or ParentRule from its shape by replacing
+     * %column-name% placeholders with the column/leaf values.
      * @param log_msg_node_id The LogMessage node ID.
-     * @param parent_rule_column_name The column name of a ParentRule to reconstruct, or empty for the full message.
+     * @param parent_rule_column_name The column name of a ParentRule to reconstruct, or empty for
+     * the full message.
      * @param message_index The index of the message to reconstruct.
      * @return The reconstructed raw log text.
      */

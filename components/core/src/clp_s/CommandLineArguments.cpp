@@ -5,6 +5,7 @@
 #include <iostream>
 #include <optional>
 #include <string_view>
+#include <utility>
 
 #include <boost/program_options.hpp>
 #include <fmt/format.h>
@@ -264,9 +265,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     }
 
     po::options_description general_options("General options");
+    bool experimental{false};
     general_options.add_options()("help,h", "Print help")(
             "experimental",
-            po::bool_switch(&m_experimental),
+            po::bool_switch(&experimental),
             "Enable experimental features to be used."
     );
 
@@ -332,6 +334,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 break;
             default:
                 throw std::invalid_argument(std::string("Unknown action '") + command_input + "'");
+        }
+
+        if (experimental) {
+            m_experimental.emplace();
         }
 
         if (Command::Compress == m_command) {
@@ -582,15 +588,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             validate_network_auth(auth, m_network_auth);
 
-            if (m_experimental ^ (false == parsing_spec_path.empty())) {
+            if (m_experimental && false == parsing_spec_path.empty()) {
+                m_experimental->parsing_spec_path
+                        = std::move(get_path_object_for_raw_path(parsing_spec_path));
+            } else if (m_experimental.has_value() ^ (false == parsing_spec_path.empty())) {
                 throw std::invalid_argument(
-                        "--experimental and --parsing-specification must both be non-empty to use "
-                        "log-surgeon for compression"
+                        "--experimental must be set and --parsing-specification must be non-empty"
+                        "to use CLP+"
                 );
-            }
-
-            if (false == parsing_spec_path.empty()) {
-                m_parsing_spec_path = get_path_object_for_raw_path(parsing_spec_path);
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;

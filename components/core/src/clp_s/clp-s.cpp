@@ -157,8 +157,7 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
                                         options.dataset
                                 );
                             }
-                            if (CommandLineArguments::AggregationType::Count
-                                == aggregation_type) {
+                            if (CommandLineArguments::AggregationType::Count == aggregation_type) {
                                 return std::make_unique<clp_s::CountResultsCacheOutputHandler>(
                                         options.uri,
                                         options.collection,
@@ -183,8 +182,7 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
                             if (false == aggregation_type.has_value()) {
                                 return std::make_unique<clp_s::StandardOutputHandler>();
                             }
-                            if (CommandLineArguments::AggregationType::Count
-                                == aggregation_type) {
+                            if (CommandLineArguments::AggregationType::Count == aggregation_type) {
                                 return std::make_unique<clp_s::CountStdoutOutputHandler>(
                                         archive_id
                                 );
@@ -245,7 +243,6 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
     option.experimental = command_line_arguments.experimental();
-    option.parsing_spec_path = command_line_arguments.get_parsing_spec();
 
     clp_s::JsonParser parser(option);
     if (false == parser.ingest()) {
@@ -451,7 +448,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
     {
         return -1;
     }
-    if (false == cli_args.experimental()) {
+    if (false == cli_args.experimental().has_value()) {
         throw std::invalid_argument(fmt::format("--experimental must be set to run {}", query));
     }
     auto archive_reader{std::make_shared<clp_s::ArchiveReader>()};
@@ -461,7 +458,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
                     input_path,
                     clp_s::ArchiveReader::Options{
                             cli_args.get_network_auth(),
-                            cli_args.experimental()
+                            cli_args.experimental().has_value()
                     }
             );
         } catch (std::exception const& e) {
@@ -560,7 +557,7 @@ int main(int argc, char const* argv[]) {
         option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
         option.print_ordered_chunk_stats = command_line_arguments.print_ordered_chunk_stats();
         option.network_auth = command_line_arguments.get_network_auth();
-        option.m_experimental = command_line_arguments.experimental();
+        option.m_experimental = command_line_arguments.experimental().has_value();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db
                     = {command_line_arguments.get_mongodb_uri(),
@@ -668,7 +665,7 @@ int main(int argc, char const* argv[]) {
                         input_path,
                         clp_s::ArchiveReader::Options{
                                 command_line_arguments.get_network_auth(),
-                                command_line_arguments.experimental()
+                                command_line_arguments.experimental().has_value()
                         }
                 );
             } catch (std::exception const& e) {

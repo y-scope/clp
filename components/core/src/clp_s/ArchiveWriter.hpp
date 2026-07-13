@@ -28,6 +28,7 @@
 #include <clp_s/SchemaWriter.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryWriter.hpp>
+#include <clpp/Defs.hpp>
 #include <clpp/LogShapeStat.hpp>
 #include <clpp/ParentRuleShapes.hpp>
 
@@ -159,10 +160,13 @@ public:
 
     /**
      * Closes the archive writer.
+     * @param parsing_spec_str The parsing specification text to persist into the archive. Must be
+     * non-empty if using CLP+, otherwise it is ignored.
      * @param is_split Whether the last file ingested into the archive is split.
      * @return Statistics for the newly-written archive.
      */
-    [[nodiscard]] auto close(bool is_split = false) -> ArchiveStats;
+    [[nodiscard]] auto
+    close(std::optional<std::string_view> parsing_spec_str, bool is_split = false) -> ArchiveStats;
 
     /**
      * Appends a message to the archive writer
@@ -298,11 +302,6 @@ public:
     }
 
     /**
-     * Stores the parsing specification for persistence in the archive.
-     */
-    void set_parsing_spec(std::string spec) { m_parsing_spec_str = std::move(spec); }
-
-    /**
      * Update the log shape dictionary for the given log shape, adding it to the dictionary if
      * necessary.
      * @param log_shape
@@ -311,12 +310,20 @@ public:
      * @return ClppErrorCodeEnum::Unsupported if experimental stats are not enabled.
      */
     auto update_log_shape_dict(std::string_view log_shape)
-            -> ystdlib::error_handling::Result<std::tuple<clpp::log_shape_id_t, bool>>;
+            -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>>;
 
     auto update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
             -> ystdlib::error_handling::Result<void>;
 
 private:
+    // Types
+    struct Clpp {
+        std::shared_ptr<VariableDictionaryWriter> log_shape_dict;
+        clpp::LogShapeStatArray log_shape_stats;
+        clpp::ParentRuleShapesArray parent_rule_shapes;
+    };
+
+    // Methods
     /**
      * Initializes the schema writer
      * @param writer
@@ -333,18 +340,29 @@ private:
     [[nodiscard]] std::pair<size_t, size_t> store_tables();
 
     /**
-     * Compresses, stores, and clear the experimental log type statistics. The stats are not cleared
-     * if the result is an error.
-     * @return The size of the compressed statistics metadata in bytes.
+     * Compresses, stores, and clear the log shape statistics. The stats are not cleared if the
+     * result is an error.
+     * @return A result containing the compressed size in bytes or an error code indicating the
+     * failure:
+     * - clpp::ClppErrorCodeEnum::Unsupported if not using CLP+.
      */
     [[nodiscard]] auto close_log_shape_stats() -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Compresses, stores, and clear the parent rule shapes. The stats are not cleared if the result
+     * is an error.
+     * @return A result containing the compressed size in bytes or an error code indicating the
+     * failure:
+     * - clpp::ClppErrorCodeEnum::Unsupported if not using CLP+.
+     */
     [[nodiscard]] auto close_parent_rule_shapes() -> ystdlib::error_handling::Result<size_t>;
 
     /**
-     * Writes the parsing specification to the archive.
-     * @return The compressed size in bytes, or 0 if no schema was set.
+     * Compresses and stores the parsing specification to the archive.
+     * @param parsing_spec_str
+     * @return The compressed size in bytes.
      */
-    [[nodiscard]] auto store_parsing_spec() -> size_t;
+    [[nodiscard]] auto store_parsing_spec(std::string_view parsing_spec_str) -> size_t;
 
     /**
      * Writes the archive to a single file
@@ -380,6 +398,7 @@ private:
 
     static constexpr size_t cReadBlockSize = 4 * 1024;
 
+    // Data members
     size_t m_encoded_message_size{};
     size_t m_uncompressed_size{};
     size_t m_compressed_size{};
@@ -418,10 +437,7 @@ private:
     RangeIndexWriter m_range_index_writer;
     bool m_range_open{false};
 
-    std::optional<clpp::LogShapeStatArray> m_log_shape_stats;
-    std::optional<clpp::ParentRuleShapesArray> m_parent_rule_shapes;
-    std::shared_ptr<VariableDictionaryWriter> m_log_shape_dict;
-    std::string m_parsing_spec_str;
+    std::optional<Clpp> m_clpp;
 };
 }  // namespace clp_s
 

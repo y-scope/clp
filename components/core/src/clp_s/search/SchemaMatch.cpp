@@ -1006,8 +1006,7 @@ SchemaMatch::find_child_nodes_by_key_name(SchemaNode::id_t parent_id, std::strin
     return result;
 }
 
-auto
-SchemaMatch::lookup_decomposed_query(std::string const& column_name, std::string const& query)
+auto SchemaMatch::lookup_decomposed_query(std::string const& column_name, std::string const& query)
         -> ystdlib::error_handling::Result<clpp::DecomposedQuery const*> {
     if (auto entry{m_decomposed_query_cache.find({column_name, query})};
         m_decomposed_query_cache.end() != entry)

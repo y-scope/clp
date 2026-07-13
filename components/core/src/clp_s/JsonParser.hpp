@@ -20,6 +20,7 @@
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
 #include <clp_s/ArchiveWriter.hpp>
+#include <clp_s/CommandLineArguments.hpp>
 #include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
@@ -43,8 +44,7 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
-    bool experimental{false};
-    std::optional<Path> parsing_spec_path;
+    std::optional<CommandLineArguments::ExperimentalOptions> experimental;
 };
 
 class JsonParser {
@@ -71,6 +71,13 @@ public:
     [[nodiscard]] auto store() -> std::vector<ArchiveStats>;
 
 private:
+    // Types
+    struct Clpp {
+        std::unique_ptr<log_surgeon::ParserHandle> log_surgeon_parser;
+        std::string parsing_spec_str;
+    };
+
+    // Methods
     /**
      * Parses JSON input and ingests it into the current archive, splitting the archive if it grows
      * beyond the target encoded size.
@@ -252,6 +259,13 @@ private:
             std::string_view rule_name
     ) -> std::optional<SchemaNode::id_t>;
 
+    /**
+     * @return The parsing specification text to persist into the archive, or std::nullopt when CLP+
+     * is not in use.
+     */
+    [[nodiscard]] auto get_parsing_spec_str() const -> std::optional<std::string_view>;
+
+    // Data members
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
 
@@ -279,8 +293,7 @@ private:
 
     std::vector<ArchiveStats> m_archive_stats;
 
-    std::unique_ptr<log_surgeon::ParserHandle> m_log_surgeon_parser;
-    std::string m_parsing_spec_str;
+    std::optional<Clpp> m_clpp;
 };
 }  // namespace clp_s
 
