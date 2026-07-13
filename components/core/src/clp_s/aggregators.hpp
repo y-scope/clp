@@ -122,6 +122,31 @@ private:
 };
 
 /**
+ * Counts the number of matched records grouped by the value of a target field.
+ */
+class GroupByCountAggregator {
+public:
+    // Static constants
+    static constexpr bool cNeedsMetadata{false};
+    static constexpr bool cNeedsMarshalledRecord{true};
+
+    // Constructors
+    explicit GroupByCountAggregator(std::string_view field);
+
+    // Methods
+    auto add_record(std::string_view message, [[maybe_unused]] epochtime_t timestamp_millisecs)
+            -> void;
+
+    [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
+
+private:
+    // Data members
+    std::string m_field;
+    std::vector<std::string> m_field_path;
+    std::map<AggregationValue, int64_t> m_counts;
+};
+
+/**
  * Tracks the minimum or maximum value of a target field across matched records.
  */
 class MinMaxAggregator {
@@ -185,8 +210,12 @@ private:
 /**
  * One of the supported aggregators that a search can apply to its matched records.
  */
-using Aggregator
-        = std::variant<CountAggregator, CountByTimeAggregator, MinMaxAggregator, UniqueAggregator>;
+using Aggregator = std::variant<
+        CountAggregator,
+        CountByTimeAggregator,
+        GroupByCountAggregator,
+        MinMaxAggregator,
+        UniqueAggregator>;
 }  // namespace clp_s
 
 #endif  // CLP_S_AGGREGATORS_HPP

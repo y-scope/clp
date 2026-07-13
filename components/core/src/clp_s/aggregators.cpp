@@ -1,6 +1,7 @@
 #include "aggregators.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -72,6 +73,28 @@ find_field_node(string_view message, std::vector<string> const& field_path, nloh
     }
     return node;
 }
+
+/**
+ * Extracts a scalar node's value as an `AggregationValue`.
+ * @param node
+ * @return The node's value if it is an integer, float, string, or boolean.
+ * @return std::nullopt otherwise.
+ */
+auto node_to_aggregation_value(nlohmann::json const& node) -> std::optional<AggregationValue> {
+    if (node.is_number_integer()) {
+        return node.get<int64_t>();
+    }
+    if (node.is_number_float()) {
+        return node.get<double>();
+    }
+    if (node.is_string()) {
+        return node.get<string>();
+    }
+    if (node.is_boolean()) {
+        return node.get<bool>();
+    }
+    return std::nullopt;
+}
 }  // namespace
 
 auto CountAggregator::get_results() const -> std::vector<AggregationResult> {
@@ -89,6 +112,35 @@ auto CountByTimeAggregator::get_results() const -> std::vector<AggregationResult
     for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
         AggregationResult result;
         result.emplace_back(constants::results_cache::search::cTimestamp, bucket_timestamp);
+        result.emplace_back(constants::results_cache::search::cCount, count);
+        results.push_back(std::move(result));
+    }
+    return results;
+}
+
+GroupByCountAggregator::GroupByCountAggregator(string_view field) : m_field{field} {
+    tokenize_aggregation_field(field, m_field_path);
+}
+
+auto GroupByCountAggregator::add_record(string_view message, epochtime_t) -> void {
+    nlohmann::json doc;
+    auto const* const node{find_field_node(message, m_field_path, doc)};
+    if (nullptr == node) {
+        return;
+    }
+    auto value{node_to_aggregation_value(*node)};
+    if (value.has_value()) {
+        m_counts[std::move(value.value())] += 1;
+    }
+}
+
+auto GroupByCountAggregator::get_results() const -> std::vector<AggregationResult> {
+    std::vector<AggregationResult> results;
+    results.reserve(m_counts.size());
+    for (auto const& [value, count] : m_counts) {
+        AggregationResult result;
+        result.emplace_back(constants::results_cache::search::cField, m_field);
+        result.emplace_back(constants::results_cache::search::cValue, value);
         result.emplace_back(constants::results_cache::search::cCount, count);
         results.push_back(std::move(result));
     }
@@ -154,15 +206,9 @@ auto UniqueAggregator::add_record(string_view message, epochtime_t) -> void {
     if (nullptr == node) {
         return;
     }
-
-    if (node->is_number_integer()) {
-        m_values.emplace(node->get<int64_t>());
-    } else if (node->is_number_float()) {
-        m_values.emplace(node->get<double>());
-    } else if (node->is_string()) {
-        m_values.emplace(node->get<string>());
-    } else if (node->is_boolean()) {
-        m_values.emplace(node->get<bool>());
+    auto value{node_to_aggregation_value(*node)};
+    if (value.has_value()) {
+        m_values.emplace(std::move(value.value()));
     }
 }
 

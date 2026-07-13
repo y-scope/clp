@@ -798,6 +798,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "unique",
                 po::value<std::string>(&aggregation_field)->value_name("FIELD"),
                 "Find the distinct values of the given field"
+            )(
+                "count-by",
+                po::value<std::string>(&aggregation_field)->value_name("FIELD"),
+                "Count the number of results grouped by the value of the given field"
             );
             // clang-format on
             search_options.add(aggregation_options);
@@ -1155,19 +1159,21 @@ auto CommandLineArguments::parse_aggregation_options(
     auto const set_aggregator = [&](Aggregator value) {
         if (aggregator.has_value()) {
             throw std::invalid_argument(
-                    "The --count, --count-by-time, --min, --max, and --unique options are mutually"
-                    " exclusive."
+                    "The --count, --count-by-time, --min, --max, --unique, and --count-by options"
+                    " are mutually exclusive."
             );
         }
         aggregator = std::move(value);
     };
     auto const validate_aggregation_field = [&]() {
         if (aggregation_field.empty()) {
-            throw std::invalid_argument("The --min, --max, and --unique options require a field.");
+            throw std::invalid_argument(
+                    "The --min, --max, --unique, and --count-by options require a field."
+            );
         }
         if (search::ast::has_unescaped_wildcards(aggregation_field)) {
             throw std::invalid_argument(
-                    "The --min, --max, and --unique field must not contain wildcards."
+                    "The --min, --max, --unique, and --count-by field must not contain wildcards."
             );
         }
     };
@@ -1192,6 +1198,10 @@ auto CommandLineArguments::parse_aggregation_options(
     if (parsed_options.count("unique")) {
         validate_aggregation_field();
         set_aggregator(UniqueAggregator{aggregation_field});
+    }
+    if (parsed_options.count("count-by")) {
+        validate_aggregation_field();
+        set_aggregator(GroupByCountAggregator{aggregation_field});
     }
     return aggregator;
 }
