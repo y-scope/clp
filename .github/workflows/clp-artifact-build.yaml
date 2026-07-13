@@ -682,11 +682,26 @@ jobs:
     if: "!cancelled() && !failure() && needs.package-image.result == 'success'"
     needs:
       - "package-image"
+    strategy:
+      matrix:
+        arch: >-
+          ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+          && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
     runs-on: *runner
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
+
+      - name: "Download the package artifact"
+        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+        with:
+          name: "clp-package-${{matrix.arch}}"
+          path: "/tmp/clp-package"
+
+      - name: "Load the package image"
+        shell: "bash"
+        run: "docker load --input /tmp/clp-package/clp-package-${{matrix.arch}}.tar"
 
       - uses: "./.github/actions/run-on-image"
         env:
@@ -696,7 +711,15 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          run_command: "echo test"
+          run_command: "cd integration-tests && uv run pytest"
+
+      - name: "Upload the integration-test logs"
+        if: "always()"
+        uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
+        with:
+          name: "clp-integration-test-logs"
+          path: "build/integration_tests/test_logs"
+          retention-days: 3
 
   package-image:
     name: "package-image-${{matrix.arch}}"
