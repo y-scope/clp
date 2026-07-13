@@ -5,7 +5,7 @@ vars:
 
 tasks:
   default:
-    deps:
+    cmds:
       - task: "clp-py-project-imports"
       - task: "core"
       - task: "package"
