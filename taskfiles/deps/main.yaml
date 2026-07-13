@@ -39,7 +39,6 @@ tasks:
       - "yscope-log-viewer"
 
   core:
-    run: "once"
     deps:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
