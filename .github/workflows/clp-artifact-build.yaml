@@ -697,11 +697,17 @@ jobs:
         uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
         with:
           name: "clp-package-${{matrix.arch}}"
-          path: "/tmp/clp-package"
+          path: "/tmp/build/clp-package"
 
       - name: "Load the package image"
         shell: "bash"
-        run: "docker load --input /tmp/clp-package/clp-package-${{matrix.arch}}.tar"
+        run: "docker load --input /tmp/build/clp-package/clp-package-${{matrix.arch}}.tar"
+
+      - name: "Download the binaries artifact"
+        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+        with:
+          name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          path: "/tmp/build/core"
 
       - uses: "./.github/actions/run-on-image"
         env:
@@ -711,7 +717,12 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          run_command: "cd integration-tests && uv run pytest"
+          run_command: >-
+            cd integration-tests
+            && CLP_BUILD_DIR=/tmp/build
+            CLP_CORE_BINS_DIR=/tmp/build/core
+            CLP_PACKAGE_DIR=/tmp/build/clp-package
+            uv run pytest
 
       - name: "Upload the integration-test logs"
         if: "always()"
