@@ -357,7 +357,11 @@ impl ClpDbIngestionConnector {
             .map(|(ingestion_job_id, compression_job_id, num_submitted)| {
                 let num_object_metadata_submitted =
                     usize::try_from(num_submitted).map_err(|_| {
-                        anyhow::anyhow!("number of submitted object metadata rows overflows usize")
+                        anyhow::anyhow!(
+                            "submitted object metadata count {num_submitted} for compression job \
+                             {compression_job_id} in ingestion job {ingestion_job_id} cannot be \
+                             represented as usize"
+                        )
                     })?;
                 Ok(ClpCompressionJobContext {
                     compression_state: ClpCompressionState {
