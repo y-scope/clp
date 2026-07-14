@@ -17,6 +17,8 @@ on:
 env:
   DEPS_IMAGE_NAME_PREFIX_AARCH64: "clp-core-dependencies-aarch64-"
   BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
+  PACKAGE_ARTIFACT_NAME_PREFIX: "clp-package-"
+  PACKAGE_IMAGE_ARTIFACT_NAME_PREFIX: "clp-package-image-"
   PYTHON_WHEELS_ARTIFACT_NAME_PREFIX: "clp-python-wheels-"
   DEPS_IMAGE_NAME_PREFIX_X86: "clp-core-dependencies-x86-"
 
@@ -679,9 +681,13 @@ jobs:
 
   ubuntu-jammy-integration-tests:
     name: "ubuntu-jammy-integration-tests"
-    if: "!cancelled() && !failure() && needs.package-image.result == 'success'"
+    if: >-
+      !cancelled() && !failure() && needs.package-image.result == 'success'
+      && needs.ubuntu-jammy-binaries.result == 'success'
     needs:
+      - "filter-relevant-changes"
       - "package-image"
+      - "ubuntu-jammy-binaries"
     strategy:
       matrix:
         arch: >-
@@ -693,20 +699,37 @@ jobs:
         with:
           submodules: "recursive"
 
-      - name: "Download the package artifact"
+      - name: "Download the package image artifact"
         uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
         with:
-          name: "clp-package-${{matrix.arch}}"
+          name: "${{env.PACKAGE_IMAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}"
           path: "/tmp/build/clp-package"
 
       - name: "Load the package image"
         shell: "bash"
-        run: "docker load --input /tmp/build/clp-package/clp-package-${{matrix.arch}}.tar"
+        run: >-
+          docker load
+          --input
+          /tmp/build/clp-package/${{env.PACKAGE_IMAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}.tar
+
+      - name: "Download the package artifact"
+        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+        with:
+          name: "${{env.PACKAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}"
+          path: "/tmp/build/clp-package"
+
+      - name: "Untar the package"
+        shell: "bash"
+        run: >-
+          tar --extract --file "/tmp/build/clp-package/clp-package.tar"
+          --directory "/tmp/build/clp-package"
 
       - name: "Download the binaries artifact"
         uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+        env:
+          OS_NAME: "ubuntu-jammy"
         with:
-          name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "/tmp/build/core"
 
       - uses: "./.github/actions/run-on-image"
@@ -729,7 +752,7 @@ jobs:
         uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
         with:
           name: "clp-integration-test-logs"
-          path: "build/integration_tests/test_logs"
+          path: "/tmp/build/integration_tests/test_logs"
           retention-days: 3
 
   package-image:
@@ -796,6 +819,36 @@ jobs:
           arch: "${{matrix.arch}}"
           platform_version_codename: "jammy"
           push_image: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
+
+      - name: "Assemble the package directories"
+        uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: >-
+            ${{format('{0}ubuntu-jammy',
+            matrix.arch == 'amd64' && env.DEPS_IMAGE_NAME_PREFIX_X86
+            || env.DEPS_IMAGE_NAME_PREFIX_AARCH64)}}
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          run_command: >-
+            CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+            HOME=/tmp
+            task package-assemble OUTPUT_DIR=build/clp-package
+
+      - name: "Tar the package directories"
+        shell: "bash"
+        run: >-
+          tar --create --file "build/clp-package.tar"
+          --directory "build/clp-package" .
+
+      - name: "Upload the package tarball artifact"
+        uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
+        with:
+          name: "${{env.PACKAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}"
+          path: "build/clp-package.tar"
+          retention-days: 1
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"

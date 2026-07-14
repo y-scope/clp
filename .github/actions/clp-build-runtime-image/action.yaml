@@ -54,7 +54,7 @@ runs:
       shell: "bash"
       run: |
         base_path="./tools/docker-images"
-        image_name="clp-package"
+        image_name="clp-package-image"
         dockerfile_path="$base_path/$image_name/Dockerfile"
 
         echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
