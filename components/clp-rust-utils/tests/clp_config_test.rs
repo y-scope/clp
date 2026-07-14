@@ -1,13 +1,10 @@
-use std::mem::size_of;
+use std::error::Error;
 
-use anyhow::{Context, Result};
 use clp_rust_utils::{
     clp_config::{AwsAuthentication, AwsCredentials, S3Config},
     job_config::{ClpIoConfig, InputConfig, OutputConfig, S3ObjectMetadataInputConfig},
-    serde::ZstdMsgpack,
     types::non_empty_string::ExpectedNonEmpty,
 };
-use libzstd_rs_sys::ZSTD_MAGICNUMBER;
 use non_empty_string::NonEmptyString;
 use serde_json::Value;
 
@@ -15,9 +12,9 @@ use serde_json::Value;
 ///
 /// # Errors
 ///
-/// Returns an error if serialization, zstd frame validation, or JSON conversion fails.
+/// Returns an error if `MessagePack` or JSON conversion fails.
 #[test]
-fn test_clp_io_config_serialization() -> Result<()> {
+fn test_clp_io_config_serialization() -> Result<(), Box<dyn Error>> {
     let s3_config = S3Config {
         bucket: NonEmptyString::from_static_str("yscope"),
         region_code: Some(NonEmptyString::from_static_str("us-east-2")),
@@ -50,16 +47,6 @@ fn test_clp_io_config_serialization() -> Result<()> {
         },
     };
 
-    let zstd_compressed_msgpack = ZstdMsgpack::serialize(&config)?;
-    let frame_magic_bytes: [u8; size_of::<u32>()] = zstd_compressed_msgpack
-        .get(..size_of::<u32>())
-        .context("zstd frame should contain a magic number")?
-        .try_into()
-        .context("zstd frame magic number should fit `u32`")?;
-    let frame_magic = u32::from_le_bytes(frame_magic_bytes);
-    assert_eq!(ZSTD_MAGICNUMBER, frame_magic);
-
-    let json_serialized = serde_json::to_string_pretty(&config)?;
     let expected = serde_json::json!({
       "input": {
         "type": "s3_object_metadata",
@@ -88,8 +75,13 @@ fn test_clp_io_config_serialization() -> Result<()> {
         "compression_level": 3
       }
     });
-    let actual: Value = serde_json::from_str(json_serialized.as_str())?;
-    assert_eq!(expected, actual);
+
+    let msgpack = rmp_serde::to_vec_named(&config)?;
+    let msgpack_actual: Value = rmp_serde::from_slice(&msgpack)?;
+    assert_eq!(expected, msgpack_actual);
+
+    let json_actual = serde_json::to_value(&config)?;
+    assert_eq!(expected, json_actual);
 
     Ok(())
 }

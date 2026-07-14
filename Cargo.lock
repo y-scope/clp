@@ -906,7 +906,6 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 name = "clp-rust-utils"
 version = "0.13.1-dev"
 dependencies = [
- "anyhow",
  "aws-config",
  "aws-sdk-s3",
  "aws-sdk-sqs",
