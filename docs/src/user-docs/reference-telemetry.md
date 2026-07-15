@@ -55,6 +55,8 @@ Emitted by long-running CLP services to track duration and rate distributions:
 | compression-worker    | `clp.compression.output_rate`   | Histogram | Rate of compressed bytes output per task                   |
 | query-scheduler       | `clp.query.job.duration`        | Histogram | Duration of query jobs                                     |
 | query-scheduler       | `clp.query.task.duration`       | Histogram | Duration of query tasks                                    |
+| query-scheduler       | `clp.query.uncompressed_bytes_scanned` | Histogram | Uncompressed bytes of archive data selected for query jobs |
+| query-scheduler       | `clp.query.compressed_bytes_scanned` | Histogram | Compressed (on-disk) bytes of archive data selected for query jobs |
 
 #### Deployment topology gauges
 
