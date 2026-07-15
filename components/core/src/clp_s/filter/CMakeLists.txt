@@ -13,6 +13,11 @@ set(
         FilterReader.hpp
         HashAlgorithm.cpp
         HashAlgorithm.hpp
+        IndexBuilder.hpp
+        IndexBuilderSpecification.hpp
+        IndexDefs.hpp
+        IndexRunner.hpp
+        PackedFilterSpecification.hpp
         XxHash.cpp
         XxHash.hpp
 )
