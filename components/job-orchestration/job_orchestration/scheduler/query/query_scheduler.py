@@ -104,7 +104,11 @@ def _get_query_job_log_context_from_job(job: QueryJob) -> dict[str, Any]:
 def _get_query_job_log_context_from_fields(
     job_id: str, job_type: int, job_config: dict[str, Any]
 ) -> dict[str, Any]:
-    query_job_type = QueryJobType(job_type)
+    try:
+        query_job_type = QueryJobType(job_type)
+    except ValueError:
+        return {"job_id": job_id, "query_job_type": str(job_type)}
+
     context: dict[str, Any] = {
         "job_id": job_id,
         "query_job_type": query_job_type.to_str(),

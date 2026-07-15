@@ -55,7 +55,12 @@ def _get_search_task_log_context(
     if dataset is not None:
         context["dataset"] = dataset
 
-    search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
+    try:
+        search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
+    except (msgpack.UnpackException, ValueError):
+        # search_entry_point performs authoritative validation inside the task's exception boundary.
+        return context
+
     context["query"] = search_config.query_string
     context["query_hash"] = get_query_hash(search_config.query_string)
     return context
