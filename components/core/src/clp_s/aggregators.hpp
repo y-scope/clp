@@ -28,7 +28,7 @@ using AggregationResult = std::vector<std::pair<std::string, AggregationValue>>;
 
 /**
  * Requirements a type must satisfy to be used as an aggregator.
- * @tparam AggregatorType The type of the aggregator.
+ * @tparam AggregatorType
  */
 template <typename AggregatorType>
 concept AggregatorReq = requires(

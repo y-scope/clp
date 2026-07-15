@@ -54,8 +54,6 @@ auto ResultsCacheSink::flush_buffer() -> ErrorCode {
 }
 
 auto ResultsCacheSink::write(AggregationResult const& result) -> void {
-    // Once a flush has failed, stop buffering so memory stays bounded; the error surfaces in
-    // `finish()`.
     if (ErrorCode::ErrorCodeSuccess != m_flush_error) {
         return;
     }

@@ -81,7 +81,7 @@ public:
     // Methods implementing AggregationSink
     /**
      * Buffers a result document, flushing the buffer to the database once it reaches the batch
-     * size.
+     * size. Documents are dropped after an earlier flush failure; the error surfaces in `finish()`.
      * @param result The result document to write.
      */
     auto write(AggregationResult const& result) -> void override;
@@ -89,16 +89,16 @@ public:
     /**
      * Flushes any remaining buffered result documents.
      * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite if any flush (including an earlier batched one) failed
+     * @return ErrorCodeFailureDbBulkWrite if this flush or an earlier batched flush failed
      */
     [[nodiscard]] auto finish() -> ErrorCode override;
 
 private:
     // Methods
     /**
-     * Inserts the buffered result documents into the collection and clears the buffer.
-     * @return ErrorCodeSuccess on success, leaving the buffer empty
-     * @return ErrorCodeFailureDbBulkWrite on database error, leaving the buffer intact
+     * Inserts the buffered result documents into the collection.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureDbBulkWrite on database error
      */
     [[nodiscard]] auto flush_buffer() -> ErrorCode;
 
