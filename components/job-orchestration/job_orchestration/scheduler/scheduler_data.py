@@ -87,6 +87,8 @@ class SearchJob(QueryJob):
     num_archives_to_search: int
     num_archives_searched: int
     remaining_archives_for_search: list[dict[str, Any]]
+    uncompressed_bytes_scanned: int = 0
+    compressed_bytes_scanned: int = 0
     reducer_acquisition_task: asyncio.Task | None = None
     reducer_handler_msg_queues: ReducerHandlerMessageQueues | None = None
 
