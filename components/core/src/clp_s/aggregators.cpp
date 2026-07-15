@@ -21,11 +21,10 @@ using std::string_view;
 namespace clp_s {
 namespace {
 /**
- * Tokenizes an aggregation's target field into its path components.
+ * Tokenizes an aggregation's target field into its key path.
  * @param field
- * @param field_path Returns the tokenized path components.
- * @throws std::invalid_argument if `field` cannot be tokenized, or if it is in a non-default
- * namespace.
+ * @param field_path Returns the path's keys.
+ * @throws std::invalid_argument if `field` is malformed, or if it names a non-default namespace.
  */
 auto tokenize_aggregation_field(string_view field, std::vector<string>& field_path) -> void {
     string descriptor_namespace;
@@ -43,16 +42,15 @@ auto tokenize_aggregation_field(string_view field, std::vector<string>& field_pa
 }
 
 /**
- * Parses `message` as JSON and navigates to the node at `field_path`.
- * @param message
+ * Parses `message` as JSON and locates the value at `field_path`.
+ * @param message A matched record, marshalled to a JSON string.
  * @param field_path
- * @param doc Returns the parsed document, which owns the returned node.
- * @return A pointer, valid for the lifetime of `doc`, to the node at `field_path`.
- * @return nullptr if `message` is not valid JSON, or if any path component is missing or traverses
- * a non-object.
+ * @param doc Returns the parsed document.
+ * @return The value at `field_path`.
+ * @return nullptr if `message` isn't valid JSON, or if `field_path` doesn't resolve to a value.
  */
 auto
-find_field_node(string_view message, std::vector<string> const& field_path, nlohmann::json& doc)
+find_field_value(string_view message, std::vector<string> const& field_path, nlohmann::json& doc)
         -> nlohmann::json const* {
     try {
         doc = nlohmann::json::parse(message);
@@ -60,38 +58,38 @@ find_field_node(string_view message, std::vector<string> const& field_path, nloh
         return nullptr;
     }
 
-    nlohmann::json const* node{&doc};
+    nlohmann::json const* current{&doc};
     for (auto const& key : field_path) {
-        if (false == node->is_object()) {
+        if (false == current->is_object()) {
             return nullptr;
         }
-        auto const it{node->find(key)};
-        if (node->end() == it) {
+        auto const it{current->find(key)};
+        if (current->end() == it) {
             return nullptr;
         }
-        node = &it.value();
+        current = &it.value();
     }
-    return node;
+    return current;
 }
 
 /**
- * Extracts a scalar node's value as an `AggregationValue`.
- * @param node
- * @return The node's value if it is an integer, float, string, or boolean.
+ * Converts a scalar JSON value to an `AggregationValue`.
+ * @param value
+ * @return `value` as an `AggregationValue` if it's an integer, float, string, or boolean.
  * @return std::nullopt otherwise.
  */
-auto node_to_aggregation_value(nlohmann::json const& node) -> std::optional<AggregationValue> {
-    if (node.is_number_integer()) {
-        return node.get<int64_t>();
+auto to_aggregation_value(nlohmann::json const& value) -> std::optional<AggregationValue> {
+    if (value.is_number_integer()) {
+        return value.get<int64_t>();
     }
-    if (node.is_number_float()) {
-        return node.get<double>();
+    if (value.is_number_float()) {
+        return value.get<double>();
     }
-    if (node.is_string()) {
-        return node.get<string>();
+    if (value.is_string()) {
+        return value.get<string>();
     }
-    if (node.is_boolean()) {
-        return node.get<bool>();
+    if (value.is_boolean()) {
+        return value.get<bool>();
     }
     return std::nullopt;
 }
@@ -138,12 +136,13 @@ auto MinMaxAggregator::beats_extreme(Extreme candidate) const -> bool {
 
 auto MinMaxAggregator::add_record(string_view message, epochtime_t) -> void {
     nlohmann::json doc;
-    auto const* const node{find_field_node(message, m_field_path, doc)};
-    if (nullptr == node || false == node->is_number()) {
+    auto const* const value{find_field_value(message, m_field_path, doc)};
+    if (nullptr == value || false == value->is_number()) {
         return;
     }
     Extreme const candidate{
-            node->is_number_integer() ? Extreme{node->get<int64_t>()} : Extreme{node->get<double>()}
+            value->is_number_integer() ? Extreme{value->get<int64_t>()}
+                                       : Extreme{value->get<double>()}
     };
     if (false == m_extreme.has_value() || beats_extreme(candidate)) {
         m_extreme = candidate;
@@ -173,13 +172,13 @@ UniqueAggregator::UniqueAggregator(string_view field) : m_field{field} {
 
 auto UniqueAggregator::add_record(string_view message, epochtime_t) -> void {
     nlohmann::json doc;
-    auto const* const node{find_field_node(message, m_field_path, doc)};
-    if (nullptr == node) {
+    auto const* const value{find_field_value(message, m_field_path, doc)};
+    if (nullptr == value) {
         return;
     }
-    auto value{node_to_aggregation_value(*node)};
-    if (value.has_value()) {
-        m_values.emplace(std::move(value.value()));
+    auto aggregation_value{to_aggregation_value(*value)};
+    if (aggregation_value.has_value()) {
+        m_values.emplace(std::move(aggregation_value.value()));
     }
 }
 
