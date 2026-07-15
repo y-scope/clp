@@ -718,9 +718,8 @@ def get_task_group_for_job(
             )
             for i in range(len(archives))
         )
-    error_msg = f"Unexpected job type: {job_type}"
-    logger.error(error_msg)
-    raise NotImplementedError(error_msg)
+    logger.error("Unexpected query job type")
+    raise NotImplementedError(f"Unexpected job type: {job_type}")
 
 
 def dispatch_query_job(
@@ -881,7 +880,7 @@ def handle_pending_query_jobs(
                     # NOTE: We're skipping the job for this iteration, but its status will remain
                     # unchanged. So this log will print again in the next iteration unless the user
                     # cancels the job.
-                    logger.error("Unexpected job type: %s, skipping job", job_type)
+                    logger.error("Unexpected query job type; skipping job")
                     continue
 
         futures = []
@@ -1175,7 +1174,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 elif job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
                     await handle_finished_stream_extraction_job(db_conn, job, returned_results)
                 else:
-                    logger.error("Unexpected job type: %s, skipping job", job_type)
+                    logger.error("Unexpected query job type; skipping job")
 
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):
