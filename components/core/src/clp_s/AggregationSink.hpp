@@ -96,9 +96,9 @@ public:
 private:
     // Methods
     /**
-     * Inserts the buffered result documents into the collection and clears the buffer.
+     * Inserts the buffered result documents into the collection.
      * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on database error, leaving the buffer intact
+     * @return ErrorCodeFailureDbBulkWrite on database error
      */
     [[nodiscard]] auto flush_buffer() -> ErrorCode;
 
