@@ -1,6 +1,7 @@
 #include "aggregators.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -71,6 +72,28 @@ find_field_node(string_view message, std::vector<string> const& field_path, nloh
         node = &it.value();
     }
     return node;
+}
+
+/**
+ * Extracts a scalar node's value as an `AggregationValue`.
+ * @param node
+ * @return The node's value if it is an integer, float, string, or boolean.
+ * @return std::nullopt otherwise.
+ */
+auto node_to_aggregation_value(nlohmann::json const& node) -> std::optional<AggregationValue> {
+    if (node.is_number_integer()) {
+        return node.get<int64_t>();
+    }
+    if (node.is_number_float()) {
+        return node.get<double>();
+    }
+    if (node.is_string()) {
+        return node.get<string>();
+    }
+    if (node.is_boolean()) {
+        return node.get<bool>();
+    }
+    return std::nullopt;
 }
 }  // namespace
 
@@ -154,15 +177,9 @@ auto UniqueAggregator::add_record(string_view message, epochtime_t) -> void {
     if (nullptr == node) {
         return;
     }
-
-    if (node->is_number_integer()) {
-        m_values.emplace(node->get<int64_t>());
-    } else if (node->is_number_float()) {
-        m_values.emplace(node->get<double>());
-    } else if (node->is_string()) {
-        m_values.emplace(node->get<string>());
-    } else if (node->is_boolean()) {
-        m_values.emplace(node->get<bool>());
+    auto value{node_to_aggregation_value(*node)};
+    if (value.has_value()) {
+        m_values.emplace(std::move(value.value()));
     }
 }
 

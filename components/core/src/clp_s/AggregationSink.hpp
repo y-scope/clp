@@ -81,7 +81,8 @@ public:
     // Methods implementing AggregationSink
     /**
      * Buffers a result document, flushing the buffer to the database once it reaches the batch
-     * size.
+     * size. If an earlier flush failed, the document is dropped rather than buffered so that memory
+     * stays bounded; the error is reported by `finish()`.
      * @param result The result document to write.
      */
     auto write(AggregationResult const& result) -> void override;
