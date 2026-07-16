@@ -21,6 +21,7 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
+from structlog.contextvars import bound_contextvars
 
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
@@ -33,6 +34,25 @@ from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
+
+
+def _get_extract_stream_task_log_context(
+    job_id: str,
+    task_id: int,
+    query_job_type: str,
+    archive_id: str,
+    dataset: str | None,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {
+        "job_id": job_id,
+        "task_id": task_id,
+        "query_job_type": query_job_type,
+        "archive_id": archive_id,
+    }
+    if dataset is not None:
+        context["dataset"] = dataset
+
+    return context
 
 
 def _make_clp_command_and_env_vars(
@@ -198,7 +218,7 @@ def extract_stream_entry_point(
     clp_logging_level = os.getenv("CLP_LOGGING_LEVEL")
     set_logging_level(logger, clp_logging_level)
 
-    logger.info(f"Started {task_name} task for job {job_id}")
+    logger.info("Started %s task", task_name)
 
     start_time = datetime.datetime.now()
     task_status: QueryTaskStatus
@@ -303,24 +323,29 @@ def extract_stream(
     self: Task,
     job_id: str,
     task_id: int,
+    query_job_type: str,
     job_config: dict,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
     dataset: str | None = None,
 ) -> dict[str, Any]:
-    try:
-        return extract_stream_entry_point(
-            job_id,
-            task_id,
-            job_config,
-            archive_id,
-            clp_metadata_db_conn_params,
-            results_cache_uri,
-            dataset,
-        )
-    except SoftTimeLimitExceeded:
-        logger.exception(
-            f"Stream extraction task job_id={job_id} task_id={task_id} exceeded soft time limit."
-        )
-        raise
+    with bound_contextvars(
+        **_get_extract_stream_task_log_context(job_id, task_id, query_job_type, archive_id, dataset)
+    ):
+        try:
+            return extract_stream_entry_point(
+                job_id,
+                task_id,
+                job_config,
+                archive_id,
+                clp_metadata_db_conn_params,
+                results_cache_uri,
+                dataset,
+            )
+        except SoftTimeLimitExceeded:
+            logger.exception("Stream extraction task exceeded soft time limit.")
+            raise
+        except Exception:
+            logger.exception("Stream extraction task failed with an unexpected exception.")
+            raise
