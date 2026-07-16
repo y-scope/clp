@@ -717,11 +717,12 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          mount_host_tmp_dir: "true"
           run_command: >-
             cd integration-tests
             && CLP_BUILD_DIR=/tmp
             CLP_CORE_BINS_DIR=/tmp/clp
-            uv run pytest -m "smoke and core"
+            uv run pytest -m "smoke or core"
 
       - name: "Upload the integration-test logs"
         if: "always()"
@@ -782,11 +783,12 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          mount_host_tmp_dir: "true"
           run_command: >-
             cd integration-tests
             && CLP_BUILD_DIR=/tmp/build
             CLP_PACKAGE_DIR=/tmp/build/clp-package
-            uv run pytest -m "smoke and package"
+            uv run pytest -m "smoke or package"
 
       - name: "Upload the integration-test logs"
         if: "always()"
