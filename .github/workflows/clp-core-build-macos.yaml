@@ -106,9 +106,18 @@ jobs:
       # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
       # - run: >-
       #     task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+      # Cap clang-tidy concurrency. `lint:check-cpp-full` fans out one `clang-tidy` process per C++
+      # source file through a Taskfile `deps: for:` loop, which has no built-in concurrency limit,
+      # so ~hundreds of `clang-tidy` processes (each holding a full preprocessed translation unit)
+      # spawn at once. The runners don't have a huge amount of memory, and as the number of source
+      # files and the project's complexity grow, peak memory grows until it exceeds what the runner
+      # has and the OS swaps/thrashes instead of making progress. Cap concurrency to the
+      # logical-processor count to keep it within memory; override via `CLP_CPP_LINT_CONCURRENCY`
+      # (e.g. "1" for maximum memory safety).
       - run: >-
-          CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
-          task lint:check-cpp-full
+          task --concurrency
+          "${CLP_CPP_LINT_CONCURRENCY:-$(getconf _NPROCESSORS_ONLN)}"
+          lint:check-cpp-full
         shell: "bash"
 
       # Cache the source file checksums and the generated files (logs) for the
