@@ -679,15 +679,65 @@ jobs:
               'build/lint-clang-tidy/**/*'
             )}}
 
-  ubuntu-jammy-integration-tests:
-    name: "ubuntu-jammy-integration-tests"
+  ubuntu-jammy-integration-tests-core:
+    name: "ubuntu-jammy-integration-tests-core"
+    if: >-
+      !cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'
+    needs:
+      - "filter-relevant-changes"
+      - "ubuntu-jammy-binaries"
+    runs-on: *runner
+    steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
+      - name: "Download the binaries artifact"
+        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+
+      - name: "Untar binaries"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        working-directory: >-
+          /tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
+        run: |-
+          tar xf clp.tar
+          rm clp.tar
+
+      - uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          run_command: >-
+            cd integration-tests
+            && CLP_BUILD_DIR=/tmp
+            CLP_CORE_BINS_DIR=/tmp/clp
+            uv run pytest -m "smoke and core"
+
+      - name: "Upload the integration-test logs"
+        if: "always()"
+        uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
+        with:
+          name: "clp-integration-test-core-logs"
+          path: "/tmp/integration_tests/test_logs"
+          retention-days: 3
+
+  ubuntu-jammy-integration-tests-package:
+    name: "ubuntu-jammy-integration-tests-package"
     if: >-
       !cancelled() && !failure() && needs.package-image.result == 'success'
-      && needs.ubuntu-jammy-binaries.result == 'success'
     needs:
       - "filter-relevant-changes"
       - "package-image"
-      - "ubuntu-jammy-binaries"
     strategy:
       matrix:
         arch: >-
@@ -724,14 +774,6 @@ jobs:
           tar --extract --file "/tmp/build/clp-package/clp-package.tar"
           --directory "/tmp/build/clp-package"
 
-      - name: "Download the binaries artifact"
-        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
-        env:
-          OS_NAME: "ubuntu-jammy"
-        with:
-          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
-          path: "/tmp/build/core"
-
       - uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "ubuntu-jammy"
@@ -743,9 +785,8 @@ jobs:
           run_command: >-
             cd integration-tests
             && CLP_BUILD_DIR=/tmp/build
-            CLP_CORE_BINS_DIR=/tmp/build/core
             CLP_PACKAGE_DIR=/tmp/build/clp-package
-            uv run pytest
+            uv run pytest -m "smoke and package"
 
       - name: "Upload the integration-test logs"
         if: "always()"
