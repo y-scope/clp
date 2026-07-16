@@ -18,9 +18,12 @@
 #include <string_utils/string_utils.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clp_s/AggregationSink.hpp>
+#include <clp_s/aggregators.hpp>
 #include <clp_s/ArchiveReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clpp/Defs.hpp>
+#include <clpp/ErrorCode.hpp>
 
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
@@ -102,7 +105,7 @@ bool search_archive(
 auto create_output_handler(CommandLineArguments const& cli_args, std::string_view archive_id)
         -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
     try {
-        auto const& aggregation_type{cli_args.get_aggregation_type()};
+        auto const& aggregator{cli_args.get_aggregator()};
         return std::visit(
                 clp::overloaded{
                         [&](CommandLineArguments::FileOutputHandlerOptions const& options)
@@ -131,16 +134,24 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
                                 return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
                             }
 
-                            if (CommandLineArguments::AggregationType::Count == aggregation_type) {
+                            if (false == aggregator.has_value()) {
+                                SPDLOG_ERROR("Empty aggregation type.");
+                                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+                            }
+                            if (std::holds_alternative<clp_s::CountAggregator>(
+                                        aggregator.value()
+                                )) {
                                 return std::make_unique<clp_s::CountReducerOutputHandler>(
                                         reducer_socket_fd
                                 );
                             }
-                            if (CommandLineArguments::AggregationType::CountByTime
-                                == aggregation_type) {
+                            if (std::holds_alternative<clp_s::CountByTimeAggregator>(
+                                        aggregator.value()
+                                )) {
                                 return std::make_unique<clp_s::CountByTimeReducerOutputHandler>(
                                         reducer_socket_fd,
-                                        cli_args.get_count_by_time_bucket_size_ms()
+                                        std::get<clp_s::CountByTimeAggregator>(aggregator.value())
+                                                .get_bucket_size_millisecs()
                                 );
                             }
                             SPDLOG_ERROR("Unhandled aggregation type.");
@@ -148,7 +159,7 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
                         },
                         [&](CommandLineArguments::ResultsCacheOutputHandlerOptions const& options)
                                 -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
-                            if (false == aggregation_type.has_value()) {
+                            if (false == aggregator.has_value()) {
                                 return std::make_unique<clp_s::ResultsCacheOutputHandler>(
                                         options.uri,
                                         options.collection,
@@ -157,45 +168,24 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
                                         options.dataset
                                 );
                             }
-                            if (CommandLineArguments::AggregationType::Count == aggregation_type) {
-                                return std::make_unique<clp_s::CountResultsCacheOutputHandler>(
-                                        options.uri,
-                                        options.collection,
-                                        archive_id
-                                );
-                            }
-                            if (CommandLineArguments::AggregationType::CountByTime
-                                == aggregation_type) {
-                                return std::make_unique<
-                                        clp_s::CountByTimeResultsCacheOutputHandler
-                                >(options.uri,
-                                  options.collection,
-                                  archive_id,
-                                  cli_args.get_count_by_time_bucket_size_ms());
-                            }
-                            SPDLOG_ERROR("Unhandled aggregation type.");
-                            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+                            return clp_s::make_aggregation_output_handler(
+                                    aggregator.value(),
+                                    std::make_unique<clp_s::ResultsCacheSink>(
+                                            options.uri,
+                                            options.collection,
+                                            archive_id
+                                    )
+                            );
                         },
-
                         [&](CommandLineArguments::StdoutOutputHandlerOptions const& /*options*/)
                                 -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
-                            if (false == aggregation_type.has_value()) {
+                            if (false == aggregator.has_value()) {
                                 return std::make_unique<clp_s::StandardOutputHandler>();
                             }
-                            if (CommandLineArguments::AggregationType::Count == aggregation_type) {
-                                return std::make_unique<clp_s::CountStdoutOutputHandler>(
-                                        archive_id
-                                );
-                            }
-                            if (CommandLineArguments::AggregationType::CountByTime
-                                == aggregation_type) {
-                                return std::make_unique<clp_s::CountByTimeStdoutOutputHandler>(
-                                        archive_id,
-                                        cli_args.get_count_by_time_bucket_size_ms()
-                                );
-                            }
-                            SPDLOG_ERROR("Unhandled aggregation type.");
-                            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+                            return clp_s::make_aggregation_output_handler(
+                                    aggregator.value(),
+                                    std::make_unique<clp_s::StdoutSink>(archive_id)
+                            );
                         }
 
                 },
@@ -629,7 +619,8 @@ int main(int argc, char const* argv[]) {
 
                 if (KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented} == error
                     || KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType} == error
-                    || KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented} == error)
+                    || KvIrSearchError{KvIrSearchErrorEnum::AggregationSupportNotImplemented}
+                               == error)
                 {
                     // These errors are treated as non-fatal because they result from unsupported
                     // features. However, this approach may cause archives with this extension to be
