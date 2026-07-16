@@ -143,7 +143,7 @@ async fn health() -> &'static str {
 
 #[utoipa::path(
     post,
-    path = "/s3_scanner",
+    path = "/s3/scanner",
     tags = ["IngestionJob"],
     description = "Creates an ingestion job and starts a job instance that periodically scans the \
         specified S3 bucket and key prefix for new objects to ingest.\n\n\
@@ -194,7 +194,7 @@ async fn create_s3_scanner_job(
 
 #[utoipa::path(
     post,
-    path = "/sqs_listener",
+    path = "/s3/listener",
     tags = ["IngestionJob"],
     description = "Creates an ingestion job and starts a job instance that monitors an SQS queue. \
         The queue receives notifications whenever new objects are added to the specified S3 bucket \
@@ -245,7 +245,7 @@ async fn create_sqs_listener_job(
 
 #[utoipa::path(
     post,
-    path = "/job/{job_id}/terminate",
+    path = "/s3/{job_id}/terminate",
     tags = ["IngestionJob"],
     description = "Terminates the ingestion job instance identified by the given job ID.\n\n\
         This operation only terminates the job instance; the job record, including its status and \
