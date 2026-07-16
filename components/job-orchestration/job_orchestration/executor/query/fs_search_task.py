@@ -58,7 +58,6 @@ def _get_search_task_log_context(
     try:
         search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
     except (msgpack.UnpackException, ValueError):
-        # search_entry_point performs authoritative validation inside the task's exception boundary.
         return context
 
     context["query"] = search_config.query_string
