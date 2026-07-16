@@ -54,7 +54,7 @@ runs:
       shell: "bash"
       run: |
         base_path="./tools/docker-images"
-        image_name="clp-package-image"
+        image_name="clp-package"
         dockerfile_path="$base_path/$image_name/Dockerfile"
 
         echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
@@ -115,6 +115,6 @@ runs:
       if: "inputs.push_image == 'false'"
       uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
       with:
-        name: "${{steps.compute-meta.outputs.IMAGE_NAME}}-${{inputs.arch}}"
+        name: "clp-package-image-${{inputs.arch}}"
         path: "${{steps.output-properties.outputs.image_path}}"
         retention-days: 1
