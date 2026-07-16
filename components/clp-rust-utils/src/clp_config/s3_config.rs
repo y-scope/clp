@@ -1,5 +1,6 @@
 use non_empty_string::NonEmptyString;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Represents the configuration for connecting to an S3 bucket.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,26 +1,26 @@
 mod clp_ingestion;
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub use clp_ingestion::*;
-use clp_rust_utils::{
-    clp_config::{
-        AwsAuthentication,
-        package::{
-            config::{Config as ClpConfig, LogsInput},
-            credentials::Credentials as ClpCredentials,
-        },
-    },
-    job_config::ingestion::s3::{ConfigError, S3IngestionJobConfig, ValidatedSqsListenerConfig},
-};
+use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::package::config::Config as ClpConfig;
+use clp_rust_utils::clp_config::package::config::LogsInput;
+use clp_rust_utils::clp_config::package::credentials::Credentials as ClpCredentials;
+use clp_rust_utils::job_config::ingestion::s3::ConfigError;
+use clp_rust_utils::job_config::ingestion::s3::S3IngestionJobConfig;
+use clp_rust_utils::job_config::ingestion::s3::ValidatedSqsListenerConfig;
 use serde::Serialize;
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
 
-use crate::{
-    aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{IngestionJob, IngestionJobId, IngestionJobState, S3Scanner},
-};
+use crate::aws_client_manager::S3ClientWrapper;
+use crate::aws_client_manager::SqsClientWrapper;
+use crate::ingestion_job::IngestionJob;
+use crate::ingestion_job::IngestionJobId;
+use crate::ingestion_job::IngestionJobState;
+use crate::ingestion_job::S3Scanner;
 
 /// Errors for ingestion job manager operations.
 #[derive(thiserror::Error, Debug)]
