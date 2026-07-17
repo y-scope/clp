@@ -125,13 +125,6 @@ public:
     [[nodiscard]] auto is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) const -> bool;
 
     /**
-     * Checks whether a given schema node has any projection mode set.
-     * @param node_id The schema node ID to check.
-     * @return true if any projection mode is active for the node.
-     */
-    [[nodiscard]] auto has_any_projection(SchemaNode::id_t node_id) const -> bool;
-
-    /**
      * Gets the projection mask for a given schema node.
      * @param node_id The schema node ID to look up.
      * @return The node's projection mask, or an empty mask if the node has no projections.

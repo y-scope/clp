@@ -65,14 +65,6 @@ auto Projection::is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) 
     return it->second.has(mode);
 }
 
-auto Projection::has_any_projection(SchemaNode::id_t node_id) const -> bool {
-    auto it = m_node_projections.find(node_id);
-    if (it == m_node_projections.end()) {
-        return false;
-    }
-    return false == it->second.has(NodeMask::Mode::Default);
-}
-
 auto Projection::get_node_mask(SchemaNode::id_t node_id) const -> NodeMask {
     auto it = m_node_projections.find(node_id);
     if (it == m_node_projections.end()) {
