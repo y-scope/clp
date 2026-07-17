@@ -722,7 +722,7 @@ jobs:
             cd integration-tests
             && CLP_BUILD_DIR=/tmp
             CLP_CORE_BINS_DIR=/tmp/clp
-            uv run pytest -m "smoke or core"
+            uv run pytest -m 'smoke or core'
 
       - name: "Upload the integration-test logs"
         if: "always()"
@@ -788,7 +788,7 @@ jobs:
             cd integration-tests
             && CLP_BUILD_DIR=/tmp/build
             CLP_PACKAGE_DIR=/tmp/build/clp-package
-            uv run pytest -m "smoke or package"
+            uv run pytest -m 'smoke or package'
 
       - name: "Upload the integration-test logs"
         if: "always()"
