@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -85,6 +86,41 @@ bool compress(CommandLineArguments const& command_line_arguments);
  * @param json_constructor_option
  */
 void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_option);
+
+/**
+ * @return -1 if no experimental query found, 0 on success, >0 on failure
+ */
+auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int;
+
+/**
+ * For each archive, output archive-wide statistics as a JSON object.
+ * @param archive_reader
+ * @param output_handler
+ */
+auto output_archive_stats(
+        clp_s::ArchiveReader& archive_reader,
+        clp_s::search::OutputHandler& output_handler
+) -> void;
+
+/**
+ * For each archive, output statistics of each log-shape as JSON objects.
+ * @param archive_reader
+ * @param output_handler
+ */
+auto output_log_shape_stats(
+        clp_s::ArchiveReader& archive_reader,
+        clp_s::search::OutputHandler& output_handler
+) -> void;
+
+/**
+ * For each archive, output the schema tree as a JSON object.
+ * @param archive_reader
+ * @param output_handler
+ */
+auto output_schema_tree_stats(
+        clp_s::ArchiveReader& archive_reader,
+        clp_s::search::OutputHandler& output_handler
+) -> void;
 
 /**
  * Searches the given archive.
@@ -197,11 +233,6 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
     }
 }
 
-/**
- * @return -1 if no experimental query found, 0 on success, >0 on failure
- */
-auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int;
-
 bool compress(CommandLineArguments const& command_line_arguments) {
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
 
@@ -246,6 +277,135 @@ bool compress(CommandLineArguments const& command_line_arguments) {
 void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_option) {
     clp_s::JsonConstructor constructor(json_constructor_option);
     constructor.store();
+}
+
+auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
+    auto const& query{cli_args.get_query()};
+    if (CommandLineArguments::cArchiveStatsQuery != query
+        && CommandLineArguments::cLogShapeStatsQuery != query
+        && CommandLineArguments::cSchemaTreeStatsQuery != query)
+    {
+        return -1;
+    }
+    if (false == cli_args.experimental().has_value()) {
+        throw std::invalid_argument(fmt::format("--experimental must be set to run {}", query));
+    }
+    auto archive_reader{std::make_shared<clp_s::ArchiveReader>()};
+    for (auto const& input_path : cli_args.get_input_paths()) {
+        try {
+            archive_reader->open(
+                    input_path,
+                    clp_s::ArchiveReader::Options{
+                            cli_args.get_network_auth(),
+                            cli_args.experimental().has_value()
+                    }
+            );
+        } catch (std::exception const& e) {
+            SPDLOG_ERROR("Failed to open archive - {}", e.what());
+            return 1;
+        }
+        auto output_handler{create_output_handler(cli_args, archive_reader->get_archive_id())};
+        if (output_handler.has_error()) {
+            SPDLOG_ERROR("Failed to create output handler - {}", output_handler.error().message());
+            return 2;
+        }
+        if (CommandLineArguments::cArchiveStatsQuery == query) {
+            output_archive_stats(*archive_reader, *output_handler.value());
+        } else if (CommandLineArguments::cLogShapeStatsQuery == query) {
+            output_log_shape_stats(*archive_reader, *output_handler.value());
+        } else if (CommandLineArguments::cSchemaTreeStatsQuery == query) {
+            output_schema_tree_stats(*archive_reader, *output_handler.value());
+        }
+        if (auto ec{output_handler.value()->flush()}; clp_s::ErrorCode::ErrorCodeSuccess != ec) {
+            SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));
+            return 3;
+        }
+        archive_reader->close();
+    }
+    return 0;
+}
+
+auto output_archive_stats(
+        clp_s::ArchiveReader& archive_reader,
+        clp_s::search::OutputHandler& output_handler
+) -> void {
+    archive_reader.read_variable_dictionary();
+    auto const num_vars{archive_reader.get_variable_dictionary()->get_entries().size()};
+    archive_reader.read_log_type_dictionary();
+    size_t num_log_shapes{};
+    if (auto const log_shape_dict{archive_reader.get_log_shape_dictionary()};
+        nullptr != log_shape_dict)
+    {
+        num_log_shapes = log_shape_dict->get_entries().size();
+    } else {
+        num_log_shapes = archive_reader.get_log_type_dictionary()->get_entries().size();
+    }
+    nlohmann::json entry{
+            {"archive_id", std::string{archive_reader.get_archive_id()}},
+            {"num_log_shapes", num_log_shapes},
+            {"num_vars", num_vars}
+    };
+    output_handler.write(entry.dump());
+    output_handler.write("\n");
+}
+
+auto output_log_shape_stats(
+        clp_s::ArchiveReader& archive_reader,
+        clp_s::search::OutputHandler& output_handler
+) -> void {
+    auto const archive_id{std::string{archive_reader.get_archive_id()}};
+    if (auto const log_shape_dict{archive_reader.get_log_shape_dictionary()};
+        nullptr != log_shape_dict)
+    {
+        auto const& shape_stats{archive_reader.get_log_shape_stats()};
+        log_shape_dict->read_entries();
+        for (clpp::log_shape_id_t i{0}; i < shape_stats.size(); ++i) {
+            nlohmann::json entry{
+                    {"archive_id", archive_id},
+                    {"id", i},
+                    {"count", shape_stats.at(i).get_count()},
+                    {"shape", std::string{log_shape_dict->get_entry(i).get_value()}}
+            };
+            output_handler.write(entry.dump());
+            output_handler.write("\n");
+        }
+    } else {
+        auto const log_type_dict{archive_reader.get_log_type_dictionary()};
+        archive_reader.read_log_type_dictionary();
+        for (auto const& entry : log_type_dict->get_entries()) {
+            nlohmann::json json_entry{
+                    {"archive_id", archive_id},
+                    {"id", entry.get_id()},
+                    {"count", nullptr},
+                    {"shape", entry.get_value()}
+            };
+            output_handler.write(json_entry.dump());
+            output_handler.write("\n");
+        }
+    }
+}
+
+auto output_schema_tree_stats(
+        clp_s::ArchiveReader& archive_reader,
+        clp_s::search::OutputHandler& output_handler
+) -> void {
+    auto nodes{nlohmann::json::array()};
+    for (auto const& node : archive_reader.get_schema_tree()->get_nodes()) {
+        nodes.push_back({
+                {"id", node.get_id()},
+                {"parent_id", node.get_parent_id()},
+                {"key", std::string{node.get_key_name()}},
+                {"type", static_cast<int>(node.get_type())},
+                {"count", node.get_count()},
+                {"children", node.get_children_ids()},
+        });
+    }
+    nlohmann::json entry{
+            {"archive_id", std::string{archive_reader.get_archive_id()}},
+            {"nodes", std::move(nodes)}
+    };
+    output_handler.write(entry.dump());
+    output_handler.write("\n");
 }
 
 bool search_archive(
@@ -429,73 +589,6 @@ bool search_archive(
         telemetry_span->set_search_result_metrics(output.get_result_metrics());
     }
     return success;
-}
-
-auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
-    auto const& query{cli_args.get_query()};
-    if (CommandLineArguments::cLogShapeStatsQuery != query
-        && CommandLineArguments::cSchemaTreeStatsQuery != query)
-    {
-        return -1;
-    }
-    if (false == cli_args.experimental().has_value()) {
-        throw std::invalid_argument(fmt::format("--experimental must be set to run {}", query));
-    }
-    auto archive_reader{std::make_shared<clp_s::ArchiveReader>()};
-    for (auto const& input_path : cli_args.get_input_paths()) {
-        try {
-            archive_reader->open(
-                    input_path,
-                    clp_s::ArchiveReader::Options{
-                            cli_args.get_network_auth(),
-                            cli_args.experimental().has_value()
-                    }
-            );
-        } catch (std::exception const& e) {
-            SPDLOG_ERROR("Failed to open archive - {}", e.what());
-            return 1;
-        }
-        auto output_handler{create_output_handler(cli_args, archive_reader->get_archive_id())};
-        if (output_handler.has_error()) {
-            SPDLOG_ERROR("Failed to create output handler - {}", output_handler.error().message());
-            return 2;
-        }
-        auto const shape_stats{archive_reader->get_log_shape_stats()};
-        if (CommandLineArguments::cLogShapeStatsQuery == query) {
-            auto shape_dict{archive_reader->get_log_shape_dictionary()};
-            shape_dict->read_entries();
-            for (clpp::log_shape_id_t i{0}; i < shape_stats.size(); ++i) {
-                nlohmann::json entry{
-                        {"id", i},
-                        {"count", shape_stats.at(i).get_count()},
-                        {std::string{clpp::cShapeFunction},
-                         std::string{shape_dict->get_entry(i).get_value()}}
-                };
-                output_handler.value()->write(entry.dump());
-                output_handler.value()->write("\n");
-            }
-        } else if (CommandLineArguments::cSchemaTreeStatsQuery == query) {
-            auto nodes{nlohmann::json::array()};
-            for (auto const& node : archive_reader->get_schema_tree()->get_nodes()) {
-                nodes.push_back({
-                        {"id", node.get_id()},
-                        {"parentId", node.get_parent_id()},
-                        {"key", std::string{node.get_key_name()}},
-                        {"type", static_cast<int>(node.get_type())},
-                        {"count", node.get_count()},
-                        {"children", node.get_children_ids()},
-                });
-            }
-            output_handler.value()->write(nodes.dump());
-            output_handler.value()->write("\n");
-        }
-        if (auto ec{output_handler.value()->flush()}; clp_s::ErrorCode::ErrorCodeSuccess != ec) {
-            SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));
-            return 3;
-        }
-        archive_reader->close();
-    }
-    return 0;
 }
 }  // namespace
 

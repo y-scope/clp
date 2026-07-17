@@ -74,6 +74,7 @@ public:
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
 
     // Static data members
+    static constexpr std::string_view cArchiveStatsQuery{"stats.archives"};
     static constexpr std::string_view cLogShapeStatsQuery{"stats.log_shapes"};
     static constexpr std::string_view cSchemaTreeStatsQuery{"stats.schema_tree"};
 
