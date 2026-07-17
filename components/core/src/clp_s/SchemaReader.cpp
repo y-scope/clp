@@ -1014,10 +1014,7 @@ auto SchemaReader::collect_scope_entries(
                     scope.parent_rule_insertion_order.push_back(parent_rule_id);
                 }
                 it->second.push_back(
-                        ParentRuleOccurrence{
-                                .sub_span = sub_span,
-                                .start_col_idx = column_idx
-                        }
+                        ParentRuleOccurrence{.sub_span = sub_span, .start_col_idx = column_idx}
                 );
             }
             column_idx += count_column_consuming_entries(sub_span, *m_global_schema_tree);

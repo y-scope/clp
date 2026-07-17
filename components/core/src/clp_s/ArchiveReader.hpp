@@ -158,6 +158,8 @@ public:
 
     std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary() { return m_log_dict; }
 
+    [[nodiscard]] auto experimental() const -> bool { return m_clpp.has_value(); }
+
     std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
 
     auto get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictionaryReader> {

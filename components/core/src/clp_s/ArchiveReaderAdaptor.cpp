@@ -376,10 +376,6 @@ auto ArchiveReaderAdaptor::has_section(std::string_view section) const -> bool {
            );
 }
 
-auto ArchiveReaderAdaptor::is_experimental_archive() const -> bool {
-    return has_section(constants::cArchiveParentRuleShapesFile);
-}
-
 auto ArchiveReaderAdaptor::get_metadata_for_log_event(int64_t log_event_idx)
         -> nlohmann::json const& {
     auto const it{m_non_empty_range_metadata_map.upper_bound(log_event_idx)};

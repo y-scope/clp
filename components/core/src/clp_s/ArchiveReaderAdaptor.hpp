@@ -108,9 +108,9 @@ public:
     [[nodiscard]] auto has_section(std::string_view section) const -> bool;
 
     /**
-     * @return true if the archive contains clpp-specific sections (created with --experimental).
+     * @return true if the archive info packet set the experimental bool.
      */
-    [[nodiscard]] auto is_experimental_archive() const -> bool;
+    [[nodiscard]] auto experimental() const -> bool { return m_archive_info.experimental; }
 
     /**
      * @param log_event_idx

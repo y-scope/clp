@@ -976,7 +976,8 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
         && !(filter->get_operation() == FilterOperation::EXISTS
              || filter->get_operation() == FilterOperation::NEXISTS))
     {
-        if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
+        if (false == m_experimental && filter->get_column()->matches_type(LiteralType::ClpStringT))
+        {
             std::string query_string;
             filter->get_operand()->as_clp_string(query_string, filter->get_operation());
 
@@ -1186,12 +1187,16 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 return EvaluatedValue::False;
             }
             if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
-                auto& query_processing_result = m_string_query_map.at(filter_string);
-                if (query_processing_result.has_value()) {
-                    m_expr_clp_query[expr.get()] = &(query_processing_result.value());
-                    matches_clp_string = true;
-                } else {
+                if (m_experimental) {
                     m_expr_clp_query[expr.get()] = nullptr;
+                } else {
+                    auto& query_processing_result = m_string_query_map.at(filter_string);
+                    if (query_processing_result.has_value()) {
+                        m_expr_clp_query[expr.get()] = &(query_processing_result.value());
+                        matches_clp_string = true;
+                    } else {
+                        m_expr_clp_query[expr.get()] = nullptr;
+                    }
                 }
                 has_clp_string = wildcard->matches_type(LiteralType::ClpStringT);
             }
@@ -1233,7 +1238,9 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 return EvaluatedValue::False;
             }
             return EvaluatedValue::Unknown;
-        } else if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
+        } else if (false == m_experimental
+                   && filter->get_column()->matches_type(LiteralType::ClpStringT))
+        {
             std::string filter_string;
             filter->get_operand()->as_clp_string(filter_string, filter->get_operation());
 

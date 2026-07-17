@@ -85,12 +85,8 @@ auto ArchiveReader::initialize_archive_reader() -> void {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
 
-    bool const archive_is_experimental{m_archive_reader_adaptor->is_experimental_archive()};
-    if (m_options.m_experimental && !archive_is_experimental) {
-        SPDLOG_ERROR("--experimental flag set but archive was not created with --experimental");
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-    }
-    if (!m_options.m_experimental && archive_is_experimental) {
+    bool const experimental_archive{m_archive_reader_adaptor->experimental()};
+    if (experimental_archive && false == m_options.m_experimental) {
         SPDLOG_ERROR("Archive was created with --experimental but --experimental flag is not set");
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
@@ -101,7 +97,7 @@ auto ArchiveReader::initialize_archive_reader() -> void {
     m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
-    if (m_options.m_experimental) {
+    if (experimental_archive) {
         m_clpp.emplace();
         // TODO clpp: inlined get_variable_dictionary_reader
         m_clpp->log_shape_dict
@@ -605,7 +601,7 @@ auto ArchiveReader::read_log_shape_stats()
 }
 
 auto ArchiveReader::read_parsing_spec() -> ystdlib::error_handling::Result<std::string> {
-    if (false == m_options.m_experimental) {
+    if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }
     return ReaderUtils::read_parsing_spec(*m_archive_reader_adaptor);

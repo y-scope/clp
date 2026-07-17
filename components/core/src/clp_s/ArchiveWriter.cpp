@@ -236,7 +236,7 @@ auto ArchiveWriter::write_archive_metadata(
     compressor.write_numeric_value<uint8_t>(num_constant_packets + num_optional_packets);
 
     // Write archive info
-    ArchiveInfoPacket archive_info{.num_segments = 1};
+    ArchiveInfoPacket archive_info{.num_segments = 1, .experimental = m_clpp.has_value()};
     std::stringstream msgpack_buffer;
     msgpack::pack(msgpack_buffer, archive_info);
     std::string archive_info_str = msgpack_buffer.str();

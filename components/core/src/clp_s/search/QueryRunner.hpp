@@ -64,7 +64,8 @@ public:
               m_log_shape_dict(m_archive_reader->get_log_shape_dictionary()),
               m_array_dict(m_archive_reader->get_array_dictionary()),
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
-              m_schemas(m_archive_reader->get_schema_map()) {}
+              m_schemas(m_archive_reader->get_schema_map()),
+              m_experimental(m_archive_reader->experimental()) {}
 
     // Destructor
     virtual ~QueryRunner() = default;
@@ -144,6 +145,7 @@ private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
+    bool m_experimental{false};
 
     std::map<std::string, std::optional<clp::Query>> m_string_query_map;
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;
