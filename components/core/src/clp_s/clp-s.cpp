@@ -383,7 +383,7 @@ bool search_archive(
             if (auto func_call{std::dynamic_pointer_cast<ast::FunctionCall>(parsed)}) {
                 projection->add_column(func_call);
             } else if (auto col_desc{std::dynamic_pointer_cast<ast::ColumnDescriptor>(parsed)}) {
-                projection->add_column(col_desc, Projection::OutputType::Default);
+                projection->add_column(col_desc, Projection::NodeMask::Mode::Value);
             } else {
                 throw std::runtime_error{
                         fmt::format("Unexpected projection column type for: \"{}\"", column)

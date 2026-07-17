@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -38,19 +37,48 @@ public:
         ReturnSelectedColumns
     };
 
-    enum class NodeProjection : uint8_t {
-        Default = 1,
-        Decomposed = 2,
-        Shape = 4,
-    };
+    /**
+     * Per-schema-node projection mask tracking which output modes are active for a given schema
+     * node.
+     */
+    class NodeMask {
+    public:
+        // Types
+        /**
+         * Output modes for a projected schema node.
+         * - Default: no explicit output mode set (the node is implicitly projected if matched).
+         * - Value: emit the schema node's value.
+         * - Shape: emit the schema node's shape.
+         * - Decompose: (implies Shape) emit the schema node's leaf values and shape.
+         */
+        enum class Mode : uint8_t {
+            Default = 0,
+            Value = 1U << 0,
+            Shape = 1U << 1,
+            Decompose = 1U << 2,
+        };
 
-    enum class OutputType : uint8_t {
-        Default,
-        Decomposed,
-        Shape
-    };
+        // Methods
+        [[nodiscard]] auto has(Mode mode) const -> bool {
+            if (Mode::Default == mode) {
+                return m_mask == 0;
+            }
+            return (m_mask & static_cast<uint8_t>(mode)) != 0;
+        }
 
-    using node_projection_mask_t = std::underlying_type_t<NodeProjection>;
+        auto merge(NodeMask const& other) -> void { m_mask |= other.m_mask; }
+
+        auto set(Mode mode) -> void {
+            m_mask |= static_cast<uint8_t>(mode);
+            if (Mode::Decompose == mode) {
+                m_mask |= static_cast<uint8_t>(Mode::Shape);
+            }
+        }
+
+    private:
+        // Data members
+        uint8_t m_mask{0};
+    };
 
     // Constructors
     /**
@@ -68,13 +96,13 @@ public:
     /**
      * Adds a column to the set of columns that should be included in the projected results.
      * @param column The column descriptor to project.
-     * @param output_type The projection output type (Default, Decomposed, or Shape).
+     * @param mode The projection output mode.
      * @throws OperationFailed if `column` contains a wildcard
      * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns
      * @throws OperationFailed if `column` is identical to a previously added column with the same
-     * output type.
+     * output mode.
      */
-    auto add_column(std::shared_ptr<ast::ColumnDescriptor> column, OutputType output_type) -> void;
+    auto add_column(std::shared_ptr<ast::ColumnDescriptor> column, NodeMask::Mode mode) -> void;
 
     /**
      * Adds a projection column from a FunctionCall (e.g., shape(column) or decompose(column)).
@@ -89,26 +117,33 @@ public:
     auto add_column(std::shared_ptr<ast::FunctionCall> function_call) -> void;
 
     /**
-     * Gets the current projection mode.
-     * @return The projection mode.
-     */
-    [[nodiscard]] auto get_projection_mode() const -> Mode { return m_projection_mode; }
-
-    /**
-     * Checks whether a given node has a specific projection mode set.
+     * Checks whether a given schema node has a specific projection mode set.
      * @param node_id The schema node ID to check.
-     * @param projection The projection mode(s) to test.
+     * @param mode The projection mode to test.
      * @return true if the node has the requested projection mode.
      */
-    [[nodiscard]] auto is_projected_as(SchemaNode::id_t node_id, NodeProjection projection) const
-            -> bool;
+    [[nodiscard]] auto is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) const -> bool;
 
     /**
-     * Checks whether a given node has any projection mode set (default, decomposed, or shape).
+     * Checks whether a given schema node has any projection mode set.
      * @param node_id The schema node ID to check.
      * @return true if any projection mode is active for the node.
      */
     [[nodiscard]] auto has_any_projection(SchemaNode::id_t node_id) const -> bool;
+
+    /**
+     * Gets the projection mask for a given schema node.
+     * @param node_id The schema node ID to look up.
+     * @return The node's projection mask, or an empty mask if the node has no projections.
+     */
+    [[nodiscard]] auto get_node_mask(SchemaNode::id_t node_id) const -> NodeMask;
+
+    /**
+     * Checks whether a schema node's value should be emitted.
+     * @param node_id The schema node ID to check.
+     * @return true if the node's value should be emitted.
+     */
+    [[nodiscard]] auto should_emit_value(SchemaNode::id_t node_id) const -> bool;
 
     /**
      * Resolves all columns for the purpose of projection. This key resolution implementation is
@@ -139,16 +174,16 @@ private:
         // Constructors
         TargetColumn(
                 std::shared_ptr<ast::ColumnDescriptor> column,
-                OutputType output_type,
+                NodeMask::Mode mode,
                 std::vector<SchemaNode::id_t> matched_nodes
         )
                 : m_column(std::move(column)),
-                  m_output_type(output_type),
+                  m_mode(mode),
                   m_matched_nodes(std::move(matched_nodes)) {}
 
         // Data members
         std::shared_ptr<ast::ColumnDescriptor> m_column;
-        OutputType m_output_type;
+        NodeMask::Mode m_mode;
         std::vector<SchemaNode::id_t> m_matched_nodes;
     };
 
@@ -163,30 +198,30 @@ private:
             -> std::vector<SchemaNode::id_t>;
 
     /**
-     * Records a projection mode for a schema node by OR-ing it into the node's projection bitmask.
+     * Records a projection mode for a schema node.
      * @param node_id
-     * @param projection
+     * @param mode
      */
-    auto add_projection(SchemaNode::id_t node_id, NodeProjection projection) -> void;
+    auto add_projection(SchemaNode::id_t node_id, NodeMask::Mode mode) -> void;
 
     /**
      * For a resolved column's matched nodes, identifies structural nodes (LogMessage / ParentRule)
      * and records their projection mode. Returns whether any structural node was found.
      * @param tree
      * @param matched_nodes The nodes matched by the column descriptor.
-     * @param output_type The output type for this column.
+     * @param mode The output mode for this column.
      * @return true if at least one matched node was a structural container.
      */
     [[nodiscard]] auto collect_structural_projections(
             SchemaTree const& tree,
             std::vector<SchemaNode::id_t> const& matched_nodes,
-            OutputType output_type
+            NodeMask::Mode mode
     ) -> bool;
 
     // Data members
     std::vector<TargetColumn> m_columns;
     absl::flat_hash_set<SchemaNode::id_t> m_matching_nodes;
-    absl::flat_hash_map<SchemaNode::id_t, node_projection_mask_t> m_node_projections;
+    absl::flat_hash_map<SchemaNode::id_t, NodeMask> m_node_projections;
     Mode m_projection_mode{Mode::ReturnAllColumns};
     bool m_allow_duplicate_columns{false};
 };

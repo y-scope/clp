@@ -1,6 +1,5 @@
 #include "Projection.hpp"
 
-#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -15,7 +14,7 @@
 #include <clpp/Defs.hpp>
 
 namespace clp_s::search {
-auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column, OutputType output_type)
+auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column, NodeMask::Mode mode)
         -> void {
     if (column->is_unresolved_descriptor()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
@@ -25,12 +24,12 @@ auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column, Outpu
     }
     if (false == m_allow_duplicate_columns) {
         for (auto const& existing : m_columns) {
-            if (*existing.m_column == *column && existing.m_output_type == output_type) {
+            if (*existing.m_column == *column && existing.m_mode == mode) {
                 throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
             }
         }
     }
-    m_columns.emplace_back(TargetColumn{column, output_type, {}});
+    m_columns.emplace_back(TargetColumn{column, mode, {}});
 }
 
 auto Projection::add_column(std::shared_ptr<ast::FunctionCall> function_call) -> void {
@@ -46,25 +45,24 @@ auto Projection::add_column(std::shared_ptr<ast::FunctionCall> function_call) ->
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
-    OutputType output_type{OutputType::Default};
+    NodeMask::Mode mode{NodeMask::Mode::Value};
     if (function_name == clpp::cShapeFunction) {
-        output_type = OutputType::Shape;
+        mode = NodeMask::Mode::Shape;
     } else if (function_name == clpp::cDecomposeFunction) {
-        output_type = OutputType::Decomposed;
+        mode = NodeMask::Mode::Decompose;
     } else {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
-    add_column(column, output_type);
+    add_column(column, mode);
 }
 
-auto Projection::is_projected_as(SchemaNode::id_t node_id, NodeProjection projection) const
-        -> bool {
+auto Projection::is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) const -> bool {
     auto it = m_node_projections.find(node_id);
     if (it == m_node_projections.end()) {
         return false;
     }
-    return (it->second & static_cast<node_projection_mask_t>(projection)) != 0;
+    return it->second.has(mode);
 }
 
 auto Projection::has_any_projection(SchemaNode::id_t node_id) const -> bool {
@@ -72,17 +70,31 @@ auto Projection::has_any_projection(SchemaNode::id_t node_id) const -> bool {
     if (it == m_node_projections.end()) {
         return false;
     }
-    return it->second != 0;
+    return false == it->second.has(NodeMask::Mode::Default);
 }
 
-auto Projection::add_projection(SchemaNode::id_t node_id, NodeProjection projection) -> void {
-    m_node_projections[node_id] |= static_cast<node_projection_mask_t>(projection);
+auto Projection::get_node_mask(SchemaNode::id_t node_id) const -> NodeMask {
+    auto it = m_node_projections.find(node_id);
+    if (it == m_node_projections.end()) {
+        return {};
+    }
+    return it->second;
+}
+
+auto Projection::should_emit_value(SchemaNode::id_t node_id) const -> bool {
+    auto const mask{get_node_mask(node_id)};
+    return matches_node(node_id)
+           && (mask.has(NodeMask::Mode::Value) || mask.has(NodeMask::Mode::Default));
+}
+
+auto Projection::add_projection(SchemaNode::id_t node_id, NodeMask::Mode mode) -> void {
+    m_node_projections[node_id].set(mode);
 }
 
 auto Projection::collect_structural_projections(
         SchemaTree const& tree,
         std::vector<SchemaNode::id_t> const& matched_nodes,
-        OutputType output_type
+        NodeMask::Mode mode
 ) -> bool {
     auto is_projectable_structure = [](NodeType type) -> bool {
         return NodeType::LogMessage == type || NodeType::ParentRule == type;
@@ -94,13 +106,7 @@ auto Projection::collect_structural_projections(
         auto const type = node.get_type();
         if (is_projectable_structure(type)) {
             found_structural_match = true;
-            NodeProjection projection{NodeProjection::Default};
-            if (OutputType::Decomposed == output_type) {
-                projection = NodeProjection::Decomposed;
-            } else if (OutputType::Shape == output_type) {
-                projection = NodeProjection::Shape;
-            }
-            add_projection(node_id, projection);
+            add_projection(node_id, mode);
         }
     }
     return found_structural_match;
@@ -109,25 +115,21 @@ auto Projection::collect_structural_projections(
 auto Projection::resolve_columns(SchemaTree const& tree) -> void {
     for (auto& entry : m_columns) {
         entry.m_matched_nodes = resolve_column(tree, *entry.m_column);
-        if (OutputType::Decomposed == entry.m_output_type
-            || OutputType::Shape == entry.m_output_type)
-        {
-            if (false
-                == collect_structural_projections(tree, entry.m_matched_nodes, entry.m_output_type))
+        if (NodeMask::Mode::Decompose == entry.m_mode || NodeMask::Mode::Shape == entry.m_mode) {
+            if (false == collect_structural_projections(tree, entry.m_matched_nodes, entry.m_mode))
             {
                 throw std::runtime_error(
                         fmt::format(
                                 "{}(<col>) can only be applied to LogMessage or ParentRule "
                                 "columns.",
-                                OutputType::Decomposed == entry.m_output_type
-                                        ? clpp::cDecomposeFunction
-                                        : clpp::cShapeFunction
+                                NodeMask::Mode::Decompose == entry.m_mode ? clpp::cDecomposeFunction
+                                                                          : clpp::cShapeFunction
                         )
                 );
             }
         } else {
             static_cast<void>(
-                    collect_structural_projections(tree, entry.m_matched_nodes, entry.m_output_type)
+                    collect_structural_projections(tree, entry.m_matched_nodes, entry.m_mode)
             );
         }
     }

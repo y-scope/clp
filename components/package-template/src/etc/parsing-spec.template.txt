@@ -75,4 +75,4 @@ int:^-?\d+$
 key_value:^(?<key>(?<valid_txt>))=(?<value>(?<valid_txt>)\w(?<valid_txt>))$
 !non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]*
 has_number:^(?<non_delim>)\d(?<non_delim>)$
-hex:^[A-Fa-f]+$
+hex:^[\dA-Fa-f]+$
