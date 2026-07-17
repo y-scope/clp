@@ -478,7 +478,8 @@ void ArchiveReader::initialize_schema_reader(
             m_id_to_schema_metadata[schema_id].num_messages(),
             should_marshal_records,
             m_clpp.has_value() ? m_clpp->log_shape_dict.get() : nullptr,
-            m_clpp.has_value() ? &get_parent_rule_shapes() : nullptr
+            m_clpp.has_value() ? &get_parent_rule_shapes() : nullptr,
+            m_options.m_extract_mode
     );
     auto timestamp_column_ids
             = get_timestamp_dictionary()->get_authoritative_timestamp_column_ids();

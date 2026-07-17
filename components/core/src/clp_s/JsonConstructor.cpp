@@ -37,7 +37,7 @@ void JsonConstructor::store() {
     m_archive_reader = std::make_unique<ArchiveReader>();
     m_archive_reader->open(
             m_option.archive_path,
-            ArchiveReader::Options{m_option.network_auth, m_option.m_experimental}
+            ArchiveReader::Options{m_option.network_auth, m_option.m_experimental, true}
     );
     m_archive_reader->read_dictionaries_and_metadata();
 

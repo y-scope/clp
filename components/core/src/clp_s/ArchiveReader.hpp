@@ -40,12 +40,14 @@ public:
     struct Options {
         Options() = default;
 
-        Options(NetworkAuthOption network_auth, bool experimental)
+        Options(NetworkAuthOption network_auth, bool experimental, bool extract_mode = false)
                 : m_network_auth{network_auth},
-                  m_experimental{experimental} {}
+                  m_experimental{experimental},
+                  m_extract_mode{extract_mode} {}
 
         NetworkAuthOption m_network_auth{};
         bool m_experimental{false};
+        bool m_extract_mode{false};
     };
 
     // Constructor

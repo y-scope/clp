@@ -1234,6 +1234,28 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     combined_mask.merge(child_mask);
 
     bool const emit_text{m_projection && m_projection->should_emit_value(log_msg_node_id)};
+    bool const has_shape{combined_mask.has(search::Projection::NodeMask::Mode::Shape)};
+    bool const has_decompose{combined_mask.has(search::Projection::NodeMask::Mode::Decompose)};
+
+    if (m_extract_mode) {
+        m_json_serializer.add_special_key(key_name);
+        m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
+        m_reconstruction_targets.push_back(
+                ReconstructionTarget{
+                        .parent_rule_col_name = "",
+                        .start_col_idx = column_start,
+                        .schema_sub_span = schema
+                }
+        );
+        auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
+                schema,
+                log_msg_node_id,
+                column_start,
+                log_shape_id,
+                has_decompose
+        ))};
+        return column_idx;
+    }
 
     m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
     m_json_serializer.add_special_key(key_name);
@@ -1250,7 +1272,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
         );
     }
 
-    if (combined_mask.has(search::Projection::NodeMask::Mode::Shape)) {
+    if (has_shape) {
         if (auto const result{emit_log_shape(log_shape_id)}; result.has_error()) {
             return result.error();
         }
@@ -1261,7 +1283,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
             log_msg_node_id,
             column_start,
             log_shape_id,
-            combined_mask.has(search::Projection::NodeMask::Mode::Decompose)
+            has_decompose
     ))};
 
     m_json_serializer.add_op(JsonSerializer::Op::EndObject);

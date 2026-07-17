@@ -135,6 +135,7 @@ public:
      * @param num_messages
      * @param should_marshal_records
      * @param parent_rule_shapes
+     * @param extract_mode
      */
     void reset(
             std::shared_ptr<SchemaTree> schema_tree,
@@ -144,7 +145,8 @@ public:
             uint64_t num_messages,
             bool should_marshal_records,
             LogShapeDictionaryReader const* log_shape_dict,
-            clpp::ParentRuleShapesArray const* parent_rule_shapes
+            clpp::ParentRuleShapesArray const* parent_rule_shapes,
+            bool extract_mode = false
     ) {
         m_schema_id = schema_id;
         m_num_messages = num_messages;
@@ -169,6 +171,7 @@ public:
         m_should_marshal_records = should_marshal_records;
         m_log_shape_dict = log_shape_dict;
         m_parent_rule_shapes = parent_rule_shapes;
+        m_extract_mode = extract_mode;
     }
 
     /**
@@ -668,6 +671,7 @@ private:
     // between the readers is problematic.
     LogShapeDictionaryReader const* m_log_shape_dict;
     clpp::ParentRuleShapesArray const* m_parent_rule_shapes;
+    bool m_extract_mode{false};
 };
 }  // namespace clp_s
 
