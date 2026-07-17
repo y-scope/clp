@@ -161,6 +161,13 @@ public:
         return Mode::ReturnAllColumns == m_projection_mode || m_matching_nodes.contains(node_id);
     }
 
+    /**
+     * @return true if the projection is in ReturnAllColumns mode.
+     */
+    [[nodiscard]] auto is_return_all_columns() const -> bool {
+        return Mode::ReturnAllColumns == m_projection_mode;
+    }
+
 private:
     // Types
     struct TargetColumn {

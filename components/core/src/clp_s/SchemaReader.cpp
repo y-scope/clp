@@ -1007,16 +1007,18 @@ auto SchemaReader::collect_scope_entries(
                 if (-1 == parent_rule_id) {
                     return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Corrupt};
                 }
-                if (false == scope.parent_rule_occurrences.contains(parent_rule_id)) {
+                auto const [it, inserted]{
+                        scope.parent_rule_occurrences.try_emplace(parent_rule_id)
+                };
+                if (inserted) {
                     scope.parent_rule_insertion_order.push_back(parent_rule_id);
                 }
-                scope.parent_rule_occurrences.at(parent_rule_id)
-                        .push_back(
-                                ParentRuleOccurrence{
-                                        .sub_span = sub_span,
-                                        .start_col_idx = column_idx
-                                }
-                        );
+                it->second.push_back(
+                        ParentRuleOccurrence{
+                                .sub_span = sub_span,
+                                .start_col_idx = column_idx
+                        }
+                );
             }
             column_idx += count_column_consuming_entries(sub_span, *m_global_schema_tree);
             i += length;
@@ -1026,7 +1028,9 @@ auto SchemaReader::collect_scope_entries(
         auto const& node{m_global_schema_tree->get_node(cur_node_id)};
         if (node_type_consumes_column(node.get_type())) {
             bool const should_emit{
-                    ancestor_decomposed || (m_projection && m_projection->matches_node(cur_node_id))
+                    ancestor_decomposed
+                    || (m_projection && false == m_projection->is_return_all_columns()
+                        && m_projection->matches_node(cur_node_id))
                     || (m_projection
                         && m_projection->is_projected_as(
                                 scope_node_id,
@@ -1070,7 +1074,10 @@ auto SchemaReader::emit_parent_rule_arrays(
         bool const parent_rule_has_shape{
                 parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)
         };
-        bool const emit_text{m_projection && m_projection->should_emit_value(parent_rule_id)};
+        bool const emit_text{
+                m_projection && false == m_projection->is_return_all_columns()
+                && m_projection->should_emit_value(parent_rule_id)
+        };
 
         bool const should_include{ancestor_decomposed || emit_text || parent_rule_has_shape};
         if (false == should_include) {
