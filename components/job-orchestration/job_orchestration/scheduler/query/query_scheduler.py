@@ -157,12 +157,22 @@ task_duration_histogram = meter.create_histogram(
 uncompressed_bytes_scanned_histogram = meter.create_histogram(
     "clp.query.uncompressed_bytes_scanned",
     unit="By",
-    description="Uncompressed bytes of archive data selected for query jobs",
+    description="Uncompressed archive data selected for query jobs",
 )
 compressed_bytes_scanned_histogram = meter.create_histogram(
     "clp.query.compressed_bytes_scanned",
     unit="By",
-    description="Compressed (on-disk) bytes of archive data selected for query jobs",
+    description="Compressed archive data selected for query jobs",
+)
+uncompressed_bytes_scanned_counter = meter.create_counter(
+    "clp.query.uncompressed_bytes_scanned_total",
+    unit="By",
+    description="Cumulative uncompressed bytes of archive data selected for query jobs",
+)
+compressed_bytes_scanned_counter = meter.create_counter(
+    "clp.query.compressed_bytes_scanned_total",
+    unit="By",
+    description="Cumulative compressed (on-disk) bytes of archive data selected for query jobs",
 )
 
 
@@ -1032,6 +1042,8 @@ async def handle_finished_search_job(
         job_duration_histogram.record(duration)
         uncompressed_bytes_scanned_histogram.record(job.uncompressed_bytes_scanned)
         compressed_bytes_scanned_histogram.record(job.compressed_bytes_scanned)
+        uncompressed_bytes_scanned_counter.add(job.uncompressed_bytes_scanned)
+        compressed_bytes_scanned_counter.add(job.compressed_bytes_scanned)
         if new_job_status == QueryJobStatus.SUCCEEDED:
             logger.info(f"Completed job {job_id}.")
         elif reducer_failed:
