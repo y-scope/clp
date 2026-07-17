@@ -8,6 +8,7 @@
 #include <optional>
 #include <queue>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -1057,9 +1058,12 @@ auto SchemaMatch::resolve_clpp_query(
     // This is the first place we know we need the contents of the dict (to avoid reading it
     // unnecessarily), but it may be called multiple times and read_entries doesn't seem to track if
     // it has been read previously or not.
-    auto& log_shape_dict{*m_archive_reader->get_log_shape_dictionary()};
-    if (log_shape_dict.get_entries().empty()) {
-        log_shape_dict.read_entries();
+    auto log_shape_dict{m_archive_reader->get_log_shape_dictionary()};
+    if (nullptr == log_shape_dict) {
+        throw std::runtime_error{"archive does not contain log shape data"};
+    }
+    if (log_shape_dict->get_entries().empty()) {
+        log_shape_dict->read_entries();
     }
 
     auto column_name{m_tree->build_column_name(root_node_id)};
@@ -1067,7 +1071,7 @@ auto SchemaMatch::resolve_clpp_query(
     auto match_and_create_exists_filter{
             [&](auto const& matcher) -> std::shared_ptr<ast::Expression> {
                 auto matched_schema_ids{
-                        find_schemas_matching_predicate(column_name, log_shape_dict, matcher)
+                        find_schemas_matching_predicate(column_name, *log_shape_dict, matcher)
                 };
                 if (matched_schema_ids.empty()) {
                     return nullptr;
@@ -1110,7 +1114,7 @@ auto SchemaMatch::resolve_clpp_query(
     for (auto const& interpretation : dq.value()->get_interpretations()) {
         auto matched_schema_ids{find_schemas_matching_predicate(
                 column_name,
-                log_shape_dict,
+                *log_shape_dict,
                 [&](std::string_view value) -> bool {
                     return clp::string_utils::wildcard_match_unsafe(
                             value,
