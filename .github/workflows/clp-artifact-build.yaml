@@ -840,7 +840,8 @@ jobs:
             HOME=/tmp
             task package-build-deps
 
-      - uses: "./.github/actions/clp-build-runtime-image"
+      - id: "build-runtime-image"
+        uses: "./.github/actions/clp-build-runtime-image"
         with:
           image_registry: "ghcr.io"
           image_registry_username: "${{github.actor}}"
@@ -865,6 +866,12 @@ jobs:
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
             HOME=/tmp
             task package-assemble OUTPUT_DIR=build/clp-package
+
+      - name: "Write the package image ID"
+        shell: "bash"
+        run: >-
+          echo "${{steps.build-runtime-image.outputs.image_id}}"
+          > "build/clp-package/clp-package-image.id"
 
       - name: "Tar the package directories"
         shell: "bash"

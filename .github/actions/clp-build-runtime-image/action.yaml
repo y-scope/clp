@@ -26,6 +26,11 @@ inputs:
     description: "Whether to publish the package image"
     required: true
 
+outputs:
+  image_id:
+    description: "The ID of the built container image."
+    value: "${{steps.build-and-push.outputs.imageid}}"
+
 runs:
   using: "composite"
   steps:
@@ -97,6 +102,7 @@ runs:
         fi
 
     - name: "Build and Push"
+      id: "build-and-push"
       uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
       with:
         context: "./"
