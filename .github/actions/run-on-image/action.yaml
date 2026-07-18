@@ -11,10 +11,6 @@ inputs:
   run_command:
     description: "Command to execute"
     required: true
-  mount_host_tmp_dir:
-    description: "Whether to mount the host's `/tmp` at the same path in the container"
-    required: false
-    default: "false"
 
 runs:
   using: "composite"
@@ -52,7 +48,6 @@ runs:
         ${{inputs.use_published_image == 'true' && '--pull=always' || ''}}
         --user $(id -u):$(id -g)
         --volume "$GITHUB_WORKSPACE":/mnt/repo
-        ${{inputs.mount_host_tmp_dir == 'true' && '--volume /tmp:/tmp' || ''}}
         --workdir /mnt/repo
         ${{steps.get_image_props.outputs.qualified_image_name}}
         bash -c "${{inputs.run_command}}"

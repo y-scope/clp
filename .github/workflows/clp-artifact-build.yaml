@@ -687,6 +687,9 @@ jobs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-binaries"
     runs-on: *runner
+    env:
+      OS_NAME: "ubuntu-jammy"
+      BUILD_DIR: "build"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
@@ -694,42 +697,30 @@ jobs:
 
       - name: "Download the binaries artifact"
         uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
-        env:
-          OS_NAME: "ubuntu-jammy"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
-          path: "/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
 
       - name: "Untar binaries"
-        env:
-          OS_NAME: "ubuntu-jammy"
         working-directory: >-
-          /tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
+          ${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
         run: |-
           tar xf clp.tar
           rm clp.tar
 
-      - uses: "./.github/actions/run-on-image"
-        env:
-          OS_NAME: "ubuntu-jammy"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
-          use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          mount_host_tmp_dir: "true"
-          run_command: >-
-            cd integration-tests
-            && CLP_BUILD_DIR=/tmp
-            CLP_CORE_BINS_DIR=/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
-            uv run pytest -m 'smoke or core'
+      - name: "Run core integration tests"
+        working-directory: "integration-tests"
+        run: >-
+          CLP_BUILD_DIR=../${{env.BUILD_DIR}}
+          CLP_CORE_BINS_DIR=../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}/clp
+          uv run pytest -m 'smoke or core'
 
       - name: "Upload the integration-test logs"
         if: "always()"
         uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
         with:
           name: "clp-integration-test-core-logs"
-          path: "/tmp/integration_tests/test_logs"
+          path: "${{env.BUILD_DIR}}/integration_tests/test_logs"
           retention-days: 3
 
   ubuntu-jammy-integration-tests-package:
@@ -745,57 +736,52 @@ jobs:
           ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
           && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
     runs-on: *runner
+    env:
+      OS_NAME: "ubuntu-jammy"
+      BUILD_DIR: "build"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
+      - name: "Download the package artifact"
+        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+        with:
+          name: "${{env.PACKAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}"
+          path: "${{env.BUILD_DIR}}/clp-package"
+
+      - name: "Untar the package"
+        working-directory: "${{env.BUILD_DIR}}/clp-package"
+        run: |-
+          tar xf clp-package.tar
+          rm clp-package.tar
+
       - name: "Download the package image artifact"
         uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
         with:
           name: "${{env.PACKAGE_IMAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}"
-          path: "/tmp/build/clp-package"
+          path: "${{env.BUILD_DIR}}/clp-package-image"
 
       - name: "Load the package image"
         shell: "bash"
         run: >-
           docker load
           --input
-          /tmp/build/clp-package/${{env.PACKAGE_IMAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}.tar
+          ${{env.BUILD_DIR}}/clp-package-image/${{env.PACKAGE_IMAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}.tar
 
-      - name: "Download the package artifact"
-        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
-        with:
-          name: "${{env.PACKAGE_ARTIFACT_NAME_PREFIX}}${{matrix.arch}}"
-          path: "/tmp/build/clp-package"
-
-      - name: "Untar the package"
-        shell: "bash"
+      - name: "Run package integration tests"
+        working-directory: "integration-tests"
         run: >-
-          tar --extract --file "/tmp/build/clp-package/clp-package.tar"
-          --directory "/tmp/build/clp-package"
-
-      - uses: "./.github/actions/run-on-image"
-        env:
-          OS_NAME: "ubuntu-jammy"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
-          use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          mount_host_tmp_dir: "true"
-          run_command: >-
-            cd integration-tests
-            && CLP_BUILD_DIR=/tmp/build
-            CLP_PACKAGE_DIR=/tmp/build/clp-package
-            uv run pytest -m 'smoke or package'
+          CLP_BUILD_DIR=../${{env.BUILD_DIR}}
+          CLP_PACKAGE_DIR=../${{env.BUILD_DIR}}/clp-package
+          uv run pytest -m 'smoke or package'
 
       - name: "Upload the integration-test logs"
         if: "always()"
         uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
         with:
           name: "clp-integration-test-logs"
-          path: "/tmp/build/integration_tests/test_logs"
+          path: "${{env.BUILD_DIR}}/integration_tests/test_logs"
           retention-days: 3
 
   package-image:
