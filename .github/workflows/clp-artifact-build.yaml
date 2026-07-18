@@ -721,7 +721,7 @@ jobs:
           run_command: >-
             cd integration-tests
             && CLP_BUILD_DIR=/tmp
-            CLP_CORE_BINS_DIR=/tmp/clp
+            CLP_CORE_BINS_DIR=/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
             uv run pytest -m 'smoke or core'
 
       - name: "Upload the integration-test logs"
