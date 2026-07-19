@@ -41,7 +41,7 @@ constexpr std::string_view cReservedNamespace1{"!"};
 constexpr std::string_view cReservedNamespace2{"#"};
 constexpr std::string_view cObjectSubtreeType{"object"};
 constexpr std::string_view cMetadataSubtreeType{"metadata"};
-constexpr std::string_view cLogTypeNodeName{"log_type"};
+constexpr std::string_view cLogShapeNodeName{"log_shape"};
 
 // Metadata constants
 namespace range_index {

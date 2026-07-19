@@ -1771,7 +1771,7 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
     };
     m_current_schema.insert_unordered(m_archive_writer->add_node(
             m_archive_writer
-                    ->add_node(log_msg_node_id, NodeType::LogType, constants::cLogTypeNodeName),
+                    ->add_node(log_msg_node_id, NodeType::LogType, constants::cLogShapeNodeName),
             NodeType::LogTypeID,
             fmt::format("{}", log_shape_id)
     ));
