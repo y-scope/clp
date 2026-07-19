@@ -721,7 +721,7 @@ jobs:
           run_command: >-
             cd integration-tests
             && CLP_BUILD_DIR=../${{env.BUILD_DIR}}
-            CLP_CORE_BINS_DIR=../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}/clp
+            CLP_CORE_BINS_DIR=../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
             HOME=/tmp
             uv run pytest -m 'smoke or core'
 
@@ -800,7 +800,7 @@ jobs:
         if: "always()"
         uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
         with:
-          name: "clp-integration-test-logs"
+          name: "clp-integration-test-package-logs"
           path: "${{env.BUILD_DIR}}/integration_tests/test_logs"
           retention-days: 3
 
