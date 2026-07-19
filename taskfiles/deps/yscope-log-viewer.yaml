@@ -1,0 +1,26 @@
+version: "3"
+
+vars:
+  G_DEPS_YSCOPE_LOG_VIEWER_SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/packages/yscope-log-viewer"
+
+tasks:
+  default:
+    deps: ["source"]
+
+  source:
+    internal: true
+    run: "once"
+    deps:
+      - ":utils:init"
+    cmds:
+      - task: ":yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_EXCLUDE_PATTERNS:
+            - ".turbo"
+            - "dist"
+            - "node_modules"
+          CHECKSUM_FILE: "{{.G_DEPS_DIR}}/yscope-log-viewer.md5"
+          FILE_SHA256: "ba306d91cfc7129de6d1dfedf41210ced0391074cf0843dc6f6d6cf068e16b4e"
+          OUTPUT_DIR: "{{.G_DEPS_YSCOPE_LOG_VIEWER_SRC_DIR}}"
+          TAR_FILE: "{{.G_DEPS_DIR}}/log-viewer-{{.G_GIT_COMMIT_HASH_YSCOPE_LOG_VIEWER}}.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/f9b46d2.tar.gz"

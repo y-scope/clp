@@ -101,5 +101,5 @@ tasks:
           CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
           FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
           OUTPUT_DIR: "{{.G_DEPS_LOG_VIEWER_SRC_DIR}}"
-          TAR_FILE: "{{.G_DEPS_DIR}}/yscope-log-viewer.tar.gz"
+          TAR_FILE: "{{.G_DEPS_DIR}}/log-viewer-{{.G_GIT_COMMIT_HASH_YSCOPE_LOG_VIEWER}}.tar.gz"
           URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"
