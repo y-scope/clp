@@ -66,13 +66,32 @@ header:^(?<timestamp><<<(?<date>) (?<time>))$
 header:^ [\+-]\d{2}(:?\d{2})?Z?$
 header:^ ?Z$
 
-# Specially-encoded variables
-float:^-?\d+\.\d+$
-int:^-?\d+$
+# common placeholders
+!float:[-+]?\d*\.?\d+([eE][-+]?\d+)?
+!int:-?\d+
+!hex:[\dA-Fa-f]+
+!uuid:[\dA-Fa-f-]+(-[\dA-Fa-f]+)+
+!txt:[\w_./\\-]
+!non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]
 
-# Dictionary variables
-!valid_txt:[\w_./\\-]*
-key_value:^(?<key>(?<valid_txt>))=(?<value>(?<valid_txt>)\w(?<valid_txt>))$
-!non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]*
-has_number:^(?<non_delim>)\d(?<non_delim>)$
-hex:^[\dA-Fa-f]+$
+# openstack
+instance_id:^\[instance: (?<id>(?<uuid>))\]$
+msg_id:^msg_id: (?<id>(?<hex>))$
+unique_id:^unique_id: (?<id>(?<hex>))$
+task_name:^task (?<name>(?<txt>)+)$
+
+# heuristic fallback patterns
+key_value:^(?<key>(?<txt>)*)[:=](?<float_value>(?<float>))$
+key_value:^(?<key>(?<txt>)*)[:=](?<int_value>(?<int>))$
+key_value:^(?<key>(?<txt>)*)[:=](?<hex_value>(?<hex>))$
+key_value:^(?<key>(?<txt>)*)[:=](?<uuid_value>(?<uuid>))$
+key_value:^(?<key>(?<txt>)*)[:=](?<str_value>(?<txt>)*\w(?<txt>)*)$
+
+duration:^(?<value>(?<float>))(?<unit>m|minutes|ms|us|s|seconds)$
+src_loc:^(?<file>/?(?<non_delim>)+(/(?<non_delim>)+)+\.(?<non_delim>)+):(?<line>\d+)$
+path:^/?(?<non_delim>)+(/(?<non_delim>)+)+$
+has_number:^(?<non_delim>)*\d(?<non_delim>)*$
+
+float_fallback:^(?<float>)$
+int_fallback:^(?<int>)$
+hex_fallback:^(?<hex>)$
