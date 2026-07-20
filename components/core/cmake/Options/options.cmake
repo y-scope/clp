@@ -284,6 +284,7 @@ endfunction()
 function(set_clp_s_clp_dependencies_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LOG_SURGEON
@@ -567,6 +568,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_CATCH2
         CLP_NEED_CURL
         CLP_NEED_DATE
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LIBLZMA

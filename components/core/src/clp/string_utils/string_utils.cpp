@@ -4,10 +4,11 @@
 #include <cctype>
 #include <cstddef>
 #include <cstring>
-#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 
+#include <fast_float/fast_float.h>
 #include "string_utils/constants.hpp"
 
 using std::string;
@@ -191,15 +192,8 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
 // std::stod is locale-dependent (respects the C locale's decimal point). In practice, we don't
 // modify this so the decimal point should be '.'.
 auto convert_string_to_double(std::string_view raw, double& converted) -> bool {
-    try {
-        size_t pos{};
-        converted = std::stod(std::string{raw}, &pos);
-        return pos == raw.size();
-    } catch (std::invalid_argument const&) {
-        return false;
-    } catch (std::out_of_range const&) {
-        return false;
-    }
+    auto const res{fast_float::from_chars(raw.begin(), raw.end(), converted)};
+    return res.ptr == raw.end() && std::errc{} == res.ec;
 }
 
 auto unescape_string(std::string_view str) -> std::string {
