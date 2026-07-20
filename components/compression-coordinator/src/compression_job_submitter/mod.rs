@@ -11,7 +11,10 @@ use clp_rust_utils::{
     task_io::compression::{ClpSCompressionOption, S3InputSource},
 };
 use serde::{Deserialize, Serialize};
-use spider_core::types::id::{JobId, ResourceGroupId};
+use spider_core::{
+    task::TimeoutPolicy,
+    types::id::{JobId, ResourceGroupId},
+};
 
 use crate::error::Error;
 
@@ -40,8 +43,9 @@ pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
     /// * `resource_group_id` - The Spider resource group to register the job under.
     /// * `clp_s_option` - `clp-s` tuning options shared by every task in the job.
     /// * `dataset` - The dataset to compress into.
-    /// * `input_sources` - S3 input sources to compress. Each represents an input to a compression
-    ///   task.
+    /// * `input_sources` - S3 input sources to compress, each paired with the timeout policy to
+    ///   apply to the compression task it creates. Each element represents an input to a
+    ///   compression task.
     ///
     /// # Returns
     ///
@@ -56,7 +60,7 @@ pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
         resource_group_id: ResourceGroupId,
         clp_s_option: ClpSCompressionOption,
         dataset: Option<String>,
-        input_sources: Vec<S3InputSource>,
+        input_sources: Vec<(S3InputSource, TimeoutPolicy)>,
     ) -> Result<JobId, Error>;
 
     /// Idempotently starts the job identified by `spider_job_id` (only if it hasn't already been
