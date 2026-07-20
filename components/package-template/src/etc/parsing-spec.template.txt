@@ -68,7 +68,7 @@ header:^ ?Z$
 
 
 # common placeholders
-!float:[-+]?\d*\.?\d+([eE][-+]?\d+)?
+!float:-?\d+\.\d+([eE]-?\d+)?
 !int:-?\d+
 !hex:[\dA-Fa-f]+
 !uuid:[\dA-Fa-f-]+(-[\dA-Fa-f]+)+
