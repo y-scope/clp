@@ -3,5 +3,6 @@
 
 pub mod compression_job_submitter;
 mod error;
+pub mod partition;
 
 pub use error::Error;
