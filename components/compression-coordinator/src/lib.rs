@@ -4,5 +4,4 @@
 pub mod compression_job_submitter;
 mod error;
 
-pub use compression_job_submitter::{CompressionJobOutcome, S3CompressionJobSubmitter};
 pub use error::Error;

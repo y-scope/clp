@@ -1,11 +1,16 @@
 //! The compression-job-submission API trait for driving CLP S3 compression jobs on a Spider
 //! (Huntsman) cluster.
 
+mod spider;
+
 use async_trait::async_trait;
-use clp_rust_utils::task_io::compression::{ClpSCompressionOption, S3InputSource};
+use clp_rust_utils::{
+    job_config::CompressionJobId,
+    task_io::compression::{ClpSCompressionOption, S3InputSource},
+};
 use serde::{Deserialize, Serialize};
 use spider_core::types::id::{JobId, ResourceGroupId};
-use clp_rust_utils::job_config::CompressionJobId;
+
 use crate::error::Error;
 
 /// The terminal outcome of a compression job.
