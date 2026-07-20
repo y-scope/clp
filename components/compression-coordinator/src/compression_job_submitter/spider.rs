@@ -17,7 +17,6 @@ use spider_core::{
         TaskGraph,
         TdlContext,
         TerminationTaskDescriptor,
-        TimeoutPolicy,
         ValueTypeDescriptor,
     },
     types::{
@@ -48,7 +47,8 @@ impl S3CompressionJobSubmitter for SpiderClient {
         resource_group_id: ResourceGroupId,
         clp_s_option: ClpSCompressionOption,
         dataset: Option<String>,
-        input_sources: Vec<S3InputSource>,
+        input_sources: Vec<(S3InputSource, ExecutionPolicy)>,
+        commit_task_execution_policy: ExecutionPolicy,
     ) -> Result<JobId, Error> {
         // NOTE: These constants must be kept in sync with the TDL package definitions.
         const CLP_TDL_PACKAGE_NAME: &str = "clp";
@@ -61,22 +61,13 @@ impl S3CompressionJobSubmitter for SpiderClient {
                 package: CLP_TDL_PACKAGE_NAME.to_owned(),
                 task_func: COMMIT_TASK_FUNC.to_owned(),
             },
-            execution_policy: None,
+            execution_policy: Some(commit_task_execution_policy),
         };
         let mut graph = TaskGraph::new(Some(commit_task), None)?;
 
         let mut inputs: Vec<TaskInput> =
             Vec::with_capacity(input_sources.len() * COMPRESSION_TASK_NUM_INPUTS);
-        for input_source in input_sources {
-            let timeout_ms: u64 = 5 * 1000 * input_source.object_keys.len() as u64;
-            let execution_policy = ExecutionPolicy {
-                max_num_retry: 2,
-                max_num_instances: 1,
-                timeout_policy: TimeoutPolicy {
-                    soft_timeout_ms: timeout_ms,
-                    hard_timeout_ms: timeout_ms + 1,
-                },
-            };
+        for (input_source, execution_policy) in input_sources {
             graph.insert_task(TaskDescriptor {
                 tdl_context: TdlContext {
                     package: CLP_TDL_PACKAGE_NAME.to_owned(),
