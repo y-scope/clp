@@ -9,6 +9,7 @@
 #include <system_error>
 
 #include <fast_float/fast_float.h>
+
 #include "string_utils/constants.hpp"
 
 using std::string;

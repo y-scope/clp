@@ -164,7 +164,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp_s_clp_dependencies
                 PUBLIC
                 clp::string_utils
-                FastFloat::fast_float
                 log-surgeon::log-surgeon
                 ystdlib::containers
                 zstd::libzstd_static

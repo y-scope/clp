@@ -66,6 +66,7 @@ header:^(?<timestamp><<<(?<date>) (?<time>))$
 header:^ [\+-]\d{2}(:?\d{2})?Z?$
 header:^ ?Z$
 
+
 # common placeholders
 !float:[-+]?\d*\.?\d+([eE][-+]?\d+)?
 !int:-?\d+
@@ -73,12 +74,6 @@ header:^ ?Z$
 !uuid:[\dA-Fa-f-]+(-[\dA-Fa-f]+)+
 !txt:[\w_./\\-]
 !non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]
-
-# openstack
-instance_id:^\[instance: (?<id>(?<uuid>))\]$
-msg_id:^msg_id: (?<id>(?<hex>))$
-unique_id:^unique_id: (?<id>(?<hex>))$
-task_name:^task (?<name>(?<txt>)+)$
 
 # heuristic fallback patterns
 key_value:^(?<key>(?<txt>)*)[:=](?<float_value>(?<float>))$

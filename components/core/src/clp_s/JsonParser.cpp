@@ -1722,10 +1722,12 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
             for (auto const& encoding : matched_encodings) {
                 // TODO clpp: awkward blacklist to temporarily fix auto encoding
                 if ("key_value.key" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
-                        || "key_value.str_value" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
-                        || "src_loc.file" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
-                        || "path" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
-                        || "has_number" == match->ffi_pointers.fully_qualified_name.as_cpp_view()) {
+                    || "key_value.str_value"
+                               == match->ffi_pointers.fully_qualified_name.as_cpp_view()
+                    || "src_loc.file" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
+                    || "path" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
+                    || "has_number" == match->ffi_pointers.fully_qualified_name.as_cpp_view())
+                {
                     break;
                 }
                 if (clpp::cFloatEncodingName == encoding) {
@@ -1737,7 +1739,11 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
                         node_id = float_node_id.value();
                         break;
                     }
-                    SPDLOG_WARN("failed float conversion '{}': '{}'", match->ffi_pointers.fully_qualified_name.as_cpp_view(), lexeme);
+                    SPDLOG_WARN(
+                            "failed float conversion '{}': '{}'",
+                            match->ffi_pointers.fully_qualified_name.as_cpp_view(),
+                            lexeme
+                    );
                 } else if (clpp::cIntEncodingName == encoding) {
                     if (encoded_variable_t var{0}; clp::EncodedVariableInterpreter::
                                 convert_string_to_representable_integer_var(lexeme, var))
