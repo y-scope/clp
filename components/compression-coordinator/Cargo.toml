@@ -8,5 +8,9 @@ name = "compression_coordinator"
 path = "src/lib.rs"
 
 [dependencies]
+async-trait = "0.1.89"
 clp-rust-utils = { path = "../clp-rust-utils" }
+serde = { version = "1.0.228", features = ["derive"] }
+spider-core = { git = "https://github.com/y-scope/spider.git", branch = "main" }
 strsim = "0.11.1"
+thiserror = "2.0.18"
