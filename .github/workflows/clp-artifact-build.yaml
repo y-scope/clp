@@ -530,7 +530,8 @@ jobs:
 
           mkdir -p "${output_dir}"
           cd "$GITHUB_WORKSPACE/components/core/build"
-          tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
+          tar cfvv "${output_dir}/clp.tar" \
+            clg clo clp clp-s glt indexer log-converter make-dictionaries-readable reducer-server
         shell: "bash"
 
       - if: "matrix.upload_binaries == true"
@@ -684,9 +685,7 @@ jobs:
     if: >-
       !cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'
     needs:
-      - "filter-relevant-changes"
       - "ubuntu-jammy-binaries"
-      - "ubuntu-jammy-x86_64-deps-image"
     runs-on: *runner
     env:
       OS_NAME: "ubuntu-jammy"
