@@ -14,3 +14,6 @@ serde = { version = "1.0.228", features = ["derive"] }
 spider-core = { git = "https://github.com/y-scope/spider.git", branch = "main" }
 strsim = "0.11.1"
 thiserror = "2.0.18"
+
+[dev-dependencies]
+non-empty-string = "0.2.6"

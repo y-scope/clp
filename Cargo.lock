@@ -994,6 +994,7 @@ version = "0.13.1-dev"
 dependencies = [
  "async-trait",
  "clp-rust-utils",
+ "non-empty-string",
  "serde",
  "spider-core",
  "strsim",
