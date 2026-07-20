@@ -389,8 +389,11 @@ auto output_schema_tree_stats(
         clp_s::ArchiveReader& archive_reader,
         clp_s::search::OutputHandler& output_handler
 ) -> void {
-    auto nodes{nlohmann::json::array()};
+    nlohmann::json::array_t nodes;
     for (auto const& node : archive_reader.get_schema_tree()->get_nodes()) {
+        if (0 > node.get_id()) {
+            continue;
+        }
         nodes.push_back({
                 {"id", node.get_id()},
                 {"parent_id", node.get_parent_id()},
