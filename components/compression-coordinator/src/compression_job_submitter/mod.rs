@@ -3,6 +3,8 @@
 
 mod spider;
 
+use std::time::Duration;
+
 use async_trait::async_trait;
 use clp_rust_utils::{
     job_config::CompressionJobId,
@@ -66,6 +68,8 @@ pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
     /// # Parameters
     ///
     /// * `spider_job_id` - The job to start (if needed) and wait on.
+    /// * `initial_poll_backoff` - The delay before the first job-state poll.
+    /// * `max_poll_backoff` - The cap on the delay between job-state polls.
     ///
     /// # Returns
     ///
@@ -77,5 +81,7 @@ pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
     async fn run_s3_compression_job_to_completion(
         &self,
         spider_job_id: JobId,
+        initial_poll_backoff: Duration,
+        max_poll_backoff: Duration,
     ) -> Result<CompressionJobOutcome, Error>;
 }
