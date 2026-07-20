@@ -1,0 +1,12 @@
+[package]
+name = "compression-coordinator"
+version = "0.13.1-dev"
+edition = "2024"
+
+[lib]
+name = "compression_coordinator"
+path = "src/lib.rs"
+
+[dependencies]
+clp-rust-utils = { path = "../clp-rust-utils" }
+strsim = "0.11.1"
