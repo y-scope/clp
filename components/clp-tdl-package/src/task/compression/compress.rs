@@ -232,8 +232,7 @@ struct ArchiveFinisher {
 }
 
 impl ArchiveFinisher {
-    /// Publishes one produced archive: indexes it and uploads it to S3 concurrently, then deletes
-    /// the local staging copy.
+    /// Publishes one produced archive: indexes it and uploads it to S3 concurrently.
     ///
     /// # Errors
     ///
