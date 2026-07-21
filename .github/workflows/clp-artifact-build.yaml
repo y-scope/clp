@@ -109,6 +109,7 @@ jobs:
               - "components/core/src/**"
               - "components/core/tests/**"
               - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
+              - "integration-tests/**"
               - "taskfile.yaml"
               - "taskfiles/**"
               - "tools/scripts/deps-download/**"
@@ -680,10 +681,9 @@ jobs:
 
   ubuntu-jammy-integration-tests-core:
     name: "ubuntu-jammy-integration-tests-core"
-    if: >-
-      !cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'
-    needs:
-      - "ubuntu-jammy-binaries"
+    # Run if the ancestor jobs were successful/skipped and building clp was successful.
+    if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
+    needs: "ubuntu-jammy-binaries"
     runs-on: *runner
     env:
       OS_NAME: "ubuntu-jammy"
@@ -714,13 +714,12 @@ jobs:
 
       - name: "Run package integration tests"
         working-directory: "integration-tests"
-        run: |-
-          CLP_BUILD_DIR=\
-          ../${{env.BUILD_DIR}} \
-          CLP_CORE_BINS_DIR=\
-          ../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}} \
-          HOME=/tmp \
-          uv run pytest -m 'smoke or core'
+        env:
+          CLP_BUILD_DIR: "../${{env.BUILD_DIR}}"
+          CLP_CORE_BINS_DIR: >-
+            ../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
+          HOME: "/tmp"
+        run: "uv run pytest -m 'smoke or core'"
 
       - name: "Upload the integration-test logs"
         if: "always()"
