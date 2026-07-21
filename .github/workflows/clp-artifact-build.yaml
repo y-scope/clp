@@ -781,6 +781,7 @@ jobs:
 
   spider-worker-image:
     name: "spider-worker-image"
+    # Run if the ancestor jobs were successful/skipped and building clp was successful.
     if: >-
       !cancelled() && !failure() && (
         needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
@@ -841,7 +842,6 @@ jobs:
         with:
           context: "."
           file: "tools/docker-images/clp-spider-worker/Dockerfile"
-          pull: true
           provenance: false
           push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
           tags: "${{steps.spider_worker_image_meta.outputs.tags}}"
