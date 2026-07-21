@@ -52,8 +52,8 @@ impl S3CompressionJobSubmitter for SpiderClient {
     ) -> Result<JobId, Error> {
         // NOTE: These constants must be kept in sync with the TDL package definitions.
         const CLP_TDL_PACKAGE_NAME: &str = "clp";
-        const COMPRESSION_TASK_FUNC: &str = "compression::clp_s_compress";
-        const COMMIT_TASK_FUNC: &str = "compression::clp_s_commit";
+        const COMPRESSION_TASK_FUNC: &str = "compression::clp_s_s3_compress";
+        const COMMIT_TASK_FUNC: &str = "compression::commit";
         const COMPRESSION_TASK_NUM_INPUTS: usize = 3;
 
         let commit_task = TerminationTaskDescriptor {
