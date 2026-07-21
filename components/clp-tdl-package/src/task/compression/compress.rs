@@ -73,6 +73,8 @@ pub(super) fn compress(
         "CLP S3 compression task started.",
     );
 
+    let mut tmp_file_deleter = TmpFileDeleter::new();
+
     std::fs::write(&list_path, build_s3_logs_list(&input_source))
         .with_context(|| format!("failed to write S3 logs list to {}", list_path.display()))
         .inspect_err(|e| {
@@ -82,6 +84,7 @@ pub(super) fn compress(
                 "Failed to write S3 logs list to tmp directory."
             );
         })?;
+    tmp_file_deleter.add(list_path.clone());
 
     let S3InputSource {
         aws_authentication, ..
@@ -105,6 +108,8 @@ pub(super) fn compress(
 
     let archive_dir_clone = archive_dir.clone();
     let archive_callback = |archive: ArchiveMetadata| {
+        let archive_staging_path = archive_dir_clone.join(&archive.id);
+        tmp_file_deleter.add(archive_staging_path.clone());
         finishers.spawn_on(
             ArchiveFinisher {
                 client: client.clone(),
@@ -113,7 +118,7 @@ pub(super) fn compress(
                 indexer_bin: indexer_bin.clone(),
                 database: config.database.clone(),
                 dataset: dataset.clone(),
-                local_path: archive_dir_clone.join(&archive.id),
+                local_path: archive_staging_path,
                 archive_id: archive.id.clone(),
             }
             .finish(),
@@ -167,6 +172,53 @@ pub(super) fn compress(
     Ok(CompressionTaskOutput { dataset, archives })
 }
 
+/// Buffers tmp paths and deletes them when dropped, warning (rather than failing) on any deletion
+/// error.
+///
+/// # Note
+///
+/// * Deletion is sequential and blocking.
+/// * A path that cannot be deleted is logged as a warning and skipped rather than propagated, since
+///   a destructor cannot fail.
+struct TmpFileDeleter {
+    paths: Vec<PathBuf>,
+}
+
+impl TmpFileDeleter {
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// An empty [`TmpFileDeleter`].
+    const fn new() -> Self {
+        Self { paths: Vec::new() }
+    }
+
+    /// Registers `path` for deletion when this deleter is dropped.
+    fn add(&mut self, path: PathBuf) {
+        self.paths.push(path);
+    }
+}
+
+impl Drop for TmpFileDeleter {
+    fn drop(&mut self) {
+        for path in &self.paths {
+            let result = if path.is_dir() {
+                std::fs::remove_dir_all(path)
+            } else {
+                std::fs::remove_file(path)
+            };
+            if let Err(e) = result {
+                tracing::warn!(
+                    error = % e,
+                    path = % path.display(),
+                    "Failed to delete tmp path."
+                );
+            }
+        }
+    }
+}
+
 /// The owned inputs one spawned finisher needs to publish a single archive.
 struct ArchiveFinisher {
     client: aws_sdk_s3::Client,
@@ -190,7 +242,6 @@ impl ArchiveFinisher {
     /// * The indexer task panics.
     /// * Forwards [`put_file`]'s return values on failure.
     /// * Forwards [`run_indexer`]'s return values on failure.
-    /// * Forwards [`tokio::fs::remove_file`]'s return values on failure.
     async fn finish(self) -> anyhow::Result<()> {
         let Self {
             client,
@@ -228,16 +279,6 @@ impl ArchiveFinisher {
                     "indexer panicked."
                 );
             })??;
-        tokio::fs::remove_file(&local_path)
-            .await
-            .with_context(|| format!("failed to delete local archive {}", local_path.display()))
-            .inspect_err(|e| {
-                tracing::error!(
-                    error = % e,
-                    local_path = % local_path.display(),
-                    "Failed to delete local staging archive."
-                );
-            })?;
         anyhow::Ok(())
     }
 }
