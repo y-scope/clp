@@ -996,7 +996,9 @@ dependencies = [
  "clp-rust-utils",
  "serde",
  "spider-core",
+ "sqlx",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]

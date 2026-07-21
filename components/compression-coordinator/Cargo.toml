@@ -12,4 +12,6 @@ async-trait = "0.1.89"
 clp-rust-utils = { path = "../clp-rust-utils" }
 serde = { version = "1.0.228", features = ["derive"] }
 spider-core = { git = "https://github.com/y-scope/spider.git", branch = "main" }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
 thiserror = "2.0.18"
+tracing = "0.1.44"
