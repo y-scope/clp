@@ -712,7 +712,7 @@ jobs:
       - name: "Install MariaDB Connector/C"
         run: "sudo apt-get update && sudo apt-get install -y libmariadb-dev"
 
-      - name: "Run package integration tests"
+      - name: "Run core integration tests"
         working-directory: "integration-tests"
         env:
           CLP_BUILD_DIR: "../${{env.BUILD_DIR}}"
@@ -721,7 +721,7 @@ jobs:
           HOME: "/tmp"
         run: "uv run pytest -m 'smoke or core'"
 
-      - name: "Upload the integration-test logs"
+      - name: "Upload the package integration test logs"
         if: "always()"
         uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
         with:
