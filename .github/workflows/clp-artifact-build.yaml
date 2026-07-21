@@ -714,10 +714,12 @@ jobs:
 
       - name: "Run package integration tests"
         working-directory: "integration-tests"
-        run: >-
-          CLP_BUILD_DIR=../${{env.BUILD_DIR}}
-          CLP_CORE_BINS_DIR=../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
-          HOME=/tmp
+        run: |-
+          CLP_BUILD_DIR=\
+          ../${{env.BUILD_DIR}} \
+          CLP_CORE_BINS_DIR=\
+          ../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}} \
+          HOME=/tmp \
           uv run pytest -m 'smoke or core'
 
       - name: "Upload the integration-test logs"
