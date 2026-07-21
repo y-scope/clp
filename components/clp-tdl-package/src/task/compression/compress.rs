@@ -47,13 +47,11 @@ use crate::common::{clp_home, runtime};
 ///
 /// Returns an error if:
 ///
-/// * Forwards the async archive callback's return values on failure:
-///   * Forwards [`tokio::fs::remove_file`]'s return values on failure.
-///   * Forwards [`put_file`]'s return values on failure.
-///   * Forwards [`run_indexer`]'s return values on failure.
+/// * A spawned archive finisher panics.
 /// * Forwards [`std::fs::write`]'s return values on failure.
 /// * Forwards [`extract_s3_output_config`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
+/// * Forwards [`ArchiveFinisher::finish`]'s return values on failure.
 pub(super) fn compress(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
@@ -76,13 +74,14 @@ pub(super) fn compress(
     );
 
     std::fs::write(&list_path, build_s3_logs_list(&input_source))
-        .with_context(|| format!("failed to write S3 logs list to {}", list_path.display())).inspect_err(|e|
-        tracing::error!(
-            error = % e,
-            list_path = % list_path.display(),
-            "Failed to write S3 logs list to tmp directory."
-        )
-    )?;
+        .with_context(|| format!("failed to write S3 logs list to {}", list_path.display()))
+        .inspect_err(|e| {
+            tracing::error!(
+                error = % e,
+                list_path = % list_path.display(),
+                "Failed to write S3 logs list to tmp directory."
+            );
+        })?;
 
     let S3InputSource {
         aws_authentication, ..
@@ -98,15 +97,7 @@ pub(super) fn compress(
     let indexer_bin = clp_binary_path(clp_home, "indexer");
 
     let runtime = runtime();
-    let region = s3_config
-        .region_code
-        .as_ref()
-        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-    let client = runtime.block_on(create_new_client(
-        region,
-        s3_config.endpoint_url.as_ref(),
-        &s3_config.aws_authentication,
-    ));
+    let client = build_s3_client(&runtime, s3_config);
     let bucket = s3_config.bucket.to_string();
 
     let mut archives = Vec::new();
@@ -114,53 +105,20 @@ pub(super) fn compress(
 
     let archive_dir_clone = archive_dir.clone();
     let archive_callback = |archive: ArchiveMetadata| {
-        let local_path = archive_dir_clone.join(&archive.id);
-        let key = create_archive_s3_key(&config.archive_output, dataset.as_deref(), &archive.id);
-        let client = client.clone();
-        let bucket = bucket.clone();
-        let db_config = config.database.clone();
-        let indexer_bin = indexer_bin.clone();
-        let dataset = dataset.clone();
-        let archive_id = archive.id.clone();
-        let index_and_upload = async move {
-            let index_path = local_path.clone();
-            let index = tokio::task::spawn_blocking(move || {
-                run_indexer(&indexer_bin, &db_config, dataset.as_deref(), &index_path)
-            });
-            let (upload_result, index_result) =
-                tokio::join!(put_file(&client, &bucket, &key, &local_path), index,);
-            upload_result
-                .context("failed to upload archive to S3")
-                .inspect_err(|e| {
-                    tracing::error!(
-                        error = % e,
-                        archive_id = % archive_id,
-                        bucket = % bucket,
-                        key = % key,
-                        "Failed to upload archive to S3."
-                    )
-                })?;
-            index_result
-                .map_err(|e| anyhow::anyhow!("indexer task panicked: {e}"))
-                .inspect_err(|e| {
-                    tracing::error!(
-                        error = % e,
-                        "indexer panicked."
-                    )
-                })??;
-            tokio::fs::remove_file(&local_path)
-                .await
-                .with_context(|| format!("failed to delete local archive {}", local_path.display()))
-                .inspect_err(|e| {
-                    tracing::error!(
-                        error = % e,
-                        local_path = % local_path.display(),
-                        "Failed to delete local staging archive."
-                    )
-                })?;
-            anyhow::Ok(())
-        };
-        finishers.spawn_on(index_and_upload, &runtime);
+        finishers.spawn_on(
+            ArchiveFinisher {
+                client: client.clone(),
+                bucket: bucket.clone(),
+                key: create_archive_s3_key(&config.archive_output, dataset.as_deref(), &archive.id),
+                indexer_bin: indexer_bin.clone(),
+                database: config.database.clone(),
+                dataset: dataset.clone(),
+                local_path: archive_dir_clone.join(&archive.id),
+                archive_id: archive.id.clone(),
+            }
+            .finish(),
+            &runtime,
+        );
         archives.push(archive);
         Ok(())
     };
@@ -183,7 +141,7 @@ pub(super) fn compress(
                     tracing::error!(
                         error = % e,
                         "Archive callback panicked."
-                    )
+                    );
                 })
                 .and_then(|r| r);
             if let Err(e) = result
@@ -207,6 +165,99 @@ pub(super) fn compress(
         "CLP S3 compression task completed successfully.",
     );
     Ok(CompressionTaskOutput { dataset, archives })
+}
+
+/// The owned inputs one spawned finisher needs to publish a single archive.
+struct ArchiveFinisher {
+    client: aws_sdk_s3::Client,
+    bucket: String,
+    key: String,
+    indexer_bin: PathBuf,
+    database: Database,
+    dataset: Option<String>,
+    local_path: PathBuf,
+    archive_id: String,
+}
+
+impl ArchiveFinisher {
+    /// Publishes one produced archive: indexes it and uploads it to S3 concurrently, then deletes
+    /// the local staging copy.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * The indexer task panics.
+    /// * Forwards [`put_file`]'s return values on failure.
+    /// * Forwards [`run_indexer`]'s return values on failure.
+    /// * Forwards [`tokio::fs::remove_file`]'s return values on failure.
+    async fn finish(self) -> anyhow::Result<()> {
+        let Self {
+            client,
+            bucket,
+            key,
+            indexer_bin,
+            database,
+            dataset,
+            local_path,
+            archive_id,
+        } = self;
+
+        let index_path = local_path.clone();
+        let index = tokio::task::spawn_blocking(move || {
+            run_indexer(&indexer_bin, &database, dataset.as_deref(), &index_path)
+        });
+        let (upload_result, index_result) =
+            tokio::join!(put_file(&client, &bucket, &key, &local_path), index);
+        upload_result
+            .context("failed to upload archive to S3")
+            .inspect_err(|e| {
+                tracing::error!(
+                    error = % e,
+                    archive_id = % archive_id,
+                    bucket = % bucket,
+                    key = % key,
+                    "Failed to upload archive to S3."
+                );
+            })?;
+        index_result
+            .map_err(|e| anyhow::anyhow!("indexer task panicked: {e}"))
+            .inspect_err(|e| {
+                tracing::error!(
+                    error = % e,
+                    "indexer panicked."
+                );
+            })??;
+        tokio::fs::remove_file(&local_path)
+            .await
+            .with_context(|| format!("failed to delete local archive {}", local_path.display()))
+            .inspect_err(|e| {
+                tracing::error!(
+                    error = % e,
+                    local_path = % local_path.display(),
+                    "Failed to delete local staging archive."
+                );
+            })?;
+        anyhow::Ok(())
+    }
+}
+
+/// Builds an S3 client for the archive-output bucket, resolving the region to
+/// [`AWS_DEFAULT_REGION`] when the config omits it.
+///
+/// # Returns
+///
+/// The S3 client the archives are uploaded through.
+fn build_s3_client(runtime: &tokio::runtime::Handle, s3_config: &S3Config) -> aws_sdk_s3::Client {
+    let region = s3_config
+        .region_code
+        .as_ref()
+        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
+    runtime.block_on(create_new_client(
+        region,
+        s3_config.endpoint_url.as_ref(),
+        &s3_config.aws_authentication,
+    ))
 }
 
 /// Builds the `--files-from` list of S3 object URLs for clp-s.
