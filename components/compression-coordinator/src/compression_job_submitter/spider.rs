@@ -76,17 +76,17 @@ impl S3CompressionJobSubmitter for SpiderClient {
                 execution_policy: Some(execution_policy),
                 inputs: vec![
                     DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        "ClpSCompressionOption",
+                        stringify!(ClpSCompressionOption),
                     )?),
                     DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        "Option<String>",
+                        stringify!(Option<String>),
                     )?),
                     DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        "S3InputSource",
+                        stringify!(S3InputSource),
                     )?),
                 ],
                 outputs: vec![DataTypeDescriptor::Value(
-                    ValueTypeDescriptor::struct_from_name("Vec<ArchiveMetadata>")?,
+                    ValueTypeDescriptor::struct_from_name("CompressionTaskOutput")?,
                 )],
                 input_sources: None,
             })?;
@@ -128,14 +128,14 @@ impl S3CompressionJobSubmitter for SpiderClient {
             Err(error) => return Err(error.into()),
         }
 
-        let mut backoff = initial_poll_backoff;
+        let mut backoff = initial_poll_backoff.min(max_poll_backoff);
         let terminal_state = loop {
             let state = self.get_job_state(spider_job_id).await?;
             if state.is_terminal() {
                 break state;
             }
             tokio::time::sleep(backoff).await;
-            backoff = (backoff * POLL_BACKOFF_FACTOR).min(max_poll_backoff);
+            backoff = backoff.saturating_mul(POLL_BACKOFF_FACTOR).min(max_poll_backoff);
         };
 
         Ok(match terminal_state {
