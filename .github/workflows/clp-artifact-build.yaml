@@ -7,6 +7,11 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - "components/core/tools/scripts/lib_install/macos/**"
       - "docs/**"
+      - "integration-tests/**"
+      - "lint-requirements.txt"
+      - "tools/deployment/**"
+      - "tools/scripts/find-broken-docs-links.py"
+      - "tools/scripts/localstack/**"
   push:
     paths-ignore: *ignored_paths
   schedule:
