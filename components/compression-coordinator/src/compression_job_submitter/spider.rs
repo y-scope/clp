@@ -5,7 +5,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use clp_rust_utils::{
     job_config::CompressionJobId,
-    task_io::compression::{ClpSCompressionOption, CompressionTaskOutput, S3InputSource},
+    task_io::compression::{ClpSCompressionOption, S3InputSource},
 };
 use spider_client::{SpiderClient, error::ClientError};
 use spider_core::{
@@ -75,18 +75,18 @@ impl S3CompressionJobSubmitter for SpiderClient {
                 },
                 execution_policy: Some(execution_policy),
                 inputs: vec![
-                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(stringify!(
-                        ClpSCompressionOption
-                    ))?),
-                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(stringify!(
-                        Option<String>
-                    ))?),
-                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(stringify!(
-                        S3InputSource
-                    ))?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
+                        "ClpSCompressionOption",
+                    )?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
+                        "Option<String>",
+                    )?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
+                        "S3InputSource",
+                    )?),
                 ],
                 outputs: vec![DataTypeDescriptor::Value(
-                    ValueTypeDescriptor::struct_from_name(stringify!(CompressionTaskOutput))?,
+                    ValueTypeDescriptor::struct_from_name("CompressionTaskOutput")?,
                 )],
                 input_sources: None,
             })?;
