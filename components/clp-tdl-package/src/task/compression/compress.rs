@@ -33,8 +33,8 @@ use non_empty_string::NonEmptyString;
 
 use crate::common::{clp_home, runtime};
 
-/// Compresses one partition of S3 objects into archives, uploads them to S3, and returns their
-/// metadata for the commit task.
+/// Compresses the given S3 objects into archives, uploads them to S3, and returns their metadata
+/// for the commit task.
 ///
 /// A pure worker function called by a spider-tdl task wrapper, which formats any returned
 /// `anyhow::Error` into a user-space TDL error.
@@ -47,11 +47,13 @@ use crate::common::{clp_home, runtime};
 ///
 /// Returns an error if:
 ///
-/// * The S3 logs list cannot be written to the tmp directory.
-/// * An archive cannot be uploaded to S3, or a local archive cannot be deleted.
-/// * Forwards [`s3_archive_output`]'s return values on failure.
+/// * Forwards the async archive callback's return values on failure:
+///   * Forwards [`tokio::fs::remove_file`]'s return values on failure.
+///   * Forwards [`put_file`]'s return values on failure.
+///   * Forwards [`run_indexer`]'s return values on failure.
+/// * Forwards [`std::fs::write`]'s return values on failure.
+/// * Forwards [`extract_s3_output_config`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
-/// * Forwards [`run_indexer`]'s return values on failure.
 pub(super) fn compress(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
@@ -64,17 +66,33 @@ pub(super) fn compress(
         "compression-{}-{}-{}-log-paths.txt",
         ctx.job_id, ctx.task_id, ctx.task_instance_id,
     ));
+
+    tracing::info!(
+        job_id = % ctx.job_id,
+        task_id = % ctx.task_id,
+        task_instance_id = % ctx.task_instance_id,
+        list_path = % list_path.display(),
+        "CLP S3 compression task started.",
+    );
+
     std::fs::write(&list_path, build_s3_logs_list(&input_source))
-        .with_context(|| format!("failed to write S3 logs list to {}", list_path.display()))?;
+        .with_context(|| format!("failed to write S3 logs list to {}", list_path.display())).inspect_err(|e|
+        tracing::error!(
+            error = % e,
+            list_path = % list_path.display(),
+            "Failed to write S3 logs list to tmp directory."
+        )
+    )?;
 
     let S3InputSource {
         aws_authentication, ..
     } = input_source;
     let credential_env = s3_credential_env(&aws_authentication);
 
-    let dataset = dataset.unwrap_or_else(|| resolve_dataset_name(None).to_owned());
-    let s3_config = s3_archive_output(config)?;
-    let archive_dir = config.abs_archive_output_staging(clp_home).join(&dataset);
+    let s3_config = extract_s3_output_config(config)?;
+    let archive_dir = config
+        .abs_archive_output_staging(clp_home)
+        .join(resolve_dataset_name(dataset.as_deref()));
 
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let indexer_bin = clp_binary_path(clp_home, "indexer");
@@ -94,49 +112,79 @@ pub(super) fn compress(
     let mut archives = Vec::new();
     let mut finishers = tokio::task::JoinSet::new();
 
-    let run_result = run_clp_s(
+    let archive_dir_clone = archive_dir.clone();
+    let archive_callback = |archive: ArchiveMetadata| {
+        let local_path = archive_dir_clone.join(&archive.id);
+        let key = create_archive_s3_key(&config.archive_output, dataset.as_deref(), &archive.id);
+        let client = client.clone();
+        let bucket = bucket.clone();
+        let db_config = config.database.clone();
+        let indexer_bin = indexer_bin.clone();
+        let dataset = dataset.clone();
+        let archive_id = archive.id.clone();
+        let index_and_upload = async move {
+            let index_path = local_path.clone();
+            let index = tokio::task::spawn_blocking(move || {
+                run_indexer(&indexer_bin, &db_config, dataset.as_deref(), &index_path)
+            });
+            let (upload_result, index_result) =
+                tokio::join!(put_file(&client, &bucket, &key, &local_path), index,);
+            upload_result
+                .context("failed to upload archive to S3")
+                .inspect_err(|e| {
+                    tracing::error!(
+                        error = % e,
+                        archive_id = % archive_id,
+                        bucket = % bucket,
+                        key = % key,
+                        "Failed to upload archive to S3."
+                    )
+                })?;
+            index_result
+                .map_err(|e| anyhow::anyhow!("indexer task panicked: {e}"))
+                .inspect_err(|e| {
+                    tracing::error!(
+                        error = % e,
+                        "indexer panicked."
+                    )
+                })??;
+            tokio::fs::remove_file(&local_path)
+                .await
+                .with_context(|| format!("failed to delete local archive {}", local_path.display()))
+                .inspect_err(|e| {
+                    tracing::error!(
+                        error = % e,
+                        local_path = % local_path.display(),
+                        "Failed to delete local staging archive."
+                    )
+                })?;
+            anyhow::Ok(())
+        };
+        finishers.spawn_on(index_and_upload, &runtime);
+        archives.push(archive);
+        Ok(())
+    };
+
+    let clp_s_result = run_clp_s(
         &clp_s_bin,
         &archive_dir,
         clp_s_option,
         &list_path,
         &credential_env,
-        |archive| {
-            let local_path = archive_dir.join(&archive.id);
-            let key = create_archive_s3_key(&config.archive_output, &dataset, &archive.id);
-            let client = client.clone();
-            let bucket = bucket.clone();
-            let db_config = config.database.clone();
-            let indexer_bin = indexer_bin.clone();
-            let dataset = dataset.clone();
-            finishers.spawn_on(
-                async move {
-                    let index_path = local_path.clone();
-                    let index = tokio::task::spawn_blocking(move || {
-                        run_indexer(&indexer_bin, &db_config, &dataset, &index_path)
-                    });
-                    let (upload_result, index_result) =
-                        tokio::join!(put_file(&client, &bucket, &key, &local_path), index,);
-                    upload_result.with_context(|| {
-                        format!("failed to upload archive to s3://{bucket}/{key}")
-                    })?;
-                    index_result.map_err(|e| anyhow::anyhow!("indexer task panicked: {e}"))??;
-                    tokio::fs::remove_file(&local_path).await.with_context(|| {
-                        format!("failed to delete local archive {}", local_path.display())
-                    })?;
-                    anyhow::Ok(())
-                },
-                &runtime,
-            );
-            archives.push(archive);
-            Ok(())
-        },
+        archive_callback,
     );
 
     let finish_error = runtime.block_on(async {
         let mut first_error: Option<anyhow::Error> = None;
         while let Some(joined) = finishers.join_next().await {
             let result = joined
-                .map_err(|e| anyhow::anyhow!("finishing task panicked: {e}"))
+                .map_err(|e| anyhow::anyhow!("archive callback panicked: {e}"))
+                .inspect_err(|e| {
+                    tracing::error!(
+                        error = % e,
+                        "Archive callback panicked."
+                    )
+                })
                 .and_then(|r| r);
             if let Err(e) = result
                 && first_error.is_none()
@@ -147,15 +195,18 @@ pub(super) fn compress(
         first_error
     });
 
-    run_result?;
+    clp_s_result?;
     if let Some(e) = finish_error {
         return Err(e);
     }
 
-    Ok(CompressionTaskOutput {
-        dataset: Some(dataset),
-        archives,
-    })
+    tracing::info!(
+        job_id = % ctx.job_id,
+        task_id = % ctx.task_id,
+        task_instance_id = % ctx.task_instance_id,
+        "CLP S3 compression task completed successfully.",
+    );
+    Ok(CompressionTaskOutput { dataset, archives })
 }
 
 /// Builds the `--files-from` list of S3 object URLs for clp-s.
@@ -186,8 +237,9 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> String {
 ///
 /// # Returns
 ///
-/// The env-var name/value pairs for [`AwsAuthentication::Credentials`], or an empty vector for
-/// [`AwsAuthentication::Default`] (which assumes credentials are already in the ambient env).
+/// * The env-var name-value pairs for [`AwsAuthentication::Credentials`].
+/// * An empty vector for [`AwsAuthentication::Default`] (which assumes credentials are already in
+///   the ambient env).
 fn s3_credential_env(auth: &AwsAuthentication) -> Vec<(&'static str, String)> {
     /// The env var holding the AWS access key ID.
     const AWS_ACCESS_KEY_ID_ENV_VAR: &str = "AWS_ACCESS_KEY_ID";
@@ -209,7 +261,8 @@ fn s3_credential_env(auth: &AwsAuthentication) -> Vec<(&'static str, String)> {
 
 /// Parses a single clp-s `--print-archive-stats` stdout line into an [`ArchiveMetadata`].
 ///
-/// clp-s emits a superset of [`ArchiveMetadata`]'s fields per line; unknown keys are ignored.
+/// NOTE: clp-s emits a superset of [`ArchiveMetadata`]'s fields per line; unknown fields are
+/// ignored.
 ///
 /// # Returns
 ///
@@ -219,7 +272,7 @@ fn s3_credential_env(auth: &AwsAuthentication) -> Vec<(&'static str, String)> {
 ///
 /// Returns an error if:
 ///
-/// * `line` is not valid JSON matching [`ArchiveMetadata`].
+/// * Forwards [`serde_json::from_str`]'s return values on failure.
 fn parse_archive_stats(line: &str) -> anyhow::Result<ArchiveMetadata> {
     serde_json::from_str(line)
         .with_context(|| format!("failed to parse clp-s archive stats: {line}"))
@@ -232,13 +285,13 @@ fn parse_archive_stats(line: &str) -> anyhow::Result<ArchiveMetadata> {
 ///
 /// The ordered clp-s arguments.
 fn build_clp_s_args(
-    archive_dir: &Path,
+    archive_output_dir: &Path,
     files_from_path: &Path,
     clp_s_option: &ClpSCompressionOption,
 ) -> Vec<OsString> {
     let mut args = vec![
         OsString::from("c"),
-        archive_dir.as_os_str().to_os_string(),
+        archive_output_dir.as_os_str().to_os_string(),
         OsString::from("--print-archive-stats"),
         OsString::from("--target-encoded-size"),
         OsString::from(clp_s_option.target_encoded_size.to_string()),
@@ -276,8 +329,8 @@ fn clp_binary_path(clp_home: &Path, binary: &str) -> PathBuf {
 ///
 /// Returns an error if:
 ///
-/// * `config`'s archive output is not S3-backed, which this flow requires.
-fn s3_archive_output(config: &SpiderTaskExecutorConfig) -> anyhow::Result<&S3Config> {
+/// * `config`'s archive output is not S3-backed.
+fn extract_s3_output_config(config: &SpiderTaskExecutorConfig) -> anyhow::Result<&S3Config> {
     match &config.archive_output.storage {
         ArchiveOutputStorage::S3 { s3_config, .. } => Ok(s3_config),
         ArchiveOutputStorage::Fs { .. } => {
@@ -294,27 +347,24 @@ fn s3_archive_output(config: &SpiderTaskExecutorConfig) -> anyhow::Result<&S3Con
 /// The archive's S3 object key.
 fn create_archive_s3_key(
     archive_output: &ArchiveOutput,
-    dataset: &str,
+    dataset: Option<&str>,
     archive_id: &str,
 ) -> String {
     format!(
         "{}/{archive_id}",
-        archive_output.dataset_archive_storage_directory(Some(dataset))
+        archive_output.dataset_archive_storage_directory(dataset)
     )
 }
 
-/// Uploads a local file to S3 with a single `PutObject` (mirror of Python's `s3_put`).
-///
-/// # Returns
-///
-/// `()` once the object has been uploaded.
+/// Uploads a local file to S3 through `PutObject`.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * `src` cannot be read into a body stream.
-/// * The `PutObject` request fails.
+/// * Forwards [`aws_sdk_s3::primitives::ByteStream::from_path`]'s return values on failure.
+/// * Forwards [`aws_sdk_s3::operation::put_object::builders::PutObjectFluentBuilder::send`]'s
+///   return values on failure.
 async fn put_file(
     client: &aws_sdk_s3::Client,
     bucket: &str,
@@ -340,10 +390,14 @@ async fn put_file(
 /// # Returns
 ///
 /// The ordered `indexer` arguments.
-fn build_indexer_args(database: &Database, dataset: &str, archive_path: &Path) -> Vec<OsString> {
+fn build_indexer_args(
+    database: &Database,
+    dataset: Option<&str>,
+    archive_path: &Path,
+) -> Vec<OsString> {
     vec![
         OsString::from("--db-type"),
-        // clp-core's indexer only supports MySQL, regardless of the configured DB engine.
+        // NOTE: clp-core's indexer only supports MySQL, regardless of the configured DB engine.
         OsString::from("mysql"),
         OsString::from("--db-host"),
         OsString::from(&database.host),
@@ -353,7 +407,7 @@ fn build_indexer_args(database: &Database, dataset: &str, archive_path: &Path) -
         OsString::from(&database.names.clp),
         OsString::from("--db-table-prefix"),
         OsString::from(&database.table_prefix),
-        OsString::from(dataset),
+        OsString::from(resolve_dataset_name(dataset)),
         archive_path.as_os_str().to_os_string(),
     ]
 }
@@ -368,12 +422,12 @@ fn build_indexer_args(database: &Database, dataset: &str, archive_path: &Path) -
 ///
 /// Returns an error if:
 ///
-/// * The indexer fails to spawn.
 /// * The indexer exits with a non-zero status.
+/// * Forwards [`Command::status`]'s return values on failure.
 fn run_indexer(
     indexer_bin: &Path,
     database: &Database,
-    dataset: &str,
+    dataset: Option<&str>,
     archive_path: &Path,
 ) -> anyhow::Result<()> {
     let status = Command::new(indexer_bin)
@@ -381,6 +435,11 @@ fn run_indexer(
         .status()
         .with_context(|| format!("failed to spawn indexer at {}", indexer_bin.display()))?;
     if !status.success() {
+        tracing::error!(
+            status = % status,
+            archive_path = % archive_path.display(),
+            "indexer exited on failure."
+        );
         anyhow::bail!(
             "indexer exited with {status} for archive {}",
             archive_path.display()
@@ -396,23 +455,16 @@ fn run_indexer(
 /// parsed into an [`ArchiveMetadata`] and forwarded to `on_archive`. If `on_archive` fails, clp-s
 /// is killed and reaped before the error is returned.
 ///
-/// # Returns
-///
-/// `()` once clp-s exits successfully and every reported archive has been forwarded.
-///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * clp-s fails to spawn.
-/// * `on_archive` fails.
-/// * clp-s exits with a non-zero status (the error includes the captured stderr).
-/// * Reaping clp-s or reading its stderr fails.
+/// * clp-s's stdout or stderr was not captured.
+/// * clp-s exits with a non-zero status.
+/// * Forwards `on_archive`'s return values on failure.
+/// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`parse_archive_stats`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if the stderr-reader thread panicked.
+/// * Forwards [`std::process::Child::wait`]'s return values on failure.
 fn run_clp_s(
     clp_s_bin: &Path,
     archive_dir: &Path,
@@ -444,22 +496,35 @@ fn run_clp_s(
         .context("clp-s stdout was not captured")?;
     for line in BufReader::new(stdout).lines() {
         let line = line.context("failed to read a line from clp-s stdout")?;
-        let forward_result = parse_archive_stats(&line).and_then(&mut on_archive);
-        if let Err(e) = forward_result {
+        if let Err(e) = parse_archive_stats(&line).and_then(&mut on_archive) {
             let _ = child.kill();
-            let _ = stderr_reader.join();
             let _ = child.wait();
-            return Err(e.context("clp-s was terminated while processing its output"));
+            let stderr = match stderr_reader.join() {
+                Ok(Ok(stderr)) => stderr,
+                _ => "Failed to read clp-s stderr.".to_string(),
+            };
+            tracing::error!(
+                error = % e,
+                archive_stats = % line,
+                stderr = % stderr,
+                "Failed to execute per-archive callback. Killing clp-s."
+            );
+            return Err(e.context("clp-s killed on error"));
         }
     }
 
     let status = child.wait().context("failed to wait for clp-s to exit")?;
-    let stderr = stderr_reader
-        .join()
-        .expect("stderr reader thread panicked")
-        .context("failed to read clp-s stderr")?;
+    let stderr = match stderr_reader.join() {
+        Ok(Ok(stderr)) => stderr,
+        _ => "Failed to read clp-s stderr.".to_string(),
+    };
     if !status.success() {
-        anyhow::bail!("clp-s exited with {status}:\n{stderr}");
+        tracing::error!(
+            status = % status,
+            stderr = % stderr,
+            "clp-s exited on failure."
+        );
+        anyhow::bail!("clp-s exited with {status}");
     }
     Ok(())
 }
@@ -638,7 +703,7 @@ mod tests {
         };
 
         assert_eq!(
-            create_archive_s3_key(&archive_output, "default", "abc"),
+            create_archive_s3_key(&archive_output, None, "abc"),
             "LIB1/default/abc"
         );
     }
@@ -656,7 +721,7 @@ mod tests {
         };
 
         assert_eq!(
-            build_indexer_args(&database, "default", Path::new("/archives/abc")),
+            build_indexer_args(&database, None, Path::new("/archives/abc")),
             vec![
                 OsString::from("--db-type"),
                 OsString::from("mysql"),

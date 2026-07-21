@@ -17,13 +17,6 @@ pub(crate) fn s3_compress_task(
     dataset: Option<String>,
     input_source: S3InputSource,
 ) -> Result<CompressionTaskOutput, TdlError> {
-    tracing::info!(
-        job_id = % ctx.job_id,
-        task_id = % ctx.task_id,
-        task_instance_id = ctx.task_instance_id,
-        dataset = dataset.as_deref().unwrap_or("<default>"),
-        "CLP compression task started."
-    );
     compress::compress(
         &ctx,
         crate::common::spider_task_executor_config(),
