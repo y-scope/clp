@@ -968,6 +968,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "clp-tdl-package"
+version = "0.13.1-dev"
+dependencies = [
+ "anyhow",
+ "clp-rust-utils",
+ "serde",
+ "spider-tdl",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1039,6 +1052,12 @@ dependencies = [
  "once_cell",
  "tiny-keccak",
 ]
+
+[[package]]
+name = "const-str"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18f12cc9948ed9604230cdddc7c86e270f9401ccbe3c2e98a4378c5e7632212f"
 
 [[package]]
 name = "const_format"
@@ -1474,7 +1493,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2083,7 +2102,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.3",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -3757,6 +3776,29 @@ dependencies = [
 
 [[package]]
 name = "spider-derive"
+version = "0.1.0"
+source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "spider-tdl"
+version = "0.1.0"
+source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+dependencies = [
+ "const-str",
+ "rmp-serde",
+ "serde",
+ "spider-core",
+ "spider-tdl-derive",
+ "thiserror",
+]
+
+[[package]]
+name = "spider-tdl-derive"
 version = "0.1.0"
 source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
 dependencies = [
