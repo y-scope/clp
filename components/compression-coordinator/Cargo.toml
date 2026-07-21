@@ -1,0 +1,15 @@
+[package]
+name = "compression-coordinator"
+version = "0.13.1-dev"
+edition = "2024"
+
+[lib]
+name = "compression_coordinator"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait = "0.1.89"
+clp-rust-utils = { path = "../clp-rust-utils" }
+serde = { version = "1.0.228", features = ["derive"] }
+spider-core = { git = "https://github.com/y-scope/spider.git", branch = "main" }
+thiserror = "2.0.18"
