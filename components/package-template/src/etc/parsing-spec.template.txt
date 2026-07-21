@@ -76,11 +76,11 @@ header:^ ?Z$
 !non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]
 
 # heuristic fallback patterns
-key_value:^(?<key>(?<txt>)*)[:=](?<float_value>(?<float>))$
-key_value:^(?<key>(?<txt>)*)[:=](?<int_value>(?<int>))$
-key_value:^(?<key>(?<txt>)*)[:=](?<hex_value>(?<hex>))$
-key_value:^(?<key>(?<txt>)*)[:=](?<uuid_value>(?<uuid>))$
-key_value:^(?<key>(?<txt>)*)[:=](?<str_value>(?<txt>)*\w(?<txt>)*)$
+key_value:^(?<key>(?<txt>)*)[:=]|: (?<float_value>(?<float>))$
+key_value:^(?<key>(?<txt>)*)[:=]|: (?<int_value>(?<int>))$
+key_value:^(?<key>(?<txt>)*)[:=]|: (?<hex_value>(?<hex>))$
+key_value:^(?<key>(?<txt>)*)[:=]|: (?<uuid_value>(?<uuid>))$
+key_value:^(?<key>(?<txt>)*)[:=]|: (?<str_value>(?<txt>)*\w(?<txt>)*)$
 
 duration:^(?<value>(?<float>))(?<unit>m|minutes|ms|us|s|seconds)$
 src_loc:^(?<file>/?(?<non_delim>)+(/(?<non_delim>)+)+\.(?<non_delim>)+):(?<line>\d+)$
