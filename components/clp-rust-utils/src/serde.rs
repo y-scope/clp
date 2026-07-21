@@ -1,4 +1,6 @@
-mod brotli_msgpack;
-pub mod yaml;
+//! Serialization utilities.
 
-pub use brotli_msgpack::*;
+pub mod yaml;
+mod zstd_msgpack;
+
+pub use zstd_msgpack::*;

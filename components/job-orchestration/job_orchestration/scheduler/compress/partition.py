@@ -2,13 +2,12 @@ import copy
 import pathlib
 from typing import Any
 
-import brotli
-import msgpack
 from clp_py_utils.compression import (
     FilesPartition,
     group_files_by_similar_filenames,
 )
 from clp_py_utils.core import FileMetadata
+from clp_py_utils.zstd_msgpack import serialize as serialize_zstd_msgpack
 
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 
@@ -82,8 +81,8 @@ class PathsToCompressBuffer:
         self.__partition_info.append(
             {
                 "partition_original_size": str(sum(st_sizes)),
-                "clp_paths_to_compress": brotli.compress(
-                    msgpack.packb(paths_to_compress.model_dump(exclude_none=True)), quality=4
+                "clp_paths_to_compress": serialize_zstd_msgpack(
+                    paths_to_compress.model_dump(exclude_none=True)
                 ),
             }
         )
