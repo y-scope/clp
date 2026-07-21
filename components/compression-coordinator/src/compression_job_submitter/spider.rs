@@ -82,7 +82,7 @@ impl S3CompressionJobSubmitter for SpiderClient {
                         "Option<String>",
                     )?),
                     DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        "Vec<S3InputSource>",
+                        "S3InputSource",
                     )?),
                 ],
                 outputs: vec![DataTypeDescriptor::Value(
