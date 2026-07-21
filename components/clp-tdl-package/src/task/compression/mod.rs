@@ -13,9 +13,9 @@ mod compress;
 #[task(name = "compression::clp_s_s3_compress")]
 pub(crate) fn s3_compress_task(
     ctx: TaskContext,
-    _clp_s_option: ClpSCompressionOption,
+    clp_s_option: ClpSCompressionOption,
     dataset: Option<String>,
-    _input_source: S3InputSource,
+    input_source: S3InputSource,
 ) -> Result<CompressionTaskOutput, TdlError> {
     tracing::info!(
         job_id = % ctx.job_id,
@@ -24,7 +24,14 @@ pub(crate) fn s3_compress_task(
         dataset = dataset.as_deref().unwrap_or("<default>"),
         "CLP compression task started."
     );
-    unimplemented!("the clp-s compression task is not implemented yet")
+    compress::compress(
+        &ctx,
+        crate::common::spider_task_executor_config(),
+        &clp_s_option,
+        dataset,
+        input_source,
+    )
+    .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
 #[task(name = "compression::commit")]
