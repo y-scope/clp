@@ -721,7 +721,7 @@ jobs:
           HOME: "/tmp"
         run: "uv run pytest -m 'smoke or core'"
 
-      - name: "Upload the package integration test logs"
+      - name: "Upload the core integration test logs"
         if: "always()"
         uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
         with:
