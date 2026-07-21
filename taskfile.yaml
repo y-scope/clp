@@ -137,26 +137,6 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
-      - task: "package-assemble"
-        vars:
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-      - >-
-        rsync --archive
-        "{{.G_BUILD_DIR}}/clp-package-image.id"
-        "{{.OUTPUT_DIR}}"
-      - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
-  package-assemble:
-    requires:
-      vars: ["OUTPUT_DIR"]
-    deps:
-      - "generate-config-schemas"
-    cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - >-
         rsync --archive
@@ -181,6 +161,16 @@ tasks:
         rsync --archive
         "tools/deployment/package/"
         "{{.OUTPUT_DIR}}"
+      - >-
+        rsync --archive
+        "{{.G_BUILD_DIR}}/clp-package-image.id"
+        "{{.OUTPUT_DIR}}"
+      - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   core:
     cmds:
@@ -248,7 +238,6 @@ tasks:
         COMPONENT: "{{.TASK}}"
 
   generate-config-schemas:
-    run: "once"
     vars:
       OUTPUT_DIR: "{{.G_CONFIG_SCHEMA_BUILD_DIR}}"
     cmds:
