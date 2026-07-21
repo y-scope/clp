@@ -75,15 +75,15 @@ impl S3CompressionJobSubmitter for SpiderClient {
                 },
                 execution_policy: Some(execution_policy),
                 inputs: vec![
-                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        stringify!(ClpSCompressionOption),
-                    )?),
-                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        stringify!(Option<String>),
-                    )?),
-                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        stringify!(S3InputSource),
-                    )?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(stringify!(
+                        ClpSCompressionOption
+                    ))?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(stringify!(
+                        Option<String>
+                    ))?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(stringify!(
+                        S3InputSource
+                    ))?),
                 ],
                 outputs: vec![DataTypeDescriptor::Value(
                     ValueTypeDescriptor::struct_from_name(stringify!(CompressionTaskOutput))?,
@@ -135,7 +135,9 @@ impl S3CompressionJobSubmitter for SpiderClient {
                 break state;
             }
             tokio::time::sleep(backoff).await;
-            backoff = backoff.saturating_mul(POLL_BACKOFF_FACTOR).min(max_poll_backoff);
+            backoff = backoff
+                .saturating_mul(POLL_BACKOFF_FACTOR)
+                .min(max_poll_backoff);
         };
 
         Ok(match terminal_state {
