@@ -1,7 +1,7 @@
-//! The compression-job-submission API trait for driving CLP S3 compression jobs on a Spider
-//! (Huntsman) cluster.
+//! Compression-job submission and S3 input partitioning for a Spider cluster.
 
 pub mod compression_job_submitter;
 mod error;
+pub mod partition;
 
 pub use error::Error;
