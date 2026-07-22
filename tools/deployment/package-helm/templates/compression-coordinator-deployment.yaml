@@ -1,0 +1,87 @@
+{{- if include "clp.spiderOrchestrationEnabled" . }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-compression-coordinator
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "compression-coordinator"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "compression-coordinator"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "compression-coordinator"
+    spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "compressionCoordinator"
+        ) | nindent 6 }}
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "storage"
+          ) | nindent 10 }}
+      containers:
+        - name: "compression-coordinator"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/compression_coordinator"
+            - name: "OTEL_SERVICE_NAME"
+              value: "compression-coordinator"
+            - name: "RUST_LOG"
+              value: {{ .Values.clpConfig.compression_coordinator.logging_level
+                | default "INFO" | quote }}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "compressionCoordinator"
+            ) | nindent 10 }}
+          volumeMounts:
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "compression-coordinator"
+                "name" "log"
+              ) | quote }}
+              mountPath: "/var/log"
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+          command: [
+            "/opt/clp/bin/compression-coordinator",
+            "--config", "/etc/clp-config.yaml"
+          ]
+      volumes:
+        - name: {{ include "clp.volumeName" (dict
+            "component_category" "compression-coordinator"
+            "name" "log"
+          ) | quote }}
+          emptyDir: {}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+{{- end }}

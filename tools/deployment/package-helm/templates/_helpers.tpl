@@ -443,6 +443,35 @@ Gets the port for the Presto service.
 {{- end }}
 
 {{/*
+Whether Spider orchestration (the compression coordinator) is enabled.
+
+Uses `kindIs "map"` so an empty `compression_coordinator: {}` (all defaults) counts as enabled.
+
+@param {object} . Root template context
+@return {string} "true" when enabled; "" otherwise
+*/}}
+{{- define "clp.spiderOrchestrationEnabled" -}}
+{{- if kindIs "map" .Values.clpConfig.compression_coordinator -}}true{{- end -}}
+{{- end }}
+
+{{/*
+Gets the host for the Spider storage service, mirroring the Spider subchart's fullname logic.
+
+@param {object} . Root template context
+@return {string} The Spider storage host
+*/}}
+{{- define "clp.spiderStorageHost" -}}
+{{- if not .Values.spider.enabled -}}
+{{- fail "clpConfig.compression_coordinator requires spider.enabled" -}}
+{{- end -}}
+{{- if contains "spider" .Release.Name -}}
+{{- printf "%s-storage" .Release.Name -}}
+{{- else -}}
+{{- printf "%s-spider-storage" .Release.Name -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Gets the BROKER_URL env var for Celery workers.
 
 @param {object} . Root template context

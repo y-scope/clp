@@ -16,4 +16,5 @@ tasks:
       - "mkdir -p '{{.OUTPUT_DIR}}'"
       - |-
         . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        helm dependency build "{{.ROOT_DIR}}/tools/deployment/package-helm"
         helm package "{{.ROOT_DIR}}/tools/deployment/package-helm" --destination "{{.OUTPUT_DIR}}"
