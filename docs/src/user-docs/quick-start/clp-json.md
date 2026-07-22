@@ -30,7 +30,8 @@ services instead of bundled services, see the
 
 ```{note}
 If CLP fails to start (e.g., due to a port conflict), try adjusting the settings in
-`etc/clp-config.yaml` and then run the start command again.
+`etc/clp-config.yaml` and then run the start command again. For more information about configuring
+CLP, check out the [CLP environment setup][clp-environment-setup] section.
 ```
 
 :::
@@ -415,6 +416,7 @@ kind delete cluster --name clp
 ::::
 
 [api-server]: ../guides-using-the-api-server.md
+[clp-environment-setup]: ../guides-docker-compose-deployment.md#clp-environment-setup
 [clp-json-format]: ./index.md#clp-json
 [datasets]: ../resources-datasets.md
 [json-search-syntax]: ../reference-json-search-syntax.md
