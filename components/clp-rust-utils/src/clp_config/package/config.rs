@@ -45,6 +45,15 @@ impl Default for Config {
     }
 }
 
+/// Configuration for the Spider task executor.
+///
+/// # NOTE
+///
+/// This type is a scaffolding config definition.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct SpiderTaskExecutorConfig {}
+
 /// Database names for CLP components.
 ///
 /// # NOTE
