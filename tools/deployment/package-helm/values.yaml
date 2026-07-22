@@ -197,9 +197,9 @@ clpConfig:
     max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
     telemetry_update_interval_ms: 60000
 
-  # Compression coordinator config. When set (even to {}, which uses the defaults shown below),
-  # the chart replaces the Celery compression scheduler and workers with the compression
-  # coordinator, which drives compression jobs through Spider. Requires `spider.enabled: true`.
+  # Compression coordinator config. When set (even to {}, which uses the defaults shown below)
+  # and `spider.enabled` is true, the chart replaces the Celery compression scheduler and workers
+  # with the compression coordinator, which drives compression jobs through Spider.
   # NOTE: Currently, the coordinator only processes compression jobs submitted by the
   # log-ingestor.
   compression_coordinator: null
@@ -373,20 +373,7 @@ serviceAccount:
   # For IRSA on EKS, set:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
 
-# Overrides for the Spider subchart's own `values.yaml`.
-# NOTE: The subchart currently deploys only Spider's storage component and a Spider-owned bundled
-# MariaDB (separate from CLP's database above). Spider's scheduler and worker components are
-# still under review upstream and will be enabled here once they land in the subchart.
+# Overrides for the Spider subchart's own `values.yaml` (e.g., `image.storage.tag`).
 spider:
   # Whether to deploy the Spider subchart.
-  enabled: true
-
-  image:
-    # Once the Spider worker component lands in the subchart, override its image here with the
-    # CLP-tailored worker image so workers can execute CLP compression tasks:
-    # worker:
-    #   repository: "ghcr.io/y-scope/clp/clp-spider-worker"
-    #   tag: "<pinned tag>"
-    storage:
-      # Pinned to the same y-scope/spider commit as the subchart.
-      tag: "sha-983dde9"
+  enabled: false

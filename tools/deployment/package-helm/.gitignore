@@ -1,2 +1,2 @@
-# Subcharts are downloaded by `helm dependency update`/`build` (see Chart.yaml dependencies).
+# Subcharts are downloaded by `helm dependency update`.
 charts/

@@ -445,13 +445,16 @@ Gets the port for the Presto service.
 {{/*
 Whether Spider orchestration (the compression coordinator) is enabled.
 
-Uses `kindIs "map"` so an empty `compression_coordinator: {}` (all defaults) counts as enabled.
+Requires both the Spider subchart to be deployed and `compression_coordinator` to be set
+(`kindIs "map"` lets an empty `compression_coordinator: {}` count as set).
 
 @param {object} . Root template context
 @return {string} "true" when enabled; "" otherwise
 */}}
 {{- define "clp.spiderOrchestrationEnabled" -}}
-{{- if kindIs "map" .Values.clpConfig.compression_coordinator -}}true{{- end -}}
+{{- if and
+  .Values.spider.enabled
+  (kindIs "map" .Values.clpConfig.compression_coordinator) -}}true{{- end -}}
 {{- end }}
 
 {{/*
@@ -461,9 +464,6 @@ Gets the host for the Spider storage service, mirroring the Spider subchart's fu
 @return {string} The Spider storage host
 */}}
 {{- define "clp.spiderStorageHost" -}}
-{{- if not .Values.spider.enabled -}}
-{{- fail "clpConfig.compression_coordinator requires spider.enabled" -}}
-{{- end -}}
 {{- if contains "spider" .Release.Name -}}
 {{- printf "%s-storage" .Release.Name -}}
 {{- else -}}
