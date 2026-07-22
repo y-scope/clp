@@ -315,6 +315,7 @@ auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
                 ++reconstruction_target_index;
                 m_json_serializer.append_key();
                 m_json_serializer.append_quoted_value(reconstruct_log_shape(
+                        target.log_shape_id,
                         target.parent_rule_col_name,
                         message_index,
                         target.start_col_idx,
@@ -1039,8 +1040,7 @@ auto SchemaReader::collect_scope_entries(
                         LeafEntry{
                                 .node_id = cur_node_id,
                                 .col_idx = column_idx,
-                                .qualified_col_name
-                                = m_global_schema_tree->build_column_name(cur_node_id),
+                                .col_name = node.get_key_name(),
                                 .type = node.get_type()
                         }
                 );
@@ -1075,8 +1075,14 @@ auto SchemaReader::emit_parent_rule_arrays(
                 m_projection && false == m_projection->is_return_all_columns()
                 && m_projection->should_emit_value(parent_rule_id)
         };
+        bool const has_projected_descendant{
+                m_projection && false == m_projection->is_return_all_columns()
+                && m_projection->has_projected_descendant(parent_rule_id)
+        };
 
-        bool const should_include{ancestor_decomposed || emit_text || parent_rule_has_shape};
+        bool const should_include{
+                ancestor_decomposed || emit_text || parent_rule_has_shape || has_projected_descendant
+        };
         if (false == should_include) {
             continue;
         }
@@ -1098,6 +1104,7 @@ auto SchemaReader::emit_parent_rule_arrays(
                 m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
                 m_reconstruction_targets.push_back(
                         ReconstructionTarget{
+                                .log_shape_id = log_shape_id,
                                 .parent_rule_col_name = parent_rule_col_name,
                                 .start_col_idx = occurrence.start_col_idx,
                                 .schema_sub_span = occurrence.sub_span
@@ -1145,16 +1152,16 @@ auto SchemaReader::emit_decomposed_scope(
 auto SchemaReader::emit_grouped_leaf_entries(std::vector<LeafEntry>& entries)
         -> ystdlib::error_handling::Result<void> {
     std::stable_sort(entries.begin(), entries.end(), [](auto const& a, auto const& b) -> bool {
-        return a.qualified_col_name < b.qualified_col_name;
+        return a.col_name < b.col_name;
     });
 
     for (size_t i{0}; i < entries.size();) {
-        auto const& col_name{entries.at(i).qualified_col_name};
+        auto const& col_name{entries.at(i).col_name};
         m_json_serializer.add_special_key(col_name);
         m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
 
         size_t j{i};
-        while (j < entries.size() && entries.at(j).qualified_col_name == col_name) {
+        while (j < entries.size() && entries.at(j).col_name == col_name) {
             switch (entries.at(j).type) {
                 case NodeType::DeltaInteger:
                 case NodeType::Integer: {
@@ -1242,6 +1249,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
         m_reconstruction_targets.push_back(
                 ReconstructionTarget{
+                        .log_shape_id = log_shape_id,
                         .parent_rule_col_name = "",
                         .start_col_idx = column_start,
                         .schema_sub_span = schema
@@ -1265,6 +1273,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
         m_reconstruction_targets.push_back(
                 ReconstructionTarget{
+                        .log_shape_id = log_shape_id,
                         .parent_rule_col_name = "",
                         .start_col_idx = column_start,
                         .schema_sub_span = schema
@@ -1313,18 +1322,13 @@ auto SchemaReader::narrow_log_shape_to_parent_rule(
 }
 
 auto SchemaReader::reconstruct_log_shape(
+        clpp::log_shape_id_t log_shape_id,
         std::string_view parent_rule_column_name,
         uint64_t message_index,
         size_t column_start,
         std::span<SchemaNode::id_t> schema_sub_span
 ) -> std::string {
-    auto const log_shape_id{find_log_type_id_in_schema(schema_sub_span, *m_global_schema_tree)};
-
-    if (false == log_shape_id.has_value() || nullptr == m_log_shape_dict) {
-        return {};
-    }
-
-    auto const log_shape{m_log_shape_dict->get_value(log_shape_id.value())};
+    auto const log_shape{m_log_shape_dict->get_value(log_shape_id)};
     if (log_shape.empty()) {
         return {};
     }
@@ -1333,7 +1337,7 @@ auto SchemaReader::reconstruct_log_shape(
     if (false == parent_rule_column_name.empty()) {
         shape_to_scan = narrow_log_shape_to_parent_rule(
                 log_shape,
-                log_shape_id.value(),
+                log_shape_id,
                 parent_rule_column_name
         );
         if (shape_to_scan.empty()) {

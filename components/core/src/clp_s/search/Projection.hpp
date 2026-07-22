@@ -139,6 +139,14 @@ public:
     [[nodiscard]] auto should_emit_value(SchemaNode::id_t node_id) const -> bool;
 
     /**
+     * Checks whether a ParentRule schema node has any projected descendant leaf (i.e. a leaf
+     * matched by some projection column is nested under this ParentRule).
+     * @param node_id The ParentRule schema node ID to check.
+     * @return true if at least one descendant leaf of the node is projected.
+     */
+    [[nodiscard]] auto has_projected_descendant(SchemaNode::id_t node_id) const -> bool;
+
+    /**
      * Resolves all columns for the purpose of projection. This key resolution implementation is
      * more limited than the one in schema matching. In particular, this version of key resolution
      * only allows resolving keys that do not contain wildcards and does not allow resolving to
@@ -222,6 +230,7 @@ private:
     std::vector<TargetColumn> m_columns;
     absl::flat_hash_set<SchemaNode::id_t> m_matching_nodes;
     absl::flat_hash_map<SchemaNode::id_t, NodeMask> m_node_projections;
+    absl::flat_hash_set<SchemaNode::id_t> m_nodes_with_projected_descendants;
     Mode m_projection_mode{Mode::ReturnAllColumns};
     bool m_allow_duplicate_columns{false};
 };

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include <fmt/format.h>
@@ -14,6 +15,27 @@
 #include <clpp/Defs.hpp>
 
 namespace clp_s::search {
+namespace {
+/**
+ * Builds a dotted column name string from a column descriptor's tokens.
+ * @param column The column descriptor.
+ * @return The dotted column name.
+ */
+auto column_descriptor_to_string(ast::ColumnDescriptor& column) -> std::string;
+
+auto column_descriptor_to_string(ast::ColumnDescriptor& column) -> std::string {
+    std::string result;
+    for (auto it{column.descriptor_begin()}; column.descriptor_end() != it;) {
+        if (column.descriptor_begin() != it) {
+            result.append(".");
+        }
+        result.append(it->get_token());
+        ++it;
+    }
+    return result;
+}
+}  // namespace
+
 auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column, NodeMask::Mode mode)
         -> void {
     if (column->is_unresolved_descriptor()) {
@@ -79,6 +101,10 @@ auto Projection::should_emit_value(SchemaNode::id_t node_id) const -> bool {
            && (mask.has(NodeMask::Mode::Value) || mask.has(NodeMask::Mode::Default));
 }
 
+auto Projection::has_projected_descendant(SchemaNode::id_t node_id) const -> bool {
+    return m_nodes_with_projected_descendants.contains(node_id);
+}
+
 auto Projection::add_projection(SchemaNode::id_t node_id, NodeMask::Mode mode) -> void {
     m_node_projections[node_id].set(mode);
 }
@@ -113,9 +139,10 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
                 throw std::runtime_error(
                         fmt::format(
                                 "{}(<col>) can only be applied to LogMessage or ParentRule "
-                                "columns.",
+                                "columns; no LogMessage or ParentRule nodes match column \"{}\".",
                                 NodeMask::Mode::Decompose == entry.m_mode ? clpp::cDecomposeFunction
-                                                                          : clpp::cShapeFunction
+                                                                          : clpp::cShapeFunction,
+                                column_descriptor_to_string(*entry.m_column)
                         )
                 );
             }
@@ -123,6 +150,28 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
             static_cast<void>(
                     collect_structural_projections(tree, entry.m_matched_nodes, entry.m_mode)
             );
+        }
+    }
+
+    m_nodes_with_projected_descendants.clear();
+    if (Mode::ReturnAllColumns == m_projection_mode) {
+        return;
+    }
+    auto is_structural = [](NodeType type) -> bool {
+        return NodeType::LogMessage == type || NodeType::ParentRule == type;
+    };
+    for (auto node_id : m_matching_nodes) {
+        auto const& node{tree.get_node(node_id)};
+        if (is_structural(node.get_type())) {
+            continue;
+        }
+        for (auto cur_id{node.get_parent_id()};
+             -1 != cur_id && NodeType::LogMessage != tree.get_node(cur_id).get_type();
+             cur_id = tree.get_node(cur_id).get_parent_id())
+        {
+            if (NodeType::ParentRule == tree.get_node(cur_id).get_type()) {
+                m_nodes_with_projected_descendants.insert(cur_id);
+            }
         }
     }
 }

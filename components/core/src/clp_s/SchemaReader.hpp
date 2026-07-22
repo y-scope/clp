@@ -330,7 +330,7 @@ private:
     struct LeafEntry {
         SchemaNode::id_t node_id;
         size_t col_idx;
-        std::string qualified_col_name;
+        std::string_view col_name;
         NodeType type;
     };
 
@@ -338,6 +338,7 @@ private:
      * Records the information needed to reconstruct the original text from a shape.
      */
     struct ReconstructionTarget {
+        clpp::log_shape_id_t log_shape_id;
         std::string parent_rule_col_name;
         size_t start_col_idx;
         std::span<SchemaNode::id_t> schema_sub_span;
@@ -457,11 +458,16 @@ private:
      * @param parent_rule_column_name The column name of a ParentRule to reconstruct, or empty for
      * the full message.
      * @param message_index The index of the message to reconstruct.
+     * @param log_shape_id The log shape ID of the owning LogMessage scope.
+     * @param parent_rule_column_name The column name of the ParentRule to narrow the shape to,
+     *     or empty to reconstruct the full LogMessage shape.
+     * @param message_index The index of the message to reconstruct.
      * @param column_start The starting index in m_columns for the columns to use.
      * @param schema_sub_span The schema sub-span to iterate for column values.
      * @return The reconstructed raw log text.
      */
     [[nodiscard]] auto reconstruct_log_shape(
+            clpp::log_shape_id_t log_shape_id,
             std::string_view parent_rule_column_name,
             uint64_t message_index,
             size_t column_start,
