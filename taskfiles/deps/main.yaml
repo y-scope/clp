@@ -2,6 +2,7 @@ version: "3"
 
 includes:
   lock: "./lock.yaml"
+  toolchains: "../toolchains.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
   yscope-log-viewer: "./yscope-log-viewer.yaml"
@@ -331,24 +332,51 @@ tasks:
   log-surgeon:
     internal: true
     run: "once"
-    deps:
-      - "fmt"
-      - "microsoft.gsl"
-      - "ystdlib"
+    deps: ["toolchains:rust"]
+    vars:
+      LIB_NAME: "log-surgeon"
+      INSTALL_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+      INSTALL_INCLUDE_DIR: "{{.INSTALL_DIR}}/include"
+      INSTALL_LIB_DIR: "{{.INSTALL_DIR}}/lib"
+      INSTALL_CMAKE_DIR: "{{.INSTALL_LIB_DIR}}/cmake/{{.LIB_NAME}}"
+      OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      SRC_DIR: "{{.OUTPUT_DIR}}/rust"
+      TARGET_NAME: "{{.LIB_NAME}}::{{.LIB_NAME}}"
     cmds:
-      - task: "utils:install-remote-cmake-lib"
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
-          CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_YSTDLIB_LIB_NAME}}.cmake"
-            - "-DCMAKE_BUILD_TYPE=Release"
-            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-Dlog_surgeon_BUILD_TESTING=OFF"
-          LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "eebf857962f8fc022bfa5de8d00e10ee4ac36bb8f126a556935a93dde1435aa2"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/193e1f9.tar.gz"
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "336c90f3e41ac0834f6b103ea4b901d46acf11a98d558a583611029f4b9ff059"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          URL: "https://github.com/y-scope/log-surgeon/archive/518b6a2.tar.gz"
+      - |-
+        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+        cd "{{.SRC_DIR}}"
+        cargo build --no-default-features --release
+        mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
+        cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
+        cp -r "{{.SRC_DIR}}/cxx/log_surgeon" "{{.INSTALL_INCLUDE_DIR}}"
+        cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-config.cmake" << 'EOF'
+        if(NOT TARGET {{.TARGET_NAME}})
+            include("${CMAKE_CURRENT_LIST_DIR}/{{.LIB_NAME}}-targets.cmake")
+        endif()
+        EOF
+
+        cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-targets.cmake" << 'EOF'
+        add_library({{.TARGET_NAME}} STATIC IMPORTED)
+        set_target_properties({{.TARGET_NAME}} PROPERTIES
+            IMPORTED_LOCATION "{{.INSTALL_LIB_DIR}}/liblog_surgeon.a"
+            INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
+        )
+        target_link_libraries({{.TARGET_NAME}} INTERFACE dl)
+        EOF
+        cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" << 'EOF'
+        set({{.LIB_NAME}}_ROOT
+            "{{.INSTALL_DIR}}"
+            CACHE PATH
+            "Package root for log-surgeon."
+        )
+        EOF
 
   lz4:
     internal: true

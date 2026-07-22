@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <string_view>
 
-#include <log_surgeon/BufferParser.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/containers/Array.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -32,7 +32,6 @@ public:
      * @param output_dir The output directory for generated KV-IR files.
      * @param compress_converted_file Whether the converted file should be compressed.
      * @return A void result on success, or an error code indicating the failure:
-     * - std::errc::no_message if `log_surgeon::BufferParser::parse_next_event` returns an error.
      * - Forwards `LogSerializer::create()`'s return values.
      * - Forwards `refill_buffer()`'s return values.
      * - Forwards `LogSerializer::add_message()`'s return values.
@@ -49,8 +48,8 @@ private:
     static constexpr size_t cDefaultBufferSize{64ULL * 1024ULL};  // 64 KiB
 
     // Constructors
-    explicit LogConverter(size_t max_buffer_size, log_surgeon::BufferParser buffer_parser)
-            : m_parser{std::move(buffer_parser)},
+    explicit LogConverter(size_t max_buffer_size, log_surgeon::ParserHandle parser)
+            : m_parser{std::move(parser)},
               m_buffer(max_buffer_size < cDefaultBufferSize ? max_buffer_size : cDefaultBufferSize),
               m_max_buffer_size{max_buffer_size} {}
 
@@ -79,7 +78,7 @@ private:
      */
     [[nodiscard]] auto grow_buffer_if_full() -> ystdlib::error_handling::Result<void>;
 
-    log_surgeon::BufferParser m_parser;
+    log_surgeon::ParserHandle m_parser;
     ystdlib::containers::Array<char> m_buffer;
     size_t m_num_bytes_buffered{};
     size_t m_parser_offset{};
