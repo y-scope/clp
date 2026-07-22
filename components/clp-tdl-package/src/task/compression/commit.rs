@@ -155,7 +155,7 @@ async fn insert_archives(
     for archives in archives.chunks(1000) {
         let mut builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
             "INSERT INTO `{archives_table}` (id, begin_timestamp, end_timestamp, \
-             uncompressed_size, size, creator_id, creation_ix);"
+             uncompressed_size, size, creator_id, creation_ix) "
         ));
         builder.push_values(archives, |mut row, archive| {
             // NOTE: clp-s does not set `creator_id` or `creation_ix`.
