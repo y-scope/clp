@@ -76,7 +76,7 @@ data:
       logging_level: {{ .Values.clpConfig.compression_coordinator.logging_level | quote }}
     spider:
       host: "{{ include "clp.spiderStorageHost" . }}"
-      port: 50051
+      port: {{ include "clp.spiderStoragePort" . | int }}
     {{- end }}
     compression_scheduler:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}

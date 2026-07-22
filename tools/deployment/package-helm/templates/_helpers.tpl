@@ -468,6 +468,16 @@ Gets the host for the Spider storage service, mirroring the Spider subchart's fu
 {{- end }}
 
 {{/*
+Gets the port for the Spider storage service.
+
+@param {object} . Root template context
+@return {string} The Spider storage port
+*/}}
+{{- define "clp.spiderStoragePort" -}}
+50051
+{{- end }}
+
+{{/*
 Gets the BROKER_URL env var for Celery workers.
 
 @param {object} . Root template context
