@@ -3,10 +3,13 @@ import path from "node:path";
 import {fileURLToPath} from "node:url";
 
 import {Value} from "@sinclair/typebox/value";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import {WebuiSettingsSchema} from "@webui/common/schemas/settings";
 import {defineConfig} from "vite";
 
+
+const packageRoot = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -23,13 +26,11 @@ export default defineConfig({
     },
     plugins: [
         react(),
+        tailwindcss(),
         {
             name: "webui-public-settings",
             configureServer: (server) => {
-                const webuiRoot = path.resolve(
-                    path.dirname(fileURLToPath(import.meta.url)),
-                    "../.."
-                );
+                const webuiRoot = path.resolve(packageRoot, "../..");
 
                 server.middlewares.use("/settings.json", (_req, res) => {
                     try {
@@ -48,6 +49,11 @@ export default defineConfig({
         },
     ],
     publicDir: "public",
+    resolve: {
+        alias: {
+            "@": path.resolve(packageRoot, "./src"),
+        },
+    },
     server: {
         port: 8080,
         proxy: {

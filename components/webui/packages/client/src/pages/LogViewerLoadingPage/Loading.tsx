@@ -1,15 +1,5 @@
 import React from "react";
 
-import {
-    Box,
-    LinearProgress,
-    Sheet,
-    Step,
-    StepIndicator,
-    Stepper,
-    Typography,
-} from "@mui/joy";
-import {DefaultColorPalette} from "@mui/joy/styles/types";
 import {Nullable} from "@webui/common/utility-types";
 
 import {
@@ -19,6 +9,14 @@ import {
 } from "../../typings/query";
 
 import "./Loading.css";
+
+import {
+    Alert,
+    AlertDescription,
+    AlertTitle,
+} from "@/components/ui/alert";
+import {Progress} from "@/components/ui/progress";
+import {cn} from "@/lib/utils";
 
 
 interface LoadingStepProps {
@@ -47,37 +45,28 @@ const LoadingStep = ({
     label,
     stepIndicatorText,
 }: LoadingStepProps) => {
-    let color: DefaultColorPalette = isActive ?
-        "primary" :
-        "neutral";
-
-    if (isError) {
-        color = "danger";
-    }
+    const isHighlighted = isActive || isError;
 
     return (
-        <Step
-            indicator={
-                <StepIndicator
-                    color={color}
-                    variant={isActive ?
-                        "solid" :
-                        "outlined"}
-                >
-                    {stepIndicatorText}
-                </StepIndicator>
-            }
+        <li
+            className={cn(
+                "loading-step",
+                isHighlighted && "loading-step-active",
+                isError && "loading-step-error"
+            )}
         >
-            <Typography
-                color={color}
-                level={"title-lg"}
-            >
-                {label}
-            </Typography>
-            <Typography level={"body-sm"}>
-                {description}
-            </Typography>
-        </Step>
+            <div className={"loading-step-indicator"}>
+                {stepIndicatorText}
+            </div>
+            <div className={"loading-step-content"}>
+                <div className={"loading-step-label"}>
+                    {label}
+                </div>
+                <div className={"loading-step-description"}>
+                    {description}
+                </div>
+            </div>
+        </li>
     );
 };
 
@@ -125,24 +114,36 @@ const Loading = ({
     });
 
     return (
-        <Sheet className={"loading-sheet"}>
-            <Box className={"loading-progress-container"}>
-                <LinearProgress
-                    determinate={null !== errorMsg}
-                    color={null === errorMsg ?
-                        "primary" :
-                        "danger"}/>
-            </Box>
-            <Box className={"loading-stepper-container"}>
-                <Stepper
-                    className={"loading-stepper"}
-                    orientation={"vertical"}
-                    size={"lg"}
-                >
+        <div className={"loading-sheet"}>
+            <div className={"loading-progress-container"}>
+                <Progress
+                    className={cn(
+                        "loading-progress",
+                        null !== errorMsg && "loading-progress-error"
+                    )}
+                    value={null === errorMsg ?
+                        null :
+                        100}/>
+            </div>
+            <div className={"loading-stepper-container"}>
+                {null !== errorMsg && (
+                    <Alert
+                        className={"loading-error-alert"}
+                        variant={"destructive"}
+                    >
+                        <AlertTitle>
+                            Error
+                        </AlertTitle>
+                        <AlertDescription>
+                            {errorMsg}
+                        </AlertDescription>
+                    </Alert>
+                )}
+                <ol className={"loading-stepper"}>
                     {steps}
-                </Stepper>
-            </Box>
-        </Sheet>
+                </ol>
+            </div>
+        </div>
     );
 };
 
