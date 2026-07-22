@@ -18,7 +18,7 @@ RUN apt-get update \
 
 COPY --link ./build/rust-targets/release/libclp_tdl_package.so \
     ${SPIDER_TDL_PACKAGE_DIR}/clp/libclp.so
-COPY --link ./build/core/clp-s ./build/core/indexer ${CLP_HOME}/bin/
+COPY --link ./build/core/clp-s ./build/core/indexer ./build/core/log-converter ${CLP_HOME}/bin/
 
 ENV SPIDER_TDL_PACKAGE_DIR=${SPIDER_TDL_PACKAGE_DIR} \
     CLP_HOME=${CLP_HOME}
