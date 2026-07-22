@@ -1,8 +1,8 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_sqs::Client;
-use aws_sdk_sqs::config::Builder;
-use aws_sdk_sqs::config::Credentials;
-use aws_sdk_sqs::config::Region;
+use aws_sdk_sqs::{
+    Client,
+    config::{Builder, Credentials, Region},
+};
 use non_empty_string::NonEmptyString;
 
 use crate::clp_config::AwsAuthentication;

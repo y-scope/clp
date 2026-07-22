@@ -1,7 +1,6 @@
 use serde::Deserialize;
 
-use crate::clp_config::AwsAuthentication;
-use crate::clp_config::S3Config;
+use crate::clp_config::{AwsAuthentication, S3Config};
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///

@@ -1,7 +1,5 @@
-use num_enum::IntoPrimitive;
-use num_enum::TryFromPrimitive;
-use serde::Deserialize;
-use serde::Serialize;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 use strum::EnumString;
 use utoipa::ToSchema;
 

@@ -1,21 +1,24 @@
 use std::cmp::min;
 
 use anyhow::Result;
-use aws_sdk_sqs::Client;
-use aws_sdk_sqs::operation::receive_message::ReceiveMessageOutput;
-use aws_sdk_sqs::types::DeleteMessageBatchRequestEntry;
-use clp_rust_utils::job_config::ingestion::s3::ValidatedSqsListenerConfig;
-use clp_rust_utils::s3::ObjectMetadata;
-use clp_rust_utils::sqs::event::Record;
-use clp_rust_utils::sqs::event::S3;
+use aws_sdk_sqs::{
+    Client,
+    operation::receive_message::ReceiveMessageOutput,
+    types::DeleteMessageBatchRequestEntry,
+};
+use clp_rust_utils::{
+    job_config::ingestion::s3::ValidatedSqsListenerConfig,
+    s3::ObjectMetadata,
+    sqs::event::{Record, S3},
+};
 use non_empty_string::NonEmptyString;
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 
-use crate::aws_client_manager::AwsClientManagerType;
-use crate::ingestion_job::IngestionJobId;
-use crate::ingestion_job::IngestionJobState;
-use crate::ingestion_job::SqsListenerState;
+use crate::{
+    aws_client_manager::AwsClientManagerType,
+    ingestion_job::{IngestionJobId, IngestionJobState, SqsListenerState},
+};
 
 type TaskId = usize;
 

@@ -1,7 +1,5 @@
-use anyhow::Context;
-use anyhow::Result;
-use clp_rust_utils::s3::ObjectMetadata;
-use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+use anyhow::{Context, Result};
+use clp_rust_utils::{s3::ObjectMetadata, types::non_empty_string::ExpectedNonEmpty};
 use log_ingestor::ingestion_job::IngestionJobId;
 use non_empty_string::NonEmptyString;
 

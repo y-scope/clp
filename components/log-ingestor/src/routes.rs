@@ -1,26 +1,30 @@
 #![allow(clippy::needless_for_each)]
 
-use axum::Json;
-use axum::Router;
-use axum::extract::Path;
-use axum::extract::State;
-use axum::response::IntoResponse;
-use axum::routing::get;
-use clp_rust_utils::job_config::ingestion::s3::S3IngestionJobConfig;
-use clp_rust_utils::job_config::ingestion::s3::S3ScannerConfig;
-use clp_rust_utils::job_config::ingestion::s3::SqsListenerConfig;
+use axum::{
+    Json,
+    Router,
+    extract::{Path, State},
+    response::IntoResponse,
+    routing::get,
+};
+use clp_rust_utils::job_config::ingestion::s3::{
+    S3IngestionJobConfig,
+    S3ScannerConfig,
+    SqsListenerConfig,
+};
 use serde::Serialize;
-use tower_http::cors::Any;
-use tower_http::cors::CorsLayer;
-use utoipa::OpenApi;
-use utoipa::ToSchema;
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
+use tower_http::cors::{Any, CorsLayer};
+use utoipa::{OpenApi, ToSchema};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::ingestion_job::IngestionJobId;
-use crate::ingestion_job_manager::Error as IngestionJobManagerError;
-use crate::ingestion_job_manager::IngestionJobManagerState;
-use crate::ingestion_job_manager::TerminalStatus;
+use crate::{
+    ingestion_job::IngestionJobId,
+    ingestion_job_manager::{
+        Error as IngestionJobManagerError,
+        IngestionJobManagerState,
+        TerminalStatus,
+    },
+};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(

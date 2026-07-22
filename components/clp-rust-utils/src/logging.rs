@@ -1,9 +1,11 @@
-use tracing_appender::non_blocking::NonBlockingBuilder;
-use tracing_appender::non_blocking::WorkerGuard;
-use tracing_appender::rolling::RollingFileAppender;
-use tracing_appender::rolling::Rotation;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
-use tracing_subscriber::{self};
+use tracing_appender::{
+    non_blocking::{NonBlockingBuilder, WorkerGuard},
+    rolling::{RollingFileAppender, Rotation},
+};
+use tracing_subscriber::{
+    fmt::writer::MakeWriterExt,
+    {self},
+};
 
 /// Opaque struct to hold the worker guards for the background log writers.
 /// These guards must be held for the lifetime of the program to ensure logs are flushed.

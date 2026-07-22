@@ -2,11 +2,9 @@
 
 use std::env;
 
-use opentelemetry_sdk::metrics::PeriodicReader;
-use opentelemetry_sdk::metrics::SdkMeterProvider;
+use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 
-use crate::Error;
-use crate::clp_config::package::config::Telemetry;
+use crate::{Error, clp_config::package::config::Telemetry};
 
 /// RAII guard that shuts down the meter provider and flushes pending metric exports when dropped.
 pub struct TelemetryGuard {

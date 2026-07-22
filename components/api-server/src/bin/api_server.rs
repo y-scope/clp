@@ -1,7 +1,6 @@
 use anyhow::Context;
 use clap::Parser;
-use clp_rust_utils::clp_config::package;
-use clp_rust_utils::serde::yaml;
+use clp_rust_utils::{clp_config::package, serde::yaml};
 
 #[derive(Parser)]
 #[command(version, about = "API Server for CLP.")]

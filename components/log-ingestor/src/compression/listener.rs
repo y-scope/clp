@@ -1,15 +1,14 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use tokio::select;
-use tokio::sync::mpsc;
-use tokio::time::Instant;
-use tokio::time::sleep_until;
+use tokio::{
+    select,
+    sync::mpsc,
+    time::{Instant, sleep_until},
+};
 use tokio_util::sync::CancellationToken;
 
-use crate::compression::Buffer;
-use crate::compression::BufferSubmitter;
-use crate::compression::CompressionBufferEntry;
+use crate::compression::{Buffer, BufferSubmitter, CompressionBufferEntry};
 
 /// Represents a listener task that buffers incoming [`CompressionBufferEntry`] values and submits
 /// when a certain size threshold is reached or on timeout.

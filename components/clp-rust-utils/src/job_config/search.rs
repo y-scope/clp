@@ -1,7 +1,5 @@
-use num_enum::IntoPrimitive;
-use num_enum::TryFromPrimitive;
-use serde::Deserialize;
-use serde::Serialize;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use serde::{Deserialize, Serialize};
 
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 

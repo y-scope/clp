@@ -1,5 +1,4 @@
-use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use non_empty_string::NonEmptyString;
 
 /// Default AWS configuration for local testing with `LocalStack`.

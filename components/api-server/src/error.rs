@@ -1,5 +1,4 @@
-use aws_sdk_s3::error::SdkError;
-use aws_sdk_s3::primitives::ByteStreamError;
+use aws_sdk_s3::{error::SdkError, primitives::ByteStreamError};
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 

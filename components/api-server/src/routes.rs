@@ -1,31 +1,29 @@
-use axum::Json;
-use axum::extract::Path;
-use axum::extract::Query;
-use axum::extract::State;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::response::Sse;
-use axum::response::sse::Event;
-use axum::response::sse::KeepAlive;
-use axum::routing::get;
-use futures::Stream;
-use futures::StreamExt;
-use serde::Deserialize;
-use serde::Serialize;
+use axum::{
+    Json,
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::{
+        IntoResponse,
+        Sse,
+        sse::{Event, KeepAlive},
+    },
+    routing::get,
+};
+use futures::{Stream, StreamExt};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tower_http::cors::Any;
-use tower_http::cors::CorsLayer;
-use utoipa::OpenApi;
-use utoipa::ToSchema;
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
+use tower_http::cors::{Any, CorsLayer};
+use utoipa::{OpenApi, ToSchema};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::client::Client;
-use crate::client::ClientError;
-use crate::client::CompressionUsage;
-use crate::client::CompressionUsageParams;
-use crate::client::QueryConfig;
-use crate::client::ValidatedCompressionUsageParams;
+use crate::client::{
+    Client,
+    ClientError,
+    CompressionUsage,
+    CompressionUsageParams,
+    QueryConfig,
+    ValidatedCompressionUsageParams,
+};
 
 /// Factory method to create an Axum router configured with all API routes.
 ///
@@ -67,12 +65,14 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
 mod api_doc {
     // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
     // documentation. Importing the paths directly prevents this issue.
-    use super::__path_cancel_query;
-    use super::__path_compression_usage;
-    use super::__path_health;
-    use super::__path_query;
-    use super::__path_query_results;
-    use super::CompressionUsage;
+    use super::{
+        __path_cancel_query,
+        __path_compression_usage,
+        __path_health,
+        __path_query,
+        __path_query_results,
+        CompressionUsage,
+    };
     use crate::client::CompressionJobStatus;
 
     #[derive(utoipa::OpenApi)]
@@ -337,10 +337,11 @@ impl IntoResponse for HandlerError {
 
 #[cfg(test)]
 mod tests {
-    use axum::body::Body;
-    use axum::http::Request;
-    use axum::http::StatusCode;
-    use axum::routing::get;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        routing::get,
+    };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
