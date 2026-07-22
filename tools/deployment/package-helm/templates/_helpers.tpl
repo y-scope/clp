@@ -454,17 +454,13 @@ compression scheduler and workers.
 {{- end }}
 
 {{/*
-Gets the host for the Spider storage service, mirroring the Spider subchart's fullname logic.
+Gets the host for the Spider storage service.
 
 @param {object} . Root template context
 @return {string} The Spider storage host
 */}}
 {{- define "clp.spiderStorageHost" -}}
-{{- if contains "spider" .Release.Name -}}
-{{- printf "%s-storage" .Release.Name -}}
-{{- else -}}
-{{- printf "%s-spider-storage" .Release.Name -}}
-{{- end -}}
+{{- printf "%s-storage" .Values.spider.fullnameOverride -}}
 {{- end }}
 
 {{/*
