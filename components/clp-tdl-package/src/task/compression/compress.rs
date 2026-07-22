@@ -221,7 +221,7 @@ enum ClpSInput {
     Directory(PathBuf),
 }
 
-/// The owned inputs one spawned finisher needs to publish a single archive.
+/// An async finisher for publishing a single archive.
 struct ArchiveFinisher {
     client: aws_sdk_s3::Client,
     bucket: String,
@@ -241,7 +241,7 @@ impl ArchiveFinisher {
     /// Returns an error if:
     ///
     /// * The indexer task panics.
-    /// * Forwards [`put_file`]'s return values on failure.
+    /// * Forwards [`upload_file_to_s3`]'s return values on failure.
     /// * Forwards [`run_indexer`]'s return values on failure.
     async fn finish(self) -> anyhow::Result<()> {
         let Self {
@@ -259,8 +259,10 @@ impl ArchiveFinisher {
         let index = tokio::task::spawn_blocking(move || {
             run_indexer(&indexer_bin, &database, dataset.as_deref(), &index_path)
         });
-        let (upload_result, index_result) =
-            tokio::join!(put_file(&client, &bucket, &key, &local_path), index);
+        let (upload_result, index_result) = tokio::join!(
+            upload_file_to_s3(&client, &bucket, &key, &local_path),
+            index
+        );
         upload_result
             .context("failed to upload archive to S3")
             .inspect_err(|e| {
@@ -579,7 +581,7 @@ fn create_archive_s3_key(
 /// * Forwards [`aws_sdk_s3::primitives::ByteStream::from_path`]'s return values on failure.
 /// * Forwards [`aws_sdk_s3::operation::put_object::builders::PutObjectFluentBuilder::send`]'s
 ///   return values on failure.
-async fn put_file(
+async fn upload_file_to_s3(
     client: &aws_sdk_s3::Client,
     bucket: &str,
     key: &str,
@@ -671,10 +673,13 @@ fn run_indexer(
 ///
 /// Returns an error if:
 ///
-/// * log-converter's stderr was not captured.
 /// * log-converter exits with a non-zero status.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`std::process::Child::wait`]'s return values on failure.
+///
+/// # Panics
+///
+/// Panics if log-converter's piped stderr is unexpectedly absent (should be unreachable).
 fn run_log_converter(
     log_converter_bin: &Path,
     output_dir: &Path,
@@ -697,7 +702,7 @@ fn run_log_converter(
     let mut stderr = child
         .stderr
         .take()
-        .context("log-converter stderr was not captured")?;
+        .expect("piped stderr should always be present");
 
     let mut captured_stderr = String::new();
     if let Err(e) = stderr.read_to_string(&mut captured_stderr) {
@@ -736,12 +741,15 @@ fn run_log_converter(
 ///
 /// Returns an error if:
 ///
-/// * clp-s's stdout or stderr was not captured.
 /// * clp-s exits with a non-zero status.
 /// * Forwards `on_archive`'s return values on failure.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`parse_archive_stats`]'s return values on failure.
 /// * Forwards [`std::process::Child::wait`]'s return values on failure.
+///
+/// # Panics
+///
+/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable).
 fn run_clp_s(
     clp_s_bin: &Path,
     archive_dir: &Path,
@@ -761,7 +769,7 @@ fn run_clp_s(
     let mut stderr = child
         .stderr
         .take()
-        .context("clp-s stderr was not captured")?;
+        .expect("piped stderr should always be present");
     let stderr_reader = std::thread::spawn(move || {
         let mut buffer = String::new();
         stderr.read_to_string(&mut buffer).map(|_| buffer)
@@ -770,7 +778,7 @@ fn run_clp_s(
     let stdout = child
         .stdout
         .take()
-        .context("clp-s stdout was not captured")?;
+        .expect("piped stdout should always be present");
     for line in BufReader::new(stdout).lines() {
         let line = line.context("failed to read a line from clp-s stdout")?;
         if let Err(e) = parse_archive_stats(&line).and_then(&mut on_archive) {
