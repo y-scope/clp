@@ -49,9 +49,8 @@ use crate::common::{clp_home, runtime};
 ///
 /// * A spawned archive finisher panics.
 /// * Forwards [`std::fs::write`]'s return values on failure.
-/// * Forwards [`std::fs::create_dir`]'s return values on failure.
 /// * Forwards [`extract_s3_output_config`]'s return values on failure.
-/// * Forwards [`run_log_converter`]'s return values on failure.
+/// * Forwards [`prepare_clp_s_input`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
 /// * Forwards [`ArchiveFinisher::finish`]'s return values on failure.
 pub(super) fn compress(
