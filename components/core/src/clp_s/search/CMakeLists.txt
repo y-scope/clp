@@ -49,6 +49,7 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 clp_s::io
                 opentelemetry-cpp::api
                 opentelemetry-cpp::otlp_http_exporter
+                opentelemetry-cpp::ostream_span_exporter
                 opentelemetry-cpp::resources
                 opentelemetry-cpp::trace
                 spdlog::spdlog

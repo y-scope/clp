@@ -78,6 +78,11 @@ struct SearchResultMetrics {
     uint64_t num_archive_records_matching_query{};
     uint64_t num_matched_schemas{};
     uint64_t num_schemas_with_matches{};
+    uint64_t num_schemas_scanned{};
+    uint64_t num_messages_evaluated{};
+    uint64_t num_column_scan_filters{};
+    uint64_t num_query_runner_filters{};
+    uint64_t bytes_output{};
 };
 
 /**

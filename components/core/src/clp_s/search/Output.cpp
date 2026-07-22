@@ -103,6 +103,9 @@ bool Output::filter() {
             continue;
         }
         scanned_any_ert = true;
+        ++m_result_metrics.num_schemas_scanned;
+        m_result_metrics.num_messages_evaluated
+                += m_archive_reader->get_num_messages_for_schema(schema_id);
 
         auto& reader = m_archive_reader->read_schema_table(
                 schema_id,
@@ -110,6 +113,11 @@ bool Output::filter() {
                 m_should_marshal_records
         );
         auto& filter = m_query_runner.prepare_filter(reader);
+        if (nullptr != dynamic_cast<ColumnScan*>(&filter)) {
+            ++m_result_metrics.num_column_scan_filters;
+        } else {
+            ++m_result_metrics.num_query_runner_filters;
+        }
 
         bool schema_has_match{false};
         if (m_output_handler->should_output_metadata()) {
@@ -119,12 +127,14 @@ bool Output::filter() {
             {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
+                m_result_metrics.bytes_output += message.size();
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, filter)) {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
+                m_result_metrics.bytes_output += message.size();
                 m_output_handler->write(message);
             }
         }
