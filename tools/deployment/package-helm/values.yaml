@@ -241,14 +241,14 @@ clpConfig:
 
   compression_worker:
     logging_level: "INFO"
-    task_soft_time_limit: 0  # A value of 0 disables the limit
-    task_time_limit: 0  # A value of 0 disables the limit
+    task_soft_time_limit: 600
+    task_time_limit: 1200
     telemetry_update_interval_ms: 60000
 
   query_worker:
     logging_level: "INFO"
-    task_soft_time_limit: 0  # A value of 0 disables the limit
-    task_time_limit: 0  # A value of 0 disables the limit
+    task_soft_time_limit: 600
+    task_time_limit: 1200
     telemetry_update_interval_ms: 60000
     query_trace_sampling_probability: 0.01
 
