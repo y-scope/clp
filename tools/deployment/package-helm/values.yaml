@@ -371,7 +371,4 @@ serviceAccount:
 # Overrides for the Spider subchart's `values.yaml`
 spider:
   enabled: false
-
-  # Fixed name for the subchart's resources (e.g., the "spider-storage" Service) so that CLP can
-  # address them independently of the release name. Must be non-empty.
   fullnameOverride: "spider"
