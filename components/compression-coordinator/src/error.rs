@@ -6,6 +6,9 @@ pub enum Error {
     #[error("S3 bucket mismatch: expected `{0}`, but got `{1}`")]
     S3BucketMismatch(String, String),
 
+    #[error("S3 key prefix mismatch: expected key to start with `{0}`, but got `{1}`")]
+    S3KeyPrefixMismatch(String, String),
+
     /// Failed to build or serialize the compression task graph.
     #[error("failed to build the compression task graph: {0}")]
     TaskGraph(#[from] spider_core::task::Error),

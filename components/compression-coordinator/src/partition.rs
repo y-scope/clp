@@ -56,11 +56,24 @@ impl CompressionInputBuilder {
     ///
     /// * [`Error::S3BucketMismatch`] if `metadata`'s bucket differs from the buffer's configured
     ///   bucket.
+    /// * [`Error::S3KeyPrefixMismatch`] if `metadata`'s key doesn't start with the buffer's
+    ///   configured key prefix.
     pub fn add(&mut self, metadata: ObjectMetadata) -> Result<(), Error> {
         if metadata.bucket != self.s3_config.bucket {
             return Err(Error::S3BucketMismatch(
                 String::from(self.s3_config.bucket.clone()),
                 String::from(metadata.bucket),
+            ));
+        }
+
+        if !metadata
+            .key
+            .as_str()
+            .starts_with(self.s3_config.key_prefix.as_str())
+        {
+            return Err(Error::S3KeyPrefixMismatch(
+                String::from(self.s3_config.key_prefix.clone()),
+                String::from(metadata.key),
             ));
         }
 
