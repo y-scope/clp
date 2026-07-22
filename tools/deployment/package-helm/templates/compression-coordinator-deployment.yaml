@@ -1,4 +1,4 @@
-{{- if include "clp.spiderOrchestrationEnabled" . }}
+{{- if .Values.spider.enabled }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -55,7 +55,7 @@ spec:
             - name: "OTEL_SERVICE_NAME"
               value: "compression-coordinator"
             - name: "RUST_LOG"
-              value: {{ .Values.clpConfig.compression_coordinator.logging_level
+              value: {{ (.Values.clpConfig.compression_coordinator | default dict).logging_level
                 | default "INFO" | quote }}
           {{- include "clp.createResourceLimits" (dict
               "root" .

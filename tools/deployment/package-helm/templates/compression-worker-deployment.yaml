@@ -1,4 +1,4 @@
-{{- if not (include "clp.spiderOrchestrationEnabled" .) }}
+{{- if not .Values.spider.enabled }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:

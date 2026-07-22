@@ -67,8 +67,8 @@ data:
         | int }}
       target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
         | int }}
-    {{- if include "clp.spiderOrchestrationEnabled" . }}
-    {{- $coordinator := .Values.clpConfig.compression_coordinator }}
+    {{- if .Values.spider.enabled }}
+    {{- $coordinator := .Values.clpConfig.compression_coordinator | default dict }}
     compression_coordinator:
       service_name: {{ $coordinator.service_name | default "compression-coordinator" | quote }}
       jobs_poll_delay: {{ $coordinator.jobs_poll_delay | default 0.1 }}
