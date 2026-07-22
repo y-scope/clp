@@ -71,22 +71,29 @@ header:^ ?Z$
 !float:-?\d+\.\d+([eE]-?\d+)?
 !int:-?\d+
 !hex:[\dA-Fa-f]+
-!uuid:[\dA-Fa-f-]+(-[\dA-Fa-f]+)+
-!txt:[\w_./\\-]
+!uuid:[\dA-Fa-f]{8}-[\dA-Fa-f]{4}-[\dA-Fa-f]{4}-[\dA-Fa-f]{4}-[\dA-Fa-f]{12}
+src: /172.31.16.228:51334
+!ip_port:/?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?
+!txt:[\w_./\\-]+
 !non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]
 
 # heuristic fallback patterns
-key_value:^(?<key>(?<txt>)*)[:=]|: (?<float_value>(?<float>))$
-key_value:^(?<key>(?<txt>)*)[:=]|: (?<int_value>(?<int>))$
-key_value:^(?<key>(?<txt>)*)[:=]|: (?<hex_value>(?<hex>))$
-key_value:^(?<key>(?<txt>)*)[:=]|: (?<uuid_value>(?<uuid>))$
-key_value:^(?<key>(?<txt>)*)[:=]|: (?<str_value>(?<txt>)*\w(?<txt>)*)$
+key_value:^(?<key>(?<txt>))([:=]|: )(?<float_value>(?<float>))$
+key_value:^(?<key>(?<txt>))([:=]|: )(?<int_value>(?<int>))$
+key_value:^(?<key>(?<txt>))([:=]|: )(?<hex_value>(?<hex>))$
+key_value:^(?<key>(?<txt>))([:=]|: )(?<uuid_value>(?<uuid>))$
+key_value:^(?<key>(?<txt>))([:=]|: )(?<ip_value>(?<ip_port>))$
+## For str values the ":" and ": " separators produces false positives.
+key_value:^(?<key>(?<txt>))=(?<str_value>(?<txt>))$
 
 duration:^(?<value>(?<float>))(?<unit>m|minutes|ms|us|s|seconds)$
 src_loc:^(?<file>/?(?<non_delim>)+(/(?<non_delim>)+)+\.(?<non_delim>)+):(?<line>\d+)$
-path:^/?(?<non_delim>)+(/(?<non_delim>)+)+$
-has_number:^(?<non_delim>)*\d(?<non_delim>)*$
 
 float_fallback:^(?<float>)$
 int_fallback:^(?<int>)$
 hex_fallback:^(?<hex>)$
+uuid_fallback:^(?<uuid>)$
+ip_fallback:^(?<ip_port>)$
+
+path:^/?(?<non_delim>)+(/(?<non_delim>)+)+$
+has_number:^(?<non_delim>)*\d(?<non_delim>)*$
