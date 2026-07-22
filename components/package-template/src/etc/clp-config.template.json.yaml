@@ -22,6 +22,7 @@ telemetry:
 #log_ingestor:
 #  host: "localhost"
 #  port: 3002
+#  database_connection_pool_size: 100
 #  logging_level: "INFO"
 
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all

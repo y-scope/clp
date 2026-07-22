@@ -178,6 +178,7 @@ impl ClpDbIngestionConnector {
     ///
     /// * Forwards [`clp_rust_utils::database::mysql::create_clp_db_mysql_pool`]'s return values on
     ///   failure.
+    /// * [`anyhow::Error`] if the log-ingestor configuration is missing.
     /// * Forwards [`Self::create_tables`]'s return values on failure.
     /// * Forwards [`Self::get_unfinished_compression_jobs`]'s return values on failure.
     /// * Forwards [`Self::load_ingestion_jobs`]'s return values on failure.
@@ -199,10 +200,16 @@ impl ClpDbIngestionConnector {
             }
         };
 
+        let database_connection_pool_size = clp_config
+            .log_ingestor
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Invalid CLP config: log-ingestor is not configured"))?
+            .database_connection_pool_size
+            .get();
         let mysql_pool = clp_rust_utils::database::mysql::create_clp_db_mysql_pool(
             &clp_config.database,
             &clp_credentials.database,
-            100,
+            database_connection_pool_size,
         )
         .await?;
 

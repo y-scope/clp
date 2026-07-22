@@ -73,10 +73,6 @@ impl IngestionJobManagerState {
     ///
     /// * [`anyhow::Error`] if the logs input type in the CLP configuration is unsupported.
     /// * Forwards [`ClpDbIngestionConnector::connect`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `clp_config.log_ingestor` is `None`.
     pub async fn from_config(
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
