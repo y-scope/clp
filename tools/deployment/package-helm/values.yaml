@@ -197,17 +197,16 @@ clpConfig:
     max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
     telemetry_update_interval_ms: 60000
 
-  # Compression coordinator config overrides. Only used when `spider.enabled` is true, in which
-  # case the chart replaces the Celery compression scheduler and workers with the compression
-  # coordinator, which drives compression jobs through Spider. When null, the defaults shown
-  # below apply.
+  # Compression coordinator config. Only used when `spider.enabled` is true, in which case the
+  # chart replaces the Celery compression scheduler and workers with the compression coordinator,
+  # which drives compression jobs through Spider.
   # NOTE: Currently, the coordinator only processes compression jobs submitted by the
   # log-ingestor.
-  compression_coordinator: null
-  #   service_name: "compression-coordinator"
-  #   jobs_poll_delay: 0.1  # seconds
-  #   termination_timeout_seconds: 30
-  #   logging_level: "INFO"
+  compression_coordinator:
+    jobs_poll_delay: 0.1  # seconds
+    logging_level: "INFO"
+    service_name: "compression-coordinator"
+    termination_timeout_seconds: 30
 
   query_scheduler:
     jobs_poll_delay: 0.1  # seconds

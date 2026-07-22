@@ -443,6 +443,17 @@ Gets the port for the Presto service.
 {{- end }}
 
 {{/*
+Whether Spider orchestration is enabled, i.e., the compression coordinator replaces the Celery
+compression scheduler and workers.
+
+@param {object} . Root template context
+@return {string} "true" when enabled; "" otherwise
+*/}}
+{{- define "clp.spiderOrchestrationEnabled" -}}
+{{- if .Values.spider.enabled -}}true{{- end -}}
+{{- end }}
+
+{{/*
 Gets the host for the Spider storage service, mirroring the Spider subchart's fullname logic.
 
 @param {object} . Root template context
