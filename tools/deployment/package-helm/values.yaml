@@ -191,22 +191,17 @@ clpConfig:
       clp: "clp-db"
       spider: "spider-db"
 
-  compression_scheduler:
-    jobs_poll_delay: 0.1  # seconds
-    logging_level: "INFO"
-    max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
-    telemetry_update_interval_ms: 60000
-
-  # Compression coordinator config. Only used when `spider.enabled` is true, in which case the
-  # chart replaces the Celery compression scheduler and workers with the compression coordinator,
-  # which drives compression jobs through Spider.
-  # NOTE: Currently, the coordinator only processes compression jobs submitted by the
-  # log-ingestor.
   compression_coordinator:
     jobs_poll_delay: 0.1  # seconds
     logging_level: "INFO"
     service_name: "compression-coordinator"
     termination_timeout_seconds: 30
+
+  compression_scheduler:
+    jobs_poll_delay: 0.1  # seconds
+    logging_level: "INFO"
+    max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
+    telemetry_update_interval_ms: 60000
 
   query_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -373,7 +368,6 @@ serviceAccount:
   # For IRSA on EKS, set:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
 
-# Overrides for the Spider subchart's own `values.yaml` (e.g., `image.storage.tag`).
+# Overrides for the Spider subchart's `values.yaml`
 spider:
-  # Whether to deploy the Spider subchart.
   enabled: false
