@@ -8,8 +8,6 @@ import {
     QUERY_LOADING_STATE_VALUES,
 } from "../../typings/query";
 
-import "./Loading.css";
-
 import {
     Alert,
     AlertDescription,
@@ -45,24 +43,33 @@ const LoadingStep = ({
     label,
     stepIndicatorText,
 }: LoadingStepProps) => {
-    const isHighlighted = isActive || isError;
-
     return (
         <li
             className={cn(
-                "loading-step",
-                isHighlighted && "loading-step-active",
-                isError && "loading-step-error"
+                "grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-3.5",
+                "text-muted-foreground",
+                isError ?
+                    "text-destructive" :
+                    isActive && "text-foreground"
             )}
         >
-            <div className={"loading-step-indicator"}>
+            <div
+                className={cn(
+                    "flex size-10 items-center justify-center rounded-full border",
+                    "border-border text-sm font-semibold",
+                    isError ?
+                        "border-destructive bg-destructive text-primary-foreground" :
+                        isActive &&
+                        "border-primary bg-primary text-primary-foreground"
+                )}
+            >
                 {stepIndicatorText}
             </div>
-            <div className={"loading-step-content"}>
-                <div className={"loading-step-label"}>
+            <div className={"min-w-0"}>
+                <div className={"text-lg font-semibold"}>
                     {label}
                 </div>
-                <div className={"loading-step-description"}>
+                <div className={"mt-1 text-sm text-muted-foreground"}>
                     {description}
                 </div>
             </div>
@@ -114,23 +121,25 @@ const Loading = ({
     });
 
     return (
-        <div className={"loading-sheet"}>
-            <div className={"loading-progress-container"}>
-                <Progress
-                    className={cn(
-                        "loading-progress",
-                        null !== errorMsg && "loading-progress-error"
-                    )}
-                    value={null === errorMsg ?
-                        null :
-                        100}/>
-            </div>
-            <div className={"loading-stepper-container"}>
+        <div
+            className={"flex h-full flex-col items-center bg-background text-foreground"}
+        >
+            <Progress
+                className={cn(
+                    "w-full",
+                    null !== errorMsg && "[--primary:var(--destructive)]"
+                )}
+                value={null === errorMsg ?
+                    null :
+                    100}/>
+            <div
+                className={
+                    "flex w-[calc(100%-2rem)] max-w-lg flex-1 flex-col " +
+                    "items-center justify-center gap-6"
+                }
+            >
                 {null !== errorMsg && (
-                    <Alert
-                        className={"loading-error-alert"}
-                        variant={"destructive"}
-                    >
+                    <Alert variant={"destructive"}>
                         <AlertTitle>
                             Error
                         </AlertTitle>
@@ -139,7 +148,7 @@ const Loading = ({
                         </AlertDescription>
                     </Alert>
                 )}
-                <ol className={"loading-stepper"}>
+                <ol className={"flex w-full flex-col gap-8"}>
                     {steps}
                 </ol>
             </div>
