@@ -11,6 +11,7 @@ pub struct ClpSCompressionOption {
     pub target_encoded_size: u64,
     pub compression_level: i32,
     pub timestamp_key: Option<String>,
+    pub unstructured: bool,
 }
 
 /// Input source for a compression task.
