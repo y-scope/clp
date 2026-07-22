@@ -652,7 +652,7 @@ fn run_indexer(
         .with_context(|| format!("failed to spawn indexer at {}", indexer_bin.display()))?;
     if !status.success() {
         tracing::error!(
-            status = % status,
+            status = status.code(),
             archive_path = % archive_path.display(),
             "indexer exited on failure."
         );
@@ -721,7 +721,7 @@ fn run_log_converter(
         })?;
     if !status.success() {
         tracing::error!(
-            status = % status,
+            status = status.code(),
             stderr = % captured_stderr,
             "log-converter exited on failure."
         );
@@ -805,7 +805,7 @@ fn run_clp_s(
     };
     if !status.success() {
         tracing::error!(
-            status = % status,
+            status = status.code(),
             stderr = % stderr,
             "clp-s exited on failure."
         );
