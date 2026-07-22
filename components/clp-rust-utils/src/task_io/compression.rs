@@ -1,7 +1,8 @@
 //! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP S3 compression jobs.
 
 use non_empty_string::NonEmptyString;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::clp_config::AwsAuthentication;
 

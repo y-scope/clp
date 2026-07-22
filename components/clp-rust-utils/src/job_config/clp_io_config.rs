@@ -1,11 +1,9 @@
 use non_empty_string::NonEmptyString;
 use serde::Serialize;
 
-use crate::{
-    clp_config::S3Config,
-    job_config::ingestion::JobId as IngestionJobId,
-    s3::S3ObjectMetadataId,
-};
+use crate::clp_config::S3Config;
+use crate::job_config::ingestion::JobId as IngestionJobId;
+use crate::s3::S3ObjectMetadataId;
 
 /// Represents CLP IO config.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

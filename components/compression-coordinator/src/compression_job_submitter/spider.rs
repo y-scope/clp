@@ -3,32 +3,26 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use clp_rust_utils::{
-    job_config::CompressionJobId,
-    task_io::compression::{ClpSCompressionOption, S3InputSource},
-};
-use spider_client::{SpiderClient, error::ClientError};
-use spider_core::{
-    job::JobState,
-    task::{
-        DataTypeDescriptor,
-        ExecutionPolicy,
-        TaskDescriptor,
-        TaskGraph,
-        TdlContext,
-        TerminationTaskDescriptor,
-        ValueTypeDescriptor,
-    },
-    types::{
-        id::{JobId, ResourceGroupId},
-        io::TaskInput,
-    },
-};
+use clp_rust_utils::job_config::CompressionJobId;
+use clp_rust_utils::task_io::compression::ClpSCompressionOption;
+use clp_rust_utils::task_io::compression::S3InputSource;
+use spider_client::SpiderClient;
+use spider_client::error::ClientError;
+use spider_core::job::JobState;
+use spider_core::task::DataTypeDescriptor;
+use spider_core::task::ExecutionPolicy;
+use spider_core::task::TaskDescriptor;
+use spider_core::task::TaskGraph;
+use spider_core::task::TdlContext;
+use spider_core::task::TerminationTaskDescriptor;
+use spider_core::task::ValueTypeDescriptor;
+use spider_core::types::id::JobId;
+use spider_core::types::id::ResourceGroupId;
+use spider_core::types::io::TaskInput;
 
-use crate::{
-    compression_job_submitter::{CompressionJobOutcome, S3CompressionJobSubmitter},
-    error::Error,
-};
+use crate::compression_job_submitter::CompressionJobOutcome;
+use crate::compression_job_submitter::S3CompressionJobSubmitter;
+use crate::error::Error;
 
 #[async_trait]
 impl S3CompressionJobSubmitter for SpiderClient {

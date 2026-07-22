@@ -1,13 +1,13 @@
 //! Partitioning of S3 objects into compression-task inputs.
 
-use std::{collections::VecDeque, path::Path};
+use std::collections::VecDeque;
+use std::path::Path;
 
-use clp_rust_utils::{
-    clp_config::S3Config,
-    job_config::{ClpIoConfig, InputConfig},
-    s3::ObjectMetadata,
-    task_io::compression::S3InputSource,
-};
+use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::job_config::ClpIoConfig;
+use clp_rust_utils::job_config::InputConfig;
+use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::task_io::compression::S3InputSource;
 
 use crate::Error;
 
@@ -292,10 +292,9 @@ fn group_files_by_similar_filenames(mut files: Vec<FileMetadata>) -> Vec<Vec<Fil
 mod tests {
     use std::collections::BTreeMap;
 
-    use clp_rust_utils::{
-        clp_config::AwsAuthentication,
-        job_config::{OutputConfig, S3InputConfig},
-    };
+    use clp_rust_utils::clp_config::AwsAuthentication;
+    use clp_rust_utils::job_config::OutputConfig;
+    use clp_rust_utils::job_config::S3InputConfig;
     use non_empty_string::NonEmptyString;
 
     use super::*;

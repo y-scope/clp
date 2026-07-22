@@ -1,42 +1,34 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
-use clp_rust_utils::{
-    clp_config::{AwsAuthentication, AwsCredentials},
-    job_config::ingestion::s3::{
-        BaseConfig,
-        BufferConfig,
-        S3ScannerConfig,
-        SqsListenerConfig,
-        ValidatedSqsListenerConfig,
-    },
-    s3::ObjectMetadata,
-    types::non_empty_string::ExpectedNonEmpty,
-};
-use log_ingestor::{
-    aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{
-        IngestionJobId,
-        IngestionJobState,
-        S3Scanner,
-        S3ScannerState,
-        SqsListener,
-        SqsListenerState,
-    },
-};
+use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::AwsCredentials;
+use clp_rust_utils::job_config::ingestion::s3::BaseConfig;
+use clp_rust_utils::job_config::ingestion::s3::BufferConfig;
+use clp_rust_utils::job_config::ingestion::s3::S3ScannerConfig;
+use clp_rust_utils::job_config::ingestion::s3::SqsListenerConfig;
+use clp_rust_utils::job_config::ingestion::s3::ValidatedSqsListenerConfig;
+use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+use log_ingestor::aws_client_manager::S3ClientWrapper;
+use log_ingestor::aws_client_manager::SqsClientWrapper;
+use log_ingestor::ingestion_job::IngestionJobId;
+use log_ingestor::ingestion_job::IngestionJobState;
+use log_ingestor::ingestion_job::S3Scanner;
+use log_ingestor::ingestion_job::S3ScannerState;
+use log_ingestor::ingestion_job::SqsListener;
+use log_ingestor::ingestion_job::SqsListenerState;
 use non_empty_string::NonEmptyString;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use super::{
-    aws_config::AwsConfig,
-    test_utils::{
-        get_testing_prefix_as_non_empty_string,
-        upload_test_objects,
-        {self},
-    },
-};
+use super::aws_config::AwsConfig;
+use super::test_utils::get_testing_prefix_as_non_empty_string;
+use super::test_utils::upload_test_objects;
+use super::test_utils::{self};
 
 const WAIT_FOR_INGESTED_OBJECTS_TIMEOUT_SEC: u64 = 30;
 const INGESTED_OBJECT_POLL_INTERVAL_MS: u64 = 100;

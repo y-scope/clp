@@ -1,25 +1,20 @@
-use std::{
-    collections::HashSet,
-    sync::{
-        Arc,
-        atomic::{AtomicUsize, Ordering},
-    },
-};
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use anyhow::Result;
-use clp_rust_utils::{
-    clp_config::{AwsAuthentication, AwsCredentials},
-    s3::ObjectMetadata,
-};
+use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::AwsCredentials;
+use clp_rust_utils::s3::ObjectMetadata;
 use log_ingestor::ingestion_job::scan_prefix;
 use non_empty_string::NonEmptyString;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use super::{
-    aws_config::AwsConfig,
-    test_utils::{get_testing_prefix_as_non_empty_string, upload_test_objects},
-};
+use super::aws_config::AwsConfig;
+use super::test_utils::get_testing_prefix_as_non_empty_string;
+use super::test_utils::upload_test_objects;
 
 /// `ListObjectsV2` returns at most 1,000 keys per response.
 const MAX_NUM_OBJECTS_PER_PAGE: usize = 1000;
