@@ -10,6 +10,7 @@ vars:
   G_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs"
   G_NODEJS_BIN_DIR: "{{.G_NODEJS_BUILD_DIR}}/bin"
   G_NODEJS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/nodejs.md5"
+  G_NODEJS_VERSION_FILE: "{{.G_WEBUI_SRC_DIR}}/.node-version"
   G_RUST_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/rust"
   G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_DIR}}/env"
 
@@ -62,7 +63,8 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_NODEJS_CHECKSUM_FILE}}"
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
-      NODEJS_VERSION: "v24.18.0"
+      NODEJS_VERSION:
+        sh: "printf 'v%s' \"$(cat '{{.G_NODEJS_VERSION_FILE}}')\""
       OUTPUT_DIR: "{{.G_NODEJS_BUILD_DIR}}"
     run: "once"
     cmds:

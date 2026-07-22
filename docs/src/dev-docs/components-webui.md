@@ -5,7 +5,7 @@ server. It also serves the [log viewer][yscope-log-viewer].
 
 ## Requirements
 
-* Node.js v24 or higher
+* Node.js v24 (see `components/webui/.node-version` for the exact version)
 * (Optional) [nvm (Node Version Manager)][nvm] to manage different versions of Node.js
 
 ## Setup
