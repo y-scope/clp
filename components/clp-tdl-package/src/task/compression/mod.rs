@@ -30,5 +30,28 @@ pub(crate) fn s3_compress_task(
 #[task(name = "compression::commit")]
 pub(crate) fn commit_task(ctx: TaskContext) -> Result<(), TdlError> {
     tracing::info!(job_id = % ctx.job_id, "CLP commit task started.");
-    unimplemented!("the clp-s commit task is not implemented yet")
+    let outputs = ctx
+        .get_task_graph_outputs()?
+        .ok_or_else(|| TdlError::ExecutionError("commit must run as a commit task".to_owned()))?;
+    let outputs: Vec<CompressionTaskOutput> = outputs
+        .iter()
+        .map(|output| rmp_serde::from_slice(output))
+        .collect::<Result<_, _>>()
+        .map_err(|e| TdlError::DeserializationError(e.to_string()))?;
+    let dataset = outputs.first().and_then(|output| output.dataset.clone());
+    if outputs.iter().any(|output| output.dataset != dataset) {
+        return Err(TdlError::ExecutionError(
+            "compression task outputs belong to more than one dataset".to_owned(),
+        ));
+    }
+    let archives = outputs
+        .into_iter()
+        .flat_map(|output| output.archives)
+        .collect();
+    crate::common::runtime()
+        .block_on(commit::commit(ctx.job_id, dataset, archives))
+        .inspect_err(|e| {
+            tracing::error!(spider_job_id = % ctx.job_id, error = ? e, "CLP commit task failed.");
+        })
+        .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
