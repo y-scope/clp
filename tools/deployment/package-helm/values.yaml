@@ -284,6 +284,7 @@ clpConfig:
 
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
+    database_connection_pool_size: 100
     port: 30302
     logging_level: "INFO"
 
