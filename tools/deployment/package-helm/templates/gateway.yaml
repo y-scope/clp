@@ -10,7 +10,9 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  gatewayClassName: {{ .Values.gateway.className | quote }}
+  gatewayClassName: {{ required
+    "gateway.className is required when gateway.enabled is true"
+    .Values.gateway.className | quote }}
   listeners:
     - name: "http"
       port: 80

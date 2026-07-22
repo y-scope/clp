@@ -16,7 +16,9 @@ spec:
   ports:
     - port: 3002
       targetPort: "log-ingestor"
-      {{- if and (eq .Values.clpConfig.log_ingestor.serviceType "NodePort") .Values.clpConfig.log_ingestor.port }}
+      {{- if and
+        (eq .Values.clpConfig.log_ingestor.serviceType "NodePort")
+        .Values.clpConfig.log_ingestor.port }}
       nodePort: {{ .Values.clpConfig.log_ingestor.port }}
       {{- end }}
 {{- end }}

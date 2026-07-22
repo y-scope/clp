@@ -13,6 +13,8 @@ spec:
   ports:
     - port: 4000
       targetPort: "webui"
-      {{- if and (eq .Values.clpConfig.webui.serviceType "NodePort") .Values.clpConfig.webui.port }}
+      {{- if and
+        (eq .Values.clpConfig.webui.serviceType "NodePort")
+        .Values.clpConfig.webui.port }}
       nodePort: {{ .Values.clpConfig.webui.port }}
       {{- end }}

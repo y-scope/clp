@@ -14,7 +14,9 @@ spec:
   ports:
     - port: 3001
       targetPort: "api-server"
-      {{- if and (eq .Values.clpConfig.api_server.serviceType "NodePort") .Values.clpConfig.api_server.port }}
+      {{- if and
+        (eq .Values.clpConfig.api_server.serviceType "NodePort")
+        .Values.clpConfig.api_server.port }}
       nodePort: {{ .Values.clpConfig.api_server.port }}
       {{- end }}
 {{- end }}

@@ -423,19 +423,23 @@ To run all worker types in the same node pool:
 
 ### Service types and Gateway API
 
-By default, externally-accessible services (Web UI, API server, log ingestor, MCP server) use
-`NodePort` with fixed port numbers. You can change the service type to `ClusterIP` or
-`LoadBalancer` using the `serviceType` key for each service, and optionally add [Gateway API]
-resources for production deployments behind a load balancer.
+By default, externally-accessible services (Web UI, API server, log ingestor, MCP server, and
+Presto coordinator) use `NodePort` with fixed port numbers. You can change the service type to
+`ClusterIP` or `LoadBalancer` using the `serviceType` key for each service, and optionally add
+[Gateway API] resources for deployments behind a load balancer.
 
 #### Using ClusterIP with Gateway API
 
-For cloud Kubernetes deployments (e.g., EKS, GKE, AKS), the standard pattern is `ClusterIP`
-services behind a [Gateway API] controller such as [nginx-gateway-fabric], Envoy Gateway, or
-Istio:
+For cloud Kubernetes deployments (e.g., EKS, GKE, AKS), a common pattern is `ClusterIP` services
+behind a [Gateway API] controller such as [nginx-gateway-fabric], Envoy Gateway, or Istio. This
+example creates an HTTP listener; configure TLS on an upstream load balancer or add an HTTPS
+listener before exposing it directly in production:
 
 ```{code-block} yaml
 :caption: clusterip-gateway.yaml
+
+# Keep bundled database and results-cache services off host node ports
+allowHostAccessForSbinScripts: false
 
 clpConfig:
   # Switch external services to ClusterIP
@@ -462,7 +466,8 @@ The chart creates a `Gateway` listener on port 80 and `HTTPRoute` resources that
 | Path | Backend |
 |---|---|
 | `/api/v2/` | api-server (prefix stripped) |
-| `/mcp/` | mcp-server (prefix stripped) |
+| `/log_ingestor/` | log-ingestor (prefix stripped) |
+| `/mcp` | mcp-server |
 | `/` | webui (catch-all) |
 
 #### Custom NodePort numbers

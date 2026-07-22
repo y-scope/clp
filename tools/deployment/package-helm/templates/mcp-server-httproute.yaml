@@ -13,12 +13,6 @@ spec:
         - path:
             type: "PathPrefix"
             value: "/mcp"
-      filters:
-        - type: "URLRewrite"
-          urlRewrite:
-            path:
-              type: "ReplacePrefixMatch"
-              replacePrefixMatch: "/"
       backendRefs:
         - name: {{ include "clp.fullname" . }}-mcp-server
           port: 8000

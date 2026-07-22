@@ -274,6 +274,7 @@ clpConfig:
   presto: null
   #   host: "localhost"
   #   port: 30889
+  #   serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
   #   coordinator:
   #     logging_level: "INFO"
   #     query_max_memory_gb: 1
