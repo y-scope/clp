@@ -177,9 +177,9 @@ impl ClpDbIngestionConnector {
     ///
     /// Returns an error if:
     ///
+    /// * [`anyhow::Error`] if the log-ingestor configuration is missing.
     /// * Forwards [`clp_rust_utils::database::mysql::create_clp_db_mysql_pool`]'s return values on
     ///   failure.
-    /// * [`anyhow::Error`] if the log-ingestor configuration is missing.
     /// * Forwards [`Self::create_tables`]'s return values on failure.
     /// * Forwards [`Self::get_unfinished_compression_jobs`]'s return values on failure.
     /// * Forwards [`Self::load_ingestion_jobs`]'s return values on failure.
