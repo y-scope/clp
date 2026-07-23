@@ -6,6 +6,9 @@ pub enum Error {
     #[error("invalid dataset: {0}")]
     InvalidDataset(String),
 
+    #[error("invalid endpoint: {0}")]
+    InvalidEndpoint(String),
+
     #[error("S3 bucket mismatch: expected `{0}`, but got `{1}`")]
     S3BucketMismatch(String, String),
 

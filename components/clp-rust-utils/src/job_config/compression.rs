@@ -18,6 +18,7 @@ pub type CompressionJobId = i32;
     Serialize,
     ToSchema,
     TryFromPrimitive,
+    sqlx::Type,
 )]
 #[repr(i32)]
 #[strum(ascii_case_insensitive)]

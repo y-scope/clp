@@ -1009,8 +1009,10 @@ dependencies = [
  "async-trait",
  "clap",
  "clp-rust-utils",
+ "const_format",
  "non-empty-string",
  "rmp-serde",
+ "secrecy",
  "serde",
  "spider-client",
  "spider-core",
@@ -1018,6 +1020,8 @@ dependencies = [
  "strsim",
  "thiserror",
  "tokio",
+ "tokio-util",
+ "tonic",
  "tracing",
 ]
 
