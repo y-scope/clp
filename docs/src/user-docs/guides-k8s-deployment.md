@@ -431,7 +431,7 @@ Presto coordinator) use `NodePort` with fixed port numbers. You can change the s
 #### Using ClusterIP with Gateway API
 
 For cloud Kubernetes deployments (e.g., EKS, GKE, AKS), a common pattern is `ClusterIP` services
-behind a [Gateway API] controller such as [nginx-gateway-fabric], Envoy Gateway, or Istio. This
+behind a [Gateway API] controller such as [nginx-gateway-fabric], [Envoy Gateway], or [Istio]. This
 example creates an HTTP listener; configure TLS on an upstream load balancer or add an HTTPS
 listener before exposing it directly in production:
 
@@ -719,10 +719,12 @@ To tear down a `kubeadm` cluster:
 [design-orchestration]: ../dev-docs/design-deployment-orchestration.md
 [docker-compose-deployment]: guides-docker-compose-deployment.md
 [eks]: https://aws.amazon.com/eks/
+[Envoy Gateway]: https://gateway.envoyproxy.io/
 [external-db-guide]: guides-external-database.md
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [gke]: https://cloud.google.com/kubernetes-engine
 [Helm]: https://helm.sh/
+[Istio]: https://istio.io/
 [k3s]: https://k3s.io/
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
