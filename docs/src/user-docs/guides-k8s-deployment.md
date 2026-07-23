@@ -463,12 +463,12 @@ helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f clusterip-gateway.yaml
 
 The chart creates a `Gateway` listener on port 80 and `HTTPRoute` resources that route:
 
-| Path | Backend |
-|---|---|
-| `/api/v2/` | api-server (prefix stripped) |
+| Path             | Backend                        |
+|------------------|--------------------------------|
+| `/api/v2/`       | api-server (prefix stripped)   |
 | `/log_ingestor/` | log-ingestor (prefix stripped) |
-| `/mcp` | mcp-server |
-| `/` | webui (catch-all) |
+| `/mcp`           | mcp-server                     |
+| `/`              | webui (catch-all)              |
 
 #### Custom NodePort numbers
 
