@@ -1012,6 +1012,7 @@ dependencies = [
  "serde",
  "spider-client",
  "spider-core",
+ "sqlx",
  "strsim",
  "thiserror",
  "tokio",
