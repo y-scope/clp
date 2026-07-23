@@ -69,6 +69,10 @@ other distros using musl 1.2, including:
   env var when running `build.sh`, e.g. `PLATFORM=linux/arm64 ./build.sh`
   (requires binfmt/QEMU support on the host).
 
+  Local builds keep the architecture-specific `:dev` tags used by the packaging scripts:
+  `clp-core-dependencies-x86-musllinux_1_2:dev` for amd64 and
+  `clp-core-dependencies-aarch64-musllinux_1_2:dev` for arm64.
+
 ## clp-core-dependencies-x86-centos-stream-9
 
 An image containing the dependencies necessary to build CLP core in a CentOS Stream 9 x86
