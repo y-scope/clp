@@ -781,7 +781,7 @@ jobs:
 
   spider-worker-image:
     name: "spider-worker-image"
-    # Run if the ancestor jobs were successful/skipped and building clp was successful.
+    # Run if the dependency-image job succeeded or was skipped because the image is unchanged.
     if: >-
       !cancelled() && !failure() && (
         needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
@@ -791,9 +791,15 @@ jobs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-x86_64-deps-image"
     runs-on: *runner
+    permissions:
+      # To check out the repository.
+      contents: "read"
+      # To publish the Spider worker image to GHCR.
+      packages: "write"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
+          persist-credentials: false
           submodules: "recursive"
 
       - name: "Workaround actions/runner-images/issues/6775"
@@ -836,13 +842,14 @@ jobs:
             ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-spider-worker
           tags: "type=raw,value=${{github.ref_name}}"
 
-      # Only publish the image if this workflow was triggered by a push to `main`.
-      # NOTE: We run the rest of the job to test that the docker image build were successful.
+      # Publish on non-PR runs of `main`, including scheduled and manually dispatched runs.
+      # NOTE: Pull requests still build the image to validate the Dockerfile.
       - uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"  # v6.15.0
         with:
           context: "."
           file: "tools/docker-images/clp-spider-worker/Dockerfile"
           provenance: false
+          pull: true
           push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
           tags: "${{steps.spider_worker_image_meta.outputs.tags}}"
           labels: "${{steps.spider_worker_image_meta.outputs.labels}}"

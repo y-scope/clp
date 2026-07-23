@@ -3,7 +3,7 @@
 ARG SPIDER_WORKER_IMAGE=ghcr.io/y-scope/spider/worker:main
 FROM ${SPIDER_WORKER_IMAGE}
 
-ARG SPIDER_TDL_PACKAGE_DIR=/opt/clp/lib/spider-tdl-packages
+ARG SPIDER_TDL_PACKAGE_DIR=/opt/spider/packages
 ARG CLP_HOME=/opt/clp
 
 USER root
