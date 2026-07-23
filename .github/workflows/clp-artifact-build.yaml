@@ -382,7 +382,10 @@ jobs:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
       success()
-      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+      || (!cancelled() && !failure() && (
+        needs.filter-relevant-changes.outputs.clp_changed == 'true'
+        || needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'
+      ))
     needs:
       - "manylinux_2_28-deps-image"
       - "manylinux_2_28-deps-image-merge"
