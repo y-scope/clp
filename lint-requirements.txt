@@ -6,7 +6,10 @@ clang-format~=21.1.2
 clang-tidy~=19.1
 
 # Python
-ruff>=0.4.4
+# Cap below v0.16 until we adopt its newly stabilized rules (e.g., CPY001 requires copyright
+# notices, which our Python files don't have yet).
+# Issue: https://github.com/y-scope/clp/issues/2422
+ruff>=0.4.4,<0.16
 
 # YAML
 yamale>=6.1.0
