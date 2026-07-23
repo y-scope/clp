@@ -1060,6 +1060,21 @@ class ClpConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_compression_coordinator_config(self):
+        if self.compression_coordinator is None:
+            return self
+        if self.package.storage_engine != StorageEngine.CLP_S:
+            msg = (
+                "compression-coordinator is only compatible with storage engine "
+                f"`{StorageEngine.CLP_S}`."
+            )
+            raise ValueError(msg)
+        if self.spider is None:
+            msg = "compression-coordinator requires Spider to be configured."
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def validate_presto_config(self):
         query_engine = self.webui.query_engine
         presto = self.presto
