@@ -1,20 +1,23 @@
 //! Handle for driving a single S3 compression job to completion.
 
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 
-use clp_rust_utils::{
-    clp_config::package::config::Database,
-    dataset::VALID_DATASET_NAME_REGEX,
-    job_config::{ClpIoConfig, CompressionJobId, CompressionJobStatus, InputConfig},
-    task_io::compression::{ClpSCompressionOption, S3InputSource},
-};
-use spider_core::{
-    task::ExecutionPolicy,
-    types::id::{JobId as SpiderJobId, ResourceGroupId},
-};
+use clp_rust_utils::clp_config::package::config::Database;
+use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::job_config::ClpIoConfig;
+use clp_rust_utils::job_config::CompressionJobId;
+use clp_rust_utils::job_config::CompressionJobStatus;
+use clp_rust_utils::job_config::InputConfig;
+use clp_rust_utils::task_io::compression::ClpSCompressionOption;
+use clp_rust_utils::task_io::compression::S3InputSource;
+use spider_core::task::ExecutionPolicy;
+use spider_core::types::id::JobId as SpiderJobId;
+use spider_core::types::id::ResourceGroupId;
 use sqlx::MySqlPool;
 
-use crate::{Error, compression_job_submitter::S3CompressionJobSubmitter};
+use crate::Error;
+use crate::compression_job_submitter::S3CompressionJobSubmitter;
 
 /// Options for a compression job running in Spider.
 pub struct SpiderOption {
