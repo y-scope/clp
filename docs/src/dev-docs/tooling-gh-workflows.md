@@ -39,8 +39,10 @@ flowchart LR
     filter-relevant-changes --> ubuntu-jammy-binaries
     centos-stream-9-deps-image --> centos-stream-9-binaries
     manylinux_2_28-deps-image --> manylinux_2_28-deps-image-merge
+    manylinux_2_28-deps-image --> manylinux_2_28-x86_64-binaries
     manylinux_2_28-deps-image-merge --> manylinux_2_28-x86_64-binaries
     musllinux_1_2-deps-image --> musllinux_1_2-deps-image-merge
+    musllinux_1_2-deps-image --> musllinux_1_2-x86_64-binaries
     musllinux_1_2-deps-image-merge --> musllinux_1_2-x86_64-binaries
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
     ubuntu-jammy-deps-image --> package-image
