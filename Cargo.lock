@@ -1007,10 +1007,13 @@ version = "0.13.1-dev"
 dependencies = [
  "async-trait",
  "clp-rust-utils",
+ "non-empty-string",
  "rmp-serde",
  "serde",
  "spider-client",
  "spider-core",
+ "sqlx",
+ "strsim",
  "thiserror",
  "tokio",
  "tracing",
