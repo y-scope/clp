@@ -28,6 +28,7 @@ following rules must be observed:
        "dataset_name": "str",
        "unstructured": bool,
        "timestamp_key": "str" | null,
+       "timestamp_format": <timestamp-format> | null,
        "begin_ts": int,
        "end_ts": int,
        "logs_subdir": "str",
@@ -35,8 +36,7 @@ following rules must be observed:
            "str",
            "str",
            ...
-       ],
-       "single_match_wildcard_query": "str"
+       ]
    }
    ```
 
@@ -45,11 +45,43 @@ following rules must be observed:
    | `dataset_name` | The name of the sample dataset directory. |
    | `unstructured` | `True` if logs are unstructured, else `False`. |
    | `timestamp_key` | The authoritative timestamp key, or `null` if there is no such key. |
+   | `timestamp_format` | Description of authoritative timestamp encoding (see below). |
    | `begin_ts` | The earliest timestamp present in the dataset (ms). |
    | `end_ts` | The latest timestamp present in the dataset (ms). |
    | `logs_subdir` | The name of the subdirectory containing logs. |
    | `file_names` | A list of the files within `logs_subdir`. |
-   | `single_match_wildcard_query` | A wildcard query that matches exactly one log message in the dataset. |
+
+   `timestamp_format` is a field tagged by by `type` and containing `pattern` if applicable:
+
+   ```json
+   {"type": "epoch_ms"}
+   {"type": "strptime", "pattern": "str"}
+   ```
+
+   | Field | Description |
+   | --- | --- |
+   | `type` | `"epoch_ms"` for epoch ms timestamps, or `"strptime"` for formatted strings. |
+   | `pattern` | (`strptime` only) The Python [`strptime`][strptime] pattern for the timestamp. |
+
+3. For **structured** datasets: files in the dataset must be in line-delimited JSON (only one log
+   record per line).
+
+## Time-range search verification
+
+Search verification reproduces the package's `--begin-time`/`--end-time` filter by independently
+determining each log event's timestamp. For a dataset to be usable **in a time-range search test**,
+the following restrictions must be observed:
+
+1. `begin_ts` must equal the earliest timestamp present in the dataset, and `end_ts` the latest.
+2. `begin_ts` must be less than or equal to `end_ts`.
+3. `timestamp_format` must not be `null`.
+4. For **structured** datasets:
+   * `timestamp_key` must not be `null`, and must be a *top-level* key. Nested/dotted keys are
+     not supported.
+   * Each log in the dataset must contain `timestamp_key`.
+5. For **unstructured** datasets:
+   * Every log line must begin with a single whitespace-delimited timestamp token written in the
+     format described by `timestamp_format.pattern`.
 
 ## Accessing sample datasets within the testing system
 
@@ -74,3 +106,5 @@ To access a sample dataset from within the test system, the following rules shou
 
 Tests should use sample dataset fixtures instead of reading the logs directly, because many
 verification flows rely on dataset metadata.
+
+[strptime]: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes
