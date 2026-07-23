@@ -44,8 +44,8 @@ impl Coordinator {
     /// Factory function.
     ///
     /// On construction, this recovers compression jobs that a previous coordinator instance had
-    /// already submitted to Spider (those still `RUNNING` with a Spider job ID) by spawning a
-    /// detached handle to drive each one to completion.
+    /// already submitted to Spider (those still [`CompressionJobStatus::Running`] with a Spider job
+    /// ID) by spawning a detached handle to drive each one to completion.
     ///
     /// # Returns
     ///
@@ -227,9 +227,11 @@ impl Coordinator {
 
     /// Fetches the pending compression jobs and spawns a detached handle to drive each one.
     ///
-    /// A job whose config cannot be deserialized is marked `FAILED` and skipped; a job whose handle
-    /// cannot be constructed is skipped as well (and marked `FAILED` unless its input config is
-    /// unsupported, in which case it is left for another handler).
+    ///
+    /// A job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`] and
+    /// skipped; a job whose handle cannot be constructed is skipped as well (and marked
+    /// [`CompressionJobStatus::Failed`] unless its input config is unsupported, in which case it is
+    /// left for the legacy Celery-based compression scheduler).
     ///
     /// # Errors
     ///
@@ -278,8 +280,9 @@ impl Coordinator {
 
     /// Constructs an [`S3CompressionJobHandle`] for the given job.
     ///
-    /// A construction failure is logged, and the job is marked `FAILED` for any failure other than
-    /// an unsupported input config, which is only warned and left for another handler.
+    /// A construction failure is logged, and the job is marked [`CompressionJobStatus::Failed`] for
+    /// any failure other than an unsupported input config, which is only warned and left for
+    /// another handler.
     ///
     /// # Returns
     ///
@@ -369,7 +372,8 @@ impl Coordinator {
     /// Fetches jobs that are still in [`CompressionJobStatus::Running`] and were previously
     /// submitted by the compression coordinator.
     ///
-    /// A running job whose config cannot be deserialized is marked `FAILED` and skipped.
+    /// A running job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`]
+    /// and skipped.
     ///
     /// # Returns
     ///
