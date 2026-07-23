@@ -429,6 +429,7 @@ jobs:
       success() || (!cancelled() && !failure() && (
         needs.filter-relevant-changes.outputs.clp_changed == 'true'
         || needs.filter-relevant-changes.outputs.yscope_clp_core_changed == 'true'
+        || needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'
       ))
     needs:
       - "filter-relevant-changes"
