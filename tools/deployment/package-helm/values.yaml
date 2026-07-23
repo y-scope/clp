@@ -5,6 +5,13 @@ fullnameOverride: ""
 allowHostAccessForSbinScripts: true
 
 image:
+  # Installs the CLP Presto connector plugin into the Presto coordinator and worker pods. Override
+  # the repository to use a different edition of the connector.
+  # TODO: default the tag to the released multi-arch tag before merging.
+  clpConnector:
+    repository: "ghcr.io/y-scope/clp-plugin-presto-connector"
+    pullPolicy: "IfNotPresent"
+    tag: "0.1.0-SNAPSHOT-arm64"
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
@@ -31,13 +38,13 @@ image:
     pullPolicy: "IfNotPresent"
     tag: "0.152.0"
   prestoCoordinator:
-    repository: "ghcr.io/y-scope/presto/coordinator"
+    repository: "ghcr.io/y-scope/presto"
     pullPolicy: "IfNotPresent"
-    tag: "clp-v0.10.0"
+    tag: "0.299"
   prestoWorker:
-    repository: "ghcr.io/y-scope/presto/prestissimo-worker"
+    repository: "ghcr.io/y-scope/presto-native"
     pullPolicy: "IfNotPresent"
-    tag: "clp-v0.10.0-fix.1"
+    tag: "0.299"
   queue:
     repository: "rabbitmq"
     pullPolicy: "Always"
@@ -142,6 +149,8 @@ resources:
 
   # Jobs
   dbTableCreator: {}
+  prestoCoordinatorInstallPlugin: {}
+  prestoWorkerInstallPlugin: {}
   prestoWorkerSetupConfigs: {}
   resultsCacheIndicesCreator: {}
   topologyMetricsEmitter: {}

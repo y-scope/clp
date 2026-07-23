@@ -1,7 +1,27 @@
 services:
+  clp-plugin-presto-connector-init:
+    # One-shot: installs the CLP Presto connector plugin into shared volumes that the
+    # coordinator and worker mount into their plugin dirs (replacing the connector-baked
+    # Presto images). The connector image's own entrypoint does the install; we only supply
+    # the target paths via *_PLUGIN_INSTALL_PATH.
+    # TODO: default CLP_CONNECTOR_TAG to the released multi-arch tag before merging.
+    image: "${CLP_CONNECTOR_IMAGE:-ghcr.io/y-scope/clp-plugin-presto-connector}:${CLP_CONNECTOR_TAG:-0.1.0-SNAPSHOT-arm64}"
+    restart: "no"
+    environment:
+      COORDINATOR_PLUGIN_INSTALL_PATH: "/install/coordinator"
+      WORKER_PLUGIN_INSTALL_PATH: "/install/worker"
+    volumes:
+      - "coordinator-plugin:/install/coordinator"
+      - "worker-plugin:/install/worker"
+    networks:
+      - "clp-package"
+
   presto-coordinator:
-    image: "ghcr.io/y-scope/presto/coordinator:${CLP_PRESTO_COORDINATOR_IMAGE_TAG:-clp-v0.10.0}"
+    image: "ghcr.io/y-scope/presto:${CLP_PRESTO_COORDINATOR_IMAGE_TAG:-0.299}"
     entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
+    depends_on:
+      clp-plugin-presto-connector-init:
+        condition: "service_completed_successfully"
     env_file:
       - ".env"
       - "coordinator-common.env"
@@ -9,7 +29,9 @@ services:
     volumes:
       - "./coordinator/config-template:/configs:ro"
       - "./coordinator/scripts:/scripts:ro"
-      - "coordinator-config:/opt/presto-server/etc"
+      - type: "tmpfs"
+        target: "/opt/presto-server/etc"
+      - "coordinator-plugin:/opt/presto-server/plugin/clp"
     networks:
       - "clp-package"
     ports:
@@ -24,11 +46,12 @@ services:
       retries: 30
 
   presto-worker:
-    image: >-
-      ghcr.io/y-scope/presto/prestissimo-worker:${CLP_PRESTO_WORKER_IMAGE_TAG:-clp-v0.10.0-fix.1}
+    image: "ghcr.io/y-scope/presto-native:${CLP_PRESTO_WORKER_IMAGE_TAG:-0.299}"
     depends_on:
       presto-coordinator:
         condition: "service_healthy"
+      clp-plugin-presto-connector-init:
+        condition: "service_completed_successfully"
     entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
     env_file:
       - ".env"
@@ -39,7 +62,9 @@ services:
       - "${CLP_STAGED_ARCHIVES_DIR:-empty}:/var/data/staged-archives:ro"
       - "./worker/config-template:/configs:ro"
       - "./worker/scripts:/scripts:ro"
-      - "worker-config:/opt/presto-server/etc"
+      - type: "tmpfs"
+        target: "/opt/presto-server/etc"
+      - "worker-plugin:/opt/presto-server/plugin/clp"
     networks:
       - "clp-package"
 
@@ -47,8 +72,10 @@ volumes:
   # Dummy volume to use when a bind mount is not desired.
   empty:
 
-  coordinator-config:
-  worker-config:
+  # Populated by clp-plugin-presto-connector-init; mounted into the coordinator/worker
+  # plugin directories.
+  coordinator-plugin:
+  worker-plugin:
 
 networks:
   clp-package:

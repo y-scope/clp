@@ -31,6 +31,7 @@ sleep 2
 helm install test "${script_dir}" \
     $(get_service_exposure_helm_args) \
     $(get_presto_helm_args) \
-    $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
+    $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}") \
+    $(get_image_helm_args "${CLUSTER_NAME}" "clpConnector" "${CLP_CONNECTOR_IMAGE}")
 
 wait_for_cluster_ready

@@ -30,6 +30,19 @@ spec:
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
+        - name: "install-clp-plugin"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpConnector") | quote }}
+          imagePullPolicy: {{ .Values.image.clpConnector.pullPolicy | quote }}
+          env:
+            - name: "COORDINATOR_PLUGIN_INSTALL_PATH"
+              value: "/install/coordinator"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "prestoCoordinatorInstallPlugin"
+            ) | nindent 10 }}
+          volumeMounts:
+            - name: "presto-plugin"
+              mountPath: "/install/coordinator"
       containers:
         - name: "presto-coordinator"
           image: "{{ .Values.image.prestoCoordinator.repository }}:{{ .Values.image.prestoCoordinator.tag }}"
@@ -65,6 +78,9 @@ spec:
               mountPath: "/opt/presto-server/etc/split-filter.json"
               subPath: "presto-coordinator-config-split-filter.json"
               readOnly: true
+            - name: "presto-plugin"
+              mountPath: "/opt/presto-server/plugin/clp"
+              readOnly: true
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             httpGet: &presto-coordinator-health-check
@@ -83,4 +99,6 @@ spec:
         - name: "presto-config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        - name: "presto-plugin"
+          emptyDir: {}
 {{- end }}
