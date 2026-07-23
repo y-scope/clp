@@ -348,31 +348,14 @@ impl Default for Telemetry {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct CompressionCoordinator {
-    /// The Spider resource group the coordinator submits jobs to.
     pub resource_group: SpiderResourceGroup,
-
-    /// The interval, in milliseconds, between polls for new compression jobs.
     pub job_polling_interval_millisecs: NonZeroU64,
-
-    /// The backoff schedule for polling a submitted job's result.
     pub result_polling: PollingBackoff,
-
-    /// The maximum number of retries for a compression task.
     pub compression_task_max_retry: u32,
-
-    /// The maximum number of retries for a commit task.
     pub commit_task_max_retry: u32,
-
-    /// The size of the database connection pool.
     pub database_connection_pool_size: NonZeroU32,
-
-    /// The timeout, in seconds, for graceful shutdown.
     pub termination_timeout_secs: NonZeroU64,
-
-    /// The soft timeout, in seconds, for a commit task.
     pub commit_task_soft_timeout_secs: NonZeroU64,
-
-    /// The hard timeout, in seconds, for a commit task.
     pub commit_task_hard_timeout_secs: NonZeroU64,
 }
 
@@ -408,27 +391,20 @@ impl Default for CompressionCoordinator {
 /// Spider configuration.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Spider {
-    /// The Spider cluster's host.
     pub host: NonEmptyString,
-
-    /// The Spider cluster's port.
     pub port: u16,
 }
 
 /// Spider resource group configuration.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct SpiderResourceGroup {
-    /// The name of the Spider resource group.
     pub name: NonEmptyString,
 }
 
 /// Polling backoff configuration.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct PollingBackoff {
-    /// The initial backoff, in milliseconds, between polls.
     pub init_backoff_millisecs: NonZeroU64,
-
-    /// The maximum backoff, in milliseconds, between polls.
     pub max_backoff_millisecs: NonZeroU64,
 }
 
