@@ -467,6 +467,16 @@ def _schedule_job(
                 )
                 return
         elif input_type == InputType.S3_OBJECT_METADATA.value:
+            if clp_config.compression_coordinator is not None:
+                # NOTE: These jobs are left in PENDING and will eventually be picked up and
+                # scheduled by the compression-coordinator.
+                logger.info(
+                    "compression-coordinator is configured to handle compression jobs submitted"
+                    " by log-ingestor. Skipping job %d.",
+                    job_id,
+                )
+                return
+
             try:
                 _process_s3_object_metadata_input(
                     input_config, paths_to_compress_buffer, db_context

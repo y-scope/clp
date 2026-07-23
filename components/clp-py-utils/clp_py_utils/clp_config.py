@@ -778,6 +778,34 @@ class LogIngestor(BaseModel):
     logging_level: LoggingLevelRust = "INFO"
 
 
+class Spider(BaseModel):
+    host: DomainStr = "localhost"
+    port: Port = 6000
+
+
+class SpiderResourceGroup(BaseModel):
+    name: NonEmptyStr
+
+
+class PollingBackoff(BaseModel):
+    init_backoff_millisecs: PositiveInt
+    max_backoff_millisecs: PositiveInt
+
+
+class CompressionCoordinator(BaseModel):
+    resource_group: SpiderResourceGroup = SpiderResourceGroup(name="compression-coordinator")
+    job_polling_interval_millisecs: PositiveInt = 100
+    result_polling: PollingBackoff = PollingBackoff(
+        init_backoff_millisecs=100, max_backoff_millisecs=1000
+    )
+    compression_task_max_retry: NonNegativeInt = 1
+    commit_task_max_retry: NonNegativeInt = 1
+    database_connection_pool_size: PositiveInt = 10
+    termination_timeout_secs: PositiveInt = 30
+    commit_task_soft_timeout_secs: PositiveInt = 45
+    commit_task_hard_timeout_secs: PositiveInt = 60
+
+
 class Presto(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8080
 
@@ -830,6 +858,8 @@ class ClpConfig(BaseModel):
     garbage_collector: GarbageCollector = GarbageCollector()
     api_server: ApiServer | None = ApiServer()
     log_ingestor: LogIngestor | None = LogIngestor()
+    spider: Spider | None = None
+    compression_coordinator: CompressionCoordinator | None = None
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
