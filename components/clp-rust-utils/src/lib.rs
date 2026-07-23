@@ -8,6 +8,7 @@ pub mod logging;
 pub mod s3;
 pub mod serde;
 pub mod sqs;
+pub mod task_io;
 pub mod telemetry;
 pub mod types;
 
