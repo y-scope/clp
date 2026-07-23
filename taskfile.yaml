@@ -221,6 +221,7 @@ tasks:
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo build --release --bins
+      cargo build --release -p clp-tdl-package
 
   clp-mcp-server:
     - task: "uv-component"
