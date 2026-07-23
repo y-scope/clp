@@ -421,14 +421,13 @@ To run all worker types in the same node pool:
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
 
-### Service types and Gateway API
+### ClusterIP services and Gateway API
 
-By default, externally-accessible services (Web UI, API server, log ingestor, MCP server, and
-Presto coordinator) use `NodePort` with fixed port numbers. You can change the service type to
-`ClusterIP` or `LoadBalancer` using the `serviceType` key for each service, and optionally add
-[Gateway API] resources for deployments behind a load balancer.
+The chart exposes Web UI, API server, log ingestor, MCP server, and Presto coordinator as
+`ClusterIP` services. To make these services reachable from outside the cluster, route traffic
+through the optional [Gateway API] resources or another cluster-managed ingress layer.
 
-#### Using ClusterIP with Gateway API
+#### Using Gateway API
 
 For cloud Kubernetes deployments (e.g., EKS, GKE, AKS), a common pattern is `ClusterIP` services
 behind a [Gateway API] controller such as [nginx-gateway-fabric], [Envoy Gateway], or [Istio]. This
@@ -440,13 +439,6 @@ listener before exposing it directly in production:
 
 # Keep bundled database and results-cache services off host node ports
 allowHostAccessForSbinScripts: false
-
-clpConfig:
-  # Switch external services to ClusterIP
-  webui:
-    serviceType: "ClusterIP"
-  api_server:
-    serviceType: "ClusterIP"
 
 # Enable Gateway API resources
 gateway:
@@ -469,20 +461,6 @@ The chart creates a `Gateway` listener on port 80 and `HTTPRoute` resources that
 | `/log_ingestor/` | log-ingestor (prefix stripped) |
 | `/mcp`           | mcp-server                     |
 | `/`              | webui (catch-all)              |
-
-#### Custom NodePort numbers
-
-To use `NodePort` with different port numbers:
-
-```{code-block} yaml
-:caption: custom-nodeports.yaml
-
-clpConfig:
-  webui:
-    port: 31000
-  api_server:
-    port: 31001
-```
 
 ---
 
@@ -565,8 +543,14 @@ kubectl get jobs
 
 ### Access the Web UI
 
-Once all pods are ready, you access the CLP Web UI at: `http://<node-ip>:30000` (the value of
-`clpConfig.webui.port`)
+If you enabled the chart's Gateway API resources, access the Web UI through the Gateway hostname.
+Otherwise, forward the Web UI's ClusterIP Service to your machine:
+
+```bash
+kubectl port-forward service/clp-webui 4000:4000
+```
+
+Leave the command running and open [http://localhost:4000](http://localhost:4000).
 
 ---
 

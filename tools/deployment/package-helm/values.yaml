@@ -163,8 +163,6 @@ clpConfig:
 
   # API server config
   api_server:
-    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
-    port: 30301
     default_max_num_query_results: 1000
     query_job_polling:
       initial_backoff_ms: 100
@@ -257,16 +255,12 @@ clpConfig:
     upsert_interval: 100  # milliseconds
 
   webui:
-    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
     query_engine: "clp-s"
-    port: 30000
     presto_max_num_search_results: 1000
     rate_limit: 1000
     results_metadata_collection_name: "results-metadata"
 
   mcp_server: null
-  #   serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
-  #   port: 30800
   #   logging_level: "INFO"
 
   # Presto query engine config. When "presto" is in `bundled`, the chart deploys Presto coordinator
@@ -274,7 +268,6 @@ clpConfig:
   presto: null
   #   host: "localhost"
   #   port: 30889
-  #   serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
   #   coordinator:
   #     logging_level: "INFO"
   #     query_max_memory_gb: 1
@@ -288,8 +281,6 @@ clpConfig:
 
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
-    serviceType: "NodePort"  # "NodePort", "ClusterIP", or "LoadBalancer"
-    port: 30302
     logging_level: "INFO"
 
   # Where archives should be output to
@@ -368,7 +359,7 @@ serviceAccount:
 # Optional Gateway API resources for routing external traffic to CLP services.
 # Requires the Gateway API CRDs and a compatible controller (e.g., nginx-gateway-fabric,
 # Envoy Gateway, Traefik v3, Istio).
-# Enable this when using ClusterIP services behind a load balancer.
+# Enable this to route external traffic to CLP's ClusterIP application services.
 gateway:
   enabled: false
   className: ""  # GatewayClass name (e.g., "nginx", "eg", "istio", "traefik")

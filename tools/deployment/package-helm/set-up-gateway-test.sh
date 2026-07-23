@@ -66,8 +66,6 @@ sleep 2
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "allowHostAccessForSbinScripts=false" \
-    --set "clpConfig.webui.serviceType=ClusterIP" \
-    --set "clpConfig.api_server.serviceType=ClusterIP" \
     --set "gateway.enabled=true" \
     --set "gateway.className=nginx" \
     $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
