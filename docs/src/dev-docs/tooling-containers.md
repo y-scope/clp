@@ -37,6 +37,10 @@ distros using glibc 2.28+, including:
   env var when running `build.sh`, e.g. `PLATFORM=linux/arm64 ./build.sh`
   (requires binfmt/QEMU support on the host).
 
+  Local builds keep the architecture-specific `:dev` tags used by the packaging scripts:
+  `clp-core-dependencies-x86-manylinux_2_28:dev` for amd64 and
+  `clp-core-dependencies-aarch64-manylinux_2_28:dev` for arm64.
+
 ## clp-core-dependencies-musllinux_1_2
 
 Image containing the dependencies necessary to build CLP core in a [musllinux_1_2][musllinux_1_2]
