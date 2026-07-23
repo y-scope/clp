@@ -1,7 +1,7 @@
-use std::io::Write;
+use std::io::{Read, Write};
 
-use brotli::CompressorWriter;
-use serde::Serialize;
+use brotli::{CompressorWriter, Decompressor};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::Error;
 
@@ -11,7 +11,8 @@ pub struct BrotliMsgpack {}
 impl BrotliMsgpack {
     /// Serialize a value to a Brotli-compressed `MessagePack` byte sequence.
     ///
-    /// # Return
+    /// # Returns
+    ///
     /// A vector of bytes containing the serialized byte sequence.
     ///
     /// # Errors
@@ -25,5 +26,23 @@ impl BrotliMsgpack {
         let mut brotli_compressor = CompressorWriter::new(Vec::new(), 4096, 5, 22);
         brotli_compressor.write_all(&msgpack_data)?;
         Ok(brotli_compressor.into_inner())
+    }
+
+    /// Deserialize an owned value from a Brotli-compressed `MessagePack` byte sequence.
+    ///
+    /// # Returns
+    ///
+    /// The deserialized value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`rmp_serde::from_slice`]'s errors on failure.
+    /// * Forwards [`std::io::Read::read_to_end`]'s errors on failure.
+    pub fn deserialize<T: DeserializeOwned>(data: &[u8]) -> Result<T, Error> {
+        let mut msgpack_data = Vec::new();
+        Decompressor::new(data, 4096).read_to_end(&mut msgpack_data)?;
+        rmp_serde::from_slice(&msgpack_data).map_err(Into::into)
     }
 }

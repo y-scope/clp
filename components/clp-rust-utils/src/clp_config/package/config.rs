@@ -1,3 +1,6 @@
+use std::num::{NonZeroU32, NonZeroU64};
+
+use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 
 use crate::clp_config::{AwsAuthentication, S3Config};
@@ -22,6 +25,8 @@ pub struct Config {
     pub logs_input: LogsInput,
     pub archive_output: ArchiveOutput,
     pub telemetry: Telemetry,
+    pub spider: Option<Spider>,
+    pub compression_coordinator: Option<CompressionCoordinator>,
 }
 
 impl Default for Config {
@@ -39,6 +44,8 @@ impl Default for Config {
             },
             archive_output: ArchiveOutput::default(),
             telemetry: Telemetry::default(),
+            spider: None,
+            compression_coordinator: None,
         }
     }
 }
@@ -335,6 +342,70 @@ impl Default for Telemetry {
             endpoint: "https://telemetry.yscope.io".to_owned(),
         }
     }
+}
+
+/// Compression coordinator configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct CompressionCoordinator {
+    pub resource_group: SpiderResourceGroup,
+    pub job_polling_interval_millisecs: NonZeroU64,
+    pub result_polling: PollingBackoff,
+    pub compression_task_max_retry: u32,
+    pub commit_task_max_retry: u32,
+    pub database_connection_pool_size: NonZeroU32,
+    pub termination_timeout_secs: NonZeroU64,
+    pub commit_task_soft_timeout_secs: NonZeroU64,
+    pub commit_task_hard_timeout_secs: NonZeroU64,
+}
+
+impl Default for CompressionCoordinator {
+    fn default() -> Self {
+        Self {
+            resource_group: SpiderResourceGroup {
+                name: NonEmptyString::new("compression-coordinator".to_owned())
+                    .expect("default resource group name should not be empty"),
+            },
+            job_polling_interval_millisecs: NonZeroU64::new(100)
+                .expect("default jobs poll delay should not be zero"),
+            result_polling: PollingBackoff {
+                init_backoff_millisecs: NonZeroU64::new(100)
+                    .expect("default result polling init backoff should not be zero"),
+                max_backoff_millisecs: NonZeroU64::new(1000)
+                    .expect("default result polling max backoff should not be zero"),
+            },
+            compression_task_max_retry: 1,
+            commit_task_max_retry: 1,
+            database_connection_pool_size: NonZeroU32::new(10)
+                .expect("default database connection pool size should not be zero"),
+            termination_timeout_secs: NonZeroU64::new(30)
+                .expect("default termination timeout should not be zero"),
+            commit_task_soft_timeout_secs: NonZeroU64::new(45)
+                .expect("default commit task soft timeout should not be zero"),
+            commit_task_hard_timeout_secs: NonZeroU64::new(60)
+                .expect("default commit task hard timeout should not be zero"),
+        }
+    }
+}
+
+/// Spider configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct Spider {
+    pub host: NonEmptyString,
+    pub port: u16,
+}
+
+/// Spider resource group configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct SpiderResourceGroup {
+    pub name: NonEmptyString,
+}
+
+/// Polling backoff configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct PollingBackoff {
+    pub init_backoff_millisecs: NonZeroU64,
+    pub max_backoff_millisecs: NonZeroU64,
 }
 
 #[cfg(test)]
