@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use crate::clp_config::{AwsAuthentication, S3Config};
+use crate::{
+    clp_config::{AwsAuthentication, S3Config},
+    dataset::resolve_dataset_name,
+};
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -89,14 +92,54 @@ pub struct Database {
     pub host: String,
     pub port: u16,
     pub names: ClpDbNames,
+
+    #[serde(skip)]
+    pub table_prefix: String,
+}
+
+impl Database {
+    /// # Returns
+    ///
+    /// The archives table name `<prefix><dataset>_archives`, where a `None` dataset resolves to
+    /// `default`.
+    #[must_use]
+    pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
+        self.archive_metadata_table_name("archives", dataset)
+    }
+
+    /// # Returns
+    ///
+    /// The column-metadata table name `<prefix><dataset>_column_metadata`, where a `None` dataset
+    /// resolves to `default`.
+    #[must_use]
+    pub fn column_metadata_table_name(&self, dataset: Option<&str>) -> String {
+        self.archive_metadata_table_name("column_metadata", dataset)
+    }
+
+    /// Builds a per-dataset archive-metadata table name.
+    ///
+    /// # Returns
+    ///
+    /// `<prefix><dataset>_<suffix>`, where `dataset` defaults to the `CLP_S` default.
+    fn archive_metadata_table_name(&self, suffix: &str, dataset: Option<&str>) -> String {
+        format!(
+            "{}{}_{suffix}",
+            self.table_prefix,
+            resolve_dataset_name(dataset)
+        )
+    }
 }
 
 impl Default for Database {
     fn default() -> Self {
+        /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`.
+        const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
+
         Self {
             host: "localhost".to_owned(),
             port: 3306,
             names: ClpDbNames::default(),
+            table_prefix: CLP_METADATA_TABLE_PREFIX.to_owned(),
         }
     }
 }

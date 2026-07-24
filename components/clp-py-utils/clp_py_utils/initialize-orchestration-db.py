@@ -11,7 +11,7 @@ from job_orchestration.scheduler.constants import (
     QueryJobStatus,
     QueryTaskStatus,
 )
-from mysql.connector.errorcode import ER_DUP_KEYNAME
+from mysql.connector.errorcode import ER_DUP_FIELDNAME, ER_DUP_KEYNAME
 from pydantic import ValidationError
 
 from clp_py_utils.clp_config import (
@@ -77,10 +77,12 @@ def main(argv):
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `clp_binary_version` INT NULL DEFAULT NULL,
                     `clp_config` MEDIUMBLOB NOT NULL,
+                    `spider_id` BIGINT UNSIGNED DEFAULT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
                     INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE,
-                    INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE
+                    INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE,
+                    INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
@@ -94,6 +96,30 @@ def main(argv):
                     ALTER TABLE `{COMPRESSION_JOBS_TABLE_NAME}`
                     ADD INDEX `JOB_START_TIME_STATUS`
                     (`start_time`, `status`) USING BTREE
+                    """
+                )
+            except Exception as err:
+                if not (hasattr(err, "errno") and err.errno == ER_DUP_KEYNAME):
+                    raise
+
+            # Add Spider fields to existing tables created before compression jobs were submitted
+            # through Spider.
+            try:
+                scheduling_db_cursor.execute(
+                    f"""
+                    ALTER TABLE `{COMPRESSION_JOBS_TABLE_NAME}`
+                    ADD COLUMN `spider_id` BIGINT UNSIGNED DEFAULT NULL
+                    """
+                )
+            except Exception as err:
+                if not (hasattr(err, "errno") and err.errno == ER_DUP_FIELDNAME):
+                    raise
+
+            try:
+                scheduling_db_cursor.execute(
+                    f"""
+                    ALTER TABLE `{COMPRESSION_JOBS_TABLE_NAME}`
+                    ADD INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                     """
                 )
             except Exception as err:
