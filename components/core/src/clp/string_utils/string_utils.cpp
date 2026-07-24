@@ -6,6 +6,9 @@
 #include <cstring>
 #include <string>
 #include <string_view>
+#include <system_error>
+
+#include <fast_float/fast_float.h>
 
 #include "string_utils/constants.hpp"
 
@@ -185,6 +188,13 @@ auto clean_up_wildcard_search_string(string_view str) -> string {
     }
 
     return cleaned_str;
+}
+
+// std::stod is locale-dependent (respects the C locale's decimal point). In practice, we don't
+// modify this so the decimal point should be '.'.
+auto convert_string_to_double(std::string_view raw, double& converted) -> bool {
+    auto const res{fast_float::from_chars(raw.begin(), raw.end(), converted)};
+    return res.ptr == raw.end() && std::errc{} == res.ec;
 }
 
 auto unescape_string(std::string_view str) -> std::string {

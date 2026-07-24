@@ -107,10 +107,10 @@ enum struct ArchiveMetadataPacketType : uint8_t {
 };
 
 struct ArchiveInfoPacket {
-    uint64_t num_segments;
-    // TODO: Add more fields in the future
+    uint64_t num_segments{};
+    bool experimental{false};
 
-    MSGPACK_DEFINE_MAP(num_segments);
+    MSGPACK_DEFINE_MAP(num_segments, experimental);
 };
 
 struct ArchiveFileInfo {

@@ -1,22 +1,29 @@
 #include "JsonParser.hpp"
 
+#include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_set.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <fmt/format.h>
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/EncodedVariableInterpreter.hpp>
 #include <clp/ErrorCode.hpp>
 #include <clp/ffi/EncodedTextAst.hpp>
 #include <clp/ffi/ir_stream/decoding_methods.hpp>
@@ -27,15 +34,24 @@
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
+#include <clp/string_utils/string_utils.hpp>
 #include <clp/time_types.hpp>
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveWriter.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/FloatFormatEncoding.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/JsonFileIterator.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/Schema.hpp>
+#include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/Utils.hpp>
+#include <clpp/Defs.hpp>
+#include <clpp/ErrorCode.hpp>
+#include <clpp/LogShapeUtils.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -70,6 +86,21 @@ auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
  */
 auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
         -> bool;
+
+/**
+ * Reads the parsing specification at `spec_path` and builds it into a log-surgeon parser,
+ * registering the encoding patterns from `clpp::cEncodingPatterns`.
+ *
+ * @param spec_path Path to the parsing specification.
+ * @param network_auth Network authentication options for reading `spec_path`.
+ * @return A result containing a pair:
+ * - The built parser.
+ * - The parsing specification text.
+ * or an error code indicating the failure:
+ * - clpp::ClppErrorCodeEnum::BadParam: if we failed to read or build a non-empty spec.
+ */
+auto build_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_auth) -> ystdlib::
+        error_handling::Result<std::pair<std::unique_ptr<log_surgeon::ParserHandle>, std::string>>;
 
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
@@ -134,6 +165,175 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
     auto const restore_result{restore_encoded_float(value, format)};
     return false == restore_result.has_error() && float_str == restore_result.value();
 }
+
+// TODO clpp: might be better to move all this into clpp/
+
+/**
+ * An open `ParentRule` unordered-object scope during `parse_str_field`. `match` borrows from
+ * the log_surgeon event (valid only for one `parse_str_field` call) and identifies the scope;
+ * `schema_start` is passed to `Schema::end_unordered_object` to close it.
+ */
+struct ParentScope {
+    log_surgeon::Match const* match;
+    size_t schema_start;
+    SchemaNode::id_t tree_node_id;
+};
+
+/**
+ * Collects the chain of ancestor matches that become `ParentRule` schema-tree nodes for a leaf,
+ * in root->leaf order.
+ *
+ * If the leaf is a root rule (`sub_rule_id == 0`) it has no parent-rule nodes and `chain` is left
+ * empty. Otherwise every ancestor from the leaf's parent up to and including the root-rule
+ * ancestor becomes a node: the walk stops at a root-rule ancestor (`sub_rule_id == 0`), or — for
+ * a sub-rule whose parent is a root rule (`parent_id == 0`) — after also including that root-rule
+ * parent.
+ *
+ * @param leaf The leaf match whose ancestor chain to collect.
+ * @param chain Output vector; cleared and filled with ancestor `Match` pointers in root->leaf
+ *     order. The pointers borrow from the log_surgeon event that produced `leaf`.
+ */
+auto
+collect_parent_chain(log_surgeon::Match const& leaf, std::vector<log_surgeon::Match const*>& chain)
+        -> void {
+    chain.clear();
+    if (0 == leaf.sub_rule_id) {
+        return;
+    }
+    auto const* cur{leaf.ffi_pointers.parent};
+    while (true) {
+        chain.push_back(cur);
+        if (0 == cur->sub_rule_id) {
+            break;
+        }
+        if (0 == cur->parent_id) {
+            chain.push_back(cur->ffi_pointers.parent);
+            break;
+        }
+        cur = cur->ffi_pointers.parent;
+    }
+    std::reverse(chain.begin(), chain.end());
+}
+
+/**
+ * Syncs the stack of open `ParentRule` scopes against a leaf's ancestor chain by `Match` identity:
+ * closes scopes whose position in the chain diverged, then opens one unordered-object scope per
+ * new ancestor. Returns the schema-tree node ID the leaf should attach to — the innermost open
+ * scope, or `log_msg_node_id` when no scope is open.
+ *
+ * The sync compares `Match const*` pointers, which is valid across sibling leaves because
+ * log-surgeon stores each `Match` in a stable `Vec` for the event's lifetime: a shared ancestor is
+ * the same `Match` object (same address) on every leaf that descends from it, not a re-emitted
+ * copy.
+ *
+ * @param open_scopes The current stack of open scopes; mutated in place.
+ * @param parent_chain The leaf's ancestor chain in root->leaf order (borrowed from the event).
+ * @param log_msg_node_id The `LogMessage` tree node ID owning the top-level scope.
+ * @param archive_writer Used to add `ParentRule` tree nodes for newly opened scopes.
+ * @param current_schema Used to open/close unordered-object scopes.
+ * @return The schema-tree node ID the leaf attaches to.
+ */
+auto sync_open_scopes_to_chain(
+        std::vector<ParentScope>& open_scopes,
+        std::vector<log_surgeon::Match const*> const& parent_chain,
+        SchemaNode::id_t log_msg_node_id,
+        ArchiveWriter& archive_writer,
+        Schema& current_schema
+) -> SchemaNode::id_t {
+    size_t common{0};
+    while (common < open_scopes.size() && common < parent_chain.size()
+           && open_scopes.at(common).match == parent_chain.at(common))
+    {
+        ++common;
+    }
+    while (open_scopes.size() > common) {
+        current_schema.end_unordered_object(open_scopes.back().schema_start);
+        open_scopes.pop_back();
+    }
+    for (size_t j{common}; j < parent_chain.size(); ++j) {
+        auto const* ancestor{parent_chain.at(j)};
+        auto const ancestor_parent_node_id{
+                open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id
+        };
+        auto const node_id{archive_writer.add_node(
+                ancestor_parent_node_id,
+                NodeType::ParentRule,
+                ancestor->ffi_pointers.rule_name.as_cpp_view()
+        )};
+        auto const schema_start{current_schema.start_unordered_object(NodeType::ParentRule)};
+        open_scopes.push_back(
+                {.match = ancestor, .schema_start = schema_start, .tree_node_id = node_id}
+        );
+    }
+    return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
+}
+
+auto build_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_auth) -> ystdlib::
+        error_handling::Result<std::pair<std::unique_ptr<log_surgeon::ParserHandle>, std::string>> {
+    auto spec_reader{try_create_reader(spec_path, network_auth)};
+
+    constexpr size_t cReadChunkSize{4096};
+    std::string spec_str;
+    while (true) {
+        auto const prev_size{spec_str.size()};
+        spec_str.resize(prev_size + cReadChunkSize);
+        size_t bytes_read{};
+        auto const code{
+                spec_reader->try_read(spec_str.data() + prev_size, cReadChunkSize, bytes_read)
+        };
+        if (clp::ErrorCode_EndOfFile == code) {
+            spec_str.resize(prev_size);
+            break;
+        }
+        if (clp::ErrorCode_Success != code) {
+            spec_str.resize(prev_size);
+            SPDLOG_ERROR("Failed to read parsing specification from: \"{}\"", spec_path.path);
+            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+        }
+        spec_str.resize(prev_size + bytes_read);
+    }
+
+    if (spec_str.empty()) {
+        SPDLOG_ERROR("Parsing specification at \"{}\" is empty.", spec_path.path);
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+    }
+
+    auto* builder{log_surgeon::log_surgeon_parsing_spec_builder_from_definition(
+            log_surgeon::CCharArray::from_string_view(spec_str)
+    )};
+    if (nullptr == builder) {
+        SPDLOG_ERROR(
+                "Failed to create log surgeon specification builder from: \"{}\"",
+                spec_path.path
+        );
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+    }
+
+    for (auto const& encoding : clpp::cEncodingPatterns) {
+        if (false
+            == log_surgeon::log_surgeon_parsing_spec_add_encoding(
+                    builder,
+                    log_surgeon::CCharArray::from_string_view(encoding.name),
+                    log_surgeon::CCharArray::from_string_view(encoding.pattern)
+            ))
+        {
+            SPDLOG_ERROR(
+                    "Failed to add log surgeon specification encoding: {} - \"{}\"",
+                    encoding.name,
+                    encoding.pattern
+            );
+            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+        }
+    }
+
+    auto* parsing_spec{log_surgeon::log_surgeon_parsing_spec_builder_build(builder)};
+    if (nullptr == parsing_spec) {
+        SPDLOG_ERROR("Failed to build log surgeon specification.");
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
+    }
+
+    return {std::make_unique<log_surgeon::ParserHandle>(parsing_spec), std::move(spec_str)};
+}
 }  // namespace
 
 JsonParser::JsonParser(JsonParserOption const& option)
@@ -157,8 +357,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
 
-        // Unescape individual tokens to match unescaped JSON and confirm there are no wildcards in
-        // the timestamp column.
+        // Unescape individual tokens to match unescaped JSON and confirm there are no wildcards
+        // in the timestamp column.
         auto column = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
                 m_timestamp_column,
                 m_timestamp_namespace
@@ -181,9 +381,20 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.id = m_generator();
     m_archive_options.authoritative_timestamp = m_timestamp_column;
     m_archive_options.authoritative_timestamp_namespace = m_timestamp_namespace;
+    m_archive_options.experimental = option.experimental.has_value();
 
     m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);
+
+    if (option.experimental) {
+        auto result{
+                build_parsing_spec(option.experimental->parsing_spec_path, option.network_auth)
+        };
+        if (result.has_error()) {
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
+        m_clpp.emplace(std::move(result.value().first), std::move(result.value().second));
+    }
 }
 
 void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id) {
@@ -303,13 +514,31 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
+                    if (m_archive_options.experimental) {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::LogMessage,
+                                cur_key
+                        );
+                        if (auto const result{parse_str_field(value, node_id)}; result.has_error())
+                        {
+                            throw(std::runtime_error(
+                                    "parse_str_field failed with: " + result.error().message()
+                            ));
+                        }
+                    } else {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::ClpString,
+                                cur_key
+                        );
+                        m_current_parsed_message.add_unordered_value(value);
+                    }
                 } else {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
+                    m_current_parsed_message.add_unordered_value(value);
                 }
-                m_current_parsed_message.add_unordered_value(value);
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
@@ -408,11 +637,24 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
-                    node_id = m_archive_writer->add_node(parent_node_id, NodeType::ClpString, "");
+                    if (m_archive_options.experimental) {
+                        node_id = m_archive_writer
+                                          ->add_node(parent_node_id, NodeType::LogMessage, "");
+                        if (auto const result{parse_str_field(value, node_id)}; result.has_error())
+                        {
+                            throw(std::runtime_error(
+                                    "parse_str_field failed with: " + result.error().message()
+                            ));
+                        }
+                    } else {
+                        node_id = m_archive_writer
+                                          ->add_node(parent_node_id, NodeType::ClpString, "");
+                        m_current_parsed_message.add_unordered_value(value);
+                    }
                 } else {
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::VarString, "");
+                    m_current_parsed_message.add_unordered_value(value);
                 }
-                m_current_parsed_message.add_unordered_value(value);
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
@@ -435,17 +677,17 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
 
 void JsonParser::parse_line(
         simdjson::ondemand::value line,
-        int32_t parent_node_id,
-        std::string const& key
+        SchemaNode::id_t parent_node_id,
+        std::string const& parent_key
 ) {
-    int32_t node_id;
+    SchemaNode::id_t node_id{};
     std::stack<simdjson::ondemand::object> object_stack;
     std::stack<int32_t> node_id_stack;
     std::stack<simdjson::ondemand::object_iterator> object_it_stack;
 
     simdjson::ondemand::field cur_field;
 
-    std::string_view cur_key = key;
+    std::string_view cur_key = parent_key;
     node_id_stack.push(parent_node_id);
 
     do {
@@ -598,15 +840,34 @@ void JsonParser::parse_line(
 
                 std::string_view value = line.get_string(true);
                 if (value.find(' ') != std::string::npos) {
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
-                    m_current_parsed_message.add_value(node_id, value);
+                    if (m_archive_options.experimental) {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::LogMessage,
+                                cur_key
+                        );
+                        if (auto const result{parse_str_field(value, node_id)}; result.has_error())
+                        {
+                            throw(std::runtime_error(
+                                    "parse_str_field failed with: " + result.error().message()
+                            ));
+                        }
+                        m_current_schema.insert_unordered(node_id);
+                    } else {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::ClpString,
+                                cur_key
+                        );
+                        m_current_parsed_message.add_value(node_id, value);
+                        m_current_schema.insert_ordered(node_id);
+                    }
                 } else {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
+                    m_current_schema.insert_ordered(node_id);
                 }
-                m_current_schema.insert_ordered(node_id);
                 break;
             }
             case simdjson::ondemand::json_type::boolean: {
@@ -673,7 +934,7 @@ bool JsonParser::ingest() {
                         "Direct ingestion of unstructured log-text is not supported from input {}",
                         path.path
                 );
-                std::ignore = m_archive_writer->close();
+                std::ignore = m_archive_writer->close(get_parsing_spec_str());
                 return false;
             case FileType::Unknown: {
                 if (false == nested_readers.empty()
@@ -684,7 +945,7 @@ bool JsonParser::ingest() {
                 {
                     close_nested_readers(nested_readers);
                     SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
-                    std::ignore = m_archive_writer->close();
+                    std::ignore = m_archive_writer->close(get_parsing_spec_str());
                     return false;
                 }
 
@@ -730,7 +991,7 @@ bool JsonParser::ingest() {
                     close_nested_readers(nested_readers);
                 }
                 SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
-                std::ignore = m_archive_writer->close();
+                std::ignore = m_archive_writer->close(get_parsing_spec_str());
                 return false;
             }
         }
@@ -740,7 +1001,7 @@ bool JsonParser::ingest() {
             || (false == nested_readers.empty()
                 && NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get())))
         {
-            std::ignore = m_archive_writer->close();
+            std::ignore = m_archive_writer->close(get_parsing_spec_str());
             return false;
         }
     }
@@ -769,7 +1030,7 @@ auto JsonParser::ingest_json(
     size_t bytes_consumed_up_to_prev_record{0ULL};
 
     size_t file_split_number{0ULL};
-    int32_t log_event_idx_node_id{};
+    SchemaNode::id_t log_event_idx_node_id{};
     auto initialize_fields_for_archive = [&]() -> bool {
         if (false == m_record_log_order) {
             return true;
@@ -818,7 +1079,7 @@ auto JsonParser::ingest_json(
         return true;
     };
     if (false == initialize_fields_for_archive()) {
-        std::ignore = m_archive_writer->close();
+        std::ignore = m_archive_writer->close(get_parsing_spec_str());
         return false;
     }
     auto update_fields_after_archive_split = [&]() { ++file_split_number; };
@@ -1091,7 +1352,8 @@ auto JsonParser::ingest_kvir(
     return true;
 }
 
-int32_t JsonParser::add_metadata_field(std::string_view const field_name, NodeType type) {
+auto JsonParser::add_metadata_field(std::string_view const field_name, NodeType type)
+        -> SchemaNode::id_t {
     auto metadata_subtree_id = m_archive_writer->add_node(
             constants::cRootNodeId,
             NodeType::Metadata,
@@ -1156,8 +1418,8 @@ auto JsonParser::add_node_to_archive_and_translations(
 
     auto key_name = ir_node_to_add.get_key_name();
     if (autogen && constants::cRootNodeId == parent_node_id) {
-        // We adjust the name of the root of the auto-gen subtree to "@" in order to namespace the
-        // auto-gen subtree within the archive's schema tree.
+        // We adjust the name of the root of the auto-gen subtree to "@" in order to namespace
+        // the auto-gen subtree within the archive's schema tree.
         key_name = constants::cAutogenNamespace;
     }
     int const curr_node_archive_id
@@ -1402,14 +1664,174 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
     m_archive_writer->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
 }
 
+auto JsonParser::get_parsing_spec_str() const -> std::optional<std::string_view> {
+    if (false == m_clpp.has_value()) {
+        return std::nullopt;
+    }
+    return m_clpp->parsing_spec_str;
+}
+
 auto JsonParser::store() -> std::vector<ArchiveStats> {
-    m_archive_stats.emplace_back(m_archive_writer->close());
+    m_archive_stats.emplace_back(m_archive_writer->close(get_parsing_spec_str()));
     return std::move(m_archive_stats);
 }
 
 void JsonParser::split_archive() {
-    m_archive_stats.emplace_back(m_archive_writer->close(true));
+    m_archive_stats.emplace_back(m_archive_writer->close(get_parsing_spec_str(), true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
+}
+
+auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t log_msg_node_id)
+        -> ystdlib::error_handling::Result<void> {
+    size_t parser_pos{0};
+    auto const event{m_clpp->log_surgeon_parser->next_event(str_field, &parser_pos)};
+    if (false == event.has_value()) {
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
+    }
+    auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
+
+    std::string log_shape{};
+    log_shape.reserve(str_field.size());
+    size_t log_msg_pos{0};
+    std::vector<log_surgeon::Match const*> parent_chain;
+    std::vector<ParentScope> open_scopes;
+    for (size_t i{0};; ++i) {
+        auto const match{event->get_leaf_match(i)};
+        if (false == match.has_value()) {
+            break;
+        }
+
+        collect_parent_chain(match.value(), parent_chain);
+        auto const parent_node_id{sync_open_scopes_to_chain(
+                open_scopes,
+                parent_chain,
+                log_msg_node_id,
+                *m_archive_writer,
+                m_current_schema
+        )};
+
+        auto const rule_name{match->ffi_pointers.rule_name.as_cpp_view()};
+        auto const lexeme{match->ffi_pointers.lexeme.as_cpp_view()};
+
+        SchemaNode::id_t node_id{0};
+        if (0 < match->encoding_idx) {
+            auto const matched_encodings{
+                    m_clpp->log_surgeon_parser->get_encoding(match->encoding_idx)
+            };
+            for (auto const& encoding : matched_encodings) {
+                // TODO clpp: awkward blacklist to temporarily fix auto encoding
+                if ("key_value.key" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
+                    || "key_value.str_value"
+                               == match->ffi_pointers.fully_qualified_name.as_cpp_view()
+                    || "src_loc.file" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
+                    || "path" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
+                    || "has_number" == match->ffi_pointers.fully_qualified_name.as_cpp_view())
+                {
+                    break;
+                }
+                if (clpp::cFloatEncodingName == encoding) {
+                    if (auto const float_node_id{
+                                try_add_float_value(lexeme, parent_node_id, rule_name)
+                        };
+                        float_node_id.has_value())
+                    {
+                        node_id = float_node_id.value();
+                        break;
+                    }
+                    SPDLOG_WARN(
+                            "failed float conversion '{}': '{}'",
+                            match->ffi_pointers.fully_qualified_name.as_cpp_view(),
+                            lexeme
+                    );
+                } else if (clpp::cIntEncodingName == encoding) {
+                    if (encoded_variable_t var{0}; clp::EncodedVariableInterpreter::
+                                convert_string_to_representable_integer_var(lexeme, var))
+                    {
+                        node_id = m_archive_writer
+                                          ->add_node(parent_node_id, NodeType::Integer, rule_name);
+                        m_current_parsed_message.add_unordered_value(var);
+                        break;
+                    }
+                }
+            }
+        }
+        if (0 == node_id) {
+            node_id = m_archive_writer->add_node(parent_node_id, NodeType::VarString, rule_name);
+            m_current_parsed_message.add_unordered_value(lexeme);
+        }
+        m_current_schema.insert_unordered(node_id);
+
+        log_shape.append(
+                clpp::escape_shape_text(
+                        str_field.substr(log_msg_pos, match->range.start - log_msg_pos)
+                )
+        );
+        log_shape.append(
+                fmt::format("%{}%", match->ffi_pointers.fully_qualified_name.as_cpp_view())
+        );
+        log_msg_pos = match->range.end;
+    }
+    log_shape.append(clpp::escape_shape_text(str_field.substr(log_msg_pos)));
+
+    // Close remaining scopes so `LogType`/`LogTypeID` stay direct children of the `LogMessage`
+    // span rather than nesting inside a parent-rule scope.
+    while (false == open_scopes.empty()) {
+        m_current_schema.end_unordered_object(open_scopes.back().schema_start);
+        open_scopes.pop_back();
+    }
+
+    auto [log_shape_id, new_log_shape]{
+            YSTDLIB_ERROR_HANDLING_TRYX(m_archive_writer->update_log_shape_dict(log_shape))
+    };
+    m_current_schema.insert_unordered(m_archive_writer->add_node(
+            m_archive_writer
+                    ->add_node(log_msg_node_id, NodeType::LogType, constants::cLogShapeNodeName),
+            NodeType::LogTypeID,
+            fmt::format("{}", log_shape_id)
+    ));
+
+    if (new_log_shape) {
+        auto parent_shapes{clpp::build_parent_rule_shapes(*event, log_shape)};
+        YSTDLIB_ERROR_HANDLING_TRYV(
+                m_archive_writer->update_parent_rule_shapes(log_shape_id, parent_shapes)
+        );
+    }
+
+    m_current_schema.end_unordered_object(msg_obj);
+    return ystdlib::error_handling::success();
+}
+
+auto JsonParser::try_add_float_value(
+        std::string_view lexeme,
+        SchemaNode::id_t parent_node_id,
+        std::string_view rule_name
+) -> std::optional<SchemaNode::id_t> {
+    double double_value{};
+    if (false == clp::string_utils::convert_string_to_double(lexeme, double_value)) {
+        return std::nullopt;
+    }
+
+    if (m_retain_float_format) {
+        auto const float_format_result{get_float_encoding(lexeme)};
+        if (false == float_format_result.has_error()
+            && round_trip_is_identical(lexeme, double_value, float_format_result.value()))
+        {
+            auto const node_id{
+                    m_archive_writer->add_node(parent_node_id, NodeType::FormattedFloat, rule_name)
+            };
+            m_current_parsed_message.add_unordered_value(double_value, float_format_result.value());
+            return node_id;
+        }
+        auto const node_id{
+                m_archive_writer->add_node(parent_node_id, NodeType::DictionaryFloat, rule_name)
+        };
+        m_current_parsed_message.add_unordered_value(std::string{lexeme});
+        return node_id;
+    }
+
+    auto const node_id{m_archive_writer->add_node(parent_node_id, NodeType::Float, rule_name)};
+    m_current_parsed_message.add_unordered_value(double_value);
+    return node_id;
 }
 }  // namespace clp_s

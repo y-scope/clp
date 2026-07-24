@@ -11,7 +11,7 @@ query
     ;
 
 expression
-    : column_range_expression 
+    : column_range_expression
     | column_value_expression
     | value_expression
     ;
@@ -24,8 +24,22 @@ column_value_expression
     : col=column ':' ( list=list_of_values | timestamp=timestamp_expression | lit=literal )
     ;
 
-column: 
-    literal
+function_call
+    : func=UNQUOTED_LITERAL '(' column_literal ')'
+    ;
+
+column
+    : function_call
+    | literal
+    ;
+
+column_literal
+    : literal
+    ;
+
+projection_column
+    : function_call
+    | literal
     ;
 
 value_expression

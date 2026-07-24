@@ -1,6 +1,7 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -31,6 +32,10 @@ public:
         Compress = 'c',
         Extract = 'x',
         Search = 's'
+    };
+
+    struct ExperimentalOptions {
+        Path parsing_spec_path;
     };
 
     struct ResultsCacheOutputHandlerOptions {
@@ -67,6 +72,11 @@ public:
 
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
+
+    // Static data members
+    static constexpr std::string_view cArchiveStatsQuery{"stats.archives"};
+    static constexpr std::string_view cLogShapeStatsQuery{"stats.log_shapes"};
+    static constexpr std::string_view cSchemaTreeStatsQuery{"stats.schema_tree"};
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]);
@@ -141,6 +151,10 @@ public:
     std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
+
+    [[nodiscard]] auto experimental() const -> std::optional<ExperimentalOptions> const& {
+        return m_experimental;
+    }
 
 private:
     // Methods
@@ -228,6 +242,13 @@ private:
 
     void print_search_usage() const;
 
+    /**
+     * Validate the use of experimental features. Requires the program options to have been parsed.
+     * @throws std::invalid_argument if any experimental feature is used without setting the
+     * experimetnal flag.
+     */
+    auto validate_experimental() const -> void;
+
     // Variables
     std::string m_program_name;
     Command m_command;
@@ -266,6 +287,8 @@ private:
     std::vector<std::string> m_projection_columns;
 
     std::optional<Aggregator> m_aggregator;
+
+    std::optional<ExperimentalOptions> m_experimental;
 };
 }  // namespace clp_s
 

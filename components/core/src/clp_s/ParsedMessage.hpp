@@ -1,6 +1,7 @@
 #ifndef CLP_S_PARSEDMESSAGE_HPP
 #define CLP_S_PARSEDMESSAGE_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -9,8 +10,10 @@
 #include <variant>
 #include <vector>
 
+#include <clp/Defs.h>
 #include <clp/ffi/EncodedTextAst.hpp>
 #include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/FloatFormatEncoding.hpp>
 
 namespace clp_s {

@@ -1,6 +1,5 @@
 #ifndef CLP_S_JSONPARSER_HPP
 #define CLP_S_JSONPARSER_HPP
-
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -12,13 +11,17 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/ffi/KeyValuePairLogEvent.hpp>
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
 #include <clp_s/ArchiveWriter.hpp>
+#include <clp_s/CommandLineArguments.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ParsedMessage.hpp>
@@ -41,6 +44,7 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
+    std::optional<CommandLineArguments::ExperimentalOptions> experimental;
 };
 
 class JsonParser {
@@ -52,11 +56,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructor
     explicit JsonParser(JsonParserOption const& option);
-
-    // Destructor
-    ~JsonParser() = default;
 
     /**
      * Ingests the input described by `JsonParserOption`.
@@ -71,6 +71,13 @@ public:
     [[nodiscard]] auto store() -> std::vector<ArchiveStats>;
 
 private:
+    // Types
+    struct Clpp {
+        std::unique_ptr<log_surgeon::ParserHandle> log_surgeon_parser;
+        std::string parsing_spec_str;
+    };
+
+    // Methods
     /**
      * Parses JSON input and ingests it into the current archive, splitting the archive if it grows
      * beyond the target encoded size.
@@ -104,13 +111,17 @@ private:
     ) -> bool;
 
     /**
-     * Parses a JSON line
-     * @param line the JSON line
-     * @param parent_node_id the parent node id
-     * @param key the key of the node
+     * Parses a JSON line.
+     * @param line
+     * @param parent_node_id
+     * @param parent_key
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
-    void parse_line(simdjson::ondemand::value line, int32_t parent_node_id, std::string const& key);
+    void parse_line(
+            simdjson::ondemand::value line,
+            SchemaNode::id_t parent_node_id,
+            std::string const& parent_key
+    );
 
     /**
      * Determines the archive node type based on the IR node type and value.
@@ -213,8 +224,48 @@ private:
      * Note: this method should be called before parsing a record so that internal fields come first
      * in each table. This isn't strictly necessary, but it is a nice convention.
      */
-    int32_t add_metadata_field(std::string_view const field_name, NodeType type);
+    auto add_metadata_field(std::string_view const field_name, NodeType type) -> SchemaNode::id_t;
 
+    /**
+     * Parse a string field as an unstructured log message using log surgeon and store its
+     * components in the current parsed message, clp-s schema, and dictionaries.
+     * @param str_field
+     * @param parent_node_id
+     * @return A result containing an error code indicating the failure:
+     * - ClppErrorCodeEnum::Failure if parsing fails.
+     * - Forwards `store_capture_groups`'s return values on failure.
+     * - Forwards `m_archive_writer->update_log_shape_dict`'s return values on failure.
+     * - Forwards `m_archive_writer->update_parent_rule_shapes`'s return values on failure.
+     */
+    auto parse_str_field(std::string_view str_field, SchemaNode::id_t log_msg_node_id)
+            -> ystdlib::error_handling::Result<void>;
+
+    /**
+     * Attempts to parse a string lexeme as a float and add it to the current parsed message
+     * with the appropriate schema node type (Float, FormattedFloat, or DictionaryFloat).
+     *
+     * Respects m_retain_float_format for format preservation, falling back to plain Float
+     * when format preservation is not requested or the format can't be preserved.
+     *
+     * @param lexeme The string to parse as a float.
+     * @param parent_node_id The parent schema tree node ID.
+     * @param rule_name The rule name for the schema tree node key.
+     * @return The schema node ID of the added float node, or std::nullopt if the lexeme
+     *         cannot be parsed as a float.
+     */
+    auto try_add_float_value(
+            std::string_view lexeme,
+            SchemaNode::id_t parent_node_id,
+            std::string_view rule_name
+    ) -> std::optional<SchemaNode::id_t>;
+
+    /**
+     * @return The parsing specification text to persist into the archive, or std::nullopt when CLP+
+     * is not in use.
+     */
+    [[nodiscard]] auto get_parsing_spec_str() const -> std::optional<std::string_view>;
+
+    // Data members
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
 
@@ -241,6 +292,8 @@ private:
             m_autogen_ir_node_to_archive_node_id_mapping;
 
     std::vector<ArchiveStats> m_archive_stats;
+
+    std::optional<Clpp> m_clpp;
 };
 }  // namespace clp_s
 

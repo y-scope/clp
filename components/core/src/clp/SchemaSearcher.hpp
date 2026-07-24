@@ -5,15 +5,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <set>
 #include <string>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/wildcard_query_parser/Query.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
 #include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
@@ -71,12 +68,15 @@ class SchemaSearcher {
 #endif
 
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
 
-        char const* what() const noexcept override { return "Too many encodable variables."; }
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return "Too many encodable variables.";
+        }
     };
 
     /**
@@ -104,34 +104,27 @@ public:
     >
     static auto
     search(std::string const& search_string,
-           log_surgeon::lexers::ByteLexer& lexer,
+           log_surgeon::ParserHandle& parser,
            LogTypeDictionaryReaderType const& logtype_dict,
            VariableDictionaryReaderType const& var_dict,
            bool ignore_case) -> std::vector<SubQuery> {
-        log_surgeon::wildcard_query_parser::Query const query{search_string};
-        auto const interpretations{query.get_all_multi_token_interpretations(lexer)};
-        auto const normalized_interpretations{normalize_interpretations(interpretations)};
-        return generate_schema_sub_queries(
-                normalized_interpretations,
-                logtype_dict,
-                var_dict,
-                ignore_case
-        );
+        auto const interpretations{parser.query_interpretations("", search_string)};
+        auto const normalized_interps{normalize_interpretations(interpretations)};
+        return generate_schema_sub_queries(normalized_interps, logtype_dict, var_dict, ignore_case);
     }
 
 private:
-    /**
-     * Normalizes a set of interpretations by collapsing consecutive greedy wildcards ('*') within
-     * each token.
+    /** Normalizes interpretations by collapsing consecutive greedy wildcards ('*') within each
+     * token.
      *
      * Consecutive wildcards that span across the boundary of tokens are preserved.
      *
-     * @param interpretations The original set of `QueryInterpretation`s to normalize.
-     * @return The normalized set of `QueryInterpretation`s.
+     * @param interpretations The original vector of `vector<log_surgeon::SubQuery>`s to normalize.
+     * @return The normalized vector of `vector<log_surgeon::SubQuery>`s.
      */
     static auto normalize_interpretations(
-            std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interpretations
-    ) -> std::set<log_surgeon::wildcard_query_parser::QueryInterpretation>;
+            std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations
+    ) -> std::vector<std::vector<log_surgeon::SubQuery>>;
 
     /**
      * Compare all log-surgeon interpretations against the dictionaries to determine the sub queries
@@ -161,8 +154,7 @@ private:
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
     static auto generate_schema_sub_queries(
-            std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const&
-                    interpretations,
+            std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations,
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
             bool ignore_case,
@@ -176,7 +168,7 @@ private:
      * @return A vector of positions of encodable wildcard variables.
      */
     static auto get_wildcard_encodable_positions(
-            log_surgeon::wildcard_query_parser::QueryInterpretation const& interpretation
+            std::vector<log_surgeon::SubQuery> const& interpretation
     ) -> std::vector<size_t>;
 
     /**
@@ -189,7 +181,7 @@ private:
      * @return The logtype string corresponding to this combination of encoded variables.
      */
     static auto generate_logtype_string(
-            log_surgeon::wildcard_query_parser::QueryInterpretation const& interpretation,
+            std::vector<log_surgeon::SubQuery> const& interpretation,
             std::vector<size_t> const& wildcard_encodable_positions,
             std::vector<bool> const& mask_encoded_flags
     ) -> std::string;
@@ -214,12 +206,27 @@ private:
      */
     template <VariableDictionaryReaderReq VariableDictionaryReaderType>
     static auto process_schema_var_token(
-            log_surgeon::wildcard_query_parser::VariableQueryToken const& variable_token,
+            log_surgeon::SubQuery const& variable_token,
             VariableDictionaryReaderType const& var_dict,
             bool ignore_case,
             bool is_mask_encoded,
             SubQuery& sub_query
     ) -> bool;
+
+    /**
+     * @param input String to check for wildcard.
+     * @return Whether the string contains a wildcard (non-escaped '*' or '?').
+     */
+    static auto contains_wildcard(std::string const& input) -> bool {
+        for (size_t j{0}; j < input.size(); ++j) {
+            if ('*' == input[j] || '?' == input[j]) {
+                if (0 == j || '\\' != input[j - 1]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 };
 
 template <
@@ -227,7 +234,7 @@ template <
         VariableDictionaryReaderReq VariableDictionaryReaderType
 >
 auto SchemaSearcher::generate_schema_sub_queries(
-        std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interpretations,
+        std::vector<std::vector<log_surgeon::SubQuery>> const& interpretations,
         LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,
         bool const ignore_case,
@@ -235,7 +242,6 @@ auto SchemaSearcher::generate_schema_sub_queries(
 ) -> std::vector<SubQuery> {
     std::vector<SubQuery> sub_queries;
     for (auto const& interpretation : interpretations) {
-        auto const logtype{interpretation.get_logtype()};
         auto const wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
         if (wildcard_encodable_positions.size() > max_encodable_wildcard_variables
             || wildcard_encodable_positions.size() >= std::numeric_limits<uint64_t>::digits)
@@ -244,7 +250,7 @@ auto SchemaSearcher::generate_schema_sub_queries(
         }
         uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
         for (uint64_t mask{0}; mask < num_combos; ++mask) {
-            std::vector<bool> mask_encoded_flags(logtype.size(), false);
+            std::vector<bool> mask_encoded_flags(interpretation.size(), false);
             for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
                 mask_encoded_flags[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
             }
@@ -267,12 +273,9 @@ auto SchemaSearcher::generate_schema_sub_queries(
 
             SubQuery sub_query;
             bool has_vars{true};
-            for (size_t i{0}; i < logtype.size(); ++i) {
-                auto const& token{logtype[i]};
-                if (std::holds_alternative<log_surgeon::wildcard_query_parser::VariableQueryToken>(
-                            token
-                    ))
-                {
+            for (size_t i{0}; i < interpretation.size(); ++i) {
+                auto const& token{interpretation[i]};
+                if (false == token.qualified_name.empty()) {
                     bool is_mask_encoded{false};
                     if (wildcard_encodable_positions.end()
                         != std::ranges::find(wildcard_encodable_positions, i))
@@ -281,7 +284,7 @@ auto SchemaSearcher::generate_schema_sub_queries(
                     }
 
                     has_vars = process_schema_var_token(
-                            std::get<log_surgeon::wildcard_query_parser::VariableQueryToken>(token),
+                            token,
                             var_dict,
                             ignore_case,
                             is_mask_encoded,
@@ -312,7 +315,7 @@ auto SchemaSearcher::generate_schema_sub_queries(
 
 template <VariableDictionaryReaderReq VariableDictionaryReaderType>
 auto SchemaSearcher::process_schema_var_token(
-        log_surgeon::wildcard_query_parser::VariableQueryToken const& variable_token,
+        log_surgeon::SubQuery const& variable_token,
         VariableDictionaryReaderType const& var_dict,
         bool const ignore_case,
         bool const is_mask_encoded,
@@ -320,19 +323,17 @@ auto SchemaSearcher::process_schema_var_token(
 ) -> bool {
     sub_query.mark_wildcard_match_required();
 
-    auto const& raw_string{variable_token.get_query_substring()};
-    auto const var_has_wildcard{variable_token.get_contains_wildcard()};
-    auto const var_type{static_cast<log_surgeon::SymbolId>(variable_token.get_variable_type())};
-    bool const is_int{log_surgeon::SymbolId::TokenInt == var_type};
-    bool const is_float{log_surgeon::SymbolId::TokenFloat == var_type};
+    auto const var_type{variable_token.qualified_name};
+    bool const is_int{var_type.ends_with("int")};
+    bool const is_float{var_type.ends_with("float")};
 
     if (is_mask_encoded) {
         return true;
     }
 
-    if (var_has_wildcard) {
+    if (contains_wildcard(variable_token.value)) {
         return EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
-                raw_string,
+                variable_token.value,
                 var_dict,
                 ignore_case,
                 sub_query
@@ -342,12 +343,12 @@ auto SchemaSearcher::process_schema_var_token(
     encoded_variable_t encoded_var{};
     if ((is_int
          && EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                 raw_string,
+                 variable_token.value,
                  encoded_var
          ))
         || (is_float
             && EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                    raw_string,
+                    variable_token.value,
                     encoded_var
             )))
     {
@@ -355,7 +356,7 @@ auto SchemaSearcher::process_schema_var_token(
         return true;
     }
 
-    auto const entries{var_dict.get_entry_matching_value(raw_string, ignore_case)};
+    auto const entries{var_dict.get_entry_matching_value(variable_token.value, ignore_case)};
     if (entries.empty()) {
         return false;
     }

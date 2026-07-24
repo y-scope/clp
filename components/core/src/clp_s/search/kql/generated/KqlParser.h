@@ -20,8 +20,9 @@ public:
 
   enum {
     RuleStart = 0, RuleQuery = 1, RuleExpression = 2, RuleColumn_range_expression = 3, 
-    RuleColumn_value_expression = 4, RuleColumn = 5, RuleValue_expression = 6, 
-    RuleList_of_values = 7, RuleTimestamp_expression = 8, RuleLiteral = 9
+    RuleColumn_value_expression = 4, RuleFunction_call = 5, RuleColumn = 6, 
+    RuleColumn_literal = 7, RuleProjection_column = 8, RuleValue_expression = 9, 
+    RuleList_of_values = 10, RuleTimestamp_expression = 11, RuleLiteral = 12
   };
 
   explicit KqlParser(antlr4::TokenStream *input);
@@ -46,7 +47,10 @@ public:
   class ExpressionContext;
   class Column_range_expressionContext;
   class Column_value_expressionContext;
+  class Function_callContext;
   class ColumnContext;
+  class Column_literalContext;
+  class Projection_columnContext;
   class Value_expressionContext;
   class List_of_valuesContext;
   class Timestamp_expressionContext;
@@ -192,10 +196,26 @@ public:
 
   Column_value_expressionContext* column_value_expression();
 
+  class  Function_callContext : public antlr4::ParserRuleContext {
+  public:
+    antlr4::Token *func = nullptr;
+    Function_callContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Column_literalContext *column_literal();
+    antlr4::tree::TerminalNode *UNQUOTED_LITERAL();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Function_callContext* function_call();
+
   class  ColumnContext : public antlr4::ParserRuleContext {
   public:
     ColumnContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    Function_callContext *function_call();
     LiteralContext *literal();
 
 
@@ -204,6 +224,33 @@ public:
   };
 
   ColumnContext* column();
+
+  class  Column_literalContext : public antlr4::ParserRuleContext {
+  public:
+    Column_literalContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    LiteralContext *literal();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Column_literalContext* column_literal();
+
+  class  Projection_columnContext : public antlr4::ParserRuleContext {
+  public:
+    Projection_columnContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Function_callContext *function_call();
+    LiteralContext *literal();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Projection_columnContext* projection_column();
 
   class  Value_expressionContext : public antlr4::ParserRuleContext {
   public:
