@@ -421,6 +421,47 @@ To run all worker types in the same node pool:
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
 
+### ClusterIP services and Gateway API
+
+The chart exposes Web UI, API server, log ingestor, MCP server, and Presto coordinator as
+`ClusterIP` services. To make these services reachable from outside the cluster, route traffic
+through the optional [Gateway API] resources or another cluster-managed ingress layer.
+
+#### Using Gateway API
+
+For cloud Kubernetes deployments (e.g., EKS, GKE, AKS), a common pattern is `ClusterIP` services
+behind a [Gateway API] controller such as [nginx-gateway-fabric], [Envoy Gateway], or [Istio]. This
+example creates an HTTP listener; configure TLS on an upstream load balancer or add an HTTPS
+listener before exposing it directly in production:
+
+```{code-block} yaml
+:caption: clusterip-gateway.yaml
+
+# Keep bundled database and results-cache services off host node ports
+allowHostAccessForSbinScripts: false
+
+# Enable Gateway API resources
+gateway:
+  enabled: true
+  className: "nginx"  # GatewayClass name from your controller
+  hostname: "clp.example.com"
+```
+
+Install:
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f clusterip-gateway.yaml
+```
+
+The chart creates a `Gateway` listener on port 80 and `HTTPRoute` resources that route:
+
+| Path             | Backend                        |
+|------------------|--------------------------------|
+| `/api/v2/`       | api-server (prefix stripped)   |
+| `/log_ingestor/` | log-ingestor (prefix stripped) |
+| `/mcp`           | mcp-server                     |
+| `/`              | webui (catch-all)              |
+
 ---
 
 ### Component resources
@@ -502,8 +543,14 @@ kubectl get jobs
 
 ### Access the Web UI
 
-Once all pods are ready, you access the CLP Web UI at: `http://<node-ip>:30000` (the value of
-`clpConfig.webui.port`)
+If you enabled the chart's Gateway API resources, access the Web UI through the Gateway hostname.
+Otherwise, forward the Web UI's ClusterIP Service to your machine:
+
+```bash
+kubectl port-forward service/clp-webui 4000:4000
+```
+
+Leave the command running and open [http://localhost:4000](http://localhost:4000).
 
 ---
 
@@ -656,13 +703,17 @@ To tear down a `kubeadm` cluster:
 [design-orchestration]: ../dev-docs/design-deployment-orchestration.md
 [docker-compose-deployment]: guides-docker-compose-deployment.md
 [eks]: https://aws.amazon.com/eks/
+[Envoy Gateway]: https://gateway.envoyproxy.io/
 [external-db-guide]: guides-external-database.md
+[Gateway API]: https://gateway-api.sigs.k8s.io/
 [gke]: https://cloud.google.com/kubernetes-engine
 [Helm]: https://helm.sh/
+[Istio]: https://istio.io/
 [k3s]: https://k3s.io/
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
+[nginx-gateway-fabric]: https://github.com/nginx/nginx-gateway-fabric
 [presto-guide]: guides-using-presto.md
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md

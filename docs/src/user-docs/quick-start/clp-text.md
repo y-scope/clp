@@ -58,11 +58,9 @@ webui:
 First, create a `kind` cluster:
 
 ```bash
-# Host port mappings
-export CLP_WEBUI_PORT=30000
+# Host ports for services that support package scripts
 export CLP_RESULTS_CACHE_PORT=30017
 export CLP_DATABASE_PORT=30306
-export CLP_MCP_SERVER_PORT=30800
 
 # Credentials (generate random or use your own)
 export CLP_DB_PASS=$(openssl rand -hex 16)
@@ -82,14 +80,10 @@ nodes:
     containerPath: /home
 
   extraPortMappings:
-  - containerPort: $CLP_WEBUI_PORT
-    hostPort: $CLP_WEBUI_PORT
   - containerPort: $CLP_RESULTS_CACHE_PORT
     hostPort: $CLP_RESULTS_CACHE_PORT
   - containerPort: $CLP_DATABASE_PORT
     hostPort: $CLP_DATABASE_PORT
-  - containerPort: $CLP_MCP_SERVER_PORT
-    hostPort: $CLP_MCP_SERVER_PORT
 EOF
 ```
 
@@ -103,10 +97,9 @@ helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.package.storage_engine=clp \
   --set clpConfig.webui.query_engine=clp \
   --set clpConfig.telemetry.disable=false \
-  --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \
-  --set clpConfig.mcp_server.port="$CLP_MCP_SERVER_PORT" \
+  --set clpConfig.mcp_server.logging_level=INFO \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
@@ -117,6 +110,14 @@ Wait for all pods to be ready:
 
 ```bash
 kubectl wait pods --all --for=condition=Ready --timeout=300s
+```
+
+In separate terminals, forward the ClusterIP services that you want to access and leave the
+commands running:
+
+```bash
+kubectl port-forward service/clp-webui 30000:4000
+kubectl port-forward service/clp-mcp-server 30800:8000
 ```
 
 Update the following configurations in `etc/clp-config.yaml`:
@@ -223,7 +224,8 @@ To search your compressed logs from CLP's UI, open the following URL in your bro
 ::::
 
 :::{note}
-If you changed `webui.host` or `webui.port` in the configuration, use the new values.
+For Docker Compose, use the configured Web UI host and port. For Kubernetes, use the local port
+from the `kubectl port-forward` command.
 :::
 
 [Figure 3](#figure-3) shows the search page after running a query.
