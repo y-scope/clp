@@ -1,12 +1,17 @@
 /**
  * Reference:
- * https://github.com/tsconfig/bases/blob/2604892973bcb1822c204e2aa2add10a8b0d1c8c/bases/node22.json
+ * https://github.com/tsconfig/bases/blob/12474cd696ec17c6ac4ccc19261860bf3c7fdc56/bases/node24.json
  */
 {
   "compilerOptions": {
     "esModuleInterop": true,
     "lib": [
-      "es2023"
+      "es2024",
+      "ESNext.Array",
+      "ESNext.Collection",
+      "ESNext.Error",
+      "ESNext.Iterator",
+      "ESNext.Promise"
     ],
     "module": "nodenext",
     "moduleResolution": "node16",
@@ -14,7 +19,7 @@
     "removeComments": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "target": "ES2022",
+    "target": "ES2024",
     "baseUrl": ".",
     "alwaysStrict": true,
     "exactOptionalPropertyTypes": true,

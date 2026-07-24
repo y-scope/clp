@@ -404,7 +404,7 @@ services:
       results-cache-indices-creator:
         condition: "service_completed_successfully"
     command: [
-      "/opt/clp/bin/node-22",
+      "/opt/clp/bin/node",
       "/opt/clp/var/www/webui/server/dist/main.js"
     ]
     healthcheck:
