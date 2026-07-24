@@ -6,10 +6,11 @@ can be built and used locally, but some are available to download from
 
 To build an image locally, run the `build.sh` script in the image's directory.
 
-## clp-core-dependencies-&lt;arch&gt;-manylinux_2_28
+## clp-core-dependencies-manylinux_2_28
 
-Images containing the dependencies necessary to build CLP core in a [manylinux_2_28][manylinux_2_28]
-environment (aarch64 or x86).
+Image containing the dependencies necessary to build CLP core in a [manylinux_2_28][manylinux_2_28]
+environment. It is published as a multi-arch image (amd64 and arm64); Docker auto-selects the
+architecture matching the host on pull.
 
 Binaries built on manylinux_2_28 (based on AlmaLinux 8) are expected to be compatible with other
 distros using glibc 2.28+, including:
@@ -19,75 +20,58 @@ distros using glibc 2.28+, including:
 * Fedora 29+
 * Ubuntu 18.10+
 
-### clp-core-dependencies-aarch64-manylinux_2_28
-
-* [GitHub Packages page][core-deps-manylinux_2_28-aarch64]
+* [GitHub Packages page][core-deps-manylinux_2_28]
 * Pull command:
 
   ```bash
-  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-aarch64-manylinux_2_28:main
+  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-manylinux_2_28:main
   ```
 
 * Path:
 
   ```text
-  components/core/tools/docker-images/clp-env-base-manylinux_2_28-aarch64
+  components/core/tools/docker-images/clp-env-base-manylinux_2_28
   ```
 
-### clp-core-dependencies-x86-manylinux_2_28
+  To cross-build for a non-native architecture locally (using QEMU emulation), set the `PLATFORM`
+  env var when running `build.sh`, e.g. `PLATFORM=linux/arm64 ./build.sh`
+  (requires binfmt/QEMU support on the host).
 
-* [GitHub Packages page][core-deps-manylinux_2_28-x86_64]
-* Pull command:
+  Local builds keep the architecture-specific `:dev` tags used by the packaging scripts:
+  `clp-core-dependencies-x86-manylinux_2_28:dev` for amd64 and
+  `clp-core-dependencies-aarch64-manylinux_2_28:dev` for arm64.
 
-  ```bash
-  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-x86-manylinux_2_28:main
-  ```
+## clp-core-dependencies-musllinux_1_2
 
-* Path:
-
-  ```text
-  components/core/tools/docker-images/clp-env-base-manylinux_2_28-x86_64
-  ```
-
-## clp-core-dependencies-&lt;arch&gt;-musllinux_1_2
-
-Images containing the dependencies necessary to build CLP core in a [musllinux_1_2][musllinux_1_2]
-environment (aarch64 or x86).
+Image containing the dependencies necessary to build CLP core in a [musllinux_1_2][musllinux_1_2]
+environment. It is published as a multi-arch image (amd64 and arm64); Docker auto-selects the
+architecture matching the host on pull.
 
 Binaries built on musllinux_1_2 (based on Alpine Linux 3.22) are expected to be compatible with
 other distros using musl 1.2, including:
 
 * Alpine Linux 3.13+
 
-### clp-core-dependencies-aarch64-musllinux_1_2
-
-* [GitHub Packages page][core-deps-musllinux_1_2-aarch64]
+* [GitHub Packages page][core-deps-musllinux_1_2]
 * Pull command:
 
   ```bash
-  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-aarch64-musllinux_1_2:main
+  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-musllinux_1_2:main
   ```
 
 * Path:
 
   ```text
-  components/core/tools/docker-images/clp-env-base-musllinux_1_2-aarch64
+  components/core/tools/docker-images/clp-env-base-musllinux_1_2
   ```
 
-### clp-core-dependencies-x86-musllinux_1_2
+  To cross-build for a non-native architecture locally (using QEMU emulation), set the `PLATFORM`
+  env var when running `build.sh`, e.g. `PLATFORM=linux/arm64 ./build.sh`
+  (requires binfmt/QEMU support on the host).
 
-* [GitHub Packages page][core-deps-musllinux_1_2-x86_64]
-* Pull command:
-
-  ```bash
-  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-x86-musllinux_1_2:main
-  ```
-
-* Path:
-
-  ```text
-  components/core/tools/docker-images/clp-env-base-musllinux_1_2-x86_64
-  ```
+  Local builds keep the architecture-specific `:dev` tags used by the packaging scripts:
+  `clp-core-dependencies-x86-musllinux_1_2:dev` for amd64 and
+  `clp-core-dependencies-aarch64-musllinux_1_2:dev` for arm64.
 
 ## clp-core-dependencies-x86-centos-stream-9
 
@@ -247,10 +231,8 @@ Each distro supports an environment variable to override the default package mir
 | `DOCKER_NETWORK` | (auto)  | Override Docker's network mode (e.g., `host`, `bridge`).                       |
 
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
-[core-deps-manylinux_2_28-aarch64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-aarch64-manylinux_2_28
-[core-deps-manylinux_2_28-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-manylinux_2_28
-[core-deps-musllinux_1_2-aarch64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-aarch64-musllinux_1_2
-[core-deps-musllinux_1_2-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-musllinux_1_2
+[core-deps-manylinux_2_28]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-manylinux_2_28
+[core-deps-musllinux_1_2]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-musllinux_1_2
 [core-deps-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [core-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy
 [gh-packages]: https://github.com/orgs/y-scope/packages?repo_name=clp
