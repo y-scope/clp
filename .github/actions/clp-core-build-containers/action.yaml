@@ -17,6 +17,15 @@ inputs:
   token:
     description: "Registry token"
     required: true
+  arch:
+    description: >-
+      Target architecture (e.g. "amd64" or "arm64") when building a single arch of a
+      multi-arch image. When set, the image is tagged/published under an arch-suffixed
+      tag (e.g. ":main-amd64") within the single image_name repository, so a downstream
+      merge step can combine the per-arch tags into a multi-arch manifest. When empty,
+      the image is tagged/published under the bare branch tag (legacy behaviour).
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -33,6 +42,17 @@ runs:
     - id: "get_image_props"
       shell: "bash"
       run: |
+        # When `arch` is set, arch-suffix the tag/artifact so each arch of a multi-arch
+        # image is published/loaded under a distinct tag (e.g. ":main-amd64") within the
+        # single image_name repository. A downstream merge step combines them into a
+        # multi-arch ":main" manifest.
+        arch="${{inputs.arch}}"
+        if [[ -n "$arch" ]]; then
+          arch_suffix="-${arch}"
+        else
+          arch_suffix=""
+        fi
+
         if [[ "${{inputs.push_deps_image}}" == "true" ]] ; then
           # Docker doesn't support repository names with uppercase characters, so we convert to
           # lowercase here.
@@ -40,13 +60,13 @@ runs:
 
           echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}" \
             >> "$GITHUB_OUTPUT"
-          echo "branch=${{github.ref_name}}" >> "$GITHUB_OUTPUT"
+          echo "branch=${{github.ref_name}}${arch_suffix}" >> "$GITHUB_OUTPUT"
           echo "output=type=registry" >> "$GITHUB_OUTPUT"
         else
-          image_path="/tmp/${{inputs.image_name}}.tar"
+          image_path="/tmp/${{inputs.image_name}}${arch_suffix}.tar"
           echo "image_path=${image_path}" >> "$GITHUB_OUTPUT"
 
-          echo "qualified_image_name=${{inputs.image_name}}" >> "$GITHUB_OUTPUT"
+          echo "qualified_image_name=${{inputs.image_name}}${arch_suffix}" >> "$GITHUB_OUTPUT"
           echo "branch=latest" >> "$GITHUB_OUTPUT"
           echo "output=type=docker,dest=${image_path}" >> "$GITHUB_OUTPUT"
         fi
@@ -87,6 +107,9 @@ runs:
         labels: "${{steps.deps_image_meta.outputs.labels}}"
         tags: "${{steps.deps_image_meta.outputs.tags}}"
         outputs: "${{steps.get_image_props.outputs.output}}"
+        # Disable provenance to create a simple image instead of a manifest list.
+        # This allows `docker manifest create` to combine the per-arch images later.
+        provenance: false
 
     - if: "inputs.push_deps_image == 'false'"
       uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
