@@ -263,10 +263,13 @@ for cur_format in "${format_list[@]}"; do
         echo "Building ${cur_format} for ${target_arch}"
         echo "========================================"
 
-        # Build the base image if not present
+        # Build the base image if not present. The consolidated (multi-arch)
+        # clp-env-base-<family>/build.sh selects the target architecture via the
+        # PLATFORM env var, so cross-arch packaging builds get the correct base.
         if ! docker image inspect "${base_image_tag}" &>/dev/null; then
             echo "==> Building base image ${base_image_tag}..."
-            bash "${repo_root}/components/core/tools/docker-images/clp-env-base-${base_image_family}-${docker_suffix}/build.sh"
+            PLATFORM="${docker_platform}" \
+                bash "${repo_root}/components/core/tools/docker-images/clp-env-base-${base_image_family}/build.sh"
         fi
 
         # Build the builder image (base + packaging tools)
