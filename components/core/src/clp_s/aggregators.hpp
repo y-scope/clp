@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -18,7 +19,7 @@ namespace clp_s {
 /**
  * A single typed value in an aggregation's result document.
  */
-using AggregationValue = std::variant<int64_t, double, std::string>;
+using AggregationValue = std::variant<int64_t, double, std::string, bool>;
 
 /**
  * One aggregation's result document: an ordered list of typed key-value pairs.
@@ -27,7 +28,7 @@ using AggregationResult = std::vector<std::pair<std::string, AggregationValue>>;
 
 /**
  * Requirements a type must satisfy to be used as an aggregator.
- * @tparam AggregatorType The type of the aggregator.
+ * @tparam AggregatorType
  */
 template <typename AggregatorType>
 concept AggregatorReq = requires(
@@ -121,6 +122,31 @@ private:
 };
 
 /**
+ * Counts the number of matched records grouped by the value of a target field.
+ */
+class GroupByCountAggregator {
+public:
+    // Static constants
+    static constexpr bool cNeedsMetadata{false};
+    static constexpr bool cNeedsMarshalledRecord{true};
+
+    // Constructors
+    explicit GroupByCountAggregator(std::string_view field);
+
+    // Methods
+    auto add_record(std::string_view message, [[maybe_unused]] epochtime_t timestamp_millisecs)
+            -> void;
+
+    [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
+
+private:
+    // Data members
+    std::string m_field;
+    std::vector<std::string> m_field_path;
+    std::map<AggregationValue, int64_t> m_counts;
+};
+
+/**
  * Tracks the minimum or maximum value of a target field across matched records.
  */
 class MinMaxAggregator {
@@ -157,9 +183,39 @@ private:
 };
 
 /**
+ * Collects the distinct values of a target field across matched records.
+ */
+class UniqueAggregator {
+public:
+    // Static constants
+    static constexpr bool cNeedsMetadata{false};
+    static constexpr bool cNeedsMarshalledRecord{true};
+
+    // Constructors
+    explicit UniqueAggregator(std::string_view field);
+
+    // Methods
+    auto add_record(std::string_view message, [[maybe_unused]] epochtime_t timestamp_millisecs)
+            -> void;
+
+    [[nodiscard]] auto get_results() const -> std::vector<AggregationResult>;
+
+private:
+    // Data members
+    std::string m_field;
+    std::vector<std::string> m_field_path;
+    std::set<AggregationValue> m_values;
+};
+
+/**
  * One of the supported aggregators that a search can apply to its matched records.
  */
-using Aggregator = std::variant<CountAggregator, CountByTimeAggregator, MinMaxAggregator>;
+using Aggregator = std::variant<
+        CountAggregator,
+        CountByTimeAggregator,
+        GroupByCountAggregator,
+        MinMaxAggregator,
+        UniqueAggregator>;
 }  // namespace clp_s
 
 #endif  // CLP_S_AGGREGATORS_HPP

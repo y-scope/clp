@@ -162,10 +162,10 @@ private:
      * @param parsed_options
      * @param count_by_time_bucket_size_millisecs Bucket size for count-by-time. Only used by that
      * option.
-     * @param aggregation_field Field for min/max. Only used by those options.
+     * @param aggregation_field Field for min/max/unique. Only used by those options.
      * @return The requested aggregation, or std::nullopt if none was requested.
      * @throws std::invalid_argument if multiple aggregations are specified, the bucket size is
-     * non-positive, or a min/max field is empty or contains wildcards.
+     * non-positive, or a min/max/unique field is empty or contains wildcards.
      */
     [[nodiscard]] static auto parse_aggregation_options(
             boost::program_options::variables_map const& parsed_options,

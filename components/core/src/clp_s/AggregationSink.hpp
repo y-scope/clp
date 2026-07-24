@@ -1,6 +1,7 @@
 #ifndef CLP_S_AGGREGATIONSINK_HPP
 #define CLP_S_AGGREGATIONSINK_HPP
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -73,25 +74,41 @@ public:
     ResultsCacheSink(
             std::string_view uri,
             std::string_view collection,
+            uint64_t batch_size,
             std::string_view archive_id
     );
 
     // Methods implementing AggregationSink
+    /**
+     * Buffers a result document, flushing the buffer to the database once it reaches the batch
+     * size. Documents are dropped after an earlier flush failure; the error surfaces in `finish()`.
+     * @param result The result document to write.
+     */
     auto write(AggregationResult const& result) -> void override;
 
     /**
-     * Flushes the buffered result documents.
+     * Flushes any remaining buffered result documents.
      * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on database error
+     * @return ErrorCodeFailureDbBulkWrite if this flush or an earlier batched flush failed
      */
     [[nodiscard]] auto finish() -> ErrorCode override;
 
 private:
+    // Methods
+    /**
+     * Inserts the buffered result documents into the collection.
+     * @return ErrorCodeSuccess on success
+     * @return ErrorCodeFailureDbBulkWrite on database error
+     */
+    [[nodiscard]] auto flush_buffer() -> ErrorCode;
+
     // Data members
     mongocxx::client m_client;
     mongocxx::collection m_collection;
+    uint64_t m_batch_size;
     std::string m_archive_id;
     std::vector<bsoncxx::document::value> m_results;
+    ErrorCode m_flush_error{ErrorCode::ErrorCodeSuccess};
 };
 }  // namespace clp_s
 

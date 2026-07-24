@@ -794,6 +794,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "max",
                 po::value<std::string>(&aggregation_field)->value_name("FIELD"),
                 "Find the maximum value of the given field"
+            )(
+                "unique",
+                po::value<std::string>(&aggregation_field)->value_name("FIELD"),
+                "Find the distinct values of the given field"
+            )(
+                "count-by",
+                po::value<std::string>(&aggregation_field)->value_name("FIELD"),
+                "Count the number of results grouped by the value of the given field"
             );
             // clang-format on
             search_options.add(aggregation_options);
@@ -973,6 +981,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
                           << " --max latency" << std::endl;
+                std::cerr << std::endl;
+
+                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
+                             R"( "level: INFO" and output the distinct values of field "latency")"
+                             " to stdout"
+                          << std::endl;
+                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
+                          << " --unique latency" << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -1151,17 +1167,22 @@ auto CommandLineArguments::parse_aggregation_options(
     auto const set_aggregator = [&](Aggregator value) {
         if (aggregator.has_value()) {
             throw std::invalid_argument(
-                    "The --count, --count-by-time, --min, and --max options are mutually exclusive."
+                    "The --count, --count-by-time, --min, --max, --unique, and --count-by options"
+                    " are mutually exclusive."
             );
         }
         aggregator = std::move(value);
     };
     auto const validate_aggregation_field = [&]() {
         if (aggregation_field.empty()) {
-            throw std::invalid_argument("The --min and --max options require a field.");
+            throw std::invalid_argument(
+                    "The --min, --max, --unique, and --count-by options require a field."
+            );
         }
         if (search::ast::has_unescaped_wildcards(aggregation_field)) {
-            throw std::invalid_argument("The --min and --max field must not contain wildcards.");
+            throw std::invalid_argument(
+                    "The --min, --max, --unique, and --count-by field must not contain wildcards."
+            );
         }
     };
 
@@ -1181,6 +1202,14 @@ auto CommandLineArguments::parse_aggregation_options(
     if (parsed_options.count("max")) {
         validate_aggregation_field();
         set_aggregator(MinMaxAggregator{true, aggregation_field});
+    }
+    if (parsed_options.count("unique")) {
+        validate_aggregation_field();
+        set_aggregator(UniqueAggregator{aggregation_field});
+    }
+    if (parsed_options.count("count-by")) {
+        validate_aggregation_field();
+        set_aggregator(GroupByCountAggregator{aggregation_field});
     }
     return aggregator;
 }
@@ -1225,7 +1254,8 @@ void CommandLineArguments::parse_reducer_output_handler_options(
     }
 
     if (false == m_aggregator.has_value()
-        || std::holds_alternative<MinMaxAggregator>(m_aggregator.value()))
+        || (false == std::holds_alternative<CountAggregator>(m_aggregator.value())
+            && false == std::holds_alternative<CountByTimeAggregator>(m_aggregator.value())))
     {
         throw std::invalid_argument(
                 "The reducer output handler currently only supports count and count-by-time"
