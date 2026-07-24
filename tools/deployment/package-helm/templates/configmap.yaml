@@ -121,6 +121,7 @@ data:
     {{- end }}{{/* with .Values.clpConfig.logs_input */}}
     {{- with .Values.clpConfig.log_ingestor }}
     log_ingestor:
+      database_connection_pool_size: {{ .database_connection_pool_size | int }}
       host: "localhost"
       logging_level: {{ .logging_level | quote }}
       port: 3002

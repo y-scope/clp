@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use serde::Deserialize;
 
 use crate::clp_config::{AwsAuthentication, S3Config};
@@ -227,6 +229,9 @@ impl Default for StreamOutputStorage {
     }
 }
 
+const DEFAULT_LOG_INGESTOR_DATABASE_CONNECTION_POOL_SIZE: NonZeroU32 =
+    NonZeroU32::new(100).unwrap();
+
 /// Mirror of `clp_py_utils.clp_config.LogIngestor`.
 ///
 /// # NOTE
@@ -237,6 +242,7 @@ impl Default for StreamOutputStorage {
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
+    pub database_connection_pool_size: NonZeroU32,
     pub logging_level: String,
 }
 
@@ -245,6 +251,7 @@ impl Default for LogIngestor {
         Self {
             host: "localhost".to_owned(),
             port: 3002,
+            database_connection_pool_size: DEFAULT_LOG_INGESTOR_DATABASE_CONNECTION_POOL_SIZE,
             logging_level: "INFO".to_owned(),
         }
     }
@@ -339,7 +346,25 @@ impl Default for Telemetry {
 
 #[cfg(test)]
 mod tests {
-    use super::LogsInput;
+    use super::{LogIngestor, LogsInput};
+
+    #[test]
+    fn deserialize_log_ingestor_database_connection_pool_size() {
+        let default_config = serde_json::from_str::<LogIngestor>("{}")
+            .expect("failed to deserialize default `LogIngestor` config");
+        assert_eq!(100, default_config.database_connection_pool_size.get());
+
+        let custom_config =
+            serde_json::from_str::<LogIngestor>(r#"{"database_connection_pool_size": 42}"#)
+                .expect("failed to deserialize custom `LogIngestor` config");
+        assert_eq!(42, custom_config.database_connection_pool_size.get());
+    }
+
+    #[test]
+    fn reject_zero_log_ingestor_database_connection_pool_size() {
+        let result = serde_json::from_str::<LogIngestor>(r#"{"database_connection_pool_size": 0}"#);
+        assert!(result.is_err());
+    }
 
     #[test]
     fn deserialize_logs_input_s3_config() {

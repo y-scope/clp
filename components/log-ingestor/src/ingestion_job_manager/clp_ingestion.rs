@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use anyhow::Context;
 use async_trait::async_trait;
 use clp_rust_utils::{
     clp_config::{
@@ -176,6 +177,7 @@ impl ClpDbIngestionConnector {
     ///
     /// Returns an error if:
     ///
+    /// * [`anyhow::Error`] if the log-ingestor configuration is missing.
     /// * Forwards [`clp_rust_utils::database::mysql::create_clp_db_mysql_pool`]'s return values on
     ///   failure.
     /// * Forwards [`Self::create_tables`]'s return values on failure.
@@ -199,10 +201,16 @@ impl ClpDbIngestionConnector {
             }
         };
 
+        let database_connection_pool_size = clp_config
+            .log_ingestor
+            .as_ref()
+            .context("Invalid CLP config: log-ingestor is not configured")?
+            .database_connection_pool_size
+            .get();
         let mysql_pool = clp_rust_utils::database::mysql::create_clp_db_mysql_pool(
             &clp_config.database,
             &clp_credentials.database,
-            100,
+            database_connection_pool_size,
         )
         .await?;
 
