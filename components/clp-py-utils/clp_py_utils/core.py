@@ -15,13 +15,10 @@ class FileMetadata:
         self.size = size
         self.estimated_uncompressed_size = size
 
-        filename = path.name
+        filename = path.name.lower()
         if any(filename.endswith(extension) for extension in [".gz", ".gzip", ".tgz", ".tar.gz"]):
             self.estimated_uncompressed_size *= 13
-        elif any(
-            filename.endswith(extension)
-            for extension in [".zstd", ".zstandard", ".tar.zstd", ".tar.zstandard"]
-        ):
+        elif filename.endswith(".zst"):
             self.estimated_uncompressed_size *= 8
 
 

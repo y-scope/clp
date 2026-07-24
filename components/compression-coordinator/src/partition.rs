@@ -232,15 +232,23 @@ fn estimate_uncompressed_size(key: &str, size: u64) -> u64 {
     const GZIP_COMPRESSION_RATIO_ESTIMATE: u64 = 13;
     const GZIP_SUFFIXES: &[&str] = &[".gz", ".gzip", ".tgz", ".tar.gz"];
     const ZSTD_COMPRESSION_RATIO_ESTIMATE: u64 = 8;
-    const ZSTD_SUFFIXES: &[&str] = &[".zstd", ".zstandard", ".tar.zstd", ".tar.zstandard"];
 
-    if GZIP_SUFFIXES.iter().any(|suffix| key.ends_with(suffix)) {
+    if GZIP_SUFFIXES
+        .iter()
+        .any(|suffix| ends_with_ignore_ascii_case(key, suffix))
+    {
         size * GZIP_COMPRESSION_RATIO_ESTIMATE
-    } else if ZSTD_SUFFIXES.iter().any(|suffix| key.ends_with(suffix)) {
+    } else if ends_with_ignore_ascii_case(key, ".zst") {
         size * ZSTD_COMPRESSION_RATIO_ESTIMATE
     } else {
         size
     }
+}
+
+fn ends_with_ignore_ascii_case(value: &str, suffix: &str) -> bool {
+    value
+        .get(value.len().saturating_sub(suffix.len())..)
+        .is_some_and(|ending| ending.eq_ignore_ascii_case(suffix))
 }
 
 /// Gets the filename portion of an S3 object's key.
@@ -381,6 +389,38 @@ mod tests {
             // Files are appended only while the partition is still under the target, so removing
             // the last-appended file must drop the partition back below the target.
             assert!(total_size - last_size < target_archive_size);
+        }
+    }
+
+    #[test]
+    fn test_estimate_uncompressed_size_for_gzip_suffix() {
+        const FILE_SIZE: u64 = 100;
+
+        for key in [
+            "logs/app.log.gz",
+            "logs/app.log.GZ",
+            "logs/app.log.gzip",
+            "logs/app.log.GZIP",
+            "logs/app.log.tgz",
+            "logs/app.log.TGZ",
+            "logs/app.log.tar.gz",
+            "logs/app.log.TAR.GZ",
+        ] {
+            assert_eq!(FILE_SIZE * 13, estimate_uncompressed_size(key, FILE_SIZE));
+        }
+    }
+
+    #[test]
+    fn test_estimate_uncompressed_size_for_zstandard_suffix() {
+        const FILE_SIZE: u64 = 100;
+
+        for key in [
+            "logs/app.log.zst",
+            "logs/app.log.clp.zst",
+            "logs/app.log.tar.zst",
+            "logs/app.log.ZST",
+        ] {
+            assert_eq!(FILE_SIZE * 8, estimate_uncompressed_size(key, FILE_SIZE));
         }
     }
 
