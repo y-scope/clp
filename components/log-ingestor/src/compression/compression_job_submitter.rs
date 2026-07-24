@@ -1,11 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::{
-    clp_config::{
-        AwsAuthentication,
-        S3Config,
-        package::{DEFAULT_DATASET_NAME, config::ArchiveOutput},
-    },
+    clp_config::{AwsAuthentication, S3Config, package::config::ArchiveOutput},
+    dataset::CLP_DEFAULT_DATASET_NAME,
     job_config::{
         ClpIoConfig,
         CompressionJobId,
@@ -16,7 +13,9 @@ use clp_rust_utils::{
         ingestion::s3::BaseConfig,
     },
     s3::S3ObjectMetadataId,
+    types::non_empty_string::ExpectedNonEmpty,
 };
+use non_empty_string::NonEmptyString;
 
 use crate::{compression::BufferSubmitter, ingestion_job_manager::ClpCompressionState};
 
@@ -79,7 +78,7 @@ impl CompressionJobSubmitter {
                 ingestion_job_config
                     .dataset
                     .clone()
-                    .unwrap_or_else(|| DEFAULT_DATASET_NAME.clone()),
+                    .unwrap_or_else(|| NonEmptyString::from_static_str(CLP_DEFAULT_DATASET_NAME)),
             ),
             timestamp_key: ingestion_job_config.timestamp_key.clone(),
             unstructured: ingestion_job_config.unstructured,
