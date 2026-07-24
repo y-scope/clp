@@ -69,6 +69,7 @@ constexpr std::string_view cAttrNumArchiveRecordsMatchingSchemas{
 constexpr std::string_view cAttrNumArchiveRecordsMatchingQuery{
         "clp.query.num_archive_records_matching_query"
 };
+constexpr std::string_view cAttrNumArchiveSchemas{"clp.query.num_archive_schemas"};
 constexpr std::string_view cAttrNumMatchedSchemas{"clp.query.num_matched_schemas"};
 constexpr std::string_view cAttrNumSchemasWithMatches{"clp.query.num_schemas_with_matches"};
 constexpr std::string_view cAttrNumSchemasScanned{"clp.query.num_schemas_scanned"};
@@ -326,6 +327,10 @@ public:
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumArchiveRecordsMatchingQuery),
                 to_int64_attribute(metrics.num_archive_records_matching_query)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumArchiveSchemas),
+                to_int64_attribute(metrics.num_archive_schemas)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumMatchedSchemas),

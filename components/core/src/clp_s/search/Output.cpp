@@ -47,7 +47,9 @@ bool Output::filter() {
         return false;
     }
 
-    for (auto schema_id : m_archive_reader->get_schema_ids()) {
+    auto const& schema_ids = m_archive_reader->get_schema_ids();
+    m_result_metrics.num_archive_schemas = schema_ids.size();
+    for (auto schema_id : schema_ids) {
         m_result_metrics.num_archive_records
                 += m_archive_reader->get_num_messages_for_schema(schema_id);
         if (m_match->schema_matched(schema_id)) {
