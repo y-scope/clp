@@ -229,9 +229,6 @@ impl Default for StreamOutputStorage {
     }
 }
 
-const DEFAULT_LOG_INGESTOR_DATABASE_CONNECTION_POOL_SIZE: NonZeroU32 =
-    NonZeroU32::new(100).unwrap();
-
 /// Mirror of `clp_py_utils.clp_config.LogIngestor`.
 ///
 /// # NOTE
@@ -251,7 +248,8 @@ impl Default for LogIngestor {
         Self {
             host: "localhost".to_owned(),
             port: 3002,
-            database_connection_pool_size: DEFAULT_LOG_INGESTOR_DATABASE_CONNECTION_POOL_SIZE,
+            database_connection_pool_size: NonZeroU32::new(100)
+                .expect("default database connection pool size must be nonzero"),
             logging_level: "INFO".to_owned(),
         }
     }
