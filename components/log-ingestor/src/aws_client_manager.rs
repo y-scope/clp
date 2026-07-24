@@ -2,7 +2,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
-use clp_rust_utils::{aws::AWS_DEFAULT_REGION, clp_config::AwsAuthentication};
+use clp_rust_utils::aws::AWS_DEFAULT_REGION;
+use clp_rust_utils::clp_config::AwsAuthentication;
 use non_empty_string::NonEmptyString;
 
 /// A marker trait for AWS client types.

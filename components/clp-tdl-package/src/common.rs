@@ -1,10 +1,9 @@
 //! Process-global state shared by this package's tasks: the Tokio runtime, the Spider task
 //! executor config, and this cdylib's `tracing` subscriber.
 
-use std::{
-    path::{Path, PathBuf},
-    sync::OnceLock,
-};
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use anyhow::Context;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;

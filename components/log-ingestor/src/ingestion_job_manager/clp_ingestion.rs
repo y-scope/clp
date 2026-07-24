@@ -1,43 +1,42 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use clp_rust_utils::{
-    clp_config::{
-        AwsAuthentication,
-        package::{
-            config::{ArchiveOutput, Config as ClpConfig, LogsInput},
-            credentials::Credentials as ClpCredentials,
-        },
-    },
-    database::mysql::MySqlEnumFormat,
-    impl_sqlx_type,
-    job_config::{
-        ClpIoConfig,
-        CompressionJobId,
-        CompressionJobStatus,
-        InputConfig,
-        ingestion::s3::{S3IngestionJobConfig, S3ScannerConfig},
-    },
-    s3::{ObjectMetadata, S3ObjectMetadataId},
-};
+use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::package::config::ArchiveOutput;
+use clp_rust_utils::clp_config::package::config::Config as ClpConfig;
+use clp_rust_utils::clp_config::package::config::LogsInput;
+use clp_rust_utils::clp_config::package::credentials::Credentials as ClpCredentials;
+use clp_rust_utils::database::mysql::MySqlEnumFormat;
+use clp_rust_utils::impl_sqlx_type;
+use clp_rust_utils::job_config::ClpIoConfig;
+use clp_rust_utils::job_config::CompressionJobId;
+use clp_rust_utils::job_config::CompressionJobStatus;
+use clp_rust_utils::job_config::InputConfig;
+use clp_rust_utils::job_config::ingestion::s3::S3IngestionJobConfig;
+use clp_rust_utils::job_config::ingestion::s3::S3ScannerConfig;
+use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::s3::S3ObjectMetadataId;
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
-use sqlx::{Connection, MySqlPool};
-use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
+use sqlx::Connection;
+use sqlx::MySqlPool;
+use strum_macros::AsRefStr;
+use strum_macros::Display;
+use strum_macros::EnumIter;
+use strum_macros::EnumString;
 use tokio::sync::mpsc;
 
-use crate::{
-    compression::{
-        Buffer,
-        CLP_COMPRESSION_JOB_TABLE_NAME,
-        CompressionBufferEntry,
-        CompressionJobSubmitter,
-        Listener,
-        wait_for_compression_job_completion_and_update_metadata,
-    },
-    ingestion_job::{IngestionJobState, S3ScannerState, SqsListenerState},
-    ingestion_job_manager::{IngestionJobId, TerminalStatus},
-};
+use crate::compression::Buffer;
+use crate::compression::CLP_COMPRESSION_JOB_TABLE_NAME;
+use crate::compression::CompressionBufferEntry;
+use crate::compression::CompressionJobSubmitter;
+use crate::compression::Listener;
+use crate::compression::wait_for_compression_job_completion_and_update_metadata;
+use crate::ingestion_job::IngestionJobState;
+use crate::ingestion_job::S3ScannerState;
+use crate::ingestion_job::SqsListenerState;
+use crate::ingestion_job_manager::IngestionJobId;
+use crate::ingestion_job_manager::TerminalStatus;
 
 /// A bundle of objects for log-ingestor to recovery from a restart.
 pub struct LogIngestorRecoveryContext {
