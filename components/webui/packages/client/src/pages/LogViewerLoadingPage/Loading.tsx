@@ -1,15 +1,5 @@
 import React from "react";
 
-import {
-    Box,
-    LinearProgress,
-    Sheet,
-    Step,
-    StepIndicator,
-    Stepper,
-    Typography,
-} from "@mui/joy";
-import {DefaultColorPalette} from "@mui/joy/styles/types";
 import {Nullable} from "@webui/common/utility-types";
 
 import {
@@ -18,7 +8,13 @@ import {
     QUERY_LOADING_STATE_VALUES,
 } from "../../typings/query";
 
-import "./Loading.css";
+import {
+    Alert,
+    AlertDescription,
+    AlertTitle,
+} from "@/components/ui/alert";
+import {Progress} from "@/components/ui/progress";
+import {cn} from "@/lib/utils";
 
 
 interface LoadingStepProps {
@@ -47,37 +43,37 @@ const LoadingStep = ({
     label,
     stepIndicatorText,
 }: LoadingStepProps) => {
-    let color: DefaultColorPalette = isActive ?
-        "primary" :
-        "neutral";
-
-    if (isError) {
-        color = "danger";
-    }
-
     return (
-        <Step
-            indicator={
-                <StepIndicator
-                    color={color}
-                    variant={isActive ?
-                        "solid" :
-                        "outlined"}
-                >
-                    {stepIndicatorText}
-                </StepIndicator>
-            }
+        <li
+            className={cn(
+                "grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-3.5",
+                "text-muted-foreground",
+                isError ?
+                    "text-destructive" :
+                    isActive && "text-foreground"
+            )}
         >
-            <Typography
-                color={color}
-                level={"title-lg"}
+            <div
+                className={cn(
+                    "flex size-10 items-center justify-center rounded-full border",
+                    "border-border text-sm font-semibold",
+                    isError ?
+                        "border-destructive bg-destructive text-primary-foreground" :
+                        isActive &&
+                        "border-primary bg-primary text-primary-foreground"
+                )}
             >
-                {label}
-            </Typography>
-            <Typography level={"body-sm"}>
-                {description}
-            </Typography>
-        </Step>
+                {stepIndicatorText}
+            </div>
+            <div className={"min-w-0"}>
+                <div className={"text-lg font-semibold"}>
+                    {label}
+                </div>
+                <div className={"mt-1 text-sm text-muted-foreground"}>
+                    {description}
+                </div>
+            </div>
+        </li>
     );
 };
 
@@ -125,24 +121,38 @@ const Loading = ({
     });
 
     return (
-        <Sheet className={"loading-sheet"}>
-            <Box className={"loading-progress-container"}>
-                <LinearProgress
-                    determinate={null !== errorMsg}
-                    color={null === errorMsg ?
-                        "primary" :
-                        "danger"}/>
-            </Box>
-            <Box className={"loading-stepper-container"}>
-                <Stepper
-                    className={"loading-stepper"}
-                    orientation={"vertical"}
-                    size={"lg"}
-                >
+        <div
+            className={"flex h-full flex-col items-center bg-background text-foreground"}
+        >
+            <Progress
+                className={cn(
+                    "w-full",
+                    null !== errorMsg && "[--primary:var(--destructive)]"
+                )}
+                value={null === errorMsg ?
+                    null :
+                    100}/>
+            <div
+                className={
+                    "flex w-[calc(100%-2rem)] max-w-lg flex-1 flex-col " +
+                    "items-center justify-center gap-6"
+                }
+            >
+                {null !== errorMsg && (
+                    <Alert variant={"destructive"}>
+                        <AlertTitle>
+                            Error
+                        </AlertTitle>
+                        <AlertDescription>
+                            {errorMsg}
+                        </AlertDescription>
+                    </Alert>
+                )}
+                <ol className={"flex w-full flex-col gap-8"}>
                     {steps}
-                </Stepper>
-            </Box>
-        </Sheet>
+                </ol>
+            </div>
+        </div>
     );
 };
 
