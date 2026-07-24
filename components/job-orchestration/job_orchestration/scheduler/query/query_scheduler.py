@@ -186,6 +186,26 @@ task_duration_histogram = meter.create_histogram(
     unit="s",
     description="Duration of query tasks",
 )
+uncompressed_bytes_scanned_histogram = meter.create_histogram(
+    "clp.query.uncompressed_bytes_scanned",
+    unit="By",
+    description="Uncompressed archive data selected for query jobs",
+)
+compressed_bytes_scanned_histogram = meter.create_histogram(
+    "clp.query.compressed_bytes_scanned",
+    unit="By",
+    description="Compressed archive data selected for query jobs",
+)
+uncompressed_bytes_scanned_counter = meter.create_counter(
+    "clp.query.uncompressed_bytes_scanned_total",
+    unit="By",
+    description="Cumulative uncompressed bytes of archive data selected for query jobs",
+)
+compressed_bytes_scanned_counter = meter.create_counter(
+    "clp.query.compressed_bytes_scanned_total",
+    unit="By",
+    description="Cumulative compressed (on-disk) bytes of archive data selected for query jobs",
+)
 
 
 class DispatchExecutor:
@@ -571,7 +591,10 @@ def _get_archives_for_search_without_datasets(
         where_clause = " WHERE " + " AND ".join(filter_clauses)
 
     table = get_archives_table_name(table_prefix, None)
-    query = f"SELECT id AS archive_id, end_timestamp FROM {table}{where_clause}"
+    query = (
+        f"SELECT id AS archive_id, end_timestamp, uncompressed_size, size AS compressed_size"
+        f" FROM {table}{where_clause}"
+    )
     query += " ORDER BY end_timestamp DESC"
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
@@ -604,7 +627,8 @@ def get_archives_for_search(
     for ds in datasets:
         table = get_archives_table_name(table_prefix, ds)
         union_parts.append(
-            f"SELECT id AS archive_id, end_timestamp, '{ds}' AS dataset FROM {table}{where_clause}"
+            f"SELECT id AS archive_id, end_timestamp, uncompressed_size, size AS compressed_size,"
+            f" '{ds}' AS dataset FROM {table}{where_clause}"
         )
     query = " UNION ALL ".join(union_parts) + " ORDER BY end_timestamp DESC"
 
@@ -1051,6 +1075,10 @@ async def handle_finished_search_job(
         duration=duration,
     ):
         job_duration_histogram.record(duration)
+        uncompressed_bytes_scanned_histogram.record(job.uncompressed_bytes_scanned)
+        compressed_bytes_scanned_histogram.record(job.compressed_bytes_scanned)
+        uncompressed_bytes_scanned_counter.add(job.uncompressed_bytes_scanned)
+        compressed_bytes_scanned_counter.add(job.compressed_bytes_scanned)
         if new_job_status == QueryJobStatus.SUCCEEDED:
             logger.info("Completed job.")
         elif reducer_failed:
@@ -1479,6 +1507,8 @@ def _handle_new_search_job(
         num_archives_to_search=len(archives_for_search),
         num_archives_searched=0,
         remaining_archives_for_search=archives_for_search,
+        uncompressed_bytes_scanned=sum(a["uncompressed_size"] for a in archives_for_search),
+        compressed_bytes_scanned=sum(a["compressed_size"] for a in archives_for_search),
     )
 
     if search_config.aggregation_config is not None:
