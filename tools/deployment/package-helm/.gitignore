@@ -1,0 +1,2 @@
+# Subcharts are downloaded by `helm dependency update`.
+charts/

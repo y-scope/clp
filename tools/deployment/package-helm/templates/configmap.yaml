@@ -67,6 +67,17 @@ data:
         | int }}
       target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
         | int }}
+    {{- if include "clp.spiderOrchestrationEnabled" . }}
+    compression_coordinator:
+      service_name: {{ .Values.clpConfig.compression_coordinator.service_name | quote }}
+      jobs_poll_delay: {{ .Values.clpConfig.compression_coordinator.jobs_poll_delay }}
+      termination_timeout_seconds: {{
+        .Values.clpConfig.compression_coordinator.termination_timeout_seconds | int }}
+      logging_level: {{ .Values.clpConfig.compression_coordinator.logging_level | quote }}
+    spider:
+      host: "{{ include "clp.spiderStorageHost" . }}"
+      port: {{ include "clp.spiderStoragePort" . | int }}
+    {{- end }}
     compression_scheduler:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}

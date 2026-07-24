@@ -44,6 +44,7 @@ helm uninstall test --ignore-not-found
 sleep 2
 # Word splitting is intentional: helper functions return multiple --set flags.
 # shellcheck disable=SC2046
+helm dependency build "${script_dir}"
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
     --set "scheduling.compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \

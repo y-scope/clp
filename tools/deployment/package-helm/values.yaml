@@ -100,6 +100,7 @@ scheduling:
   resultsCache: {}
 
   # Core
+  compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
   queryScheduler: {}
@@ -130,6 +131,7 @@ resources:
   resultsCache: {}
 
   # Core
+  compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
   queryScheduler: {}
@@ -188,6 +190,12 @@ clpConfig:
     names:
       clp: "clp-db"
       spider: "spider-db"
+
+  compression_coordinator:
+    jobs_poll_delay: 0.1  # seconds
+    logging_level: "INFO"
+    service_name: "compression-coordinator"
+    termination_timeout_seconds: 30
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -359,3 +367,8 @@ serviceAccount:
   annotations:
   # For IRSA on EKS, set:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
+
+# Overrides for the Spider subchart's `values.yaml`
+spider:
+  enabled: false
+  fullnameOverride: "spider"
