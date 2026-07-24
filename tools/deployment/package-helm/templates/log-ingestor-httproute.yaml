@@ -1,17 +1,29 @@
 {{- if and
-  .Values.gateway
-  .Values.gateway.enabled
+  .Values.httpRoute.enabled
   .Values.clpConfig.log_ingestor
   (eq .Values.clpConfig.logs_input.type "s3") }}
+{{- if eq (len .Values.httpRoute.parentRefs) 0 }}
+{{- fail
+  "httpRoute.parentRefs must contain at least one Gateway reference when httpRoute.enabled is true"
+}}
+{{- end }}
 apiVersion: "gateway.networking.k8s.io/v1"
 kind: "HTTPRoute"
 metadata:
   name: {{ include "clp.fullname" . }}-log-ingestor
   labels:
     {{- include "clp.labels" . | nindent 4 }}
+  {{- with .Values.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   parentRefs:
-    - name: {{ include "clp.fullname" . }}
+    {{- toYaml .Values.httpRoute.parentRefs | nindent 4 }}
+  {{- with .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   rules:
     - matches:
         - path:

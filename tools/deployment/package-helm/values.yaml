@@ -4,6 +4,21 @@ fullnameOverride: ""
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
 
+# Common exposure settings for CLP's application Services (Web UI, API server, log ingestor, MCP
+# server, and bundled Presto coordinator). ClusterIP is recommended for cloud deployments, where a
+# shared Gateway or another platform-managed ingress layer should expose these Services.
+services:
+  type: "ClusterIP"
+
+  # Used only when `services.type` is "NodePort". NodePort is intended for local or simple-cluster
+  # deployments; each release on the same nodes must use a unique set of ports.
+  nodePorts:
+    webui: 30000
+    apiServer: 30301
+    logIngestor: 30302
+    mcpServer: 30800
+    prestoCoordinator: 30889
+
 image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
@@ -356,12 +371,23 @@ serviceAccount:
   # For IRSA on EKS, set:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
 
-# Optional Gateway API resources for routing external traffic to CLP services.
-# Requires the Gateway API CRDs and a compatible controller (e.g., nginx-gateway-fabric,
-# Envoy Gateway, Traefik v3, Istio).
-# Enable this to route external traffic to CLP's ClusterIP application services.
-gateway:
+# Optional HTTPRoutes for attaching CLP Services to an existing platform-managed Gateway.
+# Requires the Gateway API CRDs, a compatible controller, and a Gateway that allows routes from the
+# release namespace. The chart does not install these cluster-level resources.
+httpRoute:
   enabled: false
-  className: ""  # GatewayClass name (e.g., "nginx", "eg", "istio", "traefik")
-  hostname: ""  # Optional hostname filter for the Gateway listener
+
+  # Gateway parent references shared by all generated HTTPRoutes. At least one reference is required
+  # when enabled. Set `namespace` when the Gateway is in another namespace and `sectionName` to
+  # select a specific listener.
+  parentRefs: []
+  # - name: "shared-gateway"
+  #   namespace: "gateway-system"
+  #   sectionName: "https"
+
+  # Optional hostname matches shared by all generated HTTPRoutes.
+  hostnames: []
+  # - "clp.example.com"
+
+  # Annotations shared by all generated HTTPRoutes.
   annotations: {}

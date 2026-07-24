@@ -7,11 +7,14 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
 spec:
-  type: "ClusterIP"
+  type: {{ .Values.services.type | quote }}
   selector:
     {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
   ports:
     - port: 3001
       targetPort: "api-server"
+      {{- if eq .Values.services.type "NodePort" }}
+      nodePort: {{ .Values.services.nodePorts.apiServer }}
+      {{- end }}
 {{- end }}

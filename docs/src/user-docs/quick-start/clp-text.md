@@ -58,9 +58,11 @@ webui:
 First, create a `kind` cluster:
 
 ```bash
-# Host ports for services that support package scripts
+# Host ports
+export CLP_WEBUI_PORT=30000
 export CLP_RESULTS_CACHE_PORT=30017
 export CLP_DATABASE_PORT=30306
+export CLP_MCP_SERVER_PORT=30800
 
 # Credentials (generate random or use your own)
 export CLP_DB_PASS=$(openssl rand -hex 16)
@@ -80,10 +82,14 @@ nodes:
     containerPath: /home
 
   extraPortMappings:
+  - containerPort: $CLP_WEBUI_PORT
+    hostPort: $CLP_WEBUI_PORT
   - containerPort: $CLP_RESULTS_CACHE_PORT
     hostPort: $CLP_RESULTS_CACHE_PORT
   - containerPort: $CLP_DATABASE_PORT
     hostPort: $CLP_DATABASE_PORT
+  - containerPort: $CLP_MCP_SERVER_PORT
+    hostPort: $CLP_MCP_SERVER_PORT
 EOF
 ```
 
@@ -94,6 +100,9 @@ helm repo add clp https://y-scope.github.io/clp
 helm repo update clp
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
+  --set services.type=NodePort \
+  --set services.nodePorts.webui="$CLP_WEBUI_PORT" \
+  --set services.nodePorts.mcpServer="$CLP_MCP_SERVER_PORT" \
   --set clpConfig.package.storage_engine=clp \
   --set clpConfig.webui.query_engine=clp \
   --set clpConfig.telemetry.disable=false \
@@ -110,14 +119,6 @@ Wait for all pods to be ready:
 
 ```bash
 kubectl wait pods --all --for=condition=Ready --timeout=300s
-```
-
-In separate terminals, forward the ClusterIP services that you want to access and leave the
-commands running:
-
-```bash
-kubectl port-forward service/clp-webui 30000:4000
-kubectl port-forward service/clp-mcp-server 30800:8000
 ```
 
 Update the following configurations in `etc/clp-config.yaml`:
@@ -224,8 +225,8 @@ To search your compressed logs from CLP's UI, open the following URL in your bro
 ::::
 
 :::{note}
-For Docker Compose, use the configured Web UI host and port. For Kubernetes, use the local port
-from the `kubectl port-forward` command.
+For Docker Compose, use the configured Web UI host and port. For Kubernetes, use
+`services.nodePorts.webui`.
 :::
 
 [Figure 3](#figure-3) shows the search page after running a query.

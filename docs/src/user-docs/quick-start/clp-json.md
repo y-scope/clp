@@ -41,9 +41,12 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 First, create a `kind` cluster:
 
 ```bash
-# Host ports for services that support package scripts
+# Host ports
+export CLP_WEBUI_PORT=30000
 export CLP_RESULTS_CACHE_PORT=30017
 export CLP_DATABASE_PORT=30306
+export CLP_API_SERVER_PORT=30301
+export CLP_MCP_SERVER_PORT=30800
 
 # Credentials (generate random or use your own)
 export CLP_DB_PASS=$(openssl rand -hex 16)
@@ -63,10 +66,16 @@ nodes:
     containerPath: /home
 
   extraPortMappings:
+  - containerPort: $CLP_WEBUI_PORT
+    hostPort: $CLP_WEBUI_PORT
   - containerPort: $CLP_RESULTS_CACHE_PORT
     hostPort: $CLP_RESULTS_CACHE_PORT
   - containerPort: $CLP_DATABASE_PORT
     hostPort: $CLP_DATABASE_PORT
+  - containerPort: $CLP_API_SERVER_PORT
+    hostPort: $CLP_API_SERVER_PORT
+  - containerPort: $CLP_MCP_SERVER_PORT
+    hostPort: $CLP_MCP_SERVER_PORT
 EOF
 ```
 
@@ -77,6 +86,10 @@ helm repo add clp https://y-scope.github.io/clp
 helm repo update clp
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
+  --set services.type=NodePort \
+  --set services.nodePorts.webui="$CLP_WEBUI_PORT" \
+  --set services.nodePorts.apiServer="$CLP_API_SERVER_PORT" \
+  --set services.nodePorts.mcpServer="$CLP_MCP_SERVER_PORT" \
   --set clpConfig.telemetry.disable=false \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \
@@ -91,15 +104,6 @@ Wait for all pods to be ready:
 
 ```bash
 kubectl wait pods --all --for=condition=Ready --timeout=300s
-```
-
-In separate terminals, forward the ClusterIP services that you want to access and leave the
-commands running:
-
-```bash
-kubectl port-forward service/clp-webui 30000:4000
-kubectl port-forward service/clp-api-server 30301:3001
-kubectl port-forward service/clp-mcp-server 30800:8000
 ```
 
 Update the following configurations in `etc/clp-config.yaml`:
@@ -263,8 +267,8 @@ To search your compressed logs from CLP's UI, open the following URL in your bro
 ::::
 
 :::{note}
-For Docker Compose, use the configured Web UI host and port. For Kubernetes, use the local port
-from the `kubectl port-forward` command.
+For Docker Compose, use the configured Web UI host and port. For Kubernetes, use
+`services.nodePorts.webui`.
 :::
 
 [Figure 3](#figure-3) shows the search page after running a query.
@@ -345,8 +349,8 @@ curl -X POST "http://localhost:30301/query/submit" \
 ::::
 
 :::{note}
-For Docker Compose, use the configured API server host and port. For Kubernetes, use the local port
-from the `kubectl port-forward` command.
+For Docker Compose, use the configured API server host and port. For Kubernetes, use
+`services.nodePorts.apiServer`.
 :::
 
 For more details on the API, see [Using the API server][api-server].
