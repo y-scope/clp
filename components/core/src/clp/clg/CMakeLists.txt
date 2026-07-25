@@ -54,8 +54,6 @@ set(
         ../ir/parsing.hpp
         ../ir/parsing.inc
         ../ir/types.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryEntryReq.hpp
@@ -158,7 +156,7 @@ if(CLP_BUILD_EXECUTABLES)
                 Boost::filesystem Boost::program_options
                 date::date
                 fmt::fmt
-                log_surgeon::log_surgeon
+                log-surgeon::log-surgeon
                 MariaDBClient::MariaDBClient
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
