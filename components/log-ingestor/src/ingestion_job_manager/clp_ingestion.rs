@@ -195,8 +195,8 @@ impl ClpDbIngestionConnector {
             LogsInput::S3 { config } => config.aws_authentication,
             LogsInput::Fs { .. } => {
                 panic!(
-                    "Invalid CLP config: Unsupported logs input type. The current implementation \
-                     only supports S3 input."
+                    "invalid CLP config: unsupported logs input type; the current implementation \
+                     only supports S3 input"
                 );
             }
         };
@@ -371,7 +371,7 @@ impl ClpDbIngestionConnector {
                     },
                     compression_job_id,
                     num_object_metadata_submitted: usize::try_from(num_submitted)
-                        .expect("Number of files submitted is not `usize` compatible"),
+                        .expect("number of files submitted is not `usize` compatible"),
                 },
             )
             .collect();
