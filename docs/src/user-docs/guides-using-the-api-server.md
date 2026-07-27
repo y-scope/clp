@@ -42,12 +42,13 @@ following commands to submit a query to clp-json and stream the results.
 
     ```json
     {
-      "query_results_uri": "/query_results/100"
+      "query_results_uri": "query_results/100"
     }
     ```
 
 2. Retrieve search results:
-   Use the returned `query_results_uri` to receive search results as an SSE stream:
+   Resolve the returned `query_results_uri` relative to the query submission URL to receive search
+   results as an SSE stream. For direct access, this resolves to:
 
    ```bash
    curl -N http://localhost:3001/query_results/100

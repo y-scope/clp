@@ -423,30 +423,22 @@ To run all worker types in the same node pool:
 
 ### Service exposure
 
-The chart defaults the Web UI, API server, log ingestor, MCP server, and bundled Presto coordinator
-to `ClusterIP` Services. This is the recommended configuration for cloud Kubernetes deployments,
-where a shared [Gateway API] Gateway or another platform-managed ingress layer exposes the
-Services.
+Application Services default to `ClusterIP`. This is recommended for cloud and multi-tenant
+clusters, where a shared [Gateway API] Gateway or another platform-managed ingress exposes them.
+Use `NodePort` only for local or simple clusters.
 
-#### Using an existing Gateway
+#### Gateway API
 
-The chart can create optional `HTTPRoute` resources that attach to an existing Gateway. The
-platform operator remains responsible for installing the Gateway API CRDs and controller and for
-managing the `GatewayClass`, Gateway listeners, TLS certificates, DNS, and access policies. The
-Gateway must allow routes from the namespace containing the CLP release.
-
-First, the platform operator must install a compatible Gateway API implementation, such as
-[NGINX Gateway Fabric][nginx-gateway-fabric], [Envoy Gateway], or [Istio]. Follow the selected
-controller's installation instructions so that its compatible Gateway API CRDs are installed, then
-verify that the controller has registered an accepted `GatewayClass`:
+The chart can create `HTTPRoute` resources, but it does not install Gateway API CRDs or a
+controller, or create a Gateway. The platform operator must install an implementation such as
+[NGINX Gateway Fabric][nginx-gateway-fabric], [Envoy Gateway], or [Istio], and manage the
+`GatewayClass`, Gateway, TLS, DNS, and access policies. Verify the installed `GatewayClass`:
 
 ```bash
 kubectl get gatewayclass
 ```
 
-The platform operator must also create the Gateway that will accept CLP's routes. For example, the
-following shared Gateway terminates TLS and allows `HTTPRoute` resources only from namespaces that
-the operator has explicitly labeled:
+The following example allows routes only from namespaces explicitly labeled by the operator:
 
 ```bash
 kubectl create namespace gateway-system
@@ -463,7 +455,6 @@ metadata:
   name: shared-gateway
   namespace: gateway-system
 spec:
-  # Use the GatewayClass created by the selected controller.
   gatewayClassName: "example-gateway-class"
   listeners:
     - name: "https"
@@ -473,7 +464,6 @@ spec:
       tls:
         mode: "Terminate"
         certificateRefs:
-          # Provision this TLS Secret in the Gateway's namespace.
           - name: "example-com-tls"
       allowedRoutes:
         kinds:
@@ -485,8 +475,6 @@ spec:
               shared-gateway-access: "true"
 ```
 
-Apply the Gateway and wait for its controller to program the listener:
-
 ```bash
 kubectl apply -f shared-gateway.yaml
 kubectl wait \
@@ -495,18 +483,14 @@ kubectl wait \
   gateway/shared-gateway
 ```
 
-Only the platform operator should grant the `shared-gateway-access` namespace label. See the
-Gateway API documentation for more information about [cross-namespace routes].
-
-Configure the CLP release to reference the Gateway's namespace, name, and listener:
+Only the platform operator should grant the namespace label. Configure CLP to attach its routes to
+the Gateway:
 
 ```{code-block} yaml
 :caption: clusterip-gateway.yaml
 
-# Keep bundled database and results-cache services off host node ports
 allowHostAccessForSbinScripts: false
 
-# Attach CLP's optional routes to a shared platform Gateway
 httpRoute:
   enabled: true
   parentRefs:
@@ -517,49 +501,52 @@ httpRoute:
     - "clp.example.com"
 ```
 
-Install:
-
 ```bash
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --namespace clp \
   -f clusterip-gateway.yaml
 ```
 
-The chart creates `HTTPRoute` resources with the following application-aware routes:
+The chart creates these routes:
 
-| Path             | Backend                        |
-|------------------|--------------------------------|
-| `/api/v2/`       | api-server (prefix stripped)   |
-| `/query_results/` | api-server                     |
-| `/log_ingestor/` | log-ingestor (prefix stripped) |
-| `/mcp`           | mcp-server                     |
-| `/`              | webui (catch-all)              |
+| Path              | Backend behavior              |
+|-------------------|-------------------------------|
+| `/api/v1/`        | API server; prefix stripped   |
+| `/log_ingestor/`  | Log ingestor; prefix stripped |
+| `/mcp`            | MCP server                    |
+| `/`               | Web UI; catch-all             |
+
+The API returns relative query-results URIs, so clients that submit requests through `/api/v1/`
+retrieve results through the same prefix.
 
 Set `httpRoute.enabled` to `false` when the platform manages CLP's routes as well as its Gateway.
+See [cross-namespace routes] for details about attaching routes to a Gateway in another namespace.
 
-#### Using NodePort
+#### NodePort
 
-For local or simple-cluster deployments without an ingress layer, set the common Service type to
-`NodePort`. The `nodePorts` values are used only in this mode:
+For local or simple-cluster deployments without an ingress layer, set `serviceType` to `NodePort`
+for each application Service that should be reachable through a node address. Its `port` value then
+specifies the Service's `nodePort`:
 
 ```{code-block} yaml
 :caption: nodeport.yaml
 
-services:
-  type: "NodePort"
-  nodePorts:
-    webui: 30000
-    apiServer: 30301
-    logIngestor: 30302
-    mcpServer: 30800
-    prestoCoordinator: 30889
+clpConfig:
+  webui:
+    serviceType: "NodePort"
+    port: 30000
+
+  api_server:
+    serviceType: "NodePort"
+    port: 30301
 ```
 
-Every enabled application Service will bind its configured port on every cluster node. Deployments
-sharing nodes must therefore use unique port values. For multi-tenant or cloud deployments, keep
-the default `ClusterIP` type and use a shared Gateway instead. The database and results-cache
-NodePorts used by host-side `sbin` scripts remain controlled separately by
-`allowHostAccessForSbinScripts`.
+The same keys are available under `log_ingestor`, `mcp_server`, and `presto`. For bundled Presto,
+`port` is the coordinator's `nodePort` when `serviceType` is `NodePort`; otherwise it remains the
+external Presto endpoint port.
+
+NodePorts must be unique across deployments sharing nodes. Database and results-cache NodePorts
+used by host-side `sbin` scripts remain controlled by `allowHostAccessForSbinScripts`.
 
 ---
 
@@ -643,7 +630,7 @@ kubectl get jobs
 ### Access the Web UI
 
 If you enabled the chart's HTTPRoutes, access the Web UI through the Gateway hostname. With
-`services.type: "NodePort"`, use the Web UI's configured node port and a node address. Otherwise,
+`clpConfig.webui.serviceType: "NodePort"`, use `clpConfig.webui.port` and a node address. Otherwise,
 forward the Web UI's ClusterIP Service to your machine:
 
 ```bash

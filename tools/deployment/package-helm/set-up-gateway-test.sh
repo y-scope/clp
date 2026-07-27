@@ -133,4 +133,4 @@ echo "Validating Gateway routes..."
 curl --fail --retry 30 --retry-all-errors --retry-delay 2 --silent --show-error \
     --output /dev/null "http://127.0.0.1/"
 curl --fail --retry 30 --retry-all-errors --retry-delay 2 --silent --show-error \
-    --output /dev/null "http://127.0.0.1/api/v2/health"
+    --output /dev/null "http://127.0.0.1/api/v1/health"

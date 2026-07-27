@@ -4,21 +4,6 @@ fullnameOverride: ""
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
 
-# Common exposure settings for CLP's application Services (Web UI, API server, log ingestor, MCP
-# server, and bundled Presto coordinator). ClusterIP is recommended for cloud deployments, where a
-# shared Gateway or another platform-managed ingress layer should expose these Services.
-services:
-  type: "ClusterIP"
-
-  # Used only when `services.type` is "NodePort". NodePort is intended for local or simple-cluster
-  # deployments; each release on the same nodes must use a unique set of ports.
-  nodePorts:
-    webui: 30000
-    apiServer: 30301
-    logIngestor: 30302
-    mcpServer: 30800
-    prestoCoordinator: 30889
-
 image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
@@ -178,6 +163,8 @@ clpConfig:
 
   # API server config
   api_server:
+    serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
+    port: 30301  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
     default_max_num_query_results: 1000
     query_job_polling:
       initial_backoff_ms: 100
@@ -270,19 +257,26 @@ clpConfig:
     upsert_interval: 100  # milliseconds
 
   webui:
+    serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
     query_engine: "clp-s"
+    port: 30000  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
     presto_max_num_search_results: 1000
     rate_limit: 1000
     results_metadata_collection_name: "results-metadata"
 
   mcp_server: null
+  #   serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
+  #   port: 30800  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
   #   logging_level: "INFO"
 
   # Presto query engine config. When "presto" is in `bundled`, the chart deploys Presto coordinator
   # and worker pods. When not in `bundled`, set `host` and `port` to an external Presto instance.
   presto: null
   #   host: "localhost"
+  #   # External endpoint port when Presto isn't bundled; otherwise specifies the coordinator's
+  #   # nodePort when serviceType is "NodePort".
   #   port: 30889
+  #   serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
   #   coordinator:
   #     logging_level: "INFO"
   #     query_max_memory_gb: 1
@@ -296,6 +290,8 @@ clpConfig:
 
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
+    serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
+    port: 30302  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
     logging_level: "INFO"
 
   # Where archives should be output to

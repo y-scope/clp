@@ -25,20 +25,13 @@ spec:
     - matches:
         - path:
             type: "PathPrefix"
-            value: "/api/v2"
+            value: "/api/v1"
       filters:
         - type: "URLRewrite"
           urlRewrite:
             path:
               type: "ReplacePrefixMatch"
               replacePrefixMatch: "/"
-      backendRefs:
-        - name: {{ include "clp.fullname" . }}-api-server
-          port: 3001
-    - matches:
-        - path:
-            type: "PathPrefix"
-            value: "/query_results"
       backendRefs:
         - name: {{ include "clp.fullname" . }}-api-server
           port: 3001

@@ -117,8 +117,9 @@ async fn health() -> String {
         (
             status = OK,
             body = QueryResultsUri,
-            description = "The URI to fetch the results of the submitted query.",
-            example = json!({"query_results_uri":"/query_results/1"})
+            description = "The URI reference, relative to this request, for fetching the results \
+                of the submitted query.",
+            example = json!({"query_results_uri":"query_results/1"})
         ),
         (status = INTERNAL_SERVER_ERROR)
     )
@@ -138,7 +139,7 @@ async fn query(
             return Err(err.into());
         }
     };
-    let uri = format!("/query_results/{search_job_id}");
+    let uri = format!("query_results/{search_job_id}");
     Ok(Json(QueryResultsUri {
         query_results_uri: uri,
     }))
@@ -147,7 +148,7 @@ async fn query(
 #[derive(Clone, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 struct QueryResultsUri {
-    /// The uri to get the query results.
+    /// The URI reference, relative to the query submission request, for fetching its results.
     query_results_uri: String,
 }
 

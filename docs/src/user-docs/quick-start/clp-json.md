@@ -41,11 +41,12 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 First, create a `kind` cluster:
 
 ```bash
-# Host ports
+# Host port mappings
 export CLP_WEBUI_PORT=30000
 export CLP_RESULTS_CACHE_PORT=30017
-export CLP_DATABASE_PORT=30306
 export CLP_API_SERVER_PORT=30301
+export CLP_LOG_INGESTOR_PORT=30302
+export CLP_DATABASE_PORT=30306
 export CLP_MCP_SERVER_PORT=30800
 
 # Credentials (generate random or use your own)
@@ -70,10 +71,12 @@ nodes:
     hostPort: $CLP_WEBUI_PORT
   - containerPort: $CLP_RESULTS_CACHE_PORT
     hostPort: $CLP_RESULTS_CACHE_PORT
-  - containerPort: $CLP_DATABASE_PORT
-    hostPort: $CLP_DATABASE_PORT
   - containerPort: $CLP_API_SERVER_PORT
     hostPort: $CLP_API_SERVER_PORT
+  - containerPort: $CLP_LOG_INGESTOR_PORT
+    hostPort: $CLP_LOG_INGESTOR_PORT
+  - containerPort: $CLP_DATABASE_PORT
+    hostPort: $CLP_DATABASE_PORT
   - containerPort: $CLP_MCP_SERVER_PORT
     hostPort: $CLP_MCP_SERVER_PORT
 EOF
@@ -86,14 +89,18 @@ helm repo add clp https://y-scope.github.io/clp
 helm repo update clp
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
-  --set services.type=NodePort \
-  --set services.nodePorts.webui="$CLP_WEBUI_PORT" \
-  --set services.nodePorts.apiServer="$CLP_API_SERVER_PORT" \
-  --set services.nodePorts.mcpServer="$CLP_MCP_SERVER_PORT" \
   --set clpConfig.telemetry.disable=false \
+  --set clpConfig.webui.serviceType=NodePort \
+  --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
+  --set clpConfig.api_server.serviceType=NodePort \
+  --set clpConfig.api_server.port="$CLP_API_SERVER_PORT" \
+  --set clpConfig.log_ingestor.serviceType=NodePort \
+  --set clpConfig.log_ingestor.port="$CLP_LOG_INGESTOR_PORT" \
+  --set clpConfig.mcp_server.serviceType=NodePort \
+  --set clpConfig.mcp_server.port="$CLP_MCP_SERVER_PORT" \
+  --set clpConfig.mcp_server.logging_level=INFO \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \
-  --set clpConfig.mcp_server.logging_level=INFO \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
@@ -267,8 +274,7 @@ To search your compressed logs from CLP's UI, open the following URL in your bro
 ::::
 
 :::{note}
-For Docker Compose, use the configured Web UI host and port. For Kubernetes, use
-`services.nodePorts.webui`.
+If you changed `webui.host` or `webui.port` in the configuration, use the new values.
 :::
 
 [Figure 3](#figure-3) shows the search page after running a query.
@@ -349,8 +355,7 @@ curl -X POST "http://localhost:30301/query/submit" \
 ::::
 
 :::{note}
-For Docker Compose, use the configured API server host and port. For Kubernetes, use
-`services.nodePorts.apiServer`.
+If you changed `api_server.host` or `api_server.port` in the configuration, use the new values.
 :::
 
 For more details on the API, see [Using the API server][api-server].
