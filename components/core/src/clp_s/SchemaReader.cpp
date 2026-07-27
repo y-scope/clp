@@ -314,13 +314,7 @@ auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
                 auto const& target{m_reconstruction_targets.at(reconstruction_target_index)};
                 ++reconstruction_target_index;
                 m_json_serializer.append_key();
-                m_json_serializer.append_quoted_value(reconstruct_log_shape(
-                        target.log_shape_id,
-                        target.parent_rule_col_name,
-                        message_index,
-                        target.start_col_idx,
-                        target.schema_sub_span
-                ));
+                m_json_serializer.append_quoted_value(reconstruct_log_shape(target, message_index));
                 break;
             }
             case JsonSerializer::Op::AddLiteralField: {
@@ -855,6 +849,7 @@ auto SchemaReader::initialize_serializer() -> ystdlib::error_handling::Result<vo
     {
         generate_json_template(subtree_root);
     }
+
     return ystdlib::error_handling::success();
 }
 
@@ -986,11 +981,11 @@ auto SchemaReader::emit_log_shape(clpp::log_shape_id_t log_shape_id)
 auto SchemaReader::collect_scope_entries(
         std::span<SchemaNode::id_t> schema,
         SchemaNode::id_t scope_node_id,
-        size_t column_idx,
+        size_t column_reader_idx,
         bool ancestor_decomposed
 ) -> ystdlib::error_handling::Result<SchemaSpanContents> {
     SchemaSpanContents scope;
-    scope.next_col_idx = column_idx;
+    scope.next_column_reader_idx = column_reader_idx;
 
     for (size_t i{0}; i < schema.size(); ++i) {
         auto const cur_node_id{schema[i]};
@@ -1015,10 +1010,13 @@ auto SchemaReader::collect_scope_entries(
                     scope.parent_rule_insertion_order.push_back(parent_rule_id);
                 }
                 it->second.push_back(
-                        ParentRuleOccurrence{.sub_span = sub_span, .start_col_idx = column_idx}
+                        ParentRuleOccurrence{
+                                .sub_span = sub_span,
+                                .start_column_reader_idx = column_reader_idx
+                        }
                 );
             }
-            column_idx += count_column_consuming_entries(sub_span, *m_global_schema_tree);
+            column_reader_idx += count_column_consuming_entries(sub_span, *m_global_schema_tree);
             i += length;
             continue;
         }
@@ -1037,19 +1035,19 @@ auto SchemaReader::collect_scope_entries(
             };
             if (should_emit) {
                 scope.entries.push_back(
-                        LeafEntry{
+                        DecompositionTarget{
                                 .node_id = cur_node_id,
-                                .col_idx = column_idx,
-                                .col_name = node.get_key_name(),
+                                .reader_idx = column_reader_idx,
+                                .name = node.get_key_name(),
                                 .type = node.get_type()
                         }
                 );
             }
-            ++column_idx;
+            ++column_reader_idx;
         }
     }
 
-    scope.next_col_idx = column_idx;
+    scope.next_column_reader_idx = column_reader_idx;
     return scope;
 }
 
@@ -1090,7 +1088,7 @@ auto SchemaReader::emit_parent_rule_arrays(
 
         auto const& parent_rule_node{m_global_schema_tree->get_node(parent_rule_id)};
         auto const parent_rule_key_name{parent_rule_node.get_key_name()};
-        auto const parent_rule_col_name{m_global_schema_tree->build_column_name(parent_rule_id)};
+        auto const parent_rule_column_name{m_global_schema_tree->build_column_name(parent_rule_id)};
 
         bool const child_decomposed{ancestor_decomposed || parent_rule_has_decomposed};
 
@@ -1103,26 +1101,24 @@ auto SchemaReader::emit_parent_rule_arrays(
             if (emit_text) {
                 m_json_serializer.add_special_key("text");
                 m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-                m_reconstruction_targets.push_back(
-                        ReconstructionTarget{
-                                .log_shape_id = log_shape_id,
-                                .parent_rule_col_name = parent_rule_col_name,
-                                .start_col_idx = occurrence.start_col_idx,
-                                .schema_sub_span = occurrence.sub_span
-                        }
-                );
+                m_reconstruction_targets.push_back(make_reconstruction_target(
+                        log_shape_id,
+                        parent_rule_column_name,
+                        occurrence.start_column_reader_idx,
+                        occurrence.sub_span
+                ));
             }
 
             if (parent_rule_has_shape) {
                 YSTDLIB_ERROR_HANDLING_TRYX(
-                        emit_parent_rule_shape_substring(log_shape_id, parent_rule_col_name)
+                        emit_parent_rule_shape_substring(log_shape_id, parent_rule_column_name)
                 );
             }
 
             YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
                     occurrence.sub_span,
                     parent_rule_id,
-                    occurrence.start_col_idx,
+                    occurrence.start_column_reader_idx,
                     log_shape_id,
                     child_decomposed
             ));
@@ -1147,22 +1143,22 @@ auto SchemaReader::emit_decomposed_scope(
     )};
     YSTDLIB_ERROR_HANDLING_TRYV(emit_grouped_leaf_entries(scope.entries));
     YSTDLIB_ERROR_HANDLING_TRYV(emit_parent_rule_arrays(scope, log_shape_id, ancestor_decomposed));
-    return scope.next_col_idx;
+    return scope.next_column_reader_idx;
 }
 
-auto SchemaReader::emit_grouped_leaf_entries(std::vector<LeafEntry>& entries)
+auto SchemaReader::emit_grouped_leaf_entries(std::vector<DecompositionTarget>& entries)
         -> ystdlib::error_handling::Result<void> {
     std::stable_sort(entries.begin(), entries.end(), [](auto const& a, auto const& b) -> bool {
-        return a.col_name < b.col_name;
+        return a.name < b.name;
     });
 
     for (size_t i{0}; i < entries.size();) {
-        auto const& col_name{entries.at(i).col_name};
+        auto const& col_name{entries.at(i).name};
         m_json_serializer.add_special_key(col_name);
         m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
 
         size_t j{i};
-        while (j < entries.size() && entries.at(j).col_name == col_name) {
+        while (j < entries.size() && entries.at(j).name == col_name) {
             switch (entries.at(j).type) {
                 case NodeType::DeltaInteger:
                 case NodeType::Integer: {
@@ -1191,7 +1187,7 @@ auto SchemaReader::emit_grouped_leaf_entries(std::vector<LeafEntry>& entries)
                     return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
                 }
             }
-            m_reordered_columns.push_back(m_columns.at(entries.at(j).col_idx));
+            m_reordered_columns.push_back(m_columns.at(entries.at(j).reader_idx));
             ++j;
         }
 
@@ -1249,12 +1245,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
         m_json_serializer.add_special_key(key_name);
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
         m_reconstruction_targets.push_back(
-                ReconstructionTarget{
-                        .log_shape_id = log_shape_id,
-                        .parent_rule_col_name = "",
-                        .start_col_idx = column_start,
-                        .schema_sub_span = schema
-                }
+                make_reconstruction_target(log_shape_id, "", column_start, schema)
         );
         auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
                 schema,
@@ -1273,12 +1264,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
         m_json_serializer.add_special_key("text");
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
         m_reconstruction_targets.push_back(
-                ReconstructionTarget{
-                        .log_shape_id = log_shape_id,
-                        .parent_rule_col_name = "",
-                        .start_col_idx = column_start,
-                        .schema_sub_span = schema
-                }
+                make_reconstruction_target(log_shape_id, "", column_start, schema)
         );
     }
 
@@ -1322,29 +1308,27 @@ auto SchemaReader::narrow_log_shape_to_parent_rule(
     return {};
 }
 
-auto SchemaReader::reconstruct_log_shape(
+auto SchemaReader::make_reconstruction_target(
         clpp::log_shape_id_t log_shape_id,
         std::string_view parent_rule_column_name,
-        uint64_t message_index,
-        size_t column_start,
+        size_t start_column_reader_idx,
         std::span<SchemaNode::id_t> schema_sub_span
-) -> std::string {
-    auto const log_shape{m_log_shape_dict->get_value(log_shape_id)};
-    if (log_shape.empty()) {
-        return {};
-    }
-
-    std::string_view shape_to_scan{log_shape};
-    if (false == parent_rule_column_name.empty()) {
-        shape_to_scan
-                = narrow_log_shape_to_parent_rule(log_shape, log_shape_id, parent_rule_column_name);
-        if (shape_to_scan.empty()) {
-            return {};
+) -> ReconstructionTarget {
+    std::string_view shape_to_scan;
+    if (nullptr != m_log_shape_dict) {
+        auto const& log_shape{m_log_shape_dict->get_value(log_shape_id)};
+        if (false == log_shape.empty()) {
+            shape_to_scan = parent_rule_column_name.empty() ? log_shape
+                                                            : narrow_log_shape_to_parent_rule(
+                                                                      log_shape,
+                                                                      log_shape_id,
+                                                                      parent_rule_column_name
+                                                              );
         }
     }
 
-    size_t column_idx{column_start};
-    std::unordered_map<std::string, std::vector<std::string>> column_name_to_values;
+    std::vector<ReconstructionTarget::Column> sub_span_cols;
+    size_t column_reader_idx{start_column_reader_idx};
     for (auto global_column_id : schema_sub_span) {
         if (Schema::schema_entry_is_unordered_object(global_column_id)) {
             continue;
@@ -1353,15 +1337,34 @@ auto SchemaReader::reconstruct_log_shape(
         if (false == node_type_consumes_column(node.get_type())) {
             continue;
         }
-        auto column_name{m_global_schema_tree->build_column_name(global_column_id)};
-        auto* column{m_columns.at(column_idx)};
-        std::string value;
-        column->extract_string_value_into_buffer(message_index, value);
-        column_name_to_values[column_name].push_back(std::move(value));
-        ++column_idx;
+        sub_span_cols.push_back(
+                ReconstructionTarget::Column{
+                        .name = m_global_schema_tree->build_column_name(global_column_id),
+                        .reader_idx = column_reader_idx
+                }
+        );
+        ++column_reader_idx;
     }
 
-    std::unordered_map<std::string, size_t> column_name_to_next_index;
+    return ReconstructionTarget{shape_to_scan, std::move(sub_span_cols)};
+}
+
+auto SchemaReader::reconstruct_log_shape(ReconstructionTarget const& target, uint64_t message_index)
+        -> std::string {
+    auto const shape_to_scan{target.shape_to_scan};
+    if (shape_to_scan.empty()) {
+        return {};
+    }
+
+    m_column_name_to_values.clear();
+    for (auto const& column_target : target.sub_span_columns) {
+        std::string value;
+        m_columns.at(column_target.reader_idx)
+                ->extract_string_value_into_buffer(message_index, value);
+        m_column_name_to_values[column_target.name].push_back(std::move(value));
+    }
+
+    m_column_name_to_next_index.clear();
     std::string raw_text;
     size_t pos{0};
     while (pos < shape_to_scan.size()) {
@@ -1377,15 +1380,10 @@ auto SchemaReader::reconstruct_log_shape(
             break;
         }
         auto const column_name{std::string(shape_to_scan.substr(pct + 1, end_pct - pct - 1))};
-        auto it{column_name_to_values.find(column_name)};
-        if (column_name_to_values.end() != it) {
-            auto& next_index{column_name_to_next_index[column_name]};
-            if (next_index < it->second.size()) {
-                raw_text.append(it->second.at(next_index));
-                ++next_index;
-            } else {
-                raw_text.append("%").append(column_name).append("%");
-            }
+        auto it{m_column_name_to_values.find(column_name)};
+        auto& next_index{m_column_name_to_next_index[column_name]};
+        if (m_column_name_to_values.end() != it && next_index < it->second.size()) {
+            raw_text.append(it->second.at(next_index++));
         } else {
             raw_text.append("%").append(column_name).append("%");
         }

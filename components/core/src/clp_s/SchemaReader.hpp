@@ -166,6 +166,8 @@ public:
         m_local_schema_tree.clear();
         m_json_serializer.clear();
         m_reconstruction_targets.clear();
+        m_column_name_to_values.clear();
+        m_column_name_to_next_index.clear();
         m_global_schema_tree = std::move(schema_tree);
         m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
@@ -325,23 +327,33 @@ public:
 private:
     // Types
     /**
-     * A leaf column entry collected while walking a schema span for decomposed output.
+     * A leaf column targeted for decomposed output.
      */
-    struct LeafEntry {
+    struct DecompositionTarget {
         SchemaNode::id_t node_id;
-        size_t col_idx;
-        std::string_view col_name;
+        size_t reader_idx;
+        std::string_view name;
         NodeType type;
     };
 
     /**
-     * Records the information needed to reconstruct the original text from a shape.
+     * Records data needed to reconstruct the original text from a shape that is stable across
+     * messages.
+     * @var shape_to_scan The shape substring to scan for placeholder substitution.
+     * @var sub_span_cols One entry per column-consuming node in the target's schema sub-span.
      */
     struct ReconstructionTarget {
-        clpp::log_shape_id_t log_shape_id;
-        std::string parent_rule_col_name;
-        size_t start_col_idx;
-        std::span<SchemaNode::id_t> schema_sub_span;
+        struct Column {
+            std::string name;
+            size_t reader_idx;
+        };
+
+        ReconstructionTarget(std::string_view scan, std::vector<Column> cols)
+                : shape_to_scan{scan},
+                  sub_span_columns{std::move(cols)} {}
+
+        std::string_view shape_to_scan;
+        std::vector<Column> sub_span_columns;
     };
 
     /**
@@ -350,20 +362,20 @@ private:
      */
     struct ParentRuleOccurrence {
         std::span<SchemaNode::id_t> sub_span;
-        size_t start_col_idx;
+        size_t start_column_reader_idx;
     };
 
     /**
      * Everything collected from a single walk of a schema span during decomposed output
      * generation:
-     * @var next_col_idx The index into `m_columns` after consuming all columns in this span.
+     * @var next_column_reader_idx Index into `m_columns` after consuming all span columns.
      * @var entries The direct leaf entries collected from this span.
      * @var parent_rule_insertion_order ParentRule node IDs in first-seen order.
      * @var parent_rule_occurrences Maps each ParentRule node ID to all of its occurrences.
      */
     struct SchemaSpanContents {
-        size_t next_col_idx{0};
-        std::vector<LeafEntry> entries;
+        size_t next_column_reader_idx{0};
+        std::vector<DecompositionTarget> entries;
         std::vector<SchemaNode::id_t> parent_rule_insertion_order;
         absl::flat_hash_map<SchemaNode::id_t, std::vector<ParentRuleOccurrence>>
                 parent_rule_occurrences;
@@ -455,24 +467,14 @@ private:
     /**
      * Reconstructs the text for a LogMessage or ParentRule from its shape by replacing
      * %leaf-rule-name% placeholders with the leaf match values.
-     * @param parent_rule_column_name The column name of a ParentRule to reconstruct, or empty for
-     * the full message.
+     * @param target The reconstruction target containing pre-computed stable data (shape
+     *     substring and column entries) for this LogMessage or ParentRule scope.
      * @param message_index The index of the message to reconstruct.
-     * @param log_shape_id The log shape ID of the owning LogMessage scope.
-     * @param parent_rule_column_name The column name of the ParentRule to narrow the shape to,
-     *     or empty to reconstruct the full LogMessage shape.
-     * @param message_index The index of the message to reconstruct.
-     * @param column_start The starting index in m_columns for the columns to use.
-     * @param schema_sub_span The schema sub-span to iterate for column values.
      * @return The reconstructed raw log text.
      */
-    [[nodiscard]] auto reconstruct_log_shape(
-            clpp::log_shape_id_t log_shape_id,
-            std::string_view parent_rule_column_name,
-            uint64_t message_index,
-            size_t column_start,
-            std::span<SchemaNode::id_t> schema_sub_span
-    ) -> std::string;
+    [[nodiscard]] auto
+    reconstruct_log_shape(ReconstructionTarget const& target, uint64_t message_index)
+            -> std::string;
 
     /**
      * Aggregates the projection masks of all ParentRule scopes within a schema span into a single
@@ -570,7 +572,7 @@ private:
      * @return A void result on success, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Unsupported if an unsupported column type is encountered.
      */
-    [[nodiscard]] auto emit_grouped_leaf_entries(std::vector<LeafEntry>& entries)
+    [[nodiscard]] auto emit_grouped_leaf_entries(std::vector<DecompositionTarget>& entries)
             -> ystdlib::error_handling::Result<void>;
 
     /**
@@ -638,14 +640,31 @@ private:
      * Narrows a log shape to the substring corresponding to the ParentRule.
      * @param log_shape
      * @param log_shape_id
-     * @param parent_rule_col_name
+     * @param parent_rule_column_name
      * @return The narrowed shape substring, or empty string_view on failure.
      */
     [[nodiscard]] auto narrow_log_shape_to_parent_rule(
             std::string_view log_shape,
             clpp::log_shape_id_t log_shape_id,
-            std::string_view parent_rule_col_name
+            std::string_view parent_rule_column_name
     ) -> std::string_view;
+
+    /**
+     * Makes a `ReconstructionTarget` by resolving the shape substring and computing the column
+     * entries from the schema sub-span.
+     * @param log_shape_id The log shape ID of the owning LogMessage scope.
+     * @param parent_rule_column_name The column name of the ParentRule to narrow the shape to,
+     * or empty to reconstruct the full LogMessage shape.
+     * @param start_column_reader_idx Index in `m_columns`.
+     * @param schema_sub_span The schema sub-span to iterate for column values.
+     * @return The fully-initialized reconstruction target.
+     */
+    [[nodiscard]] auto make_reconstruction_target(
+            clpp::log_shape_id_t log_shape_id,
+            std::string_view parent_rule_column_name,
+            size_t start_column_reader_idx,
+            std::span<SchemaNode::id_t> schema_sub_span
+    ) -> ReconstructionTarget;
 
     int32_t m_schema_id;
     uint64_t m_num_messages;
@@ -673,6 +692,9 @@ private:
 
     std::map<int32_t, std::pair<size_t, std::span<int32_t>>> m_global_id_to_unordered_object;
     std::vector<ReconstructionTarget> m_reconstruction_targets;
+    // Reused across messages to avoid per-message reallocation.
+    std::unordered_map<std::string, std::vector<std::string>> m_column_name_to_values;
+    std::unordered_map<std::string, size_t> m_column_name_to_next_index;
     // TODO clpp: the archive reader owns the schema reader so this is safe, but the ownership
     // between the readers is problematic.
     LogShapeDictionaryReader const* m_log_shape_dict;
