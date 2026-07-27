@@ -67,7 +67,7 @@ data:
         | int }}
       target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
         | int }}
-    {{- if include "clp.spiderOrchestrationEnabled" . }}
+    {{- if .Values.spider.enabled }}
     compression_coordinator:
       commit_task_hard_timeout_secs: {{
         .Values.clpConfig.compression_coordinator.commit_task_hard_timeout_secs | int }}
