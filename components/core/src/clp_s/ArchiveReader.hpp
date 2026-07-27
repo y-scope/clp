@@ -221,6 +221,10 @@ public:
         m_projection = projection;
     }
 
+    [[nodiscard]] auto get_projection() const -> std::shared_ptr<search::Projection> {
+        return m_projection;
+    }
+
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */

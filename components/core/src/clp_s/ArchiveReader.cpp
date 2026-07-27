@@ -99,7 +99,6 @@ auto ArchiveReader::initialize_archive_reader() -> void {
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
     if (experimental_archive) {
         m_clpp.emplace();
-        // TODO clpp: inlined get_variable_dictionary_reader
         m_clpp->log_shape_dict
                 = std::make_shared<LogShapeDictionaryReader>(*m_archive_reader_adaptor);
         m_clpp->log_shape_dict->open(constants::cArchiveLogDictFile);
@@ -107,12 +106,6 @@ auto ArchiveReader::initialize_archive_reader() -> void {
         m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
     }
     m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
-
-    // TODO clpp: cannot read on demand as the streams are left open by the time we know to read
-    // shape info.
-    if (m_clpp.has_value()) {
-        std::ignore = get_parent_rule_shapes();
-    }
 }
 
 auto ArchiveReader::read_single_schema_metadata()
@@ -478,7 +471,9 @@ void ArchiveReader::initialize_schema_reader(
             m_id_to_schema_metadata[schema_id].num_messages(),
             should_marshal_records,
             m_clpp.has_value() ? m_clpp->log_shape_dict.get() : nullptr,
-            m_clpp.has_value() ? &get_parent_rule_shapes() : nullptr,
+            m_clpp.has_value() && m_clpp->parent_rule_shapes.has_value()
+                    ? &m_clpp->parent_rule_shapes.value()
+                    : nullptr,
             m_options.m_extract_mode
     );
     auto timestamp_column_ids

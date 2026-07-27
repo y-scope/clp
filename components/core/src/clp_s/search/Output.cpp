@@ -94,6 +94,14 @@ bool Output::filter() {
         }
     }
 
+    // If the parent rule shapes are needed for projection, ensure they've been read before opening
+    // the packed streams as the reader checkout logic will prevent future reading.
+    if (m_archive_reader->get_log_shape_dictionary() != nullptr
+        && false == m_archive_reader->get_projection()->is_return_all_columns())
+    {
+        std::ignore = m_archive_reader->get_parent_rule_shapes();
+    }
+
     m_query_runner.global_init();
     m_archive_reader->open_packed_streams();
 

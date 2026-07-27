@@ -1052,8 +1052,6 @@ auto SchemaMatch::resolve_clpp_query(
         SchemaNode::id_t root_node_id,
         ast::FilterExpr const& filter
 ) -> std::shared_ptr<ast::Expression> {
-    m_clpp_decomposed_query = true;
-
     // TODO clpp: this check is dumb, but fixing it requires fixing the archive reading.
     // This is the first place we know we need the contents of the dict (to avoid reading it
     // unnecessarily), but it may be called multiple times and read_entries doesn't seem to track if
@@ -1100,6 +1098,8 @@ auto SchemaMatch::resolve_clpp_query(
             return clp::string_utils::wildcard_match_unsafe(shape_str, query);
         });
     }
+
+    m_clpp_decomposed_query = true;
 
     auto& operand{dynamic_cast<ast::Literal&>(*filter.get_operand())};
     std::string query;
