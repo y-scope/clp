@@ -192,10 +192,19 @@ clpConfig:
       spider: "spider-db"
 
   compression_coordinator:
-    jobs_poll_delay: 0.1  # seconds
+    commit_task_hard_timeout_secs: 60
+    commit_task_max_retry: 1
+    commit_task_soft_timeout_secs: 45
+    compression_task_max_retry: 1
+    database_connection_pool_size: 10
+    job_polling_interval_millisecs: 100
     logging_level: "INFO"
-    service_name: "compression-coordinator"
-    termination_timeout_seconds: 30
+    resource_group:
+      name: "compression-coordinator"
+    result_polling:
+      init_backoff_millisecs: 100
+      max_backoff_millisecs: 1000
+    termination_timeout_secs: 30
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
