@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
 
     // `None` if a shutdown signal arrived while the coordinator is still running; `Some` if the
     // coordinator returned on its own (an early exit, possibly on error).
-    let early_exit = tokio::select! {
+    let early_exit_result = tokio::select! {
         _ = sigterm.recv() => {
             tracing::info!("Received SIGTERM.");
             None
@@ -102,7 +102,7 @@ async fn main() -> anyhow::Result<()> {
     // Request a graceful stop. A no-op if the coordinator has already returned.
     cancellation_token.cancel();
 
-    let join_result = if let Some(join_result) = early_exit {
+    let join_result = if let Some(join_result) = early_exit_result {
         join_result
     } else {
         let termination_timeout =
