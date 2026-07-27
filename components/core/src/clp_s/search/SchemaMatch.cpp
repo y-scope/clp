@@ -74,10 +74,11 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
 
 // TODO: write proper iterators on the AST to make this code less awful.
 // In particular schema intersection needs AST iterators and a proper refactor
-SchemaMatch::SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader)
+SchemaMatch::SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader, bool ignore_case)
         : m_tree(archive_reader->get_schema_tree()),
           m_schemas(archive_reader->get_schema_map()),
-          m_archive_reader(std::move(archive_reader)) {}
+          m_archive_reader(std::move(archive_reader)),
+          m_ignore_case(ignore_case) {}
 
 std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) {
     build_log_shape_id_to_schema_id_map();
@@ -1094,8 +1095,8 @@ auto SchemaMatch::resolve_clpp_query(
         auto& operand{dynamic_cast<ast::Literal&>(*filter.get_operand())};
         std::string query;
         operand.as_var_string(query, filter.get_operation());
-        return match_and_create_exists_filter([&query](std::string_view shape_str) -> bool {
-            return clp::string_utils::wildcard_match_unsafe(shape_str, query);
+        return match_and_create_exists_filter([&query, this](std::string_view shape_str) -> bool {
+            return clp::string_utils::wildcard_match_unsafe(shape_str, query, !m_ignore_case);
         });
     }
 
@@ -1118,7 +1119,8 @@ auto SchemaMatch::resolve_clpp_query(
                 [&](std::string_view value) -> bool {
                     return clp::string_utils::wildcard_match_unsafe(
                             value,
-                            interpretation.m_shape_query
+                            interpretation.m_shape_query,
+                            !m_ignore_case
                     );
                 }
         )};

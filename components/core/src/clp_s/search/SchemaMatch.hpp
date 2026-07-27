@@ -40,7 +40,7 @@ concept StringViewPredicate = std::predicate<Matcher, std::string_view>;
 class SchemaMatch : public ast::Transformation {
 public:
     // Constructor
-    SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader);
+    SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader, bool ignore_case);
 
     /**
      * Runs the transformation on an expression
@@ -228,6 +228,7 @@ private:
     // TODO clpp: refactor m_tree and m_schemas
     std::shared_ptr<ArchiveReader> m_archive_reader;
     bool m_clpp_decomposed_query{false};
+    bool m_ignore_case{false};
     std::string m_parsing_spec_str;
     log_surgeon::ParsingSpec* m_parsing_spec{nullptr};
     std::unique_ptr<log_surgeon::ParserHandle> m_parser;

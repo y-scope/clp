@@ -1081,7 +1081,8 @@ auto SchemaReader::emit_parent_rule_arrays(
         };
 
         bool const should_include{
-                ancestor_decomposed || emit_text || parent_rule_has_shape || has_projected_descendant
+                ancestor_decomposed || emit_text || parent_rule_has_shape
+                || has_projected_descendant
         };
         if (false == should_include) {
             continue;
@@ -1335,11 +1336,8 @@ auto SchemaReader::reconstruct_log_shape(
 
     std::string_view shape_to_scan{log_shape};
     if (false == parent_rule_column_name.empty()) {
-        shape_to_scan = narrow_log_shape_to_parent_rule(
-                log_shape,
-                log_shape_id,
-                parent_rule_column_name
-        );
+        shape_to_scan
+                = narrow_log_shape_to_parent_rule(log_shape, log_shape_id, parent_rule_column_name);
         if (shape_to_scan.empty()) {
             return {};
         }
