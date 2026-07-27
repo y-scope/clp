@@ -25,22 +25,22 @@ use crate::{
 /// Errors for ingestion job manager operations.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Log ingestor internal error: {0}")]
+    #[error("log ingestor internal error: {0}")]
     InternalError(#[from] anyhow::Error),
 
-    #[error("Ingestion job not found: {0}")]
+    #[error("ingestion job not found: {0}")]
     JobNotFound(IngestionJobId),
 
-    #[error("Prefix conflict: {0}")]
+    #[error("prefix conflict: {0}")]
     PrefixConflict(String),
 
-    #[error("Custom endpoint URL not supported: {0}")]
+    #[error("custom endpoint URL not supported: {0}")]
     CustomEndpointUrlNotSupported(String),
 
-    #[error("Invalid job config: {0}")]
+    #[error("invalid job config: {0}")]
     InvalidConfig(#[from] ConfigError),
 
-    #[error("A region code must be specified when using the default AWS endpoint")]
+    #[error("a region code must be specified when using the default AWS endpoint")]
     MissingRegionCode,
 }
 
@@ -73,10 +73,6 @@ impl IngestionJobManagerState {
     ///
     /// * [`anyhow::Error`] if the logs input type in the CLP configuration is unsupported.
     /// * Forwards [`ClpDbIngestionConnector::connect`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `clp_config.log_ingestor` is `None`.
     pub async fn from_config(
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,

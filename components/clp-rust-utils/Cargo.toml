@@ -27,5 +27,6 @@ tracing-subscriber = { version = "0.3.22", features = ["json", "env-filter", "fm
 utoipa = { version = "5.4.0" }
 
 [dev-dependencies]
+anyhow = "1.0.100"
 hex = "0.4.3"
 serde_json = "1.0.149"

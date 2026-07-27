@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use serde::Deserialize;
 
 use crate::clp_config::{AwsAuthentication, S3Config};
@@ -237,6 +239,7 @@ impl Default for StreamOutputStorage {
 pub struct LogIngestor {
     pub host: String,
     pub port: u16,
+    pub database_connection_pool_size: NonZeroU32,
     pub logging_level: String,
 }
 
@@ -245,6 +248,8 @@ impl Default for LogIngestor {
         Self {
             host: "localhost".to_owned(),
             port: 3002,
+            database_connection_pool_size: NonZeroU32::new(100)
+                .expect("default database connection pool size must be nonzero"),
             logging_level: "INFO".to_owned(),
         }
     }
@@ -339,10 +344,31 @@ impl Default for Telemetry {
 
 #[cfg(test)]
 mod tests {
-    use super::LogsInput;
+    use super::{LogIngestor, LogsInput};
 
     #[test]
-    fn deserialize_logs_input_s3_config() {
+    fn deserialize_log_ingestor_database_connection_pool_size() -> anyhow::Result<()> {
+        let default_config = serde_json::from_str::<LogIngestor>("{}")?;
+        assert_eq!(100, default_config.database_connection_pool_size.get());
+
+        let custom_config =
+            serde_json::from_str::<LogIngestor>(r#"{"database_connection_pool_size": 42}"#)?;
+        assert_eq!(42, custom_config.database_connection_pool_size.get());
+        Ok(())
+    }
+
+    #[test]
+    fn reject_zero_log_ingestor_database_connection_pool_size() -> anyhow::Result<()> {
+        let result = serde_json::from_str::<LogIngestor>(r#"{"database_connection_pool_size": 0}"#);
+        anyhow::ensure!(
+            result.is_err(),
+            "zero database connection pool size was accepted"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn deserialize_logs_input_s3_config() -> anyhow::Result<()> {
         const ACCESS_KEY_ID: &str = "YSCOPE";
         const SECRET_ACCESS_KEY: &str = "IamSecret";
         let logs_input_config_json = serde_json::json!({
@@ -357,8 +383,7 @@ mod tests {
         });
 
         let deserialized =
-            serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())
-                .expect("failed to deserialize `LogsInput` from JSON");
+            serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())?;
 
         match deserialized {
             LogsInput::S3 { config } => match config.aws_authentication {
@@ -367,15 +392,16 @@ mod tests {
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
                 crate::clp_config::AwsAuthentication::Default => {
-                    panic!("Expected credentials, got `default`")
+                    panic!("expected credentials, got `default`")
                 }
             },
-            LogsInput::Fs { .. } => panic!("Expected S3"),
+            LogsInput::Fs { .. } => panic!("expected S3"),
         }
+        Ok(())
     }
 
     #[test]
-    fn deserialize_logs_input_s3_default_config() {
+    fn deserialize_logs_input_s3_default_config() -> anyhow::Result<()> {
         let logs_input_config_json = serde_json::json!({
             "type": "s3",
             "aws_authentication": {
@@ -384,8 +410,7 @@ mod tests {
         });
 
         let deserialized =
-            serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())
-                .expect("failed to deserialize `LogsInput` from JSON");
+            serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())?;
 
         match deserialized {
             LogsInput::S3 { config } => {
@@ -394,12 +419,13 @@ mod tests {
                     crate::clp_config::AwsAuthentication::Default
                 );
             }
-            LogsInput::Fs { .. } => panic!("Expected S3"),
+            LogsInput::Fs { .. } => panic!("expected S3"),
         }
+        Ok(())
     }
 
     #[test]
-    fn deserialize_logs_input_fs_config() {
+    fn deserialize_logs_input_fs_config() -> anyhow::Result<()> {
         const DIRECTORY: &str = "/var/logs";
 
         let logs_input_config_json = serde_json::json!({
@@ -408,14 +434,14 @@ mod tests {
         });
 
         let deserialized =
-            serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())
-                .expect("failed to deserialize `LogsInput` from JSON");
+            serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())?;
 
         match deserialized {
             LogsInput::Fs { config } => {
                 assert_eq!(config.directory, DIRECTORY);
             }
-            LogsInput::S3 { .. } => panic!("Expected Fs"),
+            LogsInput::S3 { .. } => panic!("expected Fs"),
         }
+        Ok(())
     }
 }

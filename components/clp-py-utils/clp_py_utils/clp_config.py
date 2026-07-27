@@ -97,6 +97,7 @@ PositiveUnitFloat = Annotated[float, Field(ge=0, le=1)]
 # Specific types
 # TODO: Replace this with pydantic_extra_types.domain.DomainStr.
 DomainStr = NonEmptyStr
+DatabaseConnectionPoolSize = Annotated[int, Field(gt=0, lt=2**32)]
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
@@ -775,6 +776,7 @@ class ApiServer(BaseModel):
 class LogIngestor(BaseModel):
     host: DomainStr = "localhost"
     port: Port = 3002
+    database_connection_pool_size: DatabaseConnectionPoolSize = 100
     logging_level: LoggingLevelRust = "INFO"
 
 
