@@ -47,7 +47,7 @@ impl CompressionInputBuilder {
     ///
     /// A newly created [`CompressionInputBuilder`] with an empty buffer.
     #[must_use]
-    pub(crate) fn from_s3_config(s3_config: S3Config, target_archive_size: u64) -> Self {
+    pub(crate) const fn from_s3_config(s3_config: S3Config, target_archive_size: u64) -> Self {
         Self {
             buffer: Vec::new(),
             partitioned_task_inputs: Vec::new(),

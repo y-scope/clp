@@ -1,11 +1,21 @@
 //! The crate-level error type for the compression coordinator.
 
+use clp_rust_utils::{job_config::ingestion::JobId as IngestionJobId, s3::S3ObjectMetadataId};
+
 /// Errors returned by the compression coordinator.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("S3 object metadata {metadata_id} has an empty {field}")]
+    #[error(
+        "duplicate S3 object metadata IDs {ids:?} requested for ingestion job {ingestion_job_id}"
+    )]
+    DuplicateS3ObjectMetadata {
+        ingestion_job_id: IngestionJobId,
+        ids: Vec<S3ObjectMetadataId>,
+    },
+
+    #[error("S3 object metadata {id} has an empty `{field}`")]
     EmptyS3ObjectMetadataField {
-        metadata_id: u64,
+        id: S3ObjectMetadataId,
         field: &'static str,
     },
 
@@ -19,17 +29,14 @@ pub enum Error {
         source: sqlx::Error,
     },
 
-    #[error(
-        "missing S3 object metadata for ingestion job {ingestion_job_id}; missing IDs: \
-         {metadata_ids:?}"
-    )]
+    #[error("missing S3 object metadata {id} for ingestion job {ingestion_job_id}")]
     MissingS3ObjectMetadata {
-        ingestion_job_id: u64,
-        metadata_ids: Vec<u64>,
+        ingestion_job_id: IngestionJobId,
+        id: S3ObjectMetadataId,
     },
 
     #[error("no S3 object metadata was requested for ingestion job {0}")]
-    NoS3ObjectMetadata(u64),
+    NoS3ObjectMetadata(IngestionJobId),
 
     #[error("no S3 objects were partitioned into compression task inputs")]
     NoTaskInputs,

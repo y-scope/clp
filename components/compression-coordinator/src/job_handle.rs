@@ -1,6 +1,6 @@
 //! Handle for driving a single S3 compression job to completion.
 
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use clp_rust_utils::{
     clp_config::package::config::Database,
@@ -11,7 +11,7 @@ use clp_rust_utils::{
 };
 use non_empty_string::NonEmptyString;
 use spider_core::{
-    task::ExecutionPolicy,
+    task::{ExecutionPolicy, TimeoutPolicy},
     types::id::{JobId as SpiderJobId, ResourceGroupId},
 };
 use sqlx::MySqlPool;
@@ -142,7 +142,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
 
     /// Resumes a compression job that was already submitted to Spider.
     ///
-    ///
     /// This method skips submission and waits for the Spider job identified by `spider_job_id` to
     /// reach a terminal state. On failure, the compression job is marked as
     /// [`CompressionJobStatus::Failed`] before the error is returned.
@@ -205,8 +204,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             "Compression job submitted.",
         );
 
-        self.persist_spider_job_id(spider_job_id, num_tasks)
-            .await?;
+        self.persist_spider_job_id(spider_job_id, num_tasks).await?;
         tracing::info!(
             compression_job_id = % self.compression_job_id,
             spider_job_id = % spider_job_id,
@@ -261,50 +259,40 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     /// Returns an error if:
     ///
     /// * [`Error::NoS3ObjectMetadata`] if the job doesn't request any object metadata IDs.
-    /// * [`Error::Sqlx`] if the metadata query fails.
-    /// * [`Error::MissingS3ObjectMetadata`] if the query doesn't return every requested ID.
-    /// * [`Error::EmptyS3ObjectMetadataField`] if a returned bucket or key is empty.
-    /// * Forwards [`CompressionInputBuilder::add`]'s return values on failure.
+    /// * [`Error::DuplicateS3ObjectMetadata`] if the requested IDs contain a duplicate.
+    /// * [`Error::MissingS3ObjectMetadata`] if a requested ID does not exist in the metadata table.
+    /// * [`Error::EmptyS3ObjectMetadataField`] if a requested bucket or key is empty.
     /// * [`Error::NoTaskInputs`] if no compression task inputs are produced.
+    /// * Forwards [`CompressionInputBuilder::add`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn prepare_task_inputs(&self) -> Result<Vec<(S3InputSource, ExecutionPolicy)>, Error> {
+        // NOTE: We batch the metadata fetch to avoid hitting the maximum placeholder limit of
+        // MySQL.
+        const FETCH_CHUNK_SIZE: usize = 1000;
+
         let InputConfig::S3ObjectMetadataInputConfig { config } = &self.input_config else {
-            return Err(Error::UnsupportedInputConfig);
+            unreachable!("the input config is validated in the factory")
         };
-        let metadata_ids = &config.s3_object_metadata_ids;
-        if metadata_ids.is_empty() {
+        if config.s3_object_metadata_ids.is_empty() {
             return Err(Error::NoS3ObjectMetadata(config.ingestion_job_id));
         }
 
-        let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT `id`, `bucket`, `key`, `size` FROM \
-             `{INGESTED_S3_OBJECT_METADATA_TABLE_NAME}` WHERE `id` IN ("
-        ));
-        let mut separated_ids = query_builder.separated(", ");
-        for metadata_id in metadata_ids {
-            separated_ids.push_bind(metadata_id);
-        }
-        query_builder
-            .push(") AND `ingestion_job_id` = ")
-            .push_bind(config.ingestion_job_id);
-
-        let metadata_rows = query_builder
-            .build_query_as::<(S3ObjectMetadataId, String, String, u64)>()
-            .fetch_all(&self.db_pool)
-            .await?;
-
-        let returned_ids: HashSet<S3ObjectMetadataId> = metadata_rows
-            .iter()
-            .map(|(metadata_id, ..)| *metadata_id)
-            .collect();
-        let requested_ids: HashSet<S3ObjectMetadataId> =
-            metadata_ids.iter().copied().collect();
-        let mut missing_ids: Vec<S3ObjectMetadataId> =
-            requested_ids.difference(&returned_ids).copied().collect();
-        missing_ids.sort_unstable();
-        if !missing_ids.is_empty() {
-            return Err(Error::MissingS3ObjectMetadata {
+        let mut sorted_metadata_ids = config.s3_object_metadata_ids.clone();
+        sorted_metadata_ids.sort_unstable();
+        let mut duplicate_ids: Vec<S3ObjectMetadataId> = Vec::new();
+        sorted_metadata_ids.dedup_by(|a, b| {
+            if *a != *b {
+                return false;
+            }
+            if duplicate_ids.last().copied() != Some(*b) {
+                duplicate_ids.push(*b);
+            }
+            true
+        });
+        if !duplicate_ids.is_empty() {
+            return Err(Error::DuplicateS3ObjectMetadata {
                 ingestion_job_id: config.ingestion_job_id,
-                metadata_ids: missing_ids,
+                ids: duplicate_ids,
             });
         }
 
@@ -312,19 +300,54 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             config.s3_config.clone(),
             self.target_archive_size,
         );
-        for (metadata_id, bucket, key, size) in metadata_rows {
-            let bucket = NonEmptyString::new(bucket).map_err(|_| {
-                Error::EmptyS3ObjectMetadataField {
-                    metadata_id,
-                    field: "bucket",
+        for chunk in sorted_metadata_ids.chunks(FETCH_CHUNK_SIZE) {
+            let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
+                "SELECT `id`, `bucket`, `key`, `size` FROM \
+                 `{INGESTED_S3_OBJECT_METADATA_TABLE_NAME}` WHERE `id` IN ("
+            ));
+            let mut separated_ids = query_builder.separated(", ");
+            for metadata_id in chunk {
+                separated_ids.push_bind(metadata_id);
+            }
+            query_builder
+                .push(") AND `ingestion_job_id` = ")
+                .push_bind(config.ingestion_job_id);
+            query_builder.push(" ORDER BY `id` ASC");
+
+            let metadata_rows = query_builder
+                .build_query_as::<S3ObjectMetadataRow>()
+                .fetch_all(&self.db_pool)
+                .await?;
+
+            let mut row_iter = metadata_rows.into_iter().peekable();
+            for &expected_id in chunk {
+                if row_iter.peek().is_none_or(|row| row.id != expected_id) {
+                    return Err(Error::MissingS3ObjectMetadata {
+                        ingestion_job_id: config.ingestion_job_id,
+                        id: expected_id,
+                    });
                 }
-            })?;
-            let key =
-                NonEmptyString::new(key).map_err(|_| Error::EmptyS3ObjectMetadataField {
-                    metadata_id,
-                    field: "key",
+                let row = row_iter
+                    .next()
+                    .expect("row should have been validated by the previous peek");
+                let bucket = NonEmptyString::new(row.bucket).map_err(|_| {
+                    Error::EmptyS3ObjectMetadataField {
+                        id: row.id,
+                        field: "bucket",
+                    }
                 })?;
-            input_builder.add(ObjectMetadata { bucket, key, size })?;
+                let key = NonEmptyString::new(row.key).map_err(|_| {
+                    Error::EmptyS3ObjectMetadataField {
+                        id: row.id,
+                        field: "key",
+                    }
+                })?;
+                input_builder.add(ObjectMetadata {
+                    bucket,
+                    key,
+                    size: row.size,
+                })?;
+            }
         }
 
         let input_sources = input_builder.into_task_input_sources();
@@ -335,8 +358,18 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         Ok(input_sources
             .into_iter()
             .map(|input_source| {
+                // NOTE: The timeout policy scales with the number of objects assigned to the task.
+                // Each object contributes three minutes to the soft timeout and five minutes to
+                // the hard timeout. This heuristic does not account for object size and can be
+                // refined in the future.
+                let num_objects = input_source.object_keys.len() as u64;
+                let timeout_policy = TimeoutPolicy {
+                    soft_timeout_ms: num_objects * 3 * 60 * 1000,
+                    hard_timeout_ms: num_objects * 5 * 60 * 1000,
+                };
                 let execution_policy = ExecutionPolicy {
                     max_num_retry: self.spider_option.compression_task_max_retry,
+                    timeout_policy,
                     ..ExecutionPolicy::default()
                 };
                 (input_source, execution_policy)
@@ -420,9 +453,9 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         let num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyCompressionTasks(num_tasks))?;
         sqlx::query(&format!(
-            "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, \
-             `num_tasks` = ?, `start_time` = CURRENT_TIMESTAMP(3), \
-             `update_time` = CURRENT_TIMESTAMP() WHERE `id` = ?"
+            "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, `num_tasks` \
+             = ?, `start_time` = CURRENT_TIMESTAMP(3), `update_time` = CURRENT_TIMESTAMP() WHERE \
+             `id` = ?"
         ))
         .bind(spider_job_id.get())
         .bind(i32::from(CompressionJobStatus::Running))
@@ -510,4 +543,13 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
 
         Ok(())
     }
+}
+
+/// A projection of the columns read from an ingested S3 object metadata row.
+#[derive(Debug, sqlx::FromRow)]
+struct S3ObjectMetadataRow {
+    id: S3ObjectMetadataId,
+    bucket: String,
+    key: String,
+    size: u64,
 }
