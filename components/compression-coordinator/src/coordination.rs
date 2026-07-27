@@ -35,7 +35,7 @@ pub struct Coordinator {
     db_pool: sqlx::MySqlPool,
     db_config: DatabaseConfig,
     spider_option: Arc<SpiderOption>,
-    last_polled_job_id: Option<CompressionJobId>,
+    is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
 }
@@ -124,7 +124,7 @@ impl Coordinator {
             db_pool,
             db_config,
             spider_option,
-            last_polled_job_id: None,
+            is_first_fetch: true,
             job_polling_interval: Duration::from_millis(
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
@@ -161,24 +161,27 @@ impl Coordinator {
     ///
     /// On each iteration, this method fetches the pending compression jobs, spawns a detached
     /// handle to drive each one, and then sleeps until the next poll or until the cancellation
-    /// token is triggered.
+    /// token is triggered. The jobs dispatched in the iteration are marked once the sleep elapses,
+    /// so their update does not contend with concurrent job submissions during the poll interval.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`Self::schedule_new_jobs`]'s return values on failure.
+    /// * Forwards [`Self::mark_jobs_dispatched`]'s return values on failure.
     pub async fn run(mut self) -> Result<(), Error> {
         let cancellation_token = self.cancellation_token.clone();
         loop {
             let now = Instant::now();
 
+            let dispatched_job_ids;
             select! {
                 () = cancellation_token.cancelled() => {
                     break;
                 }
                 result = self.schedule_new_jobs() => {
-                    result.inspect_err(|e| {
+                    dispatched_job_ids = result.inspect_err(|e| {
                         tracing::error!(error = % e, "Failed to schedule new jobs.");
                     })?;
                 }
@@ -194,6 +197,8 @@ impl Coordinator {
             {
                 break;
             }
+
+            self.mark_jobs_dispatched(&dispatched_job_ids).await?;
         }
 
         tracing::info!("Coordinator shutting down.");
@@ -233,15 +238,21 @@ impl Coordinator {
     /// [`CompressionJobStatus::Failed`] unless its input config is unsupported, in which case it is
     /// left for the legacy Celery-based compression scheduler).
     ///
+    /// # Returns
+    ///
+    /// The IDs of the fetched jobs that were dispatched in this poll.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
-    async fn schedule_new_jobs(&mut self) -> Result<(), Error> {
+    async fn schedule_new_jobs(&mut self) -> Result<Vec<CompressionJobId>, Error> {
         let new_job_rows = self.fetch_new_job_rows().await.inspect_err(|e| {
             tracing::error!(error = % e, "Failed to fetch new jobs from database.");
         })?;
+        let dispatched_job_ids: Vec<CompressionJobId> =
+            new_job_rows.iter().map(|row| row.id).collect();
         for job_row in new_job_rows {
             let job_id = job_row.id;
             let clp_io_config: ClpIoConfig =
@@ -275,6 +286,38 @@ impl Coordinator {
                 });
             });
         }
+        Ok(dispatched_job_ids)
+    }
+
+    /// Marks the compression jobs identified by `job_ids` with the current dispatch time.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
+    async fn mark_jobs_dispatched(&self, job_ids: &[CompressionJobId]) -> Result<(), Error> {
+        if job_ids.is_empty() {
+            return Ok(());
+        }
+
+        let mut tx = self.db_pool.begin().await?;
+        for chunk in job_ids.chunks(1000) {
+            let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
+                "UPDATE `{table}` SET `dispatch_time` = CURRENT_TIMESTAMP() WHERE `id` IN (",
+                table = COMPRESSION_JOB_TABLE_NAME,
+            ));
+            let mut separated_ids = query_builder.separated(", ");
+            for job_id in chunk {
+                separated_ids.push_bind(job_id);
+            }
+            query_builder.push(");");
+            query_builder.build().execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+
         Ok(())
     }
 
@@ -332,8 +375,17 @@ impl Coordinator {
         result
     }
 
-    /// Fetches the pending compression jobs newer than the last polled job and advances the poll
-    /// cursor.
+    /// Fetches the pending compression jobs to dispatch.
+    ///
+    /// The first fetch after startup returns every [`CompressionJobStatus::Pending`] job so that
+    /// jobs a previous coordinator instance had already dispatched but not started are
+    /// re-dispatched. Every subsequent fetch returns only [`CompressionJobStatus::Pending`] jobs
+    /// whose dispatch time is still not set.
+    ///
+    /// # Returns
+    ///
+    /// A vector of rows projected from the compression job table on success, each row represents a
+    /// pending compression job.
     ///
     /// # Errors
     ///
@@ -341,30 +393,26 @@ impl Coordinator {
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_new_job_rows(&mut self) -> Result<Vec<PendingJobRowProjection>, Error> {
-        let query = self.last_polled_job_id.map_or_else(
-            || {
-                sqlx::query_as::<_, PendingJobRowProjection>(formatcp!(
-                    "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? ORDER BY `id` \
-                     ASC;",
-                    table = COMPRESSION_JOB_TABLE_NAME,
-                ))
-                .bind(CompressionJobStatus::Pending)
-            },
-            |last_polled_job_id| {
-                sqlx::query_as::<_, PendingJobRowProjection>(formatcp!(
-                    "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? AND `id` > ? \
-                     ORDER BY `id` ASC;",
-                    table = COMPRESSION_JOB_TABLE_NAME,
-                ))
-                .bind(CompressionJobStatus::Pending)
-                .bind(last_polled_job_id)
-            },
+        const FIRST_FETCH_QUERY: &str = formatcp!(
+            "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? ORDER BY `id` ASC;",
+            table = COMPRESSION_JOB_TABLE_NAME,
+        );
+        const SUBSEQUENT_FETCH_QUERY: &str = formatcp!(
+            "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? AND `dispatch_time` IS \
+             NULL ORDER BY `id` ASC;",
+            table = COMPRESSION_JOB_TABLE_NAME,
         );
 
-        let rows = query.fetch_all(&self.db_pool).await?;
-        if let Some(last_row) = rows.last() {
-            self.last_polled_job_id = Some(last_row.id);
-        }
+        let query = if self.is_first_fetch {
+            self.is_first_fetch = false;
+            FIRST_FETCH_QUERY
+        } else {
+            SUBSEQUENT_FETCH_QUERY
+        };
+        let rows = sqlx::query_as::<_, PendingJobRowProjection>(query)
+            .bind(CompressionJobStatus::Pending)
+            .fetch_all(&self.db_pool)
+            .await?;
 
         Ok(rows)
     }
