@@ -750,11 +750,11 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_CMD"]
-    deps: [":toolchains:nodejs-22"]
+    deps: [":toolchains:nodejs"]
     dir: "{{.G_WEBUI_SRC_DIR}}"
     cmds:
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm run lint:{{.LINT_CMD}}"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm run lint:{{.LINT_CMD}}"
 
   py:
     internal: true
