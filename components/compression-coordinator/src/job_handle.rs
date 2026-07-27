@@ -23,9 +23,6 @@ use crate::{
     partition::CompressionInputBuilder,
 };
 
-const COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
-const INGESTED_S3_OBJECT_METADATA_TABLE_NAME: &str = "ingested_s3_object_metadata";
-
 /// Options for a compression job running in Spider.
 pub struct SpiderOption {
     pub compression_task_max_retry: u32,
@@ -579,6 +576,9 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         Ok(())
     }
 }
+
+const COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
+const INGESTED_S3_OBJECT_METADATA_TABLE_NAME: &str = "ingested_s3_object_metadata";
 
 /// A projection of the columns read from an ingested S3 object metadata row.
 #[derive(Debug, sqlx::FromRow)]
