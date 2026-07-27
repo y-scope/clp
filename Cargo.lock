@@ -1009,6 +1009,7 @@ dependencies = [
  "async-trait",
  "clap",
  "clp-rust-utils",
+ "const_format",
  "non-empty-string",
  "rmp-serde",
  "serde",

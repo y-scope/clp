@@ -9,6 +9,7 @@ use clp_rust_utils::{
     s3::{ObjectMetadata, S3ObjectMetadataId},
     task_io::compression::{ClpSCompressionOption, S3InputSource},
 };
+use const_format::formatcp;
 use non_empty_string::NonEmptyString;
 use spider_core::{
     task::{ExecutionPolicy, TimeoutPolicy},
@@ -443,8 +444,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::TooManyCompressionTasks`] if `num_tasks` exceeds the database column's range.
-    /// * [`Error::Sqlx`] if the update fails.
+    /// * [`Error::TooManyCompressionTasks`] if `num_tasks` exceeds `i32`'s range.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn persist_spider_job_id(
         &self,
         spider_job_id: SpiderJobId,
@@ -452,13 +453,12 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ) -> Result<(), Error> {
         let num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyCompressionTasks(num_tasks))?;
-        sqlx::query(&format!(
+        sqlx::query(formatcp!(
             "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, `num_tasks` \
-             = ?, `start_time` = CURRENT_TIMESTAMP(3), `update_time` = CURRENT_TIMESTAMP() WHERE \
-             `id` = ?"
+             = ?, `start_time` = CURRENT_TIMESTAMP(3) WHERE `id` = ?"
         ))
         .bind(spider_job_id.get())
-        .bind(i32::from(CompressionJobStatus::Running))
+        .bind(CompressionJobStatus::Running)
         .bind(num_tasks)
         .bind(self.compression_job_id)
         .execute(&self.db_pool)
@@ -479,6 +479,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     /// * Forwards [`S3CompressionJobSubmitter::run_s3_compression_job_to_completion`]'s return
     ///   values on failure.
     /// * Forwards [`Self::update_job_status`]'s return values on failure.
+    /// * Forwards [`Self::get_job_status`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         let outcome = self
             .job_submitter
@@ -500,6 +501,12 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             // the same transaction.
             CompressionJobOutcome::Succeeded => Ok(()),
             CompressionJobOutcome::Failed { error_message } => {
+                if CompressionJobStatus::Succeeded == self.get_job_status().await? {
+                    // NOTE: The commit task may successfully proceed but fail to report to Spider's
+                    // control unit. In that case, the compression outcome has already committed to
+                    // CLP DB, and thus the job should be considered `Succeeded`.
+                    return Ok(());
+                }
                 self.update_job_status(
                     CompressionJobStatus::Failed,
                     Some(format!(
@@ -509,6 +516,12 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                 .await
             }
             CompressionJobOutcome::Cancelled => {
+                if CompressionJobStatus::Succeeded == self.get_job_status().await? {
+                    // NOTE: The commit task may successfully proceed but fail to report to Spider's
+                    // control unit. In that case, the compression outcome has already committed to
+                    // CLP DB, and thus the job should be considered `Succeeded`.
+                    return Ok(());
+                }
                 self.update_job_status(
                     CompressionJobStatus::Killed,
                     Some("The Spider compression job was cancelled.".to_owned()),
@@ -518,24 +531,46 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         }
     }
 
+    /// Reads the current status of the compression job from the CLP database.
+    ///
+    /// # Returns
+    ///
+    /// The current [`CompressionJobStatus`] of the compression job on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
+    async fn get_job_status(&self) -> Result<CompressionJobStatus, Error> {
+        let job_status: CompressionJobStatus = sqlx::query_scalar(formatcp!(
+            "SELECT `status` FROM `{COMPRESSION_JOB_TABLE_NAME}` WHERE `id` = ?"
+        ))
+        .bind(self.compression_job_id)
+        .fetch_one(&self.db_pool)
+        .await?;
+
+        Ok(job_status)
+    }
+
     /// Updates the compression job status in the CLP database.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::Sqlx`] if the update fails.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn update_job_status(
         &self,
         job_status: CompressionJobStatus,
         status_message: Option<String>,
     ) -> Result<(), Error> {
         let status_message = status_message.as_ref().map_or("", String::as_str);
-        sqlx::query(&format!(
-            "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `status` = ?, `status_msg` = ?, \
-             `update_time` = CURRENT_TIMESTAMP() WHERE `id` = ?"
+        sqlx::query(formatcp!(
+            "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` \
+             = ?"
         ))
-        .bind(i32::from(job_status))
+        .bind(job_status)
         .bind(status_message)
         .bind(self.compression_job_id)
         .execute(&self.db_pool)
