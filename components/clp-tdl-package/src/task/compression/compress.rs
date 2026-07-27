@@ -733,14 +733,15 @@ fn run_log_converter(
 ///
 /// Spawns clp-s with the resolved arguments and credential env vars, draining stderr on a dedicated
 /// thread to avoid a pipe deadlock while stdout is streamed line by line. Each stdout line is
-/// parsed into an [`ArchiveMetadata`] and forwarded to `on_archive`. If `on_archive` fails, clp-s
-/// is killed and reaped before the error is returned.
+/// parsed into an [`ArchiveMetadata`] and forwarded to `on_archive`. If reading a stdout line,
+/// parsing it, or `on_archive` fails, clp-s is killed and reaped before the error is returned.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * clp-s exits with a non-zero status.
+/// * A line cannot be read from clp-s's stdout.
 /// * Forwards `on_archive`'s return values on failure.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`parse_archive_stats`]'s return values on failure.
@@ -779,14 +780,20 @@ fn run_clp_s(
         .take()
         .expect("piped stdout should always be present");
     for line in BufReader::new(stdout).lines() {
-        let line = line.context("failed to read a line from clp-s stdout")?;
+        let line = match line.context("failed to read a line from clp-s stdout") {
+            Ok(line) => line,
+            Err(e) => {
+                let stderr = kill_clp_s_and_read_stderr(&mut child, stderr_reader);
+                tracing::error!(
+                    error = % e,
+                    stderr = % stderr,
+                    "Failed to read a line from clp-s stdout. Killing clp-s."
+                );
+                return Err(e.context("clp-s killed on error"));
+            }
+        };
         if let Err(e) = parse_archive_stats(&line).and_then(&mut on_archive) {
-            let _ = child.kill();
-            let _ = child.wait();
-            let stderr = match stderr_reader.join() {
-                Ok(Ok(stderr)) => stderr,
-                _ => "Failed to read clp-s stderr.".to_string(),
-            };
+            let stderr = kill_clp_s_and_read_stderr(&mut child, stderr_reader);
             tracing::error!(
                 error = % e,
                 archive_stats = % line,
@@ -811,6 +818,24 @@ fn run_clp_s(
         anyhow::bail!("clp-s exited with {status}");
     }
     Ok(())
+}
+
+/// Kills and reaps clp-s, then joins the stderr-draining thread and returns its captured output.
+///
+/// # Returns
+///
+/// clp-s's captured stderr, or a placeholder if the stderr-draining thread cannot be joined or
+/// read.
+fn kill_clp_s_and_read_stderr(
+    child: &mut std::process::Child,
+    stderr_reader: std::thread::JoinHandle<std::io::Result<String>>,
+) -> String {
+    let _ = child.kill();
+    let _ = child.wait();
+    match stderr_reader.join() {
+        Ok(Ok(stderr)) => stderr,
+        _ => "Failed to read clp-s stderr.".to_string(),
+    }
 }
 
 #[cfg(test)]
