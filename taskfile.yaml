@@ -223,6 +223,13 @@ tasks:
       cargo build --release --bins
       cargo build --release -p clp-tdl-package
 
+  clp-tdl-package:
+    deps: ["toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    cmd: |-
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo build --release -p clp-tdl-package
+
   clp-mcp-server:
     - task: "uv-component"
       vars:
@@ -284,7 +291,7 @@ tasks:
       - "rsync -a 'packages/client/dist/' '{{.OUTPUT_DIR}}/client/'"
       - "rsync -a 'packages/yscope-log-viewer/dist/' '{{.OUTPUT_DIR}}/yscope-log-viewer/'"
       - >-
-        PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH
+        PATH='{{.G_NODEJS_BIN_DIR}}':$PATH
         pnpm deploy
         --prod
         --filter=@webui/server
@@ -459,7 +466,7 @@ tasks:
     deps:
       - "init"
       - "deps:yscope-log-viewer:source"
-      - "toolchains:nodejs-22"
+      - "toolchains:nodejs"
     cmds:
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH pnpm run build"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm run build"
