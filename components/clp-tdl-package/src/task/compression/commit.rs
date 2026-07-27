@@ -192,18 +192,28 @@ async fn mark_job_succeeded(
 ) -> anyhow::Result<()> {
     // NOTE: `duration` (seconds) is derived from the DB clock so it stays consistent with the DB's
     // time.
-    sqlx::query(
+    let query_result = sqlx::query(
         "UPDATE compression_jobs SET status = ?, uncompressed_size = ?, compressed_size = ?, \
-         duration = TIMESTAMPDIFF(MICROSECOND, start_time, CURRENT_TIMESTAMP(3)) / 1000000, \
-         update_time = CURRENT_TIMESTAMP() WHERE id = ?",
+         duration = TIMESTAMPDIFF(MICROSECOND, start_time, CURRENT_TIMESTAMP(3)) / 1000000, WHERE \
+         id = ? AND status = ?",
     )
     .bind(CompressionJobStatus::Succeeded)
     .bind(total_uncompressed_size)
     .bind(total_compressed_size)
     .bind(id)
+    .bind(CompressionJobStatus::Running)
     .execute(&mut **tx)
     .await
     .context("failed to mark the CLP compression job succeeded")?;
+
+    if query_result.rows_affected() != 1 {
+        anyhow::bail!(
+            "failed to mark CLP compression job {} succeeded; expected 1 row to be updated, got {}",
+            id,
+            query_result.rows_affected()
+        );
+    }
+
     Ok(())
 }
 
