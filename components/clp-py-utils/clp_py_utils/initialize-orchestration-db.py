@@ -78,7 +78,6 @@ def main(argv):
                     `clp_binary_version` INT NULL DEFAULT NULL,
                     `clp_config` MEDIUMBLOB NOT NULL,
                     `spider_id` BIGINT UNSIGNED DEFAULT NULL,
-                    `dispatch_time` DATETIME NULL DEFAULT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
                     INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE,
