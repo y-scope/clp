@@ -58,14 +58,14 @@
         },
         "responses": {
           "200": {
-            "description": "The URI to fetch the results of the submitted query.",
+            "description": "The URI reference, relative to this request, for fetching the results of the submitted query.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/QueryResultsUri"
                 },
                 "example": {
-                  "query_results_uri": "/query_results/1"
+                  "query_results_uri": "query_results/1"
                 }
               }
             }
@@ -350,7 +350,7 @@
         "properties": {
           "query_results_uri": {
             "type": "string",
-            "description": "The uri to get the query results."
+            "description": "The URI reference, relative to the query submission request, for fetching its results."
           }
         },
         "additionalProperties": false

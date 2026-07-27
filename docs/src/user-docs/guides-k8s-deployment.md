@@ -421,6 +421,133 @@ To run all worker types in the same node pool:
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
 
+### Service exposure
+
+Application Services default to `ClusterIP`. This is recommended for cloud and multi-tenant
+clusters, where a shared [Gateway API] Gateway or another platform-managed ingress exposes them.
+Use `NodePort` only for local or simple clusters.
+
+#### Gateway API
+
+The chart can create `HTTPRoute` resources, but it does not install Gateway API CRDs or a
+controller, or create a Gateway. The platform operator must install an implementation such as
+[NGINX Gateway Fabric][nginx-gateway-fabric], [Envoy Gateway], or [Istio], and manage the
+`GatewayClass`, Gateway, TLS, DNS, and access policies. Verify the installed `GatewayClass`:
+
+```bash
+kubectl get gatewayclass
+```
+
+The following example allows routes only from namespaces explicitly labeled by the operator:
+
+```bash
+kubectl create namespace gateway-system
+kubectl create namespace clp
+kubectl label namespace clp shared-gateway-access="true"
+```
+
+```{code-block} yaml
+:caption: shared-gateway.yaml
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shared-gateway
+  namespace: gateway-system
+spec:
+  gatewayClassName: "example-gateway-class"
+  listeners:
+    - name: "https"
+      hostname: "*.example.com"
+      port: 443
+      protocol: "HTTPS"
+      tls:
+        mode: "Terminate"
+        certificateRefs:
+          - name: "example-com-tls"
+      allowedRoutes:
+        kinds:
+          - kind: "HTTPRoute"
+        namespaces:
+          from: "Selector"
+          selector:
+            matchLabels:
+              shared-gateway-access: "true"
+```
+
+```bash
+kubectl apply -f shared-gateway.yaml
+kubectl wait \
+  --namespace gateway-system \
+  --for=condition=Programmed \
+  gateway/shared-gateway
+```
+
+Only the platform operator should grant the namespace label. Configure CLP to attach its routes to
+the Gateway:
+
+```{code-block} yaml
+:caption: clusterip-gateway.yaml
+
+allowHostAccessForSbinScripts: false
+
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: "shared-gateway"
+      namespace: "gateway-system"
+      sectionName: "https"
+  hostnames:
+    - "clp.example.com"
+```
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
+  --namespace clp \
+  -f clusterip-gateway.yaml
+```
+
+The chart creates these routes:
+
+| Path              | Backend behavior              |
+|-------------------|-------------------------------|
+| `/api/v1/`        | API server; prefix stripped   |
+| `/log_ingestor/`  | Log ingestor; prefix stripped |
+| `/mcp`            | MCP server                    |
+| `/`               | Web UI; catch-all             |
+
+The API returns relative query-results URIs, so clients that submit requests through `/api/v1/`
+retrieve results through the same prefix.
+
+Set `httpRoute.enabled` to `false` when the platform manages CLP's routes as well as its Gateway.
+See [cross-namespace routes] for details about attaching routes to a Gateway in another namespace.
+
+#### NodePort
+
+For local or simple-cluster deployments without an ingress layer, set `serviceType` to `NodePort`
+for each application Service that should be reachable through a node address. Its `port` value then
+specifies the Service's `nodePort`:
+
+```{code-block} yaml
+:caption: nodeport.yaml
+
+clpConfig:
+  webui:
+    serviceType: "NodePort"
+    port: 30000
+
+  api_server:
+    serviceType: "NodePort"
+    port: 30301
+```
+
+The same keys are available under `log_ingestor`, `mcp_server`, and `presto`. For bundled Presto,
+`port` is the coordinator's `nodePort` when `serviceType` is `NodePort`; otherwise it remains the
+external Presto endpoint port.
+
+NodePorts must be unique across deployments sharing nodes. Database and results-cache NodePorts
+used by host-side `sbin` scripts remain controlled by `allowHostAccessForSbinScripts`.
+
 ---
 
 ### Component resources
@@ -502,8 +629,15 @@ kubectl get jobs
 
 ### Access the Web UI
 
-Once all pods are ready, you access the CLP Web UI at: `http://<node-ip>:30000` (the value of
-`clpConfig.webui.port`)
+If you enabled the chart's HTTPRoutes, access the Web UI through the Gateway hostname. With
+`clpConfig.webui.serviceType: "NodePort"`, use `clpConfig.webui.port` and a node address. Otherwise,
+forward the Web UI's ClusterIP Service to your machine:
+
+```bash
+kubectl port-forward service/clp-webui 4000:4000
+```
+
+Leave the command running and open [http://localhost:4000](http://localhost:4000).
 
 ---
 
@@ -653,16 +787,21 @@ To tear down a `kubeadm` cluster:
 [Cilium]: https://cilium.io/
 [clp-helm-repo]: https://y-scope.github.io/clp
 [clp-releases]: https://github.com/y-scope/clp/releases
+[cross-namespace routes]: https://gateway-api.sigs.k8s.io/guides/user-guides/multiple-ns/
 [design-orchestration]: ../dev-docs/design-deployment-orchestration.md
 [docker-compose-deployment]: guides-docker-compose-deployment.md
 [eks]: https://aws.amazon.com/eks/
+[Envoy Gateway]: https://gateway.envoyproxy.io/docs/install/install-helm/
 [external-db-guide]: guides-external-database.md
+[Gateway API]: https://gateway-api.sigs.k8s.io/
 [gke]: https://cloud.google.com/kubernetes-engine
 [Helm]: https://helm.sh/
+[Istio]: https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/
 [k3s]: https://k3s.io/
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
+[nginx-gateway-fabric]: https://docs.nginx.com/nginx-gateway-fabric/install/helm/
 [presto-guide]: guides-using-presto.md
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md

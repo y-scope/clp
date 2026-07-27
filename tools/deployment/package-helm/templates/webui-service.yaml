@@ -6,11 +6,13 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "webui"
 spec:
-  type: "NodePort"
+  type: {{ .Values.services.type | quote }}
   selector:
     {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "webui"
   ports:
     - port: 4000
       targetPort: "webui"
-      nodePort: {{ .Values.clpConfig.webui.port }}
+      {{- if eq .Values.services.type "NodePort" }}
+      nodePort: {{ .Values.services.nodePorts.webui }}
+      {{- end }}

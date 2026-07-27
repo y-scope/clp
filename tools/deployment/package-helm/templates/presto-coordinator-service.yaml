@@ -7,12 +7,14 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "presto-coordinator"
 spec:
-  type: "NodePort"
+  type: {{ .Values.services.type | quote }}
   selector:
     {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "presto-coordinator"
   ports:
     - port: 8889
       targetPort: "presto-coord"
-      nodePort: {{ .Values.clpConfig.presto.port }}
+      {{- if eq .Values.services.type "NodePort" }}
+      nodePort: {{ .Values.services.nodePorts.prestoCoordinator }}
+      {{- end }}
 {{- end }}
