@@ -68,7 +68,8 @@ def main(argv):
                     `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
-                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP()
+                        ON UPDATE CURRENT_TIMESTAMP(),
                     `duration` FLOAT NULL DEFAULT NULL,
                     `original_size` BIGINT NOT NULL DEFAULT '0',
                     `uncompressed_size` BIGINT NOT NULL DEFAULT '0',
@@ -76,11 +77,14 @@ def main(argv):
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `clp_binary_version` INT NULL DEFAULT NULL,
+                    `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+                    `dispatch_time` DATETIME NULL DEFAULT NULL,
                     `clp_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
                     INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE,
-                    INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE
+                    INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE,
+                    INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
