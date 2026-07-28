@@ -48,6 +48,7 @@ use crate::common::{clp_home, runtime};
 /// Returns an error if:
 ///
 /// * A spawned archive finisher panics.
+/// * Forwards [`build_s3_logs_list`]'s return values on failure.
 /// * Forwards [`std::fs::write`]'s return values on failure.
 /// * Forwards [`extract_s3_output_config`]'s return values on failure.
 /// * Forwards [`prepare_clp_s_input`]'s return values on failure.
@@ -76,7 +77,7 @@ pub(super) fn compress(
 
     let mut tmp_file_deleter = TmpFileDeleter::new();
 
-    std::fs::write(&list_path, build_s3_logs_list(&input_source))
+    std::fs::write(&list_path, build_s3_logs_list(&input_source)?)
         .with_context(|| format!("failed to write S3 logs list to {}", list_path.display()))
         .inspect_err(|e| {
             tracing::error!(
@@ -308,7 +309,14 @@ fn build_s3_client(runtime: &tokio::runtime::Handle, s3_config: &S3Config) -> aw
 /// # Returns
 ///
 /// The newline-terminated list of object URLs, one per object key in `input_source`.
-fn build_s3_logs_list(input_source: &S3InputSource) -> String {
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * An object key in `input_source` is empty.
+/// * Forwards [`generate_s3_url`]'s return values on failure.
+fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
     let endpoint = input_source
         .endpoint_url
         .as_ref()
@@ -317,14 +325,20 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> String {
         .region_code
         .as_ref()
         .map(NonEmptyString::as_str);
-    let bucket = input_source.bucket.as_str();
 
     let mut list = String::new();
     for object_key in &input_source.object_keys {
-        list.push_str(&generate_s3_url(endpoint, region, bucket, object_key));
+        let object_key = NonEmptyString::try_from(object_key.clone())
+            .map_err(|_| anyhow::anyhow!("S3 object key must not be empty"))?;
+        list.push_str(&generate_s3_url(
+            endpoint,
+            region,
+            &input_source.bucket,
+            &object_key,
+        )?);
         list.push('\n');
     }
-    list
+    Ok(list)
 }
 
 /// Resolves the AWS credential env vars clp-s needs to access the S3 objects.
@@ -868,7 +882,7 @@ mod tests {
     };
 
     #[test]
-    fn build_s3_logs_list_default_endpoint() {
+    fn build_s3_logs_list_default_endpoint() -> anyhow::Result<()> {
         let input_source = S3InputSource {
             endpoint_url: None,
             region_code: Some(
@@ -881,10 +895,12 @@ mod tests {
         };
 
         assert_eq!(
-            build_s3_logs_list(&input_source),
+            build_s3_logs_list(&input_source)?,
             "https://logs.s3.us-east-1.amazonaws.com/a/b.json\n\
              https://logs.s3.us-east-1.amazonaws.com/c/d.json\n"
         );
+
+        Ok(())
     }
 
     #[test]
