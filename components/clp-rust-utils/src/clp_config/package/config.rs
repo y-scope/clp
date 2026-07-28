@@ -156,6 +156,28 @@ impl Default for Database {
     }
 }
 
+impl Database {
+    /// # Returns
+    ///
+    /// The archives table name (`<prefix><dataset>_archives`).
+    #[must_use]
+    pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
+        format!(
+            "{}{}_archives",
+            self.table_prefix,
+            resolve_dataset_name(dataset)
+        )
+    }
+
+    /// # Returns
+    ///
+    /// The datasets table name `<prefix>datasets`.
+    #[must_use]
+    pub fn datasets_table_name(&self) -> String {
+        format!("{}datasets", self.table_prefix)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct ApiServer {
