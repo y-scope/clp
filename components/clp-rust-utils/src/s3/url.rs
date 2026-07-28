@@ -61,11 +61,7 @@ pub fn generate_s3_url(
     let Some(captures) = ENDPOINT_URL_REGEX.captures(endpoint_url) else {
         return Err(Error::UnsupportedS3Endpoint(endpoint_url.to_owned()));
     };
-    let s3_prefix = if captures.name(S3_GROUP).is_some() {
-        "s3."
-    } else {
-        ""
-    };
+    let s3_prefix = captures.name(S3_GROUP).map_or("", |_| "s3.");
     let scheme = captures
         .name(SCHEME_GROUP)
         .expect("scheme should be unconditionally captured")
