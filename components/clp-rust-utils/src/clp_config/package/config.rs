@@ -143,47 +143,6 @@ pub struct Database {
     pub table_prefix: String,
 }
 
-impl Database {
-    /// # Returns
-    ///
-    /// The archives table name `<prefix><dataset>_archives`, where a `None` dataset resolves to
-    /// `default`.
-    #[must_use]
-    pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
-        self.archive_metadata_table_name("archives", dataset)
-    }
-
-    /// # Returns
-    ///
-    /// The column-metadata table name `<prefix><dataset>_column_metadata`, where a `None` dataset
-    /// resolves to `default`.
-    #[must_use]
-    pub fn column_metadata_table_name(&self, dataset: Option<&str>) -> String {
-        self.archive_metadata_table_name("column_metadata", dataset)
-    }
-
-    /// Builds a per-dataset archive-metadata table name.
-    ///
-    /// # Returns
-    ///
-    /// `<prefix><dataset>_<suffix>`, where `dataset` defaults to the `CLP_S` default.
-    fn archive_metadata_table_name(&self, suffix: &str, dataset: Option<&str>) -> String {
-        format!(
-            "{}{}_{suffix}",
-            self.table_prefix,
-            resolve_dataset_name(dataset)
-        )
-    }
-
-    /// # Returns
-    ///
-    /// The datasets table name `<prefix>datasets`.
-    #[must_use]
-    pub fn datasets_table_name(&self) -> String {
-        format!("{}datasets", self.table_prefix)
-    }
-}
-
 impl Default for Database {
     fn default() -> Self {
         /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`.
@@ -195,6 +154,40 @@ impl Default for Database {
             names: ClpDbNames::default(),
             table_prefix: CLP_METADATA_TABLE_PREFIX.to_owned(),
         }
+    }
+}
+
+impl Database {
+    /// # Returns
+    ///
+    /// The archives table name (`<prefix><dataset>_archives`).
+    #[must_use]
+    pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
+        format!(
+            "{}{}_archives",
+            self.table_prefix,
+            resolve_dataset_name(dataset)
+        )
+    }
+
+    /// # Returns
+    ///
+    /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
+    #[must_use]
+    pub fn column_metadata_table_name(&self, dataset: Option<&str>) -> String {
+        format!(
+            "{}{}_column_metadata",
+            self.table_prefix,
+            resolve_dataset_name(dataset)
+        )
+    }
+
+    /// # Returns
+    ///
+    /// The datasets table name `<prefix>datasets`.
+    #[must_use]
+    pub fn datasets_table_name(&self) -> String {
+        format!("{}datasets", self.table_prefix)
     }
 }
 
