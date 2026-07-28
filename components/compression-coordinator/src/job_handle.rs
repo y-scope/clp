@@ -489,7 +489,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         tracing::info!(
             compression_job_id = % self.compression_job_id,
             spider_job_id = % spider_job_id,
-            outcome = ?outcome,
+            outcome = ? outcome,
             "Compression job reached a terminal state.",
         );
 
