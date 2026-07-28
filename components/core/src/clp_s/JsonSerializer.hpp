@@ -45,6 +45,11 @@ public:
     std::string& get_serialized_string() { return m_json_string; }
 
     /**
+     * @return The SIMD JSON string escaper used for escaping column values.
+     */
+    SimdJsonStringEscaper& get_string_value_escaper() { return m_string_value_escaper; }
+
+    /**
      * Resets the JsonSerializer for the next record.
      */
     void reset() {

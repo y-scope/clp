@@ -10,8 +10,10 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
@@ -23,12 +25,39 @@
 #include <clp_s/Schema.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/Projection.hpp>
+#include <clp_s/Utils.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
 #include <clpp/LogShapeUtils.hpp>
 
 namespace clp_s {
 namespace {
+/**
+ * Collapses `%%` to `%` in a shape text segment, JSON-escapes the result, and
+ * appends it as a string segment to the compiled shape.
+ *
+ * @param text The escaped shape text.
+ * @param out The compiled shape to append the segment to.
+ */
+auto add_literal_segment(std::string_view text, SchemaReader::CompiledShape& out) -> void;
+
+/**
+ * Builds a map from column name to the list of reader indices (in schema order) for all
+ * column-consuming (leaf rule) nodes in the given schema sub-span.
+ *
+ * @param schema_sub_span The schema sub-span to scan.
+ * @param tree The global schema tree.
+ * @param start_column_reader_idx The starting index in `m_columns` for the first column in the
+ * sub-span.
+ * @return A map from column name to reader indices, and the next reader index after the last
+ * consumed column.
+ */
+[[nodiscard]] auto build_name_to_reader_indices(
+        std::span<SchemaNode::id_t> schema_sub_span,
+        SchemaTree const& tree,
+        size_t start_column_reader_idx
+) -> std::pair<std::unordered_map<std::string, std::vector<size_t>>, size_t>;
+
 /**
  * Counts the number of column-consuming entries in a schema span, including entries within
  * nested unordered-object scopes.
@@ -56,6 +85,36 @@ find_log_type_id_in_schema(std::span<SchemaNode::id_t> schema, SchemaTree const&
  * reader.
  */
 [[nodiscard]] auto node_type_consumes_column(NodeType type) -> bool;
+
+auto add_literal_segment(std::string_view text, SchemaReader::CompiledShape& out) -> void {
+    auto const unescaped{clpp::unescape_shape_text(text)};
+    std::string escaped;
+    StringUtils::escape_json_string(escaped, unescaped);
+    out.segments.emplace_back(std::move(escaped));
+}
+
+[[nodiscard]] auto build_name_to_reader_indices(
+        std::span<SchemaNode::id_t> schema_sub_span,
+        SchemaTree const& tree,
+        size_t start_column_reader_idx
+) -> std::pair<std::unordered_map<std::string, std::vector<size_t>>, size_t> {
+    std::unordered_map<std::string, std::vector<size_t>> name_to_reader_indices;
+    size_t column_reader_idx{start_column_reader_idx};
+    for (auto global_column_id : schema_sub_span) {
+        if (Schema::schema_entry_is_unordered_object(global_column_id)) {
+            continue;
+        }
+        auto const& node{tree.get_node(global_column_id)};
+        if (false == node_type_consumes_column(node.get_type())) {
+            continue;
+        }
+        name_to_reader_indices[tree.build_column_name(global_column_id)].push_back(
+                column_reader_idx
+        );
+        ++column_reader_idx;
+    }
+    return {std::move(name_to_reader_indices), column_reader_idx};
+}
 
 [[nodiscard]] auto
 count_column_consuming_entries(std::span<SchemaNode::id_t> schema, SchemaTree const& tree)
@@ -311,10 +370,11 @@ auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
                 break;
             }
             case JsonSerializer::Op::AddReconstructedLogShapeField: {
-                auto const& target{m_reconstruction_targets.at(reconstruction_target_index)};
+                auto const& shape{m_reconstruction_targets.at(reconstruction_target_index)};
                 ++reconstruction_target_index;
                 m_json_serializer.append_key();
-                m_json_serializer.append_quoted_value(reconstruct_log_shape(target, message_index));
+                auto& buffer{m_json_serializer.get_serialized_string()};
+                reconstruct_compiled_shape(shape, message_index, buffer);
                 break;
             }
             case JsonSerializer::Op::AddLiteralField: {
@@ -1101,7 +1161,7 @@ auto SchemaReader::emit_parent_rule_arrays(
             if (emit_text) {
                 m_json_serializer.add_special_key("text");
                 m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-                m_reconstruction_targets.push_back(make_reconstruction_target(
+                m_reconstruction_targets.push_back(compile_shape(
                         log_shape_id,
                         parent_rule_column_name,
                         occurrence.start_column_reader_idx,
@@ -1244,9 +1304,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     if (m_extract_mode) {
         m_json_serializer.add_special_key(key_name);
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.push_back(
-                make_reconstruction_target(log_shape_id, "", column_start, schema)
-        );
+        m_reconstruction_targets.push_back(compile_shape(log_shape_id, "", column_start, schema));
         auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
                 schema,
                 log_msg_node_id,
@@ -1263,9 +1321,7 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     if (emit_text) {
         m_json_serializer.add_special_key("text");
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.push_back(
-                make_reconstruction_target(log_shape_id, "", column_start, schema)
-        );
+        m_reconstruction_targets.push_back(compile_shape(log_shape_id, "", column_start, schema));
     }
 
     if (has_shape) {
@@ -1308,12 +1364,14 @@ auto SchemaReader::narrow_log_shape_to_parent_rule(
     return {};
 }
 
-auto SchemaReader::make_reconstruction_target(
+auto SchemaReader::compile_shape(
         clpp::log_shape_id_t log_shape_id,
         std::string_view parent_rule_column_name,
         size_t start_column_reader_idx,
         std::span<SchemaNode::id_t> schema_sub_span
-) -> ReconstructionTarget {
+) -> CompiledShape {
+    CompiledShape compiled_shape;
+
     std::string_view shape_to_scan;
     if (nullptr != m_log_shape_dict) {
         auto const& log_shape{m_log_shape_dict->get_value(log_shape_id)};
@@ -1327,68 +1385,81 @@ auto SchemaReader::make_reconstruction_target(
         }
     }
 
-    std::vector<ReconstructionTarget::Column> sub_span_cols;
-    size_t column_reader_idx{start_column_reader_idx};
-    for (auto global_column_id : schema_sub_span) {
-        if (Schema::schema_entry_is_unordered_object(global_column_id)) {
-            continue;
-        }
-        auto const& node{m_global_schema_tree->get_node(global_column_id)};
-        if (false == node_type_consumes_column(node.get_type())) {
-            continue;
-        }
-        sub_span_cols.push_back(
-                ReconstructionTarget::Column{
-                        .name = m_global_schema_tree->build_column_name(global_column_id),
-                        .reader_idx = column_reader_idx
-                }
-        );
-        ++column_reader_idx;
-    }
-
-    return ReconstructionTarget{shape_to_scan, std::move(sub_span_cols)};
-}
-
-auto SchemaReader::reconstruct_log_shape(ReconstructionTarget const& target, uint64_t message_index)
-        -> std::string {
-    auto const shape_to_scan{target.shape_to_scan};
     if (shape_to_scan.empty()) {
-        return {};
+        return compiled_shape;
     }
 
-    m_column_name_to_values.clear();
-    for (auto const& column_target : target.sub_span_columns) {
-        std::string value;
-        m_columns.at(column_target.reader_idx)
-                ->extract_string_value_into_buffer(message_index, value);
-        m_column_name_to_values[column_target.name].push_back(std::move(value));
-    }
+    auto [name_to_reader_indices, next_reader_idx]{build_name_to_reader_indices(
+            schema_sub_span,
+            *m_global_schema_tree,
+            start_column_reader_idx
+    )};
+    std::unordered_map<std::string, size_t> name_to_next_reader_idx;
 
-    m_column_name_to_next_index.clear();
-    std::string raw_text;
     size_t pos{0};
     while (pos < shape_to_scan.size()) {
         auto pct{clpp::find_placeholder_delimiter(shape_to_scan, pos)};
         if (std::string_view::npos == pct) {
-            raw_text.append(clpp::unescape_shape_text(shape_to_scan.substr(pos)));
+            add_literal_segment(shape_to_scan.substr(pos), compiled_shape);
             break;
         }
-        raw_text.append(clpp::unescape_shape_text(shape_to_scan.substr(pos, pct - pos)));
+        if (pct > pos) {
+            add_literal_segment(shape_to_scan.substr(pos, pct - pos), compiled_shape);
+        }
         auto end_pct{shape_to_scan.find('%', pct + 1)};
         if (std::string_view::npos == end_pct) {
-            raw_text.append(clpp::unescape_shape_text(shape_to_scan.substr(pct)));
+            add_literal_segment(shape_to_scan.substr(pct), compiled_shape);
             break;
         }
-        auto const column_name{std::string(shape_to_scan.substr(pct + 1, end_pct - pct - 1))};
-        auto it{m_column_name_to_values.find(column_name)};
-        auto& next_index{m_column_name_to_next_index[column_name]};
-        if (m_column_name_to_values.end() != it && next_index < it->second.size()) {
-            raw_text.append(it->second.at(next_index++));
+        auto const column_name{shape_to_scan.substr(pct + 1, end_pct - pct - 1)};
+        auto const column_name_str{std::string(column_name)};
+        auto it{name_to_reader_indices.find(column_name_str)};
+        if (name_to_reader_indices.end() != it) {
+            auto& next_reader_idx{name_to_next_reader_idx[column_name_str]};
+            if (next_reader_idx < it->second.size()) {
+                auto reader_idx{it->second.at(next_reader_idx++)};
+                compiled_shape.segments.emplace_back(m_columns.at(reader_idx));
+            } else {
+                std::string literal{"%"};
+                literal.append(column_name);
+                literal.push_back('%');
+                compiled_shape.segments.emplace_back(std::move(literal));
+            }
         } else {
-            raw_text.append("%").append(column_name).append("%");
+            std::string literal{"%"};
+            literal.append(column_name);
+            literal.push_back('%');
+            compiled_shape.segments.emplace_back(std::move(literal));
         }
         pos = end_pct + 1;
     }
-    return raw_text;
+
+    return compiled_shape;
+}
+
+auto SchemaReader::reconstruct_compiled_shape(
+        CompiledShape const& shape,
+        uint64_t message_index,
+        std::string& buffer
+) -> void {
+    buffer.push_back('"');
+    for (auto const& segment : shape.segments) {
+        std::visit(
+                [&](auto const& seg) -> void {
+                    using T = std::decay_t<decltype(seg)>;
+                    if constexpr (std::is_same_v<T, std::string>) {
+                        buffer.append(seg);
+                    } else if constexpr (std::is_same_v<T, BaseColumnReader*>) {
+                        seg->extract_escaped_string_value_into_buffer(
+                                message_index,
+                                buffer,
+                                m_json_serializer.get_string_value_escaper()
+                        );
+                    }
+                },
+                segment
+        );
+    }
+    buffer.append("\",");
 }
 }  // namespace clp_s
