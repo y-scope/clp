@@ -83,6 +83,9 @@ impl From<clp_rust_utils::Error> for ClientError {
             clp_rust_utils::Error::MsgpackEncode(_) | clp_rust_utils::Error::SerdeYaml(_) => {
                 Self::MalformedData
             }
+            clp_rust_utils::Error::UnsupportedS3Endpoint(_) => {
+                Self::InvalidInput(value.to_string())
+            }
             clp_rust_utils::Error::Io(error) => error.into(),
             clp_rust_utils::Error::Sqlx(error) => error.into(),
             clp_rust_utils::Error::TelemetryExporterBuildError(error) => Self::Telemetry(error),
