@@ -1,0 +1,16 @@
+[package]
+name = "clp-tdl-package"
+version = "0.13.1-dev"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "1.0.100"
+clp-rust-utils = { path = "../clp-rust-utils" }
+serde = { version = "1.0.228", features = ["derive"] }
+spider-tdl = { git = "https://github.com/y-scope/spider.git", branch = "main", features = ["derive"] }
+tokio = { version = "1.49.0", features = ["net", "rt-multi-thread", "time"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
