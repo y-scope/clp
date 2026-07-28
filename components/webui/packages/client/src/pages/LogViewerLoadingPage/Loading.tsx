@@ -125,6 +125,7 @@ const Loading = ({
             className={"flex h-full flex-col items-center bg-background text-foreground"}
         >
             <Progress
+                aria-label={"Query loading progress"}
                 className={cn(
                     "w-full",
                     null !== errorMsg && "[--primary:var(--destructive)]"
