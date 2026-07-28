@@ -50,6 +50,7 @@ helm install test "${script_dir}" \
     --set "scheduling.queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
     --set "scheduling.reducer.replicas=${REDUCER_REPLICAS}" \
     --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
+    $(get_service_exposure_helm_args) \
     $(get_presto_helm_args) \
     $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
 

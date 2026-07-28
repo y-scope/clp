@@ -449,6 +449,39 @@ Then install with the values file:
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f resources.yaml
 ```
 
+### Service exposure
+
+The Web UI, API server, log ingestor, MCP server, and bundled Presto coordinator each have a
+`serviceType`, defaulting to `ClusterIP` for cloud and multi-tenant clusters behind a
+platform-managed ingress layer.
+
+For local or simple clusters without an ingress layer, set `serviceType` to `NodePort` on each
+Service that should be reachable through a node address; `port` then specifies its `nodePort`:
+
+```{code-block} yaml
+:caption: nodeport.yaml
+
+clpConfig:
+  webui:
+    serviceType: "NodePort"
+    port: 30000
+
+  api_server:
+    serviceType: "NodePort"
+    port: 30301
+```
+
+The same keys are available under `log_ingestor`, `mcp_server`, and `presto` (for bundled Presto,
+`port` is the coordinator's `nodePort` in `NodePort` mode; otherwise it's the external endpoint
+port). NodePorts must be unique across deployments sharing nodes.
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f nodeport.yaml
+```
+
+Database and results-cache NodePorts are unaffected; they remain controlled by
+`allowHostAccessForSbinScripts`.
+
 ---
 
 ## Verifying the deployment
@@ -502,8 +535,15 @@ kubectl get jobs
 
 ### Access the Web UI
 
-Once all pods are ready, you access the CLP Web UI at: `http://<node-ip>:30000` (the value of
-`clpConfig.webui.port`)
+With `clpConfig.webui.serviceType: "NodePort"`, access the CLP Web UI at `http://<node-ip>:30000`
+(the value of `clpConfig.webui.port`). Otherwise, forward the Web UI's `ClusterIP` Service to your
+machine:
+
+```bash
+kubectl port-forward service/clp-webui 4000:4000
+```
+
+Then open [http://localhost:4000](http://localhost:4000).
 
 ---
 
