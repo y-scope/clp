@@ -973,8 +973,11 @@ name = "clp-tdl-package"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
+ "aws-sdk-s3",
  "clp-rust-utils",
+ "non-empty-string",
  "serde",
+ "serde_json",
  "spider-tdl",
  "tokio",
  "tracing",
@@ -3860,7 +3863,7 @@ dependencies = [
 [[package]]
 name = "spider-client"
 version = "0.1.0"
-source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+source = "git+https://github.com/y-scope/spider.git?branch=main#c983f4a36096c15517151028f3310a345eaf03c0"
 dependencies = [
  "spider-core",
  "spider-proto-rust",
@@ -3873,7 +3876,7 @@ dependencies = [
 [[package]]
 name = "spider-core"
 version = "0.1.0"
-source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+source = "git+https://github.com/y-scope/spider.git?branch=main#c983f4a36096c15517151028f3310a345eaf03c0"
 dependencies = [
  "non-empty-string",
  "rand 0.9.4",
@@ -3892,7 +3895,7 @@ dependencies = [
 [[package]]
 name = "spider-derive"
 version = "0.1.0"
-source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+source = "git+https://github.com/y-scope/spider.git?branch=main#c983f4a36096c15517151028f3310a345eaf03c0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3902,7 +3905,7 @@ dependencies = [
 [[package]]
 name = "spider-proto-rust"
 version = "0.1.0"
-source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+source = "git+https://github.com/y-scope/spider.git?branch=main#c983f4a36096c15517151028f3310a345eaf03c0"
 dependencies = [
  "prost",
  "spider-core",
@@ -3917,7 +3920,7 @@ dependencies = [
 [[package]]
 name = "spider-tdl"
 version = "0.1.0"
-source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+source = "git+https://github.com/y-scope/spider.git?branch=main#c983f4a36096c15517151028f3310a345eaf03c0"
 dependencies = [
  "const-str",
  "rmp-serde",
@@ -3930,7 +3933,7 @@ dependencies = [
 [[package]]
 name = "spider-tdl-derive"
 version = "0.1.0"
-source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+source = "git+https://github.com/y-scope/spider.git?branch=main#c983f4a36096c15517151028f3310a345eaf03c0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3940,7 +3943,7 @@ dependencies = [
 [[package]]
 name = "spider-utils"
 version = "0.1.0"
-source = "git+https://github.com/y-scope/spider.git?branch=main#983dde9bc946c1683ffd202055924c68ae3a3492"
+source = "git+https://github.com/y-scope/spider.git?branch=main#c983f4a36096c15517151028f3310a345eaf03c0"
 dependencies = [
  "non-empty-string",
  "rand 0.9.4",
