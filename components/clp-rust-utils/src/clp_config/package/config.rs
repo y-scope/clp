@@ -147,7 +147,6 @@ impl Default for Database {
     fn default() -> Self {
         /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`.
         const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
-
         Self {
             host: "localhost".to_owned(),
             port: 3306,
