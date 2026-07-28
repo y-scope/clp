@@ -535,9 +535,9 @@ kubectl get jobs
 
 ### Access the Web UI
 
-With `clpConfig.webui.serviceType: "NodePort"`, access the CLP Web UI at `http://<node-ip>:30000`
-(the value of `clpConfig.webui.port`). Otherwise, forward the Web UI's `ClusterIP` Service to your
-machine:
+With `clpConfig.webui.serviceType: "NodePort"`, access the CLP Web UI at
+`http://<node-ip>:<webui-node-port>`, where `<webui-node-port>` is the value of
+`clpConfig.webui.port`. Otherwise, forward the Web UI's `ClusterIP` Service to your machine:
 
 ```bash
 kubectl port-forward service/clp-webui 4000:4000
