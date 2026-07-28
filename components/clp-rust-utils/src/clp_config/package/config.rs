@@ -1,6 +1,11 @@
+use std::path::{Path, PathBuf};
+
 use serde::Deserialize;
 
-use crate::clp_config::{AwsAuthentication, S3Config};
+use crate::{
+    clp_config::{AwsAuthentication, S3Config},
+    dataset::resolve_dataset_name,
+};
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -44,13 +49,55 @@ impl Default for Config {
 }
 
 /// Configuration for the Spider task executor.
-///
-/// # NOTE
-///
-/// This type is a scaffolding config definition.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
-pub struct SpiderTaskExecutorConfig {}
+pub struct SpiderTaskExecutorConfig {
+    pub package: Package,
+    pub archive_output: ArchiveOutput,
+    pub tmp_directory: String,
+    pub database: Database,
+}
+
+impl SpiderTaskExecutorConfig {
+    /// Resolves `tmp_directory` against `clp_home`.
+    ///
+    /// # Returns
+    ///
+    /// `tmp_directory` unchanged if it is already absolute; otherwise, it is joined with
+    /// `clp_home`.
+    #[must_use]
+    pub fn abs_tmp_directory(&self, clp_home: &Path) -> PathBuf {
+        make_config_path_absolute(clp_home, &self.tmp_directory)
+    }
+
+    /// Resolves the archive-output storage's local directory against `clp_home`.
+    ///
+    /// # Returns
+    ///
+    /// The storage's local directory (`directory` for `Fs`, `staging_directory` for `S3`) unchanged
+    /// if it is already absolute; otherwise, it is joined with `clp_home`.
+    #[must_use]
+    pub fn abs_archive_output_staging(&self, clp_home: &Path) -> PathBuf {
+        let directory = match &self.archive_output.storage {
+            ArchiveOutputStorage::Fs { directory } => directory,
+            ArchiveOutputStorage::S3 {
+                staging_directory, ..
+            } => staging_directory,
+        };
+        make_config_path_absolute(clp_home, directory)
+    }
+}
+
+impl Default for SpiderTaskExecutorConfig {
+    fn default() -> Self {
+        Self {
+            package: Package::default(),
+            database: Database::default(),
+            archive_output: ArchiveOutput::default(),
+            tmp_directory: "var/tmp".to_owned(),
+        }
+    }
+}
 
 /// Database names for CLP components.
 ///
@@ -83,20 +130,28 @@ impl Default for ClpDbNames {
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
+/// * `table_prefix` is a fixed constant mirroring `CLP_METADATA_TABLE_PREFIX` (`"clp_"`) and is
+///   excluded from (de)serialization.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Database {
     pub host: String,
     pub port: u16,
     pub names: ClpDbNames,
+
+    #[serde(skip)]
+    pub table_prefix: String,
 }
 
 impl Default for Database {
     fn default() -> Self {
+        /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`.
+        const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
         Self {
             host: "localhost".to_owned(),
             port: 3306,
             names: ClpDbNames::default(),
+            table_prefix: CLP_METADATA_TABLE_PREFIX.to_owned(),
         }
     }
 }
@@ -260,6 +315,7 @@ impl Default for LogIngestor {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct ArchiveOutput {
+    pub storage: ArchiveOutputStorage,
     pub target_archive_size: u64,
     pub target_dictionaries_size: u64,
     pub target_encoded_file_size: u64,
@@ -267,14 +323,58 @@ pub struct ArchiveOutput {
     pub compression_level: u8,
 }
 
+impl ArchiveOutput {
+    /// Derives the archive storage directory for a dataset.
+    ///
+    /// # Returns
+    ///
+    /// The dataset's storage base (`s3_config.key_prefix` for S3, `directory` for `Fs`) joined with
+    /// `dataset`, where a `None` dataset resolves to `default`.
+    #[must_use]
+    pub fn dataset_archive_storage_directory(&self, dataset: Option<&str>) -> String {
+        let base = match &self.storage {
+            ArchiveOutputStorage::Fs { directory } => directory.as_str(),
+            ArchiveOutputStorage::S3 { s3_config, .. } => s3_config.key_prefix.as_str(),
+        };
+        Path::new(base)
+            .join(resolve_dataset_name(dataset))
+            .to_string_lossy()
+            .into_owned()
+    }
+}
+
 impl Default for ArchiveOutput {
     fn default() -> Self {
         Self {
+            storage: ArchiveOutputStorage::default(),
             target_archive_size: 256 * 1024 * 1024,
             target_dictionaries_size: 32 * 1024 * 1024,
             target_encoded_file_size: 256 * 1024 * 1024,
             target_segment_size: 256 * 1024 * 1024,
             compression_level: 3,
+        }
+    }
+}
+
+/// Mirror of `clp_py_utils.clp_config.ArchiveFsStorage` | `ArchiveS3Storage`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(tag = "type")]
+pub enum ArchiveOutputStorage {
+    #[serde(rename = "fs")]
+    Fs { directory: String },
+
+    #[serde(rename = "s3")]
+    S3 {
+        #[serde(default = "default_archive_staging_directory")]
+        staging_directory: String,
+        s3_config: S3Config,
+    },
+}
+
+impl Default for ArchiveOutputStorage {
+    fn default() -> Self {
+        Self::Fs {
+            directory: "var/data/archives".to_owned(),
         }
     }
 }
@@ -337,9 +437,32 @@ impl Default for Telemetry {
     }
 }
 
+/// # Returns
+///
+/// `path` unchanged if it is already absolute, otherwise joined with `root`.
+fn make_config_path_absolute(root: &Path, path: &str) -> PathBuf {
+    if Path::new(path).is_absolute() {
+        PathBuf::from(path)
+    } else {
+        root.join(path)
+    }
+}
+
+fn default_archive_staging_directory() -> String {
+    "var/data/staged-archives".to_owned()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::LogsInput;
+    use std::path::Path;
+
+    use super::{
+        ArchiveOutput,
+        ArchiveOutputStorage,
+        Database,
+        LogsInput,
+        SpiderTaskExecutorConfig,
+    };
 
     #[test]
     fn deserialize_logs_input_s3_config() {
@@ -416,6 +539,149 @@ mod tests {
                 assert_eq!(config.directory, DIRECTORY);
             }
             LogsInput::S3 { .. } => panic!("Expected Fs"),
+        }
+    }
+
+    #[test]
+    fn dataset_archive_storage_directory_fs() {
+        let archive_output = ArchiveOutput {
+            storage: ArchiveOutputStorage::Fs {
+                directory: "/var/data/archives".to_owned(),
+            },
+            ..ArchiveOutput::default()
+        };
+
+        assert_eq!(
+            archive_output.dataset_archive_storage_directory(Some("mydataset")),
+            "/var/data/archives/mydataset"
+        );
+        assert_eq!(
+            archive_output.dataset_archive_storage_directory(None),
+            "/var/data/archives/default"
+        );
+    }
+
+    #[test]
+    fn dataset_archive_storage_directory_s3() {
+        use non_empty_string::NonEmptyString;
+
+        use crate::clp_config::{AwsAuthentication, S3Config};
+
+        let archive_output = ArchiveOutput {
+            storage: ArchiveOutputStorage::S3 {
+                staging_directory: "var/data/staged-archives".to_owned(),
+                s3_config: S3Config {
+                    bucket: NonEmptyString::try_from("bucket".to_string())
+                        .expect("bucket is non-empty"),
+                    region_code: None,
+                    key_prefix: NonEmptyString::try_from("prefix".to_string())
+                        .expect("key prefix is non-empty"),
+                    endpoint_url: None,
+                    aws_authentication: AwsAuthentication::Default,
+                },
+            },
+            ..ArchiveOutput::default()
+        };
+
+        assert_eq!(
+            archive_output.dataset_archive_storage_directory(Some("mydataset")),
+            "prefix/mydataset"
+        );
+        assert_eq!(
+            archive_output.dataset_archive_storage_directory(None),
+            "prefix/default"
+        );
+    }
+
+    #[test]
+    fn deserialize_database_ignores_provided_table_prefix() {
+        let database_json = serde_json::json!({
+            "host": "h",
+            "port": 3306,
+            "names": {
+                "clp": "clp-db",
+                "spider": "spider-db",
+            },
+            "table_prefix": "custom_"
+        });
+
+        let db = serde_json::from_str::<Database>(database_json.to_string().as_str())
+            .expect("failed to deserialize `Database` from JSON");
+
+        assert_eq!(db.table_prefix, "clp_");
+    }
+
+    #[test]
+    fn abs_tmp_directory_joins_relative_path() {
+        let config = SpiderTaskExecutorConfig {
+            tmp_directory: "var/tmp".to_owned(),
+            ..SpiderTaskExecutorConfig::default()
+        };
+
+        assert_eq!(
+            config.abs_tmp_directory(Path::new("/opt/clp")),
+            Path::new("/opt/clp/var/tmp")
+        );
+    }
+
+    #[test]
+    fn abs_tmp_directory_leaves_absolute_path_unchanged() {
+        let config = SpiderTaskExecutorConfig {
+            tmp_directory: "/abs/tmp".to_owned(),
+            ..SpiderTaskExecutorConfig::default()
+        };
+
+        assert_eq!(
+            config.abs_tmp_directory(Path::new("/opt/clp")),
+            Path::new("/abs/tmp")
+        );
+    }
+
+    #[test]
+    fn abs_archive_output_staging_joins_relative_s3_path() {
+        let config = s3_config_with_staging_directory("var/staged-archives");
+
+        assert_eq!(
+            config.abs_archive_output_staging(Path::new("/opt/clp")),
+            Path::new("/opt/clp/var/staged-archives")
+        );
+    }
+
+    #[test]
+    fn abs_archive_output_staging_leaves_absolute_s3_path_unchanged() {
+        let config = s3_config_with_staging_directory("/abs/staged-archives");
+
+        assert_eq!(
+            config.abs_archive_output_staging(Path::new("/opt/clp")),
+            Path::new("/abs/staged-archives")
+        );
+    }
+
+    /// # Returns
+    ///
+    /// A [`SpiderTaskExecutorConfig`] whose archive output is S3-backed with `staging_directory`.
+    fn s3_config_with_staging_directory(staging_directory: &str) -> SpiderTaskExecutorConfig {
+        use non_empty_string::NonEmptyString;
+
+        use crate::clp_config::{AwsAuthentication, S3Config};
+
+        SpiderTaskExecutorConfig {
+            archive_output: ArchiveOutput {
+                storage: ArchiveOutputStorage::S3 {
+                    staging_directory: staging_directory.to_owned(),
+                    s3_config: S3Config {
+                        bucket: NonEmptyString::try_from("bucket".to_string())
+                            .expect("bucket is non-empty"),
+                        region_code: None,
+                        key_prefix: NonEmptyString::try_from("prefix/".to_string())
+                            .expect("key prefix is non-empty"),
+                        endpoint_url: None,
+                        aws_authentication: AwsAuthentication::Default,
+                    },
+                },
+                ..ArchiveOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
         }
     }
 }
