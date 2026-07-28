@@ -48,10 +48,10 @@ use crate::common::{clp_home, runtime};
 /// Returns an error if:
 ///
 /// * A spawned archive finisher panics.
+/// * Forwards [`build_s3_logs_list`]'s return values on failure.
 /// * Forwards [`std::fs::write`]'s return values on failure.
-/// * Forwards [`std::fs::create_dir`]'s return values on failure.
 /// * Forwards [`extract_s3_output_config`]'s return values on failure.
-/// * Forwards [`run_log_converter`]'s return values on failure.
+/// * Forwards [`prepare_clp_s_input`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
 /// * Forwards [`ArchiveFinisher::finish`]'s return values on failure.
 pub(super) fn compress(
@@ -77,7 +77,7 @@ pub(super) fn compress(
 
     let mut tmp_file_deleter = TmpFileDeleter::new();
 
-    std::fs::write(&list_path, build_s3_logs_list(&input_source))
+    std::fs::write(&list_path, build_s3_logs_list(&input_source)?)
         .with_context(|| format!("failed to write S3 logs list to {}", list_path.display()))
         .inspect_err(|e| {
             tracing::error!(
@@ -309,7 +309,14 @@ fn build_s3_client(runtime: &tokio::runtime::Handle, s3_config: &S3Config) -> aw
 /// # Returns
 ///
 /// The newline-terminated list of object URLs, one per object key in `input_source`.
-fn build_s3_logs_list(input_source: &S3InputSource) -> String {
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * An object key in `input_source` is empty.
+/// * Forwards [`generate_s3_url`]'s return values on failure.
+fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
     let endpoint = input_source
         .endpoint_url
         .as_ref()
@@ -318,14 +325,20 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> String {
         .region_code
         .as_ref()
         .map(NonEmptyString::as_str);
-    let bucket = input_source.bucket.as_str();
 
     let mut list = String::new();
     for object_key in &input_source.object_keys {
-        list.push_str(&generate_s3_url(endpoint, region, bucket, object_key));
+        let object_key = NonEmptyString::try_from(object_key.clone())
+            .map_err(|_| anyhow::anyhow!("S3 object key must not be empty"))?;
+        list.push_str(&generate_s3_url(
+            endpoint,
+            region,
+            &input_source.bucket,
+            &object_key,
+        )?);
         list.push('\n');
     }
-    list
+    Ok(list)
 }
 
 /// Resolves the AWS credential env vars clp-s needs to access the S3 objects.
@@ -734,14 +747,15 @@ fn run_log_converter(
 ///
 /// Spawns clp-s with the resolved arguments and credential env vars, draining stderr on a dedicated
 /// thread to avoid a pipe deadlock while stdout is streamed line by line. Each stdout line is
-/// parsed into an [`ArchiveMetadata`] and forwarded to `on_archive`. If `on_archive` fails, clp-s
-/// is killed and reaped before the error is returned.
+/// parsed into an [`ArchiveMetadata`] and forwarded to `on_archive`. If reading a stdout line,
+/// parsing it, or `on_archive` fails, clp-s is killed and reaped before the error is returned.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * clp-s exits with a non-zero status.
+/// * A line cannot be read from clp-s's stdout.
 /// * Forwards `on_archive`'s return values on failure.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`parse_archive_stats`]'s return values on failure.
@@ -780,14 +794,20 @@ fn run_clp_s(
         .take()
         .expect("piped stdout should always be present");
     for line in BufReader::new(stdout).lines() {
-        let line = line.context("failed to read a line from clp-s stdout")?;
+        let line = match line.context("failed to read a line from clp-s stdout") {
+            Ok(line) => line,
+            Err(e) => {
+                let stderr = kill_clp_s_and_read_stderr(&mut child, stderr_reader);
+                tracing::error!(
+                    error = % e,
+                    stderr = % stderr,
+                    "Failed to read a line from clp-s stdout. Killing clp-s."
+                );
+                return Err(e.context("clp-s killed on error"));
+            }
+        };
         if let Err(e) = parse_archive_stats(&line).and_then(&mut on_archive) {
-            let _ = child.kill();
-            let _ = child.wait();
-            let stderr = match stderr_reader.join() {
-                Ok(Ok(stderr)) => stderr,
-                _ => "Failed to read clp-s stderr.".to_string(),
-            };
+            let stderr = kill_clp_s_and_read_stderr(&mut child, stderr_reader);
             tracing::error!(
                 error = % e,
                 archive_stats = % line,
@@ -812,6 +832,24 @@ fn run_clp_s(
         anyhow::bail!("clp-s exited with {status}");
     }
     Ok(())
+}
+
+/// Kills and reaps clp-s, then joins the stderr-draining thread and returns its captured output.
+///
+/// # Returns
+///
+/// clp-s's captured stderr, or a placeholder if the stderr-draining thread cannot be joined or
+/// read.
+fn kill_clp_s_and_read_stderr(
+    child: &mut std::process::Child,
+    stderr_reader: std::thread::JoinHandle<std::io::Result<String>>,
+) -> String {
+    let _ = child.kill();
+    let _ = child.wait();
+    match stderr_reader.join() {
+        Ok(Ok(stderr)) => stderr,
+        _ => "Failed to read clp-s stderr.".to_string(),
+    }
 }
 
 #[cfg(test)]
@@ -844,7 +882,7 @@ mod tests {
     };
 
     #[test]
-    fn build_s3_logs_list_default_endpoint() {
+    fn build_s3_logs_list_default_endpoint() -> anyhow::Result<()> {
         let input_source = S3InputSource {
             endpoint_url: None,
             region_code: Some(
@@ -857,10 +895,12 @@ mod tests {
         };
 
         assert_eq!(
-            build_s3_logs_list(&input_source),
+            build_s3_logs_list(&input_source)?,
             "https://logs.s3.us-east-1.amazonaws.com/a/b.json\n\
              https://logs.s3.us-east-1.amazonaws.com/c/d.json\n"
         );
+
+        Ok(())
     }
 
     #[test]
