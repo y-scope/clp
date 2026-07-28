@@ -15,3 +15,18 @@ pub static VALID_DATASET_NAME_REGEX: LazyLock<Regex> =
 pub fn resolve_dataset_name(dataset: Option<&str>) -> &str {
     dataset.unwrap_or(CLP_DEFAULT_DATASET_NAME)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{CLP_DEFAULT_DATASET_NAME, resolve_dataset_name};
+
+    #[test]
+    fn resolve_dataset_name_passes_through_some() {
+        assert_eq!(resolve_dataset_name(Some("mydataset")), "mydataset");
+    }
+
+    #[test]
+    fn resolve_dataset_name_defaults_none_to_default() {
+        assert_eq!(resolve_dataset_name(None), CLP_DEFAULT_DATASET_NAME);
+    }
+}

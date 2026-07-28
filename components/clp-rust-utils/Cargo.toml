@@ -8,6 +8,7 @@ aws-config = "1.8.12"
 aws-sdk-s3 = "1.121.0"
 aws-sdk-sqs = "1.92.0"
 brotli = "8.0.2"
+const_format = "0.2.35"
 non-empty-string = { version = "0.2.6", features = ["serde"] }
 num_enum = "0.7.5"
 opentelemetry = { version = "0.32.0" }
