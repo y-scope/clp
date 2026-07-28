@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
-FROM quay.io/pypa/manylinux_2_28_x86_64
+# Multi-arch base image (amd64, arm64, ...). Build with `--platform` to select the
+# target architecture; see build.sh (PLATFORM env var for local cross-builds).
+FROM quay.io/pypa/manylinux_2_28
 
 WORKDIR /root
 
