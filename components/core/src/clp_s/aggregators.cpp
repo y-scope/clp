@@ -21,27 +21,6 @@ using std::string_view;
 namespace clp_s {
 namespace {
 /**
- * Tokenizes an aggregation's target field into its key path.
- * @param field
- * @param field_path Returns the path's keys.
- * @throws std::invalid_argument if `field` is malformed, or if it names a non-default namespace.
- */
-auto tokenize_aggregation_field(string_view field, std::vector<string>& field_path) -> void {
-    string descriptor_namespace;
-    if (false
-        == search::ast::tokenize_column_descriptor(string{field}, field_path, descriptor_namespace))
-    {
-        throw std::invalid_argument("Invalid aggregation field: " + string{field});
-    }
-    if (false == descriptor_namespace.empty()) {
-        throw std::invalid_argument(
-                "The aggregation field must be in the default namespace; namespaced fields (e.g. "
-                "the auto-generated \"@\" namespace) are not supported."
-        );
-    }
-}
-
-/**
  * Parses `message` as JSON and locates the value at `field_path`.
  * @param message A matched record, marshalled to a JSON string.
  * @param field_path
@@ -49,6 +28,26 @@ auto tokenize_aggregation_field(string_view field, std::vector<string>& field_pa
  * @return The value at `field_path`.
  * @return nullptr if `message` isn't valid JSON, or if `field_path` doesn't resolve to a value.
  */
+auto
+find_field_value(string_view message, std::vector<string> const& field_path, nlohmann::json& doc)
+        -> nlohmann::json const*;
+
+/**
+ * Converts a scalar JSON value to an `AggregationValue`.
+ * @param value
+ * @return `value` as an `AggregationValue` if it's an integer, float, string, or boolean.
+ * @return std::nullopt otherwise.
+ */
+auto to_aggregation_value(nlohmann::json const& value) -> std::optional<AggregationValue>;
+
+/**
+ * Tokenizes an aggregation's target field into its key path.
+ * @param field
+ * @return Returns the path's keys.
+ * @throws std::invalid_argument if `field` is malformed, or if it names a non-default namespace.
+ */
+auto tokenize_aggregation_field(string_view field) -> std::vector<string>;
+
 auto
 find_field_value(string_view message, std::vector<string> const& field_path, nlohmann::json& doc)
         -> nlohmann::json const* {
@@ -72,12 +71,6 @@ find_field_value(string_view message, std::vector<string> const& field_path, nlo
     return current;
 }
 
-/**
- * Converts a scalar JSON value to an `AggregationValue`.
- * @param value
- * @return `value` as an `AggregationValue` if it's an integer, float, string, or boolean.
- * @return std::nullopt otherwise.
- */
 auto to_aggregation_value(nlohmann::json const& value) -> std::optional<AggregationValue> {
     if (value.is_number_integer()) {
         return value.get<int64_t>();
@@ -92,6 +85,23 @@ auto to_aggregation_value(nlohmann::json const& value) -> std::optional<Aggregat
         return value.get<bool>();
     }
     return std::nullopt;
+}
+
+auto tokenize_aggregation_field(string_view field) -> std::vector<string> {
+    std::vector<string> field_path;
+    string descriptor_namespace;
+    if (false
+        == search::ast::tokenize_column_descriptor(string{field}, field_path, descriptor_namespace))
+    {
+        throw std::invalid_argument("Invalid aggregation field: " + string{field});
+    }
+    if (false == descriptor_namespace.empty()) {
+        throw std::invalid_argument(
+                "The aggregation field must be in the default namespace; namespaced fields (e.g. "
+                "the auto-generated \"@\" namespace) are not supported."
+        );
+    }
+    return field_path;
 }
 }  // namespace
 
@@ -118,9 +128,8 @@ auto CountByTimeAggregator::get_results() const -> std::vector<AggregationResult
 
 MinMaxAggregator::MinMaxAggregator(bool find_max, string_view field)
         : m_find_max{find_max},
-          m_field{field} {
-    tokenize_aggregation_field(field, m_field_path);
-}
+          m_field{field},
+          m_field_path{tokenize_aggregation_field(field)} {}
 
 auto MinMaxAggregator::beats_extreme(Extreme candidate) const -> bool {
     auto const& current{m_extreme.value()};
@@ -166,9 +175,9 @@ auto MinMaxAggregator::get_results() const -> std::vector<AggregationResult> {
     return {std::move(result)};
 }
 
-UniqueAggregator::UniqueAggregator(string_view field) : m_field{field} {
-    tokenize_aggregation_field(field, m_field_path);
-}
+UniqueAggregator::UniqueAggregator(string_view field)
+        : m_field{field},
+          m_field_path{tokenize_aggregation_field(field)} {}
 
 auto UniqueAggregator::add_record(string_view message, epochtime_t) -> void {
     nlohmann::json doc;
