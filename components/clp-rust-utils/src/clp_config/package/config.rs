@@ -171,6 +171,18 @@ impl Database {
 
     /// # Returns
     ///
+    /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
+    #[must_use]
+    pub fn column_metadata_table_name(&self, dataset: Option<&str>) -> String {
+        format!(
+            "{}{}_column_metadata",
+            self.table_prefix,
+            resolve_dataset_name(dataset)
+        )
+    }
+
+    /// # Returns
+    ///
     /// The datasets table name `<prefix>datasets`.
     #[must_use]
     pub fn datasets_table_name(&self) -> String {
