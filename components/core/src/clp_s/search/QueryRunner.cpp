@@ -4,7 +4,6 @@
 #include <utility>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "../../clp/Defs.h"
@@ -916,7 +915,6 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
 
             // search on log type dictionary
             clp::epochtime_t placeholder_timestamp{};
-            log_surgeon::lexers::ByteLexer placeholder_lexer;
             m_string_query_map.emplace(
                     query_string,
                     clp::GrepCore::process_raw_query(
@@ -926,8 +924,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                             placeholder_timestamp,
                             placeholder_timestamp,
                             m_ignore_case,
-                            placeholder_lexer,
-                            true
+                            nullptr
                     )
             );
         }

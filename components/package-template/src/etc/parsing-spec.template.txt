@@ -1,0 +1,67 @@
+delimiters:\ \t\r\n!"#$%&'()*,:;<=>?@[]^_`{|}~
+
+!date:\d{4}[/\-]?\d{2}[/\-]?\d{2}
+!time:\d{2}:\d{2}:\d{2}([,\.]\d+)?
+
+# E.g. 2015-01-31T15:50:45.392
+# E.g. 2015-01-31T15:50:45,392
+# E.g. 2015-01-31 15:50:45.392
+# E.g. 2015-01-31 15:50:45,392
+# E.g. 2016-05-08 11:34:04.083464
+timestamp:^(?<date>)[T ](?<time>)$
+
+# E.g. 2015-01-31 15:50:45
+# E.g. 2015-01-31  15:50:45
+timestamp:^(?<date>) {1,2}(?<time>)$
+
+# E.g. [2015-01-31 15:50:45,085]
+timestamp:^\[(?<date>)[T\- ](?<time>)\]?$
+
+# E.g. [2015-01-31T15:50:45
+# E.g. [20170106-16:56:41]
+timestamp:^\[(?<date>)[T\- ](?<time>)\]?$
+
+# E.g. [01/Jan/2016:15:50:17
+timestamp:^\[\d{2}/[A-Z][a-z]{2}/\d{4}:(?<time>)$
+
+# E.g. [01/01/2016:15:50:17
+timestamp:^\[\d{2}/\d{2}/\d{4}:(?<time>)$
+
+# E.g. 2015/01/31 15:50:45
+# E.g. 15/01/31 15:50:45
+timestamp:^(\d{2}|\d{4})/\d{2}/\d{2} (?<time>)$
+
+# E.g. 150131  9:50:45
+timestamp:^\d{2}\d{2}\d{2} [ 0-9]{2}:\d{2}:\d{2}$
+
+# E.g. 01 Jan 2016 15:50:17,085
+timestamp:^\d{2} [A-Z][a-z]{2} \d{4} (?<time>)$
+
+# E.g. Jan 01, 2016 3:50:17 PM
+timestamp:^[A-Z][a-z]{2} \d{2}, \d{4} [ 0-9]{2}:\d{2}:\d{2} [AP]M$
+
+# E.g. January 31, 2015 15:50
+timestamp:^[A-Z][a-z]+ \d{2}, \d{4} \d{2}:\d{2}$
+
+# E.g. Sun Jan  1 15:50:45 2015
+timestamp:^[A-Z][a-z]{2} [A-Z][a-z]{2} [ 0-9]{2} (?<time>) \d{4}$
+
+# E.g. Jan 21 11:56:42
+timestamp:^[A-Z][a-z]{2} \d{2} (?<time>)$
+
+# E.g. 01-21 11:56:42.392
+timestamp:^\d{2}-\d{2} (?<time>)$
+
+# E.g. <<<2016-11-10 03:02:29:936
+timestamp:^\<\<\<(?<date>) (?<time>)$
+
+# Specially-encoded variables
+float:^-?\d+\.\d+$
+int:^-?\d+$
+
+# Dictionary variables
+!valid_txt:[\w_.\-/\\]*
+key_value:^(?<key>(?<valid_txt>))=(?<value>(?<valid_txt>)\w(?<valid_txt>))$
+!non_delim:[^ \t\r\n!"#$%&'()*,:;<>?@\[\]^_`{|}~]*
+has_number:^(?<non_delim>)\d(?<non_delim>)$
+hex:^[A-Fa-f]+$

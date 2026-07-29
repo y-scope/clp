@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
@@ -41,8 +41,7 @@ public:
      * @param search_begin_ts
      * @param search_end_ts
      * @param ignore_case
-     * @param lexer DFA for determining if input is in the schema
-     * @param use_heuristic
+     * @param parser Pointer to parser used for interpreting query. If `nullptr` use heurustic mode.
      * @return Query if it may match a message, std::nullopt otherwise
      */
     template <
@@ -56,8 +55,7 @@ public:
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            log_surgeon::lexers::ByteLexer& lexer,
-            bool use_heuristic
+            log_surgeon::ParserHandle* parser
     );
 
     /**
@@ -143,13 +141,17 @@ std::optional<Query> GrepCore::process_raw_query(
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        log_surgeon::lexers::ByteLexer& lexer,
-        bool use_heuristic
+        log_surgeon::ParserHandle* parser
 ) {
     std::vector<SubQuery> sub_queries;
-    if (false == use_heuristic) {
-        sub_queries
-                = SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict, ignore_case);
+    if (nullptr != parser) {
+        sub_queries = SchemaSearcher::search(
+                search_string,
+                *parser,
+                logtype_dict,
+                var_dict,
+                ignore_case
+        );
     } else {
         // Split search_string into tokens with wildcards
         std::vector<QueryToken> query_tokens;
