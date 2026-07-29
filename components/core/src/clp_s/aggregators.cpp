@@ -43,7 +43,7 @@ auto to_aggregation_value(nlohmann::json const& value) -> std::optional<Aggregat
 /**
  * Tokenizes an aggregation's target field into its key path.
  * @param field
- * @return Returns the path's keys.
+ * @return The path's keys.
  * @throws std::invalid_argument if `field` is malformed, or if it names a non-default namespace.
  */
 auto tokenize_aggregation_field(string_view field) -> std::vector<string>;

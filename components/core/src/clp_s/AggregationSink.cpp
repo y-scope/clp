@@ -25,7 +25,7 @@ auto StdoutSink::write(AggregationResult const& result) -> ystdlib::error_handli
     nlohmann::json document;
     document[constants::results_cache::search::cArchiveId] = m_archive_id;
     for (auto const& [key, value] : result) {
-        std::visit([&](auto const& field_value) { document[key] = field_value; }, value);
+        std::visit([&](auto const& field_value) -> void { document[key] = field_value; }, value);
     }
     std::cout << document.dump() << '\n';
     return ystdlib::error_handling::success();
@@ -50,7 +50,7 @@ auto ResultsCacheSink::flush_buffer() -> ystdlib::error_handling::Result<void> {
     try {
         m_collection.insert_many(m_results);
     } catch (mongocxx::exception const& e) {
-        SPDLOG_ERROR("ResultsCacheSink failed flush:{}", e.what());
+        SPDLOG_ERROR("Failed to flush results to Results Cache: {}", e.what());
         return std::errc::io_error;
     }
     m_results.clear();
@@ -65,7 +65,7 @@ auto ResultsCacheSink::write(AggregationResult const& result)
     );
     for (auto const& [key, value] : result) {
         std::visit(
-                [&](auto const& field_value) {
+                [&](auto const& field_value) -> void {
                     document.append(bsoncxx::builder::basic::kvp(key, field_value));
                 },
                 value

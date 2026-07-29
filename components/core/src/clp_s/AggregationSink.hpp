@@ -39,7 +39,8 @@ public:
      * @param result The result document to write.
      * @return A void result on success, or an error code indicating the failure.
      */
-    virtual auto write(AggregationResult const& result) -> ystdlib::error_handling::Result<void>
+    [[nodiscard]] virtual auto write(AggregationResult const& result)
+            -> ystdlib::error_handling::Result<void>
             = 0;
 
     /**
@@ -63,7 +64,8 @@ public:
      * @param result The result document to write.
      * @return A void result on success, there is no error case.
      */
-    auto write(AggregationResult const& result) -> ystdlib::error_handling::Result<void> override;
+    [[nodiscard]] auto write(AggregationResult const& result)
+            -> ystdlib::error_handling::Result<void> override;
 
     [[nodiscard]] auto finish() -> ystdlib::error_handling::Result<void> override {
         return ystdlib::error_handling::success();
@@ -95,7 +97,8 @@ public:
      * @return A void result on success, or an error code indicating the failure:
      * - Forwards `flush_buffer`'s return values on failure.
      */
-    auto write(AggregationResult const& result) -> ystdlib::error_handling::Result<void> override;
+    [[nodiscard]] auto write(AggregationResult const& result)
+            -> ystdlib::error_handling::Result<void> override;
 
     /**
      * Flushes any remaining buffered result documents.
@@ -110,7 +113,7 @@ private:
     // Methods
     /**
      * Inserts the buffered result documents into the collection.
-     * @return A result containing an error code indicating the failure:
+     * @return A void result on success, or an error code indicating the failure:
      * - std::errc::io_error if flushing failed.
      */
     [[nodiscard]] auto flush_buffer() -> ystdlib::error_handling::Result<void>;
