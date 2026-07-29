@@ -1,5 +1,8 @@
 version: "3"
 
+includes:
+  toolchains: "toolchains.yaml"
+
 tasks:
   clp-s-generate-parsers:
     vars:
@@ -19,7 +22,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
       - "{{.TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
     dir: "{{.G_CORE_COMPONENT_DIR}}/src/"
     cmds:
       - for: ["kql", "sql"]
@@ -46,8 +49,8 @@ tasks:
   webui-generate-parser:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/client/src/sql-parser"
-      OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/client/src/sql-parser/generated"
+      SRC_DIR: "{{.G_WEBUI_SRC_DIR}}/packages/client/src/sql-parser"
+      OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/packages/client/src/sql-parser/generated"
     deps:
       - ":deps:antlr-jar"
       - task: ":utils:checksum:validate"
@@ -56,7 +59,7 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     generates: ["{{.CHECKSUM_FILE}}"]
     sources:
-      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.ROOT_TASKFILE}}"
       - "{{.SRC_DIR}}/SqlBase.g4"
       - "{{.SRC_DIR}}/Sql.g4"
       - "{{.TASKFILE}}"
@@ -86,3 +89,13 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  openapi:
+    deps: ["toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    cmd: |-
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo run --bin api-server-openapi-codegen --release \
+        -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/api-server-openapi.json"
+      cargo run --bin log-ingestor-openapi-codegen --release \
+        -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/log-ingestor-openapi.json"

@@ -1,13 +1,159 @@
 version: "3"
 
+includes:
+  remote: "../tools/yscope-dev-utils/exports/taskfiles/utils/remote.yaml"
+  utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+vars:
+  G_HELM_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/helm"
+  G_HELM_TOOLCHAIN_ENV_FILE: "{{.G_HELM_TOOLCHAIN_DIR}}/env"
+  G_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs"
+  G_NODEJS_BIN_DIR: "{{.G_NODEJS_BUILD_DIR}}/bin"
+  G_NODEJS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/nodejs.md5"
+  G_NODEJS_VERSION_FILE: "{{.G_WEBUI_SRC_DIR}}/.node-version"
+  G_RUST_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/rust"
+  G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_DIR}}/env"
+
+  # Rust toolchain installation paths
+  G_CARGO_HOME: "{{.G_RUST_TOOLCHAIN_DIR}}/.cargo"
+  G_RUSTUP_HOME: "{{.G_RUST_TOOLCHAIN_DIR}}/.rustup"
+
+  # Rust toolchain checksum file
+  G_RUST_TOOLCHAIN_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains-rust.md5"
+
 tasks:
-  rust:
+  helm:
+    run: "once"
+    vars:
+      CHART_TESTING_VERSION: "3.14.0"
+    cmds:
+      - "mkdir -p '{{.G_HELM_TOOLCHAIN_DIR}}'"
+      - task: "remote:download-and-extract-tar"
+        vars:
+          OUTPUT_DIR: "{{.G_HELM_TOOLCHAIN_DIR}}"
+          URL: "https://github.com/helm/chart-testing/releases/download/v{{.CHART_TESTING_VERSION}}\
+          /chart-testing_{{.CHART_TESTING_VERSION}}_{{OS}}_{{ARCH}}.tar.gz"
+          FILE_SHA256: >-
+            {{- if and (eq OS "linux") (eq ARCH "amd64") -}}
+              d16f0583616885423826241164ce1f6589c6fe5332fa74f374ebd2bd3cb3fe1f
+            {{- else if and (eq OS "linux") (eq ARCH "arm64") -}}
+              7b035bbbd0768fba33983e81c15445e33e9c8281d329100852a342ecfd0b16b7
+            {{- else if and (eq OS "darwin") (eq ARCH "arm64") -}}
+              db10dbbb42b110c7a5da5a3202908f32ad2ca6ad600d423426dc7886d09aad07
+            {{- else -}}
+              unsupported
+            {{- end }}
+          INCLUDE_PATTERNS: ["ct", "etc/chart_schema.yaml"]
+          NUM_COMPONENTS_TO_STRIP: "0"
+      - |-
+        export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
+        export HELM_INSTALL_DIR="{{.G_HELM_TOOLCHAIN_DIR}}"
+        curl --proto "=https" --tlsv1.2 --silent --show-error --fail \
+        https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | bash -s -- --no-sudo
+
+      # Create an environment file to configure the custom Helm toolchain location.
+      - |-
+        cat <<"EOF" > "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        #!/bin/sh
+        export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
+        EOF
+
+  nodejs:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_NODEJS_CHECKSUM_FILE}}"
+      NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
+      NODEJS_VERSION:
+        sh: "printf 'v%s' \"$(cat '{{.G_NODEJS_VERSION_FILE}}')\""
+      OUTPUT_DIR: "{{.G_NODEJS_BUILD_DIR}}"
     run: "once"
     cmds:
-      # Installs Rust toolchains using rustup. If the toolchains are already installed, this task
-      # will ensure they are updated to the latest versions.
+      - task: "remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          FILE_SHA256: >-
+            {{- if and (eq OS "linux") (eq .NODEJS_ARCH "x64") -}}
+              55aa7153f9d88f28d765fcdad5ae6945b5c0f98a36881703817e4c450fa76742
+            {{- else if and (eq OS "linux") (eq .NODEJS_ARCH "arm64") -}}
+              58c9520501f6ae2b52d5b210444e24b9d0c029a58c5011b797bc1fe7105886f6
+            {{- else if and (eq OS "darwin") (eq .NODEJS_ARCH "arm64") -}}
+              4477b9f78efb77744cf5eb57a0e9594dba66466b38b4e93fa9f35cb907a095a6
+            {{- else if and (eq OS "darwin") (eq .NODEJS_ARCH "x64") -}}
+              4a3b6bc81542154430825128d9a279e8b364e8d90581544e506ef7579fd1ab6f
+            {{- else -}}
+              unsupported
+            {{- end }}
+          NUM_COMPONENTS_TO_STRIP: "1"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          URL: >-
+            https://nodejs.org/dist/{{.NODEJS_VERSION}}/node-{{.NODEJS_VERSION}}-{{OS}}-{{.NODEJS_ARCH}}.tar.xz
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH corepack enable"
+      - "cd '{{.G_WEBUI_SRC_DIR}}' && PATH='{{.G_NODEJS_BIN_DIR}}':$PATH corepack install"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  rust:
+    # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.
+    label: "toolchains-rust"
+    run: "once"
+    env:
+      CARGO_HOME: "{{.G_CARGO_HOME}}"
+      RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
+    vars:
+      CHECKSUM_FILE: "{{.G_RUST_TOOLCHAIN_CHECKSUM_FILE}}"
+      # `RUSTUP_HOME` and `CARGO_HOME` contains cache files and temporary files. Instead of
+      # including the entire directory, we only include the necessary files to verify whether the
+      # toolchain installation is up to date.
+      OUTPUT_PATTERNS: &output_patterns
+        - "{{.G_CARGO_HOME}}/bin"
+        - "{{.G_CARGO_HOME}}/env"
+        - "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+        - "{{.G_RUSTUP_HOME}}/settings.toml"
+        - "{{.G_RUSTUP_HOME}}/toolchains"
+    sources:
+      - "{{.ROOT_TASKFILE}}"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: *output_patterns
+    cmds:
       - |-
         curl --proto "=https" --tlsv1.2 --silent --show-error --fail https://sh.rustup.rs \
-          | sh -s -- --default-toolchain none -y
-        . "$HOME/.cargo/env"
+          | sh -s -- --default-toolchain none --no-modify-path -y
+
+      # Create an environment file to configure the custom Rust toolchain location.
+      # Source this file before using cargo/rustup commands to ensure they use the toolchain
+      # installed in `{{.G_RUST_TOOLCHAIN_DIR}}`.
+      # For details, check:
+      # https://rust-lang.github.io/rustup/installation/index.html#choosing-where-to-install
+      - |-
+        cat <<EOF > "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+        #!/bin/sh
+        # Set up environment for Rust toolchain
+        export CARGO_HOME="{{.G_CARGO_HOME}}"
+        export RUSTUP_HOME="{{.G_RUSTUP_HOME}}"
+        . "{{.G_CARGO_HOME}}/env"
+        # Set up environment variable for Rust build directory
+        export CARGO_TARGET_DIR="{{.G_RUST_BUILD_DIR}}"
+        EOF
+
+      # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
+      - |-
+        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
+        rustup toolchain install stable
+        rustup default stable
+        cargo install --locked cargo-nextest
+        rustup set auto-self-update disable
+
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: *output_patterns

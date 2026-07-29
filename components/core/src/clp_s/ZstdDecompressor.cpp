@@ -3,9 +3,8 @@
 #include "ZstdDecompressor.hpp"
 
 #include <algorithm>
-#include <filesystem>
+#include <utility>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <spdlog/spdlog.h>
 
 namespace clp_s {
@@ -211,10 +210,7 @@ void ZstdDecompressor::open(clp::ReaderInterface& reader, size_t file_read_buffe
 void ZstdDecompressor::close() {
     switch (m_input_type) {
         case InputType::MemoryMappedCompressedFile:
-            if (m_memory_mapped_compressed_file.is_open()) {
-                // An existing file is memory mapped by the decompressor
-                m_memory_mapped_compressed_file.close();
-            }
+            m_memory_mapped_file.reset();
             break;
         case InputType::File:
         case InputType::ClpReader:
@@ -250,36 +246,24 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
     }
     m_input_type = InputType::MemoryMappedCompressedFile;
 
-    // Create memory mapping for compressed_file_path, use boost read only memory mapped file
-    std::error_code error_code;
-    size_t compressed_file_size = std::filesystem::file_size(compressed_file_path, error_code);
-    if (error_code) {
+    // Create read-only memory mapping for compressed_file_path
+    auto result{clp::ReadOnlyMemoryMappedFile::create(compressed_file_path)};
+    if (result.has_error()) {
+        auto const error{result.error()};
         SPDLOG_ERROR(
-                "ZstdDecompressor: Unable to obtain file size for '{}' - {}.",
+                "ZstdDecompressor: Unable to memory map the compressed file with path: {}. Error: "
+                "{} - {}",
                 compressed_file_path.c_str(),
-                error_code.message().c_str()
+                error.category().name(),
+                error.message()
         );
         return ErrorCodeFailure;
     }
-
-    boost::iostreams::mapped_file_params memory_map_params;
-    memory_map_params.path = compressed_file_path;
-    memory_map_params.flags = boost::iostreams::mapped_file::readonly;
-    memory_map_params.length = compressed_file_size;
-    memory_map_params.hint
-            = m_memory_mapped_compressed_file.data();  // Try to map it to the same memory location
-                                                       // as previous memory mapped file
-    m_memory_mapped_compressed_file.open(memory_map_params);
-    if (false == m_memory_mapped_compressed_file.is_open()) {
-        SPDLOG_ERROR(
-                "ZstdDecompressor: Unable to memory map the compressed file with path: {}",
-                compressed_file_path.c_str()
-        );
-        return ErrorCodeFailure;
-    }
+    m_memory_mapped_file.emplace(std::move(result.value()));
 
     // Configure input stream
-    m_compressed_stream_block = {m_memory_mapped_compressed_file.data(), compressed_file_size, 0};
+    auto const file_view{m_memory_mapped_file.value().get_view()};
+    m_compressed_stream_block = {file_view.data(), file_view.size(), 0};
 
     reset_stream();
 

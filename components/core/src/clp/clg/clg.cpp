@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <set>
@@ -526,7 +527,7 @@ int main(int argc, char const* argv[]) {
         SPDLOG_ERROR(
                 "'{}' does not exist or cannot be accessed - {}.",
                 archives_dir.c_str(),
-                strerror(errno)
+                std::strerror(errno)
         );
         return -1;
     } else if (S_ISDIR(archives_dir_stat.st_mode) == false) {

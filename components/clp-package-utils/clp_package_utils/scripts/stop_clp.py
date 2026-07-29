@@ -1,9 +1,13 @@
-import argparse
+#!/usr/bin/env python3
+"""Script to stop the CLP Package."""
+
 import logging
 import pathlib
 import sys
 
+import click
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
@@ -11,40 +15,34 @@ from clp_package_utils.general import (
     load_config_file,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def main(argv):
-    clp_home = get_clp_home()
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
-
-    args_parser = argparse.ArgumentParser(description="Stops CLP")
-    args_parser.add_argument(
-        "--config",
-        "-c",
-        default=str(default_config_file_path),
-        help="CLP package configuration file.",
-    )
-
-    parsed_args = args_parser.parse_args(argv[1:])
-
+@click.command()
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=False, path_type=pathlib.Path),
+    default=lambda: get_clp_home() / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    help="CLP package configuration file.",
+)
+def main(config: pathlib.Path) -> None:
+    """Stops the CLP Package."""
     try:
-        config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-    except:
+        resolved_config_path = resolve_host_path_in_container(config)
+        clp_config = load_config_file(resolved_config_path)
+    except Exception:
         logger.exception("Failed to load config.")
-        return -1
+        sys.exit(1)
 
     try:
         instance_id = get_or_create_instance_id(clp_config)
         controller = DockerComposeController(clp_config, instance_id)
         controller.stop()
-    except:
+    except Exception:
         logger.exception("Failed to stop CLP.")
-        return -1
-
-    return 0
+        sys.exit(1)
 
 
 if "__main__" == __name__:
-    sys.exit(main(sys.argv))
+    main()

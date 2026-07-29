@@ -4,13 +4,10 @@ add_subdirectory(sql)
 
 set(
         CLP_S_SEARCH_SOURCES
-        ../Defs.hpp
-        ../DictionaryEntry.cpp
-        ../DictionaryEntry.hpp
-        ../DictionaryWriter.cpp
-        ../DictionaryWriter.hpp
         AddTimestampConditions.cpp
         AddTimestampConditions.hpp
+        ColumnScan.cpp
+        ColumnScan.hpp
         EvaluateRangeIndexFilters.cpp
         EvaluateRangeIndexFilters.hpp
         EvaluateTimestampIndex.cpp
@@ -24,6 +21,10 @@ set(
         QueryRunner.hpp
         SchemaMatch.cpp
         SchemaMatch.hpp
+        SearchTelemetry.cpp
+        SearchTelemetry.hpp
+        TelemetryContext.cpp
+        TelemetryContext.hpp
 )
 
 if(CLP_BUILD_CLP_S_SEARCH)
@@ -46,6 +47,11 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 clp::string_utils
                 clp_s::clp_dependencies
                 clp_s::io
+                opentelemetry-cpp::api
+                opentelemetry-cpp::otlp_http_exporter
+                opentelemetry-cpp::resources
+                opentelemetry-cpp::trace
                 spdlog::spdlog
+                xxHash::xxhash
         )
 endif()

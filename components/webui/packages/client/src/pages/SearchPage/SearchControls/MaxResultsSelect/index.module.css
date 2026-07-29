@@ -1,0 +1,12 @@
+.maxResultsContainer {
+    display: flex;
+}
+
+.maxResultsContainer :global(.ant-select) {
+    width: 88px;
+}
+
+.maxResultsContainer :global(.ant-select-selector) {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}

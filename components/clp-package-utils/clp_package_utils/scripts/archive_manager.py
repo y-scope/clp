@@ -4,19 +4,21 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Final, List, Optional
+from typing import Final
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
-    CLPConfig,
+    ClpConfig,
     DockerMount,
     dump_container_config,
     generate_container_config,
@@ -41,7 +43,7 @@ DRY_RUN_ARG: Final[str] = "--dry-run"
 logger: logging.Logger = logging.getLogger(__file__)
 
 
-def _validate_timestamps(begin_ts: int, end_ts: Optional[int]) -> bool:
+def _validate_timestamps(begin_ts: int, end_ts: int | None) -> bool:
     if begin_ts < 0:
         logger.error("begin-ts must be non-negative.")
         return False
@@ -54,7 +56,7 @@ def _validate_timestamps(begin_ts: int, end_ts: Optional[int]) -> bool:
     return True
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -163,17 +165,15 @@ def main(argv: List[str]) -> int:
     else:
         logger.setLevel(logging.INFO)
 
-    begin_timestamp: Optional[int] = None
-    end_timestamp: Optional[int] = None
+    begin_timestamp: int | None = None
+    end_timestamp: int | None = None
     subcommand: str = parsed_args.subcommand
 
     # Validate and load config file
     try:
         config_file_path: Path = Path(parsed_args.config)
-        clp_config: CLPConfig = load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
-        clp_config.validate_logs_dir()
+        clp_config: ClpConfig = load_config_file(resolve_host_path_in_container(config_file_path))
+        clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
@@ -219,21 +219,21 @@ def main(argv: List[str]) -> int:
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts: List[Optional[DockerMount]] = [
-        mounts.clp_home,
+    necessary_mounts: list[DockerMount | None] = [
         mounts.logs_dir,
         mounts.archives_output_dir,
     ]
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
-    container_start_cmd: List[str] = generate_container_start_cmd(
+    container_start_cmd: list[str] = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     # fmt: off
-    archive_manager_cmd: List[str] = [
+    archive_manager_cmd: list[str] = [
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
@@ -272,16 +272,19 @@ def main(argv: List[str]) -> int:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
         return -1
 
-    cmd: List[str] = container_start_cmd + archive_manager_cmd
+    cmd: list[str] = container_start_cmd + archive_manager_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Archive manager failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 

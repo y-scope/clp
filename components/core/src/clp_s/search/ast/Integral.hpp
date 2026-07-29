@@ -62,7 +62,7 @@ public:
         return mask == cIntegralLiteralTypes;
     }
 
-    bool as_epoch_date() override { return true; }
+    bool as_timestamp() override { return true; }
 
     bool as_var_string(std::string& ret, FilterOperation op) override;
 

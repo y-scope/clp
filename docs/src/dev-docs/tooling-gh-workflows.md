@@ -30,16 +30,20 @@ shown below.
 }%%
 flowchart LR
     filter-relevant-changes --> centos-stream-9-deps-image
-    filter-relevant-changes --> manylinux_2_28-x86_64-deps-image
-    filter-relevant-changes --> musllinux_1_2-x86_64-deps-image
+    filter-relevant-changes --> manylinux_2_28-deps-image
+    filter-relevant-changes --> musllinux_1_2-deps-image
     filter-relevant-changes --> ubuntu-jammy-deps-image
     filter-relevant-changes --> centos-stream-9-binaries
     filter-relevant-changes --> manylinux_2_28-x86_64-binaries
     filter-relevant-changes --> musllinux_1_2-x86_64-binaries
     filter-relevant-changes --> ubuntu-jammy-binaries
     centos-stream-9-deps-image --> centos-stream-9-binaries
-    manylinux_2_28-x86_64-deps-image --> manylinux_2_28-x86_64-binaries
-    musllinux_1_2-x86_64-deps-image --> musllinux_1_2-x86_64-binaries
+    manylinux_2_28-deps-image --> manylinux_2_28-deps-image-merge
+    manylinux_2_28-deps-image --> manylinux_2_28-x86_64-binaries
+    manylinux_2_28-deps-image-merge --> manylinux_2_28-x86_64-binaries
+    musllinux_1_2-deps-image --> musllinux_1_2-deps-image-merge
+    musllinux_1_2-deps-image --> musllinux_1_2-x86_64-binaries
+    musllinux_1_2-deps-image-merge --> musllinux_1_2-x86_64-binaries
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
     ubuntu-jammy-deps-image --> package-image
     ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
@@ -51,10 +55,18 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   the following jobs should run.
 * `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
   build CLP-core in a CentOS Stream 9 x86 environment.
-* `manylinux_2_28-x86_64-deps-image`: Builds a container image containing the dependencies necessary
-  to build CLP-core in a manylinux_2_28 x86 environment.
-* `musllinux_1_2-x86_64-deps-image`: Builds a container image containing the dependencies necessary
-  to build CLP-core in a musllinux_1_2 x86 environment.
+* `manylinux_2_28-deps-image`: A matrix job that builds, for each of amd64 and arm64 natively on
+  its matching runner, a container image containing the dependencies necessary to build CLP-core
+  in a manylinux_2_28 environment. On push to `main`, each arch is published under an
+  arch-suffixed tag (e.g. `:main-amd64`).
+* `manylinux_2_28-deps-image-merge`: On push to `main`, merges the per-arch tags produced by
+  `manylinux_2_28-deps-image` into a single multi-arch `:main` manifest.
+* `musllinux_1_2-deps-image`: A matrix job that builds, for each of amd64 and arm64 natively on
+  its matching runner, a container image containing the dependencies necessary to build CLP-core
+  in a musllinux_1_2 environment. On push to `main`, each arch is published under an
+  arch-suffixed tag (e.g. `:main-amd64`).
+* `musllinux_1_2-deps-image-merge`: On push to `main`, merges the per-arch tags produced by
+  `musllinux_1_2-deps-image` into a single multi-arch `:main` manifest.
 * `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build
   CLP-core in an Ubuntu Jammy x86 environment.
 * `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
@@ -84,6 +96,19 @@ to build and test an image for each Linux distro where we support building CLP n
 for the image containing CLP's binaries (built by the `ubuntu-jammy-binaries-image` job), we only
 need it for one OS since users can use the container on any OS.
 
+### Runner configuration
+
+The workflow automatically selects runners based on the repository owner:
+
+* For branches and pull requests on the original `y-scope`-owned repository, it uses self-hosted
+  runners with tags `["self-hosted", "x64", "ubuntu-noble"]`. Our self-hosted runner pool consists
+  of machines with 8–16 cores and 128–256 GB of RAM.
+* For forks, it automatically falls back to GitHub-hosted runners.
+
+Note that GitHub-hosted runners have limited resources (e.g., 4 cores, limited RAM) and limited
+concurrency for free-tier organizations, so builds are expected to take longer on forks. For more
+details, see [GitHub-hosted runners][gh-hosted-runners].
+
 ## clp-core-build-macos
 
 This workflow builds CLP-core on macOS and runs its unit tests.
@@ -95,3 +120,5 @@ This workflow runs linting checks on the codebase.
 ## clp-uv-checks
 
 This workflow checks whether each UV Python project's lockfile matches the project metadata.
+
+[gh-hosted-runners]: https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners

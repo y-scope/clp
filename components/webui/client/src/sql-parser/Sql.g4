@@ -1,3 +1,0 @@
-grammar Sql;
-
-import SqlBase;

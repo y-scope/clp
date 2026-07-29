@@ -1,0 +1,7 @@
+.panelContainer {
+    display: flex;
+}
+
+.presetList {
+    min-width: 150px;
+}

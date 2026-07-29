@@ -1,105 +1,184 @@
-import argparse
+#!/usr/bin/env python3
+"""Script to start the CLP Package."""
+
 import logging
 import pathlib
 import sys
 
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+import click
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
+from clp_py_utils.core import resolve_host_path_in_container
+from clp_py_utils.telemetry_config import is_telemetry_disabled_by_env
 
+from clp_package_utils.cli_utils import RESTART_POLICY
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
+    set_yaml_key,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
-    validate_logs_input_config,
     validate_output_storage_config,
     validate_retention_config,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def main(argv):
-    clp_home = get_clp_home()
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+TELEMETRY_NOTICE = """
+================================================================================
+CLP collects anonymous operational metrics to help improve the software. This
+includes: CLP version, OS/architecture, deployment method, bytes ingested,
+compression ratios, query volume, and more. It does NOT include: log content,
+queries, hostnames, IP addresses, or any other Personally Identifiable
+Information (PII).
 
-    args_parser = argparse.ArgumentParser(description="Starts CLP")
-    args_parser.add_argument(
-        "--config",
-        "-c",
-        default=str(default_config_file_path),
-        help="CLP package configuration file.",
-    )
-    args_parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Enable debug logging.",
-    )
-    args_parser.add_argument(
-        "--setup-only",
-        action="store_true",
-        help="Validate configuration and prepare directories without starting services.",
-    )
+Telemetry is sent to: https://telemetry.yscope.io
+For details, see: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
 
-    parsed_args = args_parser.parse_args(argv[1:])
+You can disable metrics at any time by setting the environment variable
+CLP_DISABLE_TELEMETRY=true. Network admins can also block
+https://telemetry.yscope.io at the firewall level.
+================================================================================
+"""
 
-    if parsed_args.verbose:
+TELEMETRY_PROMPT = "Enable anonymous telemetry to help improve CLP? [Y/n] "
+
+
+@click.command()
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=False, path_type=pathlib.Path),
+    default=lambda: get_clp_home() / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    help="CLP package configuration file.",
+)
+@click.option(
+    "--restart-policy",
+    default="on-failure:3",
+    type=RESTART_POLICY,
+    help=f"Docker restart policy ({RESTART_POLICY.VALID_POLICIES_STR}).",
+)
+@click.option(
+    "--setup-only",
+    is_flag=True,
+    help="Validate configuration and prepare directories without starting services.",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Enable debug logging.",
+)
+def main(
+    config: pathlib.Path,
+    restart_policy: str,
+    setup_only: bool,
+    verbose: bool,
+) -> None:
+    """Starts the CLP Package."""
+    if verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
 
     try:
         # Validate and load config file.
-        config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        resolved_config_path = resolve_host_path_in_container(config)
+        clp_config = load_config_file(resolved_config_path)
+        clp_home = get_clp_home()
 
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        validate_and_load_queue_credentials_file(clp_config, clp_home, True)
-        validate_and_load_redis_credentials_file(clp_config, clp_home, True)
-        validate_logs_input_config(clp_config)
+        if clp_config.queue is not None:
+            validate_and_load_queue_credentials_file(clp_config, clp_home, True)
+        if clp_config.redis is not None:
+            validate_and_load_redis_credentials_file(clp_config, clp_home, True)
+        clp_config.validate_logs_input_config(True)
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
 
-        clp_config.validate_aws_config_dir()
-        clp_config.validate_data_dir()
-        clp_config.validate_logs_dir()
-        clp_config.validate_tmp_dir()
-    except:
+        clp_config.validate_api_server()
+        clp_config.validate_aws_config_dir(True)
+        clp_config.validate_data_dir(True)
+        clp_config.validate_logs_dir(True)
+        clp_config.validate_tmp_dir(True)
+    except Exception:
         logger.exception("Failed to load config.")
-        return -1
+        sys.exit(1)
+
+    _handle_telemetry_consent(clp_config, resolved_config_path)
 
     try:
         # Create necessary directories.
-        clp_config.data_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.tmp_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
-        clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
-    except:
+        resolve_host_path_in_container(clp_config.data_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.logs_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.tmp_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.archive_output.get_directory()).mkdir(
+            parents=True, exist_ok=True
+        )
+        resolve_host_path_in_container(clp_config.stream_output.get_directory()).mkdir(
+            parents=True, exist_ok=True
+        )
+    except Exception:
         logger.exception("Failed to create necessary directories.")
-        return -1
+        sys.exit(1)
 
     try:
         instance_id = get_or_create_instance_id(clp_config)
-        controller = DockerComposeController(clp_config, instance_id)
+        controller = DockerComposeController(clp_config, instance_id, restart_policy)
         controller.set_up_env()
-        if parsed_args.setup_only:
+        if setup_only:
             logger.info(
                 "Completed setup. Services not started because `--setup-only` was specified."
             )
-            return 0
+            sys.exit(0)
         controller.start()
-    except Exception as ex:
-        if type(ex) == ValueError:
-            logger.error(f"Failed to start CLP: {ex}")
-        else:
-            logger.exception("Failed to start CLP.")
-        return -1
+    except Exception:
+        logger.exception("Failed to start CLP.")
+        sys.exit(1)
 
-    return 0
+
+def _handle_telemetry_consent(clp_config: ClpConfig, config_file_path: pathlib.Path) -> None:
+    """
+    Handles telemetry consent and prompts the user on first run if needed.
+
+    Priority order for handling telemetry preference:
+    1. Session-only environment variable overrides. e.g.,
+       a. CLP_DISABLE_TELEMETRY=true
+       b. DO_NOT_TRACK=true
+    2. Config file opt-out
+    3. Previously confirmed telemetry preference
+    4. First run consent prompt in interactive sessions
+
+    :param config_file_path: for persisting consent.
+    """
+    if is_telemetry_disabled_by_env():
+        clp_config.telemetry.disable = True
+        return
+
+    if clp_config.telemetry.disable:
+        return
+
+    # Skip prompt if not the first run. i.e., telemetry preference has been confirmed previously.
+    instance_id_file = clp_config.logs_directory / "instance-id"
+    if resolve_host_path_in_container(instance_id_file).exists():
+        return
+
+    if not sys.stdin.isatty():
+        return
+
+    print(TELEMETRY_NOTICE)
+    try:
+        response = input(TELEMETRY_PROMPT).strip().lower()
+    except EOFError:
+        # e.g., Ctrl+D
+        response = "n"
+
+    if response.startswith("n"):
+        clp_config.telemetry.disable = True
+        set_yaml_key(config_file_path, "telemetry.disable", "true")
 
 
 if "__main__" == __name__:
-    sys.exit(main(sys.argv))
+    main()

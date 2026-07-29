@@ -1,5 +1,5 @@
 // Delimiters 
-delimiters: \r\n:,=!;%\?
+delimiters: \r\n:,=!;%?
 
 // First set of variables
 timestamp:[0-9]{4}\-[0-9]{2}\-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{3}){0,1}

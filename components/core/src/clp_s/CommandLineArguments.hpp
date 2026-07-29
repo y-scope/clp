@@ -3,11 +3,15 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
 #include <vector>
 
-#include <boost/program_options/option.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
+
+#include <clp_s/aggregators.hpp>
 
 #include "../reducer/types.hpp"
 #include "Defs.hpp"
@@ -29,12 +33,37 @@ public:
         Search = 's'
     };
 
-    enum class OutputHandlerType : uint8_t {
-        Network = 0,
-        Reducer,
-        ResultsCache,
-        Stdout,
+    struct ResultsCacheOutputHandlerOptions {
+        std::string uri;
+        std::string collection;
+        std::string dataset;
+        uint64_t batch_size{1000};
+        uint64_t max_num_results{1000};
     };
+
+    struct FileOutputHandlerOptions {
+        std::string output_path;
+    };
+
+    struct NetworkOutputHandlerOptions {
+        std::string host;
+        int port{};
+    };
+
+    struct ReducerOutputHandlerOptions {
+        std::string host;
+        int port{-1};
+        reducer::job_id_t job_id{-1};
+    };
+
+    struct StdoutOutputHandlerOptions {};
+
+    using OutputHandlerOptionsVariant = std::
+            variant<ResultsCacheOutputHandlerOptions,
+                    FileOutputHandlerOptions,
+                    NetworkOutputHandlerOptions,
+                    ReducerOutputHandlerOptions,
+                    StdoutOutputHandlerOptions>;
 
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
@@ -47,6 +76,11 @@ public:
     Command get_command() const { return m_command; }
 
     std::vector<Path> const& get_input_paths() const { return m_input_paths; }
+
+    [[nodiscard]] auto get_input_paths_and_canonical_filenames() const
+            -> std::vector<std::pair<Path, std::string>> const& {
+        return m_input_paths_and_canonical_filenames;
+    }
 
     NetworkAuthOption const& get_network_auth() const { return m_network_auth; }
 
@@ -72,14 +106,6 @@ public:
 
     std::string const& get_mongodb_collection() const { return m_mongodb_collection; }
 
-    uint64_t get_batch_size() const { return m_batch_size; }
-
-    uint64_t get_max_num_results() const { return m_max_num_results; }
-
-    std::string const& get_network_dest_host() const { return m_network_dest_host; }
-
-    int const& get_network_dest_port() const { return m_network_dest_port; }
-
     std::string const& get_query() const { return m_query; }
 
     std::optional<epochtime_t> get_search_begin_ts() const { return m_search_begin_ts; }
@@ -88,19 +114,15 @@ public:
 
     bool get_ignore_case() const { return m_ignore_case; }
 
-    std::string const& get_reducer_host() const { return m_reducer_host; }
+    [[nodiscard]] auto get_enable_telemetry() const -> bool { return m_enable_telemetry; }
 
-    int get_reducer_port() const { return m_reducer_port; }
+    auto get_output_handler_options() const -> OutputHandlerOptionsVariant const& {
+        return m_output_handler_options;
+    }
 
-    reducer::job_id_t get_job_id() const { return m_job_id; }
-
-    bool do_count_results_aggregation() const { return m_do_count_results_aggregation; }
-
-    bool do_count_by_time_aggregation() const { return m_do_count_by_time_aggregation; }
-
-    int64_t get_count_by_time_bucket_size() const { return m_count_by_time_bucket_size; }
-
-    OutputHandlerType get_output_handler_type() const { return m_output_handler_type; }
+    [[nodiscard]] auto get_aggregator() const -> std::optional<Aggregator> const& {
+        return m_aggregator;
+    }
 
     [[nodiscard]] auto get_retain_float_format() const -> bool {
         return false == m_no_retain_float_format;
@@ -126,39 +148,76 @@ private:
      * Validates output options related to the Network Destination output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
+     * contain options that have the unrecognized flag set.
+     * @param network_options The parsed representation of the network output handler options.
      */
     void parse_network_dest_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
+            std::vector<std::string> const& options,
+            NetworkOutputHandlerOptions& network_options
     );
+
+    /**
+     * Builds the requested aggregation from the parsed options.
+     * @param parsed_options
+     * @param count_by_time_bucket_size_millisecs Bucket size for count-by-time. Only used by that
+     * option.
+     * @param aggregation_field Field for min/max. Only used by those options.
+     * @return The requested aggregation, or std::nullopt if none was requested.
+     * @throws std::invalid_argument if multiple aggregations are specified, the bucket size is
+     * non-positive, or a min/max field is empty or contains wildcards.
+     */
+    [[nodiscard]] static auto parse_aggregation_options(
+            boost::program_options::variables_map const& parsed_options,
+            int64_t count_by_time_bucket_size_millisecs,
+            std::string_view aggregation_field
+    ) -> std::optional<Aggregator>;
+
+    /**
+     * Throws if an aggregation was requested.
+     * @param handler_name The name of the output handler, used in the error message.
+     * @throws std::invalid_argument if an aggregation was requested.
+     */
+    auto reject_aggregation_for_handler(std::string_view handler_name) const -> void;
 
     /**
      * Validates output options related to the Reducer output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
+     * contain options that have the unrecognized flag set.
+     * @param reducer_options The parsed representation of the reducer output handler options.
      */
     void parse_reducer_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
+            std::vector<std::string> const& options,
+            ReducerOutputHandlerOptions& reducer_options
     );
 
     /**
      * Validates output options related to the Results Cache output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
+     * contain options that have the unrecognized flag set.
+     * @param results_cache_options The parsed representation of the results cache output handler
+     * options.
      */
     void parse_results_cache_output_handler_options(
             boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
+            std::vector<std::string> const& options,
+            ResultsCacheOutputHandlerOptions& results_cache_options
+    );
+
+    /**
+     * Validates output options related to the File output handler.
+     * @param options_description
+     * @param options Vector of options previously parsed by boost::program_options and which may
+     * contain options that have the unrecognized flag set.
+     * @param file_options The parsed representation of the file output handler options.
+     */
+    void parse_file_output_handler_options(
+            boost::program_options::options_description const& options_description,
+            std::vector<std::string> const& options,
+            FileOutputHandlerOptions& file_options
     );
 
     void print_basic_usage() const;
@@ -175,6 +234,7 @@ private:
 
     // Compression and decompression variables
     std::vector<Path> m_input_paths;
+    std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
     std::string m_archives_dir;
     std::string m_output_dir;
@@ -182,42 +242,30 @@ private:
     int m_compression_level{3};
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
     bool m_print_archive_stats{false};
-    size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
+    size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MiB
     bool m_no_retain_float_format{false};
     bool m_single_file_archive{false};
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
     size_t m_target_ordered_chunk_size{};
     bool m_print_ordered_chunk_stats{false};
-    size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
+    size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MiB
     bool m_disable_log_order{false};
-
-    // MongoDB configuration variables
     std::string m_mongodb_uri;
     std::string m_mongodb_collection;
-    uint64_t m_batch_size{1000};
-    uint64_t m_max_num_results{1000};
 
-    // Network configuration variables
-    std::string m_network_dest_host;
-    int m_network_dest_port;
+    // Search output handler options
+    OutputHandlerOptionsVariant m_output_handler_options{StdoutOutputHandlerOptions{}};
 
     // Search variables
     std::string m_query;
     std::optional<epochtime_t> m_search_begin_ts;
     std::optional<epochtime_t> m_search_end_ts;
     bool m_ignore_case{false};
+    bool m_enable_telemetry{false};
     std::vector<std::string> m_projection_columns;
 
-    // Search aggregation variables
-    std::string m_reducer_host;
-    int m_reducer_port{-1};
-    reducer::job_id_t m_job_id{-1};
-    bool m_do_count_results_aggregation{false};
-    bool m_do_count_by_time_aggregation{false};
-    int64_t m_count_by_time_bucket_size{0};  // Milliseconds
-
-    OutputHandlerType m_output_handler_type{OutputHandlerType::Stdout};
+    std::optional<Aggregator> m_aggregator;
 };
 }  // namespace clp_s
 

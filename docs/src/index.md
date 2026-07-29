@@ -56,7 +56,7 @@ features:
   buffer enough logs. More details on IR versus archives can be found in this
   [Uber Engineering Blog][uber-blog].
 
-- **[Log Viewer][log-viewer]**: the compressed IR can be viewed in a web-based log viewer. Compared
+- **[Log Viewer][yscope-log-viewer]**: the compressed IR can be viewed in a web-based log viewer. Compared
   to viewing the logs in an editor, CLP's log viewer supports advanced features like filtering logs
   based on log level verbosity (e.g., only displaying logs with log level equal or higher than
   ERROR). These features are possible because CLP's logging libraries parse the logs before
@@ -115,21 +115,21 @@ dev-docs/index
 [badge-discord]: https://img.shields.io/discord/1377353873068392580?style=flat&logo=discord&logoColor=white&label=Discord&labelColor=%235561f5
 [badge-slack]: https://img.shields.io/badge/Slack-yscope--community-1e724f?style=flat&logo=slack&logoColor=white&labelColor=4A154B
 [badge-zulip]: https://img.shields.io/badge/Zulip-yscope--clp-1888FA?logo=zulip
-[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
+[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yaml
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [datasets]: user-docs/resources-datasets
-[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [log-surgeon]: https://github.com/y-scope/log-surgeon
-[log-viewer]: https://github.com/y-scope/yscope-log-viewer
+[yscope-log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [log4j1-appenders]: https://github.com/y-scope/log4j1-appenders
 [log4j2-appenders]: https://github.com/y-scope/log4j2-appenders
 [logback-appenders]: https://github.com/y-scope/logback-appenders
 [re2]: https://github.com/google/re2
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
-[webui]: https://github.com/y-scope/clp/blob/main/components/webui
+[webui]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/webui
 [yscope-community-discord]: https://discord.gg/7kZA2m5G87
 [yscope-community-slack]: https://communityinviter.com/apps/yscopecommunity/yscope-community
 [yscope-community-zulip]: https://yscope-clp.zulipchat.com

@@ -1,21 +1,20 @@
 """Define all python classes used in `integration-tests`."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 
+from tests.utils.classes import IntegrationTestPathConfig
 from tests.utils.utils import (
-    unlink,
+    remove_path,
     validate_dir_exists,
 )
 
 
 @dataclass(frozen=True)
-class CoreConfig:
-    """The configuration for the clp core binaries subject to testing."""
+class ClpCorePathConfig:
+    """Path configuration for the CLP core binaries."""
 
-    #:
+    #: Root directory containing all CLP core binaries.
     clp_core_bins_dir: Path
 
     def __post_init__(self) -> None:
@@ -26,7 +25,6 @@ class CoreConfig:
         clp_core_bins_dir = self.clp_core_bins_dir
         validate_dir_exists(clp_core_bins_dir)
 
-        # Check for required CLP core binaries
         required_binaries = [
             "clg",
             "clo",
@@ -42,7 +40,7 @@ class CoreConfig:
                 f"CLP core binaries at {clp_core_bins_dir} are incomplete."
                 f" Missing binaries: {', '.join(missing_binaries)}"
             )
-            raise ValueError(err_msg)
+            raise RuntimeError(err_msg)
 
     @property
     def clp_binary_path(self) -> Path:
@@ -54,109 +52,77 @@ class CoreConfig:
         """:return: The absolute path to the core binary `clp-s`."""
         return self.clp_core_bins_dir / "clp-s"
 
-
-@dataclass(frozen=True)
-class PackageConfig:
-    """The configuration for the clp package subject to testing."""
-
-    #:
-    clp_package_dir: Path
-
-    def __post_init__(self) -> None:
-        """Validates that the CLP package directory exists and contains all required directories."""
-        clp_package_dir = self.clp_package_dir
-        validate_dir_exists(clp_package_dir)
-
-        # Check for required package script directories
-        required_dirs = ["bin", "etc", "lib", "sbin"]
-        missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
-        if len(missing_dirs) > 0:
-            err_msg = (
-                f"CLP package at {clp_package_dir} is incomplete."
-                f" Missing directories: {', '.join(missing_dirs)}"
-            )
-            raise ValueError(err_msg)
+    @property
+    def log_converter_binary_path(self) -> Path:
+        """:return: The absolute path to the core binary `log-converter`."""
+        return self.clp_core_bins_dir / "log-converter"
 
 
 @dataclass(frozen=True)
-class IntegrationTestConfig:
-    """The general configuration for integration tests."""
-
-    #: Root directory for integration tests output.
-    test_root_dir: Path
-    logs_download_dir_init: InitVar[Path | None] = None
-    #: Directory to store the downloaded logs.
-    logs_download_dir: Path = field(init=False, repr=True)
-
-    def __post_init__(self, logs_download_dir_init: Path | None) -> None:
-        """Initialize and create required directories for integration tests."""
-        if logs_download_dir_init is not None:
-            object.__setattr__(self, "logs_download_dir", logs_download_dir_init)
-        else:
-            object.__setattr__(self, "logs_download_dir", self.test_root_dir / "downloads")
-
-        self.test_root_dir.mkdir(parents=True, exist_ok=True)
-        self.logs_download_dir.mkdir(parents=True, exist_ok=True)
-
-
-@dataclass(frozen=True)
-class IntegrationTestLogs:
-    """Metadata for the downloaded logs used for integration tests."""
-
-    #:
-    name: str
-    #:
-    tarball_url: str
-    integration_test_config: InitVar[IntegrationTestConfig]
-    #:
-    tarball_path: Path = field(init=False, repr=True)
-    #:
-    extraction_dir: Path = field(init=False, repr=True)
-
-    def __post_init__(self, integration_test_config: IntegrationTestConfig) -> None:
-        """Initialize and set tarball and extraction paths for integration test logs."""
-        name = self.name.strip()
-        if 0 == len(name):
-            err_msg = "`name` cannot be empty."
-            raise ValueError(err_msg)
-        logs_download_dir = integration_test_config.logs_download_dir
-        validate_dir_exists(logs_download_dir)
-
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "tarball_path", logs_download_dir / f"{name}.tar.gz")
-        object.__setattr__(self, "extraction_dir", logs_download_dir / name)
-
-
-@dataclass(frozen=True)
-class CompressionTestConfig:
-    """Compression test configuration providing per-test metadata for artifacts and directories."""
+class CompressionTestPathConfig:
+    """Per-test path configuration for compression workflow artifacts."""
 
     #:
     test_name: str
-    #: Directory containing the original (uncompressed) log files used by this test.
-    logs_source_dir: Path
-    integration_test_config: InitVar[IntegrationTestConfig]
+    #: Directory containing the original log files used by this test.
+    logs_source_path: Path
+    integration_test_path_config: InitVar[IntegrationTestPathConfig]
     #: Path to store compressed archives generated by the test.
     compression_dir: Path = field(init=False, repr=True)
     #: Path to store decompressed logs generated by the test.
     decompression_dir: Path = field(init=False, repr=True)
 
-    def __post_init__(self, integration_test_config: IntegrationTestConfig) -> None:
+    def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
         """Initialize and set required directory paths for compression tests."""
         test_name = self.test_name.strip()
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-        test_root_dir = integration_test_config.test_root_dir
-        validate_dir_exists(test_root_dir)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
 
         object.__setattr__(self, "test_name", test_name)
-        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
         object.__setattr__(
-            self, "decompression_dir", test_root_dir / f"{test_name}-decompressed-logs"
+            self, "decompression_dir", test_cache_dir / f"{test_name}-decompressed-logs"
         )
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this compression test."""
-        unlink(self.compression_dir)
-        unlink(self.decompression_dir)
+        remove_path(self.compression_dir)
+        remove_path(self.decompression_dir)
+
+
+@dataclass(frozen=True)
+class ConversionTestPathConfig:
+    """Per-test path configuration for conversion workflow artifacts."""
+
+    #:
+    test_name: str
+    #: Directory containing the original log files used by this test.
+    logs_source_path: Path
+    integration_test_path_config: InitVar[IntegrationTestPathConfig]
+    #: Path to store converted kv-ir files generated by the test.
+    conversion_dir: Path = field(init=False, repr=True)
+    #: Path to store compressed archives generated by the test.
+    compression_dir: Path = field(init=False, repr=True)
+    #: Optional number of log events in the converted logs.
+    num_log_events: int | None = None
+
+    def __post_init__(self, integration_test_path_config: IntegrationTestPathConfig) -> None:
+        """Initialize and set required directory paths for conversion tests."""
+        test_name = self.test_name.strip()
+        if 0 == len(test_name):
+            err_msg = "`test_name` cannot be empty."
+            raise ValueError(err_msg)
+        test_cache_dir = integration_test_path_config.test_cache_dir
+        validate_dir_exists(test_cache_dir)
+
+        object.__setattr__(self, "test_name", test_name)
+        object.__setattr__(self, "conversion_dir", test_cache_dir / f"{test_name}-converted")
+        object.__setattr__(self, "compression_dir", test_cache_dir / f"{test_name}-archives")
+
+    def clear_test_outputs(self) -> None:
+        """Remove any existing output directories created by this conversion test."""
+        remove_path(self.conversion_dir)
+        remove_path(self.compression_dir)

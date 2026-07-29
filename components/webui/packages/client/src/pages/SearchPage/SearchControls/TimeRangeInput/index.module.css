@@ -1,0 +1,9 @@
+.timeRangeInputContainer {
+    display: inline-flex;
+}
+
+.rangePicker {
+    min-width: 350px;
+    max-width: 350px;
+}
+

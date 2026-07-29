@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
@@ -20,6 +21,7 @@
 #include "../../../../../clp_s/search/kql/kql.hpp"
 #include "../../../../ir/types.hpp"
 #include "../../../../time_types.hpp"
+#include "../../../EncodedTextAst.hpp"
 #include "../../../KeyValuePairLogEvent.hpp"
 #include "../../../SchemaTree.hpp"
 #include "../../../Value.hpp"
@@ -125,6 +127,9 @@ auto generate_matchable_kql_expressions(
             matchable_kql_expressions.emplace_back(
                     fmt::format("{}: {}", column_query_with_namespace, cRefTestInt)
             );
+            matchable_kql_expressions.emplace_back(
+                    fmt::format("{}: timestamp(\"{}\")", column_query_with_namespace, cRefTestInt)
+            );
             auto [it, inserted] = expected_column_resolutions.try_emplace(
                     column_query_with_namespace,
                     std::set<SchemaTree::Node::id_t>{}
@@ -142,6 +147,13 @@ auto generate_matchable_kql_expressions(
         {
             matchable_kql_expressions.emplace_back(
                     fmt::format("{}: {:.2f}", column_query_with_namespace, cRefTestFloat)
+            );
+            matchable_kql_expressions.emplace_back(
+                    fmt::format(
+                            "{}: timestamp(\"{:.3f}\")",
+                            column_query_with_namespace,
+                            cRefTestFloat
+                    )
             );
             auto [it, inserted] = expected_column_resolutions.try_emplace(
                     column_query_with_namespace,
@@ -248,12 +260,8 @@ auto get_matchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value
             std::vector<Value> matchable_values;
             matchable_values.emplace_back(fmt::format("ThisIs{}", cRefTestStr));
             auto const long_str{fmt::format("This is {}", cRefTestStr)};
-            matchable_values.emplace_back(
-                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(long_str)
-            );
-            matchable_values.emplace_back(
-                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(long_str)
-            );
+            matchable_values.emplace_back(FourByteEncodedTextAst::parse_and_encode_from(long_str));
+            matchable_values.emplace_back(EightByteEncodedTextAst::parse_and_encode_from(long_str));
             return matchable_values;
         }
         default:
@@ -280,10 +288,10 @@ auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Val
             constexpr std::string_view cUnmatchableLongStr{"This is a static message: ID=0"};
             REQUIRE((cUnmatchableLongStr.find(cRefTestStr) == std::string::npos));
             unmatchable_values.emplace_back(
-                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(cUnmatchableLongStr)
+                    FourByteEncodedTextAst::parse_and_encode_from(cUnmatchableLongStr)
             );
             unmatchable_values.emplace_back(
-                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(cUnmatchableLongStr)
+                    EightByteEncodedTextAst::parse_and_encode_from(cUnmatchableLongStr)
             );
             return unmatchable_values;
         }
@@ -904,9 +912,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                 schema_tree,
                 {},
                 {{cArrayNodeId,
-                  Value{
-                          get_encoded_text_ast<ir::four_byte_encoded_variable_t>(unstructured_array)
-                  }}},
+                  Value{FourByteEncodedTextAst::parse_and_encode_from(unstructured_array)}}},
                 query_handler_impl
         )};
         CAPTURE(evaluation_result);

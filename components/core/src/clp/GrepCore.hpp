@@ -13,14 +13,15 @@
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "Defs.h"
-#include "EncodedVariableInterpreter.hpp"
-#include "ir/parsing.hpp"
-#include "ir/types.hpp"
-#include "LogTypeDictionaryReaderReq.hpp"
-#include "Query.hpp"
-#include "QueryToken.hpp"
-#include "VariableDictionaryReaderReq.hpp"
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
+#include <clp/ir/parsing.hpp>
+#include <clp/ir/types.hpp>
+#include <clp/LogTypeDictionaryReaderReq.hpp>
+#include <clp/Query.hpp>
+#include <clp/QueryToken.hpp>
+#include <clp/SchemaSearcher.hpp>
+#include <clp/VariableDictionaryReaderReq.hpp>
 
 namespace clp {
 class GrepCore {
@@ -73,24 +74,6 @@ public:
             size_t& begin_pos,
             size_t& end_pos,
             bool& is_var
-    );
-
-    /**
-     * Returns bounds of next potential variable (either a definite variable or a token with
-     * wildcards)
-     * @param value String containing token
-     * @param begin_pos Begin position of last token, changes to begin position of next token
-     * @param end_pos End position of last token, changes to end position of next token
-     * @param is_var Whether the token is definitely a variable
-     * @param lexer DFA for determining if input is in the schema
-     * @return true if another potential variable was found, false otherwise
-     */
-    static bool get_bounds_of_next_potential_var(
-            std::string const& value,
-            size_t& begin_pos,
-            size_t& end_pos,
-            bool& is_var,
-            log_surgeon::lexers::ByteLexer& lexer
     );
 
 private:
@@ -163,13 +146,18 @@ std::optional<Query> GrepCore::process_raw_query(
         log_surgeon::lexers::ByteLexer& lexer,
         bool use_heuristic
 ) {
-    // Split search_string into tokens with wildcards
-    std::vector<QueryToken> query_tokens;
-    size_t begin_pos = 0;
-    size_t end_pos = 0;
-    bool is_var;
-    std::string search_string_for_sub_queries{search_string};
-    if (use_heuristic) {
+    std::vector<SubQuery> sub_queries;
+    if (false == use_heuristic) {
+        sub_queries
+                = SchemaSearcher::search(search_string, lexer, logtype_dict, var_dict, ignore_case);
+    } else {
+        // Split search_string into tokens with wildcards
+        std::vector<QueryToken> query_tokens;
+        size_t begin_pos{0};
+        size_t end_pos{0};
+        bool is_var{false};
+        std::string search_string_for_sub_queries{search_string};
+
         // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support for
         // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
         // message uses the original wildcards, so correctness will be maintained.
@@ -192,70 +180,55 @@ std::optional<Query> GrepCore::process_raw_query(
         {
             query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
         }
-    } else {
-        while (get_bounds_of_next_potential_var(
-                search_string_for_sub_queries,
-                begin_pos,
-                end_pos,
-                is_var,
-                lexer
-        ))
-        {
-            query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
-        }
-    }
-
-    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we
-    // fall-back to decompression + wildcard matching for those.
-    std::vector<QueryToken*> ambiguous_tokens;
-    for (auto& query_token : query_tokens) {
-        if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
-            ambiguous_tokens.push_back(&query_token);
-        }
-    }
-
-    // Generate a sub-query for each combination of ambiguous tokens
-    // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need
-    // to create:
-    // - (token1 as logtype) (token2 as logtype)
-    // - (token1 as logtype) (token2 as var)
-    // - (token1 as var) (token2 as logtype)
-    // - (token1 as var) (token2 as var)
-    std::vector<SubQuery> sub_queries;
-    std::string logtype;
-    bool type_of_one_token_changed = true;
-    while (type_of_one_token_changed) {
-        SubQuery sub_query;
-
-        // Compute logtypes and variables for query
-        auto matchability = generate_logtypes_and_vars_for_subquery(
-                logtype_dict,
-                var_dict,
-                search_string_for_sub_queries,
-                query_tokens,
-                ignore_case,
-                sub_query
-        );
-        switch (matchability) {
-            case SubQueryMatchabilityResult::SupercedesAllSubQueries:
-                // Since other sub-queries will be superceded by this one, we can stop processing
-                // now
-                return Query{search_begin_ts, search_end_ts, ignore_case, search_string, {}};
-            case SubQueryMatchabilityResult::MayMatch:
-                sub_queries.push_back(std::move(sub_query));
-                break;
-            case SubQueryMatchabilityResult::WontMatch:
-            default:
-                // Do nothing
-                break;
+        // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since
+        // we fall-back to decompression + wildcard matching for those.
+        std::vector<QueryToken*> ambiguous_tokens;
+        for (auto& query_token : query_tokens) {
+            if (false == query_token.has_greedy_wildcard_in_middle()
+                && query_token.is_ambiguous_token())
+            {
+                ambiguous_tokens.push_back(&query_token);
+            }
         }
 
-        // Update combination of ambiguous tokens
-        type_of_one_token_changed = false;
-        for (auto* ambiguous_token : ambiguous_tokens) {
-            if (ambiguous_token->change_to_next_possible_type()) {
-                type_of_one_token_changed = true;
-                break;
+        // Generate a sub-query for each combination of ambiguous tokens
+        // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we
+        // need to create:
+        // - (token1 as logtype) (token2 as logtype)
+        // - (token1 as logtype) (token2 as var)
+        // - (token1 as var) (token2 as logtype)
+        // - (token1 as var) (token2 as var)
+        bool type_of_one_token_changed{true};
+        while (type_of_one_token_changed) {
+            SubQuery sub_query;
+            auto matchability{generate_logtypes_and_vars_for_subquery(
+                    logtype_dict,
+                    var_dict,
+                    search_string_for_sub_queries,
+                    query_tokens,
+                    ignore_case,
+                    sub_query
+            )};
+            switch (matchability) {
+                case SubQueryMatchabilityResult::SupercedesAllSubQueries:
+                    // Since other sub-queries will be superceded by this one, we can stop
+                    // processing now.
+                    return Query{search_begin_ts, search_end_ts, ignore_case, search_string, {}};
+                case SubQueryMatchabilityResult::MayMatch:
+                    sub_queries.push_back(std::move(sub_query));
+                    break;
+                case SubQueryMatchabilityResult::WontMatch:
+                default:
+                    break;
+            }
+
+            // Update combination of ambiguous tokens
+            type_of_one_token_changed = false;
+            for (auto* ambiguous_token : ambiguous_tokens) {
+                if (ambiguous_token->change_to_next_possible_type()) {
+                    type_of_one_token_changed = true;
+                    break;
+                }
             }
         }
     }

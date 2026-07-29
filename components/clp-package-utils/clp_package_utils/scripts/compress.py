@@ -5,16 +5,17 @@ import shlex
 import subprocess
 import sys
 import uuid
-from typing import List, Optional
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
+    ClpDbUserType,
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path, resolve_host_path_in_container
 
 from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -48,7 +49,7 @@ def _generate_logs_list(
     with open(container_logs_list_path, "w") as container_logs_list_file:
         if host_logs_list_path is None:
             for path in parsed_args.paths:
-                resolved_path = pathlib.Path(path).resolve()
+                resolved_path = resolve_host_path(pathlib.Path(path))
                 mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                     resolved_path.anchor
                 )
@@ -56,14 +57,17 @@ def _generate_logs_list(
             return len(parsed_args.paths) != 0
 
         no_path_found = True
-        with open(host_logs_list_path, "r") as host_logs_list_file:
+        resolved_host_logs_list_path = resolve_host_path_in_container(
+            pathlib.Path(host_logs_list_path)
+        )
+        with open(resolved_host_logs_list_path, "r") as host_logs_list_file:
             for line in host_logs_list_file:
                 stripped_path_str = line.rstrip()
                 if "" == stripped_path_str:
                     # Skip empty paths
                     continue
                 no_path_found = False
-                resolved_path = pathlib.Path(stripped_path_str).resolve()
+                resolved_path = resolve_host_path(pathlib.Path(stripped_path_str))
                 mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                     resolved_path.anchor
                 )
@@ -73,11 +77,10 @@ def _generate_logs_list(
 
 def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
-    dataset: Optional[str],
+    dataset: str | None,
     config_path: pathlib.Path,
     logs_list_path: pathlib.Path,
-) -> List[str]:
-
+) -> list[str]:
     # fmt: off
     compress_cmd = [
         "python3",
@@ -96,9 +99,6 @@ def _generate_compress_cmd(
         compress_cmd.append(parsed_args.timestamp_key)
     if parsed_args.unstructured:
         compress_cmd.append("--unstructured")
-    if parsed_args.tags is not None:
-        compress_cmd.append("--tags")
-        compress_cmd.append(parsed_args.tags)
     if parsed_args.no_progress_reporting is True:
         compress_cmd.append("--no-progress-reporting")
 
@@ -156,9 +156,6 @@ def main(argv):
         help="Treat all inputs as unstructured text logs.",
     )
     args_parser.add_argument(
-        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
-    )
-    args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
     args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
@@ -175,8 +172,8 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
+        clp_config = load_config_file(resolve_host_path_in_container(config_file_path))
+        clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
@@ -230,26 +227,26 @@ def main(argv):
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir, mounts.input_logs_dir]
+    necessary_mounts = [mounts.data_dir, mounts.logs_dir, mounts.input_logs_dir]
 
     # Write compression logs to a file
     while True:
         # Get unused output path
-        container_logs_list_filename = f"{uuid.uuid4()}.txt"
-        container_logs_list_path = clp_config.logs_directory / container_logs_list_filename
-        logs_list_path_on_container = (
-            container_clp_config.logs_directory / container_logs_list_filename
-        )
-        if not container_logs_list_path.exists():
+        logs_list_filename = f"{uuid.uuid4()}.txt"
+        logs_list_path_on_host = clp_config.logs_directory / logs_list_filename
+        resolved_logs_list_path_on_host = resolve_host_path_in_container(logs_list_path_on_host)
+        logs_list_path_on_container = container_clp_config.logs_directory / logs_list_filename
+        if not resolved_logs_list_path_on_host.exists():
             break
 
-    if not _generate_logs_list(container_logs_list_path, parsed_args):
+    if not _generate_logs_list(resolved_logs_list_path_on_host, parsed_args):
         logger.error("No filesystem paths given for compression.")
         return -1
 
+    credentials = clp_config.database.credentials
     extra_env_vars = {
-        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
-        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+        CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+        CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
@@ -260,15 +257,19 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
     else:
-        container_logs_list_path.unlink()
+        resolved_logs_list_path_on_host.unlink()
 
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
+
     return ret_code
 
 

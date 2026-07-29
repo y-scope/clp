@@ -1,17 +1,23 @@
 import datetime
+import hashlib
+import logging
 import os
 import signal
 import subprocess
 import sys
 from contextlib import closing
-from logging import Logger
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 
+from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
+
+
+def get_query_hash(query_string: str) -> str:
+    return hashlib.sha256(query_string.encode("utf-8")).hexdigest()
 
 
 def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Path:
@@ -21,7 +27,7 @@ def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Pat
 
 
 def report_task_failure(
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     task_id: int,
     start_time: datetime.datetime,
 ):
@@ -40,16 +46,16 @@ def report_task_failure(
 
 
 def run_query_task(
-    sql_adapter: SQL_Adapter,
-    logger: Logger,
+    sql_adapter: SqlAdapter,
+    logger: logging.Logger,
     clp_logs_dir: Path,
-    task_command: List[str],
-    env_vars: Optional[Dict[str, str]],
+    task_command: list[str],
+    env_vars: dict[str, str] | None,
     task_name: str,
     job_id: str,
     task_id: int,
     start_time: datetime.datetime,
-) -> Tuple[QueryTaskResult, str]:
+) -> tuple[QueryTaskResult, str]:
     clo_log_path = get_task_log_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
@@ -58,7 +64,7 @@ def run_query_task(
         sql_adapter, task_id, dict(status=task_status, start_time=start_time)
     )
 
-    logger.info(f'Running: {" ".join(task_command)}')
+    logger.info(f"Running: {' '.join(task_command)}")
     task_proc = subprocess.Popen(
         task_command,
         preexec_fn=os.setpgrp,
@@ -90,14 +96,16 @@ def run_query_task(
     return_code = task_proc.returncode
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
-        logger.error(
-            f"{task_name} task {task_id} failed for job {job_id} - return_code={return_code}"
-        )
+        logger.error("%s task failed - return_code=%s", task_name, return_code)
     else:
         task_status = QueryTaskStatus.SUCCEEDED
-        logger.info(f"{task_name} task {task_id} completed for job {job_id}")
+        logger.info("%s task completed", task_name)
 
     clo_log_file.close()
+    if 0 != return_code:
+        log_file_contents(logger, clo_log_path)
+    else:
+        log_file_contents(logger, clo_log_path, logging.INFO)
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     update_query_task_metadata(
@@ -110,26 +118,24 @@ def run_query_task(
         duration=duration,
     )
 
-    if QueryTaskStatus.FAILED == task_status:
-        task_result.error_log_path = str(clo_log_path)
-
     return task_result, stdout_data.decode("utf-8")
 
 
 def update_query_task_metadata(
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     task_id: int,
-    kv_pairs: Dict[str, Any],
+    kv_pairs: dict[str, Any],
 ):
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         if not kv_pairs or len(kv_pairs) == 0:
             raise ValueError("No key-value pairs provided to update query task metadata")
 
         query = f"""
             UPDATE {QUERY_TASKS_TABLE_NAME}
-            SET {', '.join([f'{k}="{v}"' for k, v in kv_pairs.items()])}
+            SET {", ".join([f'{k}="{v}"' for k, v in kv_pairs.items()])}
             WHERE id = {task_id}
         """
         db_cursor.execute(query)

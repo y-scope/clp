@@ -94,14 +94,18 @@ std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) 
     return expr;
 }
 
-std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr<Expression> cur) {
+std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
+        std::shared_ptr<Expression> const& cur
+) {
     for (auto it = cur->op_begin(); it != cur->op_end(); it++) {
         if (auto child = std::dynamic_pointer_cast<Expression>(*it)) {
             auto new_child = populate_column_mapping(child);
             if (new_child != child) {
                 new_child->copy_replace(cur.get(), it);
             }
-        } else if (auto column = dynamic_cast<ColumnDescriptor*>((*it).get())) {
+        } else if (auto const column{std::dynamic_pointer_cast<ast::ColumnDescriptor>(*it)};
+                   nullptr != column)
+        {
             if (false == populate_column_mapping(column)) {
                 // no matching columns -- replace this expression with empty;
                 return EmptyExpr::create();
@@ -110,7 +114,7 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
 
                 // TODO: will have to decide how we wan't to handle multi-column expressions
                 // with unresolved descriptors
-                for (int32_t node_id : m_unresolved_descriptor_to_descriptor[column]) {
+                for (auto const node_id : m_unresolved_descriptor_to_descriptor.at(column.get())) {
                     auto const* node = &m_tree->get_node(node_id);
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
@@ -156,7 +160,7 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
     return cur;
 }
 
-bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
+bool SchemaMatch::populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor> const& column) {
     bool matched = false;
     // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
     // namespaces.
@@ -207,7 +211,10 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
     return matched;
 }
 
-bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node_id) {
+bool SchemaMatch::populate_column_mapping(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        int32_t node_id
+) {
     /**
      * This function is the core of Column Resolution. The general idea is to walk down different
      * branches of the mst while advancing an iterator over the column descriptor in step.
@@ -285,16 +292,20 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node
              * {"a": {"b": [{"c": "d"}]}}
              */
             column->add_unresolved_tokens(next_it);
-            m_column_to_descriptor[cur_node_id].insert(column);
+            auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(cur_node_id);
+            descriptors_it->second.emplace(column);
             matched = true;
             continue;
         } else if ((next_at_descriptor_list_end
                     && column->matches_type(node_to_literal_type(cur_node.get_type()))))
         {
             if (false == column->is_unresolved_descriptor()) {
-                m_column_to_descriptor[cur_node_id].insert(column);
+                auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(cur_node_id);
+                descriptors_it->second.emplace(column);
             } else {
-                m_unresolved_descriptor_to_descriptor[column].insert(cur_node_id);
+                auto [node_ids_it, _]
+                        = m_unresolved_descriptor_to_descriptor.try_emplace(column.get());
+                node_ids_it->second.emplace(cur_node_id);
             }
             matched = true;
             continue;
@@ -336,9 +347,11 @@ void SchemaMatch::populate_schema_mapping() {
             if (false == m_column_to_descriptor.count(column_id)) {
                 continue;
             }
-            for (auto descriptor : m_column_to_descriptor[column_id]) {
+            for (auto const& descriptor : m_column_to_descriptor.at(column_id)) {
                 if (false == descriptor->is_pure_wildcard()) {
-                    m_descriptor_to_schema[descriptor][schema_id] = column_id;
+                    auto [schema_to_column_id_it, _]
+                            = m_descriptor_to_schema.try_emplace(descriptor.get());
+                    schema_to_column_id_it->second.emplace(schema_id, column_id);
                 }
             }
         }

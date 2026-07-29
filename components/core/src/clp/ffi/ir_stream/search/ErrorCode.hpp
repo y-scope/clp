@@ -16,7 +16,6 @@ enum class ErrorCodeEnum : uint8_t {
     ColumnDescriptorTokenIteratorOutOfBounds,
     ColumnTokenizationFailure,
     DuplicateProjectedColumn,
-    EncodedTextAstDecodingFailure,
     ExpressionTypeUnexpected,
     LiteralTypeUnexpected,
     LiteralTypeUnsupported,

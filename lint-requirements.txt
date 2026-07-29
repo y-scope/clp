@@ -1,6 +1,16 @@
-black>=24.4.2
-clang-format>=21.1.2
+# C++
+# Lock to v21.1.x until we decide to upgrade to v22.
+# Issue: https://github.com/y-scope/clp/issues/2030
+clang-format~=21.1.2
 # Lock to v19.x until we can upgrade our code to fix new v20 issues.
 clang-tidy~=19.1
-ruff>=0.4.4
+
+# Python
+# Cap below v0.16 until we adopt its newly stabilized rules (e.g., CPY001 requires copyright
+# notices, which our Python files don't have yet).
+# Issue: https://github.com/y-scope/clp/issues/2422
+ruff>=0.4.4,<0.16
+
+# YAML
+yamale>=6.1.0
 yamllint>=1.35.1

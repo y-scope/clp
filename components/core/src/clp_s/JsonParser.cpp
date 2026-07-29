@@ -3,7 +3,6 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <stack>
@@ -14,29 +13,29 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
-#include <curl/curl.h>
+#include <fmt/format.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
-#include "../clp/ffi/ir_stream/decoding_methods.hpp"
-#include "../clp/ffi/ir_stream/Deserializer.hpp"
-#include "../clp/ffi/ir_stream/IrUnitType.hpp"
-#include "../clp/ffi/ir_stream/protocol_constants.hpp"
-#include "../clp/ffi/KeyValuePairLogEvent.hpp"
-#include "../clp/ffi/SchemaTree.hpp"
-#include "../clp/ffi/Value.hpp"
-#include "../clp/ir/EncodedTextAst.hpp"
-#include "../clp/NetworkReader.hpp"
-#include "../clp/ReaderInterface.hpp"
-#include "../clp/time_types.hpp"
-#include "archive_constants.hpp"
-#include "ErrorCode.hpp"
-#include "FloatFormatEncoding.hpp"
-#include "InputConfig.hpp"
-#include "JsonFileIterator.hpp"
-#include "JsonParser.hpp"
-#include "search/ast/ColumnDescriptor.hpp"
-#include "search/ast/SearchUtils.hpp"
+#include <clp/ErrorCode.hpp>
+#include <clp/ffi/EncodedTextAst.hpp>
+#include <clp/ffi/ir_stream/decoding_methods.hpp>
+#include <clp/ffi/ir_stream/Deserializer.hpp>
+#include <clp/ffi/ir_stream/IrUnitType.hpp>
+#include <clp/ffi/ir_stream/protocol_constants.hpp>
+#include <clp/ffi/KeyValuePairLogEvent.hpp>
+#include <clp/ffi/SchemaTree.hpp>
+#include <clp/ffi/Value.hpp>
+#include <clp/ReaderInterface.hpp>
+#include <clp/time_types.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/FloatFormatEncoding.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/JsonFileIterator.hpp>
+#include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
+#include <clp_s/Utils.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -144,7 +143,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
           m_retain_float_format(option.retain_float_format),
-          m_input_paths(option.input_paths),
+          m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
         if (false
@@ -507,16 +506,43 @@ void JsonParser::parse_line(
                         i64_value = number_value.get_int64();
                     }
 
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::Integer, cur_key);
-                    m_current_parsed_message.add_value(node_id, i64_value);
+                    node_id = m_archive_writer->add_node(
+                            node_id_stack.top(),
+                            matches_timestamp ? NodeType::Timestamp : NodeType::Integer,
+                            cur_key
+                    );
                     if (matches_timestamp) {
-                        m_archive_writer
-                                ->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
+                        m_current_parsed_message.add_value(
+                                node_id,
+                                m_archive_writer->ingest_unknown_precision_epoch_timestamp(
+                                        m_timestamp_key,
+                                        node_id,
+                                        i64_value
+                                )
+                        );
+                    } else {
+                        m_current_parsed_message.add_value(node_id, i64_value);
                     }
                 } else {
                     auto const double_value{number_value.get_double()};
-                    if (m_retain_float_format) {
+                    if (matches_timestamp) {
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::Timestamp,
+                                cur_key
+                        );
+                        auto const double_value_str{
+                                trim_trailing_whitespace(line.raw_json_token())
+                        };
+                        m_current_parsed_message.add_value(
+                                node_id,
+                                m_archive_writer->ingest_numeric_json_timestamp(
+                                        m_timestamp_key,
+                                        node_id,
+                                        double_value_str
+                                )
+                        );
+                    } else if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
                         auto const float_format_result{get_float_encoding(double_value_str)};
                         if (false == float_format_result.has_error()
@@ -546,33 +572,32 @@ void JsonParser::parse_line(
                                           ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
                         m_current_parsed_message.add_value(node_id, double_value);
                     }
-                    if (matches_timestamp) {
-                        m_archive_writer
-                                ->ingest_timestamp_entry(m_timestamp_key, node_id, double_value);
-                    }
                 }
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
             case simdjson::ondemand::json_type::string: {
-                std::string_view value = line.get_string(true);
-                auto const matches_timestamp
-                        = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
-                if (matches_timestamp) {
-                    node_id = m_archive_writer->add_node(
-                            node_id_stack.top(),
-                            NodeType::DateString,
-                            cur_key
-                    );
-                    uint64_t encoding_id{0};
-                    epochtime_t timestamp = m_archive_writer->ingest_timestamp_entry(
-                            m_timestamp_key,
+                if (m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key)) {
+                    auto const raw_timestamp_literal{
+                            trim_trailing_whitespace(line.raw_json_token())
+                    };
+                    node_id = m_archive_writer
+                                      ->add_node(node_id_stack.top(), NodeType::Timestamp, cur_key);
+                    m_current_parsed_message.add_value(
                             node_id,
-                            value,
-                            encoding_id
+                            m_archive_writer->ingest_string_timestamp(
+                                    m_timestamp_key,
+                                    node_id,
+                                    raw_timestamp_literal,
+                                    true
+                            )
                     );
-                    m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
-                } else if (value.find(' ') != std::string::npos) {
+                    m_current_schema.insert_ordered(node_id);
+                    break;
+                }
+
+                std::string_view value = line.get_string(true);
+                if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
@@ -581,7 +606,6 @@ void JsonParser::parse_line(
                                       ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
                 }
-
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
@@ -621,33 +645,90 @@ void JsonParser::parse_line(
 
 bool JsonParser::ingest() {
     auto archive_creator_id = boost::uuids::to_string(m_generator());
-    for (auto const& path : m_input_paths) {
-        auto reader{try_create_reader(path, m_network_auth)};
-        if (nullptr == reader) {
-            std::ignore = m_archive_writer->close();
-            return false;
-        }
+    for (auto const& [path, file_name_in_metadata] : m_input_paths_and_canonical_filenames) {
+        auto [nested_readers, file_type]
+                = try_create_reader_and_deduce_type_with_retries(path, m_network_auth);
 
-        auto const [nested_readers, file_type] = try_deduce_reader_type(reader);
         bool ingestion_successful{};
         switch (file_type) {
+            case FileType::EmptyFile:
             case FileType::Json:
-                ingestion_successful = ingest_json(nested_readers.back(), path, archive_creator_id);
+                ingestion_successful = ingest_json(
+                        nested_readers.back(),
+                        path,
+                        file_name_in_metadata,
+                        archive_creator_id
+                );
                 break;
             case FileType::KeyValueIr:
-                ingestion_successful = ingest_kvir(nested_readers.back(), path, archive_creator_id);
+                ingestion_successful = ingest_kvir(
+                        nested_readers.back(),
+                        path,
+                        file_name_in_metadata,
+                        archive_creator_id
+                );
                 break;
             case FileType::LogText:
                 SPDLOG_ERROR(
-                        "Direct ingestion of unstructured logtext is not supported from input {}",
+                        "Direct ingestion of unstructured log-text is not supported from input {}",
                         path.path
                 );
                 std::ignore = m_archive_writer->close();
                 return false;
+            case FileType::Unknown: {
+                if (false == nested_readers.empty()
+                    && NetworkUtils::check_and_log_curl_error(
+                            path.path,
+                            nested_readers.front().get()
+                    ))
+                {
+                    close_nested_readers(nested_readers);
+                    SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
+                    std::ignore = m_archive_writer->close();
+                    return false;
+                }
+
+                auto json_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                        std::string const& file_name) -> bool {
+                    return ingest_json(reader, path, file_name, archive_creator_id);
+                };
+
+                auto kv_ir_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                         std::string const& file_name) -> bool {
+                    return ingest_kvir(reader, path, file_name, archive_creator_id);
+                };
+
+                auto log_text_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                            std::string const& file_name) -> bool {
+                    SPDLOG_ERROR(
+                            "Direct ingestion of unstructured log-text is not supported from"
+                            " archive member {}",
+                            file_name
+                    );
+                    return false;
+                };
+
+                if (false == nested_readers.empty()
+                    && try_process_general_purpose_archive_with_libarchive(
+                            nested_readers.back(),
+                            path,
+                            file_name_in_metadata,
+                            json_handler,
+                            kv_ir_handler,
+                            log_text_handler,
+                            json_handler
+                    ))
+                {
+                    ingestion_successful = true;
+                    break;
+                }
+            }
             case FileType::Zstd:
-            case FileType::Unknown:
             default: {
-                std::ignore = check_and_log_curl_error(path, reader);
+                if (false == nested_readers.empty()) {
+                    NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get());
+                    close_nested_readers(nested_readers);
+                }
                 SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
                 std::ignore = m_archive_writer->close();
                 return false;
@@ -655,7 +736,10 @@ bool JsonParser::ingest() {
         }
 
         close_nested_readers(nested_readers);
-        if (false == ingestion_successful || check_and_log_curl_error(path, reader)) {
+        if (false == ingestion_successful
+            || (false == nested_readers.empty()
+                && NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get())))
+        {
             std::ignore = m_archive_writer->close();
             return false;
         }
@@ -666,6 +750,7 @@ bool JsonParser::ingest() {
 auto JsonParser::ingest_json(
         std::shared_ptr<clp::ReaderInterface> reader,
         Path const& path,
+        std::string const& file_name_in_metadata,
         std::string const& archive_creator_id
 ) -> bool {
     JsonFileIterator json_file_iterator(*reader, m_max_document_size);
@@ -693,7 +778,7 @@ auto JsonParser::ingest_json(
                 = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
         if (auto const rc = m_archive_writer->add_field_to_current_range(
                     std::string{constants::range_index::cFilename},
-                    path.path
+                    file_name_in_metadata
             );
             ErrorCodeSuccess != rc)
         {
@@ -835,6 +920,7 @@ auto JsonParser::ingest_json(
 auto JsonParser::ingest_kvir(
         std::shared_ptr<clp::ReaderInterface> reader,
         Path const& path,
+        std::string const& file_name_in_metadata,
         std::string const& archive_creator_id
 ) -> bool {
     auto deserializer_result{Deserializer<IrUnitHandler>::create(*reader, IrUnitHandler{})};
@@ -860,7 +946,7 @@ auto JsonParser::ingest_kvir(
                 = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
         if (auto const rc = m_archive_writer->add_field_to_current_range(
                     std::string{constants::range_index::cFilename},
-                    path.path
+                    file_name_in_metadata
             );
             ErrorCodeSuccess != rc)
         {
@@ -1054,14 +1140,7 @@ auto JsonParser::adjust_archive_node_type_for_timestamp(NodeType node_type, bool
     if (false == matches_timestamp) {
         return node_type;
     }
-
-    switch (node_type) {
-        case NodeType::ClpString:
-        case NodeType::VarString:
-            return NodeType::DateString;
-        default:
-            return node_type;
-    }
+    return NodeType::Timestamp;
 }
 
 template <bool autogen>
@@ -1182,17 +1261,34 @@ void JsonParser::parse_kv_log_event_subtree(
             case NodeType::Integer: {
                 auto const i64_value
                         = pair.second.value().get_immutable_view<clp::ffi::value_int_t>();
-                m_current_parsed_message.add_value(node_id, i64_value);
                 if (matches_timestamp) {
-                    m_archive_writer->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
+                    m_current_parsed_message.add_value(
+                            node_id,
+                            m_archive_writer->ingest_unknown_precision_epoch_timestamp(
+                                    m_timestamp_key,
+                                    node_id,
+                                    i64_value
+                            )
+                    );
+                } else {
+                    m_current_parsed_message.add_value(node_id, i64_value);
                 }
             } break;
             case NodeType::Float: {
                 auto const d_value
                         = pair.second.value().get_immutable_view<clp::ffi::value_float_t>();
-                m_current_parsed_message.add_value(node_id, d_value);
                 if (matches_timestamp) {
-                    m_archive_writer->ingest_timestamp_entry(m_timestamp_key, node_id, d_value);
+                    auto const timestamp_str{fmt::format("{:.9f}", d_value)};
+                    m_current_parsed_message.add_value(
+                            node_id,
+                            m_archive_writer->ingest_numeric_json_timestamp(
+                                    m_timestamp_key,
+                                    node_id,
+                                    timestamp_str
+                            )
+                    );
+                } else {
+                    m_current_parsed_message.add_value(node_id, d_value);
                 }
             } break;
             case NodeType::Boolean: {
@@ -1203,73 +1299,80 @@ void JsonParser::parse_kv_log_event_subtree(
             case NodeType::VarString: {
                 auto const var_value{pair.second.value().get_immutable_view<std::string>()};
                 if (matches_timestamp) {
-                    uint64_t encoding_id{};
-                    auto const timestamp = m_archive_writer->ingest_timestamp_entry(
-                            m_timestamp_key,
+                    m_current_parsed_message.add_value(
                             node_id,
-                            var_value,
-                            encoding_id
+                            m_archive_writer->ingest_string_timestamp(
+                                    m_timestamp_key,
+                                    node_id,
+                                    var_value,
+                                    false
+                            )
                     );
-                    m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
                 } else {
                     m_current_parsed_message.add_value(node_id, var_value);
                 }
             } break;
             case NodeType::ClpString: {
                 bool const is_eight_byte_encoding{
-                        pair.second.value().is<clp::ir::EightByteEncodedTextAst>()
+                        pair.second.value().is<clp::ffi::EightByteEncodedTextAst>()
                 };
                 if (false == matches_timestamp) {
                     if (is_eight_byte_encoding) {
                         m_current_parsed_message.add_value(
                                 node_id,
                                 pair.second.value()
-                                        .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                                        .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
                         );
                     } else {
                         m_current_parsed_message.add_value(
                                 node_id,
                                 pair.second.value()
-                                        .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                                        .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
                         );
                     }
                     break;
                 }
 
-                std::string decoded_value;
-                if (is_eight_byte_encoding) {
-                    decoded_value = pair.second.value()
-                                            .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
-                                            .decode_and_unparse()
-                                            .value();
-
-                } else {
-                    decoded_value = pair.second.value()
-                                            .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
-                                            .decode_and_unparse()
-                                            .value();
+                auto const decoding_result
+                        = is_eight_byte_encoding
+                                  ? pair.second.value()
+                                            .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
+                                            .to_string()
+                                  : pair.second.value()
+                                            .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
+                                            .to_string();
+                if (decoding_result.has_error()) {
+                    auto const error{decoding_result.error()};
+                    throw clp::ffi::ir_stream::DecodingException(
+                            clp::ErrorCode_Failure,
+                            __FILENAME__,
+                            __LINE__,
+                            fmt::format("{}: {}", error.category().name(), error.message())
+                    );
                 }
-                uint64_t encoding_id{};
-                auto const timestamp = m_archive_writer->ingest_timestamp_entry(
-                        m_timestamp_key,
+
+                m_current_parsed_message.add_value(
                         node_id,
-                        decoded_value,
-                        encoding_id
+                        m_archive_writer->ingest_string_timestamp(
+                                m_timestamp_key,
+                                node_id,
+                                decoding_result.value(),
+                                false
+                        )
                 );
-                m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
             } break;
             case NodeType::UnstructuredArray: {
-                if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
+                if (pair.second.value().is<clp::ffi::EightByteEncodedTextAst>()) {
                     m_current_parsed_message.add_value(
                             node_id,
                             pair.second.value()
-                                    .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                                    .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
                     );
                 } else {
                     m_current_parsed_message.add_value(
                             node_id,
                             pair.second.value()
-                                    .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                                    .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
                     );
                 }
                 break;
@@ -1308,28 +1411,5 @@ void JsonParser::split_archive() {
     m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
-}
-
-bool JsonParser::check_and_log_curl_error(
-        Path const& path,
-        std::shared_ptr<clp::ReaderInterface> reader
-) {
-    if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
-        nullptr != network_reader)
-    {
-        if (auto const rc = network_reader->get_curl_ret_code();
-            rc.has_value() && CURLcode::CURLE_OK != rc.value())
-        {
-            auto const curl_error_message = network_reader->get_curl_error_msg();
-            SPDLOG_ERROR(
-                    "Encountered curl error while ingesting {} - Code: {} - Message: {}",
-                    path.path,
-                    static_cast<int64_t>(rc.value()),
-                    curl_error_message.value_or("Unknown error")
-            );
-            return true;
-        }
-    }
-    return false;
 }
 }  // namespace clp_s

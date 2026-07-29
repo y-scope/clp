@@ -15,6 +15,7 @@ if(CLP_BUILD_EXECUTABLES)
         ${CLP_S_LOG_CONVERTER_SOURCES}
     )
     target_compile_features(log-converter PRIVATE cxx_std_20)
+    target_include_directories(log-converter PRIVATE ../../)
     target_link_libraries(
         log-converter
         PRIVATE

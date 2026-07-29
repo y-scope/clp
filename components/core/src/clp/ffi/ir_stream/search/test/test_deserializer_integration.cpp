@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -109,11 +110,12 @@ auto serialize_json_pairs_into_kv_pair_ir_stream(std::vector<JsonPair> const& js
     REQUIRE_FALSE(serializer_result.has_error());
     auto& serializer{serializer_result.value()};
     for (auto const& [auto_gen_kv_pairs, user_gen_kv_pairs] : json_pairs) {
-        REQUIRE(unpack_and_serialize_msgpack_bytes(
-                nlohmann::json::to_msgpack(auto_gen_kv_pairs),
-                nlohmann::json::to_msgpack(user_gen_kv_pairs),
-                serializer
-        ));
+        REQUIRE_FALSE(unpack_and_serialize_msgpack_bytes(
+                              nlohmann::json::to_msgpack(auto_gen_kv_pairs),
+                              nlohmann::json::to_msgpack(user_gen_kv_pairs),
+                              serializer
+        )
+                              .has_error());
     }
     auto const ir_buf_view{serializer.get_ir_buf_view()};
     std::vector<int8_t> ir_buf{ir_buf_view.begin(), ir_buf_view.end()};

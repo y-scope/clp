@@ -16,6 +16,8 @@
 
 #include <simdjson.h>
 
+#include <clp_s/search/ColumnScan.hpp>
+
 #include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
 #include "../ColumnReader.hpp"
@@ -86,6 +88,16 @@ public:
      */
     auto schema_init(int32_t schema_id) -> EvaluatedValue;
 
+    /**
+     * Selects a filtering implementation, and prepares a filter on a given ERT.
+     *
+     * Note: This method must be called after schema_init.
+     *
+     * @param reader A reader for an ERT.
+     * @return The filtering implementation selected by QueryRunner.
+     */
+    [[nodiscard]] auto prepare_filter(SchemaReader& reader) -> FilterClass&;
+
 protected:
     // Methods inherited from FilterClass
     auto filter(uint64_t cur_message) -> bool override;
@@ -133,7 +145,8 @@ private:
     std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*> m_expr_var_match_map;
     std::unordered_map<int32_t, std::vector<ClpStringColumnReader*>> m_clp_string_readers;
     std::unordered_map<int32_t, std::vector<VariableStringColumnReader*>> m_var_string_readers;
-    std::unordered_map<int32_t, DateStringColumnReader*> m_datestring_readers;
+    std::unordered_map<int32_t, TimestampColumnReader*> m_timestamp_readers;
+    DeprecatedDateStringColumnReader* m_deprecated_datestring_reader{nullptr};
     std::unordered_map<int32_t, std::vector<BaseColumnReader*>> m_basic_readers;
     std::unordered_map<int32_t, std::string> m_extracted_unstructured_arrays;
     uint64_t m_cur_message{0};
@@ -153,6 +166,7 @@ private:
     std::string m_array_search_string;
     bool m_maybe_string{false};
     bool m_maybe_number{false};
+    std::unique_ptr<ColumnScan> m_column_scan;
 
     /**
      * Initializes the variables. Init is called once for each schema after which filter is called
@@ -267,7 +281,20 @@ private:
      */
     auto evaluate_epoch_date_filter(
             ast::FilterOperation op,
-            DateStringColumnReader* reader,
+            DeprecatedDateStringColumnReader* reader,
+            std::shared_ptr<ast::Literal>& operand
+    ) -> bool;
+
+    /**
+     * Evaluates a timestamp filter.
+     * @param op
+     * @param reader
+     * @param operand
+     * @return Whether the filter evaluates to true.
+     */
+    auto evaluate_timestamp_filter(
+            ast::FilterOperation op,
+            TimestampColumnReader* reader,
             std::shared_ptr<ast::Literal>& operand
     ) -> bool;
 

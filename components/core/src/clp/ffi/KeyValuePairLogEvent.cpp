@@ -15,13 +15,11 @@
 #include <nlohmann/json_fwd.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "../ir/EncodedTextAst.hpp"
 #include "../time_types.hpp"
+#include "EncodedTextAst.hpp"
 #include "SchemaTree.hpp"
 #include "Value.hpp"
 
-using clp::ir::EightByteEncodedTextAst;
-using clp::ir::FourByteEncodedTextAst;
 using std::string;
 using std::vector;
 
@@ -186,7 +184,8 @@ private:
  * NOTE: This function assumes that `val` is either a `FourByteEncodedTextAst` or
  * `EightByteEncodedTextAst`.
  * @param val
- * @return Same as `EncodedTextAst::decode_and_unparse`.
+ * @return The decoded string on success.
+ * @return std::nullopt if `EncodedTextAst::to_string` returns an error.
  */
 [[nodiscard]] auto decode_as_encoded_text_ast(Value const& val) -> std::optional<string>;
 
@@ -422,9 +421,15 @@ auto insert_kv_pair_into_json_obj(
 }
 
 auto decode_as_encoded_text_ast(Value const& val) -> std::optional<string> {
-    return val.is<FourByteEncodedTextAst>()
-                   ? val.get_immutable_view<FourByteEncodedTextAst>().decode_and_unparse()
-                   : val.get_immutable_view<EightByteEncodedTextAst>().decode_and_unparse();
+    auto result{
+            val.is<FourByteEncodedTextAst>()
+                    ? val.get_immutable_view<FourByteEncodedTextAst>().to_string()
+                    : val.get_immutable_view<EightByteEncodedTextAst>().to_string()
+    };
+    if (result.has_error()) {
+        return std::nullopt;
+    }
+    return std::move(result.value());
 }
 
 auto serialize_node_id_value_pairs_to_json(

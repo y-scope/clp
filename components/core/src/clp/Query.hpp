@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "Defs.h"
+#include <clp/Defs.h>
 
 namespace clp {
 /**
@@ -25,6 +25,8 @@ public:
     );
 
     // Methods
+    auto operator==(QueryVar const& rhs) const -> bool = default;
+
     /**
      * Checks if the given encoded variable matches this QueryVar
      * @param var
@@ -75,6 +77,8 @@ private:
 class SubQuery {
 public:
     // Methods
+    auto operator==(SubQuery const& rhs) const -> bool = default;
+
     /**
      * Adds a precise non-dictionary variable to the subquery
      * @param precise_non_dict_var
@@ -155,7 +159,7 @@ private:
     std::unordered_set<logtype_dictionary_id_t> m_possible_logtypes;
     std::set<segment_id_t> m_ids_of_matching_segments;
     std::vector<QueryVar> m_vars;
-    bool m_wildcard_match_required;
+    bool m_wildcard_match_required{false};
 };
 
 /**

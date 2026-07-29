@@ -13,6 +13,7 @@
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
+#include "IrSerializationError.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
@@ -44,8 +45,10 @@ public:
      * @param optional_user_defined_metadata Stream-level user-defined metadata, given as a JSON
      * object.
      * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::protocol_error if the stream's metadata couldn't be serialized.
-     * - std::errc::protocol_not_supported if the given user-defined metadata is not a JSON object.
+     * - IrSerializationErrorEnum::MetadataSerializationFailure if the stream's metadata couldn't be
+     *   serialized.
+     * - IrSerializationErrorEnum::UnsupportedUserDefinedMetadata if the given user-defined metadata
+     *   is not a JSON object.
      */
     [[nodiscard]] static auto create(
             std::optional<nlohmann::json> optional_user_defined_metadata = std::nullopt
@@ -91,12 +94,14 @@ public:
      * Serializes the given msgpack maps as a key-value pair log event.
      * @param auto_gen_kv_pairs_map
      * @param user_gen_kv_pairs_map
-     * @return Whether serialization succeeded.
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `serialize_schema_tree_node`'s return values on failure.
+     * - Forwards `serialize_msgpack_map_using_dfs`'s return values on failure.
      */
     [[nodiscard]] auto serialize_msgpack_map(
             msgpack::object_map const& auto_gen_kv_pairs_map,
             msgpack::object_map const& user_gen_kv_pairs_map
-    ) -> bool;
+    ) -> ystdlib::error_handling::Result<void>;
 
 private:
     // Constructors
@@ -107,10 +112,15 @@ private:
      * Serializes a schema tree node identified by the given locator into `m_schema_tree_node_buf`.
      * @tparam is_auto_generated_node
      * @param locator
-     * @return Whether serialization succeeded.
+     * @return A void result on success, or an error code indicating the failure:
+     * - IrSerializationErrorEnum::UnknownSchemaTreeNodeType if the node type is unsupported.
+     * - IrSerializationErrorEnum::SchemaTreeNodeSerializationFailure if the key name couldn't be
+     *   serialized.
+     * - Forwards `encode_and_serialize_schema_tree_node_id`'s return value on failure.
      */
     template <bool is_auto_generated_node>
-    [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator) -> bool;
+    [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator)
+            -> ystdlib::error_handling::Result<void>;
 
     UtcOffset m_curr_utc_offset{0};
     Buffer m_ir_buf;

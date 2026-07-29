@@ -1,10 +1,8 @@
-import logging
 import os
 import pathlib
 import shutil
 import time
 from datetime import datetime, timezone
-from typing import List, Set
 
 from bson import ObjectId
 from clp_py_utils.clp_config import (
@@ -13,19 +11,9 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.clp_logging import get_logging_formatter, set_logging_level
 from clp_py_utils.s3_utils import s3_delete_objects
+
 from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS
-
-
-def configure_logger(
-    logger: logging.Logger, logging_level: str, log_directory: pathlib.Path, handler_name: str
-):
-    log_file = log_directory / f"{handler_name}.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-    set_logging_level(logger, logging_level)
 
 
 def validate_storage_type(output_config: ArchiveOutput, storage_engine: str) -> None:
@@ -74,7 +62,7 @@ def execute_fs_deletion(fs_storage_config: FsStorage, candidate: str) -> None:
         os.remove(path_to_delete)
 
 
-def execute_deletion(output_config: ArchiveOutput, deletion_candidates: Set[str]) -> None:
+def execute_deletion(output_config: ArchiveOutput, deletion_candidates: set[str]) -> None:
     storage_config = output_config.storage
     storage_type = storage_config.type
 
@@ -102,8 +90,8 @@ class DeletionCandidatesBuffer:
 
     def __init__(self, recovery_file_path: pathlib.Path):
         self._recovery_file_path: pathlib.Path = recovery_file_path
-        self._candidates: Set[str] = set()
-        self._candidates_to_persist: List[str] = list()
+        self._candidates: set[str] = set()
+        self._candidates_to_persist: list[str] = list()
 
         if not self._recovery_file_path.exists():
             return
@@ -120,7 +108,7 @@ class DeletionCandidatesBuffer:
             self._candidates.add(candidate)
             self._candidates_to_persist.append(candidate)
 
-    def get_candidates(self) -> Set[str]:
+    def get_candidates(self) -> set[str]:
         return self._candidates
 
     def persist_new_candidates(self) -> None:
@@ -133,8 +121,7 @@ class DeletionCandidatesBuffer:
             return
 
         with open(self._recovery_file_path, "a") as f:
-            for candidate in self._candidates_to_persist:
-                f.write(f"{candidate}\n")
+            f.writelines(f"{candidate}\n" for candidate in self._candidates_to_persist)
 
         self._candidates_to_persist.clear()
 

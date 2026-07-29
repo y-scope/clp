@@ -6,21 +6,33 @@ vars:
 tasks:
   default:
     deps:
+      - task: "clp-py-project-imports"
       - task: "core"
+      - task: "package"
 
   cache-clear:
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     cmds:
-      - >-
-        uv run python -m pytest --cache-clear --collect-only --override-ini addopts="" --quiet
-        > /dev/null
+      - "rm -rf .pytest_cache"
 
   core:
-    deps:
-      - task: "::core"
-    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     env:
       CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
       CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
       CLP_PACKAGE_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
-    cmd: "uv run python -m pytest -m core"
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    deps: ["::core"]
+    cmd: "uv run pytest -m core"
+
+  clp-py-project-imports:
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    cmd: "uv run pytest tests/test_clp_native_py_project_imports.py"
+
+  package:
+    env:
+      CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
+      CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+      CLP_PACKAGE_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    deps: ["::package"]
+    cmd: "uv run pytest -m package"

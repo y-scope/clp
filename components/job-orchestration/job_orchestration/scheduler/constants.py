@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from enum import auto, IntEnum
 
+INGESTED_S3_OBJECT_METADATA_TABLE_NAME = "ingested_s3_object_metadata"
+
 TASK_QUEUE_LOWEST_PRIORITY = 1
 TASK_QUEUE_HIGHEST_PRIORITY = 3
 

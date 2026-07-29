@@ -1,0 +1,3 @@
+delimiters: \r\n
+
+header:(?<int>\d+)

@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 #include <fmt/format.h>
 #include <nlohmann/json_fwd.hpp>
@@ -28,6 +29,8 @@
 #include "CommandLineArguments.hpp"
 #include "InputConfig.hpp"
 #include "search/ast/Expression.hpp"
+#include "search/ast/SetTimestampLiteralPrecision.hpp"
+#include "search/ast/TimestampLiteral.hpp"
 
 // This include has a circular dependency with the `.inc` file.
 // The following clang-tidy suppression should be removed once the circular dependency is resolved.
@@ -36,6 +39,8 @@
 
 using clp_s::KvIrSearchError;
 using clp_s::KvIrSearchErrorEnum;
+using clp_s::search::ast::SetTimestampLiteralPrecision;
+using clp_s::search::ast::TimestampLiteral;
 using KvIrSearchErrorCategory = ystdlib::error_handling::ErrorCategory<KvIrSearchErrorEnum>;
 
 namespace clp_s {
@@ -128,19 +133,15 @@ auto IrUnitHandler::create(
         CommandLineArguments const& command_line_arguments,
         [[maybe_unused]] int reducer_socket_fd
 ) -> ystdlib::error_handling::Result<IrUnitHandler> {
-    switch (command_line_arguments.get_output_handler_type()) {
-        case CommandLineArguments::OutputHandlerType::Stdout:
-            break;
-        case CommandLineArguments::OutputHandlerType::Network:
-        case CommandLineArguments::OutputHandlerType::Reducer:
-        case CommandLineArguments::OutputHandlerType::ResultsCache:
-            SPDLOG_ERROR(
-                    "kv-ir search: Only stdout output is supported in the current implementation."
-            );
-            return KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType};
-        default:
-            SPDLOG_ERROR("kv-ir search: Unknown output method.");
-            return KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType};
+    if (false
+        == std::holds_alternative<CommandLineArguments::StdoutOutputHandlerOptions>(
+                command_line_arguments.get_output_handler_options()
+        ))
+    {
+        SPDLOG_ERROR(
+                "kv-ir search: Only stdout output is supported in the current implementation."
+        );
+        return KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType};
     }
     return IrUnitHandler{};
 }
@@ -245,11 +246,9 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
     }
 
-    if (command_line_arguments.do_count_by_time_aggregation()
-        || command_line_arguments.do_count_results_aggregation())
-    {
-        SPDLOG_ERROR("kv-ir search: Count support is not implemented.");
-        return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};
+    if (command_line_arguments.get_aggregator().has_value()) {
+        SPDLOG_ERROR("kv-ir search: Aggregation support is not implemented.");
+        return KvIrSearchError{KvIrSearchErrorEnum::AggregationSupportNotImplemented};
     }
 
     auto const raw_reader{
@@ -268,9 +267,12 @@ auto search_kv_ir_stream(
         );
     }
 
+    SetTimestampLiteralPrecision date_precision_pass{TimestampLiteral::Precision::Milliseconds};
+    query = date_precision_pass.run(query);
+
     try {
         clp::streaming_compression::zstd::Decompressor decompressor;
-        constexpr size_t cReaderBufferSize{64L * 1024L};  // 64 KB
+        constexpr size_t cReaderBufferSize{64L * 1024L};  // 64 KiB
         decompressor.open(*raw_reader, cReaderBufferSize);
         YSTDLIB_ERROR_HANDLING_TRYV(deserialize_and_search_kv_ir_stream(
                 decompressor,
@@ -311,8 +313,8 @@ auto KvIrSearchErrorCategory::message(KvIrSearchErrorEnum error_enum) const -> s
     switch (error_enum) {
         case KvIrSearchErrorEnum::ClpLegacyError:
             return "clp legacy error.";
-        case KvIrSearchErrorEnum::CountSupportNotImplemented:
-            return "Count support is not implemented.";
+        case KvIrSearchErrorEnum::AggregationSupportNotImplemented:
+            return "Aggregation support is not implemented.";
         case KvIrSearchErrorEnum::DeserializerCreationFailure:
             return "Failed to create `clp::ffi::ir_stream::Deserializer`.";
         case KvIrSearchErrorEnum::ProjectionSupportNotImplemented:

@@ -1,9 +1,12 @@
 import datetime
 import os
+import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
+import msgpack
 from celery.app.task import Task
+from celery.exceptions import SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
     Database,
@@ -12,19 +15,54 @@ from clp_py_utils.clp_config import (
     WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
-from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, get_credential_env_vars
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.s3_utils import (
+    generate_s3_url,
+    get_credential_env_vars,
+    s3_put,
+)
+from clp_py_utils.sql_adapter import SqlAdapter
+from clp_py_utils.telemetry_config import is_telemetry_disabled_by_env
+from structlog.contextvars import bound_contextvars
 
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
+    get_query_hash,
     report_task_failure,
     run_query_task,
 )
 from job_orchestration.executor.utils import load_worker_config
+from job_orchestration.scheduler.constants import QueryJobType
 from job_orchestration.scheduler.job_config import SearchJobConfig
+from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
+
+
+def _get_search_task_log_context(
+    job_id: str,
+    task_id: int,
+    job_config_blob: bytes,
+    archive_id: str,
+    dataset: str | None,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {
+        "job_id": job_id,
+        "task_id": task_id,
+        "query_job_type": QueryJobType.SEARCH_OR_AGGREGATION.to_str(),
+        "archive_id": archive_id,
+    }
+    if dataset is not None:
+        context["dataset"] = dataset
+
+    try:
+        search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
+    except (msgpack.UnpackException, ValueError):
+        return context
+
+    context["query"] = search_config.query_string
+    context["query_hash"] = get_query_hash(search_config.query_string)
+    return context
 
 
 def _make_core_clp_command_and_env_vars(
@@ -32,11 +70,18 @@ def _make_core_clp_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_type = worker_config.archive_output.storage.type
     if StorageType.S3 == storage_type:
         logger.error(
             f"Search is not supported for storage type '{storage_type}' while using the"
+            f" '{worker_config.package.storage_engine}' storage engine."
+        )
+        return None, None
+
+    if True == search_config.write_to_file:
+        logger.error(
+            f"Outputting search results to the file system is not supported while using the"
             f" '{worker_config.package.storage_engine}' storage engine."
         )
         return None, None
@@ -54,19 +99,21 @@ def _make_core_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+    job_id: str,
+    task_id: int,
+    dataset: str,
+) -> tuple[list[str] | None, dict[str, str] | None]:
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
     ]
-
-    dataset = search_config.dataset
+    env_vars = dict(os.environ)
     if StorageType.S3 == worker_config.archive_output.storage.type:
         s3_config = worker_config.archive_output.storage.s3_config
         s3_object_key = f"{s3_config.key_prefix}{dataset}/{archive_id}"
         try:
-            s3_url = generate_s3_virtual_hosted_style_url(
-                s3_config.region_code, s3_config.bucket, s3_object_key
+            s3_url = generate_s3_url(
+                s3_config.endpoint_url, s3_config.region_code, s3_config.bucket, s3_object_key
             )
         except ValueError as ex:
             logger.error(f"Encountered error while generating S3 url: {ex}")
@@ -78,7 +125,6 @@ def _make_core_clp_s_command_and_env_vars(
             "s3"
         ))
         # fmt: on
-        env_vars = dict(os.environ)
         env_vars.update(get_credential_env_vars(s3_config.aws_authentication))
     else:
         archives_dir = worker_config.archive_output.get_directory() / dataset
@@ -89,7 +135,16 @@ def _make_core_clp_s_command_and_env_vars(
             archive_id,
         ))
         # fmt: on
-        env_vars = None
+
+    if not is_telemetry_disabled_by_env():
+        enable_telemetry = random.choices(
+            [True, False],
+            cum_weights=[worker_config.query_worker.query_trace_sampling_probability, 1.0],
+            k=1,
+        )[0]
+        if enable_telemetry:
+            command.append("--enable-telemetry")
+            env_vars.update({"CLP_QUERY_ID": job_id, "CLP_TASK_ID": str(task_id)})
     return command, env_vars
 
 
@@ -99,8 +154,10 @@ def _make_command_and_env_vars(
     archive_id: str,
     search_config: SearchJobConfig,
     results_cache_uri: str,
-    results_collection: str,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+    job_id: str,
+    task_id: int,
+    dataset: str | None = None,
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
 
     if StorageEngine.CLP == storage_engine:
@@ -109,7 +166,7 @@ def _make_command_and_env_vars(
         )
     elif StorageEngine.CLP_S == storage_engine:
         command, env_vars = _make_core_clp_s_command_and_env_vars(
-            clp_home, worker_config, archive_id, search_config
+            clp_home, worker_config, archive_id, search_config, job_id, task_id, dataset
         )
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
@@ -130,12 +187,6 @@ def _make_command_and_env_vars(
 
     if search_config.aggregation_config is not None:
         aggregation_config = search_config.aggregation_config
-        if aggregation_config.do_count_aggregation is not None:
-            command.append("--count")
-        if aggregation_config.count_by_time_bucket_size is not None:
-            command.append("--count-by-time")
-            command.append(str(aggregation_config.count_by_time_bucket_size))
-
         # fmt: off
         command.extend((
             "reducer",
@@ -144,6 +195,11 @@ def _make_command_and_env_vars(
             "--job-id", str(aggregation_config.job_id)
         ))
         # fmt: on
+        if aggregation_config.do_count_aggregation is not None:
+            command.append("--count")
+        if aggregation_config.count_by_time_bucket_size is not None:
+            command.append("--count-by-time")
+            command.append(str(aggregation_config.count_by_time_bucket_size))
     elif search_config.network_address is not None:
         # fmt: off
         command.extend((
@@ -152,29 +208,58 @@ def _make_command_and_env_vars(
             "--port", str(search_config.network_address[1])
         ))
         # fmt: on
+    elif search_config.write_to_file:
+        output_directory = worker_config.stream_output.get_directory() / job_id
+        output_directory.mkdir(exist_ok=True)
+        output_path = output_directory / archive_id
+        # fmt: off
+        command.extend((
+            "file",
+            "--path", str(output_path),
+        ))
+        # fmt: on
     else:
         # fmt: off
         command.extend((
             "results-cache",
             "--uri", results_cache_uri,
-            "--collection", results_collection,
-            "--max-num-results", str(search_config.max_num_results)
+            "--collection", job_id,
+            "--max-num-results", str(search_config.max_num_results),
         ))
         # fmt: on
+        if dataset is not None:
+            command.extend(("--dataset", dataset))
 
     return command, env_vars
 
 
-@app.task(bind=True)
-def search(
-    self: Task,
+def upload_results_to_s3(
+    task_results: QueryTaskResult, s3_config: Any, src_file: Path, dest_path: str
+):
+    if not src_file.exists() or src_file.stat().st_size == 0:
+        logger.info(f"Skipping upload for empty query results file {dest_path} to S3.")
+        src_file.unlink(missing_ok=True)
+        return
+    logger.info(f"Uploading query results {dest_path} to S3...")
+    try:
+        s3_put(s3_config, src_file, dest_path)
+        logger.info(f"Finished uploading query results {dest_path} to S3.")
+    except Exception as err:
+        logger.error(f"Failed to upload query results {dest_path}: {err}")
+        task_results.status = QueryTaskStatus.FAILED
+    src_file.unlink()
+    return
+
+
+def search_entry_point(
     job_id: str,
     task_id: int,
-    job_config: dict,
+    job_config_blob: bytes,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
-) -> Dict[str, Any]:
+    dataset: str | None = None,
+) -> dict[str, Any]:
     task_name = "search"
 
     # Setup logging to file
@@ -182,10 +267,10 @@ def search(
     clp_logging_level = os.getenv("CLP_LOGGING_LEVEL")
     set_logging_level(logger, clp_logging_level)
 
-    logger.info(f"Started {task_name} task for job {job_id}")
+    logger.info("Started %s task", task_name)
 
     start_time = datetime.datetime.now()
-    sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_conn_params))
+    sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
 
     # Load configuration
     clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))
@@ -199,7 +284,7 @@ def search(
 
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
-    search_config = SearchJobConfig.model_validate(job_config)
+    search_config = SearchJobConfig.model_validate(msgpack.unpackb(job_config_blob))
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,
@@ -207,7 +292,9 @@ def search(
         archive_id=archive_id,
         search_config=search_config,
         results_cache_uri=results_cache_uri,
-        results_collection=job_id,
+        job_id=job_id,
+        task_id=task_id,
+        dataset=dataset,
     )
     if not task_command:
         logger.error(f"Error creating {task_name} command")
@@ -229,4 +316,47 @@ def search(
         start_time=start_time,
     )
 
+    storage_config = worker_config.stream_output.storage
+    if (
+        StorageType.S3 == storage_config.type
+        and search_config.write_to_file
+        and QueryTaskStatus.SUCCEEDED == task_results.status
+    ):
+        s3_config = storage_config.s3_config
+        src_file = Path(worker_config.stream_output.get_directory()) / job_id / archive_id
+        dest_path = f"{job_id}/{archive_id}"
+        upload_results_to_s3(task_results, s3_config, src_file, dest_path)
+
     return task_results.model_dump()
+
+
+@app.task(bind=True)
+def search(
+    self: Task,
+    job_id: str,
+    task_id: int,
+    job_config_blob: bytes,
+    archive_id: str,
+    clp_metadata_db_conn_params: dict,
+    results_cache_uri: str,
+    dataset: str | None = None,
+) -> dict[str, Any]:
+    with bound_contextvars(
+        **_get_search_task_log_context(job_id, task_id, job_config_blob, archive_id, dataset)
+    ):
+        try:
+            return search_entry_point(
+                job_id,
+                task_id,
+                job_config_blob,
+                archive_id,
+                clp_metadata_db_conn_params,
+                results_cache_uri,
+                dataset,
+            )
+        except SoftTimeLimitExceeded:
+            logger.exception("Search task exceeded soft time limit.")
+            raise
+        except Exception:
+            logger.exception("Search task failed with an unexpected exception.")
+            raise

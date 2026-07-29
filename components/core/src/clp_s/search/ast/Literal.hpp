@@ -21,7 +21,7 @@ enum LiteralType : uint32_t {
     BooleanT = 1 << 4,
     ArrayT = 1 << 5,
     NullT = 1 << 6,
-    EpochDateT = 1 << 7,
+    TimestampT = 1 << 7,
     TypesEnd = 1 << 8,
     UnknownT = ((uint32_t)1) << 31
 };
@@ -73,8 +73,8 @@ public:
                 return "array";
             case LiteralType::NullT:
                 return "null";
-            case LiteralType::EpochDateT:
-                return "epochdate";
+            case LiteralType::TimestampT:
+                return "timestamp";
             default:
                 return "errtype";
         }
@@ -103,7 +103,7 @@ public:
         return as_var_string(ret, op) || as_clp_string(ret, op);
     }
 
-    virtual bool as_epoch_date() { return false; }
+    virtual bool as_timestamp() { return false; }
 
     virtual bool as_any(FilterOperation op) { return false; }
 };

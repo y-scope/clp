@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/generators/catch_generators_range.hpp>
@@ -21,10 +22,11 @@
 #include "../../../../../clp_s/search/ast/Integral.hpp"
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../../clp_s/search/ast/StringLiteral.hpp"
+#include "../../../../../clp_s/search/ast/TimestampLiteral.hpp"
 #include "../../../../ir/types.hpp"
+#include "../../../EncodedTextAst.hpp"
 #include "../../../Value.hpp"
 #include "../utils.hpp"
-#include "utils.hpp"
 
 namespace clp::ffi::ir_stream::search::test {
 namespace {
@@ -43,6 +45,7 @@ using clp_s::search::ast::Integral;
 using clp_s::search::ast::Literal;
 using clp_s::search::ast::LiteralType;
 using clp_s::search::ast::StringLiteral;
+using clp_s::search::ast::TimestampLiteral;
 
 using ValueToMatchedFilterOpsPair
         = std::pair<std::optional<Value>, std::unordered_set<FilterOperation>>;
@@ -282,8 +285,10 @@ auto check_filter_evaluation_against_encoded_text_asts(
     std::string const matched{"The test ID=" + std::string{cRefTestString}};
     std::string const unmatched{"This is an unmatched string."};
     std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
-            {Value{get_encoded_text_ast<encoded_variable_t>(matched)}, {FilterOperation::EQ}},
-            {Value{get_encoded_text_ast<encoded_variable_t>(unmatched)}, {FilterOperation::NEQ}},
+            {Value{EncodedTextAst<encoded_variable_t>::parse_and_encode_from(matched)},
+             {FilterOperation::EQ}},
+            {Value{EncodedTextAst<encoded_variable_t>::parse_and_encode_from(unmatched)},
+             {FilterOperation::NEQ}},
     };
 
     return assert_filter_evaluation_results_on_values(
@@ -390,11 +395,13 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
     auto ref_bool_literal{BooleanLiteral::create_from_bool(cRefBool)};
     auto ref_int_literal{Integral::create_from_int(cRefInt)};
     auto ref_float_literal{Integral::create_from_float(cRefFloat)};
+    auto ref_timestamp_literal{TimestampLiteral::create(cRefInt)};
 
     REQUIRE_FALSE((nullptr == ref_str_literal));
     REQUIRE_FALSE((nullptr == ref_bool_literal));
     REQUIRE_FALSE((nullptr == ref_int_literal));
     REQUIRE_FALSE((nullptr == ref_float_literal));
+    REQUIRE_FALSE((nullptr == ref_timestamp_literal));
 
     constexpr std::string_view cColumnName{"test_column"};
     auto column_descriptor{
@@ -434,6 +441,32 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
             {FilterExpr::create(column_descriptor, FilterOperation::GT, ref_float_literal),
              LiteralType::FloatT},
             {FilterExpr::create(column_descriptor, FilterOperation::GTE, ref_float_literal),
+             LiteralType::FloatT},
+
+            // Timestamp
+            {FilterExpr::create(column_descriptor, FilterOperation::EQ, ref_timestamp_literal),
+             LiteralType::IntegerT},
+            {FilterExpr::create(column_descriptor, FilterOperation::NEQ, ref_timestamp_literal),
+             LiteralType::IntegerT},
+            {FilterExpr::create(column_descriptor, FilterOperation::LT, ref_timestamp_literal),
+             LiteralType::IntegerT},
+            {FilterExpr::create(column_descriptor, FilterOperation::LTE, ref_timestamp_literal),
+             LiteralType::IntegerT},
+            {FilterExpr::create(column_descriptor, FilterOperation::GT, ref_timestamp_literal),
+             LiteralType::IntegerT},
+            {FilterExpr::create(column_descriptor, FilterOperation::GTE, ref_timestamp_literal),
+             LiteralType::IntegerT},
+            {FilterExpr::create(column_descriptor, FilterOperation::EQ, ref_timestamp_literal),
+             LiteralType::FloatT},
+            {FilterExpr::create(column_descriptor, FilterOperation::NEQ, ref_timestamp_literal),
+             LiteralType::FloatT},
+            {FilterExpr::create(column_descriptor, FilterOperation::LT, ref_timestamp_literal),
+             LiteralType::FloatT},
+            {FilterExpr::create(column_descriptor, FilterOperation::LTE, ref_timestamp_literal),
+             LiteralType::FloatT},
+            {FilterExpr::create(column_descriptor, FilterOperation::GT, ref_timestamp_literal),
+             LiteralType::FloatT},
+            {FilterExpr::create(column_descriptor, FilterOperation::GTE, ref_timestamp_literal),
              LiteralType::FloatT},
 
             // Bool

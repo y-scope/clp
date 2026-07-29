@@ -1,6 +1,8 @@
 from celery import signals
 from celery.app.task import Task
+from celery.exceptions import SoftTimeLimitExceeded
 from celery.utils.log import get_task_logger
+from structlog.contextvars import bound_contextvars
 
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.executor.compress.compression_task import compression_entry_point
@@ -19,17 +21,23 @@ def compress(
     self: Task,
     job_id: int,
     task_id: int,
-    tag_ids: list[int],
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
 ):
-    return compression_entry_point(
-        job_id,
-        task_id,
-        tag_ids,
-        clp_io_config_json,
-        paths_to_compress_json,
-        clp_metadata_db_connection_config,
-        logger,
-    )
+    with bound_contextvars(job_id=job_id, task_id=task_id):
+        try:
+            return compression_entry_point(
+                job_id,
+                task_id,
+                clp_io_config_json,
+                paths_to_compress_json,
+                clp_metadata_db_connection_config,
+                logger,
+            )
+        except SoftTimeLimitExceeded:
+            logger.exception("Compression task exceeded soft time limit.")
+            raise
+        except Exception:
+            logger.exception("Compression task failed with an unexpected exception.")
+            raise
