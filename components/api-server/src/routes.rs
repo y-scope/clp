@@ -118,7 +118,7 @@ async fn health() -> String {
             status = OK,
             body = QueryResultsUri,
             description = "The URI to fetch the results of the submitted query.",
-            example = json!({"query_results_uri":"/query_results/1"})
+            example = json!({"query_results_uri":"query_results/1"})
         ),
         (status = INTERNAL_SERVER_ERROR)
     )
@@ -138,7 +138,7 @@ async fn query(
             return Err(err.into());
         }
     };
-    let uri = format!("/query_results/{search_job_id}");
+    let uri = format!("query_results/{search_job_id}");
     Ok(Json(QueryResultsUri {
         query_results_uri: uri,
     }))
