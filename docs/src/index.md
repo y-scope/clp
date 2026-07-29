@@ -131,5 +131,5 @@ dev-docs/index
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
 [webui]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/webui
 [yscope-community-discord]: https://discord.gg/7kZA2m5G87
-[yscope-community-slack]: https://communityinviter.com/apps/yscopecommunity/yscope-community
+[yscope-community-slack]: https://inviter.co/clp-community
 [yscope-community-zulip]: https://yscope-clp.zulipchat.com
