@@ -27,9 +27,9 @@ inputs:
     required: true
 
 outputs:
-  image_id:
-    description: "The ID of the built container image."
-    value: "${{steps.build-and-push.outputs.imageid}}"
+  image_ref:
+    description: "The tagged reference of the built container image."
+    value: "${{fromJSON(steps.extract-gh-meta.outputs.json).tags[0]}}"
 
 runs:
   using: "composite"

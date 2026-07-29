@@ -827,10 +827,10 @@ jobs:
             HOME=/tmp
             task package-assemble OUTPUT_DIR=build/clp-package
 
-      - name: "Write the package image ID"
+      - name: "Write the package image reference"
         shell: "bash"
         run: >-
-          echo "${{steps.build-package-image.outputs.image_id}}"
+          echo "${{steps.build-package-image.outputs.image_ref}}"
           > "build/clp-package/clp-package-image.id"
 
       - name: "Tar the package directories"
