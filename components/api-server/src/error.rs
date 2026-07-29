@@ -80,8 +80,11 @@ impl From<ByteStreamError> for ClientError {
 impl From<clp_rust_utils::Error> for ClientError {
     fn from(value: clp_rust_utils::Error) -> Self {
         match value {
-            clp_rust_utils::Error::MsgpackEncode(_) | clp_rust_utils::Error::SerdeYaml(_) => {
-                Self::MalformedData
+            clp_rust_utils::Error::MsgpackEncode(_)
+            | clp_rust_utils::Error::MsgpackDecode(_)
+            | clp_rust_utils::Error::SerdeYaml(_) => Self::MalformedData,
+            clp_rust_utils::Error::UnsupportedS3Endpoint(_) => {
+                Self::InvalidInput(value.to_string())
             }
             clp_rust_utils::Error::Io(error) => error.into(),
             clp_rust_utils::Error::Sqlx(error) => error.into(),
