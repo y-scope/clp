@@ -1,32 +1,33 @@
 //! The coordinator poll loop that discovers pending CLP compression jobs and dispatches them to
 //! Spider.
 
-use std::{collections::VecDeque, sync::Arc, time::Duration};
+use std::collections::VecDeque;
+use std::sync::Arc;
+use std::time::Duration;
 
-use clp_rust_utils::{
-    clp_config::package::config::{
-        CompressionCoordinator as CoordinatorConfig,
-        Database as DatabaseConfig,
-        Spider as SpiderConfig,
-        SpiderResourceGroup,
-    },
-    job_config::{ClpIoConfig, CompressionJobId, CompressionJobStatus},
-    serde::BrotliMsgpack,
-};
+use clp_rust_utils::clp_config::package::config::CompressionCoordinator as CoordinatorConfig;
+use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
+use clp_rust_utils::clp_config::package::config::Spider as SpiderConfig;
+use clp_rust_utils::clp_config::package::config::SpiderResourceGroup;
+use clp_rust_utils::job_config::ClpIoConfig;
+use clp_rust_utils::job_config::CompressionJobId;
+use clp_rust_utils::job_config::CompressionJobStatus;
+use clp_rust_utils::serde::BrotliMsgpack;
 use const_format::formatcp;
 use spider_client::SpiderClient;
-use spider_core::{
-    task::{ExecutionPolicy, TimeoutPolicy},
-    types::id::{JobId as SpiderJobId, ResourceGroupId},
-};
-use tokio::{select, sync::Semaphore, time::Instant};
+use spider_core::task::ExecutionPolicy;
+use spider_core::task::TimeoutPolicy;
+use spider_core::types::id::JobId as SpiderJobId;
+use spider_core::types::id::ResourceGroupId;
+use tokio::select;
+use tokio::sync::Semaphore;
+use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Endpoint;
 
-use crate::{
-    Error,
-    job_handle::{S3CompressionJobHandle, SpiderOption},
-};
+use crate::Error;
+use crate::job_handle::S3CompressionJobHandle;
+use crate::job_handle::SpiderOption;
 
 /// Coordinator for fetching new compression jobs and submitting them to Spider.
 pub struct Coordinator {

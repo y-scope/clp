@@ -1,37 +1,33 @@
 //! The `clp-s` compression worker that turns an S3 input source into archives.
 
-use std::{
-    ffi::OsString,
-    io::{BufRead, BufReader, Read},
-    path::{Path, PathBuf},
-    process::{Command, Stdio},
-};
+use std::ffi::OsString;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Read;
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Command;
+use std::process::Stdio;
 
 use anyhow::Context;
-use clp_rust_utils::{
-    aws::AWS_DEFAULT_REGION,
-    clp_config::{
-        AwsAuthentication,
-        S3Config,
-        package::config::{
-            ArchiveOutput,
-            ArchiveOutputStorage,
-            Database,
-            SpiderTaskExecutorConfig,
-        },
-    },
-    dataset::resolve_dataset_name,
-    s3::{create_new_client, generate_s3_url},
-    task_io::compression::{
-        ArchiveMetadata,
-        ClpSCompressionOption,
-        CompressionTaskOutput,
-        S3InputSource,
-    },
-};
+use clp_rust_utils::aws::AWS_DEFAULT_REGION;
+use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::clp_config::package::config::ArchiveOutput;
+use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
+use clp_rust_utils::clp_config::package::config::Database;
+use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
+use clp_rust_utils::dataset::resolve_dataset_name;
+use clp_rust_utils::s3::create_new_client;
+use clp_rust_utils::s3::generate_s3_url;
+use clp_rust_utils::task_io::compression::ArchiveMetadata;
+use clp_rust_utils::task_io::compression::ClpSCompressionOption;
+use clp_rust_utils::task_io::compression::CompressionTaskOutput;
+use clp_rust_utils::task_io::compression::S3InputSource;
 use non_empty_string::NonEmptyString;
 
-use crate::common::{clp_home, runtime};
+use crate::common::clp_home;
+use crate::common::runtime;
 
 /// Compresses the given S3 objects into archives, uploads them to S3, and returns their metadata
 /// for the commit task.
@@ -854,32 +850,30 @@ fn kill_clp_s_and_read_stderr(
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        ffi::OsString,
-        path::{Path, PathBuf},
-    };
+    use std::ffi::OsString;
+    use std::path::Path;
+    use std::path::PathBuf;
 
-    use clp_rust_utils::{
-        clp_config::{
-            AwsAuthentication,
-            AwsCredentials,
-            S3Config,
-            package::config::{ArchiveOutput, ArchiveOutputStorage, ClpDbNames, Database},
-        },
-        task_io::compression::{ArchiveMetadata, ClpSCompressionOption, S3InputSource},
-    };
+    use clp_rust_utils::clp_config::AwsAuthentication;
+    use clp_rust_utils::clp_config::AwsCredentials;
+    use clp_rust_utils::clp_config::S3Config;
+    use clp_rust_utils::clp_config::package::config::ArchiveOutput;
+    use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
+    use clp_rust_utils::clp_config::package::config::ClpDbNames;
+    use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::task_io::compression::ArchiveMetadata;
+    use clp_rust_utils::task_io::compression::ClpSCompressionOption;
+    use clp_rust_utils::task_io::compression::S3InputSource;
     use non_empty_string::NonEmptyString;
 
-    use super::{
-        ClpSInput,
-        build_clp_s_args,
-        build_indexer_args,
-        build_log_converter_args,
-        build_s3_logs_list,
-        create_archive_s3_key,
-        parse_archive_stats,
-        s3_credential_env,
-    };
+    use super::ClpSInput;
+    use super::build_clp_s_args;
+    use super::build_indexer_args;
+    use super::build_log_converter_args;
+    use super::build_s3_logs_list;
+    use super::create_archive_s3_key;
+    use super::parse_archive_stats;
+    use super::s3_credential_env;
 
     #[test]
     fn build_s3_logs_list_default_endpoint() -> anyhow::Result<()> {

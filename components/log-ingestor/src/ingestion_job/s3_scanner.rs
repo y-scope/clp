@@ -2,15 +2,17 @@ use std::time::Duration;
 
 use anyhow::Result;
 use aws_sdk_s3::Client;
-use clp_rust_utils::{job_config::ingestion::s3::S3ScannerConfig, s3::ObjectMetadata};
+use clp_rust_utils::job_config::ingestion::s3::S3ScannerConfig;
+use clp_rust_utils::s3::ObjectMetadata;
 use non_empty_string::NonEmptyString;
 use tokio::select;
 use tokio_util::sync::CancellationToken;
 
-use crate::{
-    aws_client_manager::AwsClientManagerType,
-    ingestion_job::{IngestionJobId, IngestionJobState, S3ScannerState, scan_prefix},
-};
+use crate::aws_client_manager::AwsClientManagerType;
+use crate::ingestion_job::IngestionJobId;
+use crate::ingestion_job::IngestionJobState;
+use crate::ingestion_job::S3ScannerState;
+use crate::ingestion_job::scan_prefix;
 
 /// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
 /// object metadata for newly created objects.

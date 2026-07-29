@@ -9,6 +9,7 @@ const EslintConfig = [
         ignores: [
             "dist/",
             "node_modules/",
+            "src/components/ui/",
             "src/sql-parser/generated",
         ],
     },
