@@ -9,9 +9,9 @@
 #include <bsoncxx/document/value.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/aggregators.hpp>
-#include <clp_s/ErrorCode.hpp>
 
 namespace clp_s {
 /**
@@ -37,14 +37,17 @@ public:
     /**
      * Writes one result document.
      * @param result The result document to write.
+     * @return A void result on success, or an error code indicating the failure.
      */
-    virtual auto write(AggregationResult const& result) -> void = 0;
+    [[nodiscard]] virtual auto write(AggregationResult const& result)
+            -> ystdlib::error_handling::Result<void>
+            = 0;
 
     /**
      * Flushes any buffered results.
-     * @return ErrorCodeSuccess on success or relevant error code on error
+     * @return A void result on success, or an error code indicating the failure.
      */
-    [[nodiscard]] virtual auto finish() -> ErrorCode = 0;
+    [[nodiscard]] virtual auto finish() -> ystdlib::error_handling::Result<void> = 0;
 };
 
 /**
@@ -56,9 +59,17 @@ public:
     explicit StdoutSink(std::string_view archive_id) : m_archive_id{archive_id} {}
 
     // Methods implementing AggregationSink
-    auto write(AggregationResult const& result) -> void override;
+    /**
+     * Dumps the document to stdout.
+     * @param result The result document to write.
+     * @return A void result on success, there is no error case.
+     */
+    [[nodiscard]] auto write(AggregationResult const& result)
+            -> ystdlib::error_handling::Result<void> override;
 
-    [[nodiscard]] auto finish() -> ErrorCode override { return ErrorCode::ErrorCodeSuccess; }
+    [[nodiscard]] auto finish() -> ystdlib::error_handling::Result<void> override {
+        return ystdlib::error_handling::success();
+    }
 
 private:
     // Data members
@@ -81,26 +92,31 @@ public:
     // Methods implementing AggregationSink
     /**
      * Buffers a result document, flushing the buffer to the database once it reaches the batch
-     * size. Documents are dropped after an earlier flush failure; the error surfaces in `finish()`.
+     * size.
      * @param result The result document to write.
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `flush_buffer`'s return values on failure.
      */
-    auto write(AggregationResult const& result) -> void override;
+    [[nodiscard]] auto write(AggregationResult const& result)
+            -> ystdlib::error_handling::Result<void> override;
 
     /**
      * Flushes any remaining buffered result documents.
-     * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite if this flush or an earlier batched flush failed
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `flush_buffer`'s return values on failure.
      */
-    [[nodiscard]] auto finish() -> ErrorCode override;
+    [[nodiscard]] auto finish() -> ystdlib::error_handling::Result<void> override {
+        return flush_buffer();
+    }
 
 private:
     // Methods
     /**
      * Inserts the buffered result documents into the collection.
-     * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on database error
+     * @return A void result on success, or an error code indicating the failure:
+     * - std::errc::io_error if flushing failed.
      */
-    [[nodiscard]] auto flush_buffer() -> ErrorCode;
+    [[nodiscard]] auto flush_buffer() -> ystdlib::error_handling::Result<void>;
 
     // Data members
     mongocxx::client m_client;
@@ -108,7 +124,6 @@ private:
     uint64_t m_batch_size;
     std::string m_archive_id;
     std::vector<bsoncxx::document::value> m_results;
-    ErrorCode m_flush_error{ErrorCode::ErrorCodeSuccess};
 };
 }  // namespace clp_s
 

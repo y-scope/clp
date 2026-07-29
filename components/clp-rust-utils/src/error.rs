@@ -14,6 +14,9 @@ pub enum Error {
     #[error("`sqlx::Error`: {0}")]
     Sqlx(#[from] sqlx::Error),
 
+    #[error("unsupported S3 endpoint: {0}")]
+    UnsupportedS3Endpoint(String),
+
     #[error(transparent)]
     TelemetryExporterBuildError(#[from] opentelemetry_otlp::ExporterBuildError),
 }
