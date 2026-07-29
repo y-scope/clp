@@ -1,7 +1,6 @@
 //! The coordinator poll loop that discovers pending CLP compression jobs and dispatches them to
 //! Spider.
 
-use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -39,17 +38,22 @@ pub struct Coordinator {
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
-    job_handler_sem: Arc<Semaphore>,
+    job_handler_semaphore: Arc<Semaphore>,
     pending_job_queue: VecDeque<PendingJobRowProjection>,
 }
 
 impl Coordinator {
+    /// Maximum number of job-handler tasks that may run concurrently.
+    ///
+    /// TODO: Make this configurable through `ClpConfig`.
+    const MAX_CONCURRENT_JOB_HANDLERS: usize = 10;
+
     /// Factory function.
     ///
     /// On construction, this begins recovering all compression jobs that a previous coordinator
     /// instance had already submitted to Spider (those still [`CompressionJobStatus::Running`] with
-    /// a Spider job ID). During the restart phase, no concurrency limit is imposed, so all
-    /// recovered jobs are resumed immediately.
+    /// a Spider job ID). The job-handler semaphore is sized to accommodate all recovered jobs when
+    /// their count exceeds the normal concurrency limit.
     ///
     /// # Returns
     ///
@@ -62,7 +66,6 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::InvalidConfiguration`] if the compression coordinator configuration is invalid.
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
     /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
     /// * Forwards [`get_or_create_resource_group_id`]'s return values on failure.
@@ -73,14 +76,6 @@ impl Coordinator {
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
     ) -> Result<(Self, CancellationToken), Error> {
-        let max_concurrent_tasks = coordinator_config.max_concurrent_tasks.get();
-        if max_concurrent_tasks > Semaphore::MAX_PERMITS {
-            return Err(Error::InvalidConfiguration(format!(
-                "`max_concurrent_tasks` must not exceed {}, got {max_concurrent_tasks}",
-                Semaphore::MAX_PERMITS,
-            )));
-        }
-
         let spider_host = spider_config.host.as_str();
         let spider_port = spider_config.port;
         let endpoint_str = format!("http://{spider_host}:{spider_port}");
@@ -131,7 +126,7 @@ impl Coordinator {
 
         let cancellation_token = CancellationToken::new();
 
-        let coordinator = Self {
+        let mut coordinator = Self {
             resource_group_id,
             spider_client,
             db_pool,
@@ -142,13 +137,15 @@ impl Coordinator {
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
             cancellation_token: cancellation_token.clone(),
-            job_handler_sem: Arc::new(Semaphore::new(max_concurrent_tasks)),
+            job_handler_semaphore: Arc::new(Semaphore::new(Self::MAX_CONCURRENT_JOB_HANDLERS)),
             pending_job_queue: VecDeque::new(),
         };
 
-        for (job_id, spider_job_id, clp_io_config) in
-            coordinator.fetch_submitted_running_jobs().await?
-        {
+        let recovery_contexts = coordinator.fetch_submitted_running_jobs().await?;
+        let semaphore_size = Self::MAX_CONCURRENT_JOB_HANDLERS.max(recovery_contexts.len());
+        coordinator.job_handler_semaphore = Arc::new(Semaphore::new(semaphore_size));
+
+        for (job_id, spider_job_id, clp_io_config) in recovery_contexts {
             tracing::info!(
                 job_id = % job_id,
                 spider_job_id = % spider_job_id,
@@ -157,10 +154,17 @@ impl Coordinator {
             let Ok(job_handle) = coordinator.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
-
-            // Try to acquire a permit, but still spawn the recovery task if none is available.
-            let permit = coordinator.job_handler_sem.clone().try_acquire_owned().ok();
-
+            let Ok(permit) = coordinator
+                .job_handler_semaphore
+                .clone()
+                .try_acquire_owned()
+            else {
+                tracing::error!(
+                    job_id = %job_id,
+                    "Failed to acquire the reserved permit for a recovered job."
+                );
+                continue;
+            };
             tokio::spawn(async move {
                 let _permit = permit;
                 let _ = job_handle.recover(spider_job_id).await.inspect_err(|e| {
@@ -177,18 +181,14 @@ impl Coordinator {
         Ok((coordinator, cancellation_token))
     }
 
-    /// Runs the coordinator's polling loop until cancelled.
+    /// Runs the coordinator's poll loop until cancelled.
     ///
-    /// Each polling iteration consists of three phases:
-    ///
-    /// 1. Schedule pending compression jobs up to the available concurrency limit.
-    /// 2. Wait until the next polling interval or until cancellation.
-    /// 3. Mark the scheduled jobs as dispatched.
-    ///
-    /// Jobs are marked as dispatched only after the polling interval has elapsed, giving job
-    /// handlers an opportunity to persist their initial Spider submission state before the
-    /// coordinator updates `dispatch_time`, thereby reducing contention when updating the same
-    /// database row.
+    /// On each iteration, this method fetches and schedules pending compression jobs if capacity
+    /// remains. A permit is acquired before each detached job-handler task is spawned, bounding the
+    /// number of live handlers. The coordinator then sleeps until the next poll or until the
+    /// cancellation token is triggered. The jobs dispatched in the iteration are marked once the
+    /// sleep elapses, so their update does not contend with concurrent job submissions during the
+    /// poll interval.
     ///
     /// # Errors
     ///
@@ -256,12 +256,9 @@ impl Coordinator {
         }
     }
 
-    /// Queues new pending compression jobs and spawns as many detached handlers as the concurrency
-    /// limit allows.
+    /// Queues pending compression jobs and spawns as many detached handlers as the semaphore
+    /// permits.
     ///
-    /// New jobs are scheduled whenever permits are available. Because excess recovery handlers may
-    /// run without permits, scheduling new jobs may temporarily cause the total number of active
-    /// handlers to exceed the configured limit until the permitless recovery handlers finish.
     ///
     /// A job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`] and
     /// skipped; a job whose handle cannot be constructed is skipped as well (and marked
@@ -270,7 +267,7 @@ impl Coordinator {
     ///
     /// # Returns
     ///
-    /// The IDs of the queued jobs that were dispatched in this poll.
+    /// The IDs of the queued jobs that were processed in this poll.
     ///
     /// # Errors
     ///
@@ -278,7 +275,7 @@ impl Coordinator {
     ///
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
     async fn schedule_new_jobs(&mut self) -> Result<Vec<CompressionJobId>, Error> {
-        if self.pending_job_queue.is_empty() && self.job_handler_sem.available_permits() > 0 {
+        if self.pending_job_queue.is_empty() && self.job_handler_semaphore.available_permits() > 0 {
             let new_job_rows = self.fetch_new_job_rows().await.inspect_err(|e| {
                 tracing::error!(error = % e, "Failed to fetch new jobs from database.");
             })?;
@@ -287,17 +284,15 @@ impl Coordinator {
 
         let mut dispatched_job_ids = Vec::new();
         while !self.pending_job_queue.is_empty() {
-            let Ok(permit) = self.job_handler_sem.clone().try_acquire_owned() else {
+            let Ok(permit) = self.job_handler_semaphore.clone().try_acquire_owned() else {
                 break;
             };
-
             let job_row = self
                 .pending_job_queue
                 .pop_front()
                 .expect("pending job queue should not be empty");
             let job_id = job_row.id;
             dispatched_job_ids.push(job_id);
-
             let clp_io_config: ClpIoConfig =
                 match BrotliMsgpack::deserialize(&job_row.serialized_clp_io_config) {
                     Ok(clp_io_config) => clp_io_config,
@@ -315,12 +310,10 @@ impl Coordinator {
                         continue;
                     }
                 };
-
             tracing::info!(job_id = % job_id, "Scheduling new job.");
             let Ok(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
-
             tokio::spawn(async move {
                 let _permit = permit;
                 let _ = job_handle.run().await.inspect_err(|e| {
@@ -487,7 +480,7 @@ impl Coordinator {
     ) -> Result<Vec<(CompressionJobId, SpiderJobId, ClpIoConfig)>, Error> {
         const QUERY: &str = formatcp!(
             "SELECT `id`, `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
-             `spider_id` IS NOT NULL;",
+             `spider_id` IS NOT NULL ORDER BY `id` ASC;",
             table = COMPRESSION_JOB_TABLE_NAME,
         );
 
