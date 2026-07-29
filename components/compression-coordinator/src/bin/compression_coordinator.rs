@@ -27,6 +27,21 @@ async fn main() -> anyhow::Result<()> {
         tracing::error!(error = % e, "Failed to load the configuration file.");
     })?;
 
+    if !matches!(config.logs_input, package::config::LogsInput::S3 { .. }) {
+        const ERROR_MESSAGE: &str = "The compression coordinator only supports S3 logs inputs.";
+        tracing::error!(ERROR_MESSAGE);
+        anyhow::bail!(ERROR_MESSAGE);
+    }
+
+    if !matches!(
+        config.archive_output.storage,
+        package::config::ArchiveOutputStorage::S3 { .. }
+    ) {
+        const ERROR_MESSAGE: &str = "The compression coordinator only supports S3 archive outputs.";
+        tracing::error!(ERROR_MESSAGE);
+        anyhow::bail!(ERROR_MESSAGE);
+    }
+
     let credentials = package::credentials::Credentials {
         database: package::credentials::Database {
             password: secrecy::SecretString::new(
