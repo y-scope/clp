@@ -9,31 +9,16 @@ Expands the name of the chart.
 
 {{/*
 Creates a default fully qualified app name. We truncate at 63 chars because some Kubernetes name
-fields are limited to this (by the DNS naming spec). If release name contains chart name it will be
-used as a full name.
+fields are limited to this (by the DNS naming spec). If release name contains "clp" it will be used
+as a full name.
 
 @return {string} The fully qualified app name (truncated to 63 characters)
 */}}
 {{- define "clp.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{/*
-Creates the release-derived default of `clp.fullname` from `.Release`.
-
-@return {string} The fully qualified app name (truncated to 63 characters)
-*/}}
-{{- define "clp.fullnameFromRelease" -}}
-{{- if contains "clp" .Release.Name }}
+{{- $global := .Values.global | default dict }}
+{{- if $global.fullnameOverride }}
+{{- $global.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else if contains "clp" .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
 {{- printf "%s-clp" .Release.Name | trunc 63 | trimSuffix "-" }}

@@ -1,5 +1,7 @@
 nameOverride: ""
-fullnameOverride: ""
+
+global:
+  fullnameOverride: ""
 
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
@@ -393,12 +395,12 @@ spider:
         - name: "CLP_DB_USER"
           valueFrom:
             secretKeyRef:
-              name: "{{ include \"clp.fullnameFromRelease\" . }}-database"
+              name: "{{ include \"clp.fullname\" . }}-database"
               key: "username"
         - name: "CLP_DB_PASS"
           valueFrom:
             secretKeyRef:
-              name: "{{ include \"clp.fullnameFromRelease\" . }}-database"
+              name: "{{ include \"clp.fullname\" . }}-database"
               key: "password"
       extra_volume_mounts:
         - name: "clp-config"
@@ -410,6 +412,6 @@ spider:
       extra_volumes:
         - name: "clp-config"
           configMap:
-            name: "{{ include \"clp.fullnameFromRelease\" . }}-config"
+            name: "{{ include \"clp.fullname\" . }}-config"
         - name: "staged-archives"
           emptyDir: {}
