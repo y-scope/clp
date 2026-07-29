@@ -1,13 +1,13 @@
 //! The commit worker that publishes a compression job's archives to CLP's metadata store.
 
 use anyhow::Context;
-use clp_rust_utils::{
-    clp_config::package::credentials,
-    database::mysql::create_clp_db_mysql_pool,
-    dataset::{VALID_DATASET_NAME_REGEX, resolve_dataset_name},
-    job_config::{CompressionJobId, CompressionJobStatus},
-    task_io::compression::ArchiveMetadata,
-};
+use clp_rust_utils::clp_config::package::credentials;
+use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
+use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::resolve_dataset_name;
+use clp_rust_utils::job_config::CompressionJobId;
+use clp_rust_utils::job_config::CompressionJobStatus;
+use clp_rust_utils::task_io::compression::ArchiveMetadata;
 use secrecy::SecretString;
 use spider_core::types::id::JobId;
 

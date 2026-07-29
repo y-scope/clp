@@ -1,7 +1,10 @@
-use std::io::{Read, Write};
+use std::io::Read;
+use std::io::Write;
 
-use brotli::{CompressorWriter, Decompressor};
-use serde::{Serialize, de::DeserializeOwned};
+use brotli::CompressorWriter;
+use brotli::Decompressor;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use crate::Error;
 
