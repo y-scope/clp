@@ -194,7 +194,7 @@ async fn mark_job_succeeded(
     // time.
     let query_result = sqlx::query(
         "UPDATE compression_jobs SET status = ?, uncompressed_size = ?, compressed_size = ?, \
-         duration = TIMESTAMPDIFF(MICROSECOND, start_time, CURRENT_TIMESTAMP(3)) / 1000000, WHERE \
+         duration = TIMESTAMPDIFF(MICROSECOND, start_time, CURRENT_TIMESTAMP(3)) / 1000000 WHERE \
          id = ? AND status = ?",
     )
     .bind(CompressionJobStatus::Succeeded)

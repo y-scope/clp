@@ -22,6 +22,9 @@ pub enum Error {
     #[error("invalid dataset: {0}")]
     InvalidDataset(String),
 
+    #[error("invalid endpoint: {0}")]
+    InvalidEndpoint(String),
+
     #[error("failed to create metadata table `{table}`: {source}")]
     MetadataTableCreation {
         table: String,
