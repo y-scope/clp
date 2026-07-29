@@ -132,8 +132,11 @@ this section for testing or development.
    require shared local storage between workers. If you use S3 storage, you can skip this section.
    :::
 
-   If storage type is set to `fs`, users must manually provision the persistent volumes and update
-   `accessModes` of PVCs.
+   If storage type is set to `fs`, the shared-data directories (`/var/data/archives`,
+   `/var/data/streams`) must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
+   the same path). Users must pre-create PersistentVolumes backed by this shared storage and use
+   `claimRef` to bind them to the chart's PVCs (`<release>-clp-shared-data-archives` and
+   `<release>-clp-shared-data-streams`).
 
 2. **External databases** (recommended for production):
    * See the [external database setup guide][external-db-guide] for using external
@@ -160,9 +163,9 @@ helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \
   --set credentials.queue.password="$CLP_QUEUE_PASS" \
   --set credentials.redis.password="$CLP_REDIS_PASS" \
-  --set compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
-  --set queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS" \
-  --set reducer.replicas="$CLP_REDUCER_REPLICAS"
+  --set scheduling.compressionWorker.replicas="$CLP_COMPRESSION_WORKER_REPLICAS" \
+  --set scheduling.queryWorker.replicas="$CLP_QUERY_WORKER_REPLICAS" \
+  --set scheduling.reducer.replicas="$CLP_REDUCER_REPLICAS"
 ```
 
 ### Multi-node deployment
@@ -173,9 +176,9 @@ For multi-node clusters with shared storage mounted on all nodes (e.g., NFS/Ceph
 ```bash
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set distributedDeployment=true \
-  --set compressionWorker.replicas=3 \
-  --set queryWorker.replicas=3 \
-  --set reducer.replicas=3
+  --set scheduling.compressionWorker.replicas=3 \
+  --set scheduling.queryWorker.replicas=3 \
+  --set scheduling.reducer.replicas=3
 ```
 
 ### Installation with custom values
@@ -192,14 +195,43 @@ image:
     pullPolicy: "Never"  # Use "Never" for local images, "IfNotPresent" for remote
     tag: "latest"
 
+  # Override third-party container images (useful for private registries or AWS Marketplace ECR).
+  # See the chart's values.yaml for the full list of configurable images.
+  mariadb:
+    repository: "mariadb"
+    tag: "10.11.16"
+  mysql:
+    repository: "mysql"
+    tag: "8.0.46"
+  queue:
+    repository: "rabbitmq"
+    tag: "4.2.6"
+  redis:
+    repository: "redis"
+    tag: "7.4.8"
+  resultsCache:
+    repository: "mongo"
+    tag: "8.0.21"
+  kubectl:
+    repository: "bitnami/kubectl"
+    digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
+
 # Adjust worker concurrency
-workerConcurrency: 16
+scheduling:
+  compressionWorker:
+    slotsPerPod: 16
+  queryWorker:
+    slotsPerPod: 16
+  reducer:
+    slotsPerPod: 16
 
 # Configure CLP settings
 clpConfig:
   # Use clp-text, instead of clp-json (default)
   package:
     storage_engine: "clp"  # Use "clp-s" for clp-json, "clp" for clp-text
+
+  webui:
     query_engine: "clp"   # Use "clp-s" for clp-json, "clp" for clp-text, "presto" for Presto
 
   # Configure archive output
@@ -216,6 +248,10 @@ clpConfig:
   # Configure results cache
   results_cache:
     retention_period: 120  # (in minutes) 2 hours
+
+  # Adjust query scheduler concurrency
+  query_scheduler:
+    scheduler_concurrency: 4
 
 # Override credentials (use secrets in production!)
 credentials:
@@ -246,10 +282,22 @@ helm template clp . -f custom-values.yaml
 
 ::::
 
-### Worker scheduling
+### Using Presto as the query engine
 
-You can control where workers are scheduled using standard Kubernetes scheduling primitives
-(`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`).
+To use Presto as the query engine, see the [Using Presto][presto-guide] guide for setup
+instructions, including the Helm values file and installation steps.
+
+### Component scheduling
+
+You can control where any CLP component is scheduled using standard Kubernetes scheduling primitives
+(`nodeSelector`, `affinity`, `tolerations`, `topologySpreadConstraints`). All components support
+the same scheduling config under the top-level `scheduling` key.
+
+:::{note}
+When using Presto as the query engine, use `scheduling.prestoWorker` instead of
+`scheduling.queryWorker` and `scheduling.reducer` to configure Presto worker scheduling. Presto
+coordinator scheduling can be configured via `scheduling.prestoCoordinator`.
+:::
 
 #### Dedicated node pools
 
@@ -263,6 +311,12 @@ To run compression workers, query workers, and reducers in separate node pools:
 
    # Label query nodes
    kubectl label nodes node3 node4 yscope.io/nodeType=query
+
+   # Optional: Label Presto nodes (if using Presto as the query engine)
+   kubectl label nodes node5 node6 yscope.io/nodeType=presto
+
+   # Optional: Label DB nodes (to isolate bundled data services)
+   kubectl label nodes node7 yscope.io/nodeType=db
    ```
 
 2. Configure scheduling:
@@ -272,23 +326,41 @@ To run compression workers, query workers, and reducers in separate node pools:
 
    distributedDeployment: true
 
-   compressionWorker:
-     replicas: 2
-     scheduling:
+   scheduling:
+     compressionWorker:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: compression
+         yscope.io/nodeType: "compression"
 
-   queryWorker:
-     replicas: 2
-     scheduling:
+     queryWorker:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
 
-   reducer:
-     replicas: 2
-     scheduling:
+     reducer:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: query
+         yscope.io/nodeType: "query"
+
+     # Optional: if using Presto as the query engine
+     prestoWorker:
+       replicas: 2
+       nodeSelector:
+         yscope.io/nodeType: "presto"
+
+     # Optional: to isolate bundled data services
+     database:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     queue:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     redis:
+       nodeSelector:
+         yscope.io/nodeType: "db"
+     resultsCache:
+       nodeSelector:
+         yscope.io/nodeType: "db"
    ```
 
 3. Install:
@@ -314,11 +386,11 @@ To run all worker types in the same node pool:
 
    distributedDeployment: true
 
-   compressionWorker:
-     replicas: 2
-     scheduling:
+   scheduling:
+     compressionWorker:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
        topologySpreadConstraints:
          - maxSkew: 1
            topologyKey: "kubernetes.io/hostname"
@@ -327,17 +399,20 @@ To run all worker types in the same node pool:
              matchLabels:
                app.kubernetes.io/component: compression-worker
 
-   queryWorker:
-     replicas: 2
-     scheduling:
+     queryWorker:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
 
-   reducer:
-     replicas: 2
-     scheduling:
+     reducer:
+       replicas: 2
        nodeSelector:
-         yscope.io/nodeType: compute
+         yscope.io/nodeType: "compute"
+
+     prestoWorker:
+       replicas: 2
+       nodeSelector:
+         yscope.io/nodeType: "compute"
    ```
 
 3. Install:
@@ -345,6 +420,34 @@ To run all worker types in the same node pool:
    ```bash
    helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f shared-scheduling.yaml
    ```
+
+---
+
+### Component resources
+
+Set resource requests and limits for each chart component under the top-level `resources` key.
+Values use standard Kubernetes resource quantities:
+
+```{code-block} yaml
+:caption: resources.yaml
+
+resources:
+  compressionWorker:
+    requests:
+      cpu: "1"
+      memory: "1Gi"
+      ephemeral-storage: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+      ephemeral-storage: "4Gi"
+```
+
+Then install with the values file:
+
+```bash
+helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f resources.yaml
+```
 
 ---
 
@@ -429,9 +532,9 @@ How to compress and search unstructured text logs.
 
 :::{note}
 By default (`allowHostAccessForSbinScripts: true`), the database and results cache are exposed on
-NodePorts, allowing you to use `sbin/` scripts from the CLP package. Download a
-[release][clp-releases] matching the chart's `appVersion`, then update the following configurations
-in `etc/clp-config.yaml`:
+NodePorts, allowing you to use `sbin/compress.sh` and `sbin/search.sh` from the CLP package.
+Download a [release][clp-releases] matching the chart's `appVersion`, then update the following
+configurations in `etc/clp-config.yaml`:
 
 ```yaml
 database:
@@ -443,6 +546,12 @@ results_cache:
 Alternatively, use the Web UI ([clp-json][webui-clp-json] or [clp-text][webui-clp-text]) to compress
 logs and search interactively, or the [API server][api-server] to submit queries and view results
 programmatically.
+
+The [admin tools][admin-tools] (`sbin/admin-tools/archive-manager.sh` and
+`sbin/admin-tools/dataset-manager.sh`) are **not supported** in Kubernetes deployments with
+filesystem storage (`archive_output.storage.type: "fs"`). Those scripts require direct filesystem
+access to the archive directory via Docker bind mounts, which is not possible when archives are
+backed by PVCs inside the cluster.
 :::
 
 ---
@@ -536,7 +645,9 @@ To tear down a `kubeadm` cluster:
 * [External database setup][external-db-guide]: Using external MariaDB and MongoDB
 * [Using object storage][s3-storage]: Configuring S3 storage
 * [Configuring retention periods][retention-guide]: Setting up data retention policies
+* [Using Presto][presto-guide]: Distributed SQL queries on compressed logs
 
+[admin-tools]: reference-sbin-scripts/admin-tools.md
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
 [api-server]: guides-using-the-api-server.md
 [Cilium]: https://cilium.io/
@@ -552,6 +663,7 @@ To tear down a `kubeadm` cluster:
 [kind]: https://kind.sigs.k8s.io/
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
 [kubectl]: https://kubernetes.io/docs/tasks/tools/
+[presto-guide]: guides-using-presto.md
 [quick-start]: quick-start/index.md
 [retention-guide]: guides-retention.md
 [rfc-1918]: https://datatracker.ietf.org/doc/html/rfc1918#section-3

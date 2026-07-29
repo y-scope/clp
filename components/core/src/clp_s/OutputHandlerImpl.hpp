@@ -6,13 +6,22 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <map>
+#include <memory>
 #include <queue>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
+#include <variant>
 #include <vector>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+
+#include <clp_s/AggregationSink.hpp>
+#include <clp_s/aggregators.hpp>
+#include <clp_s/CommandLineArguments.hpp>
 
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
@@ -155,30 +164,30 @@ public:
         }
     };
 
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
-
     // Constructor
     ResultsCacheOutputHandler(
-            std::string const& uri,
-            std::string const& collection,
+            std::string_view uri,
+            std::string_view collection,
             uint64_t batch_size,
             uint64_t max_num_results,
-            std::string dataset,
+            std::string_view dataset,
             bool should_output_metadata = true
     );
 
     // Methods inherited from OutputHandler
     /**
-     * Flushes the output handler after each table that gets searched.
-     * @return ErrorCodeSuccess on success
-     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache
+     * No-op for this handler. The results heap is drained in `finish()` so that
+     * `max_num_results` is enforced across all ERTs in the archive.
+     * @return ErrorCodeSuccess
      */
-    ErrorCode flush() override;
+    [[nodiscard]] auto flush() -> ErrorCode override { return ErrorCode::ErrorCodeSuccess; }
+
+    /**
+     * Flushes the output handler after all tables are searched.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureDbBulkWrite on failure to write results to the results cache.
+     */
+    auto finish() -> ErrorCode override;
 
     void write(
             std::string_view message,
@@ -207,29 +216,31 @@ private:
 /**
  * Output handler that performs a count aggregation and sends the results to a reducer.
  */
-class CountOutputHandler : public ::clp_s::search::OutputHandler {
+class CountReducerOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    CountOutputHandler(int reducer_socket_fd);
+    CountReducerOutputHandler(int reducer_socket_fd);
 
-    // Methods inherited from OutputHandler
-    void write(
+    // Methods implementing OutputHandler
+    auto write(
             std::string_view message,
             epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override {}
+    ) -> void override {}
 
-    void write(std::string_view message) override;
+    auto write(std::string_view message) -> void override;
 
+    // Methods overriding OutputHandler
     /**
      * Flushes the count.
      * @return ErrorCodeSuccess on success
      * @return ErrorCodeFailureNetwork on network error
      */
-    ErrorCode finish() override;
+    auto finish() -> ErrorCode override;
 
 private:
+    // Data members
     int m_reducer_socket_fd;
     reducer::Pipeline m_pipeline;
 };
@@ -238,39 +249,110 @@ private:
  * Output handler that performs a count aggregation bucketed by time and sends the results to a
  * reducer.
  */
-class CountByTimeOutputHandler : public ::clp_s::search::OutputHandler {
+class CountByTimeReducerOutputHandler : public search::OutputHandler {
 public:
     // Constructors
-    CountByTimeOutputHandler(int reducer_socket_fd, int64_t count_by_time_bucket_size)
+    CountByTimeReducerOutputHandler(
+            int reducer_socket_fd,
+            int64_t count_by_time_bucket_size_millisecs
+    )
             : search::OutputHandler{true, false},
               m_reducer_socket_fd{reducer_socket_fd},
-              m_count_by_time_bucket_size{count_by_time_bucket_size} {}
+              m_count_by_time_bucket_size_millisecs{count_by_time_bucket_size_millisecs} {}
 
-    // Methods inherited from OutputHandler
-    void write(
+    // Methods implementing OutputHandler
+    auto write(
             std::string_view message,
-            epochtime_t timestamp,
+            epochtime_t timestamp_millisecs,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override {
-        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+    ) -> void override {
+        int64_t bucket = (timestamp_millisecs / m_count_by_time_bucket_size_millisecs)
+                         * m_count_by_time_bucket_size_millisecs;
         m_bucket_counts[bucket] += 1;
     }
 
-    void write(std::string_view message) override {}
+    auto write(std::string_view message) -> void override {}
 
+    // Methods overriding OutputHandler
     /**
      * Flushes the counts.
      * @return ErrorCodeSuccess on success
      * @return ErrorCodeFailureNetwork on network error
      */
-    ErrorCode finish() override;
+    auto finish() -> ErrorCode override;
 
 private:
+    // Data members
     int m_reducer_socket_fd;
     std::map<int64_t, int64_t> m_bucket_counts;
-    int64_t m_count_by_time_bucket_size;
+    int64_t m_count_by_time_bucket_size_millisecs;
 };
+
+/**
+ * Output handler that runs an `Aggregation` and writes its results to an `AggregationSink`.
+ * @tparam AggT The type of aggregator to run.
+ */
+template <AggregatorReq AggT>
+class AggregationOutputHandler : public search::OutputHandler {
+public:
+    // Constructors
+    AggregationOutputHandler(AggT aggregator, std::unique_ptr<AggregationSink> sink)
+            : search::OutputHandler{AggT::cNeedsMetadata, AggT::cNeedsMarshalledRecord},
+              m_aggregator{std::move(aggregator)},
+              m_sink{std::move(sink)} {}
+
+    // Methods implementing OutputHandler
+    auto write(
+            std::string_view message,
+            epochtime_t timestamp_millisecs,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) -> void override {
+        m_aggregator.add_record(message, timestamp_millisecs);
+    }
+
+    auto write(std::string_view message) -> void override { m_aggregator.add_record(message, 0); }
+
+    // Methods overriding OutputHandler
+    /**
+     * Drains the aggregation's results into the sink.
+     * @return ErrorCodeSuccess on success
+     * @return The sink's error code on failure
+     */
+    auto finish() -> ErrorCode override {
+        for (auto const& result : m_aggregator.get_results()) {
+            m_sink->write(result);
+        }
+        return m_sink->finish();
+    }
+
+private:
+    // Data members
+    AggT m_aggregator;
+    std::unique_ptr<AggregationSink> m_sink;
+};
+
+/**
+ * Creates an output handler that runs the given aggregation.
+ * @param aggregator The aggregation to run.
+ * @param sink The destination for the aggregation's results.
+ * @return The constructed output handler.
+ */
+[[nodiscard]] inline auto
+make_aggregation_output_handler(Aggregator aggregator, std::unique_ptr<AggregationSink> sink)
+        -> std::unique_ptr<search::OutputHandler> {
+    return std::visit(
+            [&](auto&& agg) -> std::unique_ptr<search::OutputHandler> {
+                using AggT = std::decay_t<decltype(agg)>;
+                return std::make_unique<AggregationOutputHandler<AggT>>(
+                        std::move(agg),
+                        std::move(sink)
+                );
+            },
+            std::move(aggregator)
+    );
+}
 
 /**
  * Output handler that records all results in a provided vector.

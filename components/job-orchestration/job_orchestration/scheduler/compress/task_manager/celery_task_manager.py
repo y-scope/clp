@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import celery
@@ -7,6 +8,8 @@ import celery
 from job_orchestration.executor.compress.celery_compress import compress
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.task_result import CompressionTaskResult
+
+logger = logging.getLogger(__name__)
 
 
 class CeleryTaskManager(TaskManager):
@@ -20,6 +23,9 @@ class CeleryTaskManager(TaskManager):
                 return [CompressionTaskResult.model_validate(res) for res in results]
             except celery.exceptions.TimeoutError:
                 return None
+            except celery.exceptions.SoftTimeLimitExceeded:
+                logger.exception("Compression task exceeded soft time limit.")
+                raise
 
     def submit(self, task_params: list[dict[str, Any]]) -> TaskManager.ResultHandle:
         task_instances = [compress.s(**params) for params in task_params]

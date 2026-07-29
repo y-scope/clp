@@ -2,15 +2,14 @@ name: "clp-package-helm"
 
 on:
   pull_request:
-    paths:
+    paths: &monitored_paths
       - ".github/workflows/clp-package-helm.yaml"
-      - "taskfiles/helm.yaml"
+      - "taskfile.yaml"
+      - "taskfiles/**"
       - "tools/deployment/package-helm/**"
+      - "tools/yscope-dev-utils"
   push:
-    paths:
-      - ".github/workflows/clp-package-helm.yaml"
-      - "taskfiles/helm.yaml"
-      - "tools/deployment/package-helm/**"
+    paths: *monitored_paths
   workflow_dispatch:
 
 permissions: {}
@@ -25,7 +24,7 @@ jobs:
   lint:
     runs-on: "ubuntu-24.04"
     steps:
-      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
@@ -33,9 +32,9 @@ jobs:
           # finding the `origin/main` branch.
           fetch-depth: 0
 
-      - name: "Install task"
-        shell: "bash"
-        run: "npm install -g @go-task/cli@3.48.0"
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
 
       - name: "Lint Helm charts"
         shell: "bash"
@@ -52,20 +51,20 @@ jobs:
       # To push to the `gh-pages` branch.
       contents: "write"
     steps:
-      - uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
-      - name: "Install task"
-        shell: "bash"
-        run: "npm install -g @go-task/cli@3.48.0"
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
 
       - name: "Package Helm chart"
         shell: "bash"
         run: "task helm:package"
 
       - name: "Checkout branch `gh-pages`"
-        uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # v6.0.1
+        uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           path: "gh-pages"
           ref: "gh-pages"

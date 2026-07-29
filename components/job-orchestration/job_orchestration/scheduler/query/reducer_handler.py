@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import enum
 from enum import Enum
 from typing import Any
@@ -110,11 +111,22 @@ async def _send_msg_to_reducer(msg: bytes, writer: asyncio.StreamWriter):
     await writer.drain()
 
 
+async def _clean_up_task(task: asyncio.Task | None) -> None:
+    if task is None:
+        return
+    if not task.done():
+        task.cancel()
+    with contextlib.suppress(asyncio.CancelledError, asyncio.IncompleteReadError):
+        await task
+
+
 async def handle_reducer_connection(
     reader: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
     reducer_connection_queue: asyncio.Queue,
 ):
+    recv_listener_msg_task: asyncio.Task | None = None
+    recv_reducer_msg_task: asyncio.Task | None = None
     try:
         message_bytes = await _recv_msg_from_reducer(reader)
         if message_bytes is None:
@@ -138,10 +150,8 @@ async def handle_reducer_connection(
         # Transition to next state
         """
         current_wait_state: _ReducerHandlerWaitState = _ReducerHandlerWaitState.JOB_CONFIG
-        recv_listener_msg_task: asyncio.Task | None = asyncio.create_task(
-            msg_queues.get_from_listeners()
-        )
-        recv_reducer_msg_task: asyncio.Task | None = asyncio.create_task(reader.readexactly(1))
+        recv_listener_msg_task = asyncio.create_task(msg_queues.get_from_listeners())
+        recv_reducer_msg_task = asyncio.create_task(reader.readexactly(1))
         while True:
             pending = [recv_listener_msg_task, recv_reducer_msg_task]
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
@@ -225,5 +235,7 @@ async def handle_reducer_connection(
                 await msg_queues.put_to_listeners(msg)
                 break
     finally:
+        await _clean_up_task(recv_listener_msg_task)
+        await _clean_up_task(recv_reducer_msg_task)
         writer.close()
         await writer.wait_closed()

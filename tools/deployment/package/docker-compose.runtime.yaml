@@ -14,6 +14,10 @@ services:
 
       CLP_HOME: "${CLP_HOME:?Please set a value.}"
       CLP_PWD_HOST: "${CLP_PWD_HOST:-${PWD}}"
+
+      # Telemetry opt-out vars (forwarded so start_clp.py can respect them)
+      CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"
+      DO_NOT_TRACK: "${DO_NOT_TRACK:-}"
     volumes:
       # Docker daemon bridge
       - type: "bind"

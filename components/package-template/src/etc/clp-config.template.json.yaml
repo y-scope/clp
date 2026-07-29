@@ -1,8 +1,13 @@
 # yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
 
+# Anonymous usage telemetry.
+# See: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
+telemetry:
+  disable: false
+  endpoint: "https://telemetry.yscope.io"
+
 #package:
 #  storage_engine: "clp-s"
-#  query_engine: "clp-s"
 
 ## API server config
 #api_server:
@@ -17,14 +22,6 @@
 #log_ingestor:
 #  host: "localhost"
 #  port: 3002
-#  # The timeout (in seconds) after which the log buffer is flushed for compression if no new input
-#  # arrives.
-#  buffer_flush_timeout: 300
-#  # The log buffer size (in bytes) that triggers a flush for compression.
-#  buffer_flush_threshold: 4294967296  # 4 GiB
-#  # The capacity of the internal channel used for communication between an ingestion job and the
-#  # log buffer.
-#  channel_capacity: 10
 #  logging_level: "INFO"
 
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
@@ -45,6 +42,7 @@
 #  - "queue"
 #  - "redis"
 #  - "results_cache"
+#  - "otel_collector"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -58,6 +56,7 @@
 #  jobs_poll_delay: 0.1  # seconds
 #  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
 #  logging_level: "INFO"
+#  telemetry_update_interval_ms: 60000
 #  type: "celery"  # "celery" or "spider"
 #
 #spider_scheduler:
@@ -72,6 +71,8 @@
 #  max_datasets_per_query: 10  # Set to null to disable the limit
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
+#  scheduler_concurrency: 4
+#  telemetry_update_interval_ms: 60000
 #
 #queue:
 #  host: "localhost"
@@ -98,17 +99,29 @@
 #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
 #  retention_period: 60
 #
+#otel_collector:
+#  host: "localhost"
+#  port: 4318
+#
 #compression_worker:
 #  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
+#  telemetry_update_interval_ms: 60000
 #
 #query_worker:
 #  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
+#  query_trace_sampling_probability: 0.01
 #
 #webui:
 #  host: "localhost"
 #  port: 4000
+#  query_engine: "clp-s"
 #  results_metadata_collection_name: "results-metadata"
 #  rate_limit: 1000
+#  presto_max_num_search_results: 1000
 #
 #mcp_server: null
 #

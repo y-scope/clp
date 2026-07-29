@@ -15,6 +15,10 @@ pub struct S3Config {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AwsAuthentication {
+    /// Uses the default AWS SDK credential provider chain.
+    #[serde(rename = "default")]
+    Default,
+
     #[serde(rename = "credentials")]
     Credentials { credentials: AwsCredentials },
 }

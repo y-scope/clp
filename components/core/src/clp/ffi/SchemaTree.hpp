@@ -216,16 +216,23 @@ public:
      */
     class NodeLocator {
     public:
-        NodeLocator(Node::id_t parent_id, std::string_view key_name, Node::Type type)
+        constexpr NodeLocator(Node::id_t parent_id, std::string_view key_name, Node::Type type)
                 : m_parent_id{parent_id},
                   m_key_name{key_name},
                   m_type{type} {}
 
-        [[nodiscard]] auto get_parent_id() const -> Node::id_t { return m_parent_id; }
+        constexpr ~NodeLocator() = default;
 
-        [[nodiscard]] auto get_key_name() const -> std::string_view { return m_key_name; }
+        constexpr NodeLocator(NodeLocator const&) noexcept = default;
+        constexpr NodeLocator(NodeLocator&&) noexcept = default;
+        constexpr auto operator=(NodeLocator const&) noexcept -> NodeLocator& = default;
+        constexpr auto operator=(NodeLocator&&) noexcept -> NodeLocator& = default;
 
-        [[nodiscard]] auto get_type() const -> Node::Type { return m_type; }
+        [[nodiscard]] constexpr auto get_parent_id() const -> Node::id_t { return m_parent_id; }
+
+        [[nodiscard]] constexpr auto get_key_name() const -> std::string_view { return m_key_name; }
+
+        [[nodiscard]] constexpr auto get_type() const -> Node::Type { return m_type; }
 
     private:
         Node::id_t m_parent_id;

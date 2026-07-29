@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
+import logging
 import os
 import subprocess
 import sys
+from concurrent.futures import as_completed, ThreadPoolExecutor
 from pathlib import Path
 from typing import TextIO
 
@@ -11,6 +13,8 @@ from clp_py_utils.clp_config import ClpConfig
 from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
+
+from job_orchestration.executor.utils import log_file_contents
 
 logger = get_logger("reducer")
 
@@ -90,11 +94,16 @@ def main(argv: list[str]) -> int:
         f" Concurrency={concurrency}"
         f" Upsert Interval={parsed_args.upsert_interval}"
     )
-    for i, reducer in enumerate(reducers):
-        reducer.communicate()
-        logger.info(f"reducer-{i} exited with returncode={reducer.returncode}")
-    for reducer_log_file in reducer_log_files:
-        reducer_log_file.close()
+    with ThreadPoolExecutor(max_workers=concurrency) as executor:
+        futures = {executor.submit(reducers[i].communicate): i for i in range(concurrency)}
+        for future in as_completed(futures):
+            i = futures[future]
+            future.result()
+            logger.info(f"reducer-{i} exited with returncode={reducers[i].returncode}")
+            if logs_dir is not None:
+                reducer_log_files[i].close()
+                log_file_path = logs_dir / f"reducer-{i}.log"
+                log_file_contents(logger, log_file_path, logging.INFO)
 
     logger.error("All reducers terminated")
 

@@ -16,8 +16,8 @@ if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
 fi
 
-# Get number of cpu cores
-num_cpus=$(grep -c ^processor /proc/cpuinfo)
+# Get number of cpu cores (memory-capped parallelism is handled in taskfile-driven builds)
+num_cpus=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 1)
 
 package_name=curl
 

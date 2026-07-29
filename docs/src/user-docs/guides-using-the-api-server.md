@@ -42,7 +42,7 @@ following commands to submit a query to clp-json and stream the results.
 
     ```json
     {
-      "query_results_uri": "/query_results/100"
+      "query_results_uri": "query_results/100"
     }
     ```
 

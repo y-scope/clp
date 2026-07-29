@@ -27,6 +27,21 @@ pub enum ClientError {
 
     #[error("Search job not found: {0}")]
     SearchJobNotFound(u64),
+
+    #[error("Invalid dataset name")]
+    InvalidDatasetName,
+
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
+    #[error("Dataset not found: {0}")]
+    DatasetNotFound(String),
+
+    #[error("Invalid search job config: {0}")]
+    InvalidSearchJobConfig(String),
+
+    #[error(transparent)]
+    Telemetry(#[from] opentelemetry_otlp::ExporterBuildError),
 }
 
 /// Empty trait to mark errors that indicate malformed data.
@@ -68,8 +83,12 @@ impl From<clp_rust_utils::Error> for ClientError {
             clp_rust_utils::Error::MsgpackEncode(_) | clp_rust_utils::Error::SerdeYaml(_) => {
                 Self::MalformedData
             }
+            clp_rust_utils::Error::UnsupportedS3Endpoint(_) => {
+                Self::InvalidInput(value.to_string())
+            }
             clp_rust_utils::Error::Io(error) => error.into(),
             clp_rust_utils::Error::Sqlx(error) => error.into(),
+            clp_rust_utils::Error::TelemetryExporterBuildError(error) => Self::Telemetry(error),
         }
     }
 }

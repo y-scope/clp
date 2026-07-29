@@ -10,6 +10,7 @@
 
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
 
+#include "ReaderUtils.hpp"
 #include "search/ast/SearchUtils.hpp"
 #include "SingleFileArchiveDefs.hpp"
 #include "TimestampPattern.hpp"
@@ -57,23 +58,32 @@ auto TimestampDictionaryReader::read(
         m_tokenized_column_to_range.emplace_back(std::move(tokens), &m_entries.back());
     }
 
-    uint64_t num_patterns;
+    uint64_t num_patterns{0};
     error = decompressor.try_read_numeric_value<uint64_t>(num_patterns);
     if (ErrorCodeSuccess != error) {
         return error;
     }
-    for (uint64_t i = 0; i < num_patterns; ++i) {
-        uint64_t id, pattern_len;
+    for (uint64_t i{0}; i < num_patterns; ++i) {
+        uint64_t id{0};
+        uint64_t pattern_len_u64{0};
         std::string pattern;
+
         error = decompressor.try_read_numeric_value<uint64_t>(id);
         if (ErrorCodeSuccess != error) {
             return error;
         }
-        error = decompressor.try_read_numeric_value<uint64_t>(pattern_len);
+
+        error = decompressor.try_read_numeric_value<uint64_t>(pattern_len_u64);
         if (ErrorCodeSuccess != error) {
             return error;
         }
-        error = decompressor.try_read_string(pattern_len, pattern);
+
+        auto const pattern_len_result{ReaderUtils::try_uint64_to_size_t(pattern_len_u64)};
+        if (pattern_len_result.has_error()) {
+            return ErrorCodeOutOfBounds;
+        }
+
+        error = decompressor.try_read_string(pattern_len_result.value(), pattern);
         if (ErrorCodeSuccess != error) {
             return error;
         }

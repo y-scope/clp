@@ -14,7 +14,7 @@
 namespace clp_s {
 enum class KvIrSearchErrorEnum : uint8_t {
     ClpLegacyError = 1,
-    CountSupportNotImplemented,
+    AggregationSupportNotImplemented,
     DeserializerCreationFailure,
     ProjectionSupportNotImplemented,
     StreamReaderCreationFailure,
@@ -31,7 +31,7 @@ using KvIrSearchError = ystdlib::error_handling::ErrorCode<KvIrSearchErrorEnum>;
  * @param reducer_socket_fd
  * @return A void result on success, or an error code indicating the failure:
  * - KvIrSearchErrorEnum::ClpLegacyError if a `clp::TraceableException` is caught.
- * - KvIrSearchErrorEnum::CountSupportNotImplemented if count-related features are enabled.
+ * - KvIrSearchErrorEnum::AggregationSupportNotImplemented if an aggregation is requested.
  * - KvIrSearchErrorEnum::ProjectionSupportNotImplemented if projection is non-empty.
  * - KvIrSearchErrorEnum::StreamReaderCreationFailure if the stream reader cannot be successfully
  *   created.

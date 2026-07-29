@@ -5,6 +5,7 @@
 
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/BufferViewReader.hpp>
+#include <clp_s/ErrorCode.hpp>
 #include <clp_s/Schema.hpp>
 
 namespace clp_s {
@@ -224,76 +225,101 @@ bool SchemaReader::get_next_message(std::string& message) {
         message += '\n';
     }
 
-    m_cur_message++;
+    ++m_cur_message;
     return true;
 }
 
-bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
-    while (m_cur_message < m_num_messages) {
-        if (false == filter->filter(m_cur_message)) {
-            m_cur_message++;
-            continue;
-        }
-
-        if (m_should_marshal_records) {
-            if (false == m_serializer_initialized) {
-                initialize_serializer();
-            }
-            message = generate_json_string(m_cur_message);
-
-            if (message.back() != '\n') {
-                message += '\n';
-            }
-        }
-
-        m_cur_message++;
-        return true;
+bool SchemaReader::get_next_message(std::string& message, FilterClass& filter) {
+    while (m_cur_message < m_num_messages && false == filter.filter(m_cur_message)) {
+        ++m_cur_message;
     }
 
-    return false;
+    if (m_cur_message >= m_num_messages) {
+        return false;
+    }
+
+    if (m_should_marshal_records) {
+        if (false == m_serializer_initialized) {
+            initialize_serializer();
+        }
+        message = generate_json_string(m_cur_message);
+
+        if (message.back() != '\n') {
+            message += '\n';
+        }
+    }
+
+    ++m_cur_message;
+    return true;
+}
+
+bool SchemaReader::get_next_message_with_metadata(
+        std::string& message,
+        epochtime_t& timestamp,
+        int64_t& log_event_idx
+) {
+    if (m_cur_message >= m_num_messages) {
+        return false;
+    }
+
+    if (m_should_marshal_records) {
+        if (false == m_serializer_initialized) {
+            initialize_serializer();
+        }
+        message = generate_json_string(m_cur_message);
+
+        if (message.back() != '\n') {
+            message += '\n';
+        }
+    }
+
+    timestamp = m_get_timestamp();
+    log_event_idx = get_next_log_event_idx();
+
+    ++m_cur_message;
+    return true;
 }
 
 bool SchemaReader::get_next_message_with_metadata(
         std::string& message,
         epochtime_t& timestamp,
         int64_t& log_event_idx,
-        FilterClass* filter
+        FilterClass& filter
 ) {
     // TODO: If we already get max_num_results messages, we can skip messages
     // with the timestamp less than the smallest timestamp in the priority queue
-    while (m_cur_message < m_num_messages) {
-        if (false == filter->filter(m_cur_message)) {
-            m_cur_message++;
-            continue;
-        }
-
-        if (m_should_marshal_records) {
-            if (false == m_serializer_initialized) {
-                initialize_serializer();
-            }
-            message = generate_json_string(m_cur_message);
-
-            if (message.back() != '\n') {
-                message += '\n';
-            }
-        }
-
-        timestamp = m_get_timestamp();
-        log_event_idx = get_next_log_event_idx();
-
-        m_cur_message++;
-        return true;
+    while (m_cur_message < m_num_messages && false == filter.filter(m_cur_message)) {
+        ++m_cur_message;
     }
 
-    return false;
+    if (m_cur_message >= m_num_messages) {
+        return false;
+    }
+
+    if (m_should_marshal_records) {
+        if (false == m_serializer_initialized) {
+            initialize_serializer();
+        }
+        message = generate_json_string(m_cur_message);
+
+        if (message.back() != '\n') {
+            message += '\n';
+        }
+    }
+
+    timestamp = m_get_timestamp();
+    log_event_idx = get_next_log_event_idx();
+
+    ++m_cur_message;
+    return true;
 }
 
-void SchemaReader::initialize_filter(FilterClass* filter) {
-    filter->init(this, m_columns);
+void SchemaReader::initialize_filter(FilterClass& filter) {
+    filter.init(this, m_columns);
 }
 
-void SchemaReader::initialize_filter_with_column_map(FilterClass* filter) {
-    filter->init(this, m_column_map);
+void SchemaReader::initialize_filter_with_column_map(FilterClass& filter) {
+    filter.init(this, m_column_map);
 }
 
 void SchemaReader::generate_local_tree(int32_t global_id) {

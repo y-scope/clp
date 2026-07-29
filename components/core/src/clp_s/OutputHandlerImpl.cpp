@@ -3,14 +3,18 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/builder/basic/kvp.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
-#include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
+
+#include <clp_s/ResultsCacheUtils.hpp>
 
 #include "../clp/networking/socket_utils.hpp"
 #include "../reducer/CountOperator.hpp"
@@ -18,6 +22,7 @@
 #include "../reducer/Record.hpp"
 #include "archive_constants.hpp"
 #include "search/OutputHandler.hpp"
+#include "TraceableException.hpp"
 
 using std::string;
 using std::string_view;
@@ -44,7 +49,7 @@ NetworkOutputHandler::NetworkOutputHandler(
     m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
     }
 }
 
@@ -61,33 +66,27 @@ void NetworkOutputHandler::write(
     msgpack::pack(m, src);
 
     if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
     }
 }
 
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection,
+        string_view uri,
+        string_view collection,
         uint64_t batch_size,
         uint64_t max_num_results,
-        string dataset,
+        string_view dataset,
         bool should_output_timestamp
 )
         : ::clp_s::search::OutputHandler{should_output_timestamp, true},
           m_batch_size{batch_size},
           m_max_num_results{max_num_results},
-          m_dataset{std::move(dataset)} {
-    try {
-        auto mongo_uri = mongocxx::uri(uri);
-        m_client = mongocxx::client(mongo_uri);
-        m_collection = m_client[mongo_uri.database()][collection];
-        m_results.reserve(m_batch_size);
-    } catch (mongocxx::exception const& e) {
-        throw OperationFailed(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
-    }
+          m_dataset{dataset} {
+    m_collection = connect_to_results_cache(uri, collection, m_client);
+    m_results.reserve(m_batch_size);
 }
 
-ErrorCode ResultsCacheOutputHandler::flush() {
+ErrorCode ResultsCacheOutputHandler::finish() {
     size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
@@ -179,18 +178,18 @@ void ResultsCacheOutputHandler::write(
     }
 }
 
-CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
-        : ::clp_s::search::OutputHandler(false, false),
+CountReducerOutputHandler::CountReducerOutputHandler(int reducer_socket_fd)
+        : search::OutputHandler(false, false),
           m_reducer_socket_fd(reducer_socket_fd),
           m_pipeline(reducer::PipelineInputMode::InterStage) {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
-void CountOutputHandler::write(string_view message) {
+auto CountReducerOutputHandler::write(string_view message) -> void {
     m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
-ErrorCode CountOutputHandler::finish() {
+auto CountReducerOutputHandler::finish() -> ErrorCode {
     if (false
         == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
     {
@@ -199,7 +198,7 @@ ErrorCode CountOutputHandler::finish() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-ErrorCode CountByTimeOutputHandler::finish() {
+auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,

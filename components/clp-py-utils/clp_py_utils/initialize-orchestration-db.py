@@ -11,6 +11,7 @@ from job_orchestration.scheduler.constants import (
     QueryJobStatus,
     QueryTaskStatus,
 )
+from mysql.connector.errorcode import ER_DUP_KEYNAME
 from pydantic import ValidationError
 
 from clp_py_utils.clp_config import (
@@ -67,7 +68,8 @@ def main(argv):
                     `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
-                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP()
+                        ON UPDATE CURRENT_TIMESTAMP(),
                     `duration` FLOAT NULL DEFAULT NULL,
                     `original_size` BIGINT NOT NULL DEFAULT '0',
                     `uncompressed_size` BIGINT NOT NULL DEFAULT '0',
@@ -75,13 +77,32 @@ def main(argv):
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `clp_binary_version` INT NULL DEFAULT NULL,
-                    `clp_config` VARBINARY(60000) NOT NULL,
+                    `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+                    `dispatch_time` DATETIME NULL DEFAULT NULL,
+                    `clp_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
-                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE
+                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE,
+                    INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE,
+                    INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
+
+            # Add index to existing tables that were created before this index
+            # was added to the CREATE TABLE statement. Ignoring duplicate-key
+            # errors makes this idempotent for databases that already have it.
+            try:
+                scheduling_db_cursor.execute(
+                    f"""
+                    ALTER TABLE `{COMPRESSION_JOBS_TABLE_NAME}`
+                    ADD INDEX `JOB_START_TIME_STATUS`
+                    (`start_time`, `status`) USING BTREE
+                    """
+                )
+            except Exception as err:
+                if not (hasattr(err, "errno") and err.errno == ER_DUP_KEYNAME):
+                    raise
 
             scheduling_db_cursor.execute(
                 f"""
@@ -92,7 +113,7 @@ def main(argv):
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_id` INT NOT NULL,
-                    `clp_paths_to_compress` VARBINARY(60000) NOT NULL,
+                    `clp_paths_to_compress` MEDIUMBLOB NOT NULL,
                     `partition_original_size` BIGINT NOT NULL,
                     `partition_uncompressed_size` BIGINT NULL DEFAULT NULL,
                     `partition_compressed_size` BIGINT NULL DEFAULT NULL,
@@ -118,7 +139,7 @@ def main(argv):
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
-                    `job_config` VARBINARY(60000) NOT NULL,
+                    `job_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE
