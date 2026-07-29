@@ -1,15 +1,14 @@
-use std::{
-    num::{NonZeroU32, NonZeroU64},
-    path::{Path, PathBuf},
-};
+use std::num::NonZeroU32;
+use std::num::NonZeroU64;
+use std::path::Path;
+use std::path::PathBuf;
 
 use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 
-use crate::{
-    clp_config::{AwsAuthentication, S3Config},
-    dataset::resolve_dataset_name,
-};
+use crate::clp_config::AwsAuthentication;
+use crate::clp_config::S3Config;
+use crate::dataset::resolve_dataset_name;
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -562,13 +561,11 @@ fn default_archive_staging_directory() -> String {
 mod tests {
     use std::path::Path;
 
-    use super::{
-        ArchiveOutput,
-        ArchiveOutputStorage,
-        Database,
-        LogsInput,
-        SpiderTaskExecutorConfig,
-    };
+    use super::ArchiveOutput;
+    use super::ArchiveOutputStorage;
+    use super::Database;
+    use super::LogsInput;
+    use super::SpiderTaskExecutorConfig;
 
     #[test]
     fn deserialize_logs_input_s3_config() {
@@ -671,7 +668,8 @@ mod tests {
     fn dataset_archive_storage_directory_s3() {
         use non_empty_string::NonEmptyString;
 
-        use crate::clp_config::{AwsAuthentication, S3Config};
+        use crate::clp_config::AwsAuthentication;
+        use crate::clp_config::S3Config;
 
         let archive_output = ArchiveOutput {
             storage: ArchiveOutputStorage::S3 {
@@ -769,7 +767,8 @@ mod tests {
     fn s3_config_with_staging_directory(staging_directory: &str) -> SpiderTaskExecutorConfig {
         use non_empty_string::NonEmptyString;
 
-        use crate::clp_config::{AwsAuthentication, S3Config};
+        use crate::clp_config::AwsAuthentication;
+        use crate::clp_config::S3Config;
 
         SpiderTaskExecutorConfig {
             archive_output: ArchiveOutput {
