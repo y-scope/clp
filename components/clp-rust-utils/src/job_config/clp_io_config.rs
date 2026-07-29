@@ -1,5 +1,6 @@
 use non_empty_string::NonEmptyString;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::clp_config::S3Config;
 use crate::job_config::ingestion::JobId as IngestionJobId;

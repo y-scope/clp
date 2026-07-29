@@ -1,11 +1,10 @@
-use std::{path::PathBuf, time::Duration};
+use std::path::PathBuf;
+use std::time::Duration;
 
 use clap::Parser;
-use clp_rust_utils::{
-    clp_config::package::{self},
-    database::mysql::create_clp_db_mysql_pool,
-    serde::yaml,
-};
+use clp_rust_utils::clp_config::package::{self};
+use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
+use clp_rust_utils::serde::yaml;
 
 /// Command-line arguments for the compression coordinator.
 #[derive(Debug, Parser)]
