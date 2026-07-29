@@ -4,13 +4,16 @@ Expands the name of the chart.
 @return {string} The chart name (truncated to 63 characters)
 */}}
 {{- define "clp.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- $global := .Values.global | default dict }}
+{{- default .Chart.Name $global.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Creates a default fully qualified app name. We truncate at 63 chars because some Kubernetes name
-fields are limited to this (by the DNS naming spec). If release name contains "clp" it will be used
-as a full name.
+fields are limited to this (by the DNS naming spec). If release name contains chart name it will be
+used as a full name. Reads only `.Release` and `.Values.global` (with the chart name inlined as
+"clp") so it renders identically inside the Spider subchart's context, which sees its own
+`.Chart.Name` and none of this chart's non-global values.
 
 @return {string} The fully qualified app name (truncated to 63 characters)
 */}}
@@ -18,10 +21,13 @@ as a full name.
 {{- $global := .Values.global | default dict }}
 {{- if $global.fullnameOverride }}
 {{- $global.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else if contains "clp" .Release.Name }}
+{{- else }}
+{{- $name := default "clp" $global.nameOverride }}
+{{- if contains $name .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- printf "%s-clp" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -447,7 +453,7 @@ Gets the host for the Spider storage service.
 @return {string} The Spider storage host
 */}}
 {{- define "clp.spiderStorageHost" -}}
-{{- printf "%s-storage" .Values.spider.fullnameOverride -}}
+{{- include "spider.componentFullname" (dict "root" (index .Subcharts "spider") "component" "storage") -}}
 {{- end }}
 
 {{/*

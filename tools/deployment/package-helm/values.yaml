@@ -1,7 +1,6 @@
-nameOverride: ""
-
 global:
   fullnameOverride: ""
+  nameOverride: ""
 
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
@@ -382,7 +381,6 @@ serviceAccount:
 # Overrides for the Spider subchart's `values.yaml`
 spider:
   enabled: false
-  fullnameOverride: "spider"
   image:
     worker:
       repository: "ghcr.io/y-scope/clp/clp-spider-worker"
