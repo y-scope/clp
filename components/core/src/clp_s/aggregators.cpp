@@ -126,9 +126,9 @@ auto CountByTimeAggregator::get_results() const -> std::vector<AggregationResult
     return results;
 }
 
-GroupByCountAggregator::GroupByCountAggregator(string_view field) : m_field{field} {
-    tokenize_aggregation_field(field, m_field_path);
-}
+GroupByCountAggregator::GroupByCountAggregator(string_view field)
+        : m_field{field},
+          m_field_path{tokenize_aggregation_field(field)} {}
 
 auto GroupByCountAggregator::add_record(string_view message, epochtime_t) -> void {
     nlohmann::json doc;

@@ -210,12 +210,12 @@ private:
 /**
  * One of the supported aggregators that a search can apply to its matched records.
  */
-using Aggregator = std::variant<
-        CountAggregator,
-        CountByTimeAggregator,
-        GroupByCountAggregator,
-        MinMaxAggregator,
-        UniqueAggregator>;
+using Aggregator = std::
+        variant<CountAggregator,
+                CountByTimeAggregator,
+                GroupByCountAggregator,
+                MinMaxAggregator,
+                UniqueAggregator>;
 }  // namespace clp_s
 
 #endif  // CLP_S_AGGREGATORS_HPP
