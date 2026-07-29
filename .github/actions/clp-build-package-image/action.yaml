@@ -29,7 +29,7 @@ inputs:
 outputs:
   image_ref:
     description: "The tagged reference of the built container image."
-    value: "${{fromJSON(steps.extract-gh-meta.outputs.json).tags[0]}}"
+    value: "${{steps.compute-image-ref.outputs.IMAGE_REF}}"
 
 runs:
   using: "composite"
@@ -73,6 +73,14 @@ runs:
           /${{steps.compute-meta.outputs.IMAGE_NAME}}"
         flavor: |
           suffix=-${{inputs.arch}}
+
+    - name: "Compute image reference"
+      id: "compute-image-ref"
+      shell: "bash"
+      run: |
+        # `metadata-action` emits one tag per line; the package image only ever needs the first.
+        echo "IMAGE_REF=$(head -n 1 <<< '${{steps.extract-gh-meta.outputs.tags}}')" \
+          >> "$GITHUB_OUTPUT"
 
     - name: "Map arch to Docker platform"
       id: "map-arch"
