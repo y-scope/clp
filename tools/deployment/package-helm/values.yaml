@@ -385,3 +385,31 @@ spider:
     worker:
       repository: "ghcr.io/y-scope/clp/clp-spider-worker"
       tag: "main"
+  spiderConfig:
+    worker:
+      extra_envs:
+        - name: "CLP_CONFIG_PATH"
+          value: "/etc/clp-config.yaml"
+        - name: "CLP_DB_USER"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include \"clp.fullnameFromRelease\" . }}-database"
+              key: "username"
+        - name: "CLP_DB_PASS"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include \"clp.fullnameFromRelease\" . }}-database"
+              key: "password"
+      extra_volume_mounts:
+        - name: "clp-config"
+          mountPath: "/etc/clp-config.yaml"
+          subPath: "clp-config.yaml"
+          readOnly: true
+        - name: "staged-archives"
+          mountPath: "/var/data/staged-archives"
+      extra_volumes:
+        - name: "clp-config"
+          configMap:
+            name: "{{ include \"clp.fullnameFromRelease\" . }}-config"
+        - name: "staged-archives"
+          emptyDir: {}

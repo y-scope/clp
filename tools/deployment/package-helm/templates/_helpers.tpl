@@ -28,6 +28,19 @@ used as a full name.
 {{- end }}
 
 {{/*
+Creates the release-derived default of `clp.fullname` from `.Release`.
+
+@return {string} The fully qualified app name (truncated to 63 characters)
+*/}}
+{{- define "clp.fullnameFromRelease" -}}
+{{- if contains "clp" .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-clp" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+
+{{/*
 Creates chart name and version as used by the chart label.
 
 @return {string} Chart name and version (truncated to 63 characters)
