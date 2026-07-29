@@ -1034,18 +1034,16 @@ auto SchemaMatch::lookup_decomposed_query(std::string const& column_name, std::s
         m_parsing_spec = nullptr;
     }
 
-    return &m_decomposed_query_cache
-                    .emplace(
-                            std::pair{column_name, query},
-                            YSTDLIB_ERROR_HANDLING_TRYX(
-                                    clpp::DecomposedQuery::decompose_query(
-                                            *m_parser,
-                                            column_name,
-                                            query
-                                    )
-                            )
-                    )
-                    .first->second;
+    auto const [it, inserted]{m_decomposed_query_cache.emplace(
+            std::pair{column_name, query},
+            YSTDLIB_ERROR_HANDLING_TRYX(
+                    clpp::DecomposedQuery::decompose_query(*m_parser, column_name, query)
+            )
+    )};
+    if (inserted) {
+        m_num_clpp_interpretations += it->second.get_interpretations().size();
+    }
+    return &it->second;
 }
 
 auto SchemaMatch::resolve_clpp_query(

@@ -49,6 +49,7 @@ bool Output::filter() {
 
     auto const& schema_ids = m_archive_reader->get_schema_ids();
     m_result_metrics.num_archive_schemas = schema_ids.size();
+    m_result_metrics.num_clpp_interpretations = m_match->get_num_clpp_interpretations();
     for (auto schema_id : schema_ids) {
         m_result_metrics.num_archive_records
                 += m_archive_reader->get_num_messages_for_schema(schema_id);
@@ -137,14 +138,14 @@ bool Output::filter() {
             {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
-                m_result_metrics.bytes_output += message.size();
+                m_result_metrics.num_bytes_output += message.size();
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, filter)) {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
-                m_result_metrics.bytes_output += message.size();
+                m_result_metrics.num_bytes_output += message.size();
                 m_output_handler->write(message);
             }
         }

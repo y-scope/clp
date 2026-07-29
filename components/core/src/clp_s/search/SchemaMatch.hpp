@@ -91,6 +91,14 @@ public:
      */
     bool has_array_search(int32_t schema_id);
 
+    /**
+     * @return The total number of clpp interpretations created during schema matching. Each unique
+     * (column_name, query) decomposition is counted once.
+     */
+    [[nodiscard]] auto get_num_clpp_interpretations() const -> uint64_t {
+        return m_num_clpp_interpretations;
+    }
+
 private:
     // Methods
     /**
@@ -228,6 +236,7 @@ private:
     // TODO clpp: refactor m_tree and m_schemas
     std::shared_ptr<ArchiveReader> m_archive_reader;
     bool m_clpp_decomposed_query{false};
+    uint64_t m_num_clpp_interpretations{0};
     bool m_ignore_case{false};
     std::string m_parsing_spec_str;
     log_surgeon::ParsingSpec* m_parsing_spec{nullptr};

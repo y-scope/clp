@@ -70,13 +70,14 @@ constexpr std::string_view cAttrNumArchiveRecordsMatchingQuery{
         "clp.query.num_archive_records_matching_query"
 };
 constexpr std::string_view cAttrNumArchiveSchemas{"clp.query.num_archive_schemas"};
-constexpr std::string_view cAttrNumMatchedSchemas{"clp.query.num_matched_schemas"};
-constexpr std::string_view cAttrNumSchemasWithMatches{"clp.query.num_schemas_with_matches"};
-constexpr std::string_view cAttrNumSchemasScanned{"clp.query.num_schemas_scanned"};
-constexpr std::string_view cAttrNumMessagesEvaluated{"clp.query.num_messages_evaluated"};
+constexpr std::string_view cAttrNumBytesOutput{"clp.query.num_bytes_output"};
+constexpr std::string_view cAttrNumClppInterpretations{"clp.query.num_clpp_interpretations"};
 constexpr std::string_view cAttrNumColumnScanFilters{"clp.query.num_column_scan_filters"};
+constexpr std::string_view cAttrNumMatchedSchemas{"clp.query.num_matched_schemas"};
+constexpr std::string_view cAttrNumMessagesEvaluated{"clp.query.num_messages_evaluated"};
 constexpr std::string_view cAttrNumQueryRunnerFilters{"clp.query.num_query_runner_filters"};
-constexpr std::string_view cAttrBytesOutput{"clp.query.bytes_output"};
+constexpr std::string_view cAttrNumSchemasScanned{"clp.query.num_schemas_scanned"};
+constexpr std::string_view cAttrNumSchemasWithMatches{"clp.query.num_schemas_with_matches"};
 constexpr std::string_view cAttrTerminationStage{"clp.query.termination_stage"};
 
 /**
@@ -333,32 +334,36 @@ public:
                 to_int64_attribute(metrics.num_archive_schemas)
         );
         m_span->SetAttribute(
-                to_nostd_string_view(cAttrNumMatchedSchemas),
-                to_int64_attribute(metrics.num_matched_schemas)
+                to_nostd_string_view(cAttrNumBytesOutput),
+                to_int64_attribute(metrics.num_bytes_output)
         );
         m_span->SetAttribute(
-                to_nostd_string_view(cAttrNumSchemasWithMatches),
-                to_int64_attribute(metrics.num_schemas_with_matches)
-        );
-        m_span->SetAttribute(
-                to_nostd_string_view(cAttrNumSchemasScanned),
-                to_int64_attribute(metrics.num_schemas_scanned)
-        );
-        m_span->SetAttribute(
-                to_nostd_string_view(cAttrNumMessagesEvaluated),
-                to_int64_attribute(metrics.num_messages_evaluated)
+                to_nostd_string_view(cAttrNumClppInterpretations),
+                to_int64_attribute(metrics.num_clpp_interpretations)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumColumnScanFilters),
                 to_int64_attribute(metrics.num_column_scan_filters)
         );
         m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumMatchedSchemas),
+                to_int64_attribute(metrics.num_matched_schemas)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumMessagesEvaluated),
+                to_int64_attribute(metrics.num_messages_evaluated)
+        );
+        m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumQueryRunnerFilters),
                 to_int64_attribute(metrics.num_query_runner_filters)
         );
         m_span->SetAttribute(
-                to_nostd_string_view(cAttrBytesOutput),
-                to_int64_attribute(metrics.bytes_output)
+                to_nostd_string_view(cAttrNumSchemasScanned),
+                to_int64_attribute(metrics.num_schemas_scanned)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumSchemasWithMatches),
+                to_int64_attribute(metrics.num_schemas_with_matches)
         );
     }
 
