@@ -381,3 +381,7 @@ serviceAccount:
 spider:
   enabled: false
   fullnameOverride: "spider"
+  image:
+    worker:
+      repository: "ghcr.io/y-scope/clp/clp-spider-worker"
+      tag: "main"
