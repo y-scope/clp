@@ -3,6 +3,10 @@
 
 import argparse
 import logging
+import os
+import platform
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -24,6 +28,22 @@ PRESTO_SYSTEM_MEMORY_RATIO = 0.9
 # S3 URL constant
 AWS_S3_DOMAIN = "amazonaws.com"
 
+# Default CLP Presto connector image and version. The connector is installed into Presto at
+# startup from this image (see docker-compose.yaml). `init.py` resolves the actual tag (per the
+# order in `_add_connector_image_env_vars`) and writes `CLP_CONNECTOR_IMAGE`/`CLP_CONNECTOR_TAG`
+# to `.env`; the defaults below are only used when `.env` is absent.
+# TODO: default the version to the released multi-arch tag before merging.
+DEFAULT_CONNECTOR_IMAGE = "ghcr.io/y-scope/clp-plugin-presto-connector"
+DEFAULT_CONNECTOR_VERSION = "0.1.0-SNAPSHOT"
+
+# Maps `platform.machine()` to the architecture suffix used in per-architecture connector tags.
+_ARCH_NAME_BY_PLATFORM_MACHINE = {
+    "aarch64": "arm64",
+    "arm64": "arm64",
+    "x86_64": "amd64",
+    "amd64": "amd64",
+}
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -40,7 +60,7 @@ root_logger.addHandler(logging_console_handler)
 logger = logging.getLogger(__name__)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
     """Initializes Presto worker configuration based on CLP package settings."""
     if argv is None:
         argv = sys.argv
@@ -87,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     if not _generate_worker_clp_properties(
         script_dir.parent / "worker" / "config-template", env_vars
     ):
+        return 1
+
+    if not _add_connector_image_env_vars(env_vars):
         return 1
 
     with output_file.open("w") as output_file_handle:
@@ -361,6 +384,186 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: dict[
         return False
 
     return True
+
+
+def _add_connector_image_env_vars(env_vars: dict[str, str]) -> bool:
+    """
+    Resolves the CLP Presto connector image and adds `CLP_CONNECTOR_IMAGE` and `CLP_CONNECTOR_TAG`
+    to `env_vars`, which `docker-compose.yaml` consumes.
+
+    An explicit `CLP_CONNECTOR_TAG` in the environment is used as-is and skips resolution. The
+    `CLP_CONNECTOR_IMAGE` (repository) and `CLP_CONNECTOR_VERSION` (version) env vars override
+    their respective defaults.
+
+    Otherwise the tag is resolved by trying, in order: a locally-built per-architecture image,
+    a published multi-architecture tag, and a published per-architecture tag. By default a
+    locally-built image is preferred (so local development picks up `task package`'s
+    `:<version>-<arch>` tag without a network lookup); set `CLP_CONNECTOR_PREFER_LOCAL=false` to
+    prefer the published multi-architecture image instead, e.g. to test an upstream release even
+    when a local build of the same version is loaded. If no image is found, an error is logged and
+    False is returned.
+
+    :param env_vars: Dictionary to populate with the connector image environment variables.
+    :return: Whether the image and tag were successfully resolved.
+    """
+    image = os.environ.get("CLP_CONNECTOR_IMAGE", DEFAULT_CONNECTOR_IMAGE)
+
+    explicit_tag = os.environ.get("CLP_CONNECTOR_TAG")
+    if explicit_tag is not None:
+        logger.info(
+            "Using explicitly provided CLP_CONNECTOR_TAG='%s' for connector image '%s'.",
+            explicit_tag,
+            image,
+        )
+        env_vars["CLP_CONNECTOR_IMAGE"] = image
+        env_vars["CLP_CONNECTOR_TAG"] = explicit_tag
+        return True
+
+    prefer_local = _env_is_truthy("CLP_CONNECTOR_PREFER_LOCAL", True)
+    version = os.environ.get("CLP_CONNECTOR_VERSION", DEFAULT_CONNECTOR_VERSION)
+    tag = _resolve_connector_tag(image, version, prefer_local)
+    if tag is None:
+        return False
+
+    env_vars["CLP_CONNECTOR_IMAGE"] = image
+    env_vars["CLP_CONNECTOR_TAG"] = tag
+    return True
+
+
+def _resolve_connector_tag(image: str, version: str, prefer_local: bool) -> str | None:
+    """
+    Resolves the connector image tag for `image` and `version` per the order documented in
+    `_add_connector_image_env_vars`.
+
+    :param image: The connector image repository.
+    :param version: The connector version (the multi-architecture tag, and the prefix of the
+        per-architecture tag).
+    :param prefer_local: When True, a locally-built per-architecture image is tried before the
+        published tags; when False, the published multi-architecture tag is tried first.
+    :return: The resolved tag, or None if no matching image was found.
+    """
+    # Silence Ruff S607: the absolute path of the Docker binary may vary depending on the
+    # installation method.
+    docker_executable = "docker"
+
+    if shutil.which(docker_executable) is None:
+        logger.error(
+            "Docker isn't installed or isn't on PATH, so the CLP Presto connector image can't be"
+            " resolved automatically. Install Docker, or set CLP_CONNECTOR_TAG explicitly."
+        )
+        return None
+
+    machine = platform.machine()
+    arch = _ARCH_NAME_BY_PLATFORM_MACHINE.get(machine)
+    if arch is None:
+        logger.error(
+            "Unsupported host architecture '%s' for resolving the CLP Presto connector image.",
+            machine,
+        )
+        return None
+
+    per_arch_tag = f"{version}-{arch}"
+    multi_arch_tag = version
+    per_arch_ref = f"{image}:{per_arch_tag}"
+    multi_arch_ref = f"{image}:{multi_arch_tag}"
+
+    # Each candidate: (label, existence check, image ref, tag to use on a match).
+    local_per_arch = (
+        "a locally-built per-architecture",
+        _image_exists_locally,
+        per_arch_ref,
+        per_arch_tag,
+    )
+    registry_multi_arch = (
+        "a published multi-architecture",
+        _tag_exists_on_registry,
+        multi_arch_ref,
+        multi_arch_tag,
+    )
+    registry_per_arch = (
+        "a published per-architecture",
+        _tag_exists_on_registry,
+        per_arch_ref,
+        per_arch_tag,
+    )
+    if prefer_local:
+        candidates = [local_per_arch, registry_multi_arch, registry_per_arch]
+    else:
+        candidates = [registry_multi_arch, local_per_arch, registry_per_arch]
+
+    for label, check, ref, tag in candidates:
+        if check(docker_executable, ref):
+            logger.info("Resolved CLP connector image to %s tag '%s'.", label, ref)
+            return tag
+
+    logger.error(
+        "Couldn't find a CLP Presto connector image for version '%s'. Looked for %s image '%s',"
+        " %s image '%s', and %s image '%s'. Build the connector image (e.g. via `task package` in"
+        " clp-plugin-presto-connector) or set CLP_CONNECTOR_TAG explicitly.",
+        version,
+        local_per_arch[0],
+        local_per_arch[2],
+        registry_multi_arch[0],
+        registry_multi_arch[2],
+        registry_per_arch[0],
+        registry_per_arch[2],
+    )
+    return None
+
+
+def _env_is_truthy(name: str, default_value: bool) -> bool:
+    """
+    Returns whether the environment variable `name` is truthy, using `default_value` when unset.
+
+    "false", "0", "no", and "off" (case-insensitive) are treated as falsy; any other non-empty
+    value is truthy.
+
+    :param name: The environment variable name.
+    :param default_value: The value to return when the variable is unset.
+    :return: Whether the variable is truthy.
+    """
+    value = os.environ.get(name)
+    if value is None:
+        return default_value
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _image_exists_locally(docker_executable: str, image_ref: str) -> bool:
+    """
+    Returns whether `image_ref` is present in the local Docker daemon.
+
+    :param docker_executable: The Docker executable to call.
+    :param image_ref: The image reference (repository:tag).
+    :return: True if the image exists locally.
+    """
+    return (
+        subprocess.run(
+            [docker_executable, "image", "inspect", image_ref],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        ).returncode
+        == 0
+    )
+
+
+def _tag_exists_on_registry(docker_executable: str, image_ref: str) -> bool:
+    """
+    Returns whether `image_ref` exists on its registry, queried via `docker manifest inspect`.
+
+    :param docker_executable: The Docker executable to call.
+    :param image_ref: The image reference (repository:tag).
+    :return: True if the tag exists on the registry.
+    """
+    return (
+        subprocess.run(
+            [docker_executable, "manifest", "inspect", image_ref],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 def _generate_worker_clp_properties(
