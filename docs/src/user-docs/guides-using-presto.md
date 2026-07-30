@@ -102,6 +102,13 @@ When using Kubernetes, Presto worker scheduling can be configured using the
 Kubernetes deployment guide for details.
 :::
 
+:::{note}
+The CLP connector is installed at startup from the image under `image.clpConnector` (default
+`ghcr.io/y-scope/clp-plugin-presto-connector`). To test a locally-built connector image in a `kind`
+cluster, use the set-up script's `--clp-connector-image` flag; see
+[Testing the Presto connector locally][testing-presto-connector].
+:::
+
 ## Docker Compose
 
 ### Requirements
@@ -198,6 +205,15 @@ Using Presto with CLP via Docker Compose requires:
 
     * Replace `<clp-json-dir>` with the location of the clp-json package you set up in the previous
       section.
+
+    :::{note}
+    `set-up-config.sh` also resolves the CLP connector image tag into `.env`. It prefers a
+    locally-built per-architecture image, then a published multi-architecture image, then
+    a published per-architecture image, and errors if none is found. Override the resolution
+    by exporting `CLP_CONNECTOR_IMAGE`, `CLP_CONNECTOR_TAG`, or `CLP_CONNECTOR_VERSION` before
+    running the script; see [Testing the Presto connector locally][testing-presto-connector] for
+    building the connector image yourself.
+    :::
 
 4. Configure Presto to use CLP's metadata database as follows:
 
@@ -332,3 +348,4 @@ These limitations will be addressed in a future release of the Presto integratio
 [Presto]: https://prestodb.io/
 [y-scope/presto#8]: https://github.com/y-scope/presto/issues/8
 [yscope-presto]: https://github.com/y-scope/presto
+[testing-presto-connector]: ../dev-docs/testing-presto-connector.md
