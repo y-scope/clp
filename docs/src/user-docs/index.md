@@ -114,12 +114,6 @@ Using Presto
 Use Presto for distributed SQL queries on compressed logs.
 :::
 
-:::{grid-item-card}
-:link: guides-using-spider
-Using Spider
-^^^
-Use Spider for compression and query job task distribution.
-:::
 ::::
 
 ---
@@ -263,7 +257,6 @@ guides-retention
 guides-using-the-api-server
 guides-mcp-server/index
 guides-using-presto
-guides-using-spider
 :::
 
 :::{toctree}
