@@ -11,7 +11,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -87,14 +86,14 @@ struct NamedTimezone {
 };
 
 constexpr std::array<NamedTimezone, 8> cNamedTimezones
-        = {{{"EDT", "-0400", -240},
-            {"EST", "-0500", -300},
-            {"CDT", "-0500", -300},
-            {"CST", "-0600", -360},
-            {"MDT", "-0600", -360},
-            {"MST", "-0700", -420},
-            {"PDT", "-0700", -420},
-            {"PST", "-0800", -480}}};
+        = {{{.name = "EDT", .offset_str = "-0400", .offset_minutes = -240},
+            {.name = "EST", .offset_str = "-0500", .offset_minutes = -300},
+            {.name = "CDT", .offset_str = "-0500", .offset_minutes = -300},
+            {.name = "CST", .offset_str = "-0600", .offset_minutes = -360},
+            {.name = "MDT", .offset_str = "-0600", .offset_minutes = -360},
+            {.name = "MST", .offset_str = "-0700", .offset_minutes = -420},
+            {.name = "PDT", .offset_str = "-0700", .offset_minutes = -420},
+            {.name = "PST", .offset_str = "-0800", .offset_minutes = -480}}};
 
 constexpr std::array cDefaultDateTimePatterns{
         std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\s\O{,.}\?\Z)"},
@@ -827,17 +826,7 @@ auto marshal_date_time_timestamp(
                 );
                 break;
             }
-            case 'z': {  // Timezone offset.
-                if (false == optional_timezone_info.has_value()) {
-                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
-                }
-                buffer.append(raw_pattern.substr(
-                        pattern_idx + 2ULL,
-                        optional_timezone_info->timestamp_length
-                ));
-                pattern_idx += optional_timezone_info->pattern_length;
-                break;
-            }
+            case 'z':    // Timezone offset.
             case 'o': {  // Named time-zone with specific offset.
                 if (false == optional_timezone_info.has_value()) {
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
@@ -1178,9 +1167,9 @@ auto TimestampPattern::create(std::string_view pattern)
 
                 optional_timezone_info.emplace(
                         TimezoneInfo{
-                                extracted_timezone_str.size(),
-                                timezone_bracket_pattern.size(),
-                                extracted_timezone_offset
+                                .timestamp_length = extracted_timezone_str.size(),
+                                .pattern_length = timezone_bracket_pattern.size(),
+                                .offset = extracted_timezone_offset
                         }
                 );
                 pattern_idx += timezone_bracket_pattern.size();
@@ -1219,7 +1208,11 @@ auto TimestampPattern::create(std::string_view pattern)
                 }
 
                 optional_timezone_info.emplace(
-                        TimezoneInfo{name_str.size(), bracket_pattern.size(), extracted_offset}
+                        TimezoneInfo{
+                                .timestamp_length = name_str.size(),
+                                .pattern_length = bracket_pattern.size(),
+                                .offset = extracted_offset
+                        }
                 );
                 pattern_idx += bracket_pattern.size();
                 uses_date_type_representation = true;
