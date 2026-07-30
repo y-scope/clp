@@ -1,10 +1,8 @@
 use secrecy::ExposeSecret;
 use strum::IntoEnumIterator;
 
-use crate::clp_config::package::{
-    config::Database as DatabaseConfig,
-    credentials::Database as DatabaseCredentials,
-};
+use crate::clp_config::package::config::Database as DatabaseConfig;
+use crate::clp_config::package::credentials::Database as DatabaseCredentials;
 
 /// Implements [`sqlx::Type<sqlx::MySql>`] for `$ty` by delegating to `$delegate`.
 ///

@@ -1,19 +1,17 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::s3::S3ObjectMetadataId;
-use log_ingestor::compression::{
-    Buffer,
-    BufferSubmitter,
-    CompressionBufferEntry,
-    DEFAULT_LISTENER_CAPACITY,
-    Listener,
-};
-use tokio::{
-    sync::{Mutex, mpsc},
-    time::Instant,
-};
+use log_ingestor::compression::Buffer;
+use log_ingestor::compression::BufferSubmitter;
+use log_ingestor::compression::CompressionBufferEntry;
+use log_ingestor::compression::DEFAULT_LISTENER_CAPACITY;
+use log_ingestor::compression::Listener;
+use tokio::sync::Mutex;
+use tokio::sync::mpsc;
+use tokio::time::Instant;
 
 const TEST_OBJECT_SIZE: u64 = 1024;
 

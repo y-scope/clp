@@ -1,23 +1,22 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use clp_rust_utils::{
-    clp_config::{AwsAuthentication, S3Config, package::config::ArchiveOutput},
-    dataset::CLP_DEFAULT_DATASET_NAME,
-    job_config::{
-        ClpIoConfig,
-        CompressionJobId,
-        CompressionJobStatus,
-        InputConfig,
-        OutputConfig,
-        S3ObjectMetadataInputConfig,
-        ingestion::s3::BaseConfig,
-    },
-    s3::S3ObjectMetadataId,
-    types::non_empty_string::ExpectedNonEmpty,
-};
+use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::clp_config::package::config::ArchiveOutput;
+use clp_rust_utils::dataset::CLP_DEFAULT_DATASET_NAME;
+use clp_rust_utils::job_config::ClpIoConfig;
+use clp_rust_utils::job_config::CompressionJobId;
+use clp_rust_utils::job_config::CompressionJobStatus;
+use clp_rust_utils::job_config::InputConfig;
+use clp_rust_utils::job_config::OutputConfig;
+use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
+use clp_rust_utils::job_config::ingestion::s3::BaseConfig;
+use clp_rust_utils::s3::S3ObjectMetadataId;
+use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
 use non_empty_string::NonEmptyString;
 
-use crate::{compression::BufferSubmitter, ingestion_job_manager::ClpCompressionState};
+use crate::compression::BufferSubmitter;
+use crate::ingestion_job_manager::ClpCompressionState;
 
 /// The CLP compression job table name.
 pub const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
