@@ -729,6 +729,7 @@ jobs:
   ubuntu-jammy-integration-tests-core:
     name: "ubuntu-jammy-integration-tests-core"
     # Run if the ancestor jobs were successful/skipped and building clp was successful.
+    if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
     runs-on: *runner
     env:
