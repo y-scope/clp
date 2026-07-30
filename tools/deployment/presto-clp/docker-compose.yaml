@@ -5,7 +5,9 @@ services:
     # Presto images). The connector image's own entrypoint does the install; we only supply
     # the target paths via *_PLUGIN_INSTALL_PATH.
     # TODO: default CLP_CONNECTOR_TAG to the released multi-arch tag before merging.
-    image: "${CLP_CONNECTOR_IMAGE:-ghcr.io/y-scope/clp-plugin-presto-connector}:${CLP_CONNECTOR_TAG:-0.1.0-SNAPSHOT-arm64}"
+    image: "${CLP_CONNECTOR_IMAGE:-\
+      ghcr.io/y-scope/clp-plugin-presto-connector}:${CLP_CONNECTOR_TAG:-\
+      0.1.0-SNAPSHOT-arm64}"
     restart: "no"
     environment:
       COORDINATOR_PLUGIN_INSTALL_PATH: "/install/coordinator"
