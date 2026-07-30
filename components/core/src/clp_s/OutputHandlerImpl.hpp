@@ -22,6 +22,7 @@
 #include <clp_s/AggregationSink.hpp>
 #include <clp_s/aggregators.hpp>
 #include <clp_s/CommandLineArguments.hpp>
+#include <clp_s/ErrorCode.hpp>
 
 #include "../reducer/Pipeline.hpp"
 #include "../reducer/RecordGroupIterator.hpp"
@@ -322,9 +323,14 @@ public:
      */
     auto finish() -> ErrorCode override {
         for (auto const& result : m_aggregator.get_results()) {
-            m_sink->write(result);
+            if (auto err{m_sink->write(result)}; err.has_error()) {
+                return ErrorCode::ErrorCodeFailure;
+            }
         }
-        return m_sink->finish();
+        if (auto err{m_sink->finish()}; err.has_error()) {
+            return ErrorCode::ErrorCodeFailure;
+        }
+        return ErrorCode::ErrorCodeSuccess;
     }
 
 private:

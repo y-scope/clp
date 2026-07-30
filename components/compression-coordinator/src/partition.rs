@@ -1,13 +1,13 @@
 //! Partitioning of S3 objects into compression-task inputs.
 
-use std::{collections::VecDeque, path::Path};
+use std::collections::VecDeque;
+use std::path::Path;
 
-use clp_rust_utils::{
-    clp_config::S3Config,
-    job_config::{ClpIoConfig, InputConfig},
-    s3::ObjectMetadata,
-    task_io::compression::S3InputSource,
-};
+use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::job_config::ClpIoConfig;
+use clp_rust_utils::job_config::InputConfig;
+use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::task_io::compression::S3InputSource;
 
 use crate::Error;
 
@@ -38,6 +38,16 @@ impl CompressionInputBuilder {
             InputConfig::S3ObjectMetadataInputConfig { config } => config.s3_config.clone(),
         };
 
+        Self::from_s3_config(s3_config, target_archive_size)
+    }
+
+    /// Creates an empty builder from the S3 input settings and target archive size.
+    ///
+    /// # Returns
+    ///
+    /// A newly created [`CompressionInputBuilder`] with an empty buffer.
+    #[must_use]
+    pub(crate) const fn from_s3_config(s3_config: S3Config, target_archive_size: u64) -> Self {
         Self {
             buffer: Vec::new(),
             partitioned_task_inputs: Vec::new(),
@@ -300,10 +310,9 @@ fn group_files_by_similar_filenames(mut files: Vec<FileMetadata>) -> Vec<Vec<Fil
 mod tests {
     use std::collections::BTreeMap;
 
-    use clp_rust_utils::{
-        clp_config::AwsAuthentication,
-        job_config::{OutputConfig, S3InputConfig},
-    };
+    use clp_rust_utils::clp_config::AwsAuthentication;
+    use clp_rust_utils::job_config::OutputConfig;
+    use clp_rust_utils::job_config::S3InputConfig;
     use non_empty_string::NonEmptyString;
 
     use super::*;

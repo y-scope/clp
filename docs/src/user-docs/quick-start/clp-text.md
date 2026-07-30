@@ -103,9 +103,11 @@ helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.package.storage_engine=clp \
   --set clpConfig.webui.query_engine=clp \
   --set clpConfig.telemetry.disable=false \
+  --set clpConfig.webui.serviceType=NodePort \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \
+  --set clpConfig.mcp_server.serviceType=NodePort \
   --set clpConfig.mcp_server.port="$CLP_MCP_SERVER_PORT" \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \

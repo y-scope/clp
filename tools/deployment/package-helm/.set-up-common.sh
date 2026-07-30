@@ -103,6 +103,15 @@ parse_common_args() {
     done
 }
 
+# Returns helm --set flags to expose the Web UI and API server via NodePort, at the ports
+# generate_kind_config maps to the host.
+#
+# @return Prints helm --set flags to stdout
+get_service_exposure_helm_args() {
+    echo "--set" "clpConfig.webui.serviceType=NodePort" \
+         "--set" "clpConfig.api_server.serviceType=NodePort"
+}
+
 # Returns helm --set flags to enable Presto with a minimal config.
 # Only prints flags when ENABLE_PRESTO is "true"; otherwise prints nothing.
 #
@@ -113,6 +122,7 @@ get_presto_helm_args() {
     fi
 
     echo "--set" "clpConfig.webui.query_engine=presto" \
+         "--set" "clpConfig.presto.serviceType=NodePort" \
          "--set" "clpConfig.presto.port=30889" \
          "--set" "clpConfig.presto.coordinator.logging_level=INFO" \
          "--set" "clpConfig.presto.coordinator.query_max_memory_gb=1" \
