@@ -63,6 +63,7 @@ constexpr char cCount[]{"count"};
 constexpr char cMin[]{"min"};
 constexpr char cMax[]{"max"};
 constexpr char cField[]{"field"};
+constexpr char cValue[]{"value"};
 }  // namespace results_cache::search
 }  // namespace clp_s::constants
 #endif  // CLP_S_ARCHIVE_CONSTANTS_HPP
