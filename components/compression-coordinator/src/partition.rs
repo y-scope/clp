@@ -238,27 +238,19 @@ impl Iterator for RoundRobinIterator {
 /// # Returns
 ///
 /// The estimated uncompressed size.
-fn estimate_uncompressed_size(key: &str, size: u64) -> u64 {
+fn estimate_uncompressed_size(path: &str, size: u64) -> u64 {
     const GZIP_COMPRESSION_RATIO_ESTIMATE: u64 = 13;
-    const GZIP_SUFFIXES: &[&str] = &[".gz", ".gzip", ".tgz", ".tar.gz"];
+    const GZIP_SUFFIXES: &[&str] = &[".gz", ".gzip", ".tgz"];
     const ZSTD_COMPRESSION_RATIO_ESTIMATE: u64 = 8;
 
-    if GZIP_SUFFIXES
-        .iter()
-        .any(|suffix| ends_with_ignore_ascii_case(key, suffix))
-    {
+    let path = path.to_ascii_lowercase();
+    if GZIP_SUFFIXES.iter().any(|suffix| path.ends_with(suffix)) {
         size * GZIP_COMPRESSION_RATIO_ESTIMATE
-    } else if ends_with_ignore_ascii_case(key, ".zst") {
+    } else if path.ends_with(".zst") {
         size * ZSTD_COMPRESSION_RATIO_ESTIMATE
     } else {
         size
     }
-}
-
-fn ends_with_ignore_ascii_case(value: &str, suffix: &str) -> bool {
-    value
-        .get(value.len().saturating_sub(suffix.len())..)
-        .is_some_and(|ending| ending.eq_ignore_ascii_case(suffix))
 }
 
 /// Gets the filename portion of an S3 object's key.
@@ -405,7 +397,7 @@ mod tests {
     fn test_estimate_uncompressed_size_for_gzip_suffix() {
         const FILE_SIZE: u64 = 100;
 
-        for key in [
+        for path in [
             "logs/app.log.gz",
             "logs/app.log.GZ",
             "logs/app.log.gzip",
@@ -415,7 +407,7 @@ mod tests {
             "logs/app.log.tar.gz",
             "logs/app.log.TAR.GZ",
         ] {
-            assert_eq!(FILE_SIZE * 13, estimate_uncompressed_size(key, FILE_SIZE));
+            assert_eq!(FILE_SIZE * 13, estimate_uncompressed_size(path, FILE_SIZE));
         }
     }
 
@@ -423,13 +415,13 @@ mod tests {
     fn test_estimate_uncompressed_size_for_zstandard_suffix() {
         const FILE_SIZE: u64 = 100;
 
-        for key in [
+        for path in [
             "logs/app.log.zst",
             "logs/app.log.clp.zst",
             "logs/app.log.tar.zst",
             "logs/app.log.ZST",
         ] {
-            assert_eq!(FILE_SIZE * 8, estimate_uncompressed_size(key, FILE_SIZE));
+            assert_eq!(FILE_SIZE * 8, estimate_uncompressed_size(path, FILE_SIZE));
         }
     }
 
