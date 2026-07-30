@@ -82,7 +82,8 @@ mod tests {
     use non_empty_string::NonEmptyString;
 
     use super::generate_s3_url;
-    use crate::{Error, types::non_empty_string::ExpectedNonEmpty};
+    use crate::Error;
+    use crate::types::non_empty_string::ExpectedNonEmpty;
 
     fn to_non_empty_string(value: &'static str) -> NonEmptyString {
         NonEmptyString::from_static_str(value)

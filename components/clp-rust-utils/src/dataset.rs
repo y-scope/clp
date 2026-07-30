@@ -18,7 +18,8 @@ pub fn resolve_dataset_name(dataset: Option<&str>) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::{CLP_DEFAULT_DATASET_NAME, resolve_dataset_name};
+    use super::CLP_DEFAULT_DATASET_NAME;
+    use super::resolve_dataset_name;
 
     #[test]
     fn resolve_dataset_name_passes_through_some() {
