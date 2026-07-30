@@ -784,6 +784,7 @@ jobs:
 
   package-integration-tests:
     name: "package-integration-tests-${{matrix.arch}}"
+    if: "!cancelled() && !failure() && needs.package.result == 'success'"
     needs:
       - "package"
     strategy:
@@ -872,6 +873,7 @@ jobs:
       github.event_name != 'pull_request'
       && github.ref == 'refs/heads/main'
       && needs.package.result == 'success'
+      && needs.package-integration-tests.result == 'success'
     needs:
       - "package"
       - "package-integration-tests"
