@@ -1,6 +1,7 @@
 //! The crate-level error type for the compression coordinator.
 
-use clp_rust_utils::{job_config::ingestion::JobId as IngestionJobId, s3::S3ObjectMetadataId};
+use clp_rust_utils::job_config::ingestion::JobId as IngestionJobId;
+use clp_rust_utils::s3::S3ObjectMetadataId;
 
 /// Errors returned by the compression coordinator.
 #[derive(Debug, thiserror::Error)]
@@ -21,6 +22,9 @@ pub enum Error {
 
     #[error("invalid dataset: {0}")]
     InvalidDataset(String),
+
+    #[error("invalid endpoint: {0}")]
+    InvalidEndpoint(String),
 
     #[error("failed to create metadata table `{table}`: {source}")]
     MetadataTableCreation {
