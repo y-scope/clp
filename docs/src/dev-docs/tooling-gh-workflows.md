@@ -7,9 +7,9 @@ builds, testing, and linting. We briefly describe each workflow below.
 
 This workflow is responsible for:
 
-1. building (Linux) container images containing CLP-core's dependencies,
-2. building CLP-core and running its unit tests, and
-3. building a container image containing CLP's package components.
+1. building (Linux) container images containing CLP-core's dependencies.
+2. building CLP-core and running its unit tests.
+3. building CLP's package and package image, and running package integration tests.
 
 To minimize build times, the jobs in the workflow are organized in the directed acyclic graph (DAG)
 shown below.
@@ -45,6 +45,7 @@ flowchart LR
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
     ubuntu-jammy-deps-image --> package
     ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
+    package --> package-integration-tests
 :::
 
 Arrows between jobs indicate a dependency. The jobs are as follows:
@@ -69,7 +70,10 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   container and runs core's unit tests.
 * `musllinux_1_2-x86_64-binaries`: Builds the CLP-core binaries in the built musllinux_1_2 container
   and runs core's unit tests.
-* `package`: Builds CLP's package, along with a container image containing the package's components.
+* `package`: Builds CLP's package, along with a container image containing the package's components,
+  then uploads the package as a tarball artifact.
+* `package-integration-tests`: Runs the package's integration tests against the package built by the
+  `package` job.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.
 * `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's
