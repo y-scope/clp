@@ -244,7 +244,8 @@ Services require persistent storage for logs, data, archives, and streams.
 CLP supports two deployment configurations, depending on the query engine:
 
 * **Full**: Uses Celery for query orchestration.
-* **Base**: Excludes the Celery-based orchestration in Full, to support the [Presto integration][presto-integration].
+* **Base**: Excludes the Celery-based query orchestration in Full, to support the
+  [Presto integration][presto-integration].
 
 Docker Compose uses `deploy.replicas` with environment variables (e.g., `CLP_MCP_SERVER_ENABLED`)
 to toggle optional services. Helm uses conditional templating to include or exclude resources.
