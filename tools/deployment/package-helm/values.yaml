@@ -420,3 +420,7 @@ spider:
             name: "{{ include \"clp.fullname\" . }}-config"
         - name: "staged-archives"
           emptyDir: {}
+      # Run the worker under CLP's ServiceAccount so identity-based cloud auth (e.g., IRSA on EKS
+      # via `serviceAccount.annotations`) reaches it. NOTE: requires Spider chart >= 0.1.8
+      # (y-scope/spider#420); ignored by the currently pinned version.
+      service_account_name: "{{ include \"clp.fullname\" . }}-service-account"
