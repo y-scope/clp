@@ -43,7 +43,7 @@ flowchart LR
     manylinux_2_28-x86_64-deps-image --> manylinux_2_28-x86_64-binaries
     musllinux_1_2-x86_64-deps-image --> musllinux_1_2-x86_64-binaries
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
-    ubuntu-jammy-deps-image --> package-image
+    ubuntu-jammy-deps-image --> package
     ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
 :::
 
@@ -69,7 +69,7 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   container and runs core's unit tests.
 * `musllinux_1_2-x86_64-binaries`: Builds the CLP-core binaries in the built musllinux_1_2 container
   and runs core's unit tests.
-* `package-image`: Builds a container image containing CLP's package components.
+* `package`: Builds CLP's package, along with a container image containing the package's components.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.
 * `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's

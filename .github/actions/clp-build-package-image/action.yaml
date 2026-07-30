@@ -78,7 +78,6 @@ runs:
       id: "compute-image-ref"
       shell: "bash"
       run: |
-        # `metadata-action` emits one tag per line; the package image only ever needs the first.
         echo "IMAGE_REF=$(head -n 1 <<< '${{steps.extract-gh-meta.outputs.tags}}')" \
           >> "$GITHUB_OUTPUT"
 
@@ -103,7 +102,6 @@ runs:
         if [[ "${{inputs.push_image}}" == "true" ]]; then
           echo "image_output=type=registry" >> "$GITHUB_OUTPUT"
         else
-          # Suffix with arch so the amd64/arm64 tars don't collide.
           image_path="/tmp/${image_name}-image-${{inputs.arch}}.tar"
           echo "image_path=${image_path}" >> "$GITHUB_OUTPUT"
           echo "image_output=type=docker,dest=${image_path}" >> "$GITHUB_OUTPUT"
