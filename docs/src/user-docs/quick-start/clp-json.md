@@ -90,11 +90,15 @@ helm repo update clp
 
 helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG \
   --set clpConfig.telemetry.disable=false \
+  --set clpConfig.webui.serviceType=NodePort \
   --set clpConfig.webui.port="$CLP_WEBUI_PORT" \
   --set clpConfig.results_cache.port="$CLP_RESULTS_CACHE_PORT" \
+  --set clpConfig.api_server.serviceType=NodePort \
   --set clpConfig.api_server.port="$CLP_API_SERVER_PORT" \
+  --set clpConfig.log_ingestor.serviceType=NodePort \
   --set clpConfig.log_ingestor.port="$CLP_LOG_INGESTOR_PORT" \
   --set clpConfig.database.port="$CLP_DATABASE_PORT" \
+  --set clpConfig.mcp_server.serviceType=NodePort \
   --set clpConfig.mcp_server.port="$CLP_MCP_SERVER_PORT" \
   --set credentials.database.password="$CLP_DB_PASS" \
   --set credentials.database.root_password="$CLP_DB_ROOT_PASS" \

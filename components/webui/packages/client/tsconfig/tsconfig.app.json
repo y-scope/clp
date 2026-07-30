@@ -16,6 +16,11 @@
     "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "useDefineForClassFields": true,
     "baseUrl": "../",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
 
     /* Bundler mode */
     "isolatedModules": true,
