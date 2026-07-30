@@ -826,7 +826,7 @@ auto marshal_date_time_timestamp(
                 );
                 break;
             }
-            case 'z':    // Timezone offset.
+            case 'z':  // Timezone offset.
             case 'o': {  // Named time-zone with specific offset.
                 if (false == optional_timezone_info.has_value()) {
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
