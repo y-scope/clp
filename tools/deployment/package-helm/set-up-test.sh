@@ -30,6 +30,7 @@ sleep 2
 # shellcheck disable=SC2046
 helm dependency update "${script_dir}"
 helm install test "${script_dir}" \
+    $(get_service_exposure_helm_args) \
     $(get_presto_helm_args) \
     $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
 
