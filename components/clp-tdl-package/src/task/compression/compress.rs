@@ -350,15 +350,18 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
 ///
 /// # Returns
 ///
-/// The env-var name-value pairs containing the resolved access key, secret key, and optional
-/// session token.
+/// The env-var name-value pairs with the following environment variables set:
+///
+/// * AWS_ACCESS_KEY_ID
+/// * AWS_SECRET_ACCESS_KEY
+/// * AWS_SESSION_TOKEN (if any)
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * The default AWS SDK credential provider chain has no provider.
-/// * The default AWS SDK credential provider chain fails to resolve credentials.
+/// * Forwards [`ProvideCredentials::provide_credentials`]'s return values on failure.
 fn s3_credential_env(
     runtime: &tokio::runtime::Handle,
     region: &str,
@@ -373,13 +376,11 @@ fn s3_credential_env(
     /// The env var holding the AWS session token.
     const AWS_SESSION_TOKEN_ENV_VAR: &str = "AWS_SESSION_TOKEN";
 
-    let credentials = match auth {
-        AwsAuthentication::Credentials { credentials } => Credentials::new(
+    let (access_key_id, secret_access_key, session_token) = match auth {
+        AwsAuthentication::Credentials { credentials } => (
             credentials.access_key_id.clone(),
             credentials.secret_access_key.clone(),
             credentials.session_token.clone(),
-            None,
-            "clp-credentials-provider",
         ),
         AwsAuthentication::Default => {
             let sdk_config = runtime.block_on(
@@ -390,24 +391,25 @@ fn s3_credential_env(
             let provider = sdk_config
                 .credentials_provider()
                 .context("default AWS SDK credential provider is unavailable")?;
-            runtime
+            let credentials = runtime
                 .block_on(provider.provide_credentials())
-                .context("failed to resolve credentials from the default AWS SDK provider chain")?
+                .context("failed to resolve credentials from the default AWS SDK provider chain")?;
+            (
+                credentials.access_key_id().to_string(),
+                credentials.secret_access_key().to_string(),
+                credentials
+                    .session_token()
+                    .map(std::string::ToString::to_string),
+            )
         }
     };
 
     let mut env = vec![
-        (
-            AWS_ACCESS_KEY_ID_ENV_VAR,
-            credentials.access_key_id().to_string(),
-        ),
-        (
-            AWS_SECRET_ACCESS_KEY_ENV_VAR,
-            credentials.secret_access_key().to_string(),
-        ),
+        (AWS_ACCESS_KEY_ID_ENV_VAR, access_key_id),
+        (AWS_SECRET_ACCESS_KEY_ENV_VAR, secret_access_key),
     ];
-    if let Some(session_token) = credentials.session_token() {
-        env.push((AWS_SESSION_TOKEN_ENV_VAR, session_token.to_string()));
+    if let Some(session_token) = session_token {
+        env.push((AWS_SESSION_TOKEN_ENV_VAR, session_token));
     }
     Ok(env)
 }
