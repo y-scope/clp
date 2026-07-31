@@ -351,9 +351,9 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
 ///
 /// The env-var name-value pairs with the following environment variables set:
 ///
-/// * AWS_ACCESS_KEY_ID
-/// * AWS_SECRET_ACCESS_KEY
-/// * AWS_SESSION_TOKEN (if any)
+/// * `AWS_ACCESS_KEY_ID`
+/// * `AWS_SECRET_ACCESS_KEY`
+/// * `AWS_SESSION_TOKEN` (if any)
 ///
 /// # Errors
 ///
