@@ -39,7 +39,7 @@ pub struct Coordinator {
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
-    job_handler_semaphore: Arc<Semaphore>,
+    job_handler_sem: Arc<Semaphore>,
     pending_job_queue: VecDeque<PendingJobRowProjection>,
 }
 
@@ -134,12 +134,14 @@ impl Coordinator {
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
             cancellation_token: cancellation_token.clone(),
-            job_handler_semaphore: Arc::new(Semaphore::new(max_concurrent_tasks)),
+            job_handler_sem: Arc::new(Semaphore::new(max_concurrent_tasks)),
             pending_job_queue: VecDeque::new(),
         };
 
         let recovery_contexts = coordinator.fetch_submitted_running_jobs().await?;
-        for (job_id, spider_job_id, clp_io_config) in recovery_contexts {
+        for (job_id, spider_job_id, clp_io_config) in
+            coordinator.fetch_submitted_running_jobs().await?;
+        {
             tracing::info!(
                 job_id = % job_id,
                 spider_job_id = % spider_job_id,
@@ -148,11 +150,14 @@ impl Coordinator {
             let Ok(job_handle) = coordinator.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
+
+            // Try to acquire a permit, but still spawn the recovery task if none is available.
             let permit = coordinator
-                .job_handler_semaphore
+                .job_handler_sem
                 .clone()
                 .try_acquire_owned()
                 .ok();
+
             tokio::spawn(async move {
                 let _permit = permit;
                 let _ = job_handle.recover(spider_job_id).await.inspect_err(|e| {
@@ -171,12 +176,12 @@ impl Coordinator {
 
     /// Runs the coordinator's poll loop until cancelled.
     ///
-    /// On each iteration, this method fetches and schedules pending compression jobs if capacity
-    /// remains. A permit is acquired before each detached job-handler task is spawned, bounding the
-    /// number of live handlers. The coordinator then sleeps until the next poll or until the
-    /// cancellation token is triggered. The jobs dispatched in the iteration are marked once the
-    /// sleep elapses, so their update does not contend with concurrent job submissions during the
-    /// poll interval.
+    /// On each iteration, the coordinator fetches pending compression jobs and schedules as many as
+    /// available capacity permits. A permit is acquired before spawning each detached job-handler
+    /// task, ensuring the number of concurrently running handlers remains bounded. The coordinator
+    /// then sleeps until the next poll interval or until the cancellation token is triggered. After
+    /// the polling interval, the jobs are marked as dispatched so that their updates do not contend
+    /// with concurrent job submissions during the polling interval.
     ///
     /// # Errors
     ///
@@ -263,7 +268,7 @@ impl Coordinator {
     ///
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
     async fn schedule_new_jobs(&mut self) -> Result<Vec<CompressionJobId>, Error> {
-        if self.pending_job_queue.is_empty() && self.job_handler_semaphore.available_permits() > 0 {
+        if self.pending_job_queue.is_empty() && self.job_handler_sem.available_permits() > 0 {
             let new_job_rows = self.fetch_new_job_rows().await.inspect_err(|e| {
                 tracing::error!(error = % e, "Failed to fetch new jobs from database.");
             })?;
@@ -272,7 +277,7 @@ impl Coordinator {
 
         let mut dispatched_job_ids = Vec::new();
         while !self.pending_job_queue.is_empty() {
-            let Ok(permit) = self.job_handler_semaphore.clone().try_acquire_owned() else {
+            let Ok(permit) = self.job_handler_sem.clone().try_acquire_owned() else {
                 break;
             };
             let job_row = self
