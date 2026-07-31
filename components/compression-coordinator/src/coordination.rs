@@ -44,17 +44,12 @@ pub struct Coordinator {
 }
 
 impl Coordinator {
-    /// Maximum number of job-handler tasks that may run concurrently.
-    ///
-    /// TODO: Make this configurable through `ClpConfig`.
-    const MAX_CONCURRENT_JOB_HANDLERS: usize = 10;
-
     /// Factory function.
     ///
     /// On construction, this begins recovering all compression jobs that a previous coordinator
     /// instance had already submitted to Spider (those still [`CompressionJobStatus::Running`] with
-    /// a Spider job ID). The job-handler semaphore is sized to accommodate all recovered jobs when
-    /// their count exceeds the normal concurrency limit.
+    /// a Spider job ID). Recovered jobs that exceed the normal concurrency limit are started
+    /// without acquiring a semaphore permit.
     ///
     /// # Returns
     ///
@@ -126,8 +121,9 @@ impl Coordinator {
         });
 
         let cancellation_token = CancellationToken::new();
+        let max_concurrent_tasks = coordinator_config.max_concurrent_tasks.get();
 
-        let mut coordinator = Self {
+        let coordinator = Self {
             resource_group_id,
             spider_client,
             db_pool,
@@ -138,14 +134,11 @@ impl Coordinator {
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
             cancellation_token: cancellation_token.clone(),
-            job_handler_semaphore: Arc::new(Semaphore::new(Self::MAX_CONCURRENT_JOB_HANDLERS)),
+            job_handler_semaphore: Arc::new(Semaphore::new(max_concurrent_tasks)),
             pending_job_queue: VecDeque::new(),
         };
 
         let recovery_contexts = coordinator.fetch_submitted_running_jobs().await?;
-        let semaphore_size = Self::MAX_CONCURRENT_JOB_HANDLERS.max(recovery_contexts.len());
-        coordinator.job_handler_semaphore = Arc::new(Semaphore::new(semaphore_size));
-
         for (job_id, spider_job_id, clp_io_config) in recovery_contexts {
             tracing::info!(
                 job_id = % job_id,
@@ -155,17 +148,11 @@ impl Coordinator {
             let Ok(job_handle) = coordinator.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
-            let Ok(permit) = coordinator
+            let permit = coordinator
                 .job_handler_semaphore
                 .clone()
                 .try_acquire_owned()
-            else {
-                tracing::error!(
-                    job_id = %job_id,
-                    "Failed to acquire the reserved permit for a recovered job."
-                );
-                continue;
-            };
+                .ok();
             tokio::spawn(async move {
                 let _permit = permit;
                 let _ = job_handle.recover(spider_job_id).await.inspect_err(|e| {
