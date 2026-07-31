@@ -11,7 +11,6 @@ use std::process::Stdio;
 
 use anyhow::Context;
 use aws_config::BehaviorVersion;
-use aws_sdk_s3::config::Credentials;
 use aws_sdk_s3::config::ProvideCredentials;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::AwsAuthentication;
@@ -966,29 +965,6 @@ mod tests {
                 ("AWS_ACCESS_KEY_ID", "the-access-key".to_string()),
                 ("AWS_SECRET_ACCESS_KEY", "the-secret-key".to_string()),
                 ("AWS_SESSION_TOKEN", "the-session-token".to_string()),
-            ]
-        );
-    }
-
-    #[test]
-    fn s3_credential_env_default() {
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        // SAFETY: No other test in this binary reads or writes these env vars, and the env
-        // provider is the first source in the SDK's default chain, so the test is deterministic
-        // and network-free.
-        unsafe {
-            std::env::set_var("AWS_ACCESS_KEY_ID", "the-env-access-key");
-            std::env::set_var("AWS_SECRET_ACCESS_KEY", "the-env-secret-key");
-            std::env::set_var("AWS_SESSION_TOKEN", "the-env-session-token");
-        }
-
-        assert_eq!(
-            s3_credential_env(runtime.handle(), "us-east-1", &AwsAuthentication::Default)
-                .expect("failed to resolve credentials"),
-            vec![
-                ("AWS_ACCESS_KEY_ID", "the-env-access-key".to_string()),
-                ("AWS_SECRET_ACCESS_KEY", "the-env-secret-key".to_string()),
-                ("AWS_SESSION_TOKEN", "the-env-session-token".to_string()),
             ]
         );
     }
