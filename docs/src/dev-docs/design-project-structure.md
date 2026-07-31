@@ -2,9 +2,11 @@
 
 CLP is currently split across a few different components in the [components] directory:
 
-* [clp-mcp-server] contains code for CLP MCP Server.
+* [api-server] contains code for the API server of the CLP package.
+* [clp-mcp-server] contains code for CLP MCP server.
 * [clp-package-utils] contains Python utilities for operating the CLP package.
-* [clp-py-utils] contains Python utilities common to several of the other components.
+* [clp-py-utils] contains Python utilities common to several of the other Python components.
+* [clp-rust-utils] contains Rust utilities common to several of the other Rust components.
 * [core] contains code to compress uncompressed logs, decompress compressed logs, and search
   compressed logs.
 * [job-orchestration] contains code to schedule compression jobs on the cluster.
