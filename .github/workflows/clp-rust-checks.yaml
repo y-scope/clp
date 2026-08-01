@@ -28,7 +28,13 @@ concurrency:
 
 jobs:
   rust-checks:
-    runs-on: "ubuntu-22.04"
+    # CPU-bound (cargo build + nextest), but `tests:rust-all` starts LocalStack and reaches
+    # it through a host-published port, which is unreachable from the job's loopback on the
+    # self-hosted runners. Keep on GitHub-hosted via CLP_RUNNER_LINUX_LIGHT_X64 (empty ->
+    # fallback) until LocalStack-on-self-hosted is supported.
+    runs-on: >-
+      ${{vars.CLP_RUNNER_LINUX_LIGHT_X64 != ''
+        && fromJSON(vars.CLP_RUNNER_LINUX_LIGHT_X64) || 'ubuntu-22.04'}}
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
