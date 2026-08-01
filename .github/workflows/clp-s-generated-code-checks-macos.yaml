@@ -1,4 +1,4 @@
-name: "clp-s-generated-code-checks"
+name: "clp-s-generated-code-checks-macos"
 
 on:
   pull_request:
@@ -11,10 +11,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  antlr-code-committed:
-    name: "antlr-code-committed"
-    runs-on: >-
-      ${{ fromJSON(vars.GH_RUNNER_LINUX_LIGHT_X64 || '["ubuntu-24.04"]') }}
+  antlr-code-committed-macos:
+    if: "vars.GH_DISABLE_MACOS != 'true'"
+    name: "antlr-code-committed-macos"
+    runs-on: "macos-15"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
