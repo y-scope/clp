@@ -62,6 +62,7 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::InvalidConfiguration`] if the compression coordinator configuration is invalid.
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
     /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
     /// * Forwards [`get_or_create_resource_group_id`]'s return values on failure.
@@ -72,6 +73,14 @@ impl Coordinator {
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
     ) -> Result<(Self, CancellationToken), Error> {
+        let max_concurrent_tasks = coordinator_config.max_concurrent_tasks.get();
+        if max_concurrent_tasks > Semaphore::MAX_PERMITS {
+            return Err(Error::InvalidConfiguration(format!(
+                "`max_concurrent_tasks` must not exceed {}, got {max_concurrent_tasks}",
+                Semaphore::MAX_PERMITS,
+            )));
+        }
+
         let spider_host = spider_config.host.as_str();
         let spider_port = spider_config.port;
         let endpoint_str = format!("http://{spider_host}:{spider_port}");
@@ -121,7 +130,6 @@ impl Coordinator {
         });
 
         let cancellation_token = CancellationToken::new();
-        let max_concurrent_tasks = coordinator_config.max_concurrent_tasks.get();
 
         let coordinator = Self {
             resource_group_id,
