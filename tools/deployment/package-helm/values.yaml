@@ -7,11 +7,11 @@ allowHostAccessForSbinScripts: true
 image:
   # Installs the CLP Presto connector plugin into the Presto coordinator and worker pods. Override
   # the repository to use a different edition of the connector.
-  # TODO: default the tag to the released multi-arch tag before merging.
+  # TODO: default the tag to the released tag before merging.
   clpConnector:
     repository: "ghcr.io/y-scope/clp-plugin-presto-connector"
     pullPolicy: "IfNotPresent"
-    tag: "0.1.0-SNAPSHOT-arm64"
+    tag: "0.1.0-SNAPSHOT"
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"

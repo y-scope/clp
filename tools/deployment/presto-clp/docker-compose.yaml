@@ -4,11 +4,11 @@ services:
     # coordinator and worker mount into their plugin dirs (replacing the connector-baked
     # Presto images). The connector image's own entrypoint does the install; we only supply
     # the target paths via *_PLUGIN_INSTALL_PATH.
-    # init.py resolves CLP_CONNECTOR_TAG into .env (preferring a locally-built per-architecture
-    # tag, then a published multi-architecture tag, then a published per-architecture tag). The
-    # defaults below are only used when .env is absent, so the tag default is the multi-architecture
-    # form (not arch-specific).
-    # TODO: default the version to the released multi-arch tag before merging.
+    # init.py verifies the image exists (locally or on the registry) and writes
+    # CLP_CONNECTOR_IMAGE/CLP_CONNECTOR_TAG into .env. Locally-built and published images share
+    # the same :<version> tag; whatever is in the local daemon wins. The defaults below are only
+    # used when .env is absent.
+    # TODO: default the version to the released tag before merging.
     image: "${CLP_CONNECTOR_IMAGE:-\
       ghcr.io/y-scope/clp-plugin-presto-connector}:${CLP_CONNECTOR_TAG:-\
       0.1.0-SNAPSHOT}"
