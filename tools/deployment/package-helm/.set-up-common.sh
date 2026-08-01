@@ -58,7 +58,15 @@ get_image_helm_args() {
     fi
 
     echo "Loading local image '${image}' into kind cluster..." >&2
-    kind load docker-image "${image}" --name "${cluster_name}" >&2
+    # Check explicitly rather than relying on `errexit`: callers capture this
+    # function's output via `$(...) ... || exit 1`, and the `||` suspends errexit
+    # inside the command substitution — so an unchecked `kind load` failure would
+    # be silently ignored and we'd proceed with `pullPolicy=Never` for an image
+    # that was never loaded.
+    if ! kind load docker-image "${image}" --name "${cluster_name}" >&2; then
+        echo "Error: failed to load local image '${image}' into kind cluster '${cluster_name}'." >&2
+        return 1
+    fi
 
     # Split "repo:tag" on the last colon whose right-hand side contains no '/'
     # (so registry ports like localhost:5000/repo are not mistaken for tags).
