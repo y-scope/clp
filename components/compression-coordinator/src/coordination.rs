@@ -48,8 +48,8 @@ impl Coordinator {
     ///
     /// On construction, this begins recovering all compression jobs that a previous coordinator
     /// instance had already submitted to Spider (those still [`CompressionJobStatus::Running`] with
-    /// a Spider job ID). Recovered jobs that exceed the normal concurrency limit are started
-    /// without acquiring a semaphore permit.
+    /// a Spider job ID). During the restart phase, no concurrency limit is imposed, so all
+    /// recovered jobs are resumed immediately.
     ///
     /// # Returns
     ///
@@ -138,9 +138,8 @@ impl Coordinator {
             pending_job_queue: VecDeque::new(),
         };
 
-        let recovery_contexts = coordinator.fetch_submitted_running_jobs().await?;
         for (job_id, spider_job_id, clp_io_config) in
-            coordinator.fetch_submitted_running_jobs().await?;
+            coordinator.fetch_submitted_running_jobs().await?
         {
             tracing::info!(
                 job_id = % job_id,
@@ -152,11 +151,7 @@ impl Coordinator {
             };
 
             // Try to acquire a permit, but still spawn the recovery task if none is available.
-            let permit = coordinator
-                .job_handler_sem
-                .clone()
-                .try_acquire_owned()
-                .ok();
+            let permit = coordinator.job_handler_sem.clone().try_acquire_owned().ok();
 
             tokio::spawn(async move {
                 let _permit = permit;
@@ -174,14 +169,16 @@ impl Coordinator {
         Ok((coordinator, cancellation_token))
     }
 
-    /// Runs the coordinator's poll loop until cancelled.
+    /// Runs the coordinator's polling loop until cancelled.
     ///
-    /// On each iteration, the coordinator fetches pending compression jobs and schedules as many as
-    /// available capacity permits. A permit is acquired before spawning each detached job-handler
-    /// task, ensuring the number of concurrently running handlers remains bounded. The coordinator
-    /// then sleeps until the next poll interval or until the cancellation token is triggered. After
-    /// the polling interval, the jobs are marked as dispatched so that their updates do not contend
-    /// with concurrent job submissions during the polling interval.
+    /// Each polling iteration consists of three phases:
+    ///
+    /// 1. Schedule pending compression jobs up to the available concurrency limit.
+    /// 2. Wait until the next polling interval or until cancellation.
+    /// 3. Mark the scheduled jobs as dispatched.
+    ///
+    /// Jobs are marked as dispatched only after the polling interval has elapsed,
+    /// preventing their state updates from contending with concurrent job submissions.
     ///
     /// # Errors
     ///
@@ -249,8 +246,8 @@ impl Coordinator {
         }
     }
 
-    /// Queues pending compression jobs and spawns as many detached handlers as the semaphore
-    /// permits.
+    /// Queues new pending compression jobs and spawns as many detached handlers as the concurrency
+    /// limit allows.
     ///
     ///
     /// A job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`] and
@@ -260,7 +257,7 @@ impl Coordinator {
     ///
     /// # Returns
     ///
-    /// The IDs of the queued jobs that were processed in this poll.
+    /// The IDs of the queued jobs that were dispatched in this poll.
     ///
     /// # Errors
     ///
@@ -473,7 +470,7 @@ impl Coordinator {
     ) -> Result<Vec<(CompressionJobId, SpiderJobId, ClpIoConfig)>, Error> {
         const QUERY: &str = formatcp!(
             "SELECT `id`, `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
-             `spider_id` IS NOT NULL ORDER BY `id` ASC;",
+             `spider_id` IS NOT NULL;",
             table = COMPRESSION_JOB_TABLE_NAME,
         );
 
