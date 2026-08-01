@@ -51,13 +51,13 @@ The Helm chart's local-image path is wired into the set-up scripts in
 `--clp-connector-image`:
 
 ```shell
-./package-helm/set-up-test.sh --presto --clp-connector-image <repo>:<version>
+tools/deployment/package-helm/set-up-test.sh --presto --clp-connector-image <repo>:<version>
 ```
 
 For example:
 
 ```shell
-./package-helm/set-up-test.sh --presto \
+tools/deployment/package-helm/set-up-test.sh --presto \
     --clp-connector-image ghcr.io/y-scope/clp-plugin-presto-connector:0.1.0-SNAPSHOT
 ```
 
