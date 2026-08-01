@@ -484,11 +484,11 @@ def _run_docker_probe(docker_executable: str, args: list[str]) -> bool:
             timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
         )
     except (OSError, subprocess.TimeoutExpired) as e:
-        logger.error(
-            "Docker command '%s %s' failed: %s",
+        logger.exception(
+            "Docker command '%s %s' failed.",
             docker_executable,
             " ".join(args),
-            e,
+            exc_info=e,
         )
         return False
     return completed_process.returncode == 0
