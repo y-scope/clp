@@ -75,12 +75,12 @@ get_image_helm_args() {
 }
 
 # Parses common arguments shared across set-up scripts.
-# Sets CLP_PACKAGE_IMAGE, CLP_CONNECTOR_IMAGE, and ENABLE_PRESTO global variables.
+# Sets CLP_PACKAGE_IMAGE, CLP_PRESTO_CONNECTOR_IMAGE, and ENABLE_PRESTO global variables.
 #
 # @param {string[]} args Script arguments
 parse_common_args() {
     CLP_PACKAGE_IMAGE=""
-    CLP_CONNECTOR_IMAGE=""
+    CLP_PRESTO_CONNECTOR_IMAGE=""
     ENABLE_PRESTO="false"
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -97,7 +97,7 @@ parse_common_args() {
                     echo "Error: '--clp-connector-image' requires a value." >&2
                     exit 1
                 fi
-                CLP_CONNECTOR_IMAGE="$2"
+                CLP_PRESTO_CONNECTOR_IMAGE="$2"
                 shift 2
                 ;;
             --presto)

@@ -29,10 +29,10 @@ verifies the connector image exists (locally or on the registry) and writes it i
 erroring with the ref it tried if neither exists. Override the image by exporting environment
 variables before running `set-up-config.sh`:
 
-* `CLP_CONNECTOR_IMAGE` (default `ghcr.io/y-scope/clp-plugin-presto-connector`): connector image
+* `CLP_PRESTO_CONNECTOR_IMAGE` (default `ghcr.io/y-scope/clp-plugin-presto-connector`): connector image
   repository.
-* `CLP_CONNECTOR_TAG`: exact tag; skips the existence check when set.
-* `CLP_CONNECTOR_VERSION` (default `0.1.0-SNAPSHOT`): tag to verify and use.
+* `CLP_PRESTO_CONNECTOR_TAG`: exact tag; skips the existence check when set.
+* `CLP_PRESTO_CONNECTOR_VERSION` (default `0.1.0-SNAPSHOT`): tag to verify and use.
 
 Then start the stack:
 

@@ -29,8 +29,8 @@ AWS_S3_DOMAIN = "amazonaws.com"
 
 # Default CLP Presto connector image and version. The connector is installed into Presto at
 # startup from this image (see docker-compose.yaml). `init.py` verifies the image exists (per
-# `_add_connector_image_env_vars`) and writes `CLP_CONNECTOR_IMAGE`/`CLP_CONNECTOR_TAG` to
-# `.env`; the defaults below are only used when `.env` is absent.
+# `_add_connector_image_env_vars`) and writes `CLP_PRESTO_CONNECTOR_IMAGE`/
+# `CLP_PRESTO_CONNECTOR_TAG` to `.env`; the defaults below are only used when `.env` is absent.
 # TODO: default the version to the released multi-arch tag before merging.
 DEFAULT_CONNECTOR_IMAGE = "ghcr.io/y-scope/clp-plugin-presto-connector"
 DEFAULT_CONNECTOR_VERSION = "0.1.0-SNAPSHOT"
@@ -379,12 +379,12 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: dict[
 
 def _add_connector_image_env_vars(env_vars: dict[str, str]) -> bool:
     """
-    Resolves the CLP Presto connector image and adds `CLP_CONNECTOR_IMAGE` and `CLP_CONNECTOR_TAG`
-    to `env_vars`, which `docker-compose.yaml` consumes.
+    Resolves the CLP Presto connector image and adds `CLP_PRESTO_CONNECTOR_IMAGE` and
+    `CLP_PRESTO_CONNECTOR_TAG` to `env_vars`, which `docker-compose.yaml` consumes.
 
-    An explicit `CLP_CONNECTOR_TAG` in the environment is used as-is and skips the existence
-    check. The `CLP_CONNECTOR_IMAGE` (repository) and `CLP_CONNECTOR_VERSION` (tag) env vars
-    override their respective defaults.
+    An explicit `CLP_PRESTO_CONNECTOR_TAG` in the environment is used as-is and skips the
+    existence check. The `CLP_PRESTO_CONNECTOR_IMAGE` (repository) and
+    `CLP_PRESTO_CONNECTOR_VERSION` (tag) env vars override their respective defaults.
 
     Locally-built and published images share the `:<version>` tag (the conventional Docker
     pattern): whatever is in the local daemon is used, and Docker pulls the published image
@@ -395,25 +395,25 @@ def _add_connector_image_env_vars(env_vars: dict[str, str]) -> bool:
     :param env_vars: Dictionary to populate with the connector image environment variables.
     :return: Whether the image and tag were successfully resolved.
     """
-    image = os.environ.get("CLP_CONNECTOR_IMAGE", DEFAULT_CONNECTOR_IMAGE)
+    image = os.environ.get("CLP_PRESTO_CONNECTOR_IMAGE", DEFAULT_CONNECTOR_IMAGE)
 
-    explicit_tag = os.environ.get("CLP_CONNECTOR_TAG")
+    explicit_tag = os.environ.get("CLP_PRESTO_CONNECTOR_TAG")
     if explicit_tag is not None:
         logger.info(
-            "Using explicitly provided CLP_CONNECTOR_TAG='%s' for connector image '%s'.",
+            "Using explicitly provided CLP_PRESTO_CONNECTOR_TAG='%s' for connector image '%s'.",
             explicit_tag,
             image,
         )
-        env_vars["CLP_CONNECTOR_IMAGE"] = image
-        env_vars["CLP_CONNECTOR_TAG"] = explicit_tag
+        env_vars["CLP_PRESTO_CONNECTOR_IMAGE"] = image
+        env_vars["CLP_PRESTO_CONNECTOR_TAG"] = explicit_tag
         return True
 
-    tag = os.environ.get("CLP_CONNECTOR_VERSION", DEFAULT_CONNECTOR_VERSION)
+    tag = os.environ.get("CLP_PRESTO_CONNECTOR_VERSION", DEFAULT_CONNECTOR_VERSION)
     if not _connector_image_available(image, tag):
         return False
 
-    env_vars["CLP_CONNECTOR_IMAGE"] = image
-    env_vars["CLP_CONNECTOR_TAG"] = tag
+    env_vars["CLP_PRESTO_CONNECTOR_IMAGE"] = image
+    env_vars["CLP_PRESTO_CONNECTOR_TAG"] = tag
     return True
 
 
@@ -434,7 +434,7 @@ def _connector_image_available(image: str, tag: str) -> bool:
     if shutil.which(docker_executable) is None:
         logger.error(
             "Docker isn't installed or isn't on PATH, so the CLP Presto connector image can't be"
-            " checked. Install Docker, or set CLP_CONNECTOR_TAG explicitly."
+            " checked. Install Docker, or set CLP_PRESTO_CONNECTOR_TAG explicitly."
         )
         return False
 
@@ -448,7 +448,7 @@ def _connector_image_available(image: str, tag: str) -> bool:
 
     logger.error(
         "Couldn't find CLP Presto connector image '%s' locally or on the registry. Build it"
-        " (e.g. via `task package` in clp-plugin-presto-connector) or set CLP_CONNECTOR_TAG"
+        " (e.g. via `task package` in clp-plugin-presto-connector) or set CLP_PRESTO_CONNECTOR_TAG"
         " explicitly.",
         ref,
     )
