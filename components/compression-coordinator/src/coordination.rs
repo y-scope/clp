@@ -177,8 +177,10 @@ impl Coordinator {
     /// 2. Wait until the next polling interval or until cancellation.
     /// 3. Mark the scheduled jobs as dispatched.
     ///
-    /// Jobs are marked as dispatched only after the polling interval has elapsed,
-    /// preventing their state updates from contending with concurrent job submissions.
+    /// Jobs are marked as dispatched only after the polling interval has elapsed, giving job
+    /// handlers an opportunity to persist their initial Spider submission state before the
+    /// coordinator updates `dispatch_time`, thereby reducing contention when updating the same
+    /// database row.
     ///
     /// # Errors
     ///
@@ -277,12 +279,14 @@ impl Coordinator {
             let Ok(permit) = self.job_handler_sem.clone().try_acquire_owned() else {
                 break;
             };
+
             let job_row = self
                 .pending_job_queue
                 .pop_front()
                 .expect("pending job queue should not be empty");
             let job_id = job_row.id;
             dispatched_job_ids.push(job_id);
+
             let clp_io_config: ClpIoConfig =
                 match BrotliMsgpack::deserialize(&job_row.serialized_clp_io_config) {
                     Ok(clp_io_config) => clp_io_config,
@@ -300,10 +304,12 @@ impl Coordinator {
                         continue;
                     }
                 };
+
             tracing::info!(job_id = % job_id, "Scheduling new job.");
             let Ok(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
+
             tokio::spawn(async move {
                 let _permit = permit;
                 let _ = job_handle.run().await.inspect_err(|e| {
