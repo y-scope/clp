@@ -439,10 +439,12 @@ def _connector_image_available(image: str, tag: str) -> bool:
         return False
 
     ref = f"{image}:{tag}"
-    if _image_exists_locally(docker_executable, ref):
+    # `image inspect` queries the local Docker daemon; `manifest inspect` queries the registry.
+    # A local image takes precedence at `docker compose up`.
+    if _run_docker_probe(docker_executable, ["image", "inspect", ref]):
         logger.info("Found CLP connector image '%s' in the local Docker daemon.", ref)
         return True
-    if _tag_exists_on_registry(docker_executable, ref):
+    if _run_docker_probe(docker_executable, ["manifest", "inspect", ref]):
         logger.info("Found CLP connector image '%s' on the registry.", ref)
         return True
 
@@ -455,42 +457,41 @@ def _connector_image_available(image: str, tag: str) -> bool:
     return False
 
 
-def _image_exists_locally(docker_executable: str, image_ref: str) -> bool:
+# Timeout for Docker CLI probes (local `image inspect` or registry `manifest inspect`). A
+# hung Docker daemon or an unresponsive registry would otherwise stall `set-up-config.sh`
+# indefinitely; this is ample for a small manifest request even on a slow link.
+_DOCKER_PROBE_TIMEOUT_SECONDS = 30
+
+
+def _run_docker_probe(docker_executable: str, args: list[str]) -> bool:
     """
-    Returns whether `image_ref` is present in the local Docker daemon.
+    Runs ``docker <args>`` and returns whether it exited 0, suppressing stdout/stderr.
+
+    Catches ``OSError`` (e.g. the Docker binary vanished or isn't executable) and
+    ``subprocess.TimeoutExpired``, logging the failure and returning False so a hung or
+    broken Docker/registry doesn't stall setup.
 
     :param docker_executable: The Docker executable to call.
-    :param image_ref: The image reference (repository:tag).
-    :return: True if the image exists locally.
+    :param args: Arguments to pass to Docker (e.g. ``["image", "inspect", ref]``).
+    :return: True if the command exited 0.
     """
-    return (
-        subprocess.run(
-            [docker_executable, "image", "inspect", image_ref],
+    try:
+        completed_process = subprocess.run(
+            [docker_executable, *args],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
-        ).returncode
-        == 0
-    )
-
-
-def _tag_exists_on_registry(docker_executable: str, image_ref: str) -> bool:
-    """
-    Returns whether `image_ref` exists on its registry, queried via `docker manifest inspect`.
-
-    :param docker_executable: The Docker executable to call.
-    :param image_ref: The image reference (repository:tag).
-    :return: True if the tag exists on the registry.
-    """
-    return (
-        subprocess.run(
-            [docker_executable, "manifest", "inspect", image_ref],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        ).returncode
-        == 0
-    )
+            timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        logger.error(
+            "Docker command '%s %s' failed: %s",
+            docker_executable,
+            " ".join(args),
+            e,
+        )
+        return False
+    return completed_process.returncode == 0
 
 
 def _generate_worker_clp_properties(
