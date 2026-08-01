@@ -64,12 +64,12 @@ telemetry:
 #  port: 6000
 #  logging_level: "INFO"
 #
-## Compression coordinator config. When set, the `spider` config below must also be set.
+## Compression coordinator config. Requires `logs_input.type` to be "s3" and `spider` to be set.
 #compression_coordinator:
 #  resource_group:
 #    name: "compression-coordinator"
 #  job_polling_interval_millisecs: 100
-#  max_concurrent_tasks: 1000
+#  max_concurrent_tasks: 1000  # Must be greater than 0
 #  result_polling:
 #    init_backoff_millisecs: 100
 #    max_backoff_millisecs: 1000
