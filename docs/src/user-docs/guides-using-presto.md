@@ -210,9 +210,12 @@ Using Presto with CLP via Docker Compose requires:
     `set-up-config.sh` also writes the CLP connector image into `.env`, after verifying it
     exists locally or on the registry (a locally-built image and the published one share the
     same tag; whatever is in your Docker daemon wins). Override the image by exporting
-    `CLP_PRESTO_CONNECTOR_IMAGE`, `CLP_PRESTO_CONNECTOR_TAG`, or `CLP_PRESTO_CONNECTOR_VERSION` before running the
-    script; see [Testing the Presto connector locally][testing-presto-connector] for building
-    the connector image yourself.
+    `CLP_PRESTO_CONNECTOR_IMAGE`, `CLP_PRESTO_CONNECTOR_VERSION`, or `CLP_PRESTO_CONNECTOR_TAG`
+    before running the script. An explicit `CLP_PRESTO_CONNECTOR_TAG` skips the existence check,
+    so an invalid tag is written to `.env` as-is and surfaces later during `docker compose up`;
+    `CLP_PRESTO_CONNECTOR_IMAGE` and `CLP_PRESTO_CONNECTOR_VERSION` are still validated before
+    `.env` is written. See [Testing the Presto connector locally][testing-presto-connector] for
+    building the connector image yourself.
     :::
 
 4. Configure Presto to use CLP's metadata database as follows:
