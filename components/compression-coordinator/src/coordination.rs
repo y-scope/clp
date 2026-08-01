@@ -259,6 +259,9 @@ impl Coordinator {
     /// Queues new pending compression jobs and spawns as many detached handlers as the concurrency
     /// limit allows.
     ///
+    /// New jobs are scheduled whenever permits are available. Because excess recovery handlers may
+    /// run without permits, scheduling new jobs may temporarily cause the total number of active
+    /// handlers to exceed the configured limit until the permitless recovery handlers finish.
     ///
     /// A job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`] and
     /// skipped; a job whose handle cannot be constructed is skipped as well (and marked
