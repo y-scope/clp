@@ -149,7 +149,9 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    localstack_endpoint = f"http://localhost:{args.port}"
+    # `localhost` can resolve to `::1` alone, which LocalStack doesn't bind, so address it by its
+    # IPv4 loopback address instead.
+    localstack_endpoint = f"http://127.0.0.1:{args.port}"
     logger.info("Using LocalStack endpoint: %s", localstack_endpoint)
 
     session = boto3.session.Session(
