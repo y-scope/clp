@@ -137,11 +137,8 @@ echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
 
-# Resolve the local-image overrides into Helm --set flags up front so a failure
-# (an invalid image ref, or an image absent from the local Docker daemon) exits
-# loudly instead of being silently dropped — which would make `helm install`
-# fall back to the chart-default image. An empty override is intentional (no
-# --clp-*-image passed) and resolves to empty flags.
+# Resolve image overrides up front so an invalid or unloadable image exits loudly instead
+# of silently falling back to the chart default. An empty override resolves to no flags.
 clp_package_args=$(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}") || exit 1
 clp_connector_args=$(get_image_helm_args "${CLUSTER_NAME}" "clpConnector" "${CLP_PRESTO_CONNECTOR_IMAGE}") || exit 1
 
