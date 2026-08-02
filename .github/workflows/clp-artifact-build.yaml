@@ -23,6 +23,13 @@ env:
   # (e.g. ":main-amd64") by clp-core-build-containers' `arch` input and merged into a
   # multi-arch ":main" manifest by the *-deps-image-merge jobs.
   DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-"
+  # Configurable container registry. Defaults reproduce the previous ghcr.io + GITHUB_TOKEN
+  # behavior, so upstream and forks without a private registry are unaffected. A repo with
+  # its own registry sets the REGISTRY variable and the REGISTRY_USERNAME /
+  # REGISTRY_PASSWORD secrets.
+  IMAGE_REGISTRY: "${{vars.REGISTRY || 'ghcr.io'}}"
+  IMAGE_REGISTRY_USERNAME: "${{secrets.REGISTRY_USERNAME || github.actor}}"
+  IMAGE_REGISTRY_PASSWORD: "${{secrets.REGISTRY_PASSWORD || secrets.GITHUB_TOKEN}}"
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
@@ -135,7 +142,9 @@ jobs:
             /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          image_registry_password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
   manylinux_2_28-deps-image:
     name: "manylinux_2_28-${{matrix.arch}}-deps-image"
@@ -172,7 +181,9 @@ jobs:
             /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          image_registry_password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
   manylinux_2_28-deps-image-merge:
     name: "manylinux_2_28-deps-image-merge"
@@ -192,9 +203,9 @@ jobs:
       - name: "Login to Image Registry"
         uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          registry: "${{env.IMAGE_REGISTRY}}"
+          username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
       - name: "Sanitize Repository Name"
         id: "sanitization"
@@ -206,7 +217,7 @@ jobs:
       - name: "Create and Push Multi-arch Manifest"
         shell: "bash"
         run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/${{env.DEPS_IMAGE_NAME_PREFIX}}manylinux_2_28"
+          image_base="${{env.IMAGE_REGISTRY}}/${{steps.sanitization.outputs.REPOSITORY}}/${{env.DEPS_IMAGE_NAME_PREFIX}}manylinux_2_28"
           docker manifest create "${image_base}:main" \
             "${image_base}:main-amd64" \
             "${image_base}:main-arm64"
@@ -230,9 +241,9 @@ jobs:
       - name: "Login to Image Registry"
         uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          registry: "${{env.IMAGE_REGISTRY}}"
+          username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
       - name: "Sanitize Repository Name"
         id: "sanitization"
@@ -244,7 +255,7 @@ jobs:
       - name: "Create and Push Multi-arch Manifest"
         shell: "bash"
         run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/${{env.DEPS_IMAGE_NAME_PREFIX}}musllinux_1_2"
+          image_base="${{env.IMAGE_REGISTRY}}/${{steps.sanitization.outputs.REPOSITORY}}/${{env.DEPS_IMAGE_NAME_PREFIX}}musllinux_1_2"
           docker manifest create "${image_base}:main" \
             "${image_base}:main-amd64" \
             "${image_base}:main-arm64"
@@ -285,7 +296,9 @@ jobs:
             /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          image_registry_password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
   ubuntu-jammy-x86_64-deps-image:
     name: "ubuntu-jammy-x86_64-deps-image"
@@ -312,7 +325,9 @@ jobs:
             /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          image_registry_password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
   ubuntu-jammy-aarch64-deps-image:
     name: "ubuntu-jammy-aarch64-deps-image"
@@ -342,7 +357,9 @@ jobs:
             /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          image_registry_password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
   centos-stream-9-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
@@ -373,6 +390,9 @@ jobs:
           OS_NAME: "centos-stream-9"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -418,6 +438,9 @@ jobs:
           OS_NAME: "manylinux_2_28"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           arch: "amd64"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
@@ -460,6 +483,9 @@ jobs:
       - uses: "./.github/actions/run-on-image"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           arch: "amd64"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
@@ -521,6 +547,9 @@ jobs:
           OS_NAME: "musllinux_1_2"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           arch: "amd64"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'false'
@@ -566,6 +595,9 @@ jobs:
       - uses: "./.github/actions/run-on-image"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -628,9 +660,9 @@ jobs:
 
       - uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          registry: "${{env.IMAGE_REGISTRY}}"
+          username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
       - name: "Sanitize the repo's name"
         id: "sanitize_repo_name"
@@ -645,7 +677,7 @@ jobs:
         uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
         with:
           images: >-
-            ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-core-x86-${{env.OS_NAME}}
+            ${{env.IMAGE_REGISTRY}}/${{steps.sanitize_repo_name.outputs.repository}}/clp-core-x86-${{env.OS_NAME}}
           tags: "type=raw,value=${{github.ref_name}}"
 
       # Only publish the image if this workflow was triggered by a push to `main`.
@@ -705,6 +737,9 @@ jobs:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -763,6 +798,9 @@ jobs:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{format('{0}ubuntu-jammy', env.DEPS_IMAGE_NAME_PREFIX_X86)}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -773,9 +811,9 @@ jobs:
 
       - uses: "./.github/actions/clp-build-runtime-image"
         with:
-          image_registry: "ghcr.io"
-          image_registry_username: "${{github.actor}}"
-          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          image_registry_password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
           arch: "amd64"
           platform_version_codename: "jammy"
 
@@ -809,6 +847,9 @@ jobs:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{format('{0}ubuntu-jammy', env.DEPS_IMAGE_NAME_PREFIX_AARCH64)}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -819,9 +860,9 @@ jobs:
 
       - uses: "./.github/actions/clp-build-runtime-image"
         with:
-          image_registry: "ghcr.io"
-          image_registry_username: "${{github.actor}}"
-          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          image_registry_password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
           arch: "arm64"
           platform_version_codename: "jammy"
 
@@ -841,9 +882,9 @@ jobs:
       - name: "Login to Image Registry"
         uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          registry: "${{env.IMAGE_REGISTRY}}"
+          username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
       - name: "Sanitize Repository Name"
         id: "sanitization"
@@ -855,7 +896,7 @@ jobs:
       - name: "Create and Push Multi-arch Manifest"
         shell: "bash"
         run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/clp-package"
+          image_base="${{env.IMAGE_REGISTRY}}/${{steps.sanitization.outputs.REPOSITORY}}/clp-package"
           tags=("${{github.ref_name}}")
           if [ "${{github.event_name}}" = "schedule" ]; then
             tags+=("nightly")
@@ -899,6 +940,9 @@ jobs:
         uses: "./.github/actions/run-on-image"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}ubuntu-jammy"
+          image_registry: "${{env.IMAGE_REGISTRY}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -911,9 +955,9 @@ jobs:
         uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
         if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          registry: "${{env.IMAGE_REGISTRY}}"
+          username: "${{env.IMAGE_REGISTRY_USERNAME}}"
+          password: "${{env.IMAGE_REGISTRY_PASSWORD}}"
 
       - name: "Sanitize the repo's name"
         id: "sanitize_repo_name"
@@ -928,7 +972,7 @@ jobs:
         uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"  # v5.7.0
         with:
           images: >-
-            ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-spider-worker
+            ${{env.IMAGE_REGISTRY}}/${{steps.sanitize_repo_name.outputs.repository}}/clp-spider-worker
           tags: "type=raw,value=${{github.ref_name}}"
 
       # Publish on non-PR runs of `main`, including scheduled and manually dispatched runs.
