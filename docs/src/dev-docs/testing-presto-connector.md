@@ -1,15 +1,12 @@
 # Building and testing the Presto connector
 
 The Presto integration installs the [CLP connector][clp-connector] at startup from the
-`ghcr.io/y-scope/clp-plugin-presto-connector` image, so that the stock Presto images can be used
-unmodified. This page covers building that connector image locally and pointing the
-[Docker Compose](#docker-compose) and [Helm](#helm-kind) stacks at it for testing.
+`ghcr.io/y-scope/clp-plugin-presto-connector` image, so the stock Presto images stay unmodified.
+This page covers building that image locally and pointing the [Docker Compose](#docker-compose) and
+[Helm](#helm-kind) stacks at it.
 
-Locally-built and published connector images share the same `:<version>` tag (e.g.
-`0.1.0-SNAPSHOT`), following the conventional Docker pattern: whatever is in your local Docker
-daemon wins, and Docker pulls the published image when nothing is loaded locally. To go back to
-the published image after building locally, `docker pull` the tag (or `docker rmi` your local
-build).
+Local and published images share the same `:<version>` tag (e.g. `0.1.0-SNAPSHOT`), so whatever is
+in your Docker daemon wins. `docker rmi` your local build to go back to the published image.
 
 ## Building the connector image
 
@@ -19,20 +16,18 @@ In the [`clp-plugin-presto-connector`][clp-connector] repository, run:
 task package
 ```
 
-This builds the connector image and loads it into the local Docker daemon, e.g.
-`ghcr.io/y-scope/clp-plugin-presto-connector:0.1.0-SNAPSHOT`.
+This builds `ghcr.io/y-scope/clp-plugin-presto-connector:0.1.0-SNAPSHOT` and loads it into your
+local Docker daemon.
 
 ## Docker Compose
 
-The `presto-clp` Compose stack is in `tools/deployment/presto-clp`. `scripts/set-up-config.sh`
-verifies the connector image exists (locally or on the registry) and writes it into `.env`,
-erroring with the ref it tried if neither exists. Override the image by exporting environment
-variables before running `set-up-config.sh`:
+The `presto-clp` stack is in `tools/deployment/presto-clp`. `scripts/set-up-config.sh` verifies the
+connector image exists (locally or on the registry) and writes it into `.env`, erroring with the
+ref it tried if neither exists. Export any of these before running it:
 
-* `CLP_PRESTO_CONNECTOR_IMAGE` (default `ghcr.io/y-scope/clp-plugin-presto-connector`): connector image
-  repository.
-* `CLP_PRESTO_CONNECTOR_TAG`: exact tag; skips the existence check when set.
-* `CLP_PRESTO_CONNECTOR_VERSION` (default `0.1.0-SNAPSHOT`): tag to verify and use.
+* `CLP_PRESTO_CONNECTOR_IMAGE`: repository (default `ghcr.io/y-scope/clp-plugin-presto-connector`).
+* `CLP_PRESTO_CONNECTOR_VERSION`: tag to verify and use (default `0.1.0-SNAPSHOT`).
+* `CLP_PRESTO_CONNECTOR_TAG`: exact tag, skipping the existence check.
 
 Then start the stack:
 
@@ -45,16 +40,8 @@ See the [Using Presto with CLP][using-presto] user guide for the full setup.
 
 ## Helm (kind)
 
-The Helm chart's local-image path is wired into the set-up scripts in
-`tools/deployment/package-helm`, which load a local image into the `kind` cluster and set
-`image.clpConnector.{repository,tag,pullPolicy=Never}` for you. Pass the connector image via
-`--clp-connector-image`:
-
-```shell
-tools/deployment/package-helm/set-up-test.sh --presto --clp-connector-image <repo>:<version>
-```
-
-For example:
+`--clp-connector-image` loads a local image into the `kind` cluster and sets
+`image.clpConnector.{repository,tag,pullPolicy=Never}` for you:
 
 ```shell
 tools/deployment/package-helm/set-up-test.sh --presto \
