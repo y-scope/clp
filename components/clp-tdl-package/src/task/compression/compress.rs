@@ -1087,7 +1087,6 @@ mod tests {
             port: 3306,
             names: ClpDbNames {
                 clp: "clp-db".to_string(),
-                spider: "spider-db".to_string(),
             },
             table_prefix: "clp_".to_string(),
         };
