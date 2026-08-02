@@ -567,7 +567,7 @@ command: [
   "kubectl", "wait",
   {{- if eq .type "service" }}
   "--for=condition=ready",
-  "pod", "--selector", "app.kubernetes.io/component={{ .name }}",
+  "pod", "--selector", "app.kubernetes.io/instance={{ .root.Release.Name }},app.kubernetes.io/component={{ .name }}",
   {{- else if eq .type "job" }}
   "--for=condition=complete",
   "job/{{ include "clp.fullname" .root }}-{{ .name }}",
