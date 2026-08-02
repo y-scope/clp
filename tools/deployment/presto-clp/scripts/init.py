@@ -27,12 +27,16 @@ PRESTO_SYSTEM_MEMORY_RATIO = 0.9
 # S3 URL constant
 AWS_S3_DOMAIN = "amazonaws.com"
 
-# Default CLP Presto connector image and version. The connector is installed into Presto at
-# startup from this image (see docker-compose.yaml). `init.py` verifies the image exists (per
-# `_add_connector_image_env_vars`) and writes `CLP_PRESTO_CONNECTOR_IMAGE`/
-# `CLP_PRESTO_CONNECTOR_TAG` to `.env`; the defaults below are only used when `.env` is absent.
+# Default CLP Presto connector image and tag, used when the corresponding env vars are unset.
 DEFAULT_CONNECTOR_IMAGE = "ghcr.io/y-scope/clp-plugin-presto-connector"
 DEFAULT_CONNECTOR_VERSION = "0.1.0-SNAPSHOT"
+
+# Silence Ruff S607: the absolute path of the Docker binary may vary depending on the installation
+# method.
+_DOCKER_EXECUTABLE = "docker"
+
+# Bounds each Docker probe so a hung daemon or an unresponsive registry can't stall setup.
+_DOCKER_PROBE_TIMEOUT_SECONDS = 30
 
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
@@ -381,35 +385,22 @@ def _add_connector_image_env_vars(env_vars: dict[str, str]) -> bool:
     Resolves the CLP Presto connector image and adds `CLP_PRESTO_CONNECTOR_IMAGE` and
     `CLP_PRESTO_CONNECTOR_TAG` to `env_vars`, which `docker-compose.yaml` consumes.
 
-    An explicit `CLP_PRESTO_CONNECTOR_TAG` in the environment is used as-is and skips the
-    existence check. The `CLP_PRESTO_CONNECTOR_IMAGE` (repository) and
-    `CLP_PRESTO_CONNECTOR_VERSION` (tag) env vars override their respective defaults.
-
-    Locally-built and published images share the `:<version>` tag (the conventional Docker
-    pattern): whatever is in the local daemon is used, and Docker pulls the published image
-    when nothing is loaded locally. To test the published image over a stale local build, run
-    `docker pull <image>:<version>` first (or `docker rmi` the local one). This function only
-    verifies the image is available locally or on the registry, and errors otherwise.
+    `CLP_PRESTO_CONNECTOR_IMAGE` (repository) and `CLP_PRESTO_CONNECTOR_VERSION` (tag) override
+    the defaults. An explicit `CLP_PRESTO_CONNECTOR_TAG` is used as-is and skips the existence
+    check.
 
     :param env_vars: Dictionary to populate with the connector image environment variables.
     :return: Whether the image and tag were successfully resolved.
     """
     image = os.environ.get("CLP_PRESTO_CONNECTOR_IMAGE", DEFAULT_CONNECTOR_IMAGE)
 
-    explicit_tag = os.environ.get("CLP_PRESTO_CONNECTOR_TAG")
-    if explicit_tag is not None:
-        logger.info(
-            "Using explicitly provided CLP_PRESTO_CONNECTOR_TAG='%s' for connector image '%s'.",
-            explicit_tag,
-            image,
-        )
-        env_vars["CLP_PRESTO_CONNECTOR_IMAGE"] = image
-        env_vars["CLP_PRESTO_CONNECTOR_TAG"] = explicit_tag
-        return True
-
-    tag = os.environ.get("CLP_PRESTO_CONNECTOR_VERSION", DEFAULT_CONNECTOR_VERSION)
-    if not _connector_image_available(image, tag):
-        return False
+    tag = os.environ.get("CLP_PRESTO_CONNECTOR_TAG")
+    if tag is None:
+        tag = os.environ.get("CLP_PRESTO_CONNECTOR_VERSION", DEFAULT_CONNECTOR_VERSION)
+        if not _connector_image_available(image, tag):
+            return False
+    else:
+        logger.info("Using CLP_PRESTO_CONNECTOR_TAG='%s'; skipping the existence check.", tag)
 
     env_vars["CLP_PRESTO_CONNECTOR_IMAGE"] = image
     env_vars["CLP_PRESTO_CONNECTOR_TAG"] = tag
@@ -418,19 +409,14 @@ def _add_connector_image_env_vars(env_vars: dict[str, str]) -> bool:
 
 def _connector_image_available(image: str, tag: str) -> bool:
     """
-    Returns whether `image`:`tag` exists in the local Docker daemon or on its registry, logging
-    which one was found (a local image takes precedence at `docker compose up`) or an error if
-    neither exists.
+    Returns whether `image`:`tag` exists in the local Docker daemon or on its registry. A local
+    image takes precedence at `docker compose up`.
 
     :param image: The connector image repository.
     :param tag: The image tag.
     :return: Whether the image is available.
     """
-    # Silence Ruff S607: the absolute path of the Docker binary may vary depending on the
-    # installation method.
-    docker_executable = "docker"
-
-    if shutil.which(docker_executable) is None:
+    if shutil.which(_DOCKER_EXECUTABLE) is None:
         logger.error(
             "Docker isn't installed or isn't on PATH, so the CLP Presto connector image can't be"
             " checked. Install Docker, or set CLP_PRESTO_CONNECTOR_TAG explicitly."
@@ -438,12 +424,10 @@ def _connector_image_available(image: str, tag: str) -> bool:
         return False
 
     ref = f"{image}:{tag}"
-    # `image inspect` queries the local Docker daemon; `manifest inspect` queries the registry.
-    # A local image takes precedence at `docker compose up`.
-    if _run_docker_probe(docker_executable, ["image", "inspect", ref]):
+    if _run_docker_probe(["image", "inspect", ref]):
         logger.info("Found CLP connector image '%s' in the local Docker daemon.", ref)
         return True
-    if _run_docker_probe(docker_executable, ["manifest", "inspect", ref]):
+    if _run_docker_probe(["manifest", "inspect", ref]):
         logger.info("Found CLP connector image '%s' on the registry.", ref)
         return True
 
@@ -456,27 +440,16 @@ def _connector_image_available(image: str, tag: str) -> bool:
     return False
 
 
-# Timeout for Docker CLI probes (local `image inspect` or registry `manifest inspect`). A
-# hung Docker daemon or an unresponsive registry would otherwise stall `set-up-config.sh`
-# indefinitely; this is ample for a small manifest request even on a slow link.
-_DOCKER_PROBE_TIMEOUT_SECONDS = 30
-
-
-def _run_docker_probe(docker_executable: str, args: list[str]) -> bool:
+def _run_docker_probe(args: list[str]) -> bool:
     """
-    Runs ``docker <args>`` and returns whether it exited 0, suppressing stdout/stderr.
+    Runs `docker <args>`, suppressing its output.
 
-    Catches ``OSError`` (e.g. the Docker binary vanished or isn't executable) and
-    ``subprocess.TimeoutExpired``, logging the failure and returning False so a hung or
-    broken Docker/registry doesn't stall setup.
-
-    :param docker_executable: The Docker executable to call.
-    :param args: Arguments to pass to Docker (e.g. ``["image", "inspect", ref]``).
-    :return: True if the command exited 0.
+    :param args: Arguments to pass to Docker (e.g. `["image", "inspect", ref]`).
+    :return: Whether the command exited 0. False if Docker couldn't be run or timed out.
     """
     try:
         completed_process = subprocess.run(
-            [docker_executable, *args],
+            [_DOCKER_EXECUTABLE, *args],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
@@ -484,10 +457,7 @@ def _run_docker_probe(docker_executable: str, args: list[str]) -> bool:
         )
     except (OSError, subprocess.TimeoutExpired) as e:
         logger.exception(
-            "Docker command '%s %s' failed.",
-            docker_executable,
-            " ".join(args),
-            exc_info=e,
+            "Docker command '%s %s' failed.", _DOCKER_EXECUTABLE, " ".join(args), exc_info=e
         )
         return False
     return completed_process.returncode == 0
