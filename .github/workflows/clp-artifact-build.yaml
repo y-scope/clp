@@ -25,11 +25,11 @@ env:
   DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-"
   # Configurable container registry. Defaults reproduce the previous ghcr.io + GITHUB_TOKEN
   # behavior, so upstream and forks without a private registry are unaffected. A repo with
-  # its own registry sets the GH_IMAGE_REGISTRY variable and the GH_IMAGE_REGISTRY_USERNAME /
-  # GH_IMAGE_REGISTRY_PASSWORD secrets.
-  IMAGE_REGISTRY: "${{vars.GH_IMAGE_REGISTRY || 'ghcr.io'}}"
-  IMAGE_REGISTRY_USERNAME: "${{secrets.GH_IMAGE_REGISTRY_USERNAME || github.actor}}"
-  IMAGE_REGISTRY_PASSWORD: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD || secrets.GITHUB_TOKEN}}"
+  # its own registry sets the REGISTRY variable and the REGISTRY_USERNAME /
+  # REGISTRY_PASSWORD secrets.
+  IMAGE_REGISTRY: "${{vars.REGISTRY || 'ghcr.io'}}"
+  IMAGE_REGISTRY_USERNAME: "${{secrets.REGISTRY_USERNAME || github.actor}}"
+  IMAGE_REGISTRY_PASSWORD: "${{secrets.REGISTRY_PASSWORD || secrets.GITHUB_TOKEN}}"
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
@@ -391,8 +391,8 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -439,8 +439,8 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           arch: "amd64"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
@@ -484,8 +484,8 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           arch: "amd64"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
@@ -548,8 +548,8 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           arch: "amd64"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'false'
@@ -596,8 +596,8 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -738,8 +738,8 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -799,8 +799,8 @@ jobs:
         with:
           image_name: "${{format('{0}ubuntu-jammy', env.DEPS_IMAGE_NAME_PREFIX_X86)}}"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -848,8 +848,8 @@ jobs:
         with:
           image_name: "${{format('{0}ubuntu-jammy', env.DEPS_IMAGE_NAME_PREFIX_AARCH64)}}"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -941,8 +941,8 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}ubuntu-jammy"
           image_registry: "${{env.IMAGE_REGISTRY}}"
-          image_registry_username: "${{secrets.GH_IMAGE_REGISTRY_USERNAME}}"
-          image_registry_password: "${{secrets.GH_IMAGE_REGISTRY_PASSWORD}}"
+          image_registry_username: "${{secrets.REGISTRY_USERNAME}}"
+          image_registry_password: "${{secrets.REGISTRY_PASSWORD}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
