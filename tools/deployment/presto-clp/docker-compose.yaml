@@ -8,7 +8,6 @@ services:
     # CLP_PRESTO_CONNECTOR_IMAGE/CLP_PRESTO_CONNECTOR_TAG into .env. Locally-built and published
     # images share the same :<version> tag; whatever is in the local daemon wins. The defaults
     # below are only used when .env is absent.
-    # TODO: default the version to the released tag before merging.
     image: "${CLP_PRESTO_CONNECTOR_IMAGE:-\
       ghcr.io/y-scope/clp-plugin-presto-connector}:${CLP_PRESTO_CONNECTOR_TAG:-\
       0.1.0-SNAPSHOT}"

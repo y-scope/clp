@@ -31,7 +31,6 @@ AWS_S3_DOMAIN = "amazonaws.com"
 # startup from this image (see docker-compose.yaml). `init.py` verifies the image exists (per
 # `_add_connector_image_env_vars`) and writes `CLP_PRESTO_CONNECTOR_IMAGE`/
 # `CLP_PRESTO_CONNECTOR_TAG` to `.env`; the defaults below are only used when `.env` is absent.
-# TODO: default the version to the released multi-arch tag before merging.
 DEFAULT_CONNECTOR_IMAGE = "ghcr.io/y-scope/clp-plugin-presto-connector"
 DEFAULT_CONNECTOR_VERSION = "0.1.0-SNAPSHOT"
 
