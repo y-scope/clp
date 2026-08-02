@@ -11,6 +11,20 @@ inputs:
   run_command:
     description: "Command to execute"
     required: true
+  image_registry:
+    description: "Container image registry"
+    required: false
+    default: "ghcr.io"
+  image_registry_username:
+    description: >-
+      Username for logging into the image registry. When empty, no login is performed (the
+      published image is pulled without authentication, e.g. a public ghcr.io package).
+    required: false
+    default: ""
+  image_registry_password:
+    description: "Password for logging into the image registry"
+    required: false
+    default: ""
   arch:
     description: >-
       Target architecture (e.g. "amd64" or "arm64") when consuming a single arch of a
@@ -25,6 +39,13 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - if: "inputs.use_published_image == 'true' && inputs.image_registry_username != ''"
+      uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      with:
+        registry: "${{inputs.image_registry}}"
+        username: "${{inputs.image_registry_username}}"
+        password: "${{inputs.image_registry_password}}"
+
     - id: "get_image_props"
       run: |
         arch="${{inputs.arch}}"
@@ -39,7 +60,8 @@ runs:
           # lowercase here. The published image is a multi-arch manifest tagged ":main", so Docker
           # auto-selects the runner's architecture on pull.
           repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
-          echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}:main" \
+          registry="${{inputs.image_registry}}"
+          echo "qualified_image_name=${registry}/${repository}/${{inputs.image_name}}:main" \
             >> "$GITHUB_OUTPUT"
         else
           # The locally-built image (from clp-core-build-containers) is tagged/loaded under

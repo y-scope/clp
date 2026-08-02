@@ -14,9 +14,18 @@ inputs:
   push_deps_image:
     description: "Whether to publish a container image containing CLP's dependencies"
     required: true
-  token:
-    description: "Registry token"
-    required: true
+  image_registry:
+    description: "Container image registry"
+    required: false
+    default: "ghcr.io"
+  image_registry_username:
+    description: "Username for logging into the image registry"
+    required: false
+    default: "${{github.actor}}"
+  image_registry_password:
+    description: "Password for logging into the image registry"
+    required: false
+    default: ""
   arch:
     description: >-
       Target architecture (e.g. "amd64" or "arm64") when building a single arch of a
@@ -35,9 +44,9 @@ runs:
     - if: "inputs.push_deps_image == 'true'"
       uses: "docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772"
       with:
-        registry: "ghcr.io"
-        username: "${{github.actor}}"
-        password: "${{inputs.token}}"
+        registry: "${{inputs.image_registry}}"
+        username: "${{inputs.image_registry_username}}"
+        password: "${{inputs.image_registry_password}}"
 
     - id: "get_image_props"
       shell: "bash"
@@ -57,8 +66,9 @@ runs:
           # Docker doesn't support repository names with uppercase characters, so we convert to
           # lowercase here.
           repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
+          registry="${{inputs.image_registry}}"
 
-          echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}" \
+          echo "qualified_image_name=${registry}/${repository}/${{inputs.image_name}}" \
             >> "$GITHUB_OUTPUT"
           echo "branch=${{github.ref_name}}${arch_suffix}" >> "$GITHUB_OUTPUT"
           echo "output=type=registry" >> "$GITHUB_OUTPUT"
