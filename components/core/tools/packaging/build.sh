@@ -22,6 +22,9 @@
 #   --version VER   Package version (default: from taskfile.yaml)
 #   --output DIR    Output directory for packages (default: ./packages)
 #   --clean         Remove build artifacts before building
+#   --with-ca-certs Propagate the host's CA trust into the image builds and the
+#                   build container, for use behind a corporate TLS gateway.
+#                   Nothing is baked into any image. Off by default.
 #   --help          Show this help message
 #
 # Optional env vars:
@@ -35,6 +38,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 repo_root="$(cd "${script_dir}/../../../.." && pwd)"
 
 # Defaults
+with_ca_certs=false
 format="all"
 # Leave cores unset by default so each build container computes its own optimal
 # parallelism from its own CPU and memory (cgroup) limits. A host-computed value
@@ -61,15 +65,47 @@ while [[ $# -gt 0 ]]; do
         --output)  [[ -n "${2:-}" ]] || { echo "ERROR: --output requires a value" >&2; exit 1; }
                    output_dir="$2";    shift 2 ;;
         --clean)   clean=true;         shift ;;
+        --with-ca-certs) with_ca_certs=true; shift ;;
         --help)    sed -n '/^# Usage:/,/^[^#]/{ /^#/s/^# \?//p; }' "$0"; exit 0 ;;
         *)         echo "Unknown option: $1"; echo "Use --help for usage"; exit 1 ;;
     esac
 done
 
+# --- Host CA trust (opt-in) --------------------------------------------------
+
+# Published images carry no host CA certificates, so a corporate TLS gateway
+# needs the host's bundle supplied at build and run time. Staged once here and
+# reused by the base image build, the builder image build, and the build
+# container.
+ca_certs_flag=""
+ca_trust_build_args=()
+ca_trust_run_args=()
+ca_trust_cmd_prefix=()
+if [[ "${with_ca_certs}" == "true" ]]; then
+    ca_certs_flag="--with-ca-certs"
+    # shellcheck source=tools/yscope-dev-utils/exports/docker/ca-trust/host.sh
+    source "${repo_root}/tools/yscope-dev-utils/exports/docker/ca-trust/host.sh"
+    ca_trust_dir="$(mktemp -d)"
+    trap 'rm -rf "${ca_trust_dir}"' EXIT
+    ca_trust_stage_or_fail "${ca_trust_dir}"
+    ca_trust_stage_build_context "${ca_trust_dir}"
+    ca_trust_add_build_args ca_trust_build_args "${ca_trust_dir}"
+    ca_trust_add_run_args ca_trust_run_args "${ca_trust_dir}"
+    # The run-time mount is inert on its own -- container.sh has to be sourced
+    # inside the container for the trust environment to exist. container-exec.sh
+    # does that and then execs the command, so prefix it to the entrypoint.
+    ca_trust_cmd_prefix=("bash" "${CA_TRUST_CONTAINER_DIR}/container-exec.sh")
+fi
+
 # --- Validate prerequisites --------------------------------------------------
 
 if ! command -v docker &>/dev/null; then
     echo "ERROR: docker is required" >&2
+    exit 1
+fi
+
+if ! docker buildx version &>/dev/null; then
+    echo "ERROR: docker buildx is required (Docker 23 or newer)" >&2
     exit 1
 fi
 
@@ -269,17 +305,20 @@ for cur_format in "${format_list[@]}"; do
         if ! docker image inspect "${base_image_tag}" &>/dev/null; then
             echo "==> Building base image ${base_image_tag}..."
             PLATFORM="${docker_platform}" \
-                bash "${repo_root}/components/core/tools/docker-images/clp-env-base-${base_image_family}/build.sh"
+                bash "${repo_root}/components/core/tools/docker-images/clp-env-base-${base_image_family}/build.sh" \
+                    ${ca_certs_flag}
         fi
 
         # Build the builder image (base + packaging tools)
         if ! docker image inspect "${builder_image}" &>/dev/null; then
             echo "==> Building builder image ${builder_image}..."
-            docker build \
+            docker buildx build \
                 --platform "${docker_platform}" \
                 --build-arg "BASE_IMAGE=${base_image_tag}" \
                 --tag "${builder_image}" \
+                --load \
                 ${DOCKER_NETWORK:+--network "${DOCKER_NETWORK}"} \
+                ${ca_trust_build_args[@]+"${ca_trust_build_args[@]}"} \
                 "${dockerfile_dir}" \
                 --file "${dockerfile_dir}/Dockerfile"
         fi
@@ -295,6 +334,7 @@ for cur_format in "${format_list[@]}"; do
         docker run --rm \
             --platform "${docker_platform}" \
             ${DOCKER_NETWORK:+--network "${DOCKER_NETWORK}"} \
+            ${ca_trust_run_args[@]+"${ca_trust_run_args[@]}"} \
             -v "${repo_root}:/clp" \
             -w /clp \
             ${cores:+-e "CORES=${cores}"} \
@@ -306,6 +346,7 @@ for cur_format in "${format_list[@]}"; do
             -e "CXXFLAGS=-U_FORTIFY_SOURCE" \
             -e "FORMAT_DIR=${format_dir##*/}" \
             "${builder_image}" \
+            ${ca_trust_cmd_prefix[@]+"${ca_trust_cmd_prefix[@]}"} \
             bash /clp/components/core/tools/packaging/common/build-in-container.sh
 
         # Copy the package to the output directory (only the current format to
