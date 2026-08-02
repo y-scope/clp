@@ -461,7 +461,8 @@ Gets the port for the Spider storage service.
 @return {string} The Spider storage port
 */}}
 {{- define "clp.spiderStoragePort" -}}
-50051
+{{- $spider := index .Subcharts "spider" -}}
+{{- $spider.Values.spiderConfig.storage.port -}}
 {{- end }}
 
 {{/*
