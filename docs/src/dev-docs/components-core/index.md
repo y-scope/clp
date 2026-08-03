@@ -8,9 +8,8 @@ CLP core is the low-level component that performs compression, decompression, an
   * If you have trouble building for another OS, file an issue, and we may be able to help.
 * A recent compiler that fully supports C++20 features such as
   * std::span
-* [CMake] >= 3.23.0 and < 4.0.0
+* [CMake] >= 3.23.0
   * Minimum version 3.23.0 is required for [yscope-dev-utils].
-  * We constrain the version to < 4.0.0 due to [y-scope/clp#795].
 * [Task] >= 3.48.0
 * [uv] >= 0.8
 
@@ -44,7 +43,7 @@ The task will download, build, and install (within the build directory) the foll
 | [date](https://github.com/HowardHinnant/date)                            | v3.0.5         |
 | [fmt](https://github.com/fmtlib/fmt)                                     | v11.2.0        |
 | [liblzma](https://github.com/tukaani-project/xz)                         | v5.8.1         |
-| [log-surgeon](https://github.com/y-scope/log-surgeon)                    | 840f262        |
+| [log-surgeon](https://github.com/y-scope/log-surgeon)                    | 193e1f9        |
 | [lz4](https://github.com/lz4/lz4)                                        | v1.10.0        |
 | [microsoft.gsl](https://github.com/microsoft/GSL)                        | v4.2.2         |
 | [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)          | r4.4.1         |
@@ -137,5 +136,4 @@ regex-utils
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
-[y-scope/clp#795]: https://github.com/y-scope/clp/issues/795
 [yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils

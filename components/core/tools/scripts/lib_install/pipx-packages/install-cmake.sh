@@ -23,6 +23,15 @@ if ! command -v cmake >/dev/null 2>&1; then
     package_preinstalled=1
     pipx install --force "cmake>=${required_version_min},<${installed_version_major_max_plus_1}"
     pipx ensurepath
+
+    # NOTE: `pipx ensurepath` updates shell startup files but not this process, so the CMake we
+    # just installed may still not resolve below. `pipx environment` would give us the
+    # application directory, but it doesn't exist in pipx v1.0 (Ubuntu 22.04), so fall back to
+    # pipx's default.
+    if ! command -v cmake >/dev/null 2>&1; then
+        PATH="${PIPX_BIN_DIR:-${HOME}/.local/bin}:${PATH}"
+        export PATH
+    fi
 fi
 
 installed_version=$(cmake -E capabilities | jq --raw-output ".version.string")
