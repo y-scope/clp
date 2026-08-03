@@ -191,7 +191,7 @@ if(CLP_BUILD_EXECUTABLES)
                 nlohmann_json::nlohmann_json
                 ${STD_FS_LIBS}
                 clp::string_utils
-                yaml-cpp
+                yaml-cpp::yaml-cpp
                 ystdlib::error_handling
                 zstd::libzstd_static
         )

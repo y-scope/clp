@@ -40,6 +40,9 @@ RUN if [ -n "${DNF_MIRROR_BASE_URL:-}" ]; then \
 ENV PIPX_BIN_DIR=/usr/local/bin
 ENV PIPX_HOME=/opt/pipx
 
+# NOTE: Source-built dependencies install into /usr/local, which some distros' pkg-config
+# doesn't search, and which libraries may resolve to either lib or lib64.
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
 RUN ./tools/scripts/lib_install/centos-stream-9/install-all.sh || { \
         echo ""; \
         echo "==============================================================="; \
@@ -68,3 +71,4 @@ ENV CURL_CA_BUNDLE=/opt/corp-ca/ca-bundle.crt \
     SSL_CERT_FILE=/opt/corp-ca/ca-bundle.crt
 ENV PIPX_BIN_DIR=/usr/local/bin
 ENV PIPX_HOME=/opt/pipx
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
