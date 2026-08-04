@@ -761,6 +761,8 @@ jobs:
           rm clp.tar
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
+        with:
+          version: "0.8"
 
       - name: "Install MariaDB Connector/C"
         run: "sudo apt-get update && sudo apt-get install -y libmariadb-dev"
