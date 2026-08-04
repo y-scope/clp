@@ -82,6 +82,13 @@ Configuring retention periods
 ^^^
 Configure retention periods for archives and search results.
 :::
+
+:::{grid-item-card}
+:link: guides-compression-coordinator
+Using `compression-coordinator`
+^^^
+Using `compression-coordinator` to coordinate compression jobs.
+:::
 ::::
 
 ---
@@ -248,6 +255,7 @@ guides-using-object-storage/index
 guides-using-log-ingestor
 guides-external-database
 guides-retention
+guides-using-compression-coordinator
 :::
 
 :::{toctree}
