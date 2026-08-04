@@ -5,6 +5,9 @@ pub enum Error {
     #[error("`rmp_serde::encode::Error`: {0}")]
     MsgpackEncode(#[from] rmp_serde::encode::Error),
 
+    #[error("`rmp_serde::decode::Error`: {0}")]
+    MsgpackDecode(#[from] rmp_serde::decode::Error),
+
     #[error("`std::io::Error`: {0}")]
     Io(#[from] std::io::Error),
 

@@ -209,6 +209,7 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
                                     std::make_unique<clp_s::ResultsCacheSink>(
                                             options.uri,
                                             options.collection,
+                                            options.batch_size,
                                             archive_id
                                     )
                             );
