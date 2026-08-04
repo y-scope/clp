@@ -27,14 +27,17 @@
 #include "../clp/ErrorCode.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
-#include "../clp/LibarchiveFileReader.hpp"
-#include "../clp/LibarchiveReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/streaming_compression/Decompressor.hpp"
 #include "../clp/streaming_compression/zstd/Decompressor.hpp"
 #include "../clp/utf8_utils.hpp"
 #include "Utils.hpp"
+
+#if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
+    #include "../clp/LibarchiveFileReader.hpp"
+    #include "../clp/LibarchiveReader.hpp"
+#endif
 
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/aws/AwsAuthenticationSigner.hpp"
