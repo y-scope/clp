@@ -6,15 +6,14 @@ mod spider;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use clp_rust_utils::{
-    job_config::CompressionJobId,
-    task_io::compression::{ClpSCompressionOption, S3InputSource},
-};
-use serde::{Deserialize, Serialize};
-use spider_core::{
-    task::ExecutionPolicy,
-    types::id::{JobId, ResourceGroupId},
-};
+use clp_rust_utils::job_config::CompressionJobId;
+use clp_rust_utils::task_io::compression::ClpSCompressionOption;
+use clp_rust_utils::task_io::compression::S3InputSource;
+use serde::Deserialize;
+use serde::Serialize;
+use spider_core::task::ExecutionPolicy;
+use spider_core::types::id::JobId;
+use spider_core::types::id::ResourceGroupId;
 
 use crate::error::Error;
 

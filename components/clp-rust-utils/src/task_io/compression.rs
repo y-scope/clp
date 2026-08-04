@@ -1,7 +1,8 @@
 //! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP S3 compression jobs.
 
 use non_empty_string::NonEmptyString;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::clp_config::AwsAuthentication;
 
@@ -9,8 +10,9 @@ use crate::clp_config::AwsAuthentication;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClpSCompressionOption {
     pub target_encoded_size: u64,
-    pub compression_level: i32,
+    pub compression_level: u8,
     pub timestamp_key: Option<String>,
+    pub unstructured: bool,
 }
 
 /// Input source for a compression task.

@@ -1,5 +1,7 @@
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-use serde::{Deserialize, Serialize};
+use num_enum::IntoPrimitive;
+use num_enum::TryFromPrimitive;
+use serde::Deserialize;
+use serde::Serialize;
 use strum::EnumString;
 use utoipa::ToSchema;
 
@@ -18,6 +20,7 @@ pub type CompressionJobId = i32;
     Serialize,
     ToSchema,
     TryFromPrimitive,
+    sqlx::Type,
 )]
 #[repr(i32)]
 #[strum(ascii_case_insensitive)]
