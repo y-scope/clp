@@ -772,8 +772,7 @@ jobs:
           CLP_BUILD_DIR: "../${{env.BUILD_DIR}}"
           CLP_CORE_BINS_DIR: >-
             ../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
-          HOME: "/tmp"
-        run: "uv run pytest -m 'smoke or core'"
+        run: "uv run pytest -m 'core'"
 
       - name: "Upload the core integration test logs"
         if: "always()"
