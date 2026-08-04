@@ -58,7 +58,12 @@ get_image_helm_args() {
     fi
 
     echo "Loading local image '${image}' into kind cluster..." >&2
-    kind load docker-image "${image}" --name "${cluster_name}" >&2
+    # `errexit` is suspended inside the caller's `$(...) || exit 1`, so check explicitly;
+    # otherwise a failed load silently yields `pullPolicy=Never` for an unloaded image.
+    if ! kind load docker-image "${image}" --name "${cluster_name}" >&2; then
+        echo "Error: failed to load local image '${image}' into kind cluster '${cluster_name}'." >&2
+        return 1
+    fi
 
     # Split "repo:tag" on the last colon whose right-hand side contains no '/'
     # (so registry ports like localhost:5000/repo are not mistaken for tags).
@@ -75,11 +80,12 @@ get_image_helm_args() {
 }
 
 # Parses common arguments shared across set-up scripts.
-# Sets CLP_PACKAGE_IMAGE and ENABLE_PRESTO global variables.
+# Sets CLP_PACKAGE_IMAGE, CLP_PRESTO_CONNECTOR_IMAGE, and ENABLE_PRESTO global variables.
 #
 # @param {string[]} args Script arguments
 parse_common_args() {
     CLP_PACKAGE_IMAGE=""
+    CLP_PRESTO_CONNECTOR_IMAGE=""
     ENABLE_PRESTO="false"
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -89,6 +95,14 @@ parse_common_args() {
                     exit 1
                 fi
                 CLP_PACKAGE_IMAGE="$2"
+                shift 2
+                ;;
+            --clp-connector-image)
+                if [[ $# -lt 2 || "$2" == --* ]]; then
+                    echo "Error: '--clp-connector-image' requires a value." >&2
+                    exit 1
+                fi
+                CLP_PRESTO_CONNECTOR_IMAGE="$2"
                 shift 2
                 ;;
             --presto)

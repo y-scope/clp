@@ -16,6 +16,13 @@ Docs about building CLP.
 :::
 
 :::{grid-item-card}
+:link: testing-presto-connector
+Presto connector
+^^^
+Building and testing the CLP Presto connector locally.
+:::
+
+:::{grid-item-card}
 :link: testing/index
 Testing
 ^^^
@@ -55,6 +62,7 @@ Any design docs describing parts of this project.
 :hidden:
 
 building-package
+testing-presto-connector
 :::
 
 :::{toctree}

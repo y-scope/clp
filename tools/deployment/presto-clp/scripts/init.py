@@ -3,6 +3,9 @@
 
 import argparse
 import logging
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -24,6 +27,20 @@ PRESTO_SYSTEM_MEMORY_RATIO = 0.9
 # S3 URL constant
 AWS_S3_DOMAIN = "amazonaws.com"
 
+# Default CLP Presto connector image. Pinned by digest so the image can't change under us;
+# the tag is kept as a human-readable label and must be updated alongside the digest.
+DEFAULT_CONNECTOR_REF = (
+    "ghcr.io/y-scope/clp-plugin-presto-connector:0.1.0-SNAPSHOT"
+    "@sha256:d006b0ce7830b6932eea66f1edc8dedbc54dbd661943eb38147e62c847fe0c32"
+)
+
+# Silence Ruff S607: the absolute path of the Docker binary may vary depending on the installation
+# method.
+_DOCKER_EXECUTABLE = "docker"
+
+# Bounds each Docker probe so a hung daemon or an unresponsive registry can't stall setup.
+_DOCKER_PROBE_TIMEOUT_SECONDS = 30
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -40,7 +57,7 @@ root_logger.addHandler(logging_console_handler)
 logger = logging.getLogger(__name__)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # noqa: PLR0911
     """Initializes Presto worker configuration based on CLP package settings."""
     if argv is None:
         argv = sys.argv
@@ -87,6 +104,9 @@ def main(argv: list[str] | None = None) -> int:
     if not _generate_worker_clp_properties(
         script_dir.parent / "worker" / "config-template", env_vars
     ):
+        return 1
+
+    if not _add_connector_image_env_vars(env_vars):
         return 1
 
     with output_file.open("w") as output_file_handle:
@@ -361,6 +381,80 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: dict[
         return False
 
     return True
+
+
+def _add_connector_image_env_vars(env_vars: dict[str, str]) -> bool:
+    """
+    Resolves the CLP Presto connector image and adds `CLP_PRESTO_CONNECTOR_REF` to `env_vars`,
+    which `docker-compose.yaml` consumes.
+
+    `CLP_PRESTO_CONNECTOR_REF` overrides the default and is used as-is, so it may be
+    `repository:tag`, `repository@digest`, or `repository:tag@digest`.
+
+    :param env_vars: Dictionary to populate with the connector image environment variable.
+    :return: Whether the reference was successfully resolved.
+    """
+    ref = os.environ.get("CLP_PRESTO_CONNECTOR_REF", DEFAULT_CONNECTOR_REF)
+    if not _connector_image_available(ref):
+        return False
+
+    env_vars["CLP_PRESTO_CONNECTOR_REF"] = ref
+    return True
+
+
+def _connector_image_available(ref: str) -> bool:
+    """
+    Returns whether `ref` exists in the local Docker daemon or on its registry. A local image takes
+    precedence at `docker compose up`.
+
+    :param ref: The full image reference.
+    :return: Whether the image is available.
+    """
+    if shutil.which(_DOCKER_EXECUTABLE) is None:
+        logger.error(
+            "Docker isn't installed or isn't on PATH, so the CLP Presto connector image can't be"
+            " checked. Install Docker to continue."
+        )
+        return False
+
+    # Check the local daemon before the registry so a locally-built image is accepted without a
+    # network round-trip.
+    if _run_docker_probe(["image", "inspect", ref]) or _run_docker_probe(
+        ["manifest", "inspect", ref]
+    ):
+        logger.info("Found CLP connector image '%s'.", ref)
+        return True
+
+    logger.error(
+        "Couldn't find CLP Presto connector image '%s' locally or on the registry. Build it"
+        " (e.g. via `task package` in clp-plugin-presto-connector) or set"
+        " CLP_PRESTO_CONNECTOR_REF to an image that exists.",
+        ref,
+    )
+    return False
+
+
+def _run_docker_probe(args: list[str]) -> bool:
+    """
+    Runs `docker <args>`, suppressing its output.
+
+    :param args: Arguments to pass to Docker (e.g. `["image", "inspect", ref]`).
+    :return: Whether the command exited 0. False if Docker couldn't be run or timed out.
+    """
+    try:
+        completed_process = subprocess.run(
+            [_DOCKER_EXECUTABLE, *args],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        logger.exception(
+            "Docker command '%s %s' failed.", _DOCKER_EXECUTABLE, " ".join(args), exc_info=e
+        )
+        return False
+    return completed_process.returncode == 0
 
 
 def _generate_worker_clp_properties(

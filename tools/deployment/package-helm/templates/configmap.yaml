@@ -391,6 +391,7 @@ data:
     inline-sql-functions=false
     nested-data-serialization-enabled=false
     native-execution-enabled=true
+    use-connector-provided-serialization-codecs=true
 
   presto-coordinator-config-jvm.config: |
     -server
@@ -438,6 +439,7 @@ data:
     system-memory-gb={{ .worker.system_memory_gb }}
     register-test-functions=false
     runtime-metrics-collection-enabled=false
+    plugin.dir=/opt/presto-server/plugin/clp
 
   presto-worker-config-node.properties: |
     node.environment=production
