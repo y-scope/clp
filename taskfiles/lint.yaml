@@ -69,6 +69,7 @@ tasks:
         . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
         ct lint \
           --chart-dirs="tools/deployment" \
+          --chart-repos="spider=https://github.com/y-scope/spider/raw/gh-pages" \
           --chart-yaml-schema="{{.G_HELM_TOOLCHAIN_DIR}}/etc/chart_schema.yaml" \
           --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
