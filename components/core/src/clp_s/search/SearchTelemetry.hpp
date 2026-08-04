@@ -1,10 +1,13 @@
 #ifndef CLP_S_SEARCH_SEARCHTELEMETRY_HPP
 #define CLP_S_SEARCH_SEARCHTELEMETRY_HPP
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string_view>
+
+#include <utils/profiling/Stopwatch.hpp>
 
 #include <clp_s/Defs.hpp>
 #include <clp_s/search/ast/Expression.hpp>
@@ -150,6 +153,17 @@ public:
      * @param termination_stage One of the `cTerminationStage*` constants.
      */
     auto set_termination_stage(std::string_view termination_stage) -> void;
+
+    /**
+     * Records the span attributes:
+     *   - `<tracer name>.<name>.duration_millisecs`
+     *   - `<tracer name>.<name>.call_count`
+     *
+     * @param name The profiler scope name.
+     * @param measurement
+     */
+    auto set_profiler_measurement(std::string_view name, utils::profiling::Measurement measurement)
+            -> void;
 
 private:
     // Types

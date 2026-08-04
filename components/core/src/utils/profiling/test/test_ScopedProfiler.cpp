@@ -1,0 +1,37 @@
+#include <chrono>
+#include <string>
+#include <thread>
+
+#include <catch2/catch_test_macros.hpp>
+#include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
+#include <utils/profiling/test/sinks.hpp>
+
+namespace utils::profiling::test {
+TEST_CASE("scoped_profiler_starts_and_stops_measurement", "[ScopedProfiler]") {
+    Reporter<VerifyingSink> const reporter{"test", "test.test_scope", 1U};
+    {
+        ScopedProfiler const scoped{"test_scope"};
+        std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsMedium));
+    }
+}
+
+TEST_CASE("nested_scoped_profilers_accumulate_separately", "[ScopedProfiler]") {
+    int emit_count{0};
+    std::string last_name;
+
+    {
+        Reporter<CountingSink> const reporter{"test", &emit_count, &last_name};
+        {
+            ScopedProfiler const outer{"outer"};
+            std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
+            {
+                ScopedProfiler const inner{"inner"};
+                std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
+            }
+        }
+    }
+
+    REQUIRE(2 == emit_count);
+}
+}  // namespace utils::profiling::test

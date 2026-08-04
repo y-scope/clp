@@ -67,8 +67,6 @@ set(
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../Platform.hpp
-        ../Profiler.cpp
-        ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
         ../QueryToken.cpp
@@ -82,8 +80,6 @@ set(
         ../SQLiteDB.hpp
         ../SQLitePreparedStatement.cpp
         ../SQLitePreparedStatement.hpp
-        ../Stopwatch.cpp
-        ../Stopwatch.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -190,6 +186,7 @@ if(CLP_BUILD_EXECUTABLES)
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 ${STD_FS_LIBS}
                 clp::string_utils
+                utils::profiling
                 ystdlib::containers
                 ystdlib::error_handling
                 zstd::libzstd_static

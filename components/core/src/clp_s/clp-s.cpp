@@ -29,11 +29,16 @@
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
+#include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
+#include <utils/profiling/Sink.hpp>
+
 #include <clp/type_utils.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/FunctionCall.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
 #include <clp_s/search/TelemetryContext.hpp>
+#include <clp_s/search/TelemetryProfilerSink.hpp>
 
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
@@ -418,6 +423,15 @@ bool search_archive(
         std::shared_ptr<ast::Expression> expr,
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 ) {
+    using ProfilerSinkVariant
+            = std::variant<utils::profiling::SpdlogSink, clp_s::search::TelemetryProfilerSink>;
+    utils::profiling::Reporter<ProfilerSinkVariant> const profiler_reporter{
+            "search",
+            nullptr != telemetry_span
+                    ? ProfilerSinkVariant{std::in_place_type<clp_s::search::TelemetryProfilerSink>, telemetry_span}
+                    : ProfilerSinkVariant{std::in_place_type<utils::profiling::SpdlogSink>}
+    };
+
     auto const& query = command_line_arguments.get_query();
     if (nullptr != telemetry_span) {
         telemetry_span->set_query_context(query);

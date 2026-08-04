@@ -163,8 +163,11 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         target_link_libraries(
                 clp_s_clp_dependencies
                 PUBLIC
+                absl::flat_hash_map
+                absl::flat_hash_set
                 clp::string_utils
                 log-surgeon::log-surgeon
+                utils::profiling
                 ystdlib::containers
                 zstd::libzstd_static
                 PRIVATE

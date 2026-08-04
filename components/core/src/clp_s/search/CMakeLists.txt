@@ -25,6 +25,7 @@ set(
         SearchTelemetry.hpp
         TelemetryContext.cpp
         TelemetryContext.hpp
+        TelemetryProfilerSink.hpp
 )
 
 if(CLP_BUILD_CLP_S_SEARCH)
@@ -43,6 +44,7 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 clp_s::search::ast
                 log-surgeon::log-surgeon
                 simdjson::simdjson
+                utils::profiling
                 PRIVATE
                 clp::string_utils
                 clp_s::clp_dependencies
