@@ -846,8 +846,8 @@ jobs:
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
-          submodules: "recursive"
           persist-credentials: false
+          submodules: "recursive"
 
       - name: "Download the package artifact"
         uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
@@ -894,17 +894,18 @@ jobs:
         run: >-
           docker pull "$(cat clp-package-image.id)"
 
-      - name: "Install uv"
-        uses: "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990"  # v8.3.2
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
 
       - name: "Install MariaDB connector"
         run: "sudo apt-get update && sudo apt-get install -y libmariadb-dev"
 
-      - name: "Run package integration tests"
+      - name: "Run the integration tests for the CLP package"
         working-directory: "integration-tests"
+        env:
+          # Tell pytest where the CLP package is, and where it should store the test logs.
+          CLP_BUILD_DIR: "../${{env.BUILD_DIR}}"
+          CLP_PACKAGE_DIR: "../${{env.BUILD_DIR}}/clp-package"
         run: >-
-          CLP_BUILD_DIR=../${{env.BUILD_DIR}}
-          CLP_PACKAGE_DIR=../${{env.BUILD_DIR}}/clp-package
           uv run pytest -m 'smoke or package'
 
       - name: "Upload the integration test logs"

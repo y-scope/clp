@@ -79,7 +79,7 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
 * `package`: Builds CLP's package, along with a container image containing the package's components,
   then uploads the package as a tarball artifact.
 * `package-integration-tests`: Runs the package's integration tests against the package built by the
-  `package` job.
+  `package` job, and then uploads the logs from the tests.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.
 * `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's
