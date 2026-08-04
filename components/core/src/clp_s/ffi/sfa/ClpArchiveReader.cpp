@@ -118,6 +118,8 @@ auto ClpArchiveReader::close() noexcept -> void {
     m_file_infos.clear();
     m_tables.clear();
     m_log_events.clear();
+    m_decode_state = DecodeState::NotStarted;
+    m_decode_error.clear();
 }
 
 auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
@@ -128,13 +130,49 @@ auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
     m_file_infos = std::move(rhs.m_file_infos);
     m_tables = std::move(rhs.m_tables);
     m_log_events = std::move(rhs.m_log_events);
+    m_decode_state = std::exchange(rhs.m_decode_state, DecodeState::NotStarted);
+    m_decode_error = std::exchange(rhs.m_decode_error, std::error_code{});
 }
 
-auto ClpArchiveReader::decode_all() -> Result<std::vector<LogEvent>> {
-    if (m_log_events.size() == m_event_count) {
-        return m_log_events;
+auto ClpArchiveReader::decode_all() -> Result<LogEventView> {
+    return YSTDLIB_ERROR_HANDLING_TRYX(decode_range(0, static_cast<size_t>(m_event_count)));
+}
+
+auto ClpArchiveReader::decode() -> Result<void> {
+    if (DecodeState::Failed == m_decode_state) {
+        return m_decode_error;
     }
 
+    if (DecodeState::Decoded == m_decode_state) {
+        return ystdlib::error_handling::success();
+    }
+
+    auto const decode_result{internal_decode_all()};
+    if (decode_result.has_error()) {
+        m_log_events.clear();
+        m_decode_error = decode_result.error();
+        m_decode_state = DecodeState::Failed;
+        return m_decode_error;
+    }
+    m_decode_state = DecodeState::Decoded;
+    return ystdlib::error_handling::success();
+}
+
+auto ClpArchiveReader::decode_range(size_t begin_idx, size_t end_idx) -> Result<LogEventView> {
+    if (DecodeState::Failed == m_decode_state) {
+        return m_decode_error;
+    }
+
+    if (begin_idx > end_idx || end_idx > m_event_count) {
+        return SfaErrorCode{SfaErrorCodeEnum::DecodeRangeOutOfBounds};
+    }
+
+    YSTDLIB_ERROR_HANDLING_TRYV(decode());
+
+    return LogEventView{m_log_events}.subspan(begin_idx, end_idx - begin_idx);
+}
+
+auto ClpArchiveReader::internal_decode_all() -> Result<void> {
     if (nullptr == m_archive_reader) {
         return SfaErrorCode{SfaErrorCodeEnum::NotInit};
     }
@@ -173,7 +211,7 @@ auto ClpArchiveReader::decode_all() -> Result<std::vector<LogEvent>> {
                 m_log_events.emplace_back(log_event_idx, timestamp, std::move(message));
             }
         }
-        return m_log_events;
+        return ystdlib::error_handling::success();
     } catch (std::bad_alloc const&) {
         SPDLOG_ERROR("Failed to decode archive: out of memory.");
         return SfaErrorCode{SfaErrorCodeEnum::NoMemory};

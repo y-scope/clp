@@ -1,10 +1,13 @@
 #ifndef CLP_S_FFI_SFA_CLPARCHIVEREADER_HPP
 #define CLP_S_FFI_SFA_CLPARCHIVEREADER_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 #include <ystdlib/error_handling/Result.hpp>
@@ -18,6 +21,8 @@ class SchemaReader;
 }  // namespace clp_s
 
 namespace clp_s::ffi::sfa {
+using LogEventView = std::span<LogEvent const>;
+
 /**
  * Metadata describing a single source file's event-index range within a single-file archive.
  */
@@ -105,10 +110,23 @@ public:
     [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> { return m_file_infos; }
 
     /**
+     * Decodes and caches all log events without returning them.
+     *
+     * Subsequent decode operations reuse the cached events. If decoding fails, the error is cached
+     * and returned by all subsequent decode operations.
+     *
+     * @return A void result on success, or an error indicating the failure:
+     * - `SfaErrorCodeEnum::IoFailure` if decoding fails due to archive read/decode errors.
+     * - `SfaErrorCodeEnum::NoMemory` if decoding fails due to OOM issues.
+     * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized.
+     */
+    [[nodiscard]] auto decode() -> ystdlib::error_handling::Result<void>;
+
+    /**
      * Decodes all log events in global log-event-index order.
      *
-     * Results are cached after the first successful decode. Subsequent calls return the cached
-     * decoded events.
+     * Results are cached after the first successful decode. The returned view remains valid until
+     * this reader is closed, moved from, or destroyed.
      *
      * @return A result containing decoded log events on success, or an error indicating the
      * failure:
@@ -116,9 +134,28 @@ public:
      * - `SfaErrorCodeEnum::NoMemory` if decoding fails due to OOM issues.
      * - `SfaErrorCodeEnum::NotInit` if the reader is not initialized.
      */
-    [[nodiscard]] auto decode_all() -> ystdlib::error_handling::Result<std::vector<LogEvent>>;
+    [[nodiscard]] auto decode_all() -> ystdlib::error_handling::Result<LogEventView>;
+
+    /**
+     * Decodes all log events, if necessary, and returns the requested half-open event range.
+     *
+     * @param begin_idx Index of the first event to return.
+     * @param end_idx Index one past the final event to return.
+     * @return A result containing a view of the requested decoded events on success, or an error
+     * indicating the failure:
+     * - `SfaErrorCodeEnum::DecodeRangeOutOfBounds` if the requested range is invalid.
+     * - Forwards `decode`'s errors.
+     */
+    [[nodiscard]] auto decode_range(size_t begin_idx, size_t end_idx)
+            -> ystdlib::error_handling::Result<LogEventView>;
 
 private:
+    enum class DecodeState : uint8_t {
+        NotStarted,
+        Decoded,
+        Failed,
+    };
+
     // Constructors
     explicit ClpArchiveReader(
             std::unique_ptr<clp_s::ArchiveReader> reader,
@@ -139,6 +176,11 @@ private:
     auto move_from(ClpArchiveReader& rhs) noexcept -> void;
 
     /**
+     * Populates the decoded-event cache.
+     */
+    [[nodiscard]] auto internal_decode_all() -> ystdlib::error_handling::Result<void>;
+
+    /**
      * Precomputes archive metadata from the range index.
      *
      * This function skips range index validation as they are already validated inside
@@ -156,6 +198,8 @@ private:
     std::vector<FileInfo> m_file_infos;
     std::vector<std::shared_ptr<clp_s::SchemaReader>> m_tables;
     std::vector<LogEvent> m_log_events;
+    DecodeState m_decode_state{DecodeState::NotStarted};
+    std::error_code m_decode_error;
 };
 }  // namespace clp_s::ffi::sfa
 

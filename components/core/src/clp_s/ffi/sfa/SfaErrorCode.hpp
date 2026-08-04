@@ -14,6 +14,7 @@ enum class SfaErrorCodeEnum : uint8_t {
     MalformedRangeIndex,
     NoMemory,
     NotInit,
+    DecodeRangeOutOfBounds,
 };
 
 using SfaErrorCode = ystdlib::error_handling::ErrorCode<SfaErrorCodeEnum>;
