@@ -47,6 +47,7 @@ jobs:
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
       yscope_clp_core_changed: "${{steps.filter.outputs.yscope-clp-core}}"
+      integration_tests_changed: "${{steps.filter.outputs.integration-tests}}"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
@@ -103,7 +104,6 @@ jobs:
               - "components/core/src/**"
               - "components/core/tests/**"
               - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
-              - "integration-tests/**"
               - "taskfile.yaml"
               - "taskfiles/**"
               - "tools/scripts/deps-download/**"
@@ -114,6 +114,11 @@ jobs:
               - "taskfile.yaml"
               - "taskfiles/**"
               - "python-wheels/yscope-clp-core/**"
+            integration-tests:
+              - ".github/actions/**"
+              - ".github/workflows/clp-artifact-build.yaml"
+              - ".gitmodules"
+              - "integration-tests/**"
 
   centos-stream-9-deps-image:
     name: "centos-stream-9-deps-image"
@@ -529,7 +534,11 @@ jobs:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
       success()
-      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+      || (!cancelled() && !failure() && (
+          needs.filter-relevant-changes.outputs.clp_changed == 'true'
+          || needs.filter-relevant-changes.outputs.integration_tests_changed == 'true'
+        )
+      )
     needs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-x86_64-deps-image"
@@ -727,9 +736,6 @@ jobs:
             )}}
 
   ubuntu-jammy-integration-tests-core:
-    name: "ubuntu-jammy-integration-tests-core"
-    # Run if the ancestor jobs were successful/skipped and building clp was successful.
-    if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
     runs-on: *runner
     env:
@@ -738,8 +744,8 @@ jobs:
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
-          submodules: "recursive"
           persist-credentials: false
+          submodules: "recursive"
 
       - name: "Download the binaries artifact"
         uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
@@ -754,15 +760,15 @@ jobs:
           tar xf clp.tar
           rm clp.tar
 
-      - name: "Install uv"
-        uses: "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990"  # v8.3.2
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
 
       - name: "Install MariaDB Connector/C"
         run: "sudo apt-get update && sudo apt-get install -y libmariadb-dev"
 
-      - name: "Run core integration tests"
+      - name: "Run the integration tests for CLP's core"
         working-directory: "integration-tests"
         env:
+          # Tell pytest where the CLP binaries are, and where it should store the test logs.
           CLP_BUILD_DIR: "../${{env.BUILD_DIR}}"
           CLP_CORE_BINS_DIR: >-
             ../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
