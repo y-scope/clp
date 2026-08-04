@@ -4,13 +4,13 @@ services:
     # coordinator and worker mount into their plugin dirs (replacing the connector-baked
     # Presto images). The connector image's own entrypoint does the install; we only supply
     # the target paths via *_PLUGIN_INSTALL_PATH.
-    # init.py verifies the image exists (locally or on the registry) and writes
-    # CLP_PRESTO_CONNECTOR_IMAGE/CLP_PRESTO_CONNECTOR_TAG into .env. Locally-built and published
-    # images share the same :<version> tag; whatever is in the local daemon wins. The defaults
-    # below are only used when .env is absent.
-    image: "${CLP_PRESTO_CONNECTOR_IMAGE:-\
-      ghcr.io/y-scope/clp-plugin-presto-connector}:${CLP_PRESTO_CONNECTOR_TAG:-\
-      0.1.0-SNAPSHOT}"
+    # init.py verifies the image exists (locally or on the registry) and writes the resolved
+    # reference into .env as CLP_PRESTO_CONNECTOR_REF, which may be repository:tag,
+    # repository@digest, or repository:tag@digest. Locally-built and published images share the
+    # same :<version> tag; whatever is in the local daemon wins. The default below is only used
+    # when .env is absent.
+    image: "${CLP_PRESTO_CONNECTOR_REF:-\
+      ghcr.io/y-scope/clp-plugin-presto-connector:0.1.0-SNAPSHOT@sha256:d006b0ce7830b6932eea66f1edc8dedbc54dbd661943eb38147e62c847fe0c32}"
     restart: "no"
     environment:
       COORDINATOR_PLUGIN_INSTALL_PATH: "/install/coordinator"
@@ -22,7 +22,10 @@ services:
       - "clp-package"
 
   presto-coordinator:
-    image: "ghcr.io/y-scope/presto:${CLP_PRESTO_COORDINATOR_IMAGE_TAG:-0.299}"
+    # Pinned by digest so the image can't change under us; the tag is kept as a
+    # human-readable label. Override with a full reference.
+    image: "${CLP_PRESTO_COORDINATOR_REF:-\
+      ghcr.io/y-scope/presto:0.299@sha256:87e9ce10a1184f1b5ce0dd74591ef753c3afe763d860ef412a331684ec653753}"
     entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
     depends_on:
       clp-plugin-presto-connector-init:
@@ -51,7 +54,9 @@ services:
       retries: 30
 
   presto-worker:
-    image: "ghcr.io/y-scope/presto-native:${CLP_PRESTO_WORKER_IMAGE_TAG:-0.299}"
+    # Pinned by digest; see the coordinator's image above.
+    image: "${CLP_PRESTO_WORKER_REF:-\
+      ghcr.io/y-scope/presto-native:0.299@sha256:8f9ca4ba7dd844385b85e7e3bd9568128096e2a7ad09432c6a982ea11279a13b}"
     depends_on:
       presto-coordinator:
         condition: "service_healthy"

@@ -27,9 +27,12 @@ PRESTO_SYSTEM_MEMORY_RATIO = 0.9
 # S3 URL constant
 AWS_S3_DOMAIN = "amazonaws.com"
 
-# Default CLP Presto connector image and tag, used when the corresponding env vars are unset.
-DEFAULT_CONNECTOR_IMAGE = "ghcr.io/y-scope/clp-plugin-presto-connector"
-DEFAULT_CONNECTOR_VERSION = "0.1.0-SNAPSHOT"
+# Default CLP Presto connector image. Pinned by digest so the image can't change under us;
+# the tag is kept as a human-readable label and must be updated alongside the digest.
+DEFAULT_CONNECTOR_REF = (
+    "ghcr.io/y-scope/clp-plugin-presto-connector:0.1.0-SNAPSHOT"
+    "@sha256:d006b0ce7830b6932eea66f1edc8dedbc54dbd661943eb38147e62c847fe0c32"
+)
 
 # Silence Ruff S607: the absolute path of the Docker binary may vary depending on the installation
 # method.
@@ -382,59 +385,50 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: dict[
 
 def _add_connector_image_env_vars(env_vars: dict[str, str]) -> bool:
     """
-    Resolves the CLP Presto connector image and adds `CLP_PRESTO_CONNECTOR_IMAGE` and
-    `CLP_PRESTO_CONNECTOR_TAG` to `env_vars`, which `docker-compose.yaml` consumes.
+    Resolves the CLP Presto connector image and adds `CLP_PRESTO_CONNECTOR_REF` to `env_vars`,
+    which `docker-compose.yaml` consumes.
 
-    `CLP_PRESTO_CONNECTOR_IMAGE` (repository) and `CLP_PRESTO_CONNECTOR_VERSION` (tag) override
-    the defaults. An explicit `CLP_PRESTO_CONNECTOR_TAG` is used as-is and skips the existence
-    check.
+    `CLP_PRESTO_CONNECTOR_REF` overrides the default and is used as-is, so it may be
+    `repository:tag`, `repository@digest`, or `repository:tag@digest`.
 
-    :param env_vars: Dictionary to populate with the connector image environment variables.
-    :return: Whether the image and tag were successfully resolved.
+    :param env_vars: Dictionary to populate with the connector image environment variable.
+    :return: Whether the reference was successfully resolved.
     """
-    image = os.environ.get("CLP_PRESTO_CONNECTOR_IMAGE", DEFAULT_CONNECTOR_IMAGE)
+    ref = os.environ.get("CLP_PRESTO_CONNECTOR_REF", DEFAULT_CONNECTOR_REF)
+    if not _connector_image_available(ref):
+        return False
 
-    tag = os.environ.get("CLP_PRESTO_CONNECTOR_TAG")
-    if tag is None:
-        tag = os.environ.get("CLP_PRESTO_CONNECTOR_VERSION", DEFAULT_CONNECTOR_VERSION)
-        if not _connector_image_available(image, tag):
-            return False
-    else:
-        logger.info("Using CLP_PRESTO_CONNECTOR_TAG='%s'; skipping the existence check.", tag)
-
-    env_vars["CLP_PRESTO_CONNECTOR_IMAGE"] = image
-    env_vars["CLP_PRESTO_CONNECTOR_TAG"] = tag
+    env_vars["CLP_PRESTO_CONNECTOR_REF"] = ref
     return True
 
 
-def _connector_image_available(image: str, tag: str) -> bool:
+def _connector_image_available(ref: str) -> bool:
     """
-    Returns whether `image`:`tag` exists in the local Docker daemon or on its registry. A local
-    image takes precedence at `docker compose up`.
+    Returns whether `ref` exists in the local Docker daemon or on its registry. A local image takes
+    precedence at `docker compose up`.
 
-    :param image: The connector image repository.
-    :param tag: The image tag.
+    :param ref: The full image reference.
     :return: Whether the image is available.
     """
     if shutil.which(_DOCKER_EXECUTABLE) is None:
         logger.error(
             "Docker isn't installed or isn't on PATH, so the CLP Presto connector image can't be"
-            " checked. Install Docker, or set CLP_PRESTO_CONNECTOR_TAG explicitly."
+            " checked. Install Docker to continue."
         )
         return False
 
-    ref = f"{image}:{tag}"
-    if _run_docker_probe(["image", "inspect", ref]):
-        logger.info("Found CLP connector image '%s' in the local Docker daemon.", ref)
-        return True
-    if _run_docker_probe(["manifest", "inspect", ref]):
-        logger.info("Found CLP connector image '%s' on the registry.", ref)
+    # Check the local daemon before the registry so a locally-built image is accepted without a
+    # network round-trip.
+    if _run_docker_probe(["image", "inspect", ref]) or _run_docker_probe(
+        ["manifest", "inspect", ref]
+    ):
+        logger.info("Found CLP connector image '%s'.", ref)
         return True
 
     logger.error(
         "Couldn't find CLP Presto connector image '%s' locally or on the registry. Build it"
-        " (e.g. via `task package` in clp-plugin-presto-connector) or set CLP_PRESTO_CONNECTOR_TAG"
-        " explicitly.",
+        " (e.g. via `task package` in clp-plugin-presto-connector) or set"
+        " CLP_PRESTO_CONNECTOR_REF to an image that exists.",
         ref,
     )
     return False

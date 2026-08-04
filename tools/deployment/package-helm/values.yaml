@@ -11,6 +11,7 @@ image:
     repository: "ghcr.io/y-scope/clp-plugin-presto-connector"
     pullPolicy: "IfNotPresent"
     tag: "0.1.0-SNAPSHOT"
+    digest: "sha256:d006b0ce7830b6932eea66f1edc8dedbc54dbd661943eb38147e62c847fe0c32"
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
@@ -40,10 +41,12 @@ image:
     repository: "ghcr.io/y-scope/presto"
     pullPolicy: "IfNotPresent"
     tag: "0.299"
+    digest: "sha256:87e9ce10a1184f1b5ce0dd74591ef753c3afe763d860ef412a331684ec653753"
   prestoWorker:
     repository: "ghcr.io/y-scope/presto-native"
     pullPolicy: "IfNotPresent"
     tag: "0.299"
+    digest: "sha256:8f9ca4ba7dd844385b85e7e3bd9568128096e2a7ad09432c6a982ea11279a13b"
   queue:
     repository: "rabbitmq"
     pullPolicy: "Always"

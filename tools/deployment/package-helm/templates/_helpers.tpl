@@ -156,28 +156,32 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Creates a container image reference from .Values.image.
 
-Renders repository@digest when "digest" is set; otherwise, renders repository:tag. clpPackage
-defaults to Chart.AppVersion when "tag" is omitted; other components require "tag".
+Renders repository:tag, repository@digest, or repository:tag@digest, depending on which of "tag"
+and "digest" are set. Setting both keeps the tag as a human-readable label while the digest is what
+actually gets pulled. clpPackage defaults to Chart.AppVersion when "tag" is omitted; other
+components require at least one of "tag" or "digest".
 
 @param {object} root Root template context (required)
 @param {string} component Key under .Values.image (e.g., "clpPackage", "redis")
-@return {string} Full image reference (repository@digest or repository:tag)
+@return {string} Full image reference
 */}}
 {{- define "clp.imageRef" -}}
 {{- $img := index .root.Values.image .component -}}
-{{- if $img.digest -}}
-{{- printf "%s@%s" $img.repository $img.digest -}}
-{{- else -}}
 {{- $tag := $img.tag -}}
-{{- if not $tag -}}
-  {{- if eq .component "clpPackage" -}}
-    {{- $tag = .root.Chart.AppVersion -}}
-  {{- else -}}
-    {{- fail (printf "image.%s.tag is required" .component) -}}
-  {{- end -}}
+{{- if and (not $tag) (eq .component "clpPackage") -}}
+  {{- $tag = .root.Chart.AppVersion -}}
 {{- end -}}
-{{- printf "%s:%s" $img.repository $tag -}}
+{{- if not (or $tag $img.digest) -}}
+  {{- fail (printf "image.%s requires \"tag\" or \"digest\"" .component) -}}
 {{- end -}}
+{{- $ref := $img.repository -}}
+{{- if $tag -}}
+  {{- $ref = printf "%s:%s" $ref $tag -}}
+{{- end -}}
+{{- if $img.digest -}}
+  {{- $ref = printf "%s@%s" $ref $img.digest -}}
+{{- end -}}
+{{- $ref -}}
 {{- end }}
 
 {{/*

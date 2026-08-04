@@ -62,7 +62,7 @@ spec:
               readOnly: true
       containers:
         - name: "presto-worker"
-          image: "{{ .Values.image.prestoWorker.repository }}:{{ .Values.image.prestoWorker.tag }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "prestoWorker") | quote }}
           imagePullPolicy: "{{ .Values.image.prestoWorker.pullPolicy }}"
           {{- include "clp.createResourceLimits" (dict
               "root" .

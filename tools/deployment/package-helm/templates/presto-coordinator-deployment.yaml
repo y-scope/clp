@@ -45,7 +45,7 @@ spec:
               mountPath: "/install/coordinator"
       containers:
         - name: "presto-coordinator"
-          image: "{{ .Values.image.prestoCoordinator.repository }}:{{ .Values.image.prestoCoordinator.tag }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "prestoCoordinator") | quote }}
           imagePullPolicy: "{{ .Values.image.prestoCoordinator.pullPolicy }}"
           {{- include "clp.createResourceLimits" (dict
               "root" .
