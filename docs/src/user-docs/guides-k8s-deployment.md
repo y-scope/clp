@@ -287,6 +287,11 @@ helm template clp . -f custom-values.yaml
 To use Presto as the query engine, see the [Using Presto][presto-guide] guide for setup
 instructions, including the Helm values file and installation steps.
 
+### Using Spider as the scheduler
+
+To use [Spider] as the compression scheduler, see the [Using Spider][spider-guide] guide for setup
+instructions, including the Helm values file and installation steps.
+
 ### Component scheduling
 
 You can control where any CLP component is scheduled using standard Kubernetes scheduling primitives
@@ -686,6 +691,7 @@ To tear down a `kubeadm` cluster:
 * [Using object storage][s3-storage]: Configuring S3 storage
 * [Configuring retention periods][retention-guide]: Setting up data retention policies
 * [Using Presto][presto-guide]: Distributed SQL queries on compressed logs
+* [Using Spider][spider-guide]: Spider-orchestrated compression
 
 [admin-tools]: reference-sbin-scripts/admin-tools.md
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
@@ -711,5 +717,7 @@ To tear down a `kubeadm` cluster:
 [s3-storage]: guides-using-object-storage/index
 [SeaweedFS]: https://github.com/seaweedfs/seaweedfs
 [seaweedfs-setup]: guides-docker-compose-deployment.md#setting-up-seaweedfs
+[Spider]: https://github.com/y-scope/spider
+[spider-guide]: guides-using-spider.md
 [webui-clp-json]: quick-start/clp-json.md#searching-from-the-ui
 [webui-clp-text]: quick-start/clp-text.md#searching-from-the-ui
