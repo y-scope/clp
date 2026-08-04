@@ -125,11 +125,10 @@ Using Presto with CLP via Docker Compose requires:
    but don't start the package just yet.
 2. Before starting the package, update the package's config file (`etc/clp-config.yaml`) as follows:
 
-    * Set the `package.query_engine` key to `"presto"`.
+    * Set the `webui.query_engine` key to `"presto"`.
 
       ```yaml
-      package:
-        storage_engine: "clp-s"
+      webui:
         query_engine: "presto"
       ```
 
@@ -145,6 +144,16 @@ Using Presto with CLP via Docker Compose requires:
       #
       #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
         retention_period: null
+      ```
+
+    * Optional: Disable the native query pipeline to save resources. Note that the API server depends on the native
+      query pipeline, so it must also be disabled altogether.
+
+      ```yaml
+      api_server: null
+      query_scheduler: null
+      query_worker: null
+      reducer: null
       ```
 
     * Update the `presto` key with the host and port of the Presto cluster. If you follow the

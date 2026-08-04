@@ -9,7 +9,7 @@
     "license": {
       "name": ""
     },
-    "version": "0.12.1-dev"
+    "version": "0.13.1-dev"
   },
   "paths": {
     "/health": {
@@ -65,7 +65,7 @@
                   "$ref": "#/components/schemas/QueryResultsUri"
                 },
                 "example": {
-                  "query_results_uri": "/query_results/1"
+                  "query_results_uri": "query_results/1"
                 }
               }
             }

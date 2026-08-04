@@ -1,6 +1,6 @@
 [project]
 name = "clp-py-utils"
-version = "0.12.1-dev"
+version = "0.13.1-dev"
 description = "Utilities for other Python packages in CLP."
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
@@ -18,6 +18,7 @@ dependencies = [
     "result>=0.17.0",
     "sqlalchemy>=2.0.46",
     "StrEnum>=0.4.15",
+    "structlog>=26.1.0",
 ]
 
 [build-system]

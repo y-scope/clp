@@ -128,7 +128,6 @@ data:
     log_ingestor: null
     {{- end }}
     package:
-      query_engine: {{ .Values.clpConfig.webui.query_engine | quote }}
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
     {{- with .Values.clpConfig.query_scheduler }}
     query_scheduler:
@@ -223,6 +222,7 @@ data:
     webui:
       host: "localhost"
       port: 4000
+      query_engine: {{ .Values.clpConfig.webui.query_engine | quote }}
       presto_max_num_search_results: {{ .Values.clpConfig.webui.presto_max_num_search_results
         | int }}
       rate_limit: {{ .Values.clpConfig.webui.rate_limit | int }}
@@ -276,8 +276,12 @@ data:
         {{- end }}
         "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
 
+        {{- if .Values.clpConfig.query_scheduler }}
         {{- with .Values.clpConfig.query_scheduler.max_datasets_per_query }}
         "MaxDatasetsPerQuery": {{ . | int }},
+        {{- else }}
+        "MaxDatasetsPerQuery": null,
+        {{- end }}
         {{- else }}
         "MaxDatasetsPerQuery": null,
         {{- end }}

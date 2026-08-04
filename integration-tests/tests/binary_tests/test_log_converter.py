@@ -7,6 +7,7 @@ import json
 
 import pytest
 
+from tests.utils.archive import create_tar_gz_from_dir
 from tests.utils.classes import (
     ClpAction,
     IntegrationTestPathConfig,
@@ -25,15 +26,18 @@ pytestmark = pytest.mark.core
 
 
 @pytest.mark.clp_s
+@pytest.mark.parametrize("input_type", ["directory", "tar_gz"])
 def test_log_converter_transform(
+    input_type: str,
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
     text_singlefile: SampleDataset,
 ) -> None:
     """
-    Validate that converted logs from the core binary `log-converter` can be ingested successfully
-    by `clp-s`.
+    Validates that converted logs from the core binary `log-converter` can be ingested successfully
+    by `clp-s`, for both raw directory and `.tar.gz` archive inputs.
 
+    :param input_type: "directory" for raw logs dir, "tar_gz" for a `.tar.gz` archive.
     :param clp_core_path_config:
     :param integration_test_path_config:
     :param text_singlefile:
@@ -43,9 +47,21 @@ def test_log_converter_transform(
         with (text_singlefile.logs_path / file_name).open(encoding="utf-8") as f:
             num_log_events += sum(1 for _ in f)
 
+    if input_type == "tar_gz":
+        tar_gz_path = (
+            integration_test_path_config.test_cache_dir
+            / f"clp-s-{text_singlefile.dataset_name}-input.tar.gz"
+        )
+        create_tar_gz_from_dir(text_singlefile.logs_path, tar_gz_path)
+        logs_source_path = tar_gz_path
+        test_name_suffix = "-tar-gz"
+    else:  # input_type == "directory"
+        logs_source_path = text_singlefile.logs_path
+        test_name_suffix = ""
+
     test_paths = ConversionTestPathConfig(
-        test_name=f"clp-s-{text_singlefile.dataset_name}",
-        logs_source_dir=text_singlefile.logs_path,
+        test_name=f"clp-s-{text_singlefile.dataset_name}{test_name_suffix}",
+        logs_source_path=logs_source_path,
         num_log_events=num_log_events,
         integration_test_path_config=integration_test_path_config,
     )
@@ -61,7 +77,7 @@ def _convert_and_compress(
 ) -> None:
     log_converter_bin_path = str(clp_core_path_config.log_converter_binary_path)
     clp_s_bin_path = str(clp_core_path_config.clp_s_binary_path)
-    src_path = str(test_paths.logs_source_dir)
+    src_path = str(test_paths.logs_source_path)
     conversion_path = str(test_paths.conversion_dir)
     compression_path = str(test_paths.compression_dir)
     conversion_action = NonClpAction(
@@ -82,17 +98,24 @@ def _convert_and_compress(
     compression_result = compression_action.verify_returncode()
     assert compression_result, compression_result.failure_message
 
-    if test_paths.num_log_events is None:
+    _verify_search_results(clp_s_bin_path, compression_path, test_paths.num_log_events)
+
+
+def _verify_search_results(
+    clp_s_bin_path: str,
+    compression_path: str,
+    num_log_events: int | None,
+) -> None:
+    if num_log_events is None:
         return
 
     search_action = ClpAction.from_cmd([clp_s_bin_path, "s", compression_path, "timestamp > 0"])
     search_result = search_action.verify_returncode()
     assert search_result, search_result.failure_message
     lines = search_action.completed_proc.stdout.splitlines()
-    if len(lines) != test_paths.num_log_events:
+    if len(lines) != num_log_events:
         pytest.fail(
-            f"Expected {test_paths.num_log_events} log events after conversion, "
-            f"but found {len(lines)}."
+            f"Expected {num_log_events} log events after conversion, but found {len(lines)}."
         )
 
     # Verify every event's message field.

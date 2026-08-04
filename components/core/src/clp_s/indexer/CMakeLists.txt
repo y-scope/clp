@@ -147,6 +147,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp::string_utils
                 clp_s::timestamp_parser
                 date::date
+                LibArchive::LibArchive
                 MariaDBClient::MariaDBClient
                 msgpack-cxx
                 nlohmann_json::nlohmann_json

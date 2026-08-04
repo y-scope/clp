@@ -136,7 +136,7 @@ services.
 
 :::{note}
 For **clp-json + Presto** deployments (`package.storage_engine`: `clp-s` with
-`package.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
+`webui.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
 `reducer` services.
 :::
 
@@ -199,12 +199,6 @@ docker compose \
   up compression-scheduler \
     --no-deps --wait
     
-# Start Spider scheduler (optional, only if using Spider)
-docker compose \
-    --project-name "clp-package-$(cat var/log/instance-id)" \
-    up spider-scheduler \
-      --no-deps --wait
-
 # Start query scheduler
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
@@ -245,16 +239,10 @@ docker compose \
 # Worker services (can be started on multiple hosts)
 ################################################################################
 
-# Start compression worker (if using Celery)
+# Start compression worker
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up compression-worker \
-    --no-deps --wait
-    
-# Start Spider compression worker (optional, only if using Spider)
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up spider-compression-worker \
     --no-deps --wait
 
 # Start query worker

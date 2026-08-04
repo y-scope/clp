@@ -1,6 +1,6 @@
 [package]
 name = "clp-rust-utils"
-version = "0.12.1-dev"
+version = "0.13.1-dev"
 edition = "2024"
 
 [dependencies]
@@ -8,6 +8,7 @@ aws-config = "1.8.12"
 aws-sdk-s3 = "1.121.0"
 aws-sdk-sqs = "1.92.0"
 brotli = "8.0.2"
+const_format = "0.2.35"
 non-empty-string = { version = "0.2.6", features = ["serde"] }
 num_enum = "0.7.5"
 opentelemetry = { version = "0.32.0" }

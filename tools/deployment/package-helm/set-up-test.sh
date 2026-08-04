@@ -29,6 +29,7 @@ sleep 2
 # Word splitting is intentional: helper functions return multiple --set flags.
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
+    $(get_service_exposure_helm_args) \
     $(get_presto_helm_args) \
     $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
 

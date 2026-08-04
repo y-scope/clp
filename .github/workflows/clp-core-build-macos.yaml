@@ -107,8 +107,9 @@ jobs:
       # - run: >-
       #     task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
       - run: >-
-          CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
-          task lint:check-cpp-full
+          task
+          --concurrency "$(getconf _NPROCESSORS_ONLN)"
+          lint:check-cpp-full
         shell: "bash"
 
       # Cache the source file checksums and the generated files (logs) for the

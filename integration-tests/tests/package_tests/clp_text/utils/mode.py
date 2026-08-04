@@ -5,6 +5,7 @@ from clp_py_utils.clp_config import (
     Package,
     QueryEngine,
     StorageEngine,
+    WebUi,
 )
 
 from tests.package_tests.classes import (
@@ -22,6 +23,8 @@ CLP_TEXT_MODE = ClpPackageModeConfig(
     clp_config=ClpConfig(
         package=Package(
             storage_engine=StorageEngine.CLP,
+        ),
+        webui=WebUi(
             query_engine=QueryEngine.CLP,
         ),
         api_server=None,
