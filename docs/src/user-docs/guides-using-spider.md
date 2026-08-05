@@ -128,6 +128,9 @@ Once the pods are ready, you can
 
 ### Configuration
 
+TODO: This section needs further refinement — decide which of these options must be exposed to
+users and which should stay internal.
+
 The values below are the most commonly adjusted settings. Keys under `spider.spiderConfig` that
 are specific to the Kubernetes deployment are listed individually; all other keys map directly to
 Spider's own configuration.
