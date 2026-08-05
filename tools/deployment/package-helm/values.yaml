@@ -1,5 +1,6 @@
-nameOverride: ""
-fullnameOverride: ""
+global:
+  fullnameOverride: ""
+  nameOverride: ""
 
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
@@ -100,6 +101,7 @@ scheduling:
   resultsCache: {}
 
   # Core
+  compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
   queryScheduler: {}
@@ -130,6 +132,7 @@ resources:
   resultsCache: {}
 
   # Core
+  compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
   queryScheduler: {}
@@ -189,6 +192,21 @@ clpConfig:
     names:
       clp: "clp-db"
       spider: "spider-db"
+
+  compression_coordinator:
+    commit_task_hard_timeout_secs: 60
+    commit_task_max_retry: 1
+    commit_task_soft_timeout_secs: 45
+    compression_task_max_retry: 1
+    database_connection_pool_size: 10
+    job_polling_interval_millisecs: 100
+    logging_level: "INFO"
+    resource_group:
+      name: "compression-coordinator"
+    result_polling:
+      init_backoff_millisecs: 100
+      max_backoff_millisecs: 1000
+    termination_timeout_secs: 30
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -366,3 +384,40 @@ serviceAccount:
   annotations:
   # For IRSA on EKS, set:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
+
+# Overrides for the Spider subchart's `values.yaml`
+spider:
+  enabled: false
+  image:
+    worker:
+      repository: "ghcr.io/y-scope/clp/clp-spider-worker"
+      tag: "main"
+  spiderConfig:
+    worker:
+      extra_envs:
+        - name: "CLP_CONFIG_PATH"
+          value: "/etc/clp-config.yaml"
+        - name: "CLP_DB_USER"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include \"clp.fullname\" . }}-database"
+              key: "username"
+        - name: "CLP_DB_PASS"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include \"clp.fullname\" . }}-database"
+              key: "password"
+      extra_volume_mounts:
+        - name: "clp-config"
+          mountPath: "/etc/clp-config.yaml"
+          subPath: "clp-config.yaml"
+          readOnly: true
+        - name: "staged-archives"
+          mountPath: "/var/data/staged-archives"
+      extra_volumes:
+        - name: "clp-config"
+          configMap:
+            name: "{{ include \"clp.fullname\" . }}-config"
+        - name: "staged-archives"
+          emptyDir: {}
+      service_account_name: "{{ include \"clp.fullname\" . }}-service-account"

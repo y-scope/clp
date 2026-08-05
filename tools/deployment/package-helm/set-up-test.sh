@@ -26,6 +26,7 @@ generate_kind_config 0 | kind create cluster --name "${CLUSTER_NAME}" --config=-
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
+helm dependency update "${script_dir}"
 # Word splitting is intentional: helper functions return multiple --set flags.
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
