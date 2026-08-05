@@ -10,6 +10,8 @@ use std::process::Command;
 use std::process::Stdio;
 
 use anyhow::Context;
+use aws_config::BehaviorVersion;
+use aws_sdk_s3::config::ProvideCredentials;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::AwsAuthentication;
 use clp_rust_utils::clp_config::S3Config;
@@ -46,6 +48,7 @@ use crate::common::runtime;
 /// * A spawned archive finisher panics.
 /// * Forwards [`build_s3_logs_list`]'s return values on failure.
 /// * Forwards [`std::fs::write`]'s return values on failure.
+/// * Forwards [`s3_credential_env`]'s return values on failure.
 /// * Forwards [`extract_s3_output_config`]'s return values on failure.
 /// * Forwards [`prepare_clp_s_input`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
@@ -84,10 +87,16 @@ pub(super) fn compress(
         })?;
     tmp_file_deleter.add(list_path.clone());
 
+    let runtime = runtime();
     let S3InputSource {
-        aws_authentication, ..
+        region_code,
+        aws_authentication,
+        ..
     } = input_source;
-    let credential_env = s3_credential_env(&aws_authentication);
+    let input_region = region_code
+        .as_ref()
+        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
+    let credential_env = s3_credential_env(&runtime, input_region, &aws_authentication)?;
 
     let s3_config = extract_s3_output_config(config)?;
     let archive_dir = config
@@ -107,7 +116,6 @@ pub(super) fn compress(
         &mut tmp_file_deleter,
     )?;
 
-    let runtime = runtime();
     let client = build_s3_client(&runtime, s3_config);
     let bucket = s3_config.bucket.to_string();
 
@@ -341,26 +349,68 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
 ///
 /// # Returns
 ///
-/// * The env-var name-value pairs for [`AwsAuthentication::Credentials`].
-/// * An empty vector for [`AwsAuthentication::Default`] (which assumes credentials are already in
-///   the ambient env).
-fn s3_credential_env(auth: &AwsAuthentication) -> Vec<(&'static str, String)> {
+/// The env-var name-value pairs with the following environment variables set:
+///
+/// * `AWS_ACCESS_KEY_ID`
+/// * `AWS_SECRET_ACCESS_KEY`
+/// * `AWS_SESSION_TOKEN` (if any)
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * The default AWS SDK credential provider chain has no provider.
+/// * Forwards [`ProvideCredentials::provide_credentials`]'s return values on failure.
+fn s3_credential_env(
+    runtime: &tokio::runtime::Handle,
+    region: &str,
+    auth: &AwsAuthentication,
+) -> anyhow::Result<Vec<(&'static str, String)>> {
     /// The env var holding the AWS access key ID.
     const AWS_ACCESS_KEY_ID_ENV_VAR: &str = "AWS_ACCESS_KEY_ID";
 
     /// The env var holding the AWS secret access key.
     const AWS_SECRET_ACCESS_KEY_ENV_VAR: &str = "AWS_SECRET_ACCESS_KEY";
 
-    match auth {
-        AwsAuthentication::Credentials { credentials } => vec![
-            (AWS_ACCESS_KEY_ID_ENV_VAR, credentials.access_key_id.clone()),
+    /// The env var holding the AWS session token.
+    const AWS_SESSION_TOKEN_ENV_VAR: &str = "AWS_SESSION_TOKEN";
+
+    let (access_key_id, secret_access_key, session_token) = match auth {
+        AwsAuthentication::Credentials { credentials } => (
+            credentials.access_key_id.clone(),
+            credentials.secret_access_key.clone(),
+            credentials.session_token.clone(),
+        ),
+        AwsAuthentication::Default => {
+            let sdk_config = runtime.block_on(
+                aws_config::defaults(BehaviorVersion::latest())
+                    .region(aws_sdk_s3::config::Region::new(region.to_string()))
+                    .load(),
+            );
+            let provider = sdk_config
+                .credentials_provider()
+                .context("default AWS SDK credential provider is unavailable")?;
+            let credentials = runtime
+                .block_on(provider.provide_credentials())
+                .context("failed to resolve credentials from the default AWS SDK provider chain")?;
             (
-                AWS_SECRET_ACCESS_KEY_ENV_VAR,
-                credentials.secret_access_key.clone(),
-            ),
-        ],
-        AwsAuthentication::Default => Vec::new(),
+                credentials.access_key_id().to_string(),
+                credentials.secret_access_key().to_string(),
+                credentials
+                    .session_token()
+                    .map(std::string::ToString::to_string),
+            )
+        }
+    };
+
+    let mut env = vec![
+        (AWS_ACCESS_KEY_ID_ENV_VAR, access_key_id),
+        (AWS_SECRET_ACCESS_KEY_ENV_VAR, secret_access_key),
+    ];
+    if let Some(session_token) = session_token {
+        env.push((AWS_SESSION_TOKEN_ENV_VAR, session_token));
     }
+    Ok(env)
 }
 
 /// Parses a single clp-s `--print-archive-stats` stdout line into an [`ArchiveMetadata`].
@@ -898,24 +948,23 @@ mod tests {
     }
 
     #[test]
-    fn s3_credential_env_default() {
-        assert_eq!(s3_credential_env(&AwsAuthentication::Default), Vec::new());
-    }
-
-    #[test]
     fn s3_credential_env_credentials() {
+        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let auth = AwsAuthentication::Credentials {
             credentials: AwsCredentials {
                 access_key_id: "the-access-key".to_string(),
                 secret_access_key: "the-secret-key".to_string(),
+                session_token: Some("the-session-token".to_string()),
             },
         };
 
         assert_eq!(
-            s3_credential_env(&auth),
+            s3_credential_env(runtime.handle(), "us-east-1", &auth)
+                .expect("failed to resolve credentials"),
             vec![
                 ("AWS_ACCESS_KEY_ID", "the-access-key".to_string()),
                 ("AWS_SECRET_ACCESS_KEY", "the-secret-key".to_string()),
+                ("AWS_SESSION_TOKEN", "the-session-token".to_string()),
             ]
         );
     }
