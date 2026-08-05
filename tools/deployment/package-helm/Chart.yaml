@@ -15,3 +15,8 @@ keywords:
   - "log-parser"
   - "logging"
   - "search"
+dependencies:
+  - name: "spider"
+    version: "0.1.8"
+    repository: "https://github.com/y-scope/spider/raw/gh-pages"
+    condition: "spider.enabled"
