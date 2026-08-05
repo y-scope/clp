@@ -123,8 +123,8 @@ the Celery components.
    clp-spider-worker-...                      1/1     Running   2          5m
    ```
 
-Once the pods are ready, compression jobs submitted through [`log-ingestor`][log-ingestor-guide]
-will be orchestrated by Spider.
+Once the pods are ready, you can
+[compress your logs from S3 through Spider](#compressing-your-logs-from-s3-through-spider).
 
 ### Configuration
 
@@ -142,6 +142,48 @@ Spider's own configuration.
 | All other keys under `spider.spiderConfig` | See the Spider user guide (**null**) | Spider's own configuration; each key maps to the corresponding setting of the matching Spider component — e.g., `spiderConfig.storage.log_level` maps to the `log_level` setting under Spider's storage component. |
 
 
+
+## Compressing your logs from S3 through Spider
+
+With Spider enabled, compression jobs are submitted through [`log-ingestor`][log-ingestor-guide],
+which continuously scans an S3 bucket and groups the discovered objects into compression jobs.
+
+1. Forward the `log-ingestor` Service and submit an ingestion job (see the
+   [`log-ingestor` guide][log-ingestor-guide] for the full API):
+
+   ```bash
+   kubectl port-forward service/clp-log-ingestor 3002:3002
+   ```
+
+   ```bash
+   curl -X POST http://localhost:3002/s3_scanner \
+     -H "Content-Type: application/json" \
+     -d '{
+       "bucket_name": "<logs-bucket>",
+       "key_prefix": "<key-prefix>",
+       "scanning_interval_sec": 5,
+       "buffer_config": {"timeout_sec": 10}
+     }'
+   ```
+
+2. Verify that the job was executed through Spider by checking the `spider_id` column of the
+   `compression_jobs` table in CLP's database:
+
+   ```bash
+   kubectl exec clp-database-0 -- mariadb --table -u clp-user -p"<database-password>" clp-db \
+     -e "SELECT id, status, spider_id FROM compression_jobs;"
+   ```
+
+   ```text
+   +----+--------+-----------+
+   | id | status | spider_id |
+   +----+--------+-----------+
+   |  1 |      2 |         1 |
+   +----+--------+-----------+
+   ```
+
+   A status of `2` means the job succeeded, and a non-`NULL` `spider_id` means the job was
+   executed through Spider (`NULL` means it ran through the Celery pipeline).
 
 [compression-coordinator-guide]: guides-using-compression-coordinator.md
 [k8s-deployment]: guides-k8s-deployment.md
