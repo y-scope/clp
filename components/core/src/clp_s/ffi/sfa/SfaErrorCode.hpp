@@ -15,6 +15,9 @@ enum class SfaErrorCodeEnum : uint8_t {
     NoMemory,
     NotInit,
     DecodeRangeOutOfBounds,
+    InvalidQuery,
+    SearchFailure,
+    LogEventIndexUnavailable,
 };
 
 using SfaErrorCode = ystdlib::error_handling::ErrorCode<SfaErrorCodeEnum>;

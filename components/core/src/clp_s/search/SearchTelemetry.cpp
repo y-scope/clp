@@ -9,14 +9,16 @@
 #include <string_view>
 #include <vector>
 
-#include <opentelemetry/nostd/shared_ptr.h>
-#include <opentelemetry/nostd/string_view.h>
-#include <opentelemetry/trace/provider.h>
-#include <opentelemetry/trace/scope.h>
-#include <opentelemetry/trace/span.h>
-#include <opentelemetry/trace/span_metadata.h>
-#include <opentelemetry/trace/tracer.h>  // IWYU pragma: keep
-#include <xxhash.h>
+#ifdef CLP_BUILD_CLP_S_SEARCH_TELEMETRY
+    #include <opentelemetry/nostd/shared_ptr.h>
+    #include <opentelemetry/nostd/string_view.h>
+    #include <opentelemetry/trace/provider.h>
+    #include <opentelemetry/trace/scope.h>
+    #include <opentelemetry/trace/span.h>
+    #include <opentelemetry/trace/span_metadata.h>
+    #include <opentelemetry/trace/tracer.h>  // IWYU pragma: keep
+    #include <xxhash.h>
+#endif
 
 #include <clp_s/Defs.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
@@ -31,10 +33,13 @@ using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::OrExpr;
+#ifdef CLP_BUILD_CLP_S_SEARCH_TELEMETRY
 using opentelemetry::trace::StatusCode;
+#endif
 
 namespace clp_s::search {
 namespace {
+#ifdef CLP_BUILD_CLP_S_SEARCH_TELEMETRY
 constexpr std::string_view cTracerName{"clp.query"};
 constexpr std::string_view cSearchArchiveSpanName{"clp.query.archive"};
 
@@ -97,6 +102,7 @@ constexpr std::string_view cAttrTerminationStage{"clp.query.termination_stage"};
 [[nodiscard]] auto to_hash_attribute(std::string_view value) -> int64_t {
     return static_cast<int64_t>(XXH3_64bits(value.data(), value.size()));
 }
+#endif
 
 /**
  * Increments the column-shape counter in `metrics` corresponding to `column`'s wildcard usage.
@@ -200,6 +206,7 @@ collect_query_shape_metrics(std::shared_ptr<Expression> const& expr, QueryShapeM
 }
 }  // namespace
 
+#ifdef CLP_BUILD_CLP_S_SEARCH_TELEMETRY
 class SearchTelemetrySpan::Impl {
 public:
     // Constructors
@@ -372,6 +379,25 @@ auto SearchTelemetrySpan::set_search_result_metrics(SearchResultMetrics const& m
 auto SearchTelemetrySpan::set_termination_stage(std::string_view termination_stage) -> void {
     m_impl->set_termination_stage(termination_stage);
 }
+#else
+class SearchTelemetrySpan::Impl {};
+
+SearchTelemetrySpan::SearchTelemetrySpan() : m_impl{std::make_unique<Impl>()} {}
+
+SearchTelemetrySpan::~SearchTelemetrySpan() = default;
+
+auto SearchTelemetrySpan::set_archive_context(std::string_view) -> void {}
+
+auto SearchTelemetrySpan::set_error(std::string_view) -> void {}
+
+auto SearchTelemetrySpan::set_query_context(std::string_view) -> void {}
+
+auto SearchTelemetrySpan::set_query_shape_metrics(QueryShapeMetrics const&) -> void {}
+
+auto SearchTelemetrySpan::set_search_result_metrics(SearchResultMetrics const&) -> void {}
+
+auto SearchTelemetrySpan::set_termination_stage(std::string_view) -> void {}
+#endif
 
 auto QueryShapeMetrics::create(
         std::shared_ptr<ast::Expression> const& expr,

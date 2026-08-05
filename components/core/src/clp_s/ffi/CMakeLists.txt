@@ -20,6 +20,8 @@ if(CLP_BUILD_CLP_S_FFI_SFA)
                 clp_s::archive_reader
                 ystdlib::error_handling
                 PRIVATE
+                clp_s::search
+                clp_s::search::kql
                 spdlog::spdlog
         )
 endif()

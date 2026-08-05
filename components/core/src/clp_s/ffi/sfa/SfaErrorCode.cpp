@@ -19,12 +19,18 @@ auto SfaErrorCategory::message(SfaErrorCodeEnum error_enum) const -> std::string
             return "the requested decode range is out of bounds";
         case SfaErrorCodeEnum::IoFailure:
             return "an I/O operation failed";
+        case SfaErrorCodeEnum::InvalidQuery:
+            return "the search query is invalid";
+        case SfaErrorCodeEnum::LogEventIndexUnavailable:
+            return "a search result could not be mapped to a decoded log event";
         case SfaErrorCodeEnum::MalformedRangeIndex:
             return "the archive range index is malformed";
         case SfaErrorCodeEnum::NoMemory:
             return "insufficient memory";
         case SfaErrorCodeEnum::NotInit:
             return "the object is not initialized or has already been closed";
+        case SfaErrorCodeEnum::SearchFailure:
+            return "the archive search failed";
         default:
             return "unknown error code enum";
     }

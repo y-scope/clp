@@ -1,34 +1,40 @@
 #include "TelemetryContext.hpp"
 
-#include <chrono>
-#include <cstdlib>
-#include <exception>
 #include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <utility>
 
-#include <opentelemetry/exporters/otlp/otlp_http_exporter_factory.h>
-#include <opentelemetry/exporters/otlp/otlp_http_exporter_options.h>
-#include <opentelemetry/nostd/shared_ptr.h>
-#include <opentelemetry/sdk/resource/resource.h>
-#include <opentelemetry/sdk/trace/batch_span_processor_factory.h>
-#include <opentelemetry/sdk/trace/batch_span_processor_options.h>
-#include <opentelemetry/sdk/trace/exporter.h>
-#include <opentelemetry/sdk/trace/processor.h>
-#include <opentelemetry/sdk/trace/tracer_provider.h>
-#include <opentelemetry/sdk/trace/tracer_provider_factory.h>
-#include <opentelemetry/trace/provider.h>
-#include <opentelemetry/trace/tracer_provider.h>
-#include <spdlog/spdlog.h>
+#ifdef CLP_BUILD_CLP_S_SEARCH_TELEMETRY
+    #include <chrono>
+    #include <cstdlib>
+    #include <exception>
+    #include <optional>
+    #include <string>
+    #include <string_view>
+    #include <utility>
 
+    #include <opentelemetry/exporters/otlp/otlp_http_exporter_factory.h>
+    #include <opentelemetry/exporters/otlp/otlp_http_exporter_options.h>
+    #include <opentelemetry/nostd/shared_ptr.h>
+    #include <opentelemetry/sdk/resource/resource.h>
+    #include <opentelemetry/sdk/trace/batch_span_processor_factory.h>
+    #include <opentelemetry/sdk/trace/batch_span_processor_options.h>
+    #include <opentelemetry/sdk/trace/exporter.h>
+    #include <opentelemetry/sdk/trace/processor.h>
+    #include <opentelemetry/sdk/trace/tracer_provider.h>
+    #include <opentelemetry/sdk/trace/tracer_provider_factory.h>
+    #include <opentelemetry/trace/provider.h>
+    #include <opentelemetry/trace/tracer_provider.h>
+    #include <spdlog/spdlog.h>
+#endif
+
+#ifdef CLP_BUILD_CLP_S_SEARCH_TELEMETRY
 namespace otlp = opentelemetry::exporter::otlp;
 namespace resource = opentelemetry::sdk::resource;
 namespace trace_api = opentelemetry::trace;
 namespace trace_sdk = opentelemetry::sdk::trace;
+#endif
 
 namespace clp_s::search {
+#ifdef CLP_BUILD_CLP_S_SEARCH_TELEMETRY
 namespace {
 constexpr std::string_view cServiceNameKey{"service.name"};
 constexpr std::string_view cDefaultServiceName{"clp-search"};
@@ -150,6 +156,9 @@ private:
     // Data members
     std::shared_ptr<trace_api::TracerProvider> m_provider;
 };
+#else
+class TelemetryContext::Impl {};
+#endif
 
 TelemetryContext::TelemetryContext() : m_impl{std::make_unique<Impl>()} {}
 

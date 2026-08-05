@@ -149,6 +149,25 @@ public:
     [[nodiscard]] auto decode_range(size_t begin_idx, size_t end_idx)
             -> ystdlib::error_handling::Result<LogEventView>;
 
+    /**
+     * Searches the archive using a KQL query.
+     *
+     * The returned indices are zero-based positions in the decoded log-event vector, rather than
+     * the archive's global log-event indices. A new archive reader is used for each search so that
+     * searching does not mutate the primary reader or its decoded-event cache.
+     *
+     * @param kql KQL query to evaluate.
+     * @param ignore_case Whether string comparisons should ignore case.
+     * @return A result containing matching decoded log-event indices on success, or an error:
+     * - `SfaErrorCodeEnum::InvalidQuery` if `kql` cannot be parsed.
+     * - `SfaErrorCodeEnum::LogEventIndexUnavailable` if the archive lacks log-order metadata or a
+     *   search result cannot be mapped to the decoded-event cache.
+     * - `SfaErrorCodeEnum::SearchFailure` if the search fails.
+     * - Forwards `decode`'s errors.
+     */
+    [[nodiscard]] auto search(std::string_view kql, bool ignore_case)
+            -> ystdlib::error_handling::Result<std::vector<size_t>>;
+
 private:
     enum class DecodeState : uint8_t {
         NotStarted,
@@ -159,7 +178,8 @@ private:
     // Constructors
     explicit ClpArchiveReader(
             std::unique_ptr<clp_s::ArchiveReader> reader,
-            std::shared_ptr<std::vector<char>> archive_data
+            std::shared_ptr<std::vector<char>> archive_data,
+            std::string archive_path
     );
 
     // Methods
@@ -193,6 +213,7 @@ private:
     // Members
     std::unique_ptr<clp_s::ArchiveReader> m_archive_reader;
     std::shared_ptr<std::vector<char>> m_archive_data;
+    std::string m_archive_path;
     uint64_t m_event_count{0};
     std::vector<std::string> m_file_names;
     std::vector<FileInfo> m_file_infos;
