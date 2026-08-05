@@ -66,7 +66,8 @@ the Celery components.
 
    clpConfig:
      # Optional: compression coordinator settings, shown with their default values. Adjust them
-     # to suit your usage patterns.
+     # to suit your usage patterns. For details about the coordinator, see the "Using
+     # compression-coordinator" guide.
      compression_coordinator:
        job_polling_interval_millisecs: 100
        logging_level: "INFO"
