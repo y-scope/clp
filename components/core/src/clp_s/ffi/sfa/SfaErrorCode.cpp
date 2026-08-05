@@ -17,6 +17,10 @@ auto SfaErrorCategory::message(SfaErrorCodeEnum error_enum) const -> std::string
     switch (error_enum) {
         case SfaErrorCodeEnum::DecodeRangeOutOfBounds:
             return "the requested decode range is out of bounds";
+        case SfaErrorCodeEnum::FileNotFound:
+            return "the requested source file was not found in the archive";
+        case SfaErrorCodeEnum::FileSelectionAfterDecode:
+            return "a source file cannot be selected after decoding has started";
         case SfaErrorCodeEnum::IoFailure:
             return "an I/O operation failed";
         case SfaErrorCodeEnum::InvalidQuery:

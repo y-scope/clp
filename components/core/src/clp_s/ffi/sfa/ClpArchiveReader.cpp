@@ -6,6 +6,7 @@
 #include <istream>
 #include <memory>
 #include <new>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -33,12 +34,22 @@
 namespace {
 class LogEventIndexOutputHandler : public clp_s::search::OutputHandler {
 public:
-    explicit LogEventIndexOutputHandler(std::vector<int64_t>& log_event_indices)
+    explicit LogEventIndexOutputHandler(
+            std::vector<int64_t>& log_event_indices,
+            std::optional<std::pair<int64_t, int64_t>> selected_range
+    )
             : OutputHandler{true, false},
-              m_log_event_indices{log_event_indices} {}
+              m_log_event_indices{log_event_indices},
+              m_selected_range{selected_range} {}
 
     auto write(std::string_view, clp_s::epochtime_t, std::string_view, int64_t log_event_idx)
             -> void override {
+        if (m_selected_range.has_value()
+            && (log_event_idx < m_selected_range->first
+                || log_event_idx >= m_selected_range->second))
+        {
+            return;
+        }
         m_log_event_indices.emplace_back(log_event_idx);
     }
 
@@ -46,6 +57,7 @@ public:
 
 private:
     std::vector<int64_t>& m_log_event_indices;
+    std::optional<std::pair<int64_t, int64_t>> m_selected_range;
 };
 
 class ArchiveReaderCloseGuard {
@@ -170,10 +182,13 @@ auto ClpArchiveReader::close() noexcept -> void {
     m_archive_data.reset();
     m_archive_path.clear();
     m_event_count = 0;
+    m_uncompressed_size = 0;
     m_file_names.clear();
     m_file_infos.clear();
+    m_selected_file_info.reset();
     m_tables.clear();
     m_log_events.clear();
+    m_is_decode_prepared = false;
     m_decode_state = DecodeState::NotStarted;
     m_decode_error.clear();
 }
@@ -184,16 +199,52 @@ auto ClpArchiveReader::move_from(ClpArchiveReader& rhs) noexcept -> void {
     m_archive_path = std::move(rhs.m_archive_path);
     rhs.m_archive_path.clear();
     m_event_count = std::exchange(rhs.m_event_count, 0);
+    m_uncompressed_size = std::exchange(rhs.m_uncompressed_size, 0);
     m_file_names = std::move(rhs.m_file_names);
     m_file_infos = std::move(rhs.m_file_infos);
+    m_selected_file_info = std::move(rhs.m_selected_file_info);
+    rhs.m_selected_file_info.reset();
     m_tables = std::move(rhs.m_tables);
     m_log_events = std::move(rhs.m_log_events);
+    m_is_decode_prepared = std::exchange(rhs.m_is_decode_prepared, false);
     m_decode_state = std::exchange(rhs.m_decode_state, DecodeState::NotStarted);
     m_decode_error = std::exchange(rhs.m_decode_error, std::error_code{});
 }
 
+auto ClpArchiveReader::find_file_info(std::string_view file_name) const -> std::optional<FileInfo> {
+    auto const it{std::find_if(
+            m_file_infos.cbegin(),
+            m_file_infos.cend(),
+            [file_name](FileInfo const& file_info) {
+                return file_info.get_file_name() == file_name;
+            }
+    )};
+    if (m_file_infos.cend() == it) {
+        return std::nullopt;
+    }
+    return *it;
+}
+
+auto ClpArchiveReader::select_file(std::string_view file_name) -> Result<void> {
+    if (nullptr == m_archive_reader) {
+        return SfaErrorCode{SfaErrorCodeEnum::NotInit};
+    }
+    if (DecodeState::NotStarted != m_decode_state || m_is_decode_prepared) {
+        return SfaErrorCode{SfaErrorCodeEnum::FileSelectionAfterDecode};
+    }
+
+    auto const file_info{find_file_info(file_name)};
+    if (false == file_info.has_value()) {
+        return SfaErrorCode{SfaErrorCodeEnum::FileNotFound};
+    }
+    m_selected_file_info = file_info;
+    return ystdlib::error_handling::success();
+}
+
 auto ClpArchiveReader::decode_all() -> Result<LogEventView> {
-    return YSTDLIB_ERROR_HANDLING_TRYX(decode_range(0, static_cast<size_t>(m_event_count)));
+    return YSTDLIB_ERROR_HANDLING_TRYX(
+            decode_range(0, static_cast<size_t>(get_active_event_count()))
+    );
 }
 
 auto ClpArchiveReader::decode() -> Result<void> {
@@ -221,7 +272,7 @@ auto ClpArchiveReader::decode_range(size_t begin_idx, size_t end_idx) -> Result<
         return m_decode_error;
     }
 
-    if (begin_idx > end_idx || end_idx > m_event_count) {
+    if (begin_idx > end_idx || end_idx > get_active_event_count()) {
         return SfaErrorCode{SfaErrorCodeEnum::DecodeRangeOutOfBounds};
     }
 
@@ -296,7 +347,17 @@ auto ClpArchiveReader::search(std::string_view kql, bool ignore_case)
         }
 
         std::vector<int64_t> global_log_event_indices;
-        auto output_handler{std::make_unique<LogEventIndexOutputHandler>(global_log_event_indices)};
+        std::optional<std::pair<int64_t, int64_t>> selected_range;
+        if (m_selected_file_info.has_value()) {
+            selected_range.emplace(
+                    m_selected_file_info->get_start_index(),
+                    m_selected_file_info->get_end_index()
+            );
+        }
+        auto output_handler{std::make_unique<LogEventIndexOutputHandler>(
+                global_log_event_indices,
+                selected_range
+        )};
         clp_s::search::Output
                 output{match_pass, expr, search_reader, std::move(output_handler), ignore_case};
         if (false == output.filter()) {
@@ -341,8 +402,9 @@ auto ClpArchiveReader::internal_decode_all() -> Result<void> {
     }
 
     try {
+        prepare_for_decode();
         m_log_events.clear();
-        m_log_events.reserve(m_event_count);
+        m_log_events.reserve(get_active_event_count());
 
         std::string message;
         int64_t timestamp{0};
@@ -370,7 +432,18 @@ auto ClpArchiveReader::internal_decode_all() -> Result<void> {
                 break;
             }
 
+            if (m_selected_file_info.has_value()
+                && next_idx >= m_selected_file_info->get_end_index())
+            {
+                break;
+            }
+
             if (next_table->get_next_message_with_metadata(message, timestamp, log_event_idx)) {
+                if (m_selected_file_info.has_value()
+                    && log_event_idx < m_selected_file_info->get_start_index())
+                {
+                    continue;
+                }
                 m_log_events.emplace_back(log_event_idx, timestamp, std::move(message));
             }
         }
@@ -384,7 +457,19 @@ auto ClpArchiveReader::internal_decode_all() -> Result<void> {
     }
 }
 
+auto ClpArchiveReader::prepare_for_decode() -> void {
+    if (m_is_decode_prepared) {
+        return;
+    }
+
+    m_archive_reader->read_dictionaries_and_metadata();
+    m_archive_reader->open_packed_streams();
+    m_tables = m_archive_reader->read_all_tables();
+    m_is_decode_prepared = true;
+}
+
 auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
+    m_uncompressed_size = m_archive_reader->get_header().uncompressed_size;
     auto const& range_index{m_archive_reader->get_range_index()};
     m_file_names.reserve(range_index.size());
     m_file_infos.reserve(range_index.size());
@@ -402,10 +487,6 @@ auto ClpArchiveReader::precompute_archive_metadata() -> Result<void> {
         m_file_names.push_back(filename);
         m_file_infos.emplace_back(filename, start_idx, end_idx);
     }
-
-    m_archive_reader->read_dictionaries_and_metadata();
-    m_archive_reader->open_packed_streams();
-    m_tables = m_archive_reader->read_all_tables();
 
     return ystdlib::error_handling::success();
 }

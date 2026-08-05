@@ -18,6 +18,8 @@ enum class SfaErrorCodeEnum : uint8_t {
     InvalidQuery,
     SearchFailure,
     LogEventIndexUnavailable,
+    FileNotFound,
+    FileSelectionAfterDecode,
 };
 
 using SfaErrorCode = ystdlib::error_handling::ErrorCode<SfaErrorCodeEnum>;

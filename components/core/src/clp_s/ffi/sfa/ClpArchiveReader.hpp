@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -100,6 +101,21 @@ public:
     [[nodiscard]] auto get_event_count() const -> uint64_t { return m_event_count; }
 
     /**
+     * @return The number of events in the selected source file, or the total archive event count
+     * if no source file is selected.
+     */
+    [[nodiscard]] auto get_active_event_count() const -> uint64_t {
+        return m_selected_file_info.has_value() ? m_selected_file_info->get_event_count()
+                                                : m_event_count;
+    }
+
+    /**
+     * @return The total size, in bytes, of the original uncompressed logs represented by the
+     * archive.
+     */
+    [[nodiscard]] auto get_uncompressed_size() const -> uint64_t { return m_uncompressed_size; }
+
+    /**
      * @return Source file names in range-index order.
      */
     [[nodiscard]] auto get_file_names() const -> std::vector<std::string> { return m_file_names; }
@@ -108,6 +124,35 @@ public:
      * @return Source file metadata in range index order.
      */
     [[nodiscard]] auto get_file_infos() const -> std::vector<FileInfo> { return m_file_infos; }
+
+    /**
+     * @return The selected source file metadata, or std::nullopt if the entire archive is active.
+     */
+    [[nodiscard]] auto get_selected_file_info() const -> std::optional<FileInfo> {
+        return m_selected_file_info;
+    }
+
+    /**
+     * Finds source file metadata by exact, case-sensitive filename.
+     *
+     * @param file_name Source filename stored in the archive range index.
+     * @return The source file metadata, or std::nullopt if the filename doesn't exist.
+     */
+    [[nodiscard]] auto find_file_info(std::string_view file_name) const -> std::optional<FileInfo>;
+
+    /**
+     * Selects a source file as the active log-event collection.
+     *
+     * Selection must happen before decoding starts. Subsequent decode and search operations use
+     * file-relative dense indices while LogEvent objects retain their archive-global indices.
+     *
+     * @param file_name Source filename stored in the archive range index.
+     * @return A void result on success, or:
+     * - `SfaErrorCodeEnum::FileNotFound` if the filename doesn't exist.
+     * - `SfaErrorCodeEnum::FileSelectionAfterDecode` if decoding has already started.
+     */
+    [[nodiscard]] auto select_file(std::string_view file_name)
+            -> ystdlib::error_handling::Result<void>;
 
     /**
      * Decodes and caches all log events without returning them.
@@ -123,7 +168,7 @@ public:
     [[nodiscard]] auto decode() -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Decodes all log events in global log-event-index order.
+     * Decodes all log events in the active collection in global log-event-index order.
      *
      * Results are cached after the first successful decode. The returned view remains valid until
      * this reader is closed, moved from, or destroyed.
@@ -137,7 +182,8 @@ public:
     [[nodiscard]] auto decode_all() -> ystdlib::error_handling::Result<LogEventView>;
 
     /**
-     * Decodes all log events, if necessary, and returns the requested half-open event range.
+     * Decodes all log events in the active collection, if necessary, and returns the requested
+     * half-open, active-collection-relative event range.
      *
      * @param begin_idx Index of the first event to return.
      * @param end_idx Index one past the final event to return.
@@ -152,9 +198,10 @@ public:
     /**
      * Searches the archive using a KQL query.
      *
-     * The returned indices are zero-based positions in the decoded log-event vector, rather than
-     * the archive's global log-event indices. A new archive reader is used for each search so that
-     * searching does not mutate the primary reader or its decoded-event cache.
+     * The returned indices are zero-based positions in the active decoded log-event vector,
+     * rather than the archive's global log-event indices. When a source file is selected, search
+     * results outside its global event-index range are discarded. A new archive reader is used for
+     * each search so that searching does not mutate the primary reader or its decoded-event cache.
      *
      * @param kql KQL query to evaluate.
      * @param ignore_case Whether string comparisons should ignore case.
@@ -201,6 +248,11 @@ private:
     [[nodiscard]] auto internal_decode_all() -> ystdlib::error_handling::Result<void>;
 
     /**
+     * Loads dictionaries, table metadata, packed streams, and schema tables for decoding.
+     */
+    auto prepare_for_decode() -> void;
+
+    /**
      * Precomputes archive metadata from the range index.
      *
      * This function skips range index validation as they are already validated inside
@@ -215,10 +267,13 @@ private:
     std::shared_ptr<std::vector<char>> m_archive_data;
     std::string m_archive_path;
     uint64_t m_event_count{0};
+    uint64_t m_uncompressed_size{0};
     std::vector<std::string> m_file_names;
     std::vector<FileInfo> m_file_infos;
+    std::optional<FileInfo> m_selected_file_info;
     std::vector<std::shared_ptr<clp_s::SchemaReader>> m_tables;
     std::vector<LogEvent> m_log_events;
+    bool m_is_decode_prepared{false};
     DecodeState m_decode_state{DecodeState::NotStarted};
     std::error_code m_decode_error;
 };
