@@ -23,8 +23,8 @@ Spider-orchestrated compression is currently only supported through the
 When deploying CLP on Kubernetes using Helm, Spider can be enabled by setting `spider.enabled` to
 `true`. When enabled, the chart additionally deploys:
 
-* The **compression coordinator**, a CLP component that polls for compression jobs and drives them
-  through Spider.
+* The [**compression coordinator**][compression-coordinator-guide], a CLP component that polls for
+  compression jobs and drives them through Spider.
 * The **Spider subchart**: Spider's storage service, scheduler, workers, and a bundled MariaDB for
   Spider's job state. The workers run a CLP-specific image
   (`ghcr.io/y-scope/clp/clp-spider-worker`) that bundles CLP's task library and core binaries, so
@@ -142,6 +142,7 @@ Spider's own configuration.
 
 
 
+[compression-coordinator-guide]: guides-using-compression-coordinator.md
 [k8s-deployment]: guides-k8s-deployment.md
 [log-ingestor-guide]: guides-using-log-ingestor.md
 [object-storage-guide]: guides-using-object-storage/index.md
