@@ -1,6 +1,0 @@
-/home/nathan/clpdev/.clang-format:126:17: error: invalid boolean
-ReflowComments: "Always"
-                ^~~~~~~~
-105872 warnings generated.
-Suppressed 106001 warnings (105872 in non-user code, 129 NOLINT).
-Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
