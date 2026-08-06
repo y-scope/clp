@@ -174,16 +174,16 @@ struct FileMetadata {
 }
 
 impl FileMetadata {
-    /// Creates metadata for the object identified by `object_key`, estimating its uncompressed size
-    /// from its raw `size`.
+    /// Creates metadata for the object identified by `path`, estimating its uncompressed size from
+    /// its raw `size`.
     ///
     /// # Returns
     ///
     /// A new [`FileMetadata`].
-    fn new(object_key: String, size: u64) -> Self {
-        let estimated_size = estimate_uncompressed_size(&object_key, size);
+    fn new(path: String, size: u64) -> Self {
+        let estimated_size = estimate_uncompressed_size(&path, size);
         Self {
-            path: object_key,
+            path,
             estimated_size,
         }
     }
@@ -238,17 +238,17 @@ impl Iterator for RoundRobinIterator {
 /// # Returns
 ///
 /// The estimated uncompressed size.
-fn estimate_uncompressed_size(object_key: &str, size: u64) -> u64 {
+fn estimate_uncompressed_size(key: &str, size: u64) -> u64 {
     const GZIP_COMPRESSION_RATIO_ESTIMATE: u64 = 13;
     const GZIP_SUFFIXES: &[&str] = &[".gz", ".gzip", ".tgz"];
     const ZSTD_COMPRESSION_RATIO_ESTIMATE: u64 = 8;
 
     if GZIP_SUFFIXES
         .iter()
-        .any(|suffix| ends_with_ignore_ascii_case(object_key, suffix))
+        .any(|suffix| ends_with_ignore_ascii_case(key, suffix))
     {
         size * GZIP_COMPRESSION_RATIO_ESTIMATE
-    } else if ends_with_ignore_ascii_case(object_key, ".zst") {
+    } else if ends_with_ignore_ascii_case(key, ".zst") {
         size * ZSTD_COMPRESSION_RATIO_ESTIMATE
     } else {
         size
@@ -257,12 +257,11 @@ fn estimate_uncompressed_size(object_key: &str, size: u64) -> u64 {
 
 /// # Returns
 ///
-/// Whether `object_key` ends with `suffix` using ASCII case-insensitive match.
-fn ends_with_ignore_ascii_case(object_key: &str, suffix: &str) -> bool {
-    let suffix_start = object_key.len().saturating_sub(suffix.len());
-    let object_key_suffix = object_key.get(suffix_start..);
-    object_key_suffix
-        .is_some_and(|object_key_suffix| object_key_suffix.eq_ignore_ascii_case(suffix))
+/// Whether `key` ends with `suffix` using ASCII case-insensitive match.
+fn ends_with_ignore_ascii_case(key: &str, suffix: &str) -> bool {
+    let suffix_start = key.len().saturating_sub(suffix.len());
+    let key_suffix = key.get(suffix_start..);
+    key_suffix.is_some_and(|key_suffix| key_suffix.eq_ignore_ascii_case(suffix))
 }
 
 /// Gets the filename portion of an S3 object's key.
@@ -409,7 +408,7 @@ mod tests {
     fn test_estimate_uncompressed_size_for_gzip_suffix() {
         const FILE_SIZE: u64 = 100;
 
-        for object_key in [
+        for path in [
             "logs/app.log.gz",
             "logs/app.log.GZ",
             "logs/app.log.gzip",
@@ -419,10 +418,7 @@ mod tests {
             "logs/app.log.tar.gz",
             "logs/app.log.TAR.GZ",
         ] {
-            assert_eq!(
-                FILE_SIZE * 13,
-                estimate_uncompressed_size(object_key, FILE_SIZE)
-            );
+            assert_eq!(FILE_SIZE * 13, estimate_uncompressed_size(path, FILE_SIZE));
         }
     }
 
@@ -430,16 +426,13 @@ mod tests {
     fn test_estimate_uncompressed_size_for_zstandard_suffix() {
         const FILE_SIZE: u64 = 100;
 
-        for object_key in [
+        for path in [
             "logs/app.log.zst",
             "logs/app.log.clp.zst",
             "logs/app.log.tar.zst",
             "logs/app.log.ZST",
         ] {
-            assert_eq!(
-                FILE_SIZE * 8,
-                estimate_uncompressed_size(object_key, FILE_SIZE)
-            );
+            assert_eq!(FILE_SIZE * 8, estimate_uncompressed_size(path, FILE_SIZE));
         }
     }
 
