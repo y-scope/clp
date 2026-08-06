@@ -6,74 +6,62 @@
 #include <variant>
 #include <vector>
 
-#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
+#include <clp/Defs.h>
 #include <clp/EncodedVariableInterpreter.hpp>
 
+namespace log_surgeon {
+auto operator==(SubQuery const& a, SubQuery const& b) -> bool {
+    return a.qualified_name == b.qualified_name && a.value == b.value;
+}
+}  // namespace log_surgeon
+
 namespace clp {
-using log_surgeon::SymbolId::TokenFloat;
-using log_surgeon::SymbolId::TokenInt;
-using log_surgeon::wildcard_query_parser::QueryInterpretation;
-using log_surgeon::wildcard_query_parser::StaticQueryToken;
-using log_surgeon::wildcard_query_parser::VariableQueryToken;
 using std::holds_alternative;
 using std::set;
 using std::string;
 using std::vector;
 
-auto SchemaSearcher::normalize_interpretations(set<QueryInterpretation> const& interpretations)
-        -> set<QueryInterpretation> {
-    set<QueryInterpretation> normalized_interpretations;
+auto SchemaSearcher::normalize_interpretations(
+        vector<vector<log_surgeon::SubQuery>> const& interpretations
+) -> vector<vector<log_surgeon::SubQuery>> {
+    vector<vector<log_surgeon::SubQuery>> normalized_interps;
     for (auto const& interpretation : interpretations) {
-        QueryInterpretation normalized_interpretation;
-        for (auto const& token : interpretation.get_logtype()) {
-            auto const& src_string{std::visit(
-                    [](auto const& tok) -> string const& { return tok.get_query_substring(); },
-                    token
-            )};
-            string normalized_string;
-            normalized_string.reserve(src_string.size());
-            for (auto const c : src_string) {
-                if ('*' != c || normalized_string.empty() || '*' != normalized_string.back()) {
-                    normalized_string += c;
+        vector<log_surgeon::SubQuery> normalized_interp(interpretation.size());
+        for (size_t i{0}; i < interpretation.size(); ++i) {
+            auto const& token{interpretation[i]};
+            auto& normalized_token{normalized_interp[i]};
+            normalized_token.qualified_name = token.qualified_name;
+
+            auto& normalized_value{normalized_token.value};
+            normalized_value.reserve(token.value.length());
+            for (auto const c : token.value) {
+                if ('*' != c || normalized_value.empty() || '*' != normalized_value.back()) {
+                    normalized_value += c;
                 }
             }
-
-            std::visit(
-                    overloaded{
-                            [&](VariableQueryToken const& variable_token) -> void {
-                                normalized_interpretation.append_variable_token(
-                                        variable_token.get_variable_type(),
-                                        normalized_string,
-                                        variable_token.get_contains_wildcard()
-                                );
-                            },
-                            [&]([[maybe_unused]] StaticQueryToken const& static_token) -> void {
-                                normalized_interpretation.append_static_token(normalized_string);
-                            }
-                    },
-                    token
-            );
         }
-        normalized_interpretations.insert(normalized_interpretation);
+        if (normalized_interps.end() == std::ranges::find(normalized_interps, normalized_interp)) {
+            normalized_interps.push_back(std::move(normalized_interp));
+        }
     }
-    return normalized_interpretations;
+    return normalized_interps;
 }
 
-auto SchemaSearcher::get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
-        -> vector<size_t> {
-    auto const logtype{interpretation.get_logtype()};
+auto SchemaSearcher::get_wildcard_encodable_positions(
+        vector<log_surgeon::SubQuery> const& interpretation
+) -> vector<size_t> {
     vector<size_t> wildcard_encodable_positions;
-    wildcard_encodable_positions.reserve(logtype.size());
+    wildcard_encodable_positions.reserve(interpretation.size());
 
-    for (size_t i{0}; i < logtype.size(); ++i) {
-        auto const& token{logtype[i]};
-        if (holds_alternative<VariableQueryToken>(token)) {
-            auto const& var_token{std::get<VariableQueryToken>(token)};
-            auto const var_type{static_cast<log_surgeon::SymbolId>(var_token.get_variable_type())};
-            bool const is_int{TokenInt == var_type};
-            bool const is_float{TokenFloat == var_type};
-            if (var_token.get_contains_wildcard() && (is_int || is_float)) {
+    for (size_t i{0}; i < interpretation.size(); ++i) {
+        auto const& token{interpretation[i]};
+        if (false == token.qualified_name.empty()) {
+            auto const var_type{token.qualified_name};
+            bool const is_int{var_type.ends_with("int")};
+            bool const is_float{var_type.ends_with("float")};
+            if (contains_wildcard(token.value) && (is_int || is_float)) {
                 wildcard_encodable_positions.push_back(i);
             }
         }
@@ -82,36 +70,32 @@ auto SchemaSearcher::get_wildcard_encodable_positions(QueryInterpretation const&
 }
 
 auto SchemaSearcher::generate_logtype_string(
-        QueryInterpretation const& interpretation,
+        vector<log_surgeon::SubQuery> const& interpretation,
         vector<size_t> const& wildcard_encodable_positions,
         vector<bool> const& mask_encoded_flags
 ) -> string {
     string logtype_string;
 
     size_t logtype_string_size{0};
-    auto const logtype{interpretation.get_logtype()};
-    for (auto const& token : logtype) {
-        if (holds_alternative<StaticQueryToken>(token)) {
-            auto const& static_token{std::get<StaticQueryToken>(token)};
-            logtype_string_size += static_token.get_query_substring().size();
+    for (auto const& token : interpretation) {
+        if (token.qualified_name.empty()) {
+            logtype_string_size += token.value.size();
         } else {
             ++logtype_string_size;
         }
     }
     logtype_string.reserve(logtype_string_size);
 
-    for (size_t i{0}; i < logtype.size(); ++i) {
-        auto const& token{logtype[i]};
-        if (holds_alternative<StaticQueryToken>(token)) {
-            logtype_string += std::get<StaticQueryToken>(token).get_query_substring();
+    for (size_t i{0}; i < interpretation.size(); ++i) {
+        auto const& token{interpretation[i]};
+        if (token.qualified_name.empty()) {
+            logtype_string += token.value;
             continue;
         }
 
-        auto const& var_token{std::get<VariableQueryToken>(token)};
-        auto const& raw_string{var_token.get_query_substring()};
-        auto const var_type{static_cast<log_surgeon::SymbolId>(var_token.get_variable_type())};
-        bool const is_int{TokenInt == var_type};
-        bool const is_float{TokenFloat == var_type};
+        auto const var_type{token.qualified_name};
+        bool const is_int{var_type.ends_with("int")};
+        bool const is_float{var_type.ends_with("float")};
 
         if (wildcard_encodable_positions.end()
             != std::ranges::find(wildcard_encodable_positions, i))
@@ -131,14 +115,14 @@ auto SchemaSearcher::generate_logtype_string(
         encoded_variable_t encoded_var{0};
         if (is_int
             && EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                    raw_string,
+                    token.value,
                     encoded_var
             ))
         {
             EncodedVariableInterpreter::add_int_var(logtype_string);
         } else if (is_float
                    && EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                           raw_string,
+                           token.value,
                            encoded_var
                    ))
         {

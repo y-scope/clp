@@ -55,8 +55,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
-# Profiling options
-add_definitions(-DPROF_ENABLED=0)
+set(CLP_ENABLE_PROFILING "0" CACHE STRING "Profiling level (unset/0 = off, 1 = base, 2 = debug)")
 
 # Compile-in debug logging statements
 #add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
@@ -143,6 +142,13 @@ if(BUILD_TESTING AND CLP_BUILD_TESTING)
     set(CLP_ENABLE_TESTS ON)
 endif()
 
+# Always enable profiling if building tests.
+set(CLP_ENABLE_PROFILING_EFFECTIVE "${CLP_ENABLE_PROFILING}")
+if(CLP_ENABLE_TESTS AND CLP_ENABLE_PROFILING LESS "1")
+    set(CLP_ENABLE_PROFILING_EFFECTIVE "1")
+endif()
+add_definitions(-DCLP_ENABLE_PROFILING=${CLP_ENABLE_PROFILING_EFFECTIVE})
+
 if(CLP_NEED_ABSL)
     find_package(absl REQUIRED)
     if (absl_FOUND)
@@ -189,6 +195,13 @@ if(CLP_NEED_DATE)
     endif()
 endif()
 
+if(CLP_NEED_FAST_FLOAT)
+    find_package(FastFloat REQUIRED)
+    if (FastFloat_FOUND)
+        message(STATUS "Found FastFloat (fast_float) ${FastFloat_VERSION}")
+    endif()
+endif()
+
 if(CLP_NEED_FMT)
     find_package(fmt REQUIRED)
     if(fmt_FOUND)
@@ -197,9 +210,9 @@ if(CLP_NEED_FMT)
 endif()
 
 if(CLP_NEED_LOG_SURGEON)
-    find_package(log_surgeon REQUIRED)
-    if(log_surgeon_FOUND)
-        message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+    find_package(log-surgeon REQUIRED)
+    if(log-surgeon_FOUND)
+        message(STATUS "Found log-surgeon ${log-surgeon_VERSION}")
     endif()
 endif()
 
@@ -351,12 +364,14 @@ endif()
 
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
+add_subdirectory(src/utils)
 
 add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
 add_subdirectory(src/glt/glt)
 add_subdirectory(src/clp/make_dictionaries_readable)
+add_subdirectory(src/clpp)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
@@ -541,8 +556,6 @@ set(SOURCE_FILES_unitTest
         src/clp/LibarchiveFileReader.hpp
         src/clp/LibarchiveReader.cpp
         src/clp/LibarchiveReader.hpp
-        src/clp/LogSurgeonReader.cpp
-        src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
         src/clp/LogTypeDictionaryEntry.hpp
         src/clp/LogTypeDictionaryEntryReq.hpp
@@ -567,8 +580,6 @@ set(SOURCE_FILES_unitTest
         src/clp/ParsedMessage.cpp
         src/clp/ParsedMessage.hpp
         src/clp/Platform.hpp
-        src/clp/Profiler.cpp
-        src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
         src/clp/QueryToken.cpp
@@ -582,8 +593,6 @@ set(SOURCE_FILES_unitTest
         src/clp/SQLiteDB.hpp
         src/clp/SQLitePreparedStatement.cpp
         src/clp/SQLitePreparedStatement.hpp
-        src/clp/Stopwatch.cpp
-        src/clp/Stopwatch.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
         src/clp/streaming_archive/ArchiveMetadata.hpp
         src/clp/streaming_archive/Constants.hpp
@@ -649,6 +658,10 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
+        src/utils/profiling/test/test_Profiler.cpp
+        src/utils/profiling/test/test_Reporter.cpp
+        src/utils/profiling/test/test_ScopedProfiler.cpp
+        src/utils/profiling/test/sinks.hpp
         tests/LogSuppressor.hpp
         tests/MockLogTypeDictionary.hpp
         tests/MockVariableDictionary.hpp
@@ -679,7 +692,6 @@ set(SOURCE_FILES_unitTest
         tests/test-SchemaSearcher.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
-        tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
@@ -707,6 +719,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::search::sql
             clp_s::timestamp_parser
             clp_s::timestamp_pattern
+            utils::profiling
             )
 
     add_executable(unitTest
@@ -732,7 +745,7 @@ if(CLP_ENABLE_TESTS)
             ${CURL_LIBRARIES}
             date::date
             fmt::fmt
-            log_surgeon::log_surgeon
+            log-surgeon::log-surgeon
             LibArchive::LibArchive
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient

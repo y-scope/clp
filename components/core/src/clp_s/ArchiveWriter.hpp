@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -11,10 +12,13 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/Defs.h>
 #include <clp/streaming_archive/Constants.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/DictionaryWriter.hpp>
 #include <clp_s/ParsedMessage.hpp>
 #include <clp_s/RangeIndexWriter.hpp>
@@ -24,6 +28,9 @@
 #include <clp_s/SchemaWriter.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryWriter.hpp>
+#include <clpp/Defs.hpp>
+#include <clpp/LogShapeStat.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {
@@ -35,6 +42,8 @@ struct ArchiveWriterOption {
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
+
+    bool experimental{false};
 };
 
 class ArchiveStats {
@@ -151,10 +160,13 @@ public:
 
     /**
      * Closes the archive writer.
+     * @param parsing_spec_str The parsing specification text to persist into the archive. Must be
+     * non-empty if using CLP+, otherwise it is ignored.
      * @param is_split Whether the last file ingested into the archive is split.
      * @return Statistics for the newly-written archive.
      */
-    [[nodiscard]] auto close(bool is_split = false) -> ArchiveStats;
+    [[nodiscard]] auto
+    close(std::optional<std::string_view> parsing_spec_str, bool is_split = false) -> ArchiveStats;
 
     /**
      * Appends a message to the archive writer
@@ -172,7 +184,8 @@ public:
      * @param key
      * @return the node id
      */
-    int32_t add_node(int parent_node_id, NodeType type, std::string_view key);
+    auto add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key)
+            -> SchemaNode::id_t;
 
     /**
      * Checks if a leaf key with a given parent node id matches the authoritative timestamp column.
@@ -288,7 +301,29 @@ public:
         return rc;
     }
 
+    /**
+     * Update the log shape dictionary for the given log shape, adding it to the dictionary if
+     * necessary.
+     * @param log_shape
+     * @return The log shape ID.
+     * @return True if the log shape is a new entry in the dictionary, false otherwise.
+     * @return ClppErrorCodeEnum::Unsupported if experimental stats are not enabled.
+     */
+    auto update_log_shape_dict(std::string_view log_shape)
+            -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>>;
+
+    auto update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
+            -> ystdlib::error_handling::Result<void>;
+
 private:
+    // Types
+    struct Clpp {
+        std::shared_ptr<VariableDictionaryWriter> log_shape_dict;
+        clpp::LogShapeStatArray log_shape_stats;
+        clpp::ParentRuleShapesArray parent_rule_shapes;
+    };
+
+    // Methods
     /**
      * Initializes the schema writer
      * @param writer
@@ -303,6 +338,31 @@ private:
      *         - The size of the compressed tables in bytes.
      */
     [[nodiscard]] std::pair<size_t, size_t> store_tables();
+
+    /**
+     * Compresses, stores, and clear the log shape statistics. The stats are not cleared if the
+     * result is an error.
+     * @return A result containing the compressed size in bytes or an error code indicating the
+     * failure:
+     * - clpp::ClppErrorCodeEnum::Unsupported if not using CLP+.
+     */
+    [[nodiscard]] auto close_log_shape_stats() -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Compresses, stores, and clear the parent rule shapes. The stats are not cleared if the result
+     * is an error.
+     * @return A result containing the compressed size in bytes or an error code indicating the
+     * failure:
+     * - clpp::ClppErrorCodeEnum::Unsupported if not using CLP+.
+     */
+    [[nodiscard]] auto close_parent_rule_shapes() -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Compresses and stores the parsing specification to the archive.
+     * @param parsing_spec_str
+     * @return The compressed size in bytes.
+     */
+    [[nodiscard]] auto store_parsing_spec(std::string_view parsing_spec_str) -> size_t;
 
     /**
      * Writes the archive to a single file
@@ -338,6 +398,7 @@ private:
 
     static constexpr size_t cReadBlockSize = 4 * 1024;
 
+    // Data members
     size_t m_encoded_message_size{};
     size_t m_uncompressed_size{};
     size_t m_compressed_size{};
@@ -375,6 +436,8 @@ private:
 
     RangeIndexWriter m_range_index_writer;
     bool m_range_open{false};
+
+    std::optional<Clpp> m_clpp;
 };
 }  // namespace clp_s
 

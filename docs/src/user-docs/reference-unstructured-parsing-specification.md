@@ -11,7 +11,7 @@ Anything not matching a variable type is considered to be static text.
 
 ```
 // Delimiters
-delimiters: \t\r\n:,!;%
+delimiters:\ \t\r\n:,!;%
 
 // Keywords
 timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1}
@@ -25,7 +25,7 @@ hasNumber:.*\d.*
 equals:.*=.*[a-zA-Z0-9].*
 ```
 
-* `delimiters: \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`, `!`,
+* `delimiters:\ \t\r\n:,!;%` indicates that ` `, `\t`, `\r`, `\n`, `:`, `,`, `!`,
   `;`, `%`, and `'` are delimiters. Note, this is not a regular expression but a 
   collection of characters; every character specified is treated as a delimiter.
   In a log file, consecutive delimiters, e.g., N consecutive spaces, are stored 

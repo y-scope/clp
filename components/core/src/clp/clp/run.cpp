@@ -1,11 +1,17 @@
 #include "run.hpp"
 
+#include <fstream>
+#include <memory>
+#include <string>
 #include <unordered_set>
 
-#include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/log_surgeon.hpp>
+#include <log_surgeon/rust_compat.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
+#include <utils/profiling/Sink.hpp>
 
-#include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -28,7 +34,8 @@ int run(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    Profiler::init();
+
+    utils::profiling::Reporter<utils::profiling::SpdlogSink> const profiler_reporter{"clp"};
     TimestampPattern::init();
 
     CommandLineArguments command_line_args("clp");
@@ -43,9 +50,9 @@ int run(int argc, char const* argv[]) {
             break;
     }
 
-    vector<string> input_paths = command_line_args.get_input_paths();
+    PROFILE_SCOPE("main");
 
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
+    vector<string> input_paths = command_line_args.get_input_paths();
 
     // Read input paths from file if necessary
     if (false == command_line_args.get_path_list_path().empty()) {
@@ -56,35 +63,10 @@ int run(int argc, char const* argv[]) {
 
     auto command = command_line_args.get_command();
     if (CommandLineArguments::Command::Compress == command) {
-        /// TODO: make this not a unique_ptr and test performance difference
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser;
+        std::optional<log_surgeon::ParserHandle> parser;
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
-            reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
-            // Capture groups are temporarily disabled, until NFA intersection support for search.
-            auto const& lexer{reader_parser->get_log_parser().m_lexer};
-            for (auto const& [rule_id, rule_name] : lexer.m_id_symbol) {
-                auto optional_captures{lexer.get_captures_from_rule_id(rule_id)};
-                if (false == optional_captures.has_value()) {
-                    continue;
-                }
-
-                auto const& captures{optional_captures.value()};
-                if (captures.empty()) {
-                    continue;
-                }
-
-                if ("header" == rule_name && 1 == captures.size()
-                    && "timestamp" == captures[0]->get_name())
-                {
-                    continue;
-                }
-
-                throw std::runtime_error(
-                        schema_file_path + ": error: the schema rule '" + rule_name
-                        + "' has a regex pattern containing capture groups.\n"
-                );
-            }
+            parser = load_parser_from_file(schema_file_path);
         }
 
         boost::filesystem::path path_prefix_to_remove(
@@ -129,7 +111,7 @@ int run(int argc, char const* argv[]) {
                     empty_directory_paths,
                     grouped_files_to_compress,
                     command_line_args.get_target_encoded_file_size(),
-                    std::move(reader_parser),
+                    parser,
                     command_line_args.get_use_heuristic()
             );
         } catch (TraceableException& e) {
@@ -173,9 +155,6 @@ int run(int argc, char const* argv[]) {
         SPDLOG_ERROR("Command {} not implemented.", enum_to_underlying_type(command));
         return -1;
     }
-
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Compression)
 
     return 0;
 }

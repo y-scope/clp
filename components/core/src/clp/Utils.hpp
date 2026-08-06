@@ -4,10 +4,11 @@
 #include <list>
 #include <set>
 #include <sstream>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
 #include "Defs.h"
 #include "ErrorCode.hpp"
@@ -45,14 +46,18 @@ ErrorCode create_directory_structure(std::string const& path, mode_t mode);
 ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::string>& paths);
 
 /**
- * Loads a lexer from a file
- * @param schema_file_path
- * @param lexer_ptr
+ * Loads a parser from a parsing specification string.
+ * @param parsing_spec
+ * @return parser
  */
-void load_lexer_from_file(
-        std::string const& schema_file_path,
-        log_surgeon::lexers::ByteLexer& lexer_ptr
-);
+auto load_parser_from_str(std::string const& parsing_spec) -> log_surgeon::ParserHandle;
+
+/**
+ * Loads a parser from a parsing specification file.
+ * @param parsing_spec_path
+ * @return parser
+ */
+auto load_parser_from_file(std::string const& parsing_spec_path) -> log_surgeon::ParserHandle;
 }  // namespace clp
 
 #endif  // CLP_UTILS_HPP

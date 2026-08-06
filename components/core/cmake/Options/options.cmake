@@ -24,6 +24,12 @@ option(
 )
 
 option(
+    CLP_BUILD_UTILS_PROFILING
+    "Build utils::profiling."
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_ARCHIVEREADER
     "Build clp_s::archive_reader."
     ON
@@ -157,6 +163,7 @@ function(validate_clp_binaries_dependencies)
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+        CLP_BUILD_UTILS_PROFILING
     )
 endfunction()
 
@@ -197,6 +204,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_S_SEARCH_SQL
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
         CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+        CLP_BUILD_UTILS_PROFILING
     )
 endfunction()
 
@@ -229,6 +237,18 @@ endfunction()
 
 function(set_clp_regex_utils_dependencies)
     set_property(DIRECTORY PROPERTY CLP_NEED_YSTDLIB TRUE)
+endfunction()
+
+function(validate_utils_profiling_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_UTILS_PROFILING
+    )
+endfunction()
+
+function(set_utils_profiling_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_ABSL
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_clp_s_archivereader_dependencies)
@@ -284,6 +304,7 @@ endfunction()
 function(set_clp_s_clp_dependencies_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LOG_SURGEON
@@ -385,6 +406,7 @@ function(validate_clp_s_search_dependencies)
         CLP_BUILD_CLP_S_ARCHIVEREADER
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_SEARCH_AST
+        CLP_BUILD_UTILS_PROFILING
     )
 endfunction()
 
@@ -481,6 +503,11 @@ function(validate_and_setup_all_clp_dependency_flags)
 
     # clp::string_utils has no dependencies
 
+    if (CLP_BUILD_UTILS_PROFILING)
+        validate_utils_profiling_dependencies()
+        set_utils_profiling_dependencies()
+    endif()
+
     if (CLP_BUILD_CLP_S_ARCHIVEREADER)
         validate_clp_s_archivereader_dependencies()
         set_clp_s_archivereader_dependencies()
@@ -567,6 +594,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_CATCH2
         CLP_NEED_CURL
         CLP_NEED_DATE
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LIBLZMA

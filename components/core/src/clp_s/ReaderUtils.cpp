@@ -1,11 +1,13 @@
 #include "ReaderUtils.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <string_view>
 
-#include "archive_constants.hpp"
-#include "ErrorCode.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/SchemaTree.hpp>
 
 namespace clp_s {
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) {
@@ -53,7 +55,13 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        tree->add_node(parent_id, (NodeType)node_type, key);
+        uint32_t count{0};
+        error_code = schema_tree_decompressor.try_read_numeric_value(count);
+        if (ErrorCodeSuccess != error_code) {
+            throw OperationFailed(error_code, __FILENAME__, __LINE__);
+        }
+
+        tree->add_node(parent_id, static_cast<NodeType>(node_type), key, count);
     }
 
     schema_tree_decompressor.close();
@@ -140,5 +148,29 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
     adaptor.checkin_reader_for_section(constants::cArchiveSchemaMapFile);
 
     return schemas_pointer;
+}
+
+auto ReaderUtils::read_parsing_spec(ArchiveReaderAdaptor& adaptor) -> std::string {
+    auto reader = adaptor.checkout_reader_for_section(constants::cArchiveParsingSpecFile);
+
+    ZstdDecompressor decompressor;
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    uint64_t schema_size{0};
+    auto error_code{decompressor.try_read_numeric_value(schema_size)};
+    if (ErrorCodeSuccess != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+
+    std::string schema_text(schema_size, '\0');
+    error_code = decompressor.try_read_exact_length(schema_text.data(), schema_size);
+    if (ErrorCodeSuccess != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+
+    decompressor.close();
+    adaptor.checkin_reader_for_section(constants::cArchiveParsingSpecFile);
+
+    return schema_text;
 }
 }  // namespace clp_s
