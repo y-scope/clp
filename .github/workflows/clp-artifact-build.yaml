@@ -770,7 +770,6 @@ jobs:
       - name: "Run the integration tests for CLP's core"
         working-directory: "integration-tests"
         env:
-          # Tell pytest where the CLP binaries are, and where it should store the test logs.
           CLP_BUILD_DIR: "../${{env.BUILD_DIR}}"
           CLP_CORE_BINS_DIR: >-
             ../${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}

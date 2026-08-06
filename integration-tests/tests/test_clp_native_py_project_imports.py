@@ -7,7 +7,6 @@ from clp_py_utils.clp_config import StorageEngine
 from job_orchestration.scheduler.constants import CompressionJobStatus
 
 
-@pytest.mark.smoke
 def test_clp_native_py_project_enum_classes() -> None:
     """
     Verifies that the following CLP Python projects can be imported successfully by testing
