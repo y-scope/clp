@@ -973,6 +973,7 @@ name = "clp-tdl-package"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
+ "aws-config",
  "aws-sdk-s3",
  "clp-rust-utils",
  "non-empty-string",

@@ -24,6 +24,7 @@ async fn create_test_s3_client(aws_config: &AwsConfig) -> aws_sdk_s3::Client {
         credentials: AwsCredentials {
             access_key_id: aws_config.access_key_id.clone(),
             secret_access_key: aws_config.secret_access_key.clone(),
+            session_token: None,
         },
     };
 

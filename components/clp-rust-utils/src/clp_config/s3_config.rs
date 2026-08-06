@@ -29,4 +29,6 @@ pub enum AwsAuthentication {
 pub struct AwsCredentials {
     pub access_key_id: String,
     pub secret_access_key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_token: Option<String>,
 }
