@@ -37,6 +37,13 @@ Docs specific to each component.
 :::
 
 :::{grid-item-card}
+:link: schema-based-compression-and-search
+Schema
+^^^
+Docs about compression and search using user-defined schemas.
+:::
+
+:::{grid-item-card}
 :link: tooling-containers
 Tooling
 ^^^
@@ -80,6 +87,13 @@ contributing-linting
 
 components-core/index
 components-webui
+:::
+
+:::{toctree}
+:caption: Schema
+:hidden:
+
+schema-based-compression-and-search
 :::
 
 :::{toctree}
