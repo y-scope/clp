@@ -4,7 +4,8 @@ Expands the name of the chart.
 @return {string} The chart name (truncated to 63 characters)
 */}}
 {{- define "clp.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- $global := .Values.global | default dict }}
+{{- default .Chart.Name $global.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -15,10 +16,11 @@ used as a full name.
 @return {string} The fully qualified app name (truncated to 63 characters)
 */}}
 {{- define "clp.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- $global := .Values.global | default dict }}
+{{- if $global.fullnameOverride }}
+{{- $global.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- $name := default "clp" $global.nameOverride }}
 {{- if contains $name .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -443,6 +445,27 @@ Gets the port for the Presto service.
 {{- end }}
 
 {{/*
+Gets the host for the Spider storage service.
+
+@param {object} . Root template context
+@return {string} The Spider storage host
+*/}}
+{{- define "clp.spiderStorageHost" -}}
+{{- include "spider.componentFullname" (dict "root" (index .Subcharts "spider") "component" "storage") -}}
+{{- end }}
+
+{{/*
+Gets the port for the Spider storage service.
+
+@param {object} . Root template context
+@return {string} The Spider storage port
+*/}}
+{{- define "clp.spiderStoragePort" -}}
+{{- $spider := index .Subcharts "spider" -}}
+{{- $spider.Values.spiderConfig.storage.port -}}
+{{- end }}
+
+{{/*
 Gets the BROKER_URL env var for Celery workers.
 
 @param {object} . Root template context
@@ -545,7 +568,7 @@ command: [
   "kubectl", "wait",
   {{- if eq .type "service" }}
   "--for=condition=ready",
-  "pod", "--selector", "app.kubernetes.io/component={{ .name }}",
+  "pod", "--selector", "app.kubernetes.io/instance={{ .root.Release.Name }},app.kubernetes.io/component={{ .name }}",
   {{- else if eq .type "job" }}
   "--for=condition=complete",
   "job/{{ include "clp.fullname" .root }}-{{ .name }}",
