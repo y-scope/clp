@@ -189,16 +189,46 @@ The container image sets the following environment variables and configurations,
 
 ## Corporate proxy and mirror support
 
-All base image `build.sh` scripts source `corporate-proxy-host.sh`, which provides transparent support for
-building behind corporate proxies and with custom package mirrors. When no proxy or mirror
-environment variables are set, builds work identically to before.
+All base image `build.sh` scripts source `docker-image-build.sh`, which wraps [yscope-dev-utils'
+`docker/build` and `docker/ca-trust` libraries][ca-trust] to support building behind corporate
+proxies and with custom package mirrors. With no flags or environment variables set, builds behave
+as they do without this support.
+
+This adds no Docker version requirement. Named build contexts are a Buildx feature, available since
+Buildx 0.8 — well below the `docker-buildx-plugin` >= 0.15.1 that CLP already requires. See
+[Requirements](building-package.md#requirements).
 
 ### Corporate proxy (TLS-intercepting)
 
-In environments where a TLS-intercepting proxy (e.g., Zscaler, Fortinet, Palo Alto) replaces
-upstream SSL certificates, `build.sh` auto-detects the host's CA bundle and injects it into the
-container's trust store. This allows package managers (dnf, apk, apt, pip) to verify the proxy's
-certificates without disabling SSL.
+Where a TLS-intercepting proxy (e.g., Zscaler, Fortinet, Palo Alto) replaces upstream SSL
+certificates, pass `--with-ca-certs` to `build.sh`. The host's CA bundle is then mounted into the
+build steps that reach the network, so downloads can verify the proxy's certificates without
+disabling SSL. The bundle is taken from `SSL_CERT_FILE` when set, else from common CA-bundle
+locations; expired certificates are dropped.
+
+`curl`, `pip`, and `apk` pick the bundle up from the environment variables the library exports.
+`apt` and `dnf` read neither `SSL_CERT_FILE` nor `CURL_CA_BUNDLE`, so they are pointed at it
+explicitly (`Acquire::https::CaInfo` and `--setopt=sslcacert`) by
+`lib_install/ca-trust-pkg-opts.sh`. A tool that reads none of these — `wget`, Node
+(`NODE_EXTRA_CA_CERTS`), or a rustls-based downloader — would not be covered; none is used by these
+images today.
+
+Host CA trust is **opt-in and never baked into an image**. The bundle is mounted only for the
+duration of each build step, so it appears in no image layer and in no `docker history` entry, and
+published images keep their own distro trust store. Builds without the flag — including every CI
+build — do no CA handling at all.
+
+With a local builder, the bundle persists in the BuildKit cache as a `source.local` entry
+(visible via `docker buildx du`) until `docker builder prune`.
+
+That locality isn't guaranteed in general. A remote or containerized builder receives the build
+context over the wire, and cache export (`--cache-to`) can copy build data to a registry or another
+host. Don't pass `--with-ca-certs` to a builder you don't control, or with cache export enabled,
+unless you're willing for the bundle to reach it. `docker buildx ls` shows which builder is active.
+
+Because nothing is baked in, a corporate gateway also needs the bundle at *run* time for commands
+that reach the network from inside a container. `run-in-container.sh` takes the same
+`--with-ca-certs` flag for that.
 
 The following proxy environment variables are forwarded as Docker build args when set:
 
@@ -230,6 +260,7 @@ Each distro supports an environment variable to override the default package mir
 | `DOCKER_PULL`    | `true`  | Pull the latest base image before building. Set to `false` for offline builds. |
 | `DOCKER_NETWORK` | (auto)  | Override Docker's network mode (e.g., `host`, `bridge`).                       |
 
+[ca-trust]: https://github.com/y-scope/yscope-dev-utils/blob/main/exports/docker/ca-trust/README.md
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-manylinux_2_28]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-manylinux_2_28
 [core-deps-musllinux_1_2]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-musllinux_1_2
