@@ -552,6 +552,7 @@ if(CLP_BUILD_TESTING)
                 INTERFACE
                 filter/tests/test-clp_s-bitmap_view.cpp
                 filter/tests/test-clp_s-bloom_filter.cpp
+                filter/tests/test-clp_s-index_defs.cpp
                 filter/tests/test-clp_s-xxhash.cpp
                 tests/clp_s_test_utils.cpp
                 tests/clp_s_test_utils.hpp
