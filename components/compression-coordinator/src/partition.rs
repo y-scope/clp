@@ -255,11 +255,9 @@ fn estimate_uncompressed_size(object_key: &str, size: u64) -> u64 {
     }
 }
 
-/// Checks whether `object_key` ends with `suffix`, ignoring ASCII case.
-///
 /// # Returns
 ///
-/// `true` if `object_key` ends with `suffix`, ignoring ASCII case; `false` otherwise.
+/// Whether `object_key` ends with `suffix` using ASCII case-insensitive match.
 fn ends_with_ignore_ascii_case(object_key: &str, suffix: &str) -> bool {
     let suffix_start = object_key.len().saturating_sub(suffix.len());
     let object_key_suffix = object_key.get(suffix_start..);
