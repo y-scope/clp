@@ -139,8 +139,8 @@ class SqlAdapter:
                 logging.exception("Database access denied.")
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
                 logging.exception(
-                    f'Specified database "{self.database_config.names[ClpDbNameType.CLP]}" does '
-                    "not exist."
+                    'Specified database "%s" does not exist.',
+                    self.database_config.names[ClpDbNameType.CLP],
                 )
             else:
                 logging.exception(err)
