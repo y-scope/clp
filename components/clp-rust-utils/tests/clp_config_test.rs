@@ -21,6 +21,7 @@ fn test_clp_io_config_serialization() {
             credentials: AwsCredentials {
                 access_key_id: "ACCESS_KEY_ID".into(),
                 secret_access_key: "SECRET_ACCESS_KEY".into(),
+                session_token: None,
             },
         },
     };
