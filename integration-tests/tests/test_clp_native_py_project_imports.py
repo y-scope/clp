@@ -1,6 +1,5 @@
 """Smoke tests to validate that CLP Python projects can be imported without errors."""
 
-import pytest
 from clp_mcp_server.constants import QueryJobType
 from clp_package_utils.general import JobType
 from clp_py_utils.clp_config import StorageEngine
