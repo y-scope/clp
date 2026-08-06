@@ -57,27 +57,6 @@ telemetry:
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
 #
-## Compression coordinator config. Requires `logs_input.type` to be "s3" and `spider` to be set.
-#compression_coordinator:
-#  resource_group:
-#    name: "compression-coordinator"
-#  job_polling_interval_millisecs: 100
-#  max_concurrent_tasks: 1000  # Must be greater than 0
-#  result_polling:
-#    init_backoff_millisecs: 100
-#    max_backoff_millisecs: 1000
-#  compression_task_max_retry: 1
-#  commit_task_max_retry: 1
-#  database_connection_pool_size: 10
-#  termination_timeout_secs: 30
-#  commit_task_soft_timeout_secs: 45
-#  commit_task_hard_timeout_secs: 60
-#
-## Connection config for the Spider cluster. Required by `compression_coordinator`.
-#spider:
-#  host: "localhost"
-#  port: 6000
-#
 #query_scheduler:
 #  host: "localhost"
 #  port: 7000
