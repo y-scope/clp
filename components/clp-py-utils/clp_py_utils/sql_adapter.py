@@ -10,7 +10,7 @@ from mysql.connector import errorcode
 from sqlalchemy import pool
 from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
-from clp_py_utils.clp_config import ClpDbUserType, Database, DatabaseEngine
+from clp_py_utils.clp_config import ClpDbNameType, ClpDbUserType, Database, DatabaseEngine
 
 
 class DummyCloseableObject:
@@ -139,7 +139,8 @@ class SqlAdapter:
                 logging.exception("Database access denied.")
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
                 logging.exception(
-                    f'Specified database "{self.database_config.name}" does not exist.'
+                    f'Specified database "{self.database_config.names[ClpDbNameType.CLP]}" does '
+                    "not exist."
                 )
             else:
                 logging.exception(err)
