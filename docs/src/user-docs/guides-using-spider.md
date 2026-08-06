@@ -188,7 +188,6 @@ which continuously scans an S3 bucket and groups the discovered objects into com
    A status of `2` means the job succeeded, and a non-`NULL` `spider_id` means the job was
    executed through Spider (`NULL` means it ran through the Celery pipeline).
 
-[compression-coordinator-guide]: guides-using-compression-coordinator.md
 [k8s-deployment]: guides-k8s-deployment.md
 [log-ingestor-guide]: guides-using-log-ingestor.md
 [object-storage-guide]: guides-using-object-storage/index.md

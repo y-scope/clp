@@ -125,6 +125,24 @@ Use Presto for distributed SQL queries on compressed logs.
 
 ---
 
+## Scheduling & performance
+
+Configure how CLP schedules jobs and uses compute resources.
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: guides-using-spider-scheduler
+Using Spider scheduler
+^^^
+Use Spider to schedule and execute supported CLP jobs across distributed workers.
+:::
+
+::::
+
+---
+
 ## Core
 
 Try CLP's core binaries directly, without deploying the full CLP package.
@@ -265,6 +283,13 @@ guides-retention
 guides-using-the-api-server
 guides-mcp-server/index
 guides-using-presto
+:::
+
+:::{toctree}
+:hidden:
+:caption: Scheduling & performance
+
+guides-using-spider-scheduler
 :::
 
 :::{toctree}
