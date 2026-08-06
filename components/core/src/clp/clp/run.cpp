@@ -5,7 +5,8 @@
 #include <log_surgeon/LogParser.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-#include "../Profiler.hpp"
+#include "../ProfilerReporter.hpp"
+#include "../ScopedProfiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -13,12 +14,16 @@
 #include "decompression.hpp"
 #include "utils.hpp"
 
+using clp::ProfilerReporter;
 using std::string;
 using std::unordered_set;
 using std::vector;
 
 namespace clp::clp {
 int run(int argc, char const* argv[]) {
+    ProfilerReporter profiler_reporter;
+    PROFILE_SCOPE("clp::main");
+
     // Program-wide initialization
     try {
         auto stderr_logger = spdlog::stderr_logger_st("stderr");
@@ -28,7 +33,6 @@ int run(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    Profiler::init();
     TimestampPattern::init();
 
     CommandLineArguments command_line_args("clp");
@@ -44,8 +48,6 @@ int run(int argc, char const* argv[]) {
     }
 
     vector<string> input_paths = command_line_args.get_input_paths();
-
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
 
     // Read input paths from file if necessary
     if (false == command_line_args.get_path_list_path().empty()) {
@@ -173,10 +175,6 @@ int run(int argc, char const* argv[]) {
         SPDLOG_ERROR("Command {} not implemented.", enum_to_underlying_type(command));
         return -1;
     }
-
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Compression)
-
     return 0;
 }
 }  // namespace clp::clp

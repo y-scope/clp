@@ -1,4 +1,5 @@
-#include <unistd.h>
+#include <chrono>
+#include <thread>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -15,7 +16,7 @@ TEST_CASE("Stopwatch", "[Stopwatch]") {
     SECTION("Test reset()") {
         // Measure some work
         stopwatch.start();
-        sleep(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         stopwatch.stop();
 
         stopwatch.reset();
@@ -27,30 +28,30 @@ TEST_CASE("Stopwatch", "[Stopwatch]") {
     SECTION("Test single measurement") {
         // Measure some work
         stopwatch.start();
-        sleep(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         stopwatch.stop();
 
         double time_taken = stopwatch.get_time_taken_in_seconds();
-        REQUIRE(time_taken >= 1.0);
-        REQUIRE(time_taken < 1.1);
+        REQUIRE(time_taken >= 0.05);
+        REQUIRE(time_taken < 0.1);
     }
 
     SECTION("Test multiple measurements") {
         // Measure some work
         stopwatch.start();
-        sleep(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         stopwatch.stop();
 
         // Do some other work
-        sleep(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         // Measure some work again
         stopwatch.start();
-        sleep(2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         stopwatch.stop();
 
         double time_taken = stopwatch.get_time_taken_in_seconds();
-        REQUIRE(time_taken >= 3.0);
-        REQUIRE(time_taken < 3.1);
+        REQUIRE(time_taken >= 0.15);
+        REQUIRE(time_taken < 0.25);
     }
 }
