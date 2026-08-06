@@ -173,12 +173,12 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   core:
-    cmds:
-      - task: "core-generate"
-      - task: "core-build"
+    deps:
+      - "core-build"
 
   core-generate:
     internal: true
+    run: "once"
     sources: &core_source_files
       - "{{.G_DEPS_CPP_CHECKSUM_FILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"
@@ -197,7 +197,10 @@ tasks:
 
   core-build:
     internal: true
+    run: "once"
     sources: *core_source_files
+    deps:
+      - "core-generate"
     generates:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
