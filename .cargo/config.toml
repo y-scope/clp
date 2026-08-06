@@ -4,3 +4,4 @@ rustflags = [
     "-Dclippy::nursery",
     "-Dclippy::pedantic",
 ]
+target-dir = "build/rust-targets"
