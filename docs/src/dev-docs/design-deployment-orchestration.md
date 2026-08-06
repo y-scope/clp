@@ -45,9 +45,7 @@ graph LR
   results_cache["results-cache (MongoDB)"]
   compression_scheduler["compression-scheduler"]
   query_scheduler["query-scheduler"]
-  spider_scheduler["spider-scheduler"]
   compression_worker["compression-worker"]
-  spider_compression_worker["spider-compression-worker"]
   query_worker["query-worker"]
   reducer["reducer"]
   api_server["api-server"]
@@ -77,25 +75,23 @@ graph LR
   query_scheduler -->|healthy| reducer
   linkStyle 6 stroke:#800080
 
-  %% Link 7-15: Database initialization job --> Services
+  %% Link 7-13: Database initialization job --> Services
   db_table_creator -->|completed_successfully| api_server
   db_table_creator -->|completed_successfully| compression_scheduler
   db_table_creator -->|completed_successfully| garbage_collector
   db_table_creator -->|completed_successfully| log_ingestor
   db_table_creator -->|completed_successfully| mcp_server
   db_table_creator -->|completed_successfully| query_scheduler
-  db_table_creator -->|completed_successfully| spider_compression_worker
-  db_table_creator -->|completed_successfully| spider_scheduler
   db_table_creator -->|completed_successfully| webui
-  linkStyle 7,8,9,10,11,12,13,14,15 stroke:#0000ff
+  linkStyle 7,8,9,10,11,12,13 stroke:#0000ff
 
-  %% Link 16-20: Results cache initialization job --> Services
+  %% Link 14-18: Results cache initialization job --> Services
   results_cache_indices_creator -->|completed_successfully| api_server
   results_cache_indices_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| mcp_server
   results_cache_indices_creator -->|completed_successfully| reducer
   results_cache_indices_creator -->|completed_successfully| webui
-  linkStyle 16,17,18,19,20 stroke:#008000
+  linkStyle 14,15,16,17,18 stroke:#008000
 
   subgraph Databases
     database
@@ -114,12 +110,10 @@ graph LR
   subgraph Schedulers
     compression_scheduler
     query_scheduler
-    spider_scheduler
   end
 
   subgraph Workers
     compression_worker
-    spider_compression_worker
     query_worker
     reducer
   end
@@ -137,8 +131,6 @@ graph LR
 
   %% Subgraph styles
   style celery_dependencies fill:#ffffe0
-  style spider_compression_worker fill:#008080
-  style spider_scheduler fill:#008080
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
@@ -157,10 +149,8 @@ graph LR
 | redis                     | Task result storage for workers                                    |
 | compression_scheduler     | Scheduler for compression jobs                                     |
 | query_scheduler           | Scheduler for search/aggregation jobs                              |
-| spider_scheduler          | Scheduler for Spider distributed task execution framework          |
 | results_cache             | Storage for the workers to return search results to the UI         |
 | compression_worker        | Worker processes for compression jobs using Celery                 |
-| spider_compression_worker | Worker processes for compression jobs using Spider                 |
 | query_worker              | Worker processes for search/aggregation jobs using Celery          |
 | reducer                   | Reducers for performing the final stages of aggregation jobs       |
 | api_server                | API server for submitting queries                                  |
@@ -251,23 +241,14 @@ Services require persistent storage for logs, data, archives, and streams.
 
 ### Deployment types
 
-CLP supports multiple deployment configurations based on the compression scheduler and query engine.
+CLP supports two deployment configurations, depending on the query engine:
 
-| Deployment Type | Compression Scheduler | Query Engine                 |
-|-----------------|-----------------------|------------------------------|
-| Base            | Celery                | [Presto][presto-integration] |
-| Full            | Celery                | Native                       |
-| Spider Base     | Spider                | [Presto][presto-integration] |
-| Spider Full     | Spider                | Native                       |
+* **Full**: Uses Celery for query orchestration.
+* **Base**: Excludes the Celery-based query orchestration in Full, to support the
+  [Presto integration][presto-integration].
 
-:::{note}
-Spider support is not yet available for Helm.
-:::
-
-Docker Compose selects the appropriate compose file (e.g., `docker-compose.yaml` for Full,
-`docker-compose-spider.yaml` for Spider Full) and uses `deploy.replicas` with environment
-variables (e.g., `CLP_MCP_SERVER_ENABLED`) to toggle optional services. Helm uses conditional
-templating to include/exclude resources.
+Docker Compose uses `deploy.replicas` with environment variables (e.g., `CLP_MCP_SERVER_ENABLED`)
+to toggle optional services. Helm uses conditional templating to include or exclude resources.
 
 ## Troubleshooting
 

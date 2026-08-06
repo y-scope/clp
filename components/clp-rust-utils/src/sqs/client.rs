@@ -1,8 +1,8 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_sqs::{
-    Client,
-    config::{Builder, Credentials, Region},
-};
+use aws_sdk_sqs::Client;
+use aws_sdk_sqs::config::Builder;
+use aws_sdk_sqs::config::Credentials;
+use aws_sdk_sqs::config::Region;
 use non_empty_string::NonEmptyString;
 
 use crate::clp_config::AwsAuthentication;
@@ -30,7 +30,7 @@ pub async fn create_new_client(
         config_defaults = config_defaults.credentials_provider(Credentials::new(
             credentials.access_key_id.as_str(),
             credentials.secret_access_key.as_str(),
-            None,
+            credentials.session_token.clone(),
             None,
             "clp-credentials-provider",
         ));
