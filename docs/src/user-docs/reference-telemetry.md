@@ -31,6 +31,8 @@ Emitted by long-running CLP services to track throughput:
 | log-ingestor          | `clp.ingest.total_num_objects`       | Counter | Total objects (log events) ingested               |
 | query-scheduler       | `clp.query.tasks.completed`          | Counter | Number of completed query tasks                   |
 | query-scheduler       | `clp.query.tasks.failed`             | Counter | Number of failed query tasks                      |
+| query-scheduler       | `clp.query.uncompressed_bytes_scanned_total` | Counter | Cumulative uncompressed bytes of archive data selected for query jobs |
+| query-scheduler       | `clp.query.compressed_bytes_scanned_total` | Counter | Cumulative compressed (on-disk) bytes of archive data selected for query jobs |
 
 #### Operational up-down counters
 
@@ -55,6 +57,8 @@ Emitted by long-running CLP services to track duration and rate distributions:
 | compression-worker    | `clp.compression.output_rate`   | Histogram | Rate of compressed bytes output per task                   |
 | query-scheduler       | `clp.query.job.duration`        | Histogram | Duration of query jobs                                     |
 | query-scheduler       | `clp.query.task.duration`       | Histogram | Duration of query tasks                                    |
+| query-scheduler       | `clp.query.uncompressed_bytes_scanned` | Histogram | Uncompressed bytes of archive data selected for query jobs |
+| query-scheduler       | `clp.query.compressed_bytes_scanned` | Histogram | Compressed (on-disk) bytes of archive data selected for query jobs |
 
 #### Deployment topology gauges
 
