@@ -165,13 +165,13 @@ docker compose \
   up db-table-creator \
     --no-deps
 
-# Start queue (if using Celery)
+# Start queue
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up queue \
     --no-deps --wait
 
-# Start redis (if using Celery)
+# Start redis
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up redis \
