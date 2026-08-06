@@ -153,7 +153,7 @@ Enables Spider and deploys its related CLP components.
 :default: 4
 
 Sets the number of Spider worker pods to deploy. Increase this value to allow more tasks to run
-concurrently, provided that the Kubernetes cluster has sufficient compute resources.
+concurrently.
 :::
 
 :::{confval} spider.spiderConfig.worker.extra_volumes
