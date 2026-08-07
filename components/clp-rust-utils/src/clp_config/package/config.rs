@@ -119,14 +119,12 @@ impl Default for SpiderTaskExecutorConfig {
 #[serde(deny_unknown_fields)]
 pub struct ClpDbNames {
     pub clp: String,
-    pub spider: String,
 }
 
 impl Default for ClpDbNames {
     fn default() -> Self {
         Self {
             clp: "clp-db".to_owned(),
-            spider: "spider-db".to_owned(),
         }
     }
 }
@@ -708,7 +706,6 @@ mod tests {
             "port": 3306,
             "names": {
                 "clp": "clp-db",
-                "spider": "spider-db",
             },
             "table_prefix": "custom_"
         });
