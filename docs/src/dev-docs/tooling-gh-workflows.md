@@ -8,7 +8,7 @@ builds, testing, and linting. We briefly describe each workflow below.
 This workflow is responsible for:
 
 1. building (Linux) container images containing CLP-core's dependencies,
-2. building CLP-core and running its unit tests, and
+2. building CLP-core and running its unit & integration tests, and
 3. building a container image containing CLP's package components.
 
 To minimize build times, the jobs in the workflow are organized in the directed acyclic graph (DAG)
@@ -47,6 +47,7 @@ flowchart LR
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
     ubuntu-jammy-deps-image --> package-image
     ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
+    ubuntu-jammy-binaries --> ubuntu-jammy-integration-tests-core
 :::
 
 Arrows between jobs indicate a dependency. The jobs are as follows:
@@ -80,6 +81,8 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   core's unit tests.
 * `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's
   binaries built in the `ubuntu-jammy-binaries` job.
+* `ubuntu-jammy-integration-tests-core`: Runs CLP-core's integration tests using the binaries built
+  in the `ubuntu-jammy-binaries` job, and then uploads the logs from the tests.
 
 When the PR or commit doesn't change any of the files that affect CLP's dependencies (or the
 dependency container images), then the dependency container images won't be rebuilt; instead the

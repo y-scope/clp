@@ -117,7 +117,6 @@ data:
       host: "{{ include "clp.databaseHost" . }}"
       names:
         clp: {{ .Values.clpConfig.database.names.clp | quote }}
-        spider: {{ .Values.clpConfig.database.names.spider | quote }}
       port: {{ include "clp.databasePort" . | int }}
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
