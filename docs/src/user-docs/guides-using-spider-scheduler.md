@@ -156,22 +156,11 @@ Sets the number of Spider worker pods to deploy. Increase this value to allow mo
 concurrently.
 :::
 
-:::{confval} spider.spiderConfig.worker.service_account_name
-:type: `string`
-:default: The CLP `ServiceAccount`
-
-Specifies the Kubernetes `ServiceAccount` assigned to the Spider worker pods.
-
-On Amazon EKS, configure this service account with the appropriate AWS permissions when Spider
-workers need to access AWS resources. See [this guide][aws-eks-service-accounts] for details.
-:::
-
 ### Advanced tuning
 
 :::{warning}
 🚧 This section is still under construction.
 :::
 
-[aws-eks-service-accounts]: https://docs.aws.amazon.com/eks/latest/userguide/service-accounts.html
 [k8s-deployment]: guides-k8s-deployment.md
 [spider]: https://github.com/y-scope/spider
