@@ -118,7 +118,7 @@ CLP package configurations. See "Using compression-coordinator" for the current 
    while the Spider database is being initialized. A small number of restarts during this period is
    expected.
 
-   The output should include pods similar to the following:
+   The output should eventually include entries similar to the following:
 
    ```text
    NAME                                       READY   STATUS    RESTARTS   AGE
