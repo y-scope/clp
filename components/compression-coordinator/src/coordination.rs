@@ -43,10 +43,8 @@ pub struct Coordinator {
 impl Coordinator {
     /// Factory function.
     ///
-    /// On construction, this begins recovering all compression jobs that a previous coordinator
-    /// instance had already submitted to Spider (those still [`CompressionJobStatus::Running`] with
-    /// a Spider job ID). During the restart phase, no concurrency limit is imposed, so all
-    /// recovered jobs are resumed immediately.
+    /// On construction, this begins recovering all compression jobs left behind by a previous
+    /// coordinator instance — see [`Self::recover_previous_jobs`] for details.
     ///
     /// # Returns
     ///
@@ -63,8 +61,7 @@ impl Coordinator {
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
     /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
     /// * Forwards [`get_or_create_resource_group_id`]'s return values on failure.
-    /// * Forwards [`Self::fetch_dispatched_pending_jobs`]'s return values on failure.
-    /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
+    /// * Forwards [`Self::recover_previous_jobs`]'s return values on failure.
     pub async fn new(
         coordinator_config: &CoordinatorConfig,
         spider_config: &SpiderConfig,
@@ -222,7 +219,6 @@ impl Coordinator {
     ///
     /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
     /// * Forwards [`Self::fetch_dispatched_pending_jobs`]'s return values on failure.
-    /// * Forwards [`Self::create_job_handle`]'s return values on failure.
     async fn recover_previous_jobs(&self) -> Result<(), Error> {
         let mut recovery_rows = self.fetch_submitted_running_jobs().await?;
         recovery_rows.extend(self.fetch_dispatched_pending_jobs().await?);
@@ -242,7 +238,7 @@ impl Coordinator {
                 spider_job_id = ? spider_job_id,
                 "Recovering a previously submitted job."
             );
-            let Ok(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
+            let Some(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
 
@@ -292,11 +288,8 @@ impl Coordinator {
     }
 
     /// Fetches up to the configured concurrency limit of pending jobs and spawns a detached
-    /// handler for each.
-    ///
-    /// Jobs with invalid configurations or whose handles cannot be constructed are marked
-    /// [`CompressionJobStatus::Failed`] and skipped. Jobs with unsupported input configurations are
-    /// left pending for the legacy Celery-based compression scheduler.
+    /// handler for each. Jobs with invalid configurations or whose handles cannot be constructed
+    /// are marked with failure and skipped.
     ///
     /// # Returns
     ///
@@ -337,7 +330,7 @@ impl Coordinator {
             };
 
             tracing::info!(job_id = % job_id, "Scheduling new job.");
-            let Ok(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
+            let Some(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
 
@@ -389,24 +382,19 @@ impl Coordinator {
 
     /// Constructs an [`S3CompressionJobHandle`] for the given job.
     ///
-    /// A construction failure is logged, and the job is marked [`CompressionJobStatus::Failed`] for
-    /// any failure other than an unsupported input config, which is only warned and left for
-    /// another handler.
+    /// On failure, logs the error and marks the compression job as
+    /// [`CompressionJobStatus::Failed`], except for [`Error::UnsupportedInputConfig`], which is
+    /// only logged as a warning and left pending for the legacy Celery-based compression
+    /// scheduler.
     ///
     /// # Returns
     ///
-    /// The constructed [`S3CompressionJobHandle`] on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`S3CompressionJobHandle::new`]'s return values on failure.
+    /// The constructed [`S3CompressionJobHandle`] on success, or `None` if construction failed.
     async fn create_job_handle(
         &self,
         job_id: CompressionJobId,
         clp_io_config: ClpIoConfig,
-    ) -> Result<S3CompressionJobHandle<SpiderClient>, Error> {
+    ) -> Option<S3CompressionJobHandle<SpiderClient>> {
         let result = S3CompressionJobHandle::new(
             self.db_pool.clone(),
             self.db_config.clone(),
@@ -438,7 +426,7 @@ impl Coordinator {
             }
         }
 
-        result
+        result.ok()
     }
 
     /// Fetches pending compression jobs that are ready to be dispatched.
@@ -531,13 +519,12 @@ impl Coordinator {
         Ok(rows)
     }
 
-    /// Deserializes `serialized_config` as a [`ClpIoConfig`].
-    ///
-    /// On failure, logs the error, marks the compression job as [`CompressionJobStatus::Failed`].
+    /// Deserializes `serialized_config` as a [`ClpIoConfig`], logging any failure and marking the
+    /// compression job as [`CompressionJobStatus::Failed`].
     ///
     /// # Returns
     ///
-    /// The deserialized CLP io config.
+    /// The deserialized [`ClpIoConfig`] on success, or `None` if deserialization failed.
     async fn try_deserialize_clp_io_config(
         &self,
         job_id: CompressionJobId,
