@@ -158,8 +158,57 @@ concurrently.
 
 ### Advanced tuning
 
-:::{warning}
-🚧 This section is still under construction.
+The following settings provide additional control over Spider's runtime behavior and performance.
+Adjust them as needed to suit your workload and deployment environment.
+
+:::{confval} spider.spiderConfig.scheduler.config.active_job_queue_size
+:type: `int`
+:default: 8
+
+Sets the maximum number of jobs that can actively make progress in Spider at the same time. Jobs
+beyond this limit remain queued until an active slot becomes available. Currently, queued jobs are
+admitted in first-in, first-out (FIFO) order.
+
+Active jobs share the available Spider workers in a round-robin fashion. As a result, this setting
+controls the trade-off between job-level concurrency and the amount of compute capacity available
+to each active job.
+
+In the current release, Spider executes only compression jobs, so this setting effectively limits
+the number of compression jobs that can make progress concurrently.
+
+Consider increasing this value when you want more jobs to make progress concurrently and sufficient
+worker capacity is available. Decrease it when you prefer to concentrate compute resources on fewer
+jobs at a time.
+:::
+
+:::{confval} spider.spiderConfig.scheduler.config.dispatch_queue_capacity
+:type: `int`
+:default: 16
+
+Sets the capacity of the scheduler's task dispatch queue. This queue buffers tasks that are ready to
+be dispatched to Spider workers.
+
+As a general guideline, configure this value to approximately two to four times the number of
+Spider workers. If you increase the number of workers, consider increasing this value as well so
+that the scheduler can keep enough tasks available for dispatch and avoid underutilizing workers.
+:::
+
+:::{confval} spider.spiderConfig.scheduler.config.ready_task_capacity
+:type: `int`
+:default: 1048576
+
+Sets the maximum number of ready tasks that the Spider scheduler can buffer for scheduling.
+
+A larger capacity allows the scheduler to consider more ready tasks at once, which can improve
+fairness across active jobs and better accommodate workloads with high task submission rates.
+However, buffering more tasks also increases the scheduler's memory usage.
+
+Consider:
+
+* Increasing this value for workloads that produce large numbers of ready tasks or have high task
+  submission rates.
+* Decreasing this value if scheduler memory usage is a concern and the workload does not require a
+  large ready-task buffer.
 :::
 
 [k8s-deployment]: guides-k8s-deployment.md
