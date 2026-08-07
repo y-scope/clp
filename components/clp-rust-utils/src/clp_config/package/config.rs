@@ -483,7 +483,7 @@ impl Default for Telemetry {
 pub struct CompressionCoordinator {
     pub resource_group: SpiderResourceGroup,
     pub job_polling_interval_millisecs: NonZeroU64,
-    pub max_concurrent_tasks: NonZeroUsize,
+    pub max_concurrent_jobs: NonZeroUsize,
     pub result_polling: PollingBackoff,
     pub compression_task_max_retry: u32,
     pub commit_task_max_retry: u32,
@@ -502,8 +502,8 @@ impl Default for CompressionCoordinator {
             },
             job_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default jobs poll delay should not be zero"),
-            max_concurrent_tasks: NonZeroUsize::new(1000)
-                .expect("default maximum number of concurrent tasks should not be zero"),
+            max_concurrent_jobs: NonZeroUsize::new(1000)
+                .expect("default maximum number of concurrent jobs should not be zero"),
             result_polling: PollingBackoff {
                 init_backoff_millisecs: NonZeroU64::new(100)
                     .expect("default result polling init backoff should not be zero"),

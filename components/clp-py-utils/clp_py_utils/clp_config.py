@@ -761,7 +761,7 @@ class PollingBackoff(BaseModel):
 class CompressionCoordinator(BaseModel):
     resource_group: SpiderResourceGroup = SpiderResourceGroup(name="compression-coordinator")
     job_polling_interval_millisecs: PositiveInt = 100
-    max_concurrent_tasks: PositiveInt = 1000
+    max_concurrent_jobs: PositiveInt = 1000
     result_polling: PollingBackoff = PollingBackoff(
         init_backoff_millisecs=100, max_backoff_millisecs=1000
     )

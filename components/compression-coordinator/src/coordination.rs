@@ -68,10 +68,10 @@ impl Coordinator {
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
     ) -> Result<(Self, CancellationToken), Error> {
-        let max_concurrent_tasks = coordinator_config.max_concurrent_tasks.get();
-        if max_concurrent_tasks > Semaphore::MAX_PERMITS {
+        let max_concurrent_jobs = coordinator_config.max_concurrent_jobs.get();
+        if max_concurrent_jobs > Semaphore::MAX_PERMITS {
             return Err(Error::InvalidConfiguration(format!(
-                "`max_concurrent_tasks` must not exceed {}, got {max_concurrent_tasks}",
+                "`max_concurrent_jobs` must not exceed {}, got {max_concurrent_jobs}",
                 Semaphore::MAX_PERMITS,
             )));
         }
@@ -136,7 +136,7 @@ impl Coordinator {
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
             cancellation_token: cancellation_token.clone(),
-            job_handler_sem: Arc::new(Semaphore::new(max_concurrent_tasks)),
+            job_handler_sem: Arc::new(Semaphore::new(max_concurrent_jobs)),
         };
 
         coordinator.recover_previous_jobs().await?;
