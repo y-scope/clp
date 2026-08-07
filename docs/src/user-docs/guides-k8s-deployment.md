@@ -289,7 +289,7 @@ instructions, including the Helm values file and installation steps.
 
 ### Using Spider as the scheduler
 
-To use [Spider] as the compression scheduler, see the [Using Spider scheduler][spider-guide] guide
+To use [Spider] as the scheduler for compression and search jobs, see the [Using Spider scheduler][spider-guide] guide
 for setup instructions, including the Helm values file and installation steps.
 
 ### Component scheduling
