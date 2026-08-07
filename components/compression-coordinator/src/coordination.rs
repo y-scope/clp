@@ -155,10 +155,10 @@ impl Coordinator {
     /// 2. Wait until the next polling interval or until cancellation.
     /// 3. Mark the scheduled jobs as dispatched.
     ///
-    /// Jobs are marked as dispatched only after the polling interval has elapsed, giving job
-    /// handlers an opportunity to persist their initial Spider submission state before the
-    /// coordinator updates `dispatch_time`, thereby reducing contention when updating the same
-    /// database row.
+    /// `dispatch_time` marks jobs that have already been dispatched by the current coordinator,
+    /// preventing them from being dispatched again before their handlers persist the `Running`
+    /// state. These updates are batched and applied after the polling interval to reduce
+    /// contention with the handlers' `Running` state updates.
     ///
     /// # Errors
     ///
@@ -291,10 +291,8 @@ impl Coordinator {
         }
     }
 
-    /// Fetches pending compression jobs for processing.
-    ///
-    /// Fetches and schedules pending jobs via detached handlers while respecting the configured
-    /// concurrency limit.
+    /// Fetches up to the configured concurrency limit of pending jobs and spawns a detached
+    /// handler for each.
     ///
     /// Jobs with invalid configurations or whose handles cannot be constructed are marked
     /// [`CompressionJobStatus::Failed`] and skipped. Jobs with unsupported input configurations are
@@ -476,8 +474,8 @@ impl Coordinator {
         Ok(rows)
     }
 
-    /// Fetches jobs that are still in [`CompressionJobStatus::Running`] and were previously
-    /// submitted by the compression coordinator.
+    /// Fetches jobs that are still in [`CompressionJobStatus::Running`] and were submitted by a
+    /// previous compression coordinator instance.
     ///
     /// # Returns
     ///
@@ -503,10 +501,11 @@ impl Coordinator {
         Ok(rows)
     }
 
-    /// Fetches jobs that are still in [`CompressionJobStatus::Pending`] but already have a
-    /// `dispatch_time` populated, indicating they were fetched and updated a dispatch time by a
-    /// previous coordinator instance, but the job handler may not have been dispatched to change
-    /// the status from pending to running.
+    /// Fetches pending jobs that were dispatched by a previous coordinator instance.
+    ///
+    /// These jobs have a `dispatch_time` but remain [`CompressionJobStatus::Pending`], indicating
+    /// that their handlers did not successfully persist the `Running` state and therefore have
+    /// not begun processing.
     ///
     /// # Returns
     ///
