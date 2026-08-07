@@ -191,7 +191,6 @@ clpConfig:
     port: 30306
     names:
       clp: "clp-db"
-      spider: "spider-db"
 
   compression_coordinator:
     commit_task_hard_timeout_secs: 60
