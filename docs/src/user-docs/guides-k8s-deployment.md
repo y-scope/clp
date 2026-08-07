@@ -289,8 +289,8 @@ instructions, including the Helm values file and installation steps.
 
 ### Using Spider as the scheduler
 
-To use [Spider] as the compression scheduler, see the [Using Spider][spider-guide] guide for setup
-instructions, including the Helm values file and installation steps.
+To use [Spider] as the compression scheduler, see the [Using Spider scheduler][spider-guide] guide
+for setup instructions, including the Helm values file and installation steps.
 
 ### Component scheduling
 
@@ -691,7 +691,7 @@ To tear down a `kubeadm` cluster:
 * [Using object storage][s3-storage]: Configuring S3 storage
 * [Configuring retention periods][retention-guide]: Setting up data retention policies
 * [Using Presto][presto-guide]: Distributed SQL queries on compressed logs
-* [Using Spider][spider-guide]: Spider-orchestrated compression
+* [Using Spider scheduler][spider-guide]: Spider-orchestrated compression
 
 [admin-tools]: reference-sbin-scripts/admin-tools.md
 [aks]: https://azure.microsoft.com/en-us/products/kubernetes-service
@@ -718,6 +718,6 @@ To tear down a `kubeadm` cluster:
 [SeaweedFS]: https://github.com/seaweedfs/seaweedfs
 [seaweedfs-setup]: guides-docker-compose-deployment.md#setting-up-seaweedfs
 [Spider]: https://github.com/y-scope/spider
-[spider-guide]: guides-using-spider.md
+[spider-guide]: guides-using-spider-scheduler.md
 [webui-clp-json]: quick-start/clp-json.md#searching-from-the-ui
 [webui-clp-text]: quick-start/clp-text.md#searching-from-the-ui

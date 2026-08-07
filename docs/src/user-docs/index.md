@@ -70,13 +70,6 @@ Use `log-ingestor` to continuously ingest logs.
 :::
 
 :::{grid-item-card}
-:link: guides-using-spider
-Using Spider
-^^^
-Use Spider to orchestrate compression jobs on Kubernetes.
-:::
-
-:::{grid-item-card}
 :link: guides-external-database
 External database setup
 ^^^
@@ -271,7 +264,6 @@ guides-k8s-deployment
 
 guides-using-object-storage/index
 guides-using-log-ingestor
-guides-using-spider
 guides-external-database
 guides-retention
 :::
