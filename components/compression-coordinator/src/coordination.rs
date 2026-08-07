@@ -166,7 +166,7 @@ impl Coordinator {
     ///
     /// * Forwards [`Self::schedule_new_jobs`]'s return values on failure.
     /// * Forwards [`Self::mark_jobs_dispatched`]'s return values on failure.
-    pub async fn run(mut self) -> Result<(), Error> {
+    pub async fn run(self) -> Result<(), Error> {
         let cancellation_token = self.cancellation_token.clone();
         loop {
             let now = Instant::now();
@@ -309,14 +309,14 @@ impl Coordinator {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
-    async fn schedule_new_jobs(&mut self) -> Result<Vec<CompressionJobId>, Error> {
+    async fn schedule_new_jobs(&self) -> Result<Vec<CompressionJobId>, Error> {
         let available_permits = self.job_handler_sem.available_permits();
         if available_permits == 0 {
             return Ok(Vec::new());
         }
 
         let new_job_rows = self
-            .fetch_new_job_rows(Some(available_permits))
+            .fetch_new_job_rows(available_permits)
             .await
             .inspect_err(|e| {
                 tracing::error!(error = % e, "Failed to fetch new jobs from database.");
@@ -327,6 +327,7 @@ impl Coordinator {
             let Ok(permit) = self.job_handler_sem.clone().try_acquire_owned() else {
                 break;
             };
+
             let job_id = job_row.id;
             dispatched_job_ids.push(job_id);
 
@@ -442,10 +443,10 @@ impl Coordinator {
         result
     }
 
-    /// Fetches the pending compression jobs to dispatch, bounded by `limit`.
+    /// Fetches pending compression jobs that are ready to be dispatched.
     ///
-    /// Returns [`CompressionJobStatus::Pending`] jobs whose `dispatch_time` is still not set,
-    /// ordered by ascending id. Pass `Some(n)` to cap the number of rows returned.
+    /// Returns up to `limit` [`CompressionJobStatus::Pending`] jobs that have not yet been
+    /// dispatched, ordered by ascending job ID.
     ///
     /// # Returns
     ///
@@ -457,31 +458,20 @@ impl Coordinator {
     /// Returns an error if:
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_new_job_rows(
-        &self,
-        limit: Option<usize>,
-    ) -> Result<Vec<JobRowProjection>, Error> {
+    async fn fetch_new_job_rows(&self, limit: usize) -> Result<Vec<JobRowProjection>, Error> {
         const QUERY: &str = formatcp!(
             "SELECT `id`, NULL AS `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
-             `dispatch_time` IS NULL ORDER BY `id` ASC",
-            table = COMPRESSION_JOB_TABLE_NAME,
-        );
-        const LIMITED_QUERY: &str = formatcp!(
-            "SELECT `id`, NULL AS `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
-             `dispatch_time` IS NULL ORDER BY `id` ASC LIMIT ?",
+             `dispatch_time` IS NULL ORDER BY `id` ASC LIMIT ?;",
             table = COMPRESSION_JOB_TABLE_NAME,
         );
 
-        let query = match limit {
-            Some(_) => LIMITED_QUERY,
-            None => QUERY,
-        };
-        let mut sqlx_query =
-            sqlx::query_as::<_, JobRowProjection>(query).bind(CompressionJobStatus::Pending);
-        if let Some(limit) = limit {
-            sqlx_query = sqlx_query.bind(limit as i64);
-        }
-        let rows = sqlx_query.fetch_all(&self.db_pool).await?;
+        let rows = sqlx::query_as::<_, JobRowProjection>(QUERY)
+            .bind(CompressionJobStatus::Pending)
+            .bind(i64::try_from(limit).map_err(|_| {
+                Error::InvalidConfiguration(format!("`limit` must fit in i64, got {limit}"))
+            })?)
+            .fetch_all(&self.db_pool)
+            .await?;
 
         Ok(rows)
     }
