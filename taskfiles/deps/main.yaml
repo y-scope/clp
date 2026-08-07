@@ -190,6 +190,10 @@ tasks:
           BUILD_DIR: "{{.BUILD_DIR}}"
           EXTRA_ARGS:
             - "-DANTLR4_INSTALL=ON"
+
+            # NOTE: We don't run ANTLR's tests, and its test build fetches a googletest that
+            # CMake v4+ rejects.
+            - "-DANTLR_BUILD_CPP_TESTS=OFF"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
 
@@ -249,8 +253,8 @@ tasks:
             - "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "Catch2"
-          TARBALL_SHA256: "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
-          TARBALL_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.0.tar.gz"
+          TARBALL_SHA256: "b0299ae552918220a7a6e21e7de5b714777f4e8c883fb70c4bb23fe01df8c6e3"
+          TARBALL_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.15.3.tar.gz"
 
   date:
     internal: true
@@ -262,8 +266,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "date"
-          TARBALL_SHA256: "7a390f200f0ccd207e8cff6757e04817c1a0aec3e327b006b7eb451c57ee3538"
-          TARBALL_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.tar.gz"
+          TARBALL_SHA256: "ef786edc203daec76475825640b3af247bd08e31fc52217e5ce8f76107b4bb05"
+          TARBALL_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.5.tar.gz"
 
   fmt:
     internal: true
@@ -387,8 +391,8 @@ tasks:
             - "-DINSTALL_LAYOUT=DEB"
           LIB_NAME: "mariadb-connector-cpp"
           TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
-            tags/1.1.5.tar.gz"
-          TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
+            tags/1.1.8.tar.gz"
+          TARBALL_SHA256: "e6de9acb21e3775da555f93817e180030dd33f00e98891223ebd16dad07046e5"
 
   microsoft.gsl:
     internal: true
@@ -401,13 +405,16 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DGSL_TEST=OFF"
           LIB_NAME: "{{.G_GSL_LIB_NAME}}"
-          TARBALL_SHA256: "f0e32cb10654fea91ad56bde89170d78cfbf4363ee0b01d8f097de2ba49f6ce9"
-          TARBALL_URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.0.0.tar.gz"
+          TARBALL_SHA256: "59e2a0a0ea22e8bcf9db2dc4d4bd21212ac6595748295fc27a7e02cf75eac4b5"
+          TARBALL_URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.2.2.tar.gz"
 
   mongocxx:
     internal: true
     vars:
-      VERSION: "r4.1.1"
+      VERSION: "r4.4.1"
+
+      # The version without the leading "r", for `BUILD_VERSION` below.
+      VERSION_NUMBER: "4.4.1"
     run: "once"
     cmds:
       - task: "utils:install-remote-cmake-lib"
@@ -415,14 +422,20 @@ tasks:
           CMAKE_GEN_ARGS:
             - "-DBUILD_SHARED_AND_STATIC_LIBS=ON"
             - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
+
+            # NOTE: The source tarball below omits the file the version is normally derived from.
+            - "-DBUILD_VERSION={{.VERSION_NUMBER}}"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DENABLE_SNAPPY=OFF"
             - "-DENABLE_UNINSTALL=OFF"
           LIB_NAME: "mongocxx"
-          TARBALL_SHA256: "19dff3cf834a3e09229260f22a0325820a7e30c78b294db91794dd934776b33a"
-          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
-          /mongo-cxx-driver-{{.VERSION}}.tar.gz"
+          TARBALL_SHA256: "f43d6d8d0783357d200f14b009f25f4563e6dffefd12c248cf31282a3c86157d"
+
+          # NOTE: We use the GitHub-generated source tarball since the r4.4.1 release tarball
+          # contains AppleDouble ("._*") files that break the examples' target names.
+          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/archive/refs/tags/\
+          {{.VERSION}}.tar.gz"
 
   msgpack-cxx:
     internal: true
@@ -457,12 +470,12 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DJSON_BuildTests=OFF"
           LIB_NAME: "nlohmann_json"
-          TARBALL_SHA256: "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406"
+          TARBALL_SHA256: "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187"
 
           # NOTE: We use the GitHub-generated source tarball for this version rather than the
           # release tarball, since the latter is served from githubusercontent.com which is blocked
           # by some developers' firewalls. The contents of the former are a superset of the latter.
-          TARBALL_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz"
+          TARBALL_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.12.0.tar.gz"
 
   opentelemetry-cpp:
     internal: true
@@ -531,8 +544,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "simdjson"
-          TARBALL_SHA256: "b091107844fe928158c5c2265c20360fff312889ddf7ebc4528a0f0f8f2ff9cd"
-          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v4.6.4.tar.gz"
+          TARBALL_SHA256: "1cd4c4c18263d2ae1f0cd5d4ba8b14e679b5a419ca15988a0da4cf43c514f28d"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v4.6.6.tar.gz"
 
   spdlog:
     internal: true
@@ -566,7 +579,7 @@ tasks:
       EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
       INSTALL_INCLUDE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install/include"
       INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
-      ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
+      ZIP_FILENAME_STEM: "sqlite-amalgamation-3530400"
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
     run: "once"
     deps:
@@ -575,9 +588,10 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-zip"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
+          # NOTE: sqlite.org publishes SHA3-256 hashes, so this can't be copied from its site.
+          FILE_SHA256: "1e71ddf93849c6a6ecf58b827c0692073d2dd7ee40196158068f7b29f422e87d"
           OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
-          URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
+          URL: "https://www.sqlite.org/2026/{{.ZIP_FILENAME_STEM}}.zip"
       - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
       - "rm -f '{{.INSTALL_SYMLINK}}'"
       - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
@@ -599,9 +613,9 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "6920a6a5d6a04b9a89b2a89af7132f8acefd46e0c2a7b190350539e9213816c0"
+          FILE_SHA256: "1ca68016f0abc24172998e39ce0d8f8e2b7a26f7579a0ff85d4e1b9a7aea56f8"
           OUTPUT_DIR: "{{.UTFCPP_OUTPUT_DIR}}"
-          URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
+          URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.1.1.tar.gz"
       - >-
         echo "set(
         CLP_UTFCPP_INCLUDE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
@@ -635,8 +649,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "yaml-cpp"
-          TARBALL_SHA256: "43e6a9fcb146ad871515f0d0873947e5d497a1c9c60c58cb102a97b47208b7c3"
-          TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"
+          TARBALL_SHA256: "25cb043240f828a8c51beb830569634bc7ac603978e0f69d6b63558dadefd49a"
+          TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.9.0.tar.gz"
 
   ystdlib:
     internal: true
@@ -669,8 +683,8 @@ tasks:
             - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
             - "-DZLIB_BUILD_EXAMPLES=OFF"
           LIB_NAME: "{{.LIB_NAME}}"
-          TARBALL_SHA256: "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
-          TARBALL_URL: "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz"
+          TARBALL_SHA256: "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16"
+          TARBALL_URL: "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz"
 
   zstd:
     internal: true

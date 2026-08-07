@@ -36,6 +36,9 @@ RUN if [ -n "${DNF_MIRROR_BASE_URL:-}" ]; then \
 RUN pipx uninstall cmake
 RUN pipx uninstall uv
 
+# NOTE: Source-built dependencies install into /usr/local, which some distros' pkg-config
+# doesn't search, and which libraries may resolve to either lib or lib64.
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
 RUN ./tools/scripts/lib_install/manylinux_2_28/install-all.sh || { \
         echo ""; \
         echo "==============================================================="; \
