@@ -156,27 +156,6 @@ Sets the number of Spider worker pods to deploy. Increase this value to allow mo
 concurrently.
 :::
 
-:::{confval} spider.spiderConfig.worker.extra_volumes
-:type: `list`
-:default: Chart-defined defaults
-
-Adds volumes to the Spider worker pods.
-
-When overriding this list, retain the default entries that mount the CLP configuration and staging
-directory.
-:::
-
-:::{confval} spider.spiderConfig.worker.extra_volume_mounts
-:type: `list`
-:default: Chart-defined defaults
-
-Adds the volume mounts corresponding to {confval}`spider.spiderConfig.worker.extra_volumes` to the
-Spider worker pods.
-
-When overriding this list, retain the default entries that mount the CLP configuration and staging
-directory.
-:::
-
 :::{confval} spider.spiderConfig.worker.service_account_name
 :type: `string`
 :default: The CLP `ServiceAccount`
