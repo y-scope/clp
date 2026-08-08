@@ -290,6 +290,9 @@ impl Coordinator {
 
     /// Marks the compression jobs identified by `job_ids` with the current dispatch time.
     ///
+    /// If the `dispatch_time` has already been set by the `job_handler`, we preserve the value and
+    /// skip the update. See [`S3CompressionJobHandle::persist_spider_job_id`] for details.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -305,7 +308,8 @@ impl Coordinator {
         let mut tx = self.db_pool.begin().await?;
         for chunk in job_ids.chunks(1000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
-                "UPDATE `{table}` SET `dispatch_time` = CURRENT_TIMESTAMP() WHERE `id` IN (",
+                "UPDATE `{table}` SET `dispatch_time` = COALESCE(`dispatch_time`, \
+                 CURRENT_TIMESTAMP()) WHERE `id` IN (",
                 table = COMPRESSION_JOB_TABLE_NAME,
             ));
             let mut separated_ids = query_builder.separated(", ");
