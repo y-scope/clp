@@ -453,10 +453,10 @@ mod tests {
             );
         }
 
-        assert!(builder.partitioned_task_inputs.is_empty());
+        assert_eq!(builder.partitioned_task_inputs.len(), 0);
 
         let input_sources = builder.into_task_input_sources();
-        assert!(!input_sources.is_empty());
+        assert_ne!(input_sources.len(), 0);
         assert_partition_invariants(&input_sources, &key_to_size, TARGET_ARCHIVE_SIZE);
     }
 
@@ -479,7 +479,7 @@ mod tests {
             }
         }
 
-        assert!(!builder.partitioned_task_inputs.is_empty());
+        assert_ne!(builder.partitioned_task_inputs.len(), 0);
 
         let input_sources = builder.into_task_input_sources();
         assert_partition_invariants(&input_sources, &key_to_size, TARGET_ARCHIVE_SIZE);

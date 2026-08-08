@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use async_trait::async_trait;
 use clp_rust_utils::clp_config::AwsAuthentication;
 use clp_rust_utils::clp_config::package::config::ArchiveOutput;
 use clp_rust_utils::clp_config::package::config::Config as ClpConfig;
@@ -911,7 +910,6 @@ impl ClpIngestionState {
     }
 }
 
-#[async_trait]
 impl IngestionJobState for ClpIngestionState {
     /// # NOTE
     ///
@@ -978,7 +976,6 @@ impl IngestionJobState for ClpIngestionState {
     }
 }
 
-#[async_trait]
 impl S3ScannerState for ClpIngestionState {
     /// # Errors
     ///
@@ -1021,7 +1018,6 @@ impl S3ScannerState for ClpIngestionState {
     }
 }
 
-#[async_trait]
 impl SqsListenerState for ClpIngestionState {
     /// # Errors
     ///

@@ -23,7 +23,6 @@ path = "tests/test.rs"
 [dependencies]
 anyhow = "1.0.100"
 axum = { version = "0.8.8", features = ["json"] }
-async-trait = "0.1.89"
 aws-sdk-s3 = "1.121.0"
 aws-sdk-sqs = "1.92.0"
 clap = { version = "4.5.56", features = ["derive"] }

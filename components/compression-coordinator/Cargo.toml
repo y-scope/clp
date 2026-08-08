@@ -13,7 +13,6 @@ path = "src/bin/compression_coordinator.rs"
 
 [dependencies]
 anyhow = "1.0.100"
-async-trait = "0.1.89"
 clap = { version = "4.6.4", features = ["derive"] }
 clp-rust-utils = { path = "../clp-rust-utils" }
 const_format = "0.2.35"

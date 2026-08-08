@@ -1,5 +1,6 @@
+use std::future::Future;
+
 use anyhow::Result;
-use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
@@ -19,7 +20,6 @@ impl AwsClientType for S3Client {}
 /// # Type Parameters:
 ///
 /// * [`Client`]: The AWS SKD client type. Must implement the [`AwsClientType`].
-#[async_trait]
 pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + Clone + 'static {
     /// Retrieves an AWS client instance. The specific behavior depends on the implementation.
     ///
@@ -30,7 +30,7 @@ pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + Clone + 'st
     /// # Errors:
     ///
     /// Returns an [`anyhow::Error`] on failure.
-    async fn get(&self) -> Result<Client>;
+    fn get(&self) -> impl Future<Output = Result<Client>> + Send;
 }
 
 /// A simple wrapper around an `SqsClient` that implements the `AwsClientManagerType` trait.
@@ -39,10 +39,9 @@ pub struct SqsClientWrapper {
     client: SqsClient,
 }
 
-#[async_trait]
 impl AwsClientManagerType<SqsClient> for SqsClientWrapper {
-    async fn get(&self) -> Result<SqsClient> {
-        Ok(self.client.clone())
+    fn get(&self) -> impl Future<Output = Result<SqsClient>> + Send {
+        std::future::ready(Ok(self.client.clone()))
     }
 }
 
@@ -65,10 +64,9 @@ pub struct S3ClientWrapper {
     client: S3Client,
 }
 
-#[async_trait]
 impl AwsClientManagerType<S3Client> for S3ClientWrapper {
-    async fn get(&self) -> Result<S3Client> {
-        Ok(self.client.clone())
+    fn get(&self) -> impl Future<Output = Result<S3Client>> + Send {
+        std::future::ready(Ok(self.client.clone()))
     }
 }
 

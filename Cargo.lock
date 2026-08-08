@@ -1015,7 +1015,6 @@ name = "compression-coordinator"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
- "async-trait",
  "clap",
  "clp-rust-utils",
  "const_format",
@@ -2451,7 +2450,6 @@ name = "log-ingestor"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
- "async-trait",
  "aws-sdk-s3",
  "aws-sdk-sqs",
  "axum",

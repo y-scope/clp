@@ -5,7 +5,6 @@ mod spider;
 
 use std::time::Duration;
 
-use async_trait::async_trait;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::S3InputSource;
@@ -31,7 +30,6 @@ pub enum CompressionJobOutcome {
 }
 
 /// Drives CLP S3 compression jobs on a Spider (Huntsman) cluster.
-#[async_trait]
 pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
     /// Builds the compression task graph for `input_sources` and registers it with Spider, without
     /// starting it.
@@ -54,7 +52,7 @@ pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
     /// # Errors
     ///
     /// Implementations must document their error conditions.
-    async fn submit_s3_compression_job(
+    fn submit_s3_compression_job(
         &self,
         compression_job_id: CompressionJobId,
         resource_group_id: ResourceGroupId,
@@ -62,7 +60,7 @@ pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
         dataset: Option<String>,
         input_sources: Vec<(S3InputSource, ExecutionPolicy)>,
         commit_task_execution_policy: ExecutionPolicy,
-    ) -> Result<JobId, Error>;
+    ) -> impl Future<Output = Result<JobId, Error>> + Send;
 
     /// Idempotently starts the job identified by `spider_job_id` (only if it hasn't already been
     /// started) and waits until it reaches a terminal state.
@@ -83,10 +81,10 @@ pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
     /// # Errors
     ///
     /// Implementations must document their error conditions.
-    async fn run_s3_compression_job_to_completion(
+    fn run_s3_compression_job_to_completion(
         &self,
         spider_job_id: JobId,
         initial_poll_backoff: Duration,
         max_poll_backoff: Duration,
-    ) -> Result<CompressionJobOutcome, Error>;
+    ) -> impl Future<Output = Result<CompressionJobOutcome, Error>> + Send;
 }

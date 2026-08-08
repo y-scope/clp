@@ -1,5 +1,6 @@
+use std::future::Future;
+
 use anyhow::Result;
-use async_trait::async_trait;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use sqlx::FromRow;
 
@@ -10,7 +11,6 @@ pub struct CompressionBufferEntry {
     pub size: u64,
 }
 
-#[async_trait]
 /// A trait for submitting buffered object metadata for processing.
 pub trait BufferSubmitter {
     /// Submits the buffered object metadata for processing.
@@ -22,7 +22,7 @@ pub trait BufferSubmitter {
     /// # Errors:
     ///
     /// Returns an [`anyhow::Error`] on failure.
-    async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()>;
+    fn submit(&self, buffer: &[S3ObjectMetadataId]) -> impl Future<Output = Result<()>> + Send;
 }
 
 /// A buffer that accumulates object metadata IDs and submits when the size threshold is reached.

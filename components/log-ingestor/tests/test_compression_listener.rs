@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use async_trait::async_trait;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use log_ingestor::compression::Buffer;
 use log_ingestor::compression::BufferSubmitter;
@@ -32,7 +31,6 @@ impl TestBufferSubmitter {
     }
 }
 
-#[async_trait]
 impl BufferSubmitter for TestBufferSubmitter {
     async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()> {
         self.store.lock().await.push(buffer.to_vec());

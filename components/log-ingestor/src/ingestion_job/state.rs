@@ -1,9 +1,9 @@
-use async_trait::async_trait;
+use std::future::Future;
+
 use clp_rust_utils::s3::ObjectMetadata;
 use tokio::sync::mpsc;
 
 /// An abstract, job-type-agnostic layer for managing ingestion job states.
-#[async_trait]
 pub trait IngestionJobState: Send + Sync + Clone + 'static {
     /// Starts the ingestion job.
     ///
@@ -15,7 +15,7 @@ pub trait IngestionJobState: Send + Sync + Clone + 'static {
     ///
     /// Implementations **must document** the specific error variants they may return and the
     /// conditions under which those errors occur.
-    async fn start(&self) -> anyhow::Result<()>;
+    fn start(&self) -> impl Future<Output = anyhow::Result<()>> + Send;
 
     /// Ends the ingestion job.
     ///
@@ -27,7 +27,7 @@ pub trait IngestionJobState: Send + Sync + Clone + 'static {
     ///
     /// Implementations **must document** the specific error variants they may return and the
     /// conditions under which those errors occur.
-    async fn end(&self) -> anyhow::Result<()>;
+    fn end(&self) -> impl Future<Output = anyhow::Result<()>> + Send;
 
     /// Fails the ingestion job.
     ///
@@ -40,11 +40,10 @@ pub trait IngestionJobState: Send + Sync + Clone + 'static {
     /// Implementations should not propagate errors produced while failing the job. If an error
     /// occurs, it should be logged and otherwise ignored, so the caller can prioritize propagating
     /// the *original* error that triggered the failure over any secondary error from this method.
-    async fn fail(&self, msg: String);
+    fn fail(&self, msg: String) -> impl Future<Output = ()> + Send;
 }
 
 /// An abstract layer for managing [`crate::ingestion_job::SqsListener`] states.
-#[async_trait]
 pub trait SqsListenerState: Send + Sync + Clone + 'static {
     /// Ingests the given object metadata into CLP and marks them as `Buffered`.
     ///
@@ -60,11 +59,13 @@ pub trait SqsListenerState: Send + Sync + Clone + 'static {
     ///
     /// Implementations **must document** the specific error variants they may return and the
     /// conditions under which those errors occur.
-    async fn ingest(&self, objects: Vec<ObjectMetadata>) -> anyhow::Result<()>;
+    fn ingest(
+        &self,
+        objects: Vec<ObjectMetadata>,
+    ) -> impl Future<Output = anyhow::Result<()>> + Send;
 }
 
 /// An abstract layer for managing [`crate::ingestion_job::S3Scanner`] states.
-#[async_trait]
 pub trait S3ScannerState: Send + Sync + Clone + 'static {
     /// Ingests the given object metadata into CLP and marks them as `Buffered`.
     ///
@@ -81,11 +82,11 @@ pub trait S3ScannerState: Send + Sync + Clone + 'static {
     ///
     /// Implementations **must document** the specific error variants they may return and the
     /// conditions under which those errors occur.
-    async fn ingest(
+    fn ingest(
         &self,
         objects: Vec<ObjectMetadata>,
         last_ingested_key: &str,
-    ) -> anyhow::Result<()>;
+    ) -> impl Future<Output = anyhow::Result<()>> + Send;
 }
 
 /// An ingestion job state implementation that has no fault-tolerance.
@@ -101,20 +102,20 @@ impl ZeroFaultToleranceIngestionJobState {
     }
 }
 
-#[async_trait]
 impl IngestionJobState for ZeroFaultToleranceIngestionJobState {
-    async fn start(&self) -> anyhow::Result<()> {
-        Ok(())
+    fn start(&self) -> impl Future<Output = anyhow::Result<()>> + Send {
+        std::future::ready(Ok(()))
     }
 
-    async fn end(&self) -> anyhow::Result<()> {
-        Ok(())
+    fn end(&self) -> impl Future<Output = anyhow::Result<()>> + Send {
+        std::future::ready(Ok(()))
     }
 
-    async fn fail(&self, _msg: String) {}
+    fn fail(&self, _msg: String) -> impl Future<Output = ()> + Send {
+        std::future::ready(())
+    }
 }
 
-#[async_trait]
 impl SqsListenerState for ZeroFaultToleranceIngestionJobState {
     /// # Errors
     ///
@@ -127,7 +128,6 @@ impl SqsListenerState for ZeroFaultToleranceIngestionJobState {
     }
 }
 
-#[async_trait]
 impl S3ScannerState for ZeroFaultToleranceIngestionJobState {
     /// # Errors
     ///

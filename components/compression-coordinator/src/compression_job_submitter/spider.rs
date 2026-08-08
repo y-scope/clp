@@ -2,7 +2,6 @@
 
 use std::time::Duration;
 
-use async_trait::async_trait;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::S3InputSource;
@@ -24,7 +23,6 @@ use crate::compression_job_submitter::CompressionJobOutcome;
 use crate::compression_job_submitter::S3CompressionJobSubmitter;
 use crate::error::Error;
 
-#[async_trait]
 impl S3CompressionJobSubmitter for SpiderClient {
     /// # Errors
     ///

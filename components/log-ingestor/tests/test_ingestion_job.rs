@@ -1,9 +1,9 @@
+use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
-use async_trait::async_trait;
 use clp_rust_utils::clp_config::AwsAuthentication;
 use clp_rust_utils::clp_config::AwsCredentials;
 use clp_rust_utils::job_config::ingestion::s3::BaseConfig;
@@ -50,14 +50,13 @@ impl SqsListenerTestState {
     }
 }
 
-#[async_trait]
 impl IngestionJobState for SqsListenerTestState {
-    async fn start(&self) -> Result<()> {
-        Ok(())
+    fn start(&self) -> impl Future<Output = Result<()>> + Send {
+        std::future::ready(Ok(()))
     }
 
-    async fn end(&self) -> Result<()> {
-        Ok(())
+    fn end(&self) -> impl Future<Output = Result<()>> + Send {
+        std::future::ready(Ok(()))
     }
 
     async fn fail(&self, msg: String) {
@@ -65,7 +64,6 @@ impl IngestionJobState for SqsListenerTestState {
     }
 }
 
-#[async_trait]
 impl SqsListenerState for SqsListenerTestState {
     async fn ingest(&self, objects: Vec<ObjectMetadata>) -> Result<()> {
         self.shared_ingested_buffer.lock().await.extend(objects);
@@ -88,14 +86,13 @@ impl S3ScannerTestState {
     }
 }
 
-#[async_trait]
 impl IngestionJobState for S3ScannerTestState {
-    async fn start(&self) -> Result<()> {
-        Ok(())
+    fn start(&self) -> impl Future<Output = Result<()>> + Send {
+        std::future::ready(Ok(()))
     }
 
-    async fn end(&self) -> Result<()> {
-        Ok(())
+    fn end(&self) -> impl Future<Output = Result<()>> + Send {
+        std::future::ready(Ok(()))
     }
 
     async fn fail(&self, msg: String) {
@@ -103,7 +100,6 @@ impl IngestionJobState for S3ScannerTestState {
     }
 }
 
-#[async_trait]
 impl S3ScannerState for S3ScannerTestState {
     async fn ingest(
         &self,

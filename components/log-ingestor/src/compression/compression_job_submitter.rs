@@ -1,5 +1,6 @@
+use std::future::Future;
+
 use anyhow::Result;
-use async_trait::async_trait;
 use clp_rust_utils::clp_config::AwsAuthentication;
 use clp_rust_utils::clp_config::S3Config;
 use clp_rust_utils::clp_config::package::config::ArchiveOutput;
@@ -27,23 +28,27 @@ pub struct CompressionJobSubmitter {
     state: ClpCompressionState,
 }
 
-#[async_trait]
 impl BufferSubmitter for CompressionJobSubmitter {
-    async fn submit(&self, buffer: &[S3ObjectMetadataId]) -> Result<()> {
+    fn submit(&self, buffer: &[S3ObjectMetadataId]) -> impl Future<Output = Result<()>> + Send {
         let mut io_config = self.io_config_template.clone();
-        match &mut io_config.input {
-            InputConfig::S3ObjectMetadataInputConfig { config } => {
-                config.s3_object_metadata_ids = buffer.to_vec();
-            }
-            InputConfig::S3InputConfig { .. } => {
-                unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
-            }
-        }
+        let object_metadata_ids = buffer.to_vec();
         let state = self.state.clone();
-        tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
-            state, io_config,
-        ));
-        Ok(())
+        async move {
+            match &mut io_config.input {
+                InputConfig::S3ObjectMetadataInputConfig { config } => {
+                    config.s3_object_metadata_ids = object_metadata_ids;
+                }
+                InputConfig::S3InputConfig { .. } => {
+                    unreachable!(
+                        "log-ingestor compression only supports `S3ObjectMetadataInputConfig`"
+                    )
+                }
+            }
+            tokio::spawn(submit_clp_compression_job_and_wait_for_completion(
+                state, io_config,
+            ));
+            Ok(())
+        }
     }
 }
 
