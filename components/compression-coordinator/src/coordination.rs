@@ -19,6 +19,7 @@ use spider_core::task::TimeoutPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
 use tokio::select;
+use tokio::sync::Semaphore;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Endpoint;
@@ -34,17 +35,16 @@ pub struct Coordinator {
     db_pool: sqlx::MySqlPool,
     db_config: DatabaseConfig,
     spider_option: Arc<SpiderOption>,
-    is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
+    job_handler_sem: Arc<Semaphore>,
 }
 
 impl Coordinator {
     /// Factory function.
     ///
-    /// On construction, this recovers compression jobs that a previous coordinator instance had
-    /// already submitted to Spider (those still [`CompressionJobStatus::Running`] with a Spider job
-    /// ID) by spawning a detached handle to drive each one to completion.
+    /// On construction, this begins recovering all compression jobs left behind by a previous
+    /// coordinator instance — see [`Self::recover_previous_jobs`] for details.
     ///
     /// # Returns
     ///
@@ -57,16 +57,25 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::InvalidConfiguration`] if the compression coordinator configuration is invalid.
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
     /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
     /// * Forwards [`get_or_create_resource_group_id`]'s return values on failure.
-    /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
+    /// * Forwards [`Self::recover_previous_jobs`]'s return values on failure.
     pub async fn new(
         coordinator_config: &CoordinatorConfig,
         spider_config: &SpiderConfig,
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
     ) -> Result<(Self, CancellationToken), Error> {
+        let max_concurrent_jobs = coordinator_config.max_concurrent_jobs.get();
+        if max_concurrent_jobs > Semaphore::MAX_PERMITS {
+            return Err(Error::InvalidConfiguration(format!(
+                "`max_concurrent_jobs` must not exceed {}, got {max_concurrent_jobs}",
+                Semaphore::MAX_PERMITS,
+            )));
+        }
+
         let spider_host = spider_config.host.as_str();
         let spider_port = spider_config.port;
         let endpoint_str = format!("http://{spider_host}:{spider_port}");
@@ -123,45 +132,30 @@ impl Coordinator {
             db_pool,
             db_config,
             spider_option,
-            is_first_fetch: true,
             job_polling_interval: Duration::from_millis(
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
             cancellation_token: cancellation_token.clone(),
+            job_handler_sem: Arc::new(Semaphore::new(max_concurrent_jobs)),
         };
 
-        for (job_id, spider_job_id, clp_io_config) in
-            coordinator.fetch_submitted_running_jobs().await?
-        {
-            tracing::info!(
-                job_id = % job_id,
-                spider_job_id = % spider_job_id,
-                "Recovering a previously submitted job."
-            );
-            let Ok(job_handle) = coordinator.create_job_handle(job_id, clp_io_config).await else {
-                continue;
-            };
-            tokio::spawn(async move {
-                let _ = job_handle.recover(spider_job_id).await.inspect_err(|e| {
-                    tracing::error!(
-                        error = % e,
-                        job_id = % job_id,
-                        spider_job_id = % spider_job_id,
-                        "The recovered compression job failed."
-                    );
-                });
-            });
-        }
+        coordinator.recover_previous_jobs().await?;
 
         Ok((coordinator, cancellation_token))
     }
 
-    /// Runs the coordinator's poll loop until cancelled.
+    /// Runs the coordinator's polling loop until cancelled.
     ///
-    /// On each iteration, this method fetches the pending compression jobs, spawns a detached
-    /// handle to drive each one, and then sleeps until the next poll or until the cancellation
-    /// token is triggered. The jobs dispatched in the iteration are marked once the sleep elapses,
-    /// so their update does not contend with concurrent job submissions during the poll interval.
+    /// Each polling iteration consists of three phases:
+    ///
+    /// 1. Schedule pending compression jobs up to the available concurrency limit.
+    /// 2. Wait until the next polling interval or until cancellation.
+    /// 3. Mark the scheduled jobs as dispatched.
+    ///
+    /// `dispatch_time` marks jobs that have already been dispatched by the current coordinator,
+    /// preventing them from being dispatched again before their handlers persist the `Running`
+    /// state. These updates are batched and applied after the polling interval to reduce
+    /// contention with the handlers' `Running` state updates.
     ///
     /// # Errors
     ///
@@ -169,7 +163,7 @@ impl Coordinator {
     ///
     /// * Forwards [`Self::schedule_new_jobs`]'s return values on failure.
     /// * Forwards [`Self::mark_jobs_dispatched`]'s return values on failure.
-    pub async fn run(mut self) -> Result<(), Error> {
+    pub async fn run(self) -> Result<(), Error> {
         let cancellation_token = self.cancellation_token.clone();
         loop {
             let now = Instant::now();
@@ -204,6 +198,70 @@ impl Coordinator {
         Ok(())
     }
 
+    /// Recovers compression jobs left over from a previous coordinator instance.
+    ///
+    /// Picks up jobs in two states:
+    ///
+    /// * [`CompressionJobStatus::Running`] rows with a Spider job ID — the previous coordinator
+    ///   submitted them to Spider and the handler is resumed via
+    ///   [`S3CompressionJobHandle::recover`].
+    /// * [`CompressionJobStatus::Pending`] rows whose `dispatch_time` is populated — the previous
+    ///   coordinator claimed them but died before the handler's `Running` write landed, so they are
+    ///   re-dispatched via [`S3CompressionJobHandle::run`].
+    ///
+    /// Each job is spawned as a detached handler. There is no concurrency limit for recovery, so
+    /// the number of recovered jobs may temporarily exceed the configured limit if the coordinator
+    /// is restarted with a lower limit.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
+    /// * Forwards [`Self::fetch_dispatched_pending_jobs`]'s return values on failure.
+    async fn recover_previous_jobs(&self) -> Result<(), Error> {
+        let mut recovery_rows = self.fetch_submitted_running_jobs().await?;
+        recovery_rows.extend(self.fetch_dispatched_pending_jobs().await?);
+
+        for row in recovery_rows {
+            let job_id = row.id;
+            let spider_job_id = row.spider_job_id;
+            let Some(clp_io_config) = self
+                .try_deserialize_clp_io_config(job_id, &row.serialized_clp_io_config)
+                .await
+            else {
+                continue;
+            };
+
+            tracing::info!(
+                job_id = % job_id,
+                spider_job_id = ? spider_job_id,
+                "Recovering a previously submitted job."
+            );
+            let Some(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
+                continue;
+            };
+
+            let permit = self.job_handler_sem.clone().try_acquire_owned().ok();
+            tokio::spawn(async move {
+                let _permit = permit;
+                let result = match spider_job_id {
+                    Some(id) => job_handle.recover(id).await,
+                    None => job_handle.run().await,
+                };
+                if let Err(e) = result {
+                    tracing::error!(
+                        error = % e,
+                        job_id = % job_id,
+                        "The recovered compression job failed."
+                    );
+                }
+            });
+        }
+
+        Ok(())
+    }
+
     /// Marks the compression job identified by `job_id` as [`CompressionJobStatus::Failed`].
     ///
     /// This is a best-effort update; if it fails, the error is logged and otherwise ignored.
@@ -229,13 +287,9 @@ impl Coordinator {
         }
     }
 
-    /// Fetches the pending compression jobs and spawns a detached handle to drive each one.
-    ///
-    ///
-    /// A job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`] and
-    /// skipped; a job whose handle cannot be constructed is skipped as well (and marked
-    /// [`CompressionJobStatus::Failed`] unless its input config is unsupported, in which case it is
-    /// left for the legacy Celery-based compression scheduler).
+    /// Fetches up to the configured concurrency limit of pending jobs and spawns a detached
+    /// handler for each. Jobs with invalid configurations or whose handles cannot be constructed
+    /// are marked with failure and skipped.
     ///
     /// # Returns
     ///
@@ -246,36 +300,42 @@ impl Coordinator {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
-    async fn schedule_new_jobs(&mut self) -> Result<Vec<CompressionJobId>, Error> {
-        let new_job_rows = self.fetch_new_job_rows().await.inspect_err(|e| {
-            tracing::error!(error = % e, "Failed to fetch new jobs from database.");
-        })?;
-        let dispatched_job_ids: Vec<CompressionJobId> =
-            new_job_rows.iter().map(|row| row.id).collect();
+    async fn schedule_new_jobs(&self) -> Result<Vec<CompressionJobId>, Error> {
+        let available_permits = self.job_handler_sem.available_permits();
+        if available_permits == 0 {
+            return Ok(Vec::new());
+        }
+
+        let new_job_rows = self
+            .fetch_new_job_rows(available_permits)
+            .await
+            .inspect_err(|e| {
+                tracing::error!(error = % e, "Failed to fetch new jobs from database.");
+            })?;
+
+        let mut dispatched_job_ids = Vec::with_capacity(new_job_rows.len());
         for job_row in new_job_rows {
+            let Ok(permit) = self.job_handler_sem.clone().try_acquire_owned() else {
+                break;
+            };
+
             let job_id = job_row.id;
-            let clp_io_config: ClpIoConfig =
-                match BrotliMsgpack::deserialize(&job_row.serialized_clp_io_config) {
-                    Ok(clp_io_config) => clp_io_config,
-                    Err(e) => {
-                        tracing::error!(
-                            error = % e,
-                            job_id = % job_id,
-                            "Failed to deserialize CLP I/O config. Skipping."
-                        );
-                        self.mark_job_failed(
-                            job_id,
-                            &format!("Failed to deserialize CLP I/O config: {e}"),
-                        )
-                        .await;
-                        continue;
-                    }
-                };
-            tracing::info!(job_id = % job_id, "Scheduling new job.");
-            let Ok(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
+            dispatched_job_ids.push(job_id);
+
+            let Some(clp_io_config) = self
+                .try_deserialize_clp_io_config(job_id, &job_row.serialized_clp_io_config)
+                .await
+            else {
                 continue;
             };
+
+            tracing::info!(job_id = % job_id, "Scheduling new job.");
+            let Some(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
+                continue;
+            };
+
             tokio::spawn(async move {
+                let _permit = permit;
                 let _ = job_handle.run().await.inspect_err(|e| {
                     tracing::error!(
                         error = % e,
@@ -289,6 +349,9 @@ impl Coordinator {
     }
 
     /// Marks the compression jobs identified by `job_ids` with the current dispatch time.
+    ///
+    /// If the `dispatch_time` has already been set by the `job_handler`, we preserve the value and
+    /// skip the update. See [`S3CompressionJobHandle::persist_spider_job_id`] for details.
     ///
     /// # Errors
     ///
@@ -305,7 +368,8 @@ impl Coordinator {
         let mut tx = self.db_pool.begin().await?;
         for chunk in job_ids.chunks(1000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
-                "UPDATE `{table}` SET `dispatch_time` = CURRENT_TIMESTAMP() WHERE `id` IN (",
+                "UPDATE `{table}` SET `dispatch_time` = COALESCE(`dispatch_time`, \
+                 CURRENT_TIMESTAMP()) WHERE `id` IN (",
                 table = COMPRESSION_JOB_TABLE_NAME,
             ));
             let mut separated_ids = query_builder.separated(", ");
@@ -322,24 +386,19 @@ impl Coordinator {
 
     /// Constructs an [`S3CompressionJobHandle`] for the given job.
     ///
-    /// A construction failure is logged, and the job is marked [`CompressionJobStatus::Failed`] for
-    /// any failure other than an unsupported input config, which is only warned and left for
-    /// another handler.
+    /// On failure, logs the error and marks the compression job as
+    /// [`CompressionJobStatus::Failed`], except for [`Error::UnsupportedInputConfig`], which is
+    /// only logged as a warning and left pending for the legacy Celery-based compression
+    /// scheduler.
     ///
     /// # Returns
     ///
-    /// The constructed [`S3CompressionJobHandle`] on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`S3CompressionJobHandle::new`]'s return values on failure.
+    /// The constructed [`S3CompressionJobHandle`] on success, or `None` if construction failed.
     async fn create_job_handle(
         &self,
         job_id: CompressionJobId,
         clp_io_config: ClpIoConfig,
-    ) -> Result<S3CompressionJobHandle<SpiderClient>, Error> {
+    ) -> Option<S3CompressionJobHandle<SpiderClient>> {
         let result = S3CompressionJobHandle::new(
             self.db_pool.clone(),
             self.db_config.clone(),
@@ -371,15 +430,13 @@ impl Coordinator {
             }
         }
 
-        result
+        result.ok()
     }
 
-    /// Fetches the pending compression jobs to dispatch.
+    /// Fetches pending compression jobs that are ready to be dispatched.
     ///
-    /// The first fetch after startup returns every [`CompressionJobStatus::Pending`] job so that
-    /// jobs a previous coordinator instance had already dispatched but not started are
-    /// re-dispatched. Every subsequent fetch returns only [`CompressionJobStatus::Pending`] jobs
-    /// whose dispatch time is still not set.
+    /// Returns up to `limit` [`CompressionJobStatus::Pending`] jobs that have not yet been
+    /// dispatched, ordered by ascending job ID.
     ///
     /// # Returns
     ///
@@ -391,24 +448,74 @@ impl Coordinator {
     /// Returns an error if:
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_new_job_rows(&mut self) -> Result<Vec<PendingJobRowProjection>, Error> {
-        const FIRST_FETCH_QUERY: &str = formatcp!(
-            "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? ORDER BY `id` ASC;",
-            table = COMPRESSION_JOB_TABLE_NAME,
-        );
-        const SUBSEQUENT_FETCH_QUERY: &str = formatcp!(
-            "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? AND `dispatch_time` IS \
-             NULL ORDER BY `id` ASC;",
+    async fn fetch_new_job_rows(&self, limit: usize) -> Result<Vec<JobRowProjection>, Error> {
+        const QUERY: &str = formatcp!(
+            "SELECT `id`, NULL AS `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
+             `dispatch_time` IS NULL ORDER BY `id` ASC LIMIT ?;",
             table = COMPRESSION_JOB_TABLE_NAME,
         );
 
-        let query = if self.is_first_fetch {
-            self.is_first_fetch = false;
-            FIRST_FETCH_QUERY
-        } else {
-            SUBSEQUENT_FETCH_QUERY
-        };
-        let rows = sqlx::query_as::<_, PendingJobRowProjection>(query)
+        let rows = sqlx::query_as::<_, JobRowProjection>(QUERY)
+            .bind(CompressionJobStatus::Pending)
+            .bind(i64::try_from(limit).map_err(|_| {
+                Error::InvalidConfiguration(format!("`limit` must fit in i64, got {limit}"))
+            })?)
+            .fetch_all(&self.db_pool)
+            .await?;
+
+        Ok(rows)
+    }
+
+    /// Fetches jobs that are still in [`CompressionJobStatus::Running`] and were submitted by a
+    /// previous compression coordinator instance.
+    ///
+    /// # Returns
+    ///
+    /// A vector of raw rows projected from the compression job table on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
+    async fn fetch_submitted_running_jobs(&self) -> Result<Vec<JobRowProjection>, Error> {
+        const QUERY: &str = formatcp!(
+            "SELECT `id`, `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
+             `spider_id` IS NOT NULL;",
+            table = COMPRESSION_JOB_TABLE_NAME,
+        );
+
+        let rows = sqlx::query_as::<_, JobRowProjection>(QUERY)
+            .bind(CompressionJobStatus::Running)
+            .fetch_all(&self.db_pool)
+            .await?;
+
+        Ok(rows)
+    }
+
+    /// Fetches pending jobs that were dispatched by a previous coordinator instance.
+    ///
+    /// These jobs have a `dispatch_time` but remain [`CompressionJobStatus::Pending`], indicating
+    /// that their handlers did not successfully persist the `Running` state and therefore have
+    /// not begun processing.
+    ///
+    /// # Returns
+    ///
+    /// A vector of raw rows projected from the compression job table on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
+    async fn fetch_dispatched_pending_jobs(&self) -> Result<Vec<JobRowProjection>, Error> {
+        const QUERY: &str = formatcp!(
+            "SELECT `id`, NULL AS `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
+             `dispatch_time` IS NOT NULL;",
+            table = COMPRESSION_JOB_TABLE_NAME,
+        );
+
+        let rows = sqlx::query_as::<_, JobRowProjection>(QUERY)
             .bind(CompressionJobStatus::Pending)
             .fetch_all(&self.db_pool)
             .await?;
@@ -416,81 +523,44 @@ impl Coordinator {
         Ok(rows)
     }
 
-    /// Fetches jobs that are still in [`CompressionJobStatus::Running`] and were previously
-    /// submitted by the compression coordinator.
-    ///
-    /// A running job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`]
-    /// and skipped.
+    /// Deserializes `serialized_config` as a [`ClpIoConfig`], logging any failure and marking the
+    /// compression job as [`CompressionJobStatus::Failed`].
     ///
     /// # Returns
     ///
-    /// A vector of tuples on success, each tuple containing:
-    ///
-    /// * The compression job ID.
-    /// * The Spider job ID.
-    /// * The IO config of the compression job.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_submitted_running_jobs(
+    /// The deserialized [`ClpIoConfig`] on success, or `None` if deserialization failed.
+    async fn try_deserialize_clp_io_config(
         &self,
-    ) -> Result<Vec<(CompressionJobId, SpiderJobId, ClpIoConfig)>, Error> {
-        const QUERY: &str = formatcp!(
-            "SELECT `id`, `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
-             `spider_id` IS NOT NULL;",
-            table = COMPRESSION_JOB_TABLE_NAME,
-        );
-
-        let mut recovery_context = Vec::new();
-        for row in sqlx::query_as::<_, RunningJobRowProjection>(QUERY)
-            .bind(CompressionJobStatus::Running)
-            .fetch_all(&self.db_pool)
-            .await?
-        {
-            let clp_io_config: ClpIoConfig =
-                match BrotliMsgpack::deserialize(&row.serialized_clp_io_config) {
-                    Ok(clp_io_config) => clp_io_config,
-                    Err(e) => {
-                        tracing::error!(
-                            error = % e,
-                            job_id = % row.id,
-                            "Failed to deserialize CLP I/O config of a running job. The database \
-                             might be corrupted. Skipping."
-                        );
-                        self.mark_job_failed(
-                            row.id,
-                            &format!("Failed to deserialize CLP I/O config: {e}"),
-                        )
-                        .await;
-                        continue;
-                    }
-                };
-            recovery_context.push((row.id, row.spider_job_id, clp_io_config));
+        job_id: CompressionJobId,
+        serialized_config: &[u8],
+    ) -> Option<ClpIoConfig> {
+        match BrotliMsgpack::deserialize(serialized_config) {
+            Ok(clp_io_config) => Some(clp_io_config),
+            Err(e) => {
+                tracing::error!(
+                    error = % e,
+                    job_id = % job_id,
+                    "Failed to deserialize CLP I/O config. Skipping."
+                );
+                self.mark_job_failed(
+                    job_id,
+                    &format!("Failed to deserialize CLP I/O config: {e}"),
+                )
+                .await;
+                None
+            }
         }
-
-        Ok(recovery_context)
     }
 }
 
 const COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 
-/// A projection of the columns read from a [`CompressionJobStatus::Pending`] compression job row.
+/// A projection of the columns read from a compression job row.
 #[derive(Debug, sqlx::FromRow)]
-struct PendingJobRowProjection {
-    id: CompressionJobId,
-    #[sqlx(rename = "clp_config")]
-    serialized_clp_io_config: Vec<u8>,
-}
-
-/// A projection of the columns read from a [`CompressionJobStatus::Running`] compression job row.
-#[derive(Debug, sqlx::FromRow)]
-struct RunningJobRowProjection {
+struct JobRowProjection {
     id: CompressionJobId,
     #[sqlx(rename = "spider_id")]
-    spider_job_id: SpiderJobId,
+    spider_job_id: Option<SpiderJobId>,
     #[sqlx(rename = "clp_config")]
     serialized_clp_io_config: Vec<u8>,
 }

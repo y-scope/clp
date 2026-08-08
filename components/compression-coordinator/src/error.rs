@@ -20,6 +20,9 @@ pub enum Error {
         field: &'static str,
     },
 
+    #[error("invalid configuration: {0}")]
+    InvalidConfiguration(String),
+
     #[error("invalid dataset: {0}")]
     InvalidDataset(String),
 
