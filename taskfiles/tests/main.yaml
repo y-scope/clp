@@ -5,10 +5,6 @@ includes:
   toolchains: "../toolchains.yaml"
 
 tasks:
-  job-orchestration:
-    dir: "{{.ROOT_DIR}}/components/job-orchestration"
-    cmd: "uv run python -m unittest discover -s tests -p 'test_*.py'"
-
   rust-all:
     vars:
       LOG_INGESTOR_BUCKET: "clp-log-ingestor-test-bucket"

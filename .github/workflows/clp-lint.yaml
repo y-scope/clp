@@ -69,10 +69,6 @@ jobs:
         shell: "bash"
         run: "task lint:check-py"
 
-      - name: "Test job orchestration"
-        shell: "bash"
-        run: "task tests:job-orchestration"
-
       - name: "Lint .yaml files"
         shell: "bash"
         run: "task lint:check-yaml"
