@@ -60,6 +60,9 @@ pub enum Error {
     #[error("sqlx error: {0}")]
     Sqlx(#[from] sqlx::Error),
 
+    #[error("semaphore error: {0}")]
+    Semaphore(String),
+
     /// Failed to build or serialize the compression task graph.
     #[error("failed to build the compression task graph: {0}")]
     TaskGraph(#[from] spider_core::task::Error),
