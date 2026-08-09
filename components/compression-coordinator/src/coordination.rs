@@ -350,9 +350,6 @@ impl Coordinator {
 
     /// Marks the compression jobs identified by `job_ids` with the current dispatch time.
     ///
-    /// If the `dispatch_time` has already been set by the `job_handler`, we preserve the value and
-    /// skip the update. See [`S3CompressionJobHandle::persist_spider_job_id`] for details.
-    ///
     /// # Errors
     ///
     /// Returns an error if:
