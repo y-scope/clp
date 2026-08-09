@@ -5,7 +5,6 @@ if(CLP_BUILD_UTILS_PROFILING)
             utils_profiling
             PRIVATE
             Profiler.cpp
-            Sink.cpp
     )
     target_sources(
             utils_profiling
@@ -16,7 +15,6 @@ if(CLP_BUILD_UTILS_PROFILING)
             FILES
             Profiler.hpp
             Reporter.hpp
-            Sink.hpp
             ScopedProfiler.hpp
             Stopwatch.hpp
     )

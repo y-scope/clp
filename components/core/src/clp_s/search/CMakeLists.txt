@@ -25,7 +25,6 @@ set(
         SearchTelemetry.hpp
         TelemetryContext.cpp
         TelemetryContext.hpp
-        TelemetryProfilerSink.hpp
 )
 
 if(CLP_BUILD_CLP_S_SEARCH)

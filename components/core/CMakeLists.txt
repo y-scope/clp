@@ -661,7 +661,7 @@ set(SOURCE_FILES_unitTest
         src/utils/profiling/test/test_Profiler.cpp
         src/utils/profiling/test/test_Reporter.cpp
         src/utils/profiling/test/test_ScopedProfiler.cpp
-        src/utils/profiling/test/sinks.hpp
+        src/utils/profiling/test/emitters.hpp
         tests/LogSuppressor.hpp
         tests/MockLogTypeDictionary.hpp
         tests/MockVariableDictionary.hpp

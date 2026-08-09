@@ -13,7 +13,6 @@
 #include <string_utils/string_utils.hpp>
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
-#include <utils/profiling/Sink.hpp>
 
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"
@@ -586,7 +585,7 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    utils::profiling::Reporter<utils::profiling::SpdlogSink> const profiler_reporter{"clo"};
+    utils::profiling::Reporter const profiler_reporter{"clo", utils::profiling::SpdlogEmitter{}};
     clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clo");

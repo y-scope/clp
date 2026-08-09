@@ -10,7 +10,6 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
-#include <utils/profiling/Sink.hpp>
 
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
@@ -35,7 +34,7 @@ int run(int argc, char const* argv[]) {
         return -1;
     }
 
-    utils::profiling::Reporter<utils::profiling::SpdlogSink> const profiler_reporter{"clp"};
+    utils::profiling::Reporter const profiler_reporter{"clp", utils::profiling::SpdlogEmitter{}};
     TimestampPattern::init();
 
     CommandLineArguments command_line_args("clp");

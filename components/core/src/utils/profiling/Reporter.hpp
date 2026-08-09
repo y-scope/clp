@@ -2,49 +2,74 @@
 #define UTILS_PROFILING_REPORTER_HPP
 
 #include <cassert>
+#include <chrono>
+#include <concepts>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <utility>
-#include <variant>
 
+#include <spdlog/spdlog.h>
 #include <utils/profiling/Profiler.hpp>
 #include <utils/profiling/Stopwatch.hpp>
 
 namespace utils::profiling {
 /**
- * RAII wrapper that ties together a profiler and sink. All profiler measurements are emit to the
- * sink on destruction and the active profiler is updated.
- *
- * The reporter owns its own `Profiler` instance. On construction, it saves the current thread-local
- * active profiler and prefix, then sets its own profiler and a new hierarchical prefix as active.
- * On destruction, it emits from its own profiler, restores the previous profiler and prefix, and
- * asserts that it is being destroyed on the same thread that created it.
- *
- * When profiling is disabled (`CLP_ENABLE_PROFILING == 0`), all method bodies are guarded by `if
- * constexpr`, so the compiler emits no code. The data members are still instantiated, but their
- * default constructors are effectively zero-cost and this avoids needing a separate emptry stub
- * type.
- *
- * @tparam SinkType The concrete sink type, or `std::variant<...>` of sink types.
+ * Concept constraining the emit callback type for `Reporter`.
  */
-template <typename SinkType>
+template <typename F>
+concept MeasurementEmitter = std::invocable<F&, std::string_view, Measurement>;
+
+/**
+ * Emit callback that writes profiler measurements to SPDLOG in milliseconds.
+ */
+struct SpdlogEmitter {
+    auto operator()(std::string_view name, Measurement measurement) const -> void {
+        SPDLOG_INFO(
+                "{}: {} millisecs ({} calls)",
+                name,
+                std::chrono::duration_cast<std::chrono::milliseconds>(measurement.duration).count(),
+                measurement.call_count
+        );
+    }
+};
+
+/**
+ * RAII wrapper that collects profiler measurements and emits them to a callback on destruction.
+ *
+ * On construction, the reporter registers its `Profiler` as the thread-local active profiler and
+ * pushes its name as the active prefix, so that all `ScopedProfiler` instances created within its
+ * scope produce hierarchical measurement names. On destruction, it restores the previous active
+ * profiler and prefix, then emits all collected measurements.
+ *
+ * A reporter must be created and destroyed on the same thread. For multi-threaded profiling, each
+ * worker thread should create its own `Reporter`.
+ *
+ * When profiling is disabled (`CLP_ENABLE_PROFILING == 0`), all method bodies are empty and data
+ * member instantiation is negligible (or may be optimized out completely).
+ *
+ * @tparam EmitCallback The callback type, constrained by `MeasurementEmitter`.
+ */
+template <typename EmitCallback>
+requires MeasurementEmitter<EmitCallback>
 class Reporter {
 public:
     // Constructors
     Reporter() = delete;
 
     /**
+     * Sets its own `Profiler` as the active `Profiler`, stores the previous active `Profiler`, and
+     * pushes its name onto the prefix.
+     *
      * @param name The reporter name, used to build the hierarchical measurement prefix.
-     * @param args Arguments forwarded to the sink's constructor.
+     * @param emit Callback invoked once per measurement on destruction.
      */
-    template <typename... Args>
-    explicit Reporter(std::string_view name, Args&&... args) : m_sink{std::forward<Args>(args)...} {
+    explicit Reporter(std::string_view name, EmitCallback emit) : m_emit{std::move(emit)} {
         if constexpr (CLP_ENABLE_PROFILING) {
             m_thread_id = std::this_thread::get_id();
             m_prev_profiler = Profiler::get_active_profiler();
-            m_prev_prefix = Profiler::get_active_prefix();
-            Profiler::set_active_prefix(Profiler::build_full_name(name));
+            m_full_name = Profiler::build_full_name(name);
+            Profiler::push_prefix(m_full_name);
             Profiler::set_active_profiler(&m_profiler);
         }
     }
@@ -58,43 +83,29 @@ public:
     auto operator=(Reporter&&) -> Reporter& = delete;
 
     // Destructor
+    /**
+     * Sets the active `Profiler` to the previous one stored on construction, pops the prefix, and
+     * emits the measurements.
+     */
     ~Reporter() {
         if constexpr (CLP_ENABLE_PROFILING) {
             assert(m_thread_id == std::this_thread::get_id());
             Profiler::set_active_profiler(m_prev_profiler);
-            Profiler::set_active_prefix(std::move(m_prev_prefix));
+            Profiler::pop_prefix();
             m_profiler.for_each_measurement(
                     [this](std::string_view name, Measurement const& measurement) -> void {
-                        emit_to_sink(m_sink, name, measurement);
+                        m_emit(name, measurement);
                     }
             );
         }
     }
 
 private:
-    // Static methods
-    /**
-     * Emits a single measurement to the sink. Calls `sink.emit` directly.
-     */
-    static auto emit_to_sink(auto& sink, std::string_view name, Measurement const& m) -> void {
-        sink.emit(name, m);
-    }
-
-    /**
-     * Emits a single measurement to the active alternative of a `std::variant` sink. Chosen through
-     * overload resolution over the generic version.
-     */
-    template <typename... Ts>
-    static auto emit_to_sink(std::variant<Ts...>& sink, std::string_view name, Measurement const& m)
-            -> void {
-        std::visit([&](auto& s) -> void { s.emit(name, m); }, sink);
-    }
-
     // Data members
     Profiler m_profiler;
     Profiler* m_prev_profiler{nullptr};
-    std::string m_prev_prefix;
-    SinkType m_sink;
+    std::string m_full_name;
+    EmitCallback m_emit;
     std::thread::id m_thread_id;
 };
 }  // namespace utils::profiling

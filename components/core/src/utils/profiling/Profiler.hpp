@@ -8,6 +8,7 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <absl/container/flat_hash_map.h>
 #include <spdlog/spdlog.h>
@@ -15,22 +16,15 @@
 
 namespace utils::profiling {
 /**
- * Thread-local management of named `Stopwatch` instances that is enabled at compile time.  If
- * profiling is disabled (`CLP_ENABLE_PROFILING == 0`) the functions are empty.
+ * Thread-local registry of named `Stopwatch` measurements. When profiling is disabled
+ * (`CLP_ENABLE_PROFILING == 0`), all methods are empty.
  *
- * A measurement can be taken over a single continuous operation, or called multiple times to
- * accumulate measurements into a total run time.  `Reporter`s own `Profiler`s where the
- * thread-local active `Profiler` records new measurements.  The thread-local active profiler is
- * saved/restored on `Reporter`construction/destruction, enabling nesting.
- * The hierarchical name is built as `<parent-prefix>.<reporter-name>.<scope-name>`. Each
- * nested `Reporter` contributes its name to the prefix.
+ * The thread-local active profiler records `Stopwatch` measurements. If no profiler is active, all
+ * measurement methods are no-ops.
  *
- * Note that for thread-safety a `Reporter` must be created and destroyed on the same thread.
- * Each thread's measurements are isolated via thread-local
- * storage. For multi-threaded profiling, each worker thread should create its own
- * `Reporter`.
- *
- * When no `Reporter` is active, `PROFILE_SCOPE` and all measurement methods are no-ops.
+ * Hierarchical names are built as `<prefix>.<name>`, where the prefix is a thread-local stack of
+ * `string_view`s pushed/popped by callers. Each entry must point to stable storage that outlives
+ * the corresponding pop.
  */
 class Profiler {
 public:
@@ -44,8 +38,8 @@ public:
     [[nodiscard]] static auto build_full_name(std::string_view name) -> std::string;
 
     /**
-     * @return The thread-local pointer to the active `Profiler`, or `nullptr` if no
-     * `Reporter` is active on the current thread.
+     * @return The thread-local pointer to the active `Profiler`, or `nullptr` if none is
+     * active on the current thread.
      */
     [[nodiscard]] static auto get_active_profiler() -> Profiler*;
 
@@ -57,50 +51,55 @@ public:
     static auto set_active_profiler(Profiler* profiler) -> void;
 
     /**
-     * @return The thread-local active name prefix.
+     * @return The thread-local active name prefix (top of the prefix stack), or an empty
+     * `string_view` if no prefix is active.
      */
     [[nodiscard]] static auto get_active_prefix() -> std::string_view;
 
     /**
-     * Sets the thread-local active name prefix.
+     * Pushes a name prefix onto the thread-local prefix stack. The caller must ensure `prefix`
+     * outlives the corresponding `pop_prefix()` call.
      *
-     * @param prefix The prefix to set as active.
+     * @param prefix The prefix to push.
      */
-    static auto set_active_prefix(std::string prefix) -> void;
+    static auto push_prefix(std::string_view prefix) -> void;
 
     /**
-     * Starts a Stopwatch identified by `name`. If it does not yet exist, one is created. If the
-     * measurement is already running (re-entrant call), this is a no-op.
-     * If no `Reporter` is active on the current thread, this is a no-op.
-     *
-     * @param name The measurement name (will be prefixed with the active reporter's prefix).
+     * Pops the top of the thread-local prefix stack. No-op if the stack is empty.
      */
-    static auto start_measurement(std::string_view name) -> void {
+    static auto pop_prefix() -> void;
+
+    /**
+     * Starts a Stopwatch identified by `full_name`. If it does not yet exist, one is created.
+     * If the measurement is already running (re-entrant call), this is a no-op.
+     * If no profiler is active on the current thread, this is a no-op.
+     *
+     * @param full_name The full measurement name.
+     */
+    static auto start_measurement(std::string_view full_name) -> void {
         if constexpr (CLP_ENABLE_PROFILING) {
             auto* const profiler{get_active_profiler()};
             if (nullptr == profiler) {
                 return;
             }
-            auto const full_name{build_full_name(name)};
-            auto const [it, inserted]{profiler->m_map.try_emplace(full_name)};
+            auto const [it, inserted]{profiler->m_map.try_emplace(std::string{full_name})};
             it->second.start();
         }
     }
 
     /**
-     * Stops the Stopwatch identified by `name`. If it does not exist, logs an error and returns. If
-     * the measurement exists but is not running, this is a no-op.
-     * If no `Reporter` is active on the current thread, this is a no-op.
+     * Stops the Stopwatch identified by `full_name`. If it does not exist, logs an error and
+     * returns. If the measurement exists but is not running, this is a no-op. If no profiler is
+     * active on the current thread, this is a no-op.
      *
-     * @param name The measurement name (will be prefixed with the active reporter's prefix).
+     * @param full_name The full measurement name.
      */
-    static auto stop_measurement(std::string_view name) -> void {
+    static auto stop_measurement(std::string_view full_name) -> void {
         if constexpr (CLP_ENABLE_PROFILING) {
             auto* const profiler{get_active_profiler()};
             if (nullptr == profiler) {
                 return;
             }
-            auto const full_name{build_full_name(name)};
             auto const it{profiler->m_map.find(full_name)};
             if (it == profiler->m_map.end()) {
                 SPDLOG_ERROR("Attempt to stop non-existent runtime measurement: {}", full_name);
@@ -112,9 +111,8 @@ public:
 
     // Methods
     /**
-     * Calls `callback` for each measurement with `call_count > 0`, then clears all
-     * measurements. Subsequent calls will yield no results unless new measurements are
-     * added after this call.
+     * Calls `callback` for each measurement with `call_count > 0`, then clears all measurements.
+     * Subsequent calls will yield no results unless new measurements are added after this call.
      *
      * @param callback A callable taking `(std::string_view name, Measurement)`.
      */
@@ -135,7 +133,7 @@ public:
 private:
     // Static data members
     static thread_local Profiler* m_active_profiler;
-    static thread_local std::string m_active_prefix;
+    static thread_local std::vector<std::string_view> m_prefix_stack;
 
     // Data members
     absl::flat_hash_map<std::string, Stopwatch> m_map;

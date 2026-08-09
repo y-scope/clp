@@ -15,21 +15,16 @@ struct Measurement {
 };
 
 /**
- * Simple timer class.
- * Calling `stop()` without `start()` is a no-op. Consecutive `start()` calls before `stop()`
- * are no-ops, with the timer still counting from the first call.
+ * Timer that accumulates elapsed time across start/stop intervals.
+ *
+ * `start()` is idempotent (re-entrant calls are no-ops). `stop()` without a preceding `start()` is
+ * a no-op.
  */
 class Stopwatch {
 public:
     // Methods
-    /**
-     * @return The elapsed duration and call count.
-     */
     [[nodiscard]] auto get_measurement() const -> Measurement { return m_measurement; }
 
-    /**
-     * Marks the beginning of a timed interval. No-op if already running.
-     */
     auto start() -> void {
         if (m_running) {
             return;
@@ -38,10 +33,6 @@ public:
         m_running = true;
     }
 
-    /**
-     * Accumulates the elapsed time since `start()` and increments the call count. No-op if
-     * not running.
-     */
     auto stop() -> void {
         if (false == m_running) {
             return;
