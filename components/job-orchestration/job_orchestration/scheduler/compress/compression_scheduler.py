@@ -3,9 +3,12 @@ import atexit
 import datetime
 import signal
 import sys
+import threading
 import time
+from collections.abc import Iterator
 from contextlib import closing
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +26,7 @@ from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
     fetch_existing_datasets,
+    get_archives_table_name,
 )
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import (
@@ -32,6 +36,7 @@ from clp_py_utils.core import (
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SqlAdapter
 from clp_py_utils.telemetry import init_telemetry, shutdown_telemetry
+from clp_py_utils.telemetry_config import is_telemetry_disabled_by_env
 from opentelemetry import metrics
 from pydantic import ValidationError
 from structlog.contextvars import bound_contextvars
@@ -69,22 +74,213 @@ class DbContext:
 # Setup logging
 logger = get_logger("compression_scheduler")
 
-scheduled_jobs = {}
+_MAX_OTEL_INT64 = (1 << 63) - 1
+_ARCHIVE_STORAGE_METRICS_SHUTDOWN_TIMEOUT_SECS = 5
+
+
+class _ArchiveStorageMetricsPoller:
+    def __init__(
+        self,
+        sql_adapter: SqlAdapter,
+        storage_engine: StorageEngine,
+        table_prefix: str,
+        polling_interval_secs: float,
+    ) -> None:
+        self._sql_adapter = sql_adapter
+        self._storage_engine = storage_engine
+        self._table_prefix = table_prefix
+        self._polling_interval_secs = polling_interval_secs
+        self._stop_event = threading.Event()
+        self._snapshot_lock = threading.Lock()
+        self._snapshot: tuple[int, int] | None = None
+        self._thread = threading.Thread(
+            target=self._run,
+            name="archive-storage-metrics-poller",
+            daemon=True,
+        )
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        self._thread.join(timeout=_ARCHIVE_STORAGE_METRICS_SHUTDOWN_TIMEOUT_SECS)
+        if self._thread.is_alive():
+            logger.warning("Archive storage metrics poller did not stop before shutdown.")
+        self._set_snapshot(None)
+
+    def get_snapshot(self) -> tuple[int, int] | None:
+        with self._snapshot_lock:
+            return self._snapshot
+
+    def _set_snapshot(self, snapshot: tuple[int, int] | None) -> None:
+        with self._snapshot_lock:
+            self._snapshot = snapshot
+
+    def _run(self) -> None:
+        while not self._stop_event.is_set():
+            self._poll_once()
+            if self._stop_event.wait(self._polling_interval_secs):
+                return
+
+    def _poll_once(self) -> None:
+        try:
+            snapshot = self._collect_snapshot()
+        except Exception:
+            self._set_snapshot(None)
+            logger.exception("Failed to collect archive storage metrics.")
+        else:
+            if not self._stop_event.is_set():
+                self._set_snapshot(snapshot)
+
+    def _collect_snapshot(self) -> tuple[int, int]:
+        with (
+            closing(self._sql_adapter.create_connection(True)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as db_cursor,
+        ):
+            if StorageEngine.CLP == self._storage_engine:
+                archive_table_names = [get_archives_table_name(self._table_prefix, None)]
+            elif StorageEngine.CLP_S == self._storage_engine:
+                datasets = sorted(fetch_existing_datasets(db_cursor, self._table_prefix))
+                archive_table_names = [
+                    get_archives_table_name(self._table_prefix, dataset) for dataset in datasets
+                ]
+            else:
+                error_msg = f"Unsupported storage engine: {self._storage_engine}."
+                raise ValueError(error_msg)
+
+            compressed_bytes = 0
+            uncompressed_bytes = 0
+            for archive_table_name in archive_table_names:
+                table_compressed_bytes, table_uncompressed_bytes = self._collect_table_sizes(
+                    db_cursor, archive_table_name
+                )
+                compressed_bytes = self._validate_size(
+                    compressed_bytes + table_compressed_bytes,
+                    "total compressed archive size",
+                )
+                uncompressed_bytes = self._validate_size(
+                    uncompressed_bytes + table_uncompressed_bytes,
+                    "total uncompressed archive size",
+                )
+
+            return compressed_bytes, uncompressed_bytes
+
+    @classmethod
+    def _collect_table_sizes(cls, db_cursor: Any, archive_table_name: str) -> tuple[int, int]:
+        query = f"""
+            SELECT
+                COALESCE(SUM(`size`), 0) AS bytes_compressed,
+                COALESCE(SUM(`uncompressed_size`), 0) AS bytes_uncompressed,
+                COALESCE(MIN(`size`), 0) AS minimum_compressed_size,
+                COALESCE(MIN(`uncompressed_size`), 0) AS minimum_uncompressed_size
+            FROM `{archive_table_name}`
+            """  # noqa: S608
+        db_cursor.execute(query)
+        row = db_cursor.fetchone()
+        if row is None:
+            error_msg = f"Archive table `{archive_table_name}` returned no aggregate row."
+            raise ValueError(error_msg)
+
+        compressed_bytes = cls._validate_size(row.get("bytes_compressed"), "compressed size")
+        uncompressed_bytes = cls._validate_size(row.get("bytes_uncompressed"), "uncompressed size")
+        cls._validate_size(row.get("minimum_compressed_size"), "minimum compressed size")
+        cls._validate_size(row.get("minimum_uncompressed_size"), "minimum uncompressed size")
+        return compressed_bytes, uncompressed_bytes
+
+    @staticmethod
+    def _validate_size(value: object, field_name: str) -> int:
+        if isinstance(value, bool):
+            error_msg = f"{field_name} must be an integer."
+            raise TypeError(error_msg)
+        if isinstance(value, int):
+            size = value
+        elif isinstance(value, Decimal):
+            if not value.is_finite() or value != value.to_integral_value():
+                error_msg = f"{field_name} must be a finite integer."
+                raise ValueError(error_msg)
+            size = int(value)
+        else:
+            error_msg = f"{field_name} must be an integer."
+            raise TypeError(error_msg)
+
+        if size < 0:
+            error_msg = f"{field_name} must not be negative."
+            raise ValueError(error_msg)
+        if size > _MAX_OTEL_INT64:
+            error_msg = f"{field_name} exceeds the OpenTelemetry int64 limit."
+            raise ValueError(error_msg)
+        return size
+
+
+def _start_archive_storage_metrics_poller(
+    sql_adapter: SqlAdapter,
+    storage_engine: StorageEngine,
+    table_prefix: str,
+    polling_interval_ms: int,
+) -> _ArchiveStorageMetricsPoller | None:
+    if is_telemetry_disabled_by_env():
+        return None
+
+    poller = _ArchiveStorageMetricsPoller(
+        sql_adapter,
+        storage_engine,
+        table_prefix,
+        polling_interval_ms / 1000,
+    )
+    poller.start()
+    return poller
+
+
+@dataclass
+class _ArchiveStorageMetricsState:
+    poller: _ArchiveStorageMetricsPoller | None = None
+
+
+_archive_storage_metrics_state = _ArchiveStorageMetricsState()
+
+scheduled_jobs: dict[int, CompressionJob] = {}
 
 meter = metrics.get_meter(__name__)
 
 
-def _observe_active_jobs(_options: metrics.CallbackOptions):
+def _observe_active_jobs(_options: metrics.CallbackOptions) -> Iterator[metrics.Observation]:
     yield metrics.Observation(len(scheduled_jobs))
 
 
-def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
+def _observe_outstanding_tasks(
+    _options: metrics.CallbackOptions,
+) -> Iterator[metrics.Observation]:
     try:
         jobs = list(scheduled_jobs.values())
     except RuntimeError:
         return
     num_outstanding_tasks = sum(job.num_tasks_total - job.num_tasks_completed for job in jobs)
     yield metrics.Observation(num_outstanding_tasks)
+
+
+def _observe_archive_bytes_compressed(
+    _options: metrics.CallbackOptions,
+) -> Iterator[metrics.Observation]:
+    poller = _archive_storage_metrics_state.poller
+    if poller is None:
+        return
+    snapshot = poller.get_snapshot()
+    if snapshot is None:
+        return
+    yield metrics.Observation(snapshot[0])
+
+
+def _observe_archive_bytes_uncompressed(
+    _options: metrics.CallbackOptions,
+) -> Iterator[metrics.Observation]:
+    poller = _archive_storage_metrics_state.poller
+    if poller is None:
+        return
+    snapshot = poller.get_snapshot()
+    if snapshot is None:
+        return
+    yield metrics.Observation(snapshot[1])
 
 
 meter.create_observable_up_down_counter(
@@ -98,6 +294,20 @@ meter.create_observable_up_down_counter(
     unit="{task}",
     callbacks=[_observe_outstanding_tasks],
     description="Total number of outstanding compression tasks",
+)
+meter.create_observable_gauge(
+    "clp.storage.archive.bytes_compressed",
+    unit="By",
+    callbacks=[_observe_archive_bytes_compressed],
+    description="Current logical compressed size of archives in the metadata database",
+)
+meter.create_observable_gauge(
+    "clp.storage.archive.bytes_uncompressed",
+    unit="By",
+    callbacks=[_observe_archive_bytes_uncompressed],
+    description=(
+        "Current logical uncompressed size represented by archives in the metadata database"
+    ),
 )
 tasks_completed_counter = meter.create_counter(
     "clp.compression.tasks.completed",
@@ -643,37 +853,52 @@ def main(argv) -> int | None:
         logger.exception("Failed to kill hanging compression jobs.")
         return -1
 
-    with (
-        closing(sql_adapter.create_connection(True)) as db_conn,
-        closing(db_conn.cursor(dictionary=True)) as db_cursor,
-    ):
-        db_context = DbContext(connection=db_conn, cursor=db_cursor)
-        clp_metadata_db_connection_config = (
-            sql_adapter.database_config.get_clp_connection_params_and_type(True)
-        )
+    clp_metadata_db_connection_config = (
+        sql_adapter.database_config.get_clp_connection_params_and_type(True)
+    )
+    poller = _start_archive_storage_metrics_poller(
+        sql_adapter,
+        clp_config.package.storage_engine,
+        clp_metadata_db_connection_config["table_prefix"],
+        clp_config.compression_scheduler.telemetry_update_interval_ms,
+    )
+    if poller is not None:
+        _archive_storage_metrics_state.poller = poller
 
-        # Start Job Processing Loop
-        while True:
-            try:
-                if not received_sigterm:
-                    search_and_schedule_new_tasks(
+    try:
+        with (
+            closing(sql_adapter.create_connection(True)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as db_cursor,
+        ):
+            db_context = DbContext(connection=db_conn, cursor=db_cursor)
+
+            # Start Job Processing Loop
+            while True:
+                try:
+                    if not received_sigterm:
+                        search_and_schedule_new_tasks(
+                            clp_config,
+                            clp_metadata_db_connection_config,
+                            task_manager,
+                            db_context,
+                        )
+                    poll_running_jobs(
                         clp_config,
-                        clp_metadata_db_connection_config,
                         task_manager,
                         db_context,
                     )
-                poll_running_jobs(
-                    clp_config,
-                    task_manager,
-                    db_context,
-                )
-                time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
-            except KeyboardInterrupt:
-                logger.info("Forcefully shutting down")
-                return -1
-            except Exception:
-                logger.exception("Error in scheduling.")
-                return -1
+                    time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
+                except KeyboardInterrupt:
+                    logger.info("Forcefully shutting down")
+                    return -1
+                except Exception:
+                    logger.exception("Error in scheduling.")
+                    return -1
+    finally:
+        if poller is not None:
+            poller.stop()
+            if _archive_storage_metrics_state.poller is poller:
+                _archive_storage_metrics_state.poller = None
 
 
 def _batch_tasks(
