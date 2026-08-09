@@ -43,6 +43,24 @@ Emitted by long-running CLP services to track current workload state:
 | query-scheduler       | `clp.query.active_jobs`             | UpDownCounter | Number of active query jobs                                    |
 | query-scheduler       | `clp.query.outstanding_tasks`       | UpDownCounter | Total number of outstanding tasks across all active query jobs |
 
+#### Archive storage gauges
+
+Emitted by the compression scheduler to track the current logical size of retained archives:
+
+| Component             | Metric                                           | Type  | Unit | Description                                                     |
+| --------------------- | ------------------------------------------------ | ----- | ---- | --------------------------------------------------------------- |
+| compression-scheduler | `clp.storage.archive.bytes_compressed`           | Gauge | `By` | Current logical compressed size of all retained archives        |
+| compression-scheduler | `clp.storage.archive.bytes_uncompressed`         | Gauge | `By` | Current logical uncompressed size represented by those archives |
+
+These deployment-wide totals are calculated from archive metadata and include structures and indexes
+embedded in each archive. They exclude metadata-database storage and indexes, query results, streams,
+staging files, logs, filesystem allocation overhead, object-store overhead, and physical archives whose
+metadata has already been deleted. The metrics contain no archive- or dataset-specific attributes.
+
+A valid deployment with no archives reports zero for both gauges. If collection fails, produces a partial
+result, or discovers invalid archive sizes, neither gauge is observed until a later collection succeeds.
+The current implementation assumes a single compression scheduler owns these deployment-wide metrics.
+
 #### Operational histograms
 
 Emitted by long-running CLP services to track duration and rate distributions:
@@ -175,7 +193,9 @@ filtering, redaction, aggregation, and forwarding. For a matching baseline, star
 
 You can configure the interval at which metrics are exported for each instrumented component. The
 `telemetry_update_interval_ms` setting allows you to control the export frequency (in milliseconds)
-and defaults to `60000` (60 seconds).
+and defaults to `60000` (60 seconds). For the compression scheduler, this setting also controls how
+often archive storage gauges are refreshed from the metadata database. The first refresh begins
+immediately when the scheduler starts.
 
 The supported components are `compression_scheduler`, `compression_worker`, `query_scheduler`, and
 `query_worker`.
