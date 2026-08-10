@@ -10,7 +10,7 @@ from contextlib import closing
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import brotli
 import msgpack
@@ -77,6 +77,11 @@ logger = get_logger("compression_scheduler")
 _ARCHIVE_STORAGE_METRICS_SHUTDOWN_TIMEOUT_SECS = 5
 
 
+class _ArchiveStorageSnapshot(NamedTuple):
+    bytes_compressed: int
+    bytes_uncompressed: int
+
+
 class _ArchiveStorageMetricsPoller:
     def __init__(
         self,
@@ -91,7 +96,7 @@ class _ArchiveStorageMetricsPoller:
         self._polling_interval_secs = polling_interval_secs
         self._stop_event = threading.Event()
         # CPython atomically reads and replaces this immutable snapshot reference.
-        self._snapshot: tuple[int, int] | None = None
+        self._snapshot: _ArchiveStorageSnapshot | None = None
         self._thread = threading.Thread(
             target=self._run,
             name="archive-storage-metrics-poller",
@@ -108,7 +113,7 @@ class _ArchiveStorageMetricsPoller:
             logger.warning("Archive storage metrics poller did not stop before shutdown.")
         self._snapshot = None
 
-    def get_snapshot(self) -> tuple[int, int] | None:
+    def get_snapshot(self) -> _ArchiveStorageSnapshot | None:
         return self._snapshot
 
     def _run(self) -> None:
@@ -127,7 +132,7 @@ class _ArchiveStorageMetricsPoller:
             if not self._stop_event.is_set():
                 self._snapshot = snapshot
 
-    def _collect_snapshot(self) -> tuple[int, int]:
+    def _collect_snapshot(self) -> _ArchiveStorageSnapshot:
         with (
             closing(self._sql_adapter.create_connection(True)) as db_conn,
             closing(db_conn.cursor(dictionary=True)) as db_cursor,
@@ -153,7 +158,7 @@ class _ArchiveStorageMetricsPoller:
                 compressed_bytes += table_compressed_bytes
                 uncompressed_bytes += table_uncompressed_bytes
 
-            return compressed_bytes, uncompressed_bytes
+            return _ArchiveStorageSnapshot(compressed_bytes, uncompressed_bytes)
 
     @classmethod
     def _collect_table_sizes(cls, db_cursor: Any, archive_table_name: str) -> tuple[int, int]:
@@ -248,7 +253,7 @@ def _observe_archive_bytes_compressed(
     snapshot = poller.get_snapshot()
     if snapshot is None:
         return
-    yield metrics.Observation(snapshot[0])
+    yield metrics.Observation(snapshot.bytes_compressed)
 
 
 def _observe_archive_bytes_uncompressed(
@@ -260,7 +265,7 @@ def _observe_archive_bytes_uncompressed(
     snapshot = poller.get_snapshot()
     if snapshot is None:
         return
-    yield metrics.Observation(snapshot[1])
+    yield metrics.Observation(snapshot.bytes_uncompressed)
 
 
 meter.create_observable_up_down_counter(
