@@ -135,7 +135,7 @@ class _ArchiveStorageMetricsPoller:
             if StorageEngine.CLP == self._storage_engine:
                 archive_table_names = [get_archives_table_name(self._table_prefix, None)]
             elif StorageEngine.CLP_S == self._storage_engine:
-                datasets = sorted(fetch_existing_datasets(db_cursor, self._table_prefix))
+                datasets = fetch_existing_datasets(db_cursor, self._table_prefix)
                 archive_table_names = [
                     get_archives_table_name(self._table_prefix, dataset) for dataset in datasets
                 ]
