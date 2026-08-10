@@ -90,7 +90,7 @@ class _ArchiveStorageMetricsPoller:
         self._table_prefix = table_prefix
         self._polling_interval_secs = polling_interval_secs
         self._stop_event = threading.Event()
-        self._snapshot_lock = threading.Lock()
+        # CPython atomically reads and replaces this immutable snapshot reference.
         self._snapshot: tuple[int, int] | None = None
         self._thread = threading.Thread(
             target=self._run,
@@ -106,15 +106,10 @@ class _ArchiveStorageMetricsPoller:
         self._thread.join(timeout=_ARCHIVE_STORAGE_METRICS_SHUTDOWN_TIMEOUT_SECS)
         if self._thread.is_alive():
             logger.warning("Archive storage metrics poller did not stop before shutdown.")
-        self._set_snapshot(None)
+        self._snapshot = None
 
     def get_snapshot(self) -> tuple[int, int] | None:
-        with self._snapshot_lock:
-            return self._snapshot
-
-    def _set_snapshot(self, snapshot: tuple[int, int] | None) -> None:
-        with self._snapshot_lock:
-            self._snapshot = snapshot
+        return self._snapshot
 
     def _run(self) -> None:
         while not self._stop_event.is_set():
@@ -126,11 +121,11 @@ class _ArchiveStorageMetricsPoller:
         try:
             snapshot = self._collect_snapshot()
         except Exception:
-            self._set_snapshot(None)
+            self._snapshot = None
             logger.exception("Failed to collect archive storage metrics.")
         else:
             if not self._stop_event.is_set():
-                self._set_snapshot(snapshot)
+                self._snapshot = snapshot
 
     def _collect_snapshot(self) -> tuple[int, int]:
         with (
