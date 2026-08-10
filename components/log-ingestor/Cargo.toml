@@ -1,7 +1,7 @@
 [package]
 name = "log-ingestor"
-version = "0.13.1-dev"
-edition = "2024"
+version = { workspace = true }
+edition = { workspace = true }
 autotests = false
 
 [lib]
@@ -21,31 +21,31 @@ name = "log_ingestor_tests"
 path = "tests/test.rs"
 
 [dependencies]
-anyhow = "1.0.100"
-axum = { version = "0.8.8", features = ["json"] }
-async-trait = "0.1.89"
-aws-sdk-s3 = "1.121.0"
-aws-sdk-sqs = "1.92.0"
-clap = { version = "4.5.56", features = ["derive"] }
-clp-rust-utils = { path = "../clp-rust-utils" }
-const_format = "0.2.35"
-non-empty-string = { version = "0.2.6", features = ["serde"] }
-opentelemetry = "0.32.0"
-secrecy = "0.10.3"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
-strum = "0.28.0"
-strum_macros = "0.28.0"
-tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "signal", "time"] }
-tokio-util = "0.7.18"
-tracing = "0.1.44"
-tower-http = { version = "0.6.8", features = ["cors"] }
-thiserror = "2.0.18"
-url = "2.5.8"
-utoipa = { version = "5.4.0", features = ["axum_extras"] }
-utoipa-axum = "0.2.0"
+anyhow = { workspace = true }
+axum = { workspace = true }
+async-trait = { workspace = true }
+aws-sdk-s3 = { workspace = true }
+aws-sdk-sqs = { workspace = true }
+clap = { workspace = true }
+clp-rust-utils = { workspace = true }
+const_format = { workspace = true }
+non-empty-string = { workspace = true }
+opentelemetry = { workspace = true }
+secrecy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+tokio = { workspace = true, features = ["macros", "signal"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+tower-http = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+utoipa = { workspace = true, features = ["axum_extras"] }
+utoipa-axum = { workspace = true }
 
 [dev-dependencies]
-serial_test = "3.3.1"
-uuid = { version = "1.20.0", features = ["v4"] }
+serial_test = { workspace = true }
+uuid = { workspace = true }
