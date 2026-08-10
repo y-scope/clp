@@ -67,6 +67,33 @@ data:
         | int }}
       target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
         | int }}
+    {{- if .Values.spider.enabled }}
+    compression_coordinator:
+      commit_task_hard_timeout_secs: {{
+        .Values.clpConfig.compression_coordinator.commit_task_hard_timeout_secs | int }}
+      commit_task_max_retry: {{
+        .Values.clpConfig.compression_coordinator.commit_task_max_retry | int }}
+      commit_task_soft_timeout_secs: {{
+        .Values.clpConfig.compression_coordinator.commit_task_soft_timeout_secs | int }}
+      compression_task_max_retry: {{
+        .Values.clpConfig.compression_coordinator.compression_task_max_retry | int }}
+      database_connection_pool_size: {{
+        .Values.clpConfig.compression_coordinator.database_connection_pool_size | int }}
+      job_polling_interval_millisecs: {{
+        .Values.clpConfig.compression_coordinator.job_polling_interval_millisecs | int }}
+      resource_group:
+        name: {{ .Values.clpConfig.compression_coordinator.resource_group.name | quote }}
+      result_polling:
+        init_backoff_millisecs: {{
+          .Values.clpConfig.compression_coordinator.result_polling.init_backoff_millisecs | int }}
+        max_backoff_millisecs: {{
+          .Values.clpConfig.compression_coordinator.result_polling.max_backoff_millisecs | int }}
+      termination_timeout_secs: {{
+        .Values.clpConfig.compression_coordinator.termination_timeout_secs | int }}
+    spider:
+      host: "{{ include "clp.spiderStorageHost" . }}"
+      port: {{ include "clp.spiderStoragePort" . | int }}
+    {{- end }}
     compression_scheduler:
       jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
@@ -90,7 +117,6 @@ data:
       host: "{{ include "clp.databaseHost" . }}"
       names:
         clp: {{ .Values.clpConfig.database.names.clp | quote }}
-        spider: {{ .Values.clpConfig.database.names.spider | quote }}
       port: {{ include "clp.databasePort" . | int }}
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}

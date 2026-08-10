@@ -33,7 +33,6 @@ from clp_py_utils.serialization_utils import serialize_path, serialize_str_enum
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
-SPIDER_SCHEDULER_COMPONENT_NAME = "spider_scheduler"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 OTEL_COLLECTOR_COMPONENT_NAME = "otel-collector"
@@ -83,8 +82,6 @@ CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
-SPIDER_DB_USER_ENV_VAR_NAME = "SPIDER_DB_USER"
-SPIDER_DB_PASS_ENV_VAR_NAME = "SPIDER_DB_PASS"
 
 # Serializer
 StrEnumSerializer = PlainSerializer(serialize_str_enum)
@@ -138,14 +135,6 @@ class DatabaseEngine(KebabCaseStrEnum):
 DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
 
 
-class OrchestrationType(KebabCaseStrEnum):
-    CELERY = auto()
-    SPIDER = auto()
-
-
-OrchestrationTypeStr = Annotated[OrchestrationType, StrEnumSerializer]
-
-
 class QueryEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
@@ -179,21 +168,18 @@ class ClpDbUserType(KebabCaseStrEnum):
 
     CLP = auto()
     ROOT = auto()
-    SPIDER = auto()
 
 
 class ClpDbNameType(KebabCaseStrEnum):
     """Database name types used by CLP components."""
 
     CLP = auto()
-    SPIDER = auto()
 
 
 _DB_USER_TYPE_TO_DB_NAME_TYPE: MappingProxyType[ClpDbUserType, ClpDbNameType] = MappingProxyType(
     {
         ClpDbUserType.CLP: ClpDbNameType.CLP,
         ClpDbUserType.ROOT: ClpDbNameType.CLP,
-        ClpDbUserType.SPIDER: ClpDbNameType.SPIDER,
     }
 )
 
@@ -219,7 +205,6 @@ class Database(BaseModel):
     port: Port = DEFAULT_PORT
     names: dict[ClpDbNameType, NonEmptyStr] = {
         ClpDbNameType.CLP: "clp-db",
-        ClpDbNameType.SPIDER: "spider-db",
     }
     ssl_cert: NonEmptyStr | None = None
     auto_commit: bool = False
@@ -339,10 +324,6 @@ class Database(BaseModel):
                 username=get_config_value(config, f"{DB_COMPONENT_NAME}.root_username"),
                 password=get_config_value(config, f"{DB_COMPONENT_NAME}.root_password"),
             )
-            self.credentials[ClpDbUserType.SPIDER] = DbUserCredentials(
-                username=get_config_value(config, f"{DB_COMPONENT_NAME}.spider_username"),
-                password=get_config_value(config, f"{DB_COMPONENT_NAME}.spider_password"),
-            )
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
@@ -362,9 +343,6 @@ class Database(BaseModel):
         elif user_type == ClpDbUserType.ROOT:
             user_env_var = CLP_DB_ROOT_USER_ENV_VAR_NAME
             pass_env_var = CLP_DB_ROOT_PASS_ENV_VAR_NAME
-        elif user_type == ClpDbUserType.SPIDER:
-            user_env_var = SPIDER_DB_USER_ENV_VAR_NAME
-            pass_env_var = SPIDER_DB_PASS_ENV_VAR_NAME
         else:
             err_msg = f"Unsupported user type '{user_type}'."
             raise ValueError(err_msg)
@@ -380,24 +358,12 @@ class Database(BaseModel):
             self.port = self.DEFAULT_PORT
 
 
-class SpiderScheduler(BaseModel):
-    DEFAULT_PORT: ClassVar[int] = 6000
-
-    host: DomainStr = "localhost"
-    port: Port = DEFAULT_PORT
-
-    def transform_for_container(self):
-        self.host = SPIDER_SCHEDULER_COMPONENT_NAME
-        self.port = self.DEFAULT_PORT
-
-
 class CompressionScheduler(BaseModel):
     UNLIMITED_CONCURRENT_TASKS_PER_JOB: ClassVar[NonNegativeInt] = 0
 
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
-    type: OrchestrationTypeStr = OrchestrationType.CELERY
     telemetry_update_interval_ms: PositiveInt = 60000
 
 
@@ -850,7 +816,6 @@ class ClpConfig(BaseModel):
     results_cache: ResultsCache = ResultsCache()
     otel_collector: OtelCollector = OtelCollector()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
-    spider_scheduler: SpiderScheduler | None = None
     query_scheduler: QueryScheduler | None = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker | None = QueryWorker()
@@ -1107,23 +1072,7 @@ class ClpConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_spider_config(self):
-        orchestration_type = self.compression_scheduler.type
-        if orchestration_type != OrchestrationType.SPIDER:
-            return self
-        if self.spider_scheduler is None:
-            raise ValueError(
-                "`spider_scheduler` must be configured when using Spider orchestration."
-            )
-        if self.database.type != DatabaseEngine.MARIADB:
-            raise ValueError("Spider only supports MariaDB for the metadata database.")
-        return self
-
-    @model_validator(mode="after")
     def validate_celery_config(self):
-        orchestration_type = self.compression_scheduler.type
-        if orchestration_type != OrchestrationType.CELERY:
-            return self
         if self.queue is None:
             raise ValueError("`queue` must be configured when using Celery orchestration.")
         if self.redis is None:
@@ -1149,8 +1098,6 @@ class ClpConfig(BaseModel):
             self.queue.transform_for_container(BundledService.QUEUE in self.bundled)
         if self.redis is not None:
             self.redis.transform_for_container(BundledService.REDIS in self.bundled)
-        if self.spider_scheduler is not None:
-            self.spider_scheduler.transform_for_container()
         self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
         self.otel_collector.transform_for_container(BundledService.OTEL_COLLECTOR in self.bundled)
         if self.query_scheduler is not None:
