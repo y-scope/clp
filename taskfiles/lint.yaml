@@ -850,7 +850,7 @@ tasks:
     deps: ["rust-lint-configs", "toolchains:rust"]
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-      cargo +nightly fmt --all -- {{.CARGO_FMT_FLAGS}}
+      cargo +{{.G_RUST_NIGHTLY}} fmt --all -- {{.CARGO_FMT_FLAGS}}
 
   # Runs `cargo +nightly clippy` in the root Rust workspace directory with the specified flags.
   #
@@ -863,7 +863,7 @@ tasks:
     deps: ["toolchains:rust"]
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-      cargo +nightly clippy --all-targets --all-features {{.CARGO_CLIPPY_FLAGS}}
+      cargo +{{.G_RUST_NIGHTLY}} clippy --all-targets --all-features {{.CARGO_CLIPPY_FLAGS}}
 
   venv:
     internal: true

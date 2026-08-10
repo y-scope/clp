@@ -45,6 +45,8 @@ vars:
 
   # Versions
   G_PACKAGE_VERSION: "0.13.1-dev"
+  # TODO: Unpin once clippy's `double_must_use` and `assert_is_empty` stop failing the workspace.
+  G_RUST_NIGHTLY: "nightly-2026-08-06"
 
   # Build parameters
   # NOTE: If CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK is set, it takes precedence. Otherwise, we cap
