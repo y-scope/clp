@@ -841,16 +841,15 @@ def main(argv) -> int | None:
     clp_metadata_db_connection_config = (
         sql_adapter.database_config.get_clp_connection_params_and_type(True)
     )
-    poller = _start_archive_storage_metrics_poller(
-        sql_adapter,
-        clp_config.package.storage_engine,
-        clp_metadata_db_connection_config["table_prefix"],
-        clp_config.compression_scheduler.telemetry_update_interval_ms,
-    )
-    if poller is not None:
-        _archive_storage_metrics_state.poller = poller
-
+    poller = None
     try:
+        poller = _start_archive_storage_metrics_poller(
+            sql_adapter,
+            clp_config.package.storage_engine,
+            clp_metadata_db_connection_config["table_prefix"],
+            clp_config.compression_scheduler.telemetry_update_interval_ms,
+        )
+        _archive_storage_metrics_state.poller = poller
         with (
             closing(sql_adapter.create_connection(True)) as db_conn,
             closing(db_conn.cursor(dictionary=True)) as db_cursor,
