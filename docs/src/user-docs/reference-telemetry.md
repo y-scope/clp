@@ -52,12 +52,14 @@ Emitted by the compression scheduler to track the current logical size of retain
 | compression-scheduler | `clp.storage.archive.bytes_compressed`           | Gauge | `By` | Current logical compressed size of all retained archives        |
 | compression-scheduler | `clp.storage.archive.bytes_uncompressed`         | Gauge | `By` | Current logical uncompressed size represented by those archives |
 
-These deployment-wide totals are calculated from archive metadata and include structures and indexes
-embedded in each archive. They exclude metadata-database storage and indexes, query results, streams,
-staging files, logs, filesystem allocation overhead, object-store overhead, and physical archives whose
-metadata has already been deleted. The metrics contain no archive- or dataset-specific attributes. If 
-collection fails, produces a partial result, or discovers invalid archive sizes, neither gauge is 
-observed until a later collection succeeds.
+These deployment-wide totals are calculated from archive metadata and include structures and
+indexes embedded in each archive. They exclude metadata-database storage and indexes, query
+results, streams, staging files, logs, filesystem allocation overhead, object-store overhead, and
+physical archives whose metadata has already been deleted. The metrics contain no archive- or
+dataset-specific attributes. The scheduler queries the metadata database every
+`telemetry_update_interval_ms` to total the sizes from all archive tables. If collection fails,
+produces a partial result, or discovers invalid archive sizes, neither gauge is observed until a
+later collection succeeds.
 
 #### Operational histograms
 
