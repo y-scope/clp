@@ -239,18 +239,16 @@ class _ArchiveStorageMetricsState:
 
 _archive_storage_metrics_state = _ArchiveStorageMetricsState()
 
-scheduled_jobs: dict[int, CompressionJob] = {}
+scheduled_jobs = {}
 
 meter = metrics.get_meter(__name__)
 
 
-def _observe_active_jobs(_options: metrics.CallbackOptions) -> Iterator[metrics.Observation]:
+def _observe_active_jobs(_options: metrics.CallbackOptions):
     yield metrics.Observation(len(scheduled_jobs))
 
 
-def _observe_outstanding_tasks(
-    _options: metrics.CallbackOptions,
-) -> Iterator[metrics.Observation]:
+def _observe_outstanding_tasks(_options: metrics.CallbackOptions):
     try:
         jobs = list(scheduled_jobs.values())
     except RuntimeError:
