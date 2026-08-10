@@ -55,11 +55,9 @@ Emitted by the compression scheduler to track the current logical size of retain
 These deployment-wide totals are calculated from archive metadata and include structures and indexes
 embedded in each archive. They exclude metadata-database storage and indexes, query results, streams,
 staging files, logs, filesystem allocation overhead, object-store overhead, and physical archives whose
-metadata has already been deleted. The metrics contain no archive- or dataset-specific attributes.
-
-A valid deployment with no archives reports zero for both gauges. If collection fails, produces a partial
-result, or discovers invalid archive sizes, neither gauge is observed until a later collection succeeds.
-The current implementation assumes a single compression scheduler owns these deployment-wide metrics.
+metadata has already been deleted. The metrics contain no archive- or dataset-specific attributes. If 
+collection fails, produces a partial result, or discovers invalid archive sizes, neither gauge is 
+observed until a later collection succeeds.
 
 #### Operational histograms
 
@@ -193,9 +191,7 @@ filtering, redaction, aggregation, and forwarding. For a matching baseline, star
 
 You can configure the interval at which metrics are exported for each instrumented component. The
 `telemetry_update_interval_ms` setting allows you to control the export frequency (in milliseconds)
-and defaults to `60000` (60 seconds). For the compression scheduler, this setting also controls how
-often archive storage gauges are refreshed from the metadata database. The first refresh begins
-immediately when the scheduler starts.
+and defaults to `60000` (60 seconds).
 
 The supported components are `compression_scheduler`, `compression_worker`, `query_scheduler`, and
 `query_worker`.
