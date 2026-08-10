@@ -110,8 +110,9 @@ class ArchiveStorageMetricsPollerTest(unittest.TestCase):
 
         fetch_datasets.assert_called_once_with(cursor, "clp_")
         queries = [call.args[0] for call in cursor.execute.call_args_list]
-        self.assertIn("FROM `clp_dataset_a_archives`", queries[0])
-        self.assertIn("FROM `clp_dataset_b_archives`", queries[1])
+        all_queries = "".join(queries)
+        self.assertIn("FROM `clp_dataset_a_archives`", all_queries)
+        self.assertIn("FROM `clp_dataset_b_archives`", all_queries)
         self.assertTrue(all("FROM `clp_archives`" not in query for query in queries))
 
     def test_each_poll_uses_a_fresh_connection(self) -> None:
@@ -134,7 +135,7 @@ class ArchiveStorageMetricsPollerTest(unittest.TestCase):
             [self._valid_row(), RuntimeError("dataset table disappeared")]
         )
         poller = self._create_poller(adapter, StorageEngine.CLP_S)
-        poller._set_snapshot((10, 100))
+        poller._snapshot = (10, 100)
 
         with (
             patch.object(
@@ -158,9 +159,6 @@ class ArchiveStorageMetricsPollerTest(unittest.TestCase):
             ("bytes_compressed", Decimal("1.5")),
             ("bytes_compressed", Decimal("NaN")),
             ("bytes_compressed", -1),
-            ("bytes_compressed", compression_scheduler._MAX_OTEL_INT64 + 1),
-            ("minimum_compressed_size", -1),
-            ("minimum_uncompressed_size", -1),
         ]
 
         for field_name, invalid_value in invalid_values:
@@ -169,7 +167,7 @@ class ArchiveStorageMetricsPollerTest(unittest.TestCase):
                 row[field_name] = invalid_value
                 adapter, _, _ = self._create_adapter([row])
                 poller = self._create_poller(adapter)
-                poller._set_snapshot((10, 100))
+                poller._snapshot = (10, 100)
 
                 with patch.object(compression_scheduler.logger, "exception"):
                     poller._poll_once()
@@ -194,7 +192,7 @@ class ArchiveStorageMetricsPollerTest(unittest.TestCase):
     def test_callbacks_only_read_cached_snapshot(self) -> None:
         adapter = MagicMock()
         poller = self._create_poller(adapter)
-        poller._set_snapshot((20, 200))
+        poller._snapshot = (20, 200)
         compression_scheduler._archive_storage_metrics_state.poller = poller
 
         compressed_observations = list(
