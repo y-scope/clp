@@ -1,39 +1,38 @@
 #ifndef UTILS_PROFILING_PROFILER_HPP
 #define UTILS_PROFILING_PROFILER_HPP
 
-#ifndef CLP_ENABLE_PROFILING
-    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-    #define CLP_ENABLE_PROFILING 0
-#endif
-
 #include <string>
 #include <string_view>
-#include <vector>
 
-#include <absl/container/flat_hash_map.h>
-#include <spdlog/spdlog.h>
-#include <utils/profiling/Stopwatch.hpp>
+#if CLP_ENABLE_PROFILING > 0
+    #include <vector>
+
+    #include <absl/container/flat_hash_map.h>
+    #include <spdlog/spdlog.h>
+    #include <utils/profiling/Stopwatch.hpp>
+#endif
 
 namespace utils::profiling {
+#if CLP_ENABLE_PROFILING > 0
 /**
- * Thread-local registry of named `Stopwatch` measurements. When profiling is disabled
- * (`CLP_ENABLE_PROFILING == 0`), all methods are empty.
+ * Thread-local registry of named `Stopwatch` measurements.
  *
- * The thread-local active profiler records `Stopwatch` measurements. If no profiler is active, all
- * measurement methods are no-ops.
+ * The active profiler records `Stopwatch` measurements. If no profiler is active, all measurement
+ * methods are no-ops.
  *
- * Hierarchical names are built as `<prefix>.<name>`, where the prefix is a thread-local stack of
- * `string_view`s pushed/popped by callers. Each entry must point to stable storage that outlives
- * the corresponding pop.
+ * Hierarchical names are built as `<scope_path>.<name>`, where the scope path is a thread-local
+ * stack of `string_view`s pushed/popped by callers. Each entry must point to stable storage that
+ * outlives the corresponding pop.
  */
 class Profiler {
 public:
     // Static methods
     /**
-     * Builds the full measurement name by prepending the active prefix.
+     * Builds the full measurement name by prepending the active scope path.
      *
      * @param name The local measurement name.
-     * @return `"<prefix>.<name>"` if a prefix is active, or `name` if no prefix is active.
+     * @return `"<scope_path>.<name>"` if a scope path is active, or `name` if no scope path is
+     * active.
      */
     [[nodiscard]] static auto build_full_name(std::string_view name) -> std::string;
 
@@ -44,47 +43,51 @@ public:
     [[nodiscard]] static auto get_active_profiler() -> Profiler*;
 
     /**
-     * Sets the thread-local pointer to the active `Profiler`.
+     * Pushes a `Profiler` onto the thread-local active profiler stack. The caller must ensure
+     * `profiler` outlives the corresponding `pop_active_profiler()` call.
      *
-     * @param profiler The profiler to set as active, or `nullptr` to deactivate.
+     * @param profiler The profiler to push.
      */
-    static auto set_active_profiler(Profiler* profiler) -> void;
+    static auto push_active_profiler(Profiler* profiler) -> void;
 
     /**
-     * @return The thread-local active name prefix (top of the prefix stack), or an empty
-     * `string_view` if no prefix is active.
+     * Pops the top of the thread-local active profiler stack. No-op if the stack is empty.
      */
-    [[nodiscard]] static auto get_active_prefix() -> std::string_view;
+    static auto pop_active_profiler() -> void;
 
     /**
-     * Pushes a name prefix onto the thread-local prefix stack. The caller must ensure `prefix`
-     * outlives the corresponding `pop_prefix()` call.
+     * @return The thread-local active scope path (top of the scope path stack), or an empty
+     * `string_view` if no scope path is active.
+     */
+    [[nodiscard]] static auto get_active_scope_path() -> std::string_view;
+
+    /**
+     * Pushes a scope path onto the thread-local scope path stack. The caller must ensure
+     * `scope_path` outlives the corresponding `pop_scope_path()` call.
      *
-     * @param prefix The prefix to push.
+     * @param scope_path The scope path to push.
      */
-    static auto push_prefix(std::string_view prefix) -> void;
+    static auto push_scope_path(std::string_view scope_path) -> void;
 
     /**
-     * Pops the top of the thread-local prefix stack. No-op if the stack is empty.
+     * Pops the top of the thread-local scope path stack. No-op if the stack is empty.
      */
-    static auto pop_prefix() -> void;
+    static auto pop_scope_path() -> void;
 
     /**
      * Starts a Stopwatch identified by `full_name`. If it does not yet exist, one is created.
-     * If the measurement is already running (re-entrant call), this is a no-op.
-     * If no profiler is active on the current thread, this is a no-op.
+     * If the measurement is already running (re-entrant call), this is a no-op. If no profiler is
+     * active on the current thread, this is a no-op.
      *
      * @param full_name The full measurement name.
      */
     static auto start_measurement(std::string_view full_name) -> void {
-        if constexpr (CLP_ENABLE_PROFILING) {
-            auto* const profiler{get_active_profiler()};
-            if (nullptr == profiler) {
-                return;
-            }
-            auto const [it, inserted]{profiler->m_map.try_emplace(std::string{full_name})};
-            it->second.start();
+        auto* const profiler{get_active_profiler()};
+        if (nullptr == profiler) {
+            return;
         }
+        auto const [it, inserted]{profiler->m_stopwatches.try_emplace(std::string{full_name})};
+        it->second.start();
     }
 
     /**
@@ -95,18 +98,16 @@ public:
      * @param full_name The full measurement name.
      */
     static auto stop_measurement(std::string_view full_name) -> void {
-        if constexpr (CLP_ENABLE_PROFILING) {
-            auto* const profiler{get_active_profiler()};
-            if (nullptr == profiler) {
-                return;
-            }
-            auto const it{profiler->m_map.find(full_name)};
-            if (it == profiler->m_map.end()) {
-                SPDLOG_ERROR("Attempt to stop non-existent runtime measurement: {}", full_name);
-                return;
-            }
-            it->second.stop();
+        auto* const profiler{get_active_profiler()};
+        if (nullptr == profiler) {
+            return;
         }
+        auto const it{profiler->m_stopwatches.find(full_name)};
+        if (it == profiler->m_stopwatches.end()) {
+            SPDLOG_ERROR("Attempt to stop non-existent runtime measurement: {}", full_name);
+            return;
+        }
+        it->second.stop();
     }
 
     // Methods
@@ -118,26 +119,54 @@ public:
      */
     template <typename Callback>
     auto for_each_measurement(Callback callback) -> void {
-        if constexpr (CLP_ENABLE_PROFILING) {
-            for (auto const& [name, stopwatch] : m_map) {
-                auto const measurement{stopwatch.get_measurement()};
-                if (0 == measurement.call_count) {
-                    continue;
-                }
-                callback(std::string_view{name}, measurement);
+        for (auto const& [name, stopwatch] : m_stopwatches) {
+            auto const measurement{stopwatch.get_measurement()};
+            if (0 == measurement.call_count) {
+                continue;
             }
-            m_map.clear();
+            callback(std::string_view{name}, measurement);
         }
+        m_stopwatches.clear();
     }
 
 private:
     // Static data members
-    static thread_local Profiler* m_active_profiler;
-    static thread_local std::vector<std::string_view> m_prefix_stack;
+    static thread_local std::vector<Profiler*> m_active_profiler_stack;
+    static thread_local std::vector<std::string_view> m_scope_path_stack;
 
     // Data members
-    absl::flat_hash_map<std::string, Stopwatch> m_map;
+    absl::flat_hash_map<std::string, Stopwatch> m_stopwatches;
 };
+#else
+/**
+ * Stub used when profiling is disabled (`CLP_ENABLE_PROFILING == 0`).
+ */
+class Profiler {
+public:
+    // Static methods
+    [[nodiscard]] static auto build_full_name(std::string_view name) -> std::string { return {}; }
+
+    [[nodiscard]] static auto get_active_profiler() -> Profiler* { return nullptr; }
+
+    static auto push_active_profiler(Profiler* profiler) -> void {}
+
+    static auto pop_active_profiler() -> void {}
+
+    [[nodiscard]] static auto get_active_scope_path() -> std::string_view { return {}; }
+
+    static auto push_scope_path(std::string_view scope_path) -> void {}
+
+    static auto pop_scope_path() -> void {}
+
+    static auto start_measurement(std::string_view full_name) -> void {}
+
+    static auto stop_measurement(std::string_view full_name) -> void {}
+
+    // Methods
+    template <typename Callback>
+    auto for_each_measurement(Callback callback) -> void {}
+};
+#endif  // CLP_ENABLE_PROFILING > 0
 }  // namespace utils::profiling
 
 #endif  // UTILS_PROFILING_PROFILER_HPP

@@ -21,6 +21,7 @@
 #endif
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
+#include <utils/profiling/Stopwatch.hpp>
 
 #include <clp/type_utils.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>

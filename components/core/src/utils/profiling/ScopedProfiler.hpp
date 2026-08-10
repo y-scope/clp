@@ -1,22 +1,25 @@
 #ifndef UTILS_PROFILING_SCOPEDPROFILER_HPP
 #define UTILS_PROFILING_SCOPEDPROFILER_HPP
 
-#include <string>
-#include <string_view>
+#if CLP_ENABLE_PROFILING > 0
+    #include <string>
+    #include <string_view>
 
-#include <utils/profiling/Profiler.hpp>
+    #include <utils/profiling/Profiler.hpp>
+#endif
 
+#if CLP_ENABLE_PROFILING > 0
 namespace utils::profiling {
 /**
  * RAII wrapper that starts a measurement on construction and stops it on destruction.
  *
- * Intended to be used through the `PROFILE_SCOPE*` macros, but can be used directly.
- * On construction, it computes the full hierarchical name (active prefix + scope name), starts the
- * measurement, and pushes the full name as the new active prefix. On destruction, it pops the
- * prefix and stops the measurement. Therefore, nested `ScopedProfiler`s produce hierarchical names.
+ * Should only be used through the `PROFILE_SCOPE*` macros.
+ * On construction, it computes the full hierarchical name (<active scope path>.<scope name>),
+ * starts the measurement, and pushes the full name as the new active scope path. On destruction, it
+ * pops the scope path and stops the measurement.
  *
- * When profiling is disabled (`CLP_ENABLE_PROFILING == 0`), all method bodies are empty and data
- * member instantiation is negligible (or may be optimized out completely).
+ * Can be used directly in unit testing as CLP_ENABLE_PROFILING is always enabled, but any direct
+ * usage with profiling disabled will not compile.
  */
 class ScopedProfiler {
 public:
@@ -31,71 +34,66 @@ public:
      */
     explicit ScopedProfiler(std::string_view name)
             : m_owned_full_name{Profiler::build_full_name(name)} {
-        if constexpr (CLP_ENABLE_PROFILING) {
-            m_full_name = m_owned_full_name;
-            Profiler::start_measurement(m_full_name);
-            Profiler::push_prefix(m_full_name);
-        }
+        m_full_name = m_owned_full_name;
+        Profiler::start_measurement(m_full_name);
+        Profiler::push_scope_path(m_full_name);
     }
 
     /**
-     * Starts a new measurement for `name` that is stopped on destruction.
-     * Uses external storage to cache the `name` and `prefix` strings to avoid
-     * allocation/recomputation on subsequent invocations (with the same name and scope nesting).
-     * On the first invocation, the full name and prefix are computed and stored in the cached
+     * Starts a new measurement named <scope_path>.<name> that is stopped on destruction.
+     * Uses external storage to cache the full name and scope path to avoid
+     * allocation/recomputation on subsequent invocations (with the same name and scope path).
+     * On the first invocation, the full name and scope path are computed and stored in the cached
      * arguments.
      *
      * @param name The measurement name.
      * @param cached_full_name The per-call-site cache for the full name. Owned externally.
-     * @param cached_prefix The per-call-site cache for the prefix that was active when
+     * @param cached_scope_path The per-call-site cache for the scope path that was active when
      * `cached_full_name` was computed. Owned externally.
      */
     ScopedProfiler(
             std::string_view name,
             std::string& cached_full_name,
-            std::string& cached_prefix
+            std::string& cached_scope_path
     ) {
-        if constexpr (CLP_ENABLE_PROFILING) {
-            auto const prefix{Profiler::get_active_prefix()};
-            if (prefix == cached_prefix) {
-                m_full_name = cached_full_name;
-            } else {
-                cached_prefix = std::string{prefix};
-                cached_full_name = Profiler::build_full_name(name);
-                m_full_name = cached_full_name;
-            }
-            Profiler::start_measurement(m_full_name);
-            Profiler::push_prefix(m_full_name);
+        auto const scope_path{Profiler::get_active_scope_path()};
+        if (scope_path == cached_scope_path) {
+            m_full_name = cached_full_name;
+        } else {
+            cached_scope_path = std::string{scope_path};
+            cached_full_name = Profiler::build_full_name(name);
+            m_full_name = cached_full_name;
         }
+        Profiler::start_measurement(m_full_name);
+        Profiler::push_scope_path(m_full_name);
     }
 
-    // Delete copy constructor and assignment operator.
+    // Delete copy constructor and assignment operator
     ScopedProfiler(ScopedProfiler const&) = delete;
     auto operator=(ScopedProfiler const&) -> ScopedProfiler& = delete;
 
-    // Delete move constructor and assignment operator.
+    // Delete move constructor and assignment operator
     ScopedProfiler(ScopedProfiler&&) = delete;
     auto operator=(ScopedProfiler&&) -> ScopedProfiler& = delete;
 
     // Destructor
     /**
-     * Pops the prefix pushed in the constructor and stops the measurement.
+     * Pops the scope path pushed in the constructor and stops the measurement.
      */
     ~ScopedProfiler() {
-        if constexpr (CLP_ENABLE_PROFILING) {
-            Profiler::pop_prefix();
-            Profiler::stop_measurement(m_full_name);
-        }
+        Profiler::pop_scope_path();
+        Profiler::stop_measurement(m_full_name);
     }
 
 private:
     // Data members
-    // Points to m_owned_name or the externally cached full name.
+    // Points to m_owned_full_name or the externally cached full name.
     std::string_view m_full_name;
     // Owned full name storage.
     std::string m_owned_full_name;
 };
 }  // namespace utils::profiling
+#endif  // CLP_ENABLE_PROFILING > 0
 
 /**
  * `PROFILE_SCOPE` and `PROFILE_SCOPE_DEBUG` create a `ScopedProfiler` for the current scope.
@@ -110,16 +108,16 @@ private:
 #if CLP_ENABLE_PROFILING > 0
    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
     #define PROFILE_SCOPE_IMPL(counter, name) \
-        static thread_local ::std::string _porfile_scope_full_name_##counter; \
-        static thread_local ::std::string _porfile_scope_prefix_##counter; \
-        ::utils::profiling::ScopedProfiler const _porfile_scope_profiler_##counter { \
-            name, _porfile_scope_full_name_##counter, _porfile_scope_prefix_##counter \
+        static thread_local ::std::string _prof_scope_full_name_##counter; \
+        static thread_local ::std::string _prof_scope_path_##counter; \
+        ::utils::profiling::ScopedProfiler const _prof_scope_profiler_##counter { \
+            name, _prof_scope_full_name_##counter, _prof_scope_path_##counter \
         }
 
     // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
     #define PROFILE_SCOPE(name) PROFILE_SCOPE_IMPL(__COUNTER__, name)
 #else
-   // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
     #define PROFILE_SCOPE(name) (void)0
 #endif
 
@@ -127,7 +125,7 @@ private:
    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
     #define PROFILE_SCOPE_DEBUG(name) PROFILE_SCOPE_IMPL(__COUNTER__, name)
 #else
-   // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
     #define PROFILE_SCOPE_DEBUG(name) (void)0
 #endif
 
