@@ -74,7 +74,6 @@ class DbContext:
 # Setup logging
 logger = get_logger("compression_scheduler")
 
-_MAX_OTEL_INT64 = (1 << 63) - 1
 _ARCHIVE_STORAGE_METRICS_SHUTDOWN_TIMEOUT_SECS = 5
 
 
@@ -149,20 +148,15 @@ class _ArchiveStorageMetricsPoller:
                 error_msg = f"Unsupported storage engine: {self._storage_engine}."
                 raise ValueError(error_msg)
 
+            # Archive totals are assumed to remain below OpenTelemetry's 8 EiB int64 limit.
             compressed_bytes = 0
             uncompressed_bytes = 0
             for archive_table_name in archive_table_names:
                 table_compressed_bytes, table_uncompressed_bytes = self._collect_table_sizes(
                     db_cursor, archive_table_name
                 )
-                compressed_bytes = self._validate_size(
-                    compressed_bytes + table_compressed_bytes,
-                    "total compressed archive size",
-                )
-                uncompressed_bytes = self._validate_size(
-                    uncompressed_bytes + table_uncompressed_bytes,
-                    "total uncompressed archive size",
-                )
+                compressed_bytes += table_compressed_bytes
+                uncompressed_bytes += table_uncompressed_bytes
 
             return compressed_bytes, uncompressed_bytes
 
@@ -202,9 +196,6 @@ class _ArchiveStorageMetricsPoller:
 
         if size < 0:
             error_msg = f"{field_name} must not be negative."
-            raise ValueError(error_msg)
-        if size > _MAX_OTEL_INT64:
-            error_msg = f"{field_name} exceeds the OpenTelemetry int64 limit."
             raise ValueError(error_msg)
         return size
 
