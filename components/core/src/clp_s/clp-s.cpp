@@ -9,7 +9,6 @@
 #include <string_view>
 #include <system_error>
 #include <utility>
-#include <variant>
 
 #include <fmt/format.h>
 #include <mongocxx/instance.hpp>
@@ -20,6 +19,8 @@
 #if CLP_BUILD_CLP_S_ENABLE_CURL
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
+#include <utils/profiling/Reporter.hpp>
+
 #include <clp/type_utils.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
 #include <clp_s/search/TelemetryContext.hpp>
@@ -140,6 +141,18 @@ bool search_archive(
         int reducer_socket_fd,
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 ) {
+    auto emit_measurement = [telemetry_span](
+                                    std::string_view name,
+                                    utils::profiling::Measurement measurement
+                            ) -> void {
+        if (nullptr != telemetry_span) {
+            telemetry_span->set_profiler_measurement(name, measurement);
+        } else {
+            utils::profiling::SpdlogEmitter{}(name, measurement);
+        }
+    };
+    utils::profiling::Reporter const profiler_reporter{"search", emit_measurement};
+
     auto const& query = command_line_arguments.get_query();
     if (nullptr != telemetry_span) {
         telemetry_span->set_query_context(query);

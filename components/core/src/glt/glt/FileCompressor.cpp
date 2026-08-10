@@ -7,11 +7,11 @@
 #include <archive_entry.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ir/types.hpp"
 #include "../ir/utils.hpp"
-#include "../Profiler.hpp"
 #include "../streaming_archive/writer/utils.hpp"
 #include "utils.hpp"
 
@@ -108,10 +108,9 @@ bool FileCompressor::compress_file(
         FileToCompress const& file_to_compress,
         streaming_archive::writer::Archive& archive_writer
 ) {
-    std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
+    PROFILE_SCOPE("compress.parse_log_file");
 
-    PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
+    std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
 
     m_file_reader.open(file_to_compress.get_path());
 
@@ -163,10 +162,6 @@ bool FileCompressor::compress_file(
     }
 
     m_file_reader.close();
-
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
-    PROFILER_SPDLOG_INFO("Done parsing {}", file_name)
 
     return succeeded;
 }
