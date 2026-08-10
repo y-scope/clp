@@ -284,14 +284,14 @@ meter.create_observable_gauge(
     "clp.storage.archive.bytes_compressed",
     unit="By",
     callbacks=[_observe_archive_bytes_compressed],
-    description="Current logical compressed size of archives in the metadata database",
+    description="Current logical compressed size of archives according to the metadata database",
 )
 meter.create_observable_gauge(
     "clp.storage.archive.bytes_uncompressed",
     unit="By",
     callbacks=[_observe_archive_bytes_uncompressed],
     description=(
-        "Current logical uncompressed size represented by archives in the metadata database"
+        "Current logical uncompressed size represented by archives according to the metadata database"
     ),
 )
 tasks_completed_counter = meter.create_counter(
