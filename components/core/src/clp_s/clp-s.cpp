@@ -20,6 +20,7 @@
     #include "../clp/CurlGlobalInstance.hpp"
 #endif
 #include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
 #include <clp/type_utils.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
@@ -141,17 +142,7 @@ bool search_archive(
         int reducer_socket_fd,
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 ) {
-    auto emit_measurement = [telemetry_span](
-                                    std::string_view name,
-                                    utils::profiling::Measurement measurement
-                            ) -> void {
-        if (nullptr != telemetry_span) {
-            telemetry_span->set_profiler_measurement(name, measurement);
-        } else {
-            utils::profiling::SpdlogEmitter{}(name, measurement);
-        }
-    };
-    utils::profiling::Reporter const profiler_reporter{"search", emit_measurement};
+    PROFILE_SCOPE("search_archive");
 
     auto const& query = command_line_arguments.get_query();
     if (nullptr != telemetry_span) {
@@ -563,6 +554,18 @@ int main(int argc, char const* argv[]) {
             if (command_line_arguments.get_enable_telemetry()) {
                 telemetry_span = std::make_shared<SearchTelemetrySpan>();
             }
+            auto emit_measurement = [telemetry_span](
+                                            std::string_view name,
+                                            utils::profiling::Measurement measurement
+                                    ) -> void {
+                if (nullptr != telemetry_span) {
+                    telemetry_span->set_profiler_measurement(name, measurement);
+                } else {
+                    utils::profiling::SpdlogEmitter{}(name, measurement);
+                }
+            };
+            utils::profiling::Reporter const profiler_reporter{"search", emit_measurement};
+
             try {
                 archive_reader->open(input_path, command_line_arguments.get_network_auth());
             } catch (std::exception const& e) {
