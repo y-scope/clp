@@ -171,9 +171,7 @@ class _ArchiveStorageMetricsPoller:
         query = f"""
             SELECT
                 COALESCE(SUM(`size`), 0) AS bytes_compressed,
-                COALESCE(SUM(`uncompressed_size`), 0) AS bytes_uncompressed,
-                COALESCE(MIN(`size`), 0) AS minimum_compressed_size,
-                COALESCE(MIN(`uncompressed_size`), 0) AS minimum_uncompressed_size
+                COALESCE(SUM(`uncompressed_size`), 0) AS bytes_uncompressed
             FROM `{archive_table_name}`
             """  # noqa: S608
         db_cursor.execute(query)
@@ -184,8 +182,6 @@ class _ArchiveStorageMetricsPoller:
 
         compressed_bytes = cls._validate_size(row.get("bytes_compressed"), "compressed size")
         uncompressed_bytes = cls._validate_size(row.get("bytes_uncompressed"), "uncompressed size")
-        cls._validate_size(row.get("minimum_compressed_size"), "minimum compressed size")
-        cls._validate_size(row.get("minimum_uncompressed_size"), "minimum uncompressed size")
         return compressed_bytes, uncompressed_bytes
 
     @staticmethod
