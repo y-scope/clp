@@ -28,7 +28,7 @@ auto ClpArchiveReader::create(std::string_view archive_path) -> Result<ClpArchiv
     try {
         auto path{get_path_object_for_raw_path(archive_path)};
         reader = std::make_unique<clp_s::ArchiveReader>();
-        reader->open(path, NetworkAuthOption{});
+        reader->open(path, {NetworkAuthOption{}, false});
         auto clp_archive_reader{ClpArchiveReader{std::move(reader), nullptr}};
         YSTDLIB_ERROR_HANDLING_TRYV(clp_archive_reader.precompute_archive_metadata());
         return clp_archive_reader;

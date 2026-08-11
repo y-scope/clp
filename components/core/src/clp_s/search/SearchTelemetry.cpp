@@ -1,5 +1,6 @@
 #include "SearchTelemetry.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
@@ -16,6 +17,7 @@
 #include <opentelemetry/trace/span.h>
 #include <opentelemetry/trace/span_metadata.h>
 #include <opentelemetry/trace/tracer.h>  // IWYU pragma: keep
+#include <utils/profiling/Stopwatch.hpp>
 #include <xxhash.h>
 
 #include <clp_s/Defs.hpp>
@@ -69,9 +71,19 @@ constexpr std::string_view cAttrNumArchiveRecordsMatchingSchemas{
 constexpr std::string_view cAttrNumArchiveRecordsMatchingQuery{
         "clp.query.num_archive_records_matching_query"
 };
+constexpr std::string_view cAttrNumArchiveSchemas{"clp.query.num_archive_schemas"};
+constexpr std::string_view cAttrNumBytesOutput{"clp.query.num_bytes_output"};
+constexpr std::string_view cAttrNumClppInterpretations{"clp.query.num_clpp_interpretations"};
+constexpr std::string_view cAttrNumColumnScanFilters{"clp.query.num_column_scan_filters"};
 constexpr std::string_view cAttrNumMatchedSchemas{"clp.query.num_matched_schemas"};
+constexpr std::string_view cAttrNumMessagesEvaluated{"clp.query.num_messages_evaluated"};
+constexpr std::string_view cAttrNumQueryRunnerFilters{"clp.query.num_query_runner_filters"};
+constexpr std::string_view cAttrNumSchemasScanned{"clp.query.num_schemas_scanned"};
 constexpr std::string_view cAttrNumSchemasWithMatches{"clp.query.num_schemas_with_matches"};
 constexpr std::string_view cAttrTerminationStage{"clp.query.termination_stage"};
+
+constexpr std::string_view cAttrProfilerPhaseCallCountSuffix{".call_count"};
+constexpr std::string_view cAttrProfilerPhaseDurationSuffix{".duration_millisecs"};
 
 /**
  * @param sv
@@ -323,8 +335,36 @@ public:
                 to_int64_attribute(metrics.num_archive_records_matching_query)
         );
         m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumArchiveSchemas),
+                to_int64_attribute(metrics.num_archive_schemas)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumBytesOutput),
+                to_int64_attribute(metrics.num_bytes_output)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumClppInterpretations),
+                to_int64_attribute(metrics.num_clpp_interpretations)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumColumnScanFilters),
+                to_int64_attribute(metrics.num_column_scan_filters)
+        );
+        m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumMatchedSchemas),
                 to_int64_attribute(metrics.num_matched_schemas)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumMessagesEvaluated),
+                to_int64_attribute(metrics.num_messages_evaluated)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumQueryRunnerFilters),
+                to_int64_attribute(metrics.num_query_runner_filters)
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(cAttrNumSchemasScanned),
+                to_int64_attribute(metrics.num_schemas_scanned)
         );
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrNumSchemasWithMatches),
@@ -336,6 +376,19 @@ public:
         m_span->SetAttribute(
                 to_nostd_string_view(cAttrTerminationStage),
                 to_nostd_string_view(termination_stage)
+        );
+    }
+
+    auto set_profiler_measurement(std::string_view name, utils::profiling::Measurement measurement)
+            -> void {
+        auto const base{std::string{cTracerName} + "." + std::string{name}};
+        m_span->SetAttribute(
+                to_nostd_string_view(base + std::string{cAttrProfilerPhaseDurationSuffix}),
+                std::chrono::duration_cast<std::chrono::milliseconds>(measurement.duration).count()
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(base + std::string{cAttrProfilerPhaseCallCountSuffix}),
+                static_cast<int64_t>(measurement.call_count)
         );
     }
 
@@ -371,6 +424,13 @@ auto SearchTelemetrySpan::set_search_result_metrics(SearchResultMetrics const& m
 
 auto SearchTelemetrySpan::set_termination_stage(std::string_view termination_stage) -> void {
     m_impl->set_termination_stage(termination_stage);
+}
+
+auto SearchTelemetrySpan::set_profiler_measurement(
+        std::string_view name,
+        utils::profiling::Measurement measurement
+) -> void {
+    m_impl->set_profiler_measurement(name, measurement);
 }
 
 auto QueryShapeMetrics::create(

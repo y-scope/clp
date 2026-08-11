@@ -104,7 +104,8 @@ private:
      * - A fully resolved column
      * - A supported operation and literal-type combination
      * - For string predicates, a valid corresponding entry in one of the precomputed string search
-     * maps.
+     *   maps.
+     * - For numeric predicates, a non-wildcard operand.
      *
      * @param filter
      * @param clp_queries A map of precomputed clp string searches.

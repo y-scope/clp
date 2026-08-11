@@ -5,12 +5,15 @@
 #include <iostream>
 #include <optional>
 #include <string_view>
+#include <utility>
 #include <variant>
 
 #include <boost/program_options.hpp>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 
 #include "../clp/type_utils.hpp"
@@ -264,7 +267,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     }
 
     po::options_description general_options("General options");
-    general_options.add_options()("help,h", "Print help");
+    bool experimental{false};
+    general_options.add_options()("help,h", "Print help")(
+            "experimental",
+            po::bool_switch(&experimental),
+            "Enable experimental features to be used."
+    );
 
     char command_input;
     po::options_description general_positional_options("General positional options");
@@ -328,6 +336,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 break;
             default:
                 throw std::invalid_argument(std::string("Unknown action '") + command_input + "'");
+        }
+
+        if (experimental) {
+            m_experimental.emplace();
         }
 
         if (Command::Compress == m_command) {
@@ -430,12 +442,21 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
+            po::options_description experimental_options("Experimental Options");
+            std::string parsing_spec_path{};
+            experimental_options.add_options()(
+                    "parsing-specification",
+                    po::value<std::string>(&parsing_spec_path)->value_name("PATH"),
+                    "Path to a log-surgeon parsing specification. See documentation for details."
+            );
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("input-paths", -1);
 
             po::options_description all_compression_options;
             all_compression_options.add(compression_options);
+            all_compression_options.add(experimental_options);
             all_compression_options.add(compression_positional_options);
 
             std::vector<std::string> unrecognized_options
@@ -461,6 +482,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(compression_options);
+                visible_options.add(experimental_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -567,6 +589,16 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
+
+            if (m_experimental && false == parsing_spec_path.empty()) {
+                m_experimental->parsing_spec_path
+                        = std::move(get_path_object_for_raw_path(parsing_spec_path));
+            } else if (m_experimental.has_value() ^ (false == parsing_spec_path.empty())) {
+                throw std::invalid_argument(
+                        "--experimental must be set and --parsing-specification must be non-empty"
+                        "to use CLP+"
+                );
+            }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;
@@ -750,7 +782,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "enable-telemetry",
                 po::bool_switch(&m_enable_telemetry),
                 "Publish search telemetry to the OpenTelemetry endpoint specified in the"
-                " CLP_TELEMETRY_ENDPOINT environment variable"
+                " CLP_TELEMETRY_ENDPOINT environment variable. Set CLP_TELEMETRY_ENDPOINT=ostream"
+                " to print telemetry to stderr instead of sending it to an OTLP collector"
             )(
                 "archive-id",
                 po::value<std::string>(&archive_id)->value_name("ID"),

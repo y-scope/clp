@@ -6,71 +6,21 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/Schema.hpp>
-#include <log_surgeon/SchemaParser.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 
 #include <clp/Defs.h>
 #include <clp/GrepCore.hpp>
 
+#include "../clp/Utils.hpp"
 #include "search_test_utils.hpp"
 
 using clp::epochtime_t;
 using clp::GrepCore;
-using log_surgeon::lexers::ByteLexer;
-using log_surgeon::Schema;
-using log_surgeon::SchemaVarAST;
-using log_surgeon::SymbolId::TokenFloat;
-using log_surgeon::SymbolId::TokenInt;
+using clp::load_parser_from_str;
+using log_surgeon::ParserHandle;
 using std::pair;
 using std::string;
 using std::vector;
-
-constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
-constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-constexpr uint32_t cHasNumId{111};
-
-namespace {
-/**
- * Initializes a `ByteLexer` with space as a delimiter and the given `schema_rules`.
- *
- * @param schema_rules A vector of strings, each string representing a schema rule.
- * @return The initialized `ByteLexer`.
- */
-auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer;
-
-auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer {
-    ByteLexer lexer;
-    lexer.m_symbol_id["int"] = cIntId;
-    lexer.m_symbol_id["float"] = cFloatId;
-    lexer.m_symbol_id["hasNumber"] = cHasNumId;
-    lexer.m_id_symbol[cIntId] = "int";
-    lexer.m_id_symbol[cFloatId] = "float";
-    lexer.m_id_symbol[cHasNumId] = "hasNumber";
-    lexer.set_delimiters({' '});
-
-    Schema schema;
-    for (auto const& schema_rule : schema_rules) {
-        schema.add_variable(schema_rule, -1);
-    }
-
-    auto const schema_ast = schema.release_schema_ast_ptr();
-    REQUIRE(nullptr != schema_ast);
-    REQUIRE(schema_rules.size() == schema_ast->m_schema_vars.size());
-    for (size_t i{0}; i < schema_ast->m_schema_vars.size(); ++i) {
-        REQUIRE(nullptr != schema_ast->m_schema_vars[i]);
-        auto* capture_rule_ast{dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[i].get())};
-        REQUIRE(nullptr != capture_rule_ast);
-        auto symbol_id_t{lexer.m_symbol_id.find(capture_rule_ast->m_name)};
-        REQUIRE(lexer.m_symbol_id.end() != symbol_id_t);
-        lexer.add_rule(symbol_id_t->second, std::move(capture_rule_ast->m_regex_ptr));
-    }
-
-    lexer.generate();
-    return lexer;
-}
-}  // namespace
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     string str;
@@ -168,23 +118,46 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     constexpr epochtime_t cNoBeginTimestamp{0};
     constexpr epochtime_t cNoEndTimestamp{0};
     constexpr bool cIgnoreCase{true};
-    constexpr bool cUseHeuristic{false};
 
-    auto lexer{make_test_lexer(
-            {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ $]*\d+[^ $]*)"}}
-    )};
+    string const raw_query{"text 100 10? 3.14*"};
+
+    std::string spec{R"(delimiters:\ \r\n)"};
+    spec += "\n";
+    spec += R"(int:\d+)";
+    spec += "\n";
+    spec += R"(float:\d+\.\d+)";
+    spec += "\n";
+    spec += R"(hasNumber:[^ &]*\d+[^ &]*)";
+
+    CAPTURE(spec);
+
+    auto parser{load_parser_from_str(spec)};
+
+    auto const interpretations{parser.query_interpretations("", raw_query)};
+    string interpretation_strings{"interps:"};
+    CAPTURE(interpretations.size());
+    for (auto const& interpretation : interpretations) {
+        string interp_string;
+        for (auto const& token : interpretation) {
+            if (token.qualified_name.empty()) {
+                interp_string += token.value;
+                continue;
+            }
+            interp_string += "<" + token.qualified_name + ">(" + token.value + ")";
+        }
+        interpretation_strings += "\n" + interp_string;
+    }
+    CAPTURE(interpretation_strings);
 
     MockVariableDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
     MockLogTypeDictionary const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
              {"text ", 'i', " ", 'd', " ", 'f'},
-             {"text ", 'i', " ", 'd', " 3.14ab$"},
-             {"text ", 'i', " ", 'd', " 3.14abc$"},
-             {"text ", 'i', " ", 'd', " 3.15ab$"},
-             {"text ", 'i', " 10$ ", 'f'}}
+             {"text ", 'i', " ", 'd', " 3.14ab&"},
+             {"text ", 'i', " ", 'd', " 3.14abc&"},
+             {"text ", 'i', " ", 'd', " 3.15ab&"},
+             {"text ", 'i', " 10& ", 'f'}}
     )};
-
-    string const raw_query{"text 100 10? 3.14*"};
 
     auto const query{GrepCore::process_raw_query(
             logtype_dict,
@@ -193,8 +166,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
             cNoBeginTimestamp,
             cNoEndTimestamp,
             cIgnoreCase,
-            lexer,
-            cUseHeuristic
+            &parser
     )};
 
     REQUIRE(query.has_value());
@@ -202,10 +174,10 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
 
     VarInfo const wild_int{false, true, {}};
     VarInfo const wild_has_num{true, true, {1LL}};
-    REQUIRE(4 == sub_queries.size());
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
+    REQUIRE(4 == sub_queries.size());
 }

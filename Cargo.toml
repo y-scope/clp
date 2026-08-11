@@ -1,4 +1,7 @@
 [workspace]
+exclude = [
+    "build"
+]
 members = [
     "components/api-server",
     "components/clp-rust-utils",
