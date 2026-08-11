@@ -1,25 +1,21 @@
 #ifndef UTILS_PROFILING_REPORTER_HPP
 #define UTILS_PROFILING_REPORTER_HPP
 
-#include <cassert>
 #include <chrono>
-#include <concepts>
-#include <string>
 #include <string_view>
-#include <thread>
 #include <utility>
 
 #include <spdlog/spdlog.h>
-#include <utils/profiling/Profiler.hpp>
 #include <utils/profiling/Stopwatch.hpp>
 
-namespace utils::profiling {
-/**
- * Concept constraining the emit callback type for `Reporter`.
- */
-template <typename F>
-concept MeasurementEmitter = std::invocable<F&, std::string_view, Measurement>;
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
+    #include <concepts>
+    #include <string>
 
+    #include <utils/profiling/Profiler.hpp>
+#endif
+
+namespace utils::profiling {
 /**
  * Emit callback that writes profiler measurements to SPDLOG in milliseconds.
  */
@@ -34,19 +30,22 @@ struct SpdlogEmitter {
     }
 };
 
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
+/**
+ * Concept constraining the emit callback type for `Reporter`.
+ */
+template <typename F>
+concept MeasurementEmitter = std::invocable<F&, std::string_view, Measurement>;
+
 /**
  * RAII wrapper that collects profiler measurements and emits them to a callback on destruction.
  *
- * On construction, the reporter registers its `Profiler` as the thread-local active profiler and
- * pushes its name as the active prefix, so that all `ScopedProfiler` instances created within its
- * scope produce hierarchical measurement names. On destruction, it restores the previous active
- * profiler and prefix, then emits all collected measurements.
+ * On construction, the reporter pushes its `Profiler` onto the thread-local active profiler stack
+ * and pushes its name onto the thread-local scope path stack, so that any profiling using
+ * `Profiler` collected within the `Reporter`'s scope produce hierarchical measurement names. On
+ * destruction, it pops both stacks and emits all collected measurements.
  *
- * A reporter must be created and destroyed on the same thread. For multi-threaded profiling, each
- * worker thread should create its own `Reporter`.
- *
- * When profiling is disabled (`CLP_ENABLE_PROFILING == 0`), all method bodies are empty and data
- * member instantiation is negligible (or may be optimized out completely).
+ * For multi-threaded profiling, each worker thread should create its own `Reporter`.
  *
  * @tparam EmitCallback The callback type, constrained by `MeasurementEmitter`.
  */
@@ -58,56 +57,70 @@ public:
     Reporter() = delete;
 
     /**
-     * Sets its own `Profiler` as the active `Profiler`, stores the previous active `Profiler`, and
-     * pushes its name onto the prefix.
+     * Pushes its own `Profiler` onto the active profiler stack and pushes its name onto the scope
+     * path stack. Any new profiler measurements will be recorded under `m_profiler`.
      *
-     * @param name The reporter name, used to build the hierarchical measurement prefix.
+     * @param name The reporter name, used to build the hierarchical measurement scope path.
      * @param emit Callback invoked once per measurement on destruction.
      */
     explicit Reporter(std::string_view name, EmitCallback emit) : m_emit{std::move(emit)} {
-        if constexpr (CLP_ENABLE_PROFILING) {
-            m_thread_id = std::this_thread::get_id();
-            m_prev_profiler = Profiler::get_active_profiler();
-            m_full_name = Profiler::build_full_name(name);
-            Profiler::push_prefix(m_full_name);
-            Profiler::set_active_profiler(&m_profiler);
-        }
+        m_full_name = Profiler::build_full_name(name);
+        Profiler::push_scope_path(m_full_name);
+        Profiler::push_active_profiler(&m_profiler);
     }
 
-    // Delete copy constructor and assignment operator.
+    // Delete copy constructor and assignment operator
     Reporter(Reporter const&) = delete;
     auto operator=(Reporter const&) -> Reporter& = delete;
 
-    // Delete move constructor and assignment operator.
+    // Delete move constructor and assignment operator
     Reporter(Reporter&&) = delete;
     auto operator=(Reporter&&) -> Reporter& = delete;
 
     // Destructor
     /**
-     * Sets the active `Profiler` to the previous one stored on construction, pops the prefix, and
-     * emits the measurements.
+     * Pops the active profiler and scope path stacks, then emits the profiler's measurements.
      */
     ~Reporter() {
-        if constexpr (CLP_ENABLE_PROFILING) {
-            assert(m_thread_id == std::this_thread::get_id());
-            Profiler::set_active_profiler(m_prev_profiler);
-            Profiler::pop_prefix();
-            m_profiler.for_each_measurement(
-                    [this](std::string_view name, Measurement const& measurement) -> void {
-                        m_emit(name, measurement);
-                    }
-            );
-        }
+        Profiler::pop_active_profiler();
+        Profiler::pop_scope_path();
+        m_profiler.for_each_measurement(
+                [this](std::string_view name, Measurement const& measurement) -> void {
+                    m_emit(name, measurement);
+                }
+        );
     }
 
 private:
     // Data members
     Profiler m_profiler;
-    Profiler* m_prev_profiler{nullptr};
     std::string m_full_name;
     EmitCallback m_emit;
-    std::thread::id m_thread_id;
 };
+#else
+/**
+ * Stub used when profiling is disabled (`CLP_ENABLE_PROFILING == 0`).
+ */
+class Reporter {
+public:
+    // Constructors
+    Reporter() = delete;
+
+    template <typename EmitCallback>
+    explicit Reporter(std::string_view name, EmitCallback emit) {}
+
+    // Delete copy constructor and assignment operator
+    Reporter(Reporter const&) = delete;
+    auto operator=(Reporter const&) -> Reporter& = delete;
+
+    // Delete move constructor and assignment operator
+    Reporter(Reporter&&) = delete;
+    auto operator=(Reporter&&) -> Reporter& = delete;
+
+    // Destructor
+    ~Reporter() = default;
+};
+#endif  // defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
 }  // namespace utils::profiling
 
 #endif  // UTILS_PROFILING_REPORTER_HPP
