@@ -1,6 +1,6 @@
-#include "TelemetryContext.hpp"
-
 #include <memory>
+
+#include "TelemetryContext.hpp"
 
 namespace clp_s::search {
 class TelemetryContext::Impl {};

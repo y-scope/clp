@@ -18,6 +18,7 @@
 #if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
     #include <archive.h>
     #include <archive_entry.h>
+
     #include "../clp/LibarchiveFileReader.hpp"
     #include "../clp/LibarchiveReader.hpp"
 #endif

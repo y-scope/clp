@@ -1,8 +1,8 @@
-#include "SearchTelemetry.hpp"
-
 #include <memory>
 #include <optional>
 #include <string_view>
+
+#include "SearchTelemetry.hpp"
 
 namespace clp_s::search {
 class SearchTelemetrySpan::Impl {};
