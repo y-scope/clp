@@ -18,7 +18,7 @@ if(CLP_BUILD_UTILS_PROFILING)
             ScopedProfiler.hpp
             Stopwatch.hpp
     )
-    target_compile_features(utils_profiling PRIVATE cxx_std_20)
+    target_compile_features(utils_profiling PUBLIC cxx_std_20)
     target_include_directories(utils_profiling PUBLIC ../../)
     target_link_libraries(
             utils_profiling
