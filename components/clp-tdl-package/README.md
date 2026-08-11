@@ -1,7 +1,7 @@
 # CLP TDL Package
 
-This component contains implementations of CLP tasks that run on Spider. It provides a shared
-library that conforms to Spider's Task Definition Language (TDL) package specification.
+This component contains implementations of CLP tasks that run on Spider. These tasks are built into
+a shared library that conforms to the Spider Task Definition Language (TDL) package specification.
 
 ## Tasks
 

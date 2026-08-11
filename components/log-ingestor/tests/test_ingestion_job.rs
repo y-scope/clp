@@ -175,6 +175,7 @@ async fn run_sqs_listener_test(
         credentials: AwsCredentials {
             access_key_id: aws_config.access_key_id.clone(),
             secret_access_key: aws_config.secret_access_key.clone(),
+            session_token: None,
         },
     };
     let sqs_client = clp_rust_utils::sqs::create_new_client(
@@ -290,6 +291,7 @@ async fn test_s3_scanner() -> Result<()> {
         credentials: AwsCredentials {
             access_key_id: aws_config.access_key_id.clone(),
             secret_access_key: aws_config.secret_access_key.clone(),
+            session_token: None,
         },
     };
     let s3_client = clp_rust_utils::s3::create_new_client(
@@ -368,6 +370,7 @@ async fn test_s3_scanner_single_object() -> Result<()> {
         credentials: AwsCredentials {
             access_key_id: aws_config.access_key_id.clone(),
             secret_access_key: aws_config.secret_access_key.clone(),
+            session_token: None,
         },
     };
     let s3_client = clp_rust_utils::s3::create_new_client(

@@ -168,11 +168,6 @@ The container image sets the following environment variables and configurations,
       <td>Default shell for the default user.</td>
     </tr>
     <tr>
-      <td><code class="literal">$LD_LIBRARY_PATH</code></td>
-      <td><code class="literal">${CLP_HOME}/lib</code></td>
-      <td>Library path to include any shared libraries in the CLP package.</td>
-    </tr>
-    <tr>
       <td><code class="literal">$PATH</code></td>
       <td><code class="literal">${CLP_HOME}/sbin</code><br>
         <code class="literal">:${CLP_HOME}/bin</code><br>
