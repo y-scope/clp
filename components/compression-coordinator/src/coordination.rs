@@ -241,8 +241,8 @@ impl Coordinator {
         }
     }
 
-    /// Fetches the pending compression jobs and spawns a detached handle to drive each one.
-    ///
+    /// Fetches pending compression jobs and spawns a detached handle to drive each one as permitted
+    /// by the job-handler semaphore.
     ///
     /// A job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`] and
     /// skipped; a job whose handle cannot be constructed is skipped as well (and marked
@@ -260,30 +260,17 @@ impl Coordinator {
     /// * [`Error::Semaphore`] if acquiring a job handler permit from `job_handler_sem` fails.
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
     async fn schedule_new_jobs(&mut self) -> Result<Vec<CompressionJobId>, Error> {
-        let available_permits = self.job_handler_sem.available_permits();
-        if available_permits == 0 {
+        if self.job_handler_sem.available_permits() == 0 {
             return Ok(Vec::new());
         }
 
-        let new_job_rows = self
-            .fetch_new_job_rows(available_permits)
-            .await
-            .inspect_err(|e| {
-                tracing::error!(error = % e, "Failed to fetch new jobs from database.");
-            })?;
+        let new_job_rows = self.fetch_new_job_rows().await.inspect_err(|e| {
+            tracing::error!(error = % e, "Failed to fetch new jobs from database.");
+        })?;
 
         let dispatched_job_ids: Vec<CompressionJobId> =
             new_job_rows.iter().map(|row| row.id).collect();
         for job_row in new_job_rows {
-            let permit = self
-                .job_handler_sem
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| {
-                    Error::Semaphore(format!("failed to acquire a job handler permit: {e}"))
-                })?;
-
             let job_id = job_row.id;
             let clp_io_config: ClpIoConfig =
                 match BrotliMsgpack::deserialize(&job_row.serialized_clp_io_config) {
@@ -306,6 +293,15 @@ impl Coordinator {
             let Ok(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
+
+            let permit = self
+                .job_handler_sem
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|e| {
+                    Error::Semaphore(format!("failed to acquire a job handler permit: {e}"))
+                })?;
 
             tokio::spawn(async move {
                 let _permit = permit;
@@ -408,12 +404,17 @@ impl Coordinator {
         result
     }
 
-    /// Fetches the pending compression jobs to dispatch up to the specified concurrency limit.
+    /// Fetches pending compression jobs eligible for dispatch.
     ///
     /// The first fetch after startup returns every [`CompressionJobStatus::Pending`] job so that
-    /// jobs a previous coordinator instance had already dispatched but not started are
-    /// re-dispatched. Every subsequent fetch returns only [`CompressionJobStatus::Pending`] jobs
-    /// whose dispatch time is still not set.
+    /// jobs left in flight by the previous coordinator instance can be re-dispatched. This initial
+    /// fetch is not bounded by the available permit count to ensure that all such jobs are
+    /// recovered.
+    ///
+    /// Every subsequent fetch returns only [`CompressionJobStatus::Pending`] jobs whose dispatch
+    /// time is not set. The available permit count determines how many rows are fetched, ensuring
+    /// that the coordinator does not fetch more jobs than it can dispatch during the current
+    /// polling iteration.
     ///
     /// # Returns
     ///
@@ -425,10 +426,7 @@ impl Coordinator {
     /// Returns an error if:
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_new_job_rows(
-        &mut self,
-        limit: usize,
-    ) -> Result<Vec<PendingJobRowProjection>, Error> {
+    async fn fetch_new_job_rows(&mut self) -> Result<Vec<PendingJobRowProjection>, Error> {
         const FIRST_FETCH_QUERY: &str = formatcp!(
             "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? ORDER BY `id` ASC;",
             table = COMPRESSION_JOB_TABLE_NAME,
@@ -439,25 +437,20 @@ impl Coordinator {
             table = COMPRESSION_JOB_TABLE_NAME,
         );
 
-        let is_first_fetch = self.is_first_fetch;
-        self.is_first_fetch = false;
-
-        let query = if is_first_fetch {
-            FIRST_FETCH_QUERY
+        let query = if self.is_first_fetch {
+            self.is_first_fetch = false;
+            sqlx::query_as::<_, PendingJobRowProjection>(FIRST_FETCH_QUERY)
+                .bind(CompressionJobStatus::Pending)
         } else {
-            SUBSEQUENT_FETCH_QUERY
+            sqlx::query_as::<_, PendingJobRowProjection>(SUBSEQUENT_FETCH_QUERY)
+                .bind(CompressionJobStatus::Pending)
+                .bind(
+                    i64::try_from(self.job_handler_sem.available_permits())
+                        .expect("limit is bounded by Semaphore::MAX_PERMITS, which fits in i64"),
+                )
         };
 
-        let mut query_builder =
-            sqlx::query_as::<_, PendingJobRowProjection>(query).bind(CompressionJobStatus::Pending);
-        if !is_first_fetch {
-            query_builder = query_builder.bind(
-                i64::try_from(limit)
-                    .expect("limit is bounded by Semaphore::MAX_PERMITS, which fits in i64"),
-            );
-        }
-
-        let rows = query_builder.fetch_all(&self.db_pool).await?;
+        let rows = query.fetch_all(&self.db_pool).await?;
 
         Ok(rows)
     }
