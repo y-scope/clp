@@ -406,10 +406,13 @@ impl Coordinator {
 
     /// Fetches pending compression jobs eligible for dispatch.
     ///
-    /// The first fetch after startup returns every [`CompressionJobStatus::Pending`] job so that
-    /// jobs left in flight by the previous coordinator instance can be re-dispatched. This initial
-    /// fetch is not bounded by the available permit count to ensure that all such jobs are
-    /// recovered.
+    /// The first fetch after startup returns every [`CompressionJobStatus::Pending`] job whose
+    /// `dispatch_time` is set, so that jobs dispatched but not started by the previous coordinator
+    /// instance can be re-dispatched. No explicit limit is imposed because:
+    ///
+    /// 1. This query runs only once, so limiting it could leave previously dispatched jobs
+    ///    unfetched.
+    /// 2. The recovery set is bounded by the previous coordinator's concurrency limit.
     ///
     /// Every subsequent fetch returns only [`CompressionJobStatus::Pending`] jobs whose dispatch
     /// time is not set. The available permit count determines how many rows are fetched, ensuring
@@ -428,7 +431,8 @@ impl Coordinator {
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_new_job_rows(&mut self) -> Result<Vec<PendingJobRowProjection>, Error> {
         const FIRST_FETCH_QUERY: &str = formatcp!(
-            "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? ORDER BY `id` ASC;",
+            "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? AND `dispatch_time` IS \
+             NOT NULL ORDER BY `id` ASC;",
             table = COMPRESSION_JOB_TABLE_NAME,
         );
         const SUBSEQUENT_FETCH_QUERY: &str = formatcp!(
