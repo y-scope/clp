@@ -48,6 +48,11 @@ impl Coordinator {
     /// already submitted to Spider (those still [`CompressionJobStatus::Running`] with a Spider job
     /// ID) by spawning a detached handle to drive each one to completion.
     ///
+    /// Recovery is not bounded by the concurrency limit and does not consume semaphore permits.
+    /// This prevents recovery from being blocked when Spider already has more submitted compression
+    /// jobs than the configured concurrency limit.
+    /// See also: <https://github.com/y-scope/clp/issues/2472>
+    ///
     /// # Returns
     ///
     /// A tuple on success, containing:
