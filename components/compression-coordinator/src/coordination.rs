@@ -305,7 +305,8 @@ impl Coordinator {
         let mut tx = self.db_pool.begin().await?;
         for chunk in job_ids.chunks(1000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
-                "UPDATE `{table}` SET `dispatch_time` = CURRENT_TIMESTAMP() WHERE `id` IN (",
+                "UPDATE `{table}` SET `dispatch_time` = COALESCE(`dispatch_time`, \
+                 CURRENT_TIMESTAMP()) WHERE `id` IN (",
                 table = COMPRESSION_JOB_TABLE_NAME,
             ));
             let mut separated_ids = query_builder.separated(", ");
