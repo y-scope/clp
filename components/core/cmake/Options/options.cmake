@@ -96,6 +96,12 @@ option(
 )
 
 option(
+    CLP_BUILD_CLP_S_SEARCH_ENABLE_OPENTELEMETRY_CPP
+    "Include open telemetry support for clp_s::search."
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_SEARCH_KQL
     "Build clp_s::search::kql."
     ON
@@ -311,6 +317,8 @@ endfunction()
 function(validate_clp_s_ffi_sfa_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_FFI_SFA
         CLP_BUILD_CLP_S_ARCHIVEREADER
+        CLP_BUILD_CLP_S_SEARCH
+        CLP_BUILD_CLP_S_SEARCH_KQL
     )
 endfunction()
 
@@ -392,16 +400,21 @@ function(set_clp_s_search_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
         CLP_NEED_LOG_SURGEON
-        CLP_NEED_OPENTELEMETRY_CPP
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
-        CLP_NEED_XXHASH
     )
 endfunction()
 
 function(set_clp_s_search_ast_dependencies)
     set_clp_need_flags(
         CLP_NEED_SIMDJSON
+    )
+endfunction()
+
+function(set_clp_s_search_enable_opentelemetry_cpp_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_OPENTELEMETRY_CPP
+        CLP_NEED_XXHASH
     )
 endfunction()
 
@@ -536,6 +549,10 @@ function(validate_and_setup_all_clp_dependency_flags)
 
     if (CLP_BUILD_CLP_S_SEARCH_AST)
         set_clp_s_search_ast_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_SEARCH_ENABLE_OPENTELEMETRY_CPP)
+        set_clp_s_search_enable_opentelemetry_cpp_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_SEARCH_KQL)
