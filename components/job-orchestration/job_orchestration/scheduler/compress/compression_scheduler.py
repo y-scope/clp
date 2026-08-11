@@ -88,12 +88,14 @@ class _ArchiveStorageMetricsPoller:
         sql_adapter: SqlAdapter,
         storage_engine: StorageEngine,
         table_prefix: str,
-        polling_interval_secs: float,
+        export_interval_secs: float,
+        min_poll_interval_secs: float,
     ) -> None:
         self._sql_adapter = sql_adapter
         self._storage_engine = storage_engine
         self._table_prefix = table_prefix
-        self._polling_interval_secs = polling_interval_secs
+        self._export_interval_secs = export_interval_secs
+        self._min_poll_interval_secs = min_poll_interval_secs
         self._stop_event = threading.Event()
         # CPython atomically reads and replaces this immutable snapshot reference.
         self._snapshot: _ArchiveStorageSnapshot | None = None
@@ -118,8 +120,14 @@ class _ArchiveStorageMetricsPoller:
 
     def _run(self) -> None:
         while not self._stop_event.is_set():
+            started_at = time.monotonic()
             self._poll_once()
-            if self._stop_event.wait(self._polling_interval_secs):
+            elapsed_time = time.monotonic() - started_at
+
+            sleep_time = max(
+                self._export_interval_secs - elapsed_time, self._min_poll_interval_secs
+            )
+            if self._stop_event.wait(sleep_time):
                 return
 
     def _poll_once(self) -> None:
@@ -204,7 +212,8 @@ def _start_archive_storage_metrics_poller(
     sql_adapter: SqlAdapter,
     storage_engine: StorageEngine,
     table_prefix: str,
-    polling_interval_ms: int,
+    export_interval_ms: int,
+    min_poll_interval_secs: float,
 ) -> _ArchiveStorageMetricsPoller | None:
     if is_telemetry_disabled_by_env():
         return None
@@ -213,7 +222,8 @@ def _start_archive_storage_metrics_poller(
         sql_adapter,
         storage_engine,
         table_prefix,
-        polling_interval_ms / 1000,
+        export_interval_ms / 1000.0,
+        min_poll_interval_secs,
     )
     poller.start()
     return poller
@@ -848,6 +858,7 @@ def main(argv) -> int | None:
             clp_config.package.storage_engine,
             clp_metadata_db_connection_config["table_prefix"],
             clp_config.compression_scheduler.telemetry_update_interval_ms,
+            clp_config.compression_scheduler.jobs_poll_delay,
         )
         _archive_storage_metrics_state.poller = poller
         with (
