@@ -37,7 +37,6 @@ vars:
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
   G_PYTHON_WHEELS_BUILD_DIR: "{{.G_BUILD_DIR}}/python-wheels"
   G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust-targets"
-  G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
@@ -262,7 +261,6 @@ tasks:
   package-build-deps:
     deps:
       - "core"
-      - "deps:spider"
       - "init"
       - "python-libs"
       - "rust"
