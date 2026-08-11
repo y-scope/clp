@@ -281,7 +281,7 @@ impl Coordinator {
                 .acquire_owned()
                 .await
                 .map_err(|e| {
-                    Error::Semaphore(format!("Failed to acquire a job handler permit: {e}"))
+                    Error::Semaphore(format!("failed to acquire a job handler permit: {e}"))
                 })?;
 
             let job_id = job_row.id;
