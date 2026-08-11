@@ -32,9 +32,7 @@ public:
      *
      * @param name The measurement name.
      */
-    explicit ScopedProfiler(std::string_view name)
-            : m_owned_full_name{Profiler::build_full_name(name)} {
-        m_full_name = m_owned_full_name;
+    explicit ScopedProfiler(std::string_view name) : m_full_name{Profiler::build_full_name(name)} {
         Profiler::start_measurement(m_full_name);
         Profiler::push_scope_path(m_full_name);
     }
@@ -47,20 +45,24 @@ public:
      * arguments.
      *
      * @param name The measurement name.
-     * @param cached_full_name The per-call-site cache for the full name. Owned externally.
-     * @param cached_scope_path The per-call-site cache for the scope path that was active when
+     * @param cached_full_name Per-call-site cache for the full name. Owned externally.
+     * @param cached_scope_path Per-call-site cache for the scope path that was active when
      * `cached_full_name` was computed. Owned externally.
+     * @param cached_name Per-call-site cache for the name used to compute `cached_full_name`.
+     * Owned externally.
      */
     ScopedProfiler(
             std::string_view name,
             std::string& cached_full_name,
-            std::string& cached_scope_path
+            std::string& cached_scope_path,
+            std::string& cached_name
     ) {
         auto const scope_path{Profiler::get_active_scope_path()};
-        if (scope_path == cached_scope_path) {
+        if (scope_path == cached_scope_path && name == cached_name) {
             m_full_name = cached_full_name;
         } else {
             cached_scope_path = std::string{scope_path};
+            cached_name = std::string{name};
             cached_full_name = Profiler::build_full_name(name);
             m_full_name = cached_full_name;
         }
@@ -87,10 +89,7 @@ public:
 
 private:
     // Data members
-    // Points to m_owned_full_name or the externally cached full name.
-    std::string_view m_full_name;
-    // Owned full name storage.
-    std::string m_owned_full_name;
+    std::string m_full_name;
 };
 }  // namespace utils::profiling
 #endif  // defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
@@ -110,8 +109,10 @@ private:
     #define PROFILE_SCOPE_IMPL(counter, name) \
         static thread_local ::std::string _prof_scope_full_name_##counter; \
         static thread_local ::std::string _prof_scope_path_##counter; \
+        static thread_local ::std::string _prof_scope_name_##counter; \
         ::utils::profiling::ScopedProfiler const _prof_scope_profiler_##counter { \
-            name, _prof_scope_full_name_##counter, _prof_scope_path_##counter \
+            name, _prof_scope_full_name_##counter, _prof_scope_path_##counter, \
+                    _prof_scope_name_##counter \
         }
 
     #define PROFILE_SCOPE_EXPAND(counter, name) PROFILE_SCOPE_IMPL(counter, name)
