@@ -1,4 +1,4 @@
-#if CLP_ENABLE_PROFILING > 0
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
     #include <string>
     #include <string_view>
     #include <vector>
@@ -6,7 +6,7 @@
     #include <utils/profiling/Profiler.hpp>
 #endif
 
-#if CLP_ENABLE_PROFILING > 0
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
 namespace utils::profiling {
 thread_local std::vector<Profiler*> Profiler::m_active_profiler_stack;
 thread_local std::vector<std::string_view> Profiler::m_scope_path_stack;
@@ -59,4 +59,4 @@ auto Profiler::build_full_name(std::string_view name) -> std::string {
 }
 }  // namespace utils::profiling
 
-#endif  // CLP_ENABLE_PROFILING > 0
+#endif  // defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0

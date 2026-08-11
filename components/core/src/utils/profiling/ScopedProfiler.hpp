@@ -1,14 +1,14 @@
 #ifndef UTILS_PROFILING_SCOPEDPROFILER_HPP
 #define UTILS_PROFILING_SCOPEDPROFILER_HPP
 
-#if CLP_ENABLE_PROFILING > 0
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
     #include <string>
     #include <string_view>
 
     #include <utils/profiling/Profiler.hpp>
 #endif
 
-#if CLP_ENABLE_PROFILING > 0
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
 namespace utils::profiling {
 /**
  * RAII wrapper that starts a measurement on construction and stops it on destruction.
@@ -93,7 +93,7 @@ private:
     std::string m_owned_full_name;
 };
 }  // namespace utils::profiling
-#endif  // CLP_ENABLE_PROFILING > 0
+#endif  // defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
 
 /**
  * `PROFILE_SCOPE` and `PROFILE_SCOPE_DEBUG` create a `ScopedProfiler` for the current scope.
@@ -105,8 +105,8 @@ private:
  * scope. The macros use `static thread_local` cache variables to avoid recomputing the full
  * hierarchical name on repeated invocations at the same nesting level.
  */
-#if CLP_ENABLE_PROFILING > 0
-   // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
     #define PROFILE_SCOPE_IMPL(counter, name) \
         static thread_local ::std::string _prof_scope_full_name_##counter; \
         static thread_local ::std::string _prof_scope_path_##counter; \
@@ -114,19 +114,16 @@ private:
             name, _prof_scope_full_name_##counter, _prof_scope_path_##counter \
         }
 
-    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
     #define PROFILE_SCOPE(name) PROFILE_SCOPE_IMPL(__COUNTER__, name)
 #else
-    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
     #define PROFILE_SCOPE(name) (void)0
 #endif
 
-#if CLP_ENABLE_PROFILING > 1
-   // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 1
     #define PROFILE_SCOPE_DEBUG(name) PROFILE_SCOPE_IMPL(__COUNTER__, name)
 #else
-    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
     #define PROFILE_SCOPE_DEBUG(name) (void)0
 #endif
+// NOLINTEND(cppcoreguidelines-macro-usage)
 
 #endif  // UTILS_PROFILING_SCOPEDPROFILER_HPP

@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-#if CLP_ENABLE_PROFILING > 0
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
     #include <vector>
 
     #include <absl/container/flat_hash_map.h>
@@ -13,7 +13,7 @@
 #endif
 
 namespace utils::profiling {
-#if CLP_ENABLE_PROFILING > 0
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
 /**
  * Thread-local registry of named `Stopwatch` measurements.
  *
@@ -166,7 +166,7 @@ public:
     template <typename Callback>
     auto for_each_measurement(Callback callback) -> void {}
 };
-#endif  // CLP_ENABLE_PROFILING > 0
+#endif  // defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
 }  // namespace utils::profiling
 
 #endif  // UTILS_PROFILING_PROFILER_HPP

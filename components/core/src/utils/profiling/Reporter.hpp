@@ -8,11 +8,9 @@
 #include <spdlog/spdlog.h>
 #include <utils/profiling/Stopwatch.hpp>
 
-#if CLP_ENABLE_PROFILING > 0
-    #include <cassert>
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
     #include <concepts>
     #include <string>
-    #include <thread>
 
     #include <utils/profiling/Profiler.hpp>
 #endif
@@ -32,7 +30,7 @@ struct SpdlogEmitter {
     }
 };
 
-#if CLP_ENABLE_PROFILING > 0
+#if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
 /**
  * Concept constraining the emit callback type for `Reporter`.
  */
@@ -47,8 +45,7 @@ concept MeasurementEmitter = std::invocable<F&, std::string_view, Measurement>;
  * `Profiler` collected within the `Reporter`'s scope produce hierarchical measurement names. On
  * destruction, it pops both stacks and emits all collected measurements.
  *
- * A reporter must be created and destroyed on the same thread. For multi-threaded profiling, each
- * worker thread should create its own `Reporter`.
+ * For multi-threaded profiling, each worker thread should create its own `Reporter`.
  *
  * @tparam EmitCallback The callback type, constrained by `MeasurementEmitter`.
  */
@@ -67,7 +64,6 @@ public:
      * @param emit Callback invoked once per measurement on destruction.
      */
     explicit Reporter(std::string_view name, EmitCallback emit) : m_emit{std::move(emit)} {
-        m_thread_id = std::this_thread::get_id();
         m_full_name = Profiler::build_full_name(name);
         Profiler::push_scope_path(m_full_name);
         Profiler::push_active_profiler(&m_profiler);
@@ -86,7 +82,6 @@ public:
      * Pops the active profiler and scope path stacks, then emits the profiler's measurements.
      */
     ~Reporter() {
-        assert(m_thread_id == std::this_thread::get_id());
         Profiler::pop_active_profiler();
         Profiler::pop_scope_path();
         m_profiler.for_each_measurement(
@@ -101,7 +96,6 @@ private:
     Profiler m_profiler;
     std::string m_full_name;
     EmitCallback m_emit;
-    std::thread::id m_thread_id;
 };
 #else
 /**
@@ -126,7 +120,7 @@ public:
     // Destructor
     ~Reporter() = default;
 };
-#endif  // CLP_ENABLE_PROFILING > 0
+#endif  // defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 0
 }  // namespace utils::profiling
 
 #endif  // UTILS_PROFILING_REPORTER_HPP
