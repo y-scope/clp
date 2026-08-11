@@ -114,13 +114,15 @@ private:
             name, _prof_scope_full_name_##counter, _prof_scope_path_##counter \
         }
 
-    #define PROFILE_SCOPE(name) PROFILE_SCOPE_IMPL(__COUNTER__, name)
+    #define PROFILE_SCOPE_EXPAND(counter, name) PROFILE_SCOPE_IMPL(counter, name)
+
+    #define PROFILE_SCOPE(name) PROFILE_SCOPE_EXPAND(__COUNTER__, name)
 #else
     #define PROFILE_SCOPE(name) (void)0
 #endif
 
 #if defined(CLP_ENABLE_PROFILING) && CLP_ENABLE_PROFILING > 1
-    #define PROFILE_SCOPE_DEBUG(name) PROFILE_SCOPE_IMPL(__COUNTER__, name)
+    #define PROFILE_SCOPE_DEBUG(name) PROFILE_SCOPE_EXPAND(__COUNTER__, name)
 #else
     #define PROFILE_SCOPE_DEBUG(name) (void)0
 #endif

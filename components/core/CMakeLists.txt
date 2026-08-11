@@ -56,6 +56,12 @@ string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 set(CLP_ENABLE_PROFILING "0" CACHE STRING "Profiling level (unset/0 = off, 1 = base, 2 = debug)")
+if(NOT CLP_ENABLE_PROFILING MATCHES "^(0|1|2)$")
+    message(FATAL_ERROR
+        "Unsupported CLP_ENABLE_PROFILING value '${CLP_ENABLE_PROFILING}'. "
+        "Supported values: 0 (off), 1 (base), 2 (debug)."
+    )
+endif()
 
 # Compile-in debug logging statements
 #add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
@@ -147,6 +153,7 @@ set(CLP_ENABLE_PROFILING_EFFECTIVE "${CLP_ENABLE_PROFILING}")
 if(CLP_ENABLE_TESTS AND CLP_ENABLE_PROFILING LESS "1")
     set(CLP_ENABLE_PROFILING_EFFECTIVE "1")
 endif()
+
 add_definitions(-DCLP_ENABLE_PROFILING=${CLP_ENABLE_PROFILING_EFFECTIVE})
 
 if(CLP_NEED_ABSL)
