@@ -21,7 +21,7 @@ inline auto verify_emit(std::string_view expected_name, uint32_t expected_call_c
             expected_call_count](std::string_view name, Measurement measurement) -> void {
         REQUIRE(expected_name == name);
         REQUIRE(expected_call_count == measurement.call_count);
-        REQUIRE(measurement.duration >= std::chrono::milliseconds(1));
+        REQUIRE(measurement.duration >= std::chrono::milliseconds(cSleep));
     };
 }
 
