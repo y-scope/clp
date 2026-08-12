@@ -5,7 +5,6 @@ log ingestion jobs.
 
 ## Testing
 
-
 ### Quick Start
 
 All test cases in this component will be called through the Rust test task:
