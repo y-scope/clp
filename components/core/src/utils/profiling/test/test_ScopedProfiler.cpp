@@ -3,6 +3,10 @@
 #include <thread>
 
 #include <catch2/catch_test_macros.hpp>
+
+#undef CLP_ENABLE_PROFILING
+#define CLP_ENABLE_PROFILING 1
+
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
 #include <utils/profiling/test/emitters.hpp>
@@ -13,7 +17,7 @@ TEST_CASE("scoped_profiler_starts_and_stops_measurement", "[ScopedProfiler]") {
     Reporter const reporter{"test", emit};
     {
         ScopedProfiler const scoped{"test_scope"};
-        std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsMedium));
+        std::this_thread::sleep_for(cSleep);
     }
 }
 
@@ -25,10 +29,10 @@ TEST_CASE("nested_scoped_profilers_accumulate_separately", "[ScopedProfiler]") {
         Reporter const reporter{"test", emit};
         {
             ScopedProfiler const outer{"outer"};
-            std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
+            std::this_thread::sleep_for(cSleep);
             {
                 ScopedProfiler const inner{"inner"};
-                std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
+                std::this_thread::sleep_for(cSleep);
             }
         }
     }

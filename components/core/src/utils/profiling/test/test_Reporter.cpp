@@ -3,6 +3,10 @@
 #include <thread>
 
 #include <catch2/catch_test_macros.hpp>
+
+#undef CLP_ENABLE_PROFILING
+#define CLP_ENABLE_PROFILING 1
+
 #include <utils/profiling/Profiler.hpp>
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/test/emitters.hpp>
@@ -13,7 +17,7 @@ TEST_CASE("reporter_emits_on_destruction", "[Reporter]") {
     Reporter const reporter{"test", emit};
     auto const full_name{Profiler::build_full_name("reporter_test")};
     Profiler::start_measurement(full_name);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
+    std::this_thread::sleep_for(cSleep);
     Profiler::stop_measurement(full_name);
 }
 
@@ -43,7 +47,7 @@ TEST_CASE("nested_reporters_emit_independently", "[Reporter]") {
     Reporter const outer{"outer", outer_emit};
     auto const outer_name_full{Profiler::build_full_name("outer_work")};
     Profiler::start_measurement(outer_name_full);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
+    std::this_thread::sleep_for(cSleep);
     Profiler::stop_measurement(outer_name_full);
 
     {
@@ -51,7 +55,7 @@ TEST_CASE("nested_reporters_emit_independently", "[Reporter]") {
         Reporter const inner{"inner", inner_emit};
         auto const inner_name_full{Profiler::build_full_name("inner_work")};
         Profiler::start_measurement(inner_name_full);
-        std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
+        std::this_thread::sleep_for(cSleep);
         Profiler::stop_measurement(inner_name_full);
     }
 

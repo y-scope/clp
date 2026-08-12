@@ -34,13 +34,29 @@ public:
      * @return `"<scope_path>.<name>"` if a scope path is active, or `name` if no scope path is
      * active.
      */
-    [[nodiscard]] static auto build_full_name(std::string_view name) -> std::string;
+    [[nodiscard]] static auto build_full_name(std::string_view name) -> std::string {
+        auto const scope_path{get_active_scope_path()};
+        if (scope_path.empty()) {
+            return std::string{name};
+        }
+        std::string result;
+        result.reserve(scope_path.size() + 1 + name.size());
+        result.append(scope_path);
+        result.push_back('.');
+        result.append(name);
+        return result;
+    }
 
     /**
      * @return The thread-local pointer to the active `Profiler`, or `nullptr` if none is
      * active on the current thread.
      */
-    [[nodiscard]] static auto get_active_profiler() -> Profiler*;
+    [[nodiscard]] static auto get_active_profiler() -> Profiler* {
+        if (m_active_profiler_stack.empty()) {
+            return nullptr;
+        }
+        return m_active_profiler_stack.back();
+    }
 
     /**
      * Pushes a `Profiler` onto the thread-local active profiler stack. The caller must ensure
@@ -48,18 +64,29 @@ public:
      *
      * @param profiler The profiler to push.
      */
-    static auto push_active_profiler(Profiler* profiler) -> void;
+    static auto push_active_profiler(Profiler* profiler) -> void {
+        m_active_profiler_stack.push_back(profiler);
+    }
 
     /**
      * Pops the top of the thread-local active profiler stack. No-op if the stack is empty.
      */
-    static auto pop_active_profiler() -> void;
+    static auto pop_active_profiler() -> void {
+        if (not m_active_profiler_stack.empty()) {
+            m_active_profiler_stack.pop_back();
+        }
+    }
 
     /**
      * @return The thread-local active scope path (top of the scope path stack), or an empty
      * `string_view` if no scope path is active.
      */
-    [[nodiscard]] static auto get_active_scope_path() -> std::string_view;
+    [[nodiscard]] static auto get_active_scope_path() -> std::string_view {
+        if (m_scope_path_stack.empty()) {
+            return {};
+        }
+        return m_scope_path_stack.back();
+    }
 
     /**
      * Pushes a scope path onto the thread-local scope path stack. The caller must ensure
@@ -67,12 +94,18 @@ public:
      *
      * @param scope_path The scope path to push.
      */
-    static auto push_scope_path(std::string_view scope_path) -> void;
+    static auto push_scope_path(std::string_view scope_path) -> void {
+        m_scope_path_stack.push_back(scope_path);
+    }
 
     /**
      * Pops the top of the thread-local scope path stack. No-op if the stack is empty.
      */
-    static auto pop_scope_path() -> void;
+    static auto pop_scope_path() -> void {
+        if (not m_scope_path_stack.empty()) {
+            m_scope_path_stack.pop_back();
+        }
+    }
 
     /**
      * Starts a Stopwatch identified by `full_name`. If it does not yet exist, one is created.
@@ -131,8 +164,8 @@ public:
 
 private:
     // Static data members
-    static thread_local std::vector<Profiler*> m_active_profiler_stack;
-    static thread_local std::vector<std::string_view> m_scope_path_stack;
+    static inline thread_local std::vector<Profiler*> m_active_profiler_stack;
+    static inline thread_local std::vector<std::string_view> m_scope_path_stack;
 
     // Data members
     absl::flat_hash_map<std::string, Stopwatch> m_stopwatches;

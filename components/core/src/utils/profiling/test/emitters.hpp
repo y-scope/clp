@@ -10,9 +10,7 @@
 #include <utils/profiling/Stopwatch.hpp>
 
 namespace utils::profiling::test {
-inline constexpr int cSleepMsShort{10};
-inline constexpr int cSleepMsMedium{50};
-inline constexpr int cSleepMsLong{100};
+inline constexpr std::chrono::milliseconds cSleep{10};
 
 /**
  * Returns an emit callback that asserts the measurement name, call count, and a minimum

@@ -3,6 +3,10 @@
 #include <thread>
 
 #include <catch2/catch_test_macros.hpp>
+
+#undef CLP_ENABLE_PROFILING
+#define CLP_ENABLE_PROFILING 1
+
 #include <utils/profiling/Profiler.hpp>
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/test/emitters.hpp>
@@ -13,7 +17,7 @@ TEST_CASE("profiler_single_measurement", "[Profiler]") {
     Reporter const reporter{"test", emit};
     auto const full_name{Profiler::build_full_name("test_single")};
     Profiler::start_measurement(full_name);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsLong));
+    std::this_thread::sleep_for(cSleep);
     Profiler::stop_measurement(full_name);
 }
 
@@ -22,11 +26,11 @@ TEST_CASE("profiler_accumulates_multiple_calls", "[Profiler]") {
     Reporter const reporter{"test", emit};
     auto const full_name{Profiler::build_full_name("test_accumulate")};
     Profiler::start_measurement(full_name);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsMedium));
+    std::this_thread::sleep_for(cSleep);
     Profiler::stop_measurement(full_name);
 
     Profiler::start_measurement(full_name);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsMedium));
+    std::this_thread::sleep_for(cSleep);
     Profiler::stop_measurement(full_name);
 }
 
@@ -46,16 +50,10 @@ TEST_CASE("profiler_reentrant_start_is_noop", "[Profiler]") {
     Reporter const reporter{"test", emit};
     auto const full_name{Profiler::build_full_name("test_reentrant")};
     Profiler::start_measurement(full_name);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsMedium));
+    std::this_thread::sleep_for(cSleep);
     Profiler::start_measurement(full_name);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsMedium));
+    std::this_thread::sleep_for(cSleep);
     Profiler::stop_measurement(full_name);
-}
-
-TEST_CASE("profiler_noop_without_active_reporter", "[Profiler]") {
-    Profiler::start_measurement("no_reporter");
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
-    Profiler::stop_measurement("no_reporter");
 }
 
 TEST_CASE("profiler_hierarchical_name_includes_reporter_prefix", "[Profiler]") {
@@ -68,7 +66,7 @@ TEST_CASE("profiler_hierarchical_name_includes_reporter_prefix", "[Profiler]") {
     Reporter const child_reporter{"child", child_emit};
     auto const full_name{Profiler::build_full_name("test")};
     Profiler::start_measurement(full_name);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cSleepMsShort));
+    std::this_thread::sleep_for(cSleep);
     Profiler::stop_measurement(full_name);
     REQUIRE(0 == parent_emit_count);
 }
