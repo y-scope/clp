@@ -193,6 +193,8 @@ tasks:
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
+          EXTRA_ARGS:
+            - "-DCLP_ENABLE_PROFILING=0"
 
   core-generate-profiling:
     internal: true
