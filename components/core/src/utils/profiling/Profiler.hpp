@@ -72,7 +72,7 @@ public:
      * Pops the top of the thread-local active profiler stack. No-op if the stack is empty.
      */
     static auto pop_active_profiler() -> void {
-        if (not m_active_profiler_stack.empty()) {
+        if (false == m_scope_path_stack.empty()) {
             m_active_profiler_stack.pop_back();
         }
     }
@@ -102,7 +102,7 @@ public:
      * Pops the top of the thread-local scope path stack. No-op if the stack is empty.
      */
     static auto pop_scope_path() -> void {
-        if (not m_scope_path_stack.empty()) {
+        if (false == m_scope_path_stack.empty()) {
             m_scope_path_stack.pop_back();
         }
     }
