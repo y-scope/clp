@@ -1,5 +1,20 @@
 //! The coordinator poll loop that discovers pending CLP compression jobs and dispatches them to
 //! Spider.
+//!
+//! The coordinator is responsible for the compression jobs in the `compression_jobs` table that
+//! are in one of the following states:
+//!
+//! | `status` | `spider_id` | `dispatch_time` | Description                                      |
+//! |----------|-------------|-----------------|--------------------------------------------------|
+//! | PENDING  | NULL        | NULL            | New jobs awaiting dispatch.                      |
+//! | PENDING  | NULL        | NOT NULL        | Jobs dispatched but not yet submitted to Spider. |
+//! | RUNNING  | NOT NULL    | NOT NULL        | Jobs submitted to Spider.                        |
+//!
+//! NOTE:
+//!
+//! * These are the only legal states for a job that hasn't terminated.
+//! * A non-NULL `dispatch_time` indicates that the coordinator has picked up the job and granted it
+//!   permission to run under the concurrency limit.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -47,11 +62,6 @@ impl Coordinator {
     /// On construction, this recovers compression jobs that a previous coordinator instance had
     /// already submitted to Spider (those still [`CompressionJobStatus::Running`] with a Spider job
     /// ID) by spawning a detached handle to drive each one to completion.
-    ///
-    /// Recovery is not bounded by the concurrency limit and does not consume semaphore permits.
-    /// This prevents recovery from being blocked when Spider already has more submitted compression
-    /// jobs than the configured concurrency limit.
-    /// See also: <https://github.com/y-scope/clp/issues/2472>
     ///
     /// # Returns
     ///
@@ -147,6 +157,8 @@ impl Coordinator {
             job_handler_sem: Arc::new(Semaphore::new(max_concurrent_jobs)),
         };
 
+        // NOTE: The current implementation does not enforce concurrency limits for recovered jobs
+        // since they were already submitted to Spider. See #2472.
         for (job_id, spider_job_id, clp_io_config) in
             coordinator.fetch_submitted_running_jobs().await?
         {
@@ -415,9 +427,9 @@ impl Coordinator {
     /// `dispatch_time` is set, so that jobs dispatched but not started by the previous coordinator
     /// instance can be re-dispatched. No explicit limit is imposed because:
     ///
-    /// 1. This query runs only once, so limiting it could leave previously dispatched jobs
-    ///    unfetched.
-    /// 2. The recovery set is bounded by the previous coordinator's concurrency limit.
+    /// * This query runs only once, so limiting it could leave previously dispatched jobs
+    ///   unfetched.
+    /// * The recovery set is bounded by the previous coordinator's concurrency limit.
     ///
     /// Every subsequent fetch returns only [`CompressionJobStatus::Pending`] jobs whose dispatch
     /// time is not set. The available permit count determines how many rows are fetched, ensuring
