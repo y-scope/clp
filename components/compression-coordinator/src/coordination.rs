@@ -229,7 +229,7 @@ impl Coordinator {
             self.mark_jobs_dispatched(&dispatched_job_ids).await?;
         }
 
-        tracing::info!("Coordinator shutting down.");
+        tracing::info!("Compression coordinator shutting down.");
         Ok(())
     }
 
