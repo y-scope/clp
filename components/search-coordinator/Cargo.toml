@@ -11,6 +11,10 @@ path = "src/bin/search_coordinator.rs"
 anyhow = "1.0.100"
 clap = { version = "4.6.4", features = ["derive"] }
 clp-rust-utils = { path = "../clp-rust-utils" }
+const_format = "0.2.36"
+spider-core = { git = "https://github.com/y-scope/spider.git", branch = "main" }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
+thiserror = "2.0.20"
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tokio-util = "0.7.18"
 tracing = "0.1.44"
