@@ -2,6 +2,11 @@ apiVersion: "batch/v1"
 kind: "Job"
 metadata:
   name: {{ include "clp.fullname" . }}-db-table-creator
+  {{- if .Release.IsUpgrade }}
+  annotations:
+    "helm.sh/hook": "pre-upgrade"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+  {{- end }}
   labels:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "db-table-creator"
