@@ -9,6 +9,8 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
+#include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"
@@ -16,7 +18,6 @@
 #include "../Grep.hpp"
 #include "../GrepCore.hpp"
 #include "../ir/constants.hpp"
-#include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -581,7 +582,7 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    clp::Profiler::init();
+    utils::profiling::Reporter const profiler_reporter{"clo", utils::profiling::SpdlogEmitter{}};
     clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clo");
@@ -595,6 +596,8 @@ int main(int argc, char const* argv[]) {
             // Continue processing
             break;
     }
+
+    PROFILE_SCOPE("main");
 
     // mongocxx static init
     mongocxx::instance mongocxx_instance{};

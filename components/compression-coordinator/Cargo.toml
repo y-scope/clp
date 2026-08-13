@@ -1,0 +1,32 @@
+[package]
+name = "compression-coordinator"
+version = { workspace = true }
+edition = { workspace = true }
+
+[lib]
+name = "compression_coordinator"
+path = "src/lib.rs"
+
+[[bin]]
+name = "compression-coordinator"
+path = "src/bin/compression_coordinator.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+clap = { workspace = true }
+clp-rust-utils = { workspace = true }
+const_format = { workspace = true }
+non-empty-string = { workspace = true }
+rmp-serde = { workspace = true }
+secrecy = { workspace = true }
+serde = { workspace = true }
+spider-client = { workspace = true }
+spider-core = { workspace = true }
+sqlx = { workspace = true }
+strsim = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["signal"] }
+tokio-util = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }

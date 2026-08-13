@@ -136,6 +136,7 @@ EOF
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
+helm dependency update "${script_dir}"
 # Word splitting is intentional: helper functions return multiple --set flags.
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
@@ -160,6 +161,7 @@ helm install test "${script_dir}" \
     --set "scheduling.apiServer.nodeSelector.yscope\.io/nodeType=core" \
     --set "scheduling.webui.nodeSelector.yscope\.io/nodeType=core" \
     --set "scheduling.mcpServer.nodeSelector.yscope\.io/nodeType=core" \
+    $(get_service_exposure_helm_args) \
     $(get_presto_helm_args) \
     $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
 

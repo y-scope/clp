@@ -661,7 +661,7 @@ def compression_entry_point(
     sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_connection_config))
 
     start_time = datetime.datetime.now()
-    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
+    logger.info("COMPRESSION STARTED.")
     compression_task_status, worker_output = run_clp(
         worker_config,
         clp_io_config,
@@ -675,7 +675,7 @@ def compression_entry_point(
         logger,
     )
     duration = (datetime.datetime.now() - start_time).total_seconds()
-    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+    logger.info("COMPRESSION COMPLETED.")
 
     with (
         closing(sql_adapter.create_connection(True)) as db_conn,

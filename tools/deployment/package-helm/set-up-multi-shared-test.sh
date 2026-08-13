@@ -42,6 +42,7 @@ generate_kind_config "${NUM_WORKER_NODES}" | kind create cluster --name "${CLUST
 echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
+helm dependency update "${script_dir}"
 # Word splitting is intentional: helper functions return multiple --set flags.
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
@@ -50,6 +51,7 @@ helm install test "${script_dir}" \
     --set "scheduling.queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
     --set "scheduling.reducer.replicas=${REDUCER_REPLICAS}" \
     --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
+    $(get_service_exposure_helm_args) \
     $(get_presto_helm_args) \
     $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
 

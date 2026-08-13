@@ -163,8 +163,11 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         target_link_libraries(
                 clp_s_clp_dependencies
                 PUBLIC
+                absl::flat_hash_map
+                absl::flat_hash_set
                 clp::string_utils
                 log_surgeon::log_surgeon
+                utils::profiling
                 ystdlib::containers
                 zstd::libzstd_static
                 PRIVATE
@@ -480,6 +483,10 @@ endif()
 
 set(
         CLP_S_EXE_SOURCES
+        AggregationSink.cpp
+        AggregationSink.hpp
+        aggregators.cpp
+        aggregators.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         ErrorCode.hpp
@@ -487,6 +494,8 @@ set(
         kv_ir_search.hpp
         OutputHandlerImpl.cpp
         OutputHandlerImpl.hpp
+        ResultsCacheUtils.cpp
+        ResultsCacheUtils.hpp
         TraceableException.hpp
 )
 
@@ -544,6 +553,7 @@ if(CLP_BUILD_TESTING)
         target_sources(
                 clp_s_unit_test_sources
                 INTERFACE
+                filter/tests/test-clp_s-bitmap_view.cpp
                 filter/tests/test-clp_s-bloom_filter.cpp
                 filter/tests/test-clp_s-xxhash.cpp
                 tests/clp_s_test_utils.cpp

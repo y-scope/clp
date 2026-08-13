@@ -1,9 +1,12 @@
-use clp_rust_utils::{
-    clp_config::{AwsAuthentication, AwsCredentials, S3Config},
-    job_config::{ClpIoConfig, InputConfig, OutputConfig, S3ObjectMetadataInputConfig},
-    serde::BrotliMsgpack,
-    types::non_empty_string::ExpectedNonEmpty,
-};
+use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::AwsCredentials;
+use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::job_config::ClpIoConfig;
+use clp_rust_utils::job_config::InputConfig;
+use clp_rust_utils::job_config::OutputConfig;
+use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
+use clp_rust_utils::serde::BrotliMsgpack;
+use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
 use non_empty_string::NonEmptyString;
 use serde_json::Value;
 
@@ -18,6 +21,7 @@ fn test_clp_io_config_serialization() {
             credentials: AwsCredentials {
                 access_key_id: "ACCESS_KEY_ID".into(),
                 secret_access_key: "SECRET_ACCESS_KEY".into(),
+                session_token: None,
             },
         },
     };

@@ -90,7 +90,7 @@ spec:
               mountPath: "/var/data/streams"
             {{- end }}
           command: [
-            "/opt/clp/bin/node-22",
+            "/opt/clp/bin/node",
             "/opt/clp/var/www/webui/server/dist/main.js"
           ]
           readinessProbe:
