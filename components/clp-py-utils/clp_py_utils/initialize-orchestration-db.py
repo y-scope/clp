@@ -134,15 +134,19 @@ def main(argv):
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `type` INT NOT NULL,
                     `status` INT NOT NULL DEFAULT '{QueryJobStatus.PENDING}',
+                    `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
+                    `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+                    `dispatch_time` DATETIME NULL DEFAULT NULL,
                     `job_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
-                    INDEX `JOB_STATUS` (`status`) USING BTREE
+                    INDEX `JOB_STATUS` (`status`) USING BTREE,
+                    INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
