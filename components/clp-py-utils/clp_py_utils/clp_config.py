@@ -1057,6 +1057,15 @@ class ClpConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_search_coordinator_config(self):
+        if self.search_coordinator is None:
+            return self
+        if self.spider is None:
+            msg = "search-coordinator requires Spider to be configured."
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def validate_presto_config(self):
         query_engine = self.webui.query_engine
         presto = self.presto
