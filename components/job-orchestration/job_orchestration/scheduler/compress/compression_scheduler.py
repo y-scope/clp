@@ -823,7 +823,8 @@ def main(argv) -> int | None:
         poller = _start_archive_storage_metrics_poller(
             sql_adapter,
             clp_metadata_db_connection_config["table_prefix"],
-            clp_config.compression_scheduler.telemetry_update_interval_ms,
+            clp_config.compression_scheduler.archive_storage_metrics_poll_interval_ms
+            or clp_config.compression_scheduler.telemetry_update_interval_ms,
         )
         _archive_storage_metrics_state.poller = poller
         with (

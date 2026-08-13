@@ -100,6 +100,9 @@ data:
       max_concurrent_tasks_per_job: {{
         .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job | int }}
       telemetry_update_interval_ms: {{ .Values.clpConfig.compression_scheduler.telemetry_update_interval_ms | int }}
+      {{ with .Values.clpConfig.compression_scheduler.archive_storage_metrics_poll_interval_ms }}
+      archive_storage_metrics_poll_interval_ms: {{ . | int }}
+      {{ end }}
     compression_worker:
       logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
       task_soft_time_limit: {{ .Values.clpConfig.compression_worker.task_soft_time_limit | int }}
