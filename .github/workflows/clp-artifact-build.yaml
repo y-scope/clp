@@ -954,6 +954,8 @@ jobs:
           docker pull "$(cat clp-package-image.id)"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
+        with:
+          version: "0.8"
 
       - name: "Install MariaDB connector"
         run: "sudo apt-get update && sudo apt-get install -y libmariadb-dev"
@@ -961,13 +963,12 @@ jobs:
       - name: "Run the integration tests for the CLP package"
         working-directory: "integration-tests"
         env:
-          # Tell pytest where the CLP package is, and where it should store the test logs.
           CLP_BUILD_DIR: "../${{env.BUILD_DIR}}"
           CLP_PACKAGE_DIR: "../${{env.BUILD_DIR}}/clp-package"
         run: >-
           uv run pytest -m 'smoke or package'
 
-      - name: "Upload the integration test logs"
+      - name: "Upload the package integration test logs"
         if: "always()"
         uses: "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f"  # v6.0.0
         with:
