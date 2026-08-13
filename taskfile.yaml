@@ -173,10 +173,10 @@ tasks:
 
   core:
     cmds:
-      - task: "core-generate"
+      - task: "core-generate-release"
       - task: "core-build"
 
-  core-generate:
+  core-generate-release:
     internal: true
     sources: &core_source_files
       - "{{.G_DEPS_CPP_CHECKSUM_FILE}}"
@@ -193,6 +193,22 @@ tasks:
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
+          EXTRA_ARGS:
+            - "-DCLP_ENABLE_PROFILING=0"
+
+  core-generate-profiling:
+    internal: true
+    sources: *core_source_files
+    deps:
+      - "codegen:clp-s-generate-parsers"
+      - "deps:core"
+    cmds:
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
+          EXTRA_ARGS:
+            - "-DCLP_ENABLE_PROFILING=2"
 
   core-build:
     internal: true

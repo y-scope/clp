@@ -43,6 +43,7 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 clp_s::search::ast
                 log_surgeon::log_surgeon
                 simdjson::simdjson
+                utils::profiling
                 PRIVATE
                 clp::string_utils
                 clp_s::clp_dependencies
