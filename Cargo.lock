@@ -3722,6 +3722,7 @@ dependencies = [
  "clap",
  "clp-rust-utils",
  "const_format",
+ "secrecy",
  "serde",
  "spider-client",
  "spider-core",
@@ -3729,6 +3730,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-util",
+ "tonic",
  "tracing",
 ]
 
