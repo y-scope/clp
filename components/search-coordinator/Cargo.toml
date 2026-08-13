@@ -9,9 +9,12 @@ path = "src/bin/search_coordinator.rs"
 
 [dependencies]
 anyhow = "1.0.100"
+async-trait = "0.1.92"
 clap = { version = "4.6.4", features = ["derive"] }
 clp-rust-utils = { path = "../clp-rust-utils" }
 const_format = "0.2.36"
+serde = { version = "1.0.229", features = ["derive"] }
+spider-client = { git = "https://github.com/y-scope/spider.git", branch = "main" }
 spider-core = { git = "https://github.com/y-scope/spider.git", branch = "main" }
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
 thiserror = "2.0.20"

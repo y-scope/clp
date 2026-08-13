@@ -3718,9 +3718,12 @@ name = "search-coordinator"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
+ "async-trait",
  "clap",
  "clp-rust-utils",
  "const_format",
+ "serde",
+ "spider-client",
  "spider-core",
  "sqlx",
  "thiserror",
