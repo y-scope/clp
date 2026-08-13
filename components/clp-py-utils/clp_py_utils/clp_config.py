@@ -773,6 +773,21 @@ class CompressionCoordinator(BaseModel):
     commit_task_hard_timeout_secs: PositiveInt = 60
 
 
+class SearchCoordinator(BaseModel):
+    resource_group: SpiderResourceGroup = SpiderResourceGroup(name="search-coordinator")
+    job_polling_interval_millisecs: PositiveInt = 100
+    max_concurrent_jobs: PositiveInt = 1000
+    result_polling: PollingBackoff = PollingBackoff(
+        init_backoff_millisecs=100, max_backoff_millisecs=1000
+    )
+    search_task_max_retry: NonNegativeInt = 1
+    commit_task_max_retry: NonNegativeInt = 1
+    database_connection_pool_size: PositiveInt = 10
+    termination_timeout_secs: PositiveInt = 30
+    commit_task_soft_timeout_secs: PositiveInt = 45
+    commit_task_hard_timeout_secs: PositiveInt = 60
+
+
 class Presto(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8080
 
@@ -826,6 +841,7 @@ class ClpConfig(BaseModel):
     log_ingestor: LogIngestor | None = LogIngestor()
     spider: Spider | None = None
     compression_coordinator: CompressionCoordinator | None = None
+    search_coordinator: SearchCoordinator | None = None
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None

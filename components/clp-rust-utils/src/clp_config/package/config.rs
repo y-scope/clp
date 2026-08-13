@@ -33,6 +33,7 @@ pub struct Config {
     pub telemetry: Telemetry,
     pub spider: Option<Spider>,
     pub compression_coordinator: Option<CompressionCoordinator>,
+    pub search_coordinator: Option<SearchCoordinator>,
 }
 
 impl Default for Config {
@@ -52,6 +53,7 @@ impl Default for Config {
             telemetry: Telemetry::default(),
             spider: None,
             compression_coordinator: None,
+            search_coordinator: None,
         }
     }
 }
@@ -511,6 +513,53 @@ impl Default for CompressionCoordinator {
                     .expect("default result polling max backoff should not be zero"),
             },
             compression_task_max_retry: 1,
+            commit_task_max_retry: 1,
+            database_connection_pool_size: NonZeroU32::new(10)
+                .expect("default database connection pool size should not be zero"),
+            termination_timeout_secs: NonZeroU64::new(30)
+                .expect("default termination timeout should not be zero"),
+            commit_task_soft_timeout_secs: NonZeroU64::new(45)
+                .expect("default commit task soft timeout should not be zero"),
+            commit_task_hard_timeout_secs: NonZeroU64::new(60)
+                .expect("default commit task hard timeout should not be zero"),
+        }
+    }
+}
+
+/// Search coordinator configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct SearchCoordinator {
+    pub resource_group: SpiderResourceGroup,
+    pub job_polling_interval_millisecs: NonZeroU64,
+    pub max_concurrent_jobs: NonZeroUsize,
+    pub result_polling: PollingBackoff,
+    pub search_task_max_retry: u32,
+    pub commit_task_max_retry: u32,
+    pub database_connection_pool_size: NonZeroU32,
+    pub termination_timeout_secs: NonZeroU64,
+    pub commit_task_soft_timeout_secs: NonZeroU64,
+    pub commit_task_hard_timeout_secs: NonZeroU64,
+}
+
+impl Default for SearchCoordinator {
+    fn default() -> Self {
+        Self {
+            resource_group: SpiderResourceGroup {
+                name: NonEmptyString::new("search-coordinator".to_owned())
+                    .expect("default resource group name should not be empty"),
+            },
+            job_polling_interval_millisecs: NonZeroU64::new(100)
+                .expect("default jobs poll delay should not be zero"),
+            max_concurrent_jobs: NonZeroUsize::new(1000)
+                .expect("default maximum number of concurrent jobs should not be zero"),
+            result_polling: PollingBackoff {
+                init_backoff_millisecs: NonZeroU64::new(100)
+                    .expect("default result polling init backoff should not be zero"),
+                max_backoff_millisecs: NonZeroU64::new(1000)
+                    .expect("default result polling max backoff should not be zero"),
+            },
+            search_task_max_retry: 1,
             commit_task_max_retry: 1,
             database_connection_pool_size: NonZeroU32::new(10)
                 .expect("default database connection pool size should not be zero"),
