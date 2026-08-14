@@ -124,7 +124,9 @@ auto run_single_log_file_test(
     auto const r_path{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_path(archive_path, options))};
     assert_reader_matches_expected(r_path, expected_file_name, expected_event_count);
 
-    auto const r_bytes{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_bytes(archive_path, options))};
+    auto const r_bytes{
+            YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_bytes(archive_path, options))
+    };
     assert_reader_matches_expected(r_bytes, expected_file_name, expected_event_count);
 
     return ystdlib::error_handling::success();
