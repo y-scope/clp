@@ -273,7 +273,10 @@ class DispatchExecutor:
             task_ids = insert_query_tasks_into_db(db_conn, job_id, archive_ids)
 
         task_archive_sizes = {
-            task_ids[i]: (archives[i]["uncompressed_size"], archives[i]["compressed_size"])
+            task_ids[i]: (
+                archives[i]["uncompressed_size"] or 0,
+                archives[i]["compressed_size"] or 0,
+            )
             for i in range(len(archives))
         }
 
@@ -798,8 +801,8 @@ def dispatch_query_job(
     if isinstance(job, SearchJob):
         for i, task_id in enumerate(task_ids):
             job.task_archive_sizes[task_id] = (
-                archives[i]["uncompressed_size"],
-                archives[i]["compressed_size"],
+                archives[i]["uncompressed_size"] or 0,
+                archives[i]["compressed_size"] or 0,
             )
 
     task_group = get_task_group_for_job(
