@@ -365,6 +365,7 @@ class CompressionScheduler(BaseModel):
     max_concurrent_tasks_per_job: NonNegativeInt = UNLIMITED_CONCURRENT_TASKS_PER_JOB
     logging_level: LoggingLevel = "INFO"
     telemetry_update_interval_ms: PositiveInt = 60000
+    archive_storage_metrics_poll_interval_ms: PositiveInt | None = None
 
 
 class QueryScheduler(BaseModel):

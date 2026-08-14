@@ -54,6 +54,7 @@ log_ingestor: null
 #  jobs_poll_delay: 0.1  # seconds
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
+#  archive_storage_metrics_poll_interval_ms: null  # Defaults to telemetry_update_interval_ms
 #
 #query_scheduler:
 #  host: "localhost"

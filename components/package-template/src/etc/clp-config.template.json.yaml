@@ -56,6 +56,7 @@ telemetry:
 #  max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
+#  archive_storage_metrics_poll_interval_ms: null  # Defaults to telemetry_update_interval_ms
 #
 #query_scheduler:
 #  host: "localhost"
