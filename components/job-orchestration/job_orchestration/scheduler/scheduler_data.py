@@ -5,7 +5,7 @@ from enum import auto, Enum
 from typing import Any
 
 import msgpack
-from pydantic import BaseModel, ConfigDict, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
@@ -87,6 +87,8 @@ class SearchJob(QueryJob):
     num_archives_to_search: int
     num_archives_searched: int
     remaining_archives_for_search: list[dict[str, Any]]
+    # Maps task_id -> (uncompressed_size, compressed_size); populated at dispatch time.
+    task_archive_sizes: dict[int, tuple[int, int]] = Field(default_factory=dict)
     uncompressed_bytes_scanned: int = 0
     compressed_bytes_scanned: int = 0
     reducer_acquisition_task: asyncio.Task | None = None
