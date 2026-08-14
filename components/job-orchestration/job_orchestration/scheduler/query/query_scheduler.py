@@ -189,22 +189,30 @@ task_duration_histogram = meter.create_histogram(
 uncompressed_bytes_scanned_histogram = meter.create_histogram(
     "clp.query.uncompressed_bytes_scanned",
     unit="By",
-    description="Uncompressed archive data searched for successful query tasks",
+    description=(
+        "Distribution of logical uncompressed archive bytes scanned per successful search job"
+    ),
 )
 compressed_bytes_scanned_histogram = meter.create_histogram(
     "clp.query.compressed_bytes_scanned",
     unit="By",
-    description="Compressed archive data searched for successful query tasks",
+    description=(
+        "Distribution of logical compressed archive bytes scanned per successful search job"
+    ),
 )
 uncompressed_bytes_scanned_counter = meter.create_counter(
     "clp.query.uncompressed_bytes_scanned_total",
     unit="By",
-    description="Cumulative uncompressed bytes of archive data searched for successful query jobs",
+    description=(
+        "Total logical uncompressed size of archives whose search tasks completed successfully"
+    ),
 )
 compressed_bytes_scanned_counter = meter.create_counter(
     "clp.query.compressed_bytes_scanned_total",
     unit="By",
-    description="Cumulative compressed (on-disk) bytes of archive data searched for successful query jobs",
+    description=(
+        "Total logical compressed size of archives whose search tasks completed successfully"
+    ),
 )
 
 
@@ -1115,9 +1123,10 @@ async def handle_finished_search_job(
         duration=duration,
     ):
         job_duration_histogram.record(duration)
-        uncompressed_bytes_scanned_histogram.record(job.uncompressed_bytes_scanned)
-        compressed_bytes_scanned_histogram.record(job.compressed_bytes_scanned)
+
         if new_job_status == QueryJobStatus.SUCCEEDED:
+            uncompressed_bytes_scanned_histogram.record(job.uncompressed_bytes_scanned)
+            compressed_bytes_scanned_histogram.record(job.compressed_bytes_scanned)
             logger.info("Completed job.")
         elif reducer_failed:
             logger.error("Completed job with failing reducer.")
