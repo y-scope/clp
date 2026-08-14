@@ -1577,6 +1577,8 @@ def _handle_new_search_job(
             num_tasks=0,
             duration=0,
         ):
+            uncompressed_bytes_scanned_histogram.record(0)
+            compressed_bytes_scanned_histogram.record(0)
             logger.info("No matching archives, skipping job.")
         return
 
