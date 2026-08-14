@@ -104,6 +104,12 @@ To configure CLP for multi-host deployment, you'll need to:
    * Create `var/log/.clp-config.yaml` (the container-specific configuration file)
    * Create `etc/webui/settings.json` (the `webui` server's configuration file)
 
+:::{note}
+Changes to `etc/clp-config.yaml` are not hot-reloaded. If you'd like to make configuration changes
+when the deployment is already running, you must run `sbin/stop-clp.sh` followed by
+`sbin/start-clp.sh` on each affected host for the changes to take effect.
+:::
+
 ### Distributing the set-up package
 
 With the package set up, we can now distribute it to all hosts in the cluster:
