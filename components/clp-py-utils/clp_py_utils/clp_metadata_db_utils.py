@@ -8,7 +8,6 @@ from clp_py_utils.clp_config import ArchiveOutput, StorageType
 MYSQL_TABLE_NAME_MAX_LEN = 64
 
 ARCHIVES_TABLE_SUFFIX = "archives"
-ARCHIVE_STORAGE_TOTALS_TABLE_SUFFIX = "archive_totals"
 COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
 DATASETS_TABLE_SUFFIX = "datasets"
 FILES_TABLE_SUFFIX = "files"
@@ -19,11 +18,6 @@ TABLE_SUFFIX_MAX_LEN = max(
     len(DATASETS_TABLE_SUFFIX),
     len(FILES_TABLE_SUFFIX),
 )
-
-
-_FNV1A_64_OFFSET_BASIS = 0xCBF29CE484222325
-_FNV1A_64_PRIME = 0x100000001B3
-_FNV1A_64_MASK = 0xFFFFFFFFFFFFFFFF
 
 
 def _create_archives_table(db_cursor, archives_table_name: str) -> None:
@@ -44,201 +38,6 @@ def _create_archives_table(db_cursor, archives_table_name: str) -> None:
         )
         """
     )
-
-
-def create_archive_storage_totals_table(db_cursor, table_prefix: str) -> None:
-    """Creates the shared archive storage totals table."""
-    db_cursor.execute(
-        f"""
-        CREATE TABLE IF NOT EXISTS `{get_archive_storage_totals_table_name(table_prefix)}` (
-            `dataset` VARCHAR(255) NOT NULL,
-            `archive_count` BIGINT UNSIGNED NOT NULL,
-            `compressed_size` BIGINT NOT NULL,
-            `uncompressed_size` BIGINT NOT NULL,
-            PRIMARY KEY (`dataset`)
-        )
-        """
-    )
-
-
-def _get_fnv1a_64_hex(value: str) -> str:
-    hash_value = _FNV1A_64_OFFSET_BASIS
-    for byte in value.encode():
-        hash_value ^= byte
-        hash_value = (hash_value * _FNV1A_64_PRIME) & _FNV1A_64_MASK
-    return f"{hash_value:016x}"
-
-
-def get_archive_storage_totals_trigger_names(archives_table_name: str) -> tuple[str, str, str]:
-    """Returns the insert, update, and delete trigger names for an archives table."""
-    trigger_name_suffix = _get_fnv1a_64_hex(archives_table_name)
-    return (
-        f"archive_storage_ai_{trigger_name_suffix}",
-        f"archive_storage_au_{trigger_name_suffix}",
-        f"archive_storage_ad_{trigger_name_suffix}",
-    )
-
-
-def _get_archive_storage_totals_lock_name(archives_table_name: str) -> str:
-    return f"archive_storage_totals_{_get_fnv1a_64_hex(archives_table_name)}"
-
-
-def _get_existing_archive_storage_totals_triggers(
-    db_cursor, archives_table_name: str, trigger_names: tuple[str, str, str]
-) -> set[str]:
-    db_cursor.execute(
-        """
-        SELECT TRIGGER_NAME
-        FROM information_schema.TRIGGERS
-        WHERE TRIGGER_SCHEMA = DATABASE()
-          AND EVENT_OBJECT_TABLE = %s
-          AND TRIGGER_NAME IN (%s, %s, %s)
-        """,
-        (archives_table_name, *trigger_names),
-    )
-    return {row["TRIGGER_NAME"] for row in db_cursor.fetchall()}
-
-
-def _create_archive_storage_totals_triggers(
-    db_cursor, table_prefix: str, dataset: str | None, existing_trigger_names: set[str]
-) -> bool:
-    archives_table_name = get_archives_table_name(table_prefix, dataset)
-    totals_table_name = get_archive_storage_totals_table_name(table_prefix)
-    insert_trigger_name, update_trigger_name, delete_trigger_name = (
-        get_archive_storage_totals_trigger_names(archives_table_name)
-    )
-    dataset_sql_literal = "''" if dataset is None else "'" + dataset.replace("'", "''") + "'"
-    trigger_definitions = (
-        (
-            insert_trigger_name,
-            f"""
-            AFTER INSERT ON `{archives_table_name}`
-            FOR EACH ROW
-            INSERT INTO `{totals_table_name}`
-                (`dataset`, `archive_count`, `compressed_size`, `uncompressed_size`)
-            VALUES ({dataset_sql_literal}, 1, NEW.`size`, NEW.`uncompressed_size`)
-            ON DUPLICATE KEY UPDATE
-                `archive_count` = `archive_count` + 1,
-                `compressed_size` = `compressed_size` + NEW.`size`,
-                `uncompressed_size` = `uncompressed_size` + NEW.`uncompressed_size`
-            """,
-        ),
-        (
-            update_trigger_name,
-            f"""
-            AFTER UPDATE ON `{archives_table_name}`
-            FOR EACH ROW
-            UPDATE `{totals_table_name}`
-            SET `compressed_size` = `compressed_size` + NEW.`size` - OLD.`size`,
-                `uncompressed_size` = `uncompressed_size`
-                    + NEW.`uncompressed_size` - OLD.`uncompressed_size`
-            WHERE `dataset` = {dataset_sql_literal}
-            """,
-        ),
-        (
-            delete_trigger_name,
-            f"""
-            AFTER DELETE ON `{archives_table_name}`
-            FOR EACH ROW
-            UPDATE `{totals_table_name}`
-            SET `archive_count` = `archive_count` - 1,
-                `compressed_size` = `compressed_size` - OLD.`size`,
-                `uncompressed_size` = `uncompressed_size` - OLD.`uncompressed_size`
-            WHERE `dataset` = {dataset_sql_literal}
-            """,
-        ),
-    )
-
-    created_trigger = False
-    for trigger_name, trigger_definition in trigger_definitions:
-        if trigger_name not in existing_trigger_names:
-            db_cursor.execute(f"CREATE TRIGGER `{trigger_name}` {trigger_definition}")
-            created_trigger = True
-    return created_trigger
-
-
-def reconcile_archive_storage_totals(
-    db_cursor, table_prefix: str, dataset: str | None = None
-) -> None:
-    """Atomically replaces a scope's archive storage totals with an archive-table aggregate."""
-    archives_table_name = get_archives_table_name(table_prefix, dataset)
-    totals_table_name = get_archive_storage_totals_table_name(table_prefix)
-    dataset_key = "" if dataset is None else dataset
-
-    db_cursor.execute(f"LOCK TABLES `{archives_table_name}` WRITE, `{totals_table_name}` WRITE")
-    try:
-        db_cursor.execute(
-            f"""
-            SELECT COUNT(*) AS archive_count,
-                   COALESCE(SUM(size), 0) AS compressed_size,
-                   COALESCE(SUM(uncompressed_size), 0) AS uncompressed_size
-            FROM `{archives_table_name}`
-            """
-        )
-        totals = db_cursor.fetchone()
-        db_cursor.execute(
-            f"""
-            REPLACE INTO `{totals_table_name}`
-                (`dataset`, `archive_count`, `compressed_size`, `uncompressed_size`)
-            VALUES (%s, %s, %s, %s)
-            """,
-            (
-                dataset_key,
-                totals["archive_count"],
-                totals["compressed_size"],
-                totals["uncompressed_size"],
-            ),
-        )
-    finally:
-        db_cursor.execute("UNLOCK TABLES")
-
-
-def _archive_storage_totals_row_exists(db_cursor, table_prefix: str, dataset_key: str) -> bool:
-    db_cursor.execute(
-        f"""
-        SELECT 1
-        FROM `{get_archive_storage_totals_table_name(table_prefix)}`
-        WHERE dataset = %s
-        """,
-        (dataset_key,),
-    )
-    return db_cursor.fetchone() is not None
-
-
-def _acquire_archive_storage_totals_lock(db_cursor, lock_name: str) -> None:
-    db_cursor.execute("SELECT GET_LOCK(%s, 60) AS acquired", (lock_name,))
-    if db_cursor.fetchone()["acquired"] != 1:
-        raise RuntimeError(f"Timed out acquiring archive storage totals lock '{lock_name}'.")
-
-
-def _release_archive_storage_totals_lock(db_cursor, lock_name: str) -> None:
-    db_cursor.execute("SELECT RELEASE_LOCK(%s) AS released", (lock_name,))
-    if db_cursor.fetchone()["released"] != 1:
-        raise RuntimeError(f"Failed to release archive storage totals lock '{lock_name}'.")
-
-
-def ensure_archive_storage_totals(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
-    """Ensures archive storage totals triggers and the corresponding scope total exist."""
-    create_archive_storage_totals_table(db_cursor, table_prefix)
-    archives_table_name = get_archives_table_name(table_prefix, dataset)
-    trigger_names = get_archive_storage_totals_trigger_names(archives_table_name)
-    dataset_key = "" if dataset is None else dataset
-    lock_name = _get_archive_storage_totals_lock_name(archives_table_name)
-
-    _acquire_archive_storage_totals_lock(db_cursor, lock_name)
-    try:
-        existing_trigger_names = _get_existing_archive_storage_totals_triggers(
-            db_cursor, archives_table_name, trigger_names
-        )
-        created_trigger = _create_archive_storage_totals_triggers(
-            db_cursor, table_prefix, dataset, existing_trigger_names
-        )
-        if created_trigger or not _archive_storage_totals_row_exists(
-            db_cursor, table_prefix, dataset_key
-        ):
-            reconcile_archive_storage_totals(db_cursor, table_prefix, dataset)
-    finally:
-        _release_archive_storage_totals_lock(db_cursor, lock_name)
 
 
 def _create_files_table(db_cursor, table_prefix: str, dataset: str | None) -> None:
@@ -374,7 +173,6 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
 
     _create_archives_table(db_cursor, archives_table_name)
     _create_files_table(db_cursor, table_prefix, dataset)
-    ensure_archive_storage_totals(db_cursor, table_prefix, dataset)
 
 
 def delete_archives_from_metadata_db(
@@ -419,44 +217,24 @@ def delete_dataset_from_metadata_db(db_cursor, table_prefix: str, dataset: str) 
     :param table_prefix:
     :param dataset:
     """
-    archives_table_name = get_archives_table_name(table_prefix, dataset)
-    lock_name = _get_archive_storage_totals_lock_name(archives_table_name)
-    _acquire_archive_storage_totals_lock(db_cursor, lock_name)
-    try:
-        # Drop tables in an order such that no foreign key constraint is violated.
-        tables_in_removal_order = [
-            get_column_metadata_table_name(table_prefix, dataset),
-            get_files_table_name(table_prefix, dataset),
-            archives_table_name,
-        ]
+    # Drop tables in an order such that no foreign key constraint is violated.
+    tables_in_removal_order = [
+        get_column_metadata_table_name(table_prefix, dataset),
+        get_files_table_name(table_prefix, dataset),
+        get_archives_table_name(table_prefix, dataset),
+    ]
 
-        for table in tables_in_removal_order:
-            db_cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
+    for table in tables_in_removal_order:
+        db_cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
 
-        # Dropping the archives table does not execute its row triggers. Delete the shared total
-        # after the table is gone so no archive insert trigger can recreate it during deletion.
-        db_cursor.execute(
-            f"""
-            DELETE FROM `{get_archive_storage_totals_table_name(table_prefix)}`
-            WHERE dataset = %s
-            """,
-            (dataset,),
-        )
-
-        # Remove the dataset row from the datasets table
-        db_cursor.execute(
-            f"""
-            DELETE FROM `{get_datasets_table_name(table_prefix)}`
-            WHERE name = %s
-            """,
-            (dataset,),
-        )
-    finally:
-        _release_archive_storage_totals_lock(db_cursor, lock_name)
-
-
-def get_archive_storage_totals_table_name(table_prefix: str) -> str:
-    return _get_table_name(table_prefix, ARCHIVE_STORAGE_TOTALS_TABLE_SUFFIX, None)
+    # Remove the dataset row from the datasets table
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{get_datasets_table_name(table_prefix)}`
+        WHERE name = %s
+        """,
+        (dataset,),
+    )
 
 
 def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:

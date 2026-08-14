@@ -8,12 +8,7 @@ from contextlib import closing
 from pydantic import ValidationError
 
 from clp_py_utils.clp_config import ClpConfig, StorageEngine
-from clp_py_utils.clp_metadata_db_utils import (
-    create_archive_storage_totals_table,
-    create_datasets_table,
-    create_metadata_db_tables,
-    fetch_existing_datasets,
-)
+from clp_py_utils.clp_metadata_db_utils import create_datasets_table, create_metadata_db_tables
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SqlAdapter
 
@@ -63,13 +58,10 @@ def main(argv):
         ):
             if StorageEngine.CLP_S == storage_engine:
                 create_datasets_table(metadata_db_cursor, table_prefix)
-                create_archive_storage_totals_table(metadata_db_cursor, table_prefix)
-                for dataset in fetch_existing_datasets(metadata_db_cursor, table_prefix):
-                    create_metadata_db_tables(metadata_db_cursor, table_prefix, dataset)
             else:
                 create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
-    except Exception:
+    except:
         logger.exception("Failed to create clp metadata tables.")
         return -1
 

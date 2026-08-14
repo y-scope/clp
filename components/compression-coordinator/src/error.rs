@@ -36,12 +36,6 @@ pub enum Error {
         source: sqlx::Error,
     },
 
-    #[error("failed to acquire archive totals provisioning lock `{0}`")]
-    ArchiveTotalsProvisioningLockUnavailable(String),
-
-    #[error("failed to release archive totals provisioning lock `{0}`")]
-    ArchiveTotalsProvisioningLockReleaseFailed(String),
-
     #[error("missing S3 object metadata {id} for ingestion job {ingestion_job_id}")]
     MissingS3ObjectMetadata {
         ingestion_job_id: IngestionJobId,

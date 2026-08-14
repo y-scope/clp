@@ -5,7 +5,6 @@ use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
-use clp_rust_utils::dataset::resolve_dataset_name;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -26,11 +25,6 @@ use crate::Error;
 use crate::compression_job_submitter::CompressionJobOutcome;
 use crate::compression_job_submitter::S3CompressionJobSubmitter;
 use crate::partition::CompressionInputBuilder;
-
-const ARCHIVE_STORAGE_TOTALS_TABLE_SUFFIX: &str = "archive_totals";
-const ARCHIVE_TOTALS_PROVISIONING_LOCK_PREFIX: &str = "archive_storage_totals_";
-const FNV1A_64_OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
-const FNV1A_64_PRIME: u64 = 0x0000_0100_0000_01b3;
 
 /// Options for a compression job running in Spider.
 pub struct SpiderOption {
@@ -384,22 +378,23 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             .collect())
     }
 
-    /// Ensures that the required metadata tables and archive storage totals triggers exist for the
-    /// configured dataset.
+    /// Ensures that the required metadata tables exist for the configured dataset.
+    ///
+    /// This method creates the following tables in the CLP database if they do not already exist:
+    ///
+    /// * The archive metadata table.
+    /// * The column metadata table.
     ///
     /// # Errors
     ///
-    /// Returns an error if the metadata tables or totals triggers cannot be provisioned.
+    /// Returns an error if:
+    ///
+    /// * [`Error::MetadataTableCreation`] if either table cannot be created.
     async fn upsert_metadata_tables(&self) -> Result<(), Error> {
         let archives_table = self.db_config.archives_table_name(self.dataset.as_deref());
         let column_metadata_table = self
             .db_config
             .column_metadata_table_name(self.dataset.as_deref());
-        let archive_storage_totals_table = format!(
-            "{}{}",
-            self.db_config.table_prefix, ARCHIVE_STORAGE_TOTALS_TABLE_SUFFIX
-        );
-        let dataset = resolve_dataset_name(self.dataset.as_deref());
 
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS `{archives_table}` (
@@ -419,7 +414,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         .execute(&self.db_pool)
         .await
         .map_err(|source| Error::MetadataTableCreation {
-            table: archives_table.clone(),
+            table: archives_table,
             source,
         })?;
 
@@ -436,188 +431,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             table: column_metadata_table,
             source,
         })?;
-
-        self.ensure_archive_storage_totals_triggers(
-            &archives_table,
-            &archive_storage_totals_table,
-            dataset,
-        )
-        .await
-    }
-
-    async fn ensure_archive_storage_totals_triggers(
-        &self,
-        archives_table: &str,
-        archive_storage_totals_table: &str,
-        dataset: &str,
-    ) -> Result<(), Error> {
-        let provisioning_lock_name = format!(
-            "{ARCHIVE_TOTALS_PROVISIONING_LOCK_PREFIX}{:016x}",
-            fnv1a_64(archives_table.as_bytes())
-        );
-        let mut connection = self.db_pool.acquire().await?;
-        let lock_acquired: i64 = sqlx::query_scalar("SELECT GET_LOCK(?, 30)")
-            .bind(&provisioning_lock_name)
-            .fetch_one(&mut *connection)
-            .await?;
-        if lock_acquired != 1 {
-            return Err(Error::ArchiveTotalsProvisioningLockUnavailable(
-                provisioning_lock_name,
-            ));
-        }
-
-        let result = async {
-            sqlx::query(&format!(
-                "CREATE TABLE IF NOT EXISTS `{archive_storage_totals_table}` (
-                    `dataset` VARCHAR(255) NOT NULL,
-                    `archive_count` BIGINT UNSIGNED NOT NULL,
-                    `compressed_size` BIGINT NOT NULL,
-                    `uncompressed_size` BIGINT NOT NULL,
-                    PRIMARY KEY (`dataset`)
-                )"
-            ))
-            .execute(&mut *connection)
-            .await
-            .map_err(|source| Error::MetadataTableCreation {
-                table: archive_storage_totals_table.to_owned(),
-                source,
-            })?;
-
-            self.ensure_archive_storage_totals_triggers_with_lock(
-                &mut connection,
-                archives_table,
-                archive_storage_totals_table,
-                dataset,
-            )
-            .await
-        }
-        .await;
-        let lock_released: Result<i64, sqlx::Error> = sqlx::query_scalar("SELECT RELEASE_LOCK(?)")
-            .bind(&provisioning_lock_name)
-            .fetch_one(&mut *connection)
-            .await;
-
-        match (result, lock_released) {
-            (Err(error), _) => Err(error),
-            (Ok(()), Ok(1)) => Ok(()),
-            (Ok(()), _) => Err(Error::ArchiveTotalsProvisioningLockReleaseFailed(
-                provisioning_lock_name,
-            )),
-        }
-    }
-
-    async fn ensure_archive_storage_totals_triggers_with_lock(
-        &self,
-        connection: &mut sqlx::pool::PoolConnection<sqlx::MySql>,
-        archives_table: &str,
-        archive_storage_totals_table: &str,
-        dataset: &str,
-    ) -> Result<(), Error> {
-        let trigger_names = archive_storage_trigger_names(archives_table);
-        let mut missing_triggers = Vec::new();
-        for (trigger_index, trigger_name) in trigger_names.iter().enumerate() {
-            let exists: i64 = sqlx::query_scalar(
-                "SELECT EXISTS(
-                    SELECT 1 FROM INFORMATION_SCHEMA.TRIGGERS
-                    WHERE TRIGGER_SCHEMA = DATABASE()
-                      AND EVENT_OBJECT_TABLE = ?
-                      AND TRIGGER_NAME = ?
-                )",
-            )
-            .bind(archives_table)
-            .bind(trigger_name)
-            .fetch_one(&mut **connection)
-            .await?;
-            if exists == 0 {
-                missing_triggers.push((trigger_index, trigger_name.clone()));
-            }
-        }
-
-        if missing_triggers.is_empty() {
-            let totals_row_exists: i64 = sqlx::query_scalar(&format!(
-                "SELECT EXISTS(SELECT 1 FROM `{archive_storage_totals_table}` WHERE `dataset` = ?)"
-            ))
-            .bind(dataset)
-            .fetch_one(&mut **connection)
-            .await?;
-            if totals_row_exists != 0 {
-                return Ok(());
-            }
-        } else {
-            for (trigger_index, trigger_name) in missing_triggers {
-                let trigger_sql = archive_storage_trigger_sql(
-                    trigger_index,
-                    &trigger_name,
-                    archives_table,
-                    archive_storage_totals_table,
-                    &sql_string_literal(dataset),
-                );
-                sqlx::query(&trigger_sql).execute(&mut **connection).await?;
-            }
-        }
-
-        self.reconcile_archive_storage_totals_with_lock(
-            connection,
-            archives_table,
-            archive_storage_totals_table,
-            dataset,
-        )
-        .await
-    }
-
-    async fn reconcile_archive_storage_totals_with_lock(
-        &self,
-        connection: &mut sqlx::pool::PoolConnection<sqlx::MySql>,
-        archives_table: &str,
-        archive_storage_totals_table: &str,
-        dataset: &str,
-    ) -> Result<(), Error> {
-        sqlx::query(&format!(
-            "LOCK TABLES `{archives_table}` WRITE, `{archive_storage_totals_table}` WRITE"
-        ))
-        .execute(&mut **connection)
-        .await?;
-        let reconcile_result = self
-            .reconcile_archive_storage_totals(
-                connection,
-                archives_table,
-                archive_storage_totals_table,
-                dataset,
-            )
-            .await;
-        let unlock_result = sqlx::query("UNLOCK TABLES")
-            .execute(&mut **connection)
-            .await;
-        reconcile_result?;
-        unlock_result?;
-
-        Ok(())
-    }
-
-    async fn reconcile_archive_storage_totals(
-        &self,
-        connection: &mut sqlx::pool::PoolConnection<sqlx::MySql>,
-        archives_table: &str,
-        archive_storage_totals_table: &str,
-        dataset: &str,
-    ) -> Result<(), Error> {
-        let totals: (u64, i64, i64) = sqlx::query_as(&format!(
-            "SELECT COUNT(*), COALESCE(SUM(`size`), 0), COALESCE(SUM(`uncompressed_size`), 0) \
-             FROM `{archives_table}`"
-        ))
-        .fetch_one(&mut **connection)
-        .await?;
-        sqlx::query(&format!(
-            "REPLACE INTO `{archive_storage_totals_table}` \
-             (`dataset`, `archive_count`, `compressed_size`, `uncompressed_size`) \
-             VALUES (?, ?, ?, ?)"
-        ))
-        .bind(dataset)
-        .bind(totals.0)
-        .bind(totals.1)
-        .bind(totals.2)
-        .execute(&mut **connection)
-        .await?;
 
         Ok(())
     }
@@ -777,70 +590,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
 const COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 const INGESTED_S3_OBJECT_METADATA_TABLE_NAME: &str = "ingested_s3_object_metadata";
 
-fn archive_storage_trigger_names(archives_table: &str) -> [String; 3] {
-    let table_hash = fnv1a_64(archives_table.as_bytes());
-    [
-        format!("archive_storage_ai_{table_hash:016x}"),
-        format!("archive_storage_au_{table_hash:016x}"),
-        format!("archive_storage_ad_{table_hash:016x}"),
-    ]
-}
-
-fn archive_storage_trigger_sql(
-    trigger_index: usize,
-    trigger_name: &str,
-    archives_table: &str,
-    archive_storage_totals_table: &str,
-    dataset: &str,
-) -> String {
-    let update_clause = match trigger_index {
-        0 => format!(
-            "INSERT INTO `{archive_storage_totals_table}` \
-             (`dataset`, `archive_count`, `compressed_size`, `uncompressed_size`) \
-             VALUES ({dataset}, 1, NEW.`size`, NEW.`uncompressed_size`) \
-             ON DUPLICATE KEY UPDATE \
-             `archive_count` = `archive_count` + 1, \
-             `compressed_size` = `compressed_size` + NEW.`size`, \
-             `uncompressed_size` = `uncompressed_size` + NEW.`uncompressed_size`"
-        ),
-        1 => format!(
-            "UPDATE `{archive_storage_totals_table}` SET \
-             `compressed_size` = `compressed_size` + NEW.`size` - OLD.`size`, \
-             `uncompressed_size` = `uncompressed_size` + NEW.`uncompressed_size` - OLD.`uncompressed_size` \
-             WHERE `dataset` = {dataset}"
-        ),
-        2 => format!(
-            "UPDATE `{archive_storage_totals_table}` SET \
-             `archive_count` = `archive_count` - 1, \
-             `compressed_size` = `compressed_size` - OLD.`size`, \
-             `uncompressed_size` = `uncompressed_size` - OLD.`uncompressed_size` \
-             WHERE `dataset` = {dataset}"
-        ),
-        _ => unreachable!("archive storage trigger index is validated by its caller"),
-    };
-    let event = match trigger_index {
-        0 => "INSERT",
-        1 => "UPDATE",
-        2 => "DELETE",
-        _ => unreachable!("archive storage trigger index is validated by its caller"),
-    };
-
-    format!(
-        "CREATE TRIGGER `{trigger_name}` AFTER {event} ON `{archives_table}` FOR EACH ROW \
-         {update_clause}"
-    )
-}
-
-fn fnv1a_64(bytes: &[u8]) -> u64 {
-    bytes.iter().fold(FNV1A_64_OFFSET_BASIS, |hash, byte| {
-        (hash ^ u64::from(*byte)).wrapping_mul(FNV1A_64_PRIME)
-    })
-}
-
-fn sql_string_literal(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "''"))
-}
-
 /// A projection of the columns read from an ingested S3 object metadata row.
 #[derive(Debug, sqlx::FromRow)]
 struct S3ObjectMetadataRow {
@@ -848,40 +597,4 @@ struct S3ObjectMetadataRow {
     bucket: String,
     key: String,
     size: u64,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn fnv1a_64_matches_reference_values() {
-        assert_eq!(fnv1a_64(b""), 0xcbf2_9ce4_8422_2325);
-        assert_eq!(fnv1a_64(b"hello"), 0xa430_d846_80aa_bd0b);
-        assert_eq!(fnv1a_64(b"clp_example_archives"), 0x7eaf_f5f1_9190_cf0b);
-    }
-
-    #[test]
-    fn archive_storage_trigger_names_use_fnv1a_64() {
-        assert_eq!(
-            archive_storage_trigger_names("clp_example_archives"),
-            [
-                "archive_storage_ai_7eaff5f19190cf0b",
-                "archive_storage_au_7eaff5f19190cf0b",
-                "archive_storage_ad_7eaff5f19190cf0b",
-            ]
-        );
-    }
-
-    #[test]
-    fn archive_storage_trigger_names_are_within_mysql_identifier_limit() {
-        for trigger_name in archive_storage_trigger_names(&"a".repeat(64)) {
-            assert!(trigger_name.len() <= 64);
-        }
-    }
-
-    #[test]
-    fn missing_dataset_uses_default_totals_key() {
-        assert_eq!(resolve_dataset_name(None), "default");
-    }
 }

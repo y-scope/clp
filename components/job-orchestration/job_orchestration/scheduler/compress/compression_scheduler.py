@@ -26,7 +26,7 @@ from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
     fetch_existing_datasets,
-    get_archive_storage_totals_table_name,
+    get_archives_table_name,
 )
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import (
@@ -86,10 +86,12 @@ class _ArchiveStorageMetricsPoller:
     def __init__(
         self,
         sql_adapter: SqlAdapter,
+        storage_engine: StorageEngine,
         table_prefix: str,
         polling_interval_secs: float,
     ) -> None:
         self._sql_adapter = sql_adapter
+        self._storage_engine = storage_engine
         self._table_prefix = table_prefix
         self._polling_interval_secs = polling_interval_secs
         self._stop_event = threading.Event()
@@ -131,30 +133,50 @@ class _ArchiveStorageMetricsPoller:
                 self._snapshot = snapshot
 
     def _collect_snapshot(self) -> _ArchiveStorageSnapshot:
-        totals_table_name = get_archive_storage_totals_table_name(self._table_prefix)
-        query = f"""
-            SELECT
-                COALESCE(SUM(`compressed_size`), 0) AS bytes_compressed,
-                COALESCE(SUM(`uncompressed_size`), 0) AS bytes_uncompressed
-            FROM `{totals_table_name}`
-            """  # noqa: S608
         with (
             closing(self._sql_adapter.create_connection(True)) as db_conn,
             closing(db_conn.cursor(dictionary=True)) as db_cursor,
         ):
-            db_cursor.execute(query)
-            row = db_cursor.fetchone()
+            if StorageEngine.CLP == self._storage_engine:
+                archive_table_names = [get_archives_table_name(self._table_prefix, None)]
+            elif StorageEngine.CLP_S == self._storage_engine:
+                datasets = fetch_existing_datasets(db_cursor, self._table_prefix)
+                archive_table_names = [
+                    get_archives_table_name(self._table_prefix, dataset) for dataset in datasets
+                ]
+            else:
+                error_msg = f"Unsupported storage engine: {self._storage_engine}."
+                raise ValueError(error_msg)
 
+            # Archive totals are assumed to remain below OpenTelemetry's 8 EiB int64 limit.
+            compressed_bytes = 0
+            uncompressed_bytes = 0
+            for archive_table_name in archive_table_names:
+                table_compressed_bytes, table_uncompressed_bytes = self._collect_table_sizes(
+                    db_cursor, archive_table_name
+                )
+                compressed_bytes += table_compressed_bytes
+                uncompressed_bytes += table_uncompressed_bytes
+
+            return _ArchiveStorageSnapshot(compressed_bytes, uncompressed_bytes)
+
+    @classmethod
+    def _collect_table_sizes(cls, db_cursor: Any, archive_table_name: str) -> tuple[int, int]:
+        query = f"""
+            SELECT
+                COALESCE(SUM(`size`), 0) AS bytes_compressed,
+                COALESCE(SUM(`uncompressed_size`), 0) AS bytes_uncompressed
+            FROM `{archive_table_name}`
+            """  # noqa: S608
+        db_cursor.execute(query)
+        row = db_cursor.fetchone()
         if row is None:
-            error_msg = (
-                f"Archive storage totals table `{totals_table_name}` returned no aggregate row."
-            )
+            error_msg = f"Archive table `{archive_table_name}` returned no aggregate row."
             raise ValueError(error_msg)
 
-        # Archive totals are assumed to remain below OpenTelemetry's 8 EiB int64 limit.
-        compressed_bytes = self._validate_size(row.get("bytes_compressed"), "compressed size")
-        uncompressed_bytes = self._validate_size(row.get("bytes_uncompressed"), "uncompressed size")
-        return _ArchiveStorageSnapshot(compressed_bytes, uncompressed_bytes)
+        compressed_bytes = cls._validate_size(row.get("bytes_compressed"), "compressed size")
+        uncompressed_bytes = cls._validate_size(row.get("bytes_uncompressed"), "uncompressed size")
+        return compressed_bytes, uncompressed_bytes
 
     @staticmethod
     def _validate_size(value: object, field_name: str) -> int:
@@ -180,6 +202,7 @@ class _ArchiveStorageMetricsPoller:
 
 def _start_archive_storage_metrics_poller(
     sql_adapter: SqlAdapter,
+    storage_engine: StorageEngine,
     table_prefix: str,
     polling_interval_ms: int,
 ) -> _ArchiveStorageMetricsPoller | None:
@@ -188,6 +211,7 @@ def _start_archive_storage_metrics_poller(
 
     poller = _ArchiveStorageMetricsPoller(
         sql_adapter,
+        storage_engine,
         table_prefix,
         polling_interval_ms / 1000,
     )
@@ -267,8 +291,7 @@ meter.create_observable_gauge(
     unit="By",
     callbacks=[_observe_archive_bytes_uncompressed],
     description=(
-        "Current logical uncompressed size represented by archives according to the metadata "
-        "database"
+        "Current logical uncompressed size represented by archives according to the metadata database"
     ),
 )
 tasks_completed_counter = meter.create_counter(
@@ -822,6 +845,7 @@ def main(argv) -> int | None:
     try:
         poller = _start_archive_storage_metrics_poller(
             sql_adapter,
+            clp_config.package.storage_engine,
             clp_metadata_db_connection_config["table_prefix"],
             clp_config.compression_scheduler.archive_storage_metrics_poll_interval_ms
             or clp_config.compression_scheduler.telemetry_update_interval_ms,
