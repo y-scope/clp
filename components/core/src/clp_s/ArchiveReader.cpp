@@ -63,12 +63,14 @@ void ArchiveReader::open(Path const& archive_path, Options const& options) {
 
 auto ArchiveReader::open(
         std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
-        std::string_view archive_id
+        std::string_view archive_id,
+        Options const& options
 ) -> void {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_is_open = true;
+    m_options = options;
 
     if (nullptr == single_file_archive_reader || archive_id.empty()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
@@ -553,6 +555,7 @@ void ArchiveReader::close() {
     }
     m_array_dict->close();
 
+    m_clpp.reset();
     m_stream_reader.close();
     m_archive_reader_adaptor.reset();
 

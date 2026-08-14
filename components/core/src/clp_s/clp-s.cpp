@@ -300,8 +300,8 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             archive_reader->open(
                     input_path,
                     clp_s::ArchiveReader::Options{
-                            cli_args.get_network_auth(),
-                            cli_args.experimental().has_value()
+                            .m_network_auth = cli_args.get_network_auth(),
+                            .m_experimental = cli_args.experimental().has_value()
                     }
             );
         } catch (std::exception const& e) {
@@ -772,8 +772,8 @@ int main(int argc, char const* argv[]) {
                 archive_reader->open(
                         input_path,
                         clp_s::ArchiveReader::Options{
-                                command_line_arguments.get_network_auth(),
-                                command_line_arguments.experimental().has_value()
+                                .m_network_auth = command_line_arguments.get_network_auth(),
+                                .m_experimental = command_line_arguments.experimental().has_value()
                         }
                 );
             } catch (std::exception const& e) {

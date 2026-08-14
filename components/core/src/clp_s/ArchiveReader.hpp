@@ -38,13 +38,6 @@ public:
     };
 
     struct Options {
-        Options() = default;
-
-        Options(NetworkAuthOption network_auth, bool experimental, bool extract_mode = false)
-                : m_network_auth{network_auth},
-                  m_experimental{experimental},
-                  m_extract_mode{extract_mode} {}
-
         NetworkAuthOption m_network_auth{};
         bool m_experimental{false};
         bool m_extract_mode{false};
@@ -62,12 +55,14 @@ public:
 
     /**
      * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
-     * @param single_file_archive_reader The already opened archive reader
-     * @param archive_id The unique name or identifier for the archive
+     * @param single_file_archive_reader The already opened archive reader.
+     * @param archive_id The unique name or identifier for the archive.
+     * @param options Options controlling how the archive is read.
      */
     auto open(
             std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
-            std::string_view archive_id
+            std::string_view archive_id,
+            Options const& options
     ) -> void;
 
     /**

@@ -43,14 +43,14 @@ namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
         -> std::filesystem::path;
 auto get_test_input_local_path(std::string_view const test_input_path) -> std::string;
-auto extract() -> std::filesystem::path;
+auto extract(bool experimental = false) -> std::filesystem::path;
 void compare(std::filesystem::path const& extracted_json_path);
 void literallyCompare(
         std::filesystem::path const& expected_output_json_path,
         std::filesystem::path const& extracted_json_path
 );
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types);
-void validate_archive_header();
+void validate_archive_header(bool experimental = false);
 
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
         -> std::filesystem::path {
@@ -98,7 +98,7 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
     }
 }
 
-void validate_archive_header() {
+void validate_archive_header(bool experimental) {
     clp_s::ArchiveReader archive_reader;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
         REQUIRE_NOTHROW(archive_reader.open(
@@ -106,7 +106,7 @@ void validate_archive_header() {
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
-                clp_s::ArchiveReader::Options{}
+                clp_s::ArchiveReader::Options{.m_experimental = experimental}
         ));
         auto const& archive_header{archive_reader.get_header()};
         REQUIRE(clp_s::cArchiveVersion == archive_header.version);
@@ -129,7 +129,7 @@ void validate_archive_header() {
     }
 }
 
-auto extract() -> std::filesystem::path {
+auto extract(bool experimental) -> std::filesystem::path {
     constexpr auto cDefaultOrdered = false;
     constexpr auto cDefaultTargetOrderedChunkSize = 0;
 
@@ -140,6 +140,7 @@ auto extract() -> std::filesystem::path {
     constructor_option.output_dir = cTestEndToEndOutputDirectory;
     constructor_option.ordered = cDefaultOrdered;
     constructor_option.target_ordered_chunk_size = cDefaultTargetOrderedChunkSize;
+    constructor_option.m_experimental = experimental;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
         constructor_option.archive_path = clp_s::Path{
                 .source{clp_s::InputSource::Filesystem},
@@ -219,6 +220,7 @@ void literallyCompare(
 }  // namespace
 
 TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
+    auto const experimental = GENERATE(false, true);
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
 
@@ -228,19 +230,28 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
              std::string{cTestEndToEndOutputSortedJson}}
     };
 
+    auto const parsing_spec_path{
+            experimental ? std::make_optional(get_heuristic_parsing_spec_path()) : std::nullopt
+    };
+
+    // clpp requires retain_float_format for the extracted output of unstructured text to exactly
+    // match the original input.
+    auto const retain_float_format{experimental};
+
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
                     get_test_input_local_path(cTestEndToEndInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
                     std::nullopt,
-                    false,
+                    retain_float_format,
                     single_file_archive,
-                    structurize_arrays
+                    structurize_arrays,
+                    parsing_spec_path
             )
     );
-    validate_archive_header();
+    validate_archive_header(experimental);
 
-    auto extracted_json_path = extract();
+    auto extracted_json_path = extract(experimental);
 
     compare(extracted_json_path);
 }
@@ -280,7 +291,7 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
     };
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract();
+    auto extracted_json_path = extract(false);
     literallyCompare(
             get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile),
             extracted_json_path
@@ -324,7 +335,7 @@ TEST_CASE("clp-s-compress-extract-invalid-formatted-floats", "[clp-s][end-to-end
     };
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract();
+    auto extracted_json_path = extract(false);
     literallyCompare(
             get_test_input_local_path(cTestEndToEndInvalidFormattedFloatInputFile),
             extracted_json_path
@@ -357,7 +368,7 @@ TEST_CASE("clp-s-compress-extract-timestamps", "[clp-s][end-to-end]") {
     std::set<clp_s::NodeType> const expected_matching_types{clp_s::NodeType::Timestamp};
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract();
+    auto extracted_json_path = extract(false);
     literallyCompare(
             get_test_input_local_path(cTestEndToEndTimestampInputFile),
             extracted_json_path

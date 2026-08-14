@@ -271,7 +271,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     general_options.add_options()("help,h", "Print help")(
             "experimental",
             po::bool_switch(&experimental),
-            "Enable experimental features to be used."
+            "Enable the use of experimental features."
     );
 
     char command_input;
