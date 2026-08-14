@@ -167,7 +167,7 @@ tasks:
     aliases: ["fix-cpp-static-diff"]
     sources: *cpp_source_files
     deps:
-      - ":core-generate"
+      - ":core-generate-profiling"
       - "cpp-lint-configs"
       - "venv"
     cmds:
@@ -186,7 +186,7 @@ tasks:
     aliases: ["fix-cpp-static-full"]
     sources: *cpp_source_files
     deps:
-      - ":core-generate"
+      - ":core-generate-profiling"
       - "cpp-lint-configs"
       - "venv"
     cmds:

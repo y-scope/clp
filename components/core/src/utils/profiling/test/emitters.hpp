@@ -10,9 +10,7 @@
 #include <utils/profiling/Stopwatch.hpp>
 
 namespace utils::profiling::test {
-inline constexpr int cSleepMsShort{10};
-inline constexpr int cSleepMsMedium{50};
-inline constexpr int cSleepMsLong{100};
+inline constexpr std::chrono::milliseconds cSleep{10};
 
 /**
  * Returns an emit callback that asserts the measurement name, call count, and a minimum
@@ -23,7 +21,7 @@ inline auto verify_emit(std::string_view expected_name, uint32_t expected_call_c
             expected_call_count](std::string_view name, Measurement measurement) -> void {
         REQUIRE(expected_name == name);
         REQUIRE(expected_call_count == measurement.call_count);
-        REQUIRE(measurement.duration >= std::chrono::milliseconds(1));
+        REQUIRE(measurement.duration >= std::chrono::milliseconds(cSleep));
     };
 }
 
