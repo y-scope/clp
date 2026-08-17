@@ -37,6 +37,7 @@ vars:
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
   G_PYTHON_WHEELS_BUILD_DIR: "{{.G_BUILD_DIR}}/python-wheels"
   G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust-targets"
+  G_SPIDER_COMPOSE_TAR_FILE: "{{.G_BUILD_DIR}}/spider-compose-52817a78.tar.gz"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
@@ -44,6 +45,7 @@ vars:
 
   # Versions
   G_PACKAGE_VERSION: "0.13.1-dev"
+  G_SPIDER_COMPOSE_COMMIT: "52817a78c944efa478cfde94c77e19f585ff43ff"
 
   # Build parameters
   # NOTE: If CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK is set, it takes precedence. Otherwise, we cap
@@ -62,6 +64,7 @@ vars:
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
+  G_SPIDER_COMPOSE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/spider-compose-52817a78.md5"
   G_WEBUI_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui.md5"
 
 tasks:
@@ -124,6 +127,7 @@ tasks:
       - "{{.G_BUILD_DIR}}/clp-package-image.id"
       - "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/clp-config.schema.json"
       - "{{.G_WEBUI_BUILD_DIR}}/settings.json"
+      - "{{.G_SPIDER_COMPOSE_TAR_FILE}}"
       - "{{.TASKFILE}}"
       - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
@@ -137,6 +141,16 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
+      - task: "utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_SPIDER_COMPOSE_CHECKSUM_FILE}}"
+          FILE_SHA256: "84a666725baecb416eeba961694ab49ea65bd85f456792f839872846dd5de06e"
+          INCLUDE_PATTERNS: ["*/tools/deployment/spider-compose/**"]
+          NUM_COMPONENTS_TO_STRIP: 4
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}/spider-compose"
+          TAR_FILE: "{{.G_SPIDER_COMPOSE_TAR_FILE}}"
+          URL: >-
+            https://github.com/y-scope/spider/archive/{{.G_SPIDER_COMPOSE_COMMIT}}.tar.gz
       - >-
         rsync --archive
         "components/package-template/src/"
