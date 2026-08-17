@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <set>
+#include <stdexcept>
 
 #include <log_surgeon/log_surgeon.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -583,21 +584,24 @@ int main(int argc, char const* argv[]) {
 
             size_t num_bytes_read;
             file_reader.read(buf, max_map_schema_length, num_bytes_read);
+            auto build_parser = [&parsing_spec_path]() -> log_surgeon::Parser {
+                auto result{clp::build_parser_from_file(parsing_spec_path.string())};
+                if (result.has_error()) {
+                    throw std::runtime_error("Failed to build parser from parsing specification.");
+                }
+                return std::move(result.value());
+            };
             if (num_bytes_read < max_map_schema_length) {
                 auto parser_map_it{parser_map.find(buf)};
                 // If there's a chance there might be a difference, make a new parser as it's fast.
                 if (parser_map_it == parser_map.end()) {
-                    auto insert_result{
-                            parser_map.emplace(buf, clp::load_parser_from_file(parsing_spec_path))
-                    };
+                    auto insert_result{parser_map.emplace(buf, build_parser())};
                     parser = &insert_result.first->second;
                 } else {
                     parser = &parser_map_it->second;
                 }
             } else {
-                one_time_use_parser = std::make_unique<log_surgeon::Parser>(
-                        clp::load_parser_from_file(parsing_spec_path)
-                );
+                one_time_use_parser = std::make_unique<log_surgeon::Parser>(build_parser());
                 parser = one_time_use_parser.get();
             }
         }

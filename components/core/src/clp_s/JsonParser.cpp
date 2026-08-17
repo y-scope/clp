@@ -1,6 +1,5 @@
 #include "JsonParser.hpp"
 
-#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstddef>
@@ -48,10 +47,12 @@
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
+#include <clp_s/TraceableException.hpp>
 #include <clp_s/Utils.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
 #include <clpp/LogShapeUtils.hpp>
+#include <clpp/utils.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -88,21 +89,15 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
         -> bool;
 
 /**
- * Reads the parsing specification at `spec_path` and builds it into a log-surgeon parser,
- * registering the encoding patterns from `clpp::cEncodingPatterns`.
+ * Reads a parsing spec into a string that can be used by log-surgeon to build the parser.
  *
- * @param spec_path Path to the parsing specification.
- * @param network_auth Network authentication options for reading `spec_path`.
- * @return A result containing a pair:
- * - The built parser.
- * - The parsing specification text.
- * or an error code indicating the failure:
- * - clpp::ClppErrorCodeEnum::BadParam: if we failed to read or build a non-empty spec.
+ * @param spec_path Path input to `clp_s::try_create_reader`.
+ * @param network_auth Network input to `clp_s::try_create_reader` for relevant paths.
+ * @return A result containing the parsing spec's contents or an error code indicating the failure:
+ * - clpp::ClppErrorCodeEnum::BadParam if reading the spec fails or it is empty.
  */
-auto build_parsing_spec(
-        Path const& spec_path,
-        NetworkAuthOption const& network_auth
-) -> ystdlib::error_handling::Result<std::pair<std::unique_ptr<log_surgeon::Parser>, std::string>>;
+auto read_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_auth)
+        -> ystdlib::error_handling::Result<std::string>;
 
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
@@ -182,38 +177,6 @@ struct ParentScope {
 };
 
 /**
- * Collects the chain of ancestor matches that become `ParentRule` schema-tree nodes for a leaf,
- * in root->leaf order.
- *
- * If the leaf is a root rule (`sub_rule_id == 0`) it has no parent-rule nodes and `chain` is left
- * empty. Otherwise every ancestor from the leaf's parent up to and including the root-rule
- * ancestor becomes a node: the walk stops at a root-rule ancestor (`sub_rule_id == 0`), or — for
- * a sub-rule whose parent is a root rule (`parent_id == 0`) — after also including that root-rule
- * parent.
- *
- * @param leaf The leaf match whose ancestor chain to collect.
- * @param chain Output vector; cleared and filled with ancestor `Match` pointers in root->leaf
- *     order. The pointers borrow from the log_surgeon event that produced `leaf`.
- */
-auto
-collect_parent_chain(log_surgeon::Match const& leaf, std::vector<log_surgeon::Match const*>& chain)
-        -> void {
-    chain.clear();
-    if (0 == leaf.sub_rule_id) {
-        return;
-    }
-    auto const* cur{leaf.get_parent()};
-    while (true) {
-        chain.push_back(cur);
-        if (0 == cur->sub_rule_id) {
-            break;
-        }
-        cur = cur->get_parent();
-    }
-    std::reverse(chain.begin(), chain.end());
-}
-
-/**
  * Syncs the stack of open `ParentRule` scopes against a leaf's ancestor chain by `Match` identity:
  * closes scopes whose position in the chain diverged, then opens one unordered-object scope per
  * new ancestor. Returns the schema-tree node ID the leaf should attach to — the innermost open
@@ -266,10 +229,8 @@ auto sync_open_scopes_to_chain(
     return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
 }
 
-auto build_parsing_spec(
-        Path const& spec_path,
-        NetworkAuthOption const& network_auth
-) -> ystdlib::error_handling::Result<std::pair<std::unique_ptr<log_surgeon::Parser>, std::string>> {
+auto read_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_auth)
+        -> ystdlib::error_handling::Result<std::string> {
     auto spec_reader{try_create_reader(spec_path, network_auth)};
 
     constexpr size_t cReadChunkSize{4096};
@@ -298,31 +259,19 @@ auto build_parsing_spec(
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }
 
-    log_surgeon::ParsingSpecBuilder builder{spec_str};
-    for (auto const& encoding : clpp::cEncodingPatterns) {
-        if (false == builder.add_encoding(encoding.name, encoding.pattern)) {
-            SPDLOG_ERROR(
-                    "Failed to add log surgeon specification encoding: {} - \"{}\"",
-                    encoding.name,
-                    encoding.pattern
-            );
-            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-        }
-    }
-
-    return {std::make_unique<log_surgeon::Parser>(builder.build()), std::move(spec_str)};
+    return spec_str;
 }
 }  // namespace
 
 JsonParser::JsonParser(JsonParserOption const& option)
-        : m_target_encoded_size(option.target_encoded_size),
-          m_max_document_size(option.max_document_size),
+        : m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
+          m_network_auth(option.network_auth),
           m_timestamp_key(option.timestamp_key),
+          m_target_encoded_size(option.target_encoded_size),
+          m_max_document_size(option.max_document_size),
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
-          m_retain_float_format(option.retain_float_format),
-          m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
-          m_network_auth(option.network_auth) {
+          m_retain_float_format(option.retain_float_format) {
     if (false == m_timestamp_key.empty()) {
         if (false
             == clp_s::search::ast::tokenize_column_descriptor(
@@ -365,13 +314,15 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_writer->open(m_archive_options);
 
     if (option.experimental) {
-        auto result{
-                build_parsing_spec(option.experimental->parsing_spec_path, option.network_auth)
-        };
-        if (result.has_error()) {
+        auto spec{read_parsing_spec(option.experimental->parsing_spec_path, option.network_auth)};
+        if (spec.has_error()) {
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
-        m_clpp.emplace(std::move(result.value().first), std::move(result.value().second));
+        auto parser{clpp::build_parsing_spec(spec.value())};
+        if (parser.has_error()) {
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
+        m_clpp.emplace(std::move(parser.value()), std::move(spec.value()));
     }
 }
 
@@ -1683,7 +1634,7 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
             break;
         }
 
-        collect_parent_chain(match.value(), parent_chain);
+        clpp::collect_parent_chain(match.value(), parent_chain);
         auto const parent_node_id{sync_open_scopes_to_chain(
                 open_scopes,
                 parent_chain,

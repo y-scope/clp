@@ -5,10 +5,12 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
 #include <log_surgeon/log_surgeon.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "Defs.h"
 #include "ErrorCode.hpp"
@@ -46,11 +48,13 @@ ErrorCode create_directory_structure(std::string const& path, mode_t mode);
 ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::string>& paths);
 
 /**
- * Loads a parser from a parsing specification file.
- * @param parsing_spec_path
- * @return parser
+ * Builds a log-surgeon parser from a parsing specification file.
+ * @param spec_path Path to the parsing specification file.
+ * @return A result containing the built parser or an error code indicating the failure:
+ * - clpp::ClppErrorCodeEnum::BadParam if reading the spec fails or it is empty.
  */
-auto load_parser_from_file(std::string const& parsing_spec_path) -> log_surgeon::Parser;
+auto build_parser_from_file(std::string_view spec_path)
+        -> ystdlib::error_handling::Result<log_surgeon::Parser>;
 }  // namespace clp
 
 #endif  // CLP_UTILS_HPP

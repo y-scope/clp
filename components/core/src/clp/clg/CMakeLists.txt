@@ -150,6 +150,7 @@ if(CLP_BUILD_EXECUTABLES)
                 PRIVATE
                 absl::flat_hash_map
                 Boost::filesystem Boost::program_options
+                clpp::core
                 date::date
                 fmt::fmt
                 log-surgeon::log-surgeon

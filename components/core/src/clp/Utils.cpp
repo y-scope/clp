@@ -6,13 +6,14 @@
 #include <fstream>
 #include <iterator>
 #include <memory>
-#include <stdexcept>
 #include <string>
 
 #include <log_surgeon/log_surgeon.hpp>
-#include <log_surgeon/rust_compat.hpp>
 
-#include "FileReader.hpp"
+#include <clp/FileReader.hpp>
+#include <clp/spdlog_with_specializations.hpp>
+#include <clpp/ErrorCode.hpp>
+#include <clpp/utils.hpp>
 
 namespace clp {
 using std::make_unique;
@@ -113,17 +114,21 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
     return ErrorCode_Success;
 }
 
-auto load_parser_from_file(std::string const& parsing_spec_path) -> log_surgeon::Parser {
-    std::ifstream spec_file{parsing_spec_path};
+auto build_parser_from_file(std::string_view spec_path)
+        -> ystdlib::error_handling::Result<log_surgeon::Parser> {
+    std::ifstream spec_file{std::string{spec_path}};
     if (false == spec_file.good()) {
-        throw std::invalid_argument(
-                "Parsing specification at " + parsing_spec_path + " failed to open."
-        );
+        SPDLOG_ERROR("Parsing specification at \"{}\" failed to open.", spec_path);
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }
     std::string const spec{
             (std::istreambuf_iterator<char>(spec_file)),
             std::istreambuf_iterator<char>()
     };
-    return log_surgeon::ParsingSpecBuilder{spec}.build();
+    auto result{clpp::build_parsing_spec(spec)};
+    if (result.has_error()) {
+        return result.error();
+    }
+    return *std::move(result.value());
 }
 }  // namespace clp

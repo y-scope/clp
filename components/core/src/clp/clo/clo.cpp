@@ -44,7 +44,6 @@ using clp::ErrorCode_Success;
 using clp::Grep;
 using clp::GrepCore;
 using clp::ir::cIrFileExtension;
-using clp::load_parser_from_file;
 using clp::logtype_dictionary_id_t;
 using clp::Query;
 using clp::segment_id_t;
@@ -490,7 +489,11 @@ static bool search_archive(
     auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
     std::optional<log_surgeon::Parser> parser_storage;
     if (std::filesystem::exists(schema_file_path)) {
-        parser_storage = load_parser_from_file(schema_file_path.string());
+        auto parser_result{clp::build_parser_from_file(schema_file_path.string())};
+        if (parser_result.has_error()) {
+            return false;
+        }
+        parser_storage = std::move(parser_result.value());
     }
     log_surgeon::Parser* parser{nullptr};
     if (parser_storage.has_value()) {

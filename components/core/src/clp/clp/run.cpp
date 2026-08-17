@@ -1,6 +1,5 @@
 #include "run.hpp"
 
-#include <fstream>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -65,7 +64,11 @@ int run(int argc, char const* argv[]) {
         std::optional<log_surgeon::Parser> parser;
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
-            parser = load_parser_from_file(schema_file_path);
+            auto parser_result{build_parser_from_file(schema_file_path)};
+            if (parser_result.has_error()) {
+                return -1;
+            }
+            parser = std::move(parser_result.value());
         }
 
         boost::filesystem::path path_prefix_to_remove(
