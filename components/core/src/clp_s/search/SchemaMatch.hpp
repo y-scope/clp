@@ -238,9 +238,7 @@ private:
     bool m_clpp_decomposed_query{false};
     uint64_t m_num_clpp_interpretations{0};
     bool m_ignore_case{false};
-    std::string m_parsing_spec_str;
-    log_surgeon::ParsingSpec* m_parsing_spec{nullptr};
-    std::unique_ptr<log_surgeon::ParserHandle> m_parser;
+    std::unique_ptr<log_surgeon::Parser> m_parser;
     absl::flat_hash_map<std::pair<std::string, std::string>, clpp::DecomposedQuery>
             m_decomposed_query_cache;
     std::unordered_map<clpp::log_shape_id_t, std::vector<int32_t>> m_log_shape_id_to_schema_id;

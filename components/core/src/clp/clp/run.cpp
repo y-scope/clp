@@ -62,7 +62,7 @@ int run(int argc, char const* argv[]) {
 
     auto command = command_line_args.get_command();
     if (CommandLineArguments::Command::Compress == command) {
-        std::optional<log_surgeon::ParserHandle> parser;
+        std::optional<log_surgeon::Parser> parser;
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
             parser = load_parser_from_file(schema_file_path);

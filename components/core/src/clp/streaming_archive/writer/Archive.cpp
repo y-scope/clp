@@ -362,14 +362,11 @@ auto Archive::add_token_to_dicts(std::string_view match_string, std::string_view
     m_logtype_dict_entry.add_dictionary_var();
 }
 
-auto Archive::write_msg_using_schema(
-        char* buf,
-        size_t buffer_size,
-        log_surgeon::EventHandle const& event
-) -> void {
+auto
+Archive::write_msg_using_schema(char* buf, size_t buffer_size, log_surgeon::LogEvent const& event)
+        -> void {
     epochtime_t timestamp{0};
     TimestampPattern const* timestamp_pattern{nullptr};
-    // Ideally the event would just have its timestamp accessible as event.get_timestamp()
     size_t leaf_id{0};
     while (true) {
         auto optional_leaf{event.get_leaf_match(leaf_id)};
@@ -377,10 +374,10 @@ auto Archive::write_msg_using_schema(
             break;
         }
         auto leaf{optional_leaf.value()};
-        if ("header" != leaf.ffi_pointers.root_rule_name.as_cpp_view()) {
+        if (false == leaf.get_fully_qualified_name().starts_with("header")) {
             break;
         }
-        if ("timestamp" == leaf.ffi_pointers.rule_name.as_cpp_view()) {
+        if ("timestamp" == leaf.get_rule_name()) {
             std::string timestamp_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
             size_t start{};
             size_t end{};
@@ -430,7 +427,7 @@ auto Archive::write_msg_using_schema(
         std::string_view leaf_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
 
         m_logtype_dict_entry.add_static_text(static_text);
-        add_token_to_dicts(leaf_string, leaf.ffi_pointers.rule_name.as_cpp_view());
+        add_token_to_dicts(leaf_string, leaf.get_rule_name());
 
         prev_pos = leaf.range.end;
         ++leaf_id;

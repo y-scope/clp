@@ -26,7 +26,7 @@ struct RawShapeOffset {
 // name cannot contain a delimiter. Using `find_placeholder_delimiter` to find the closing delimiter
 // can incorrectly treat the closing and opening delimiters of adjacent placeholders (e.g.
 // `%var%%var%`) as an escaped literal as the two delimiters appear as `%%`.
-auto build_parent_rule_shapes(log_surgeon::EventHandle const& event, std::string_view log_shape)
+auto build_parent_rule_shapes(log_surgeon::LogEvent const& event, std::string_view log_shape)
         -> ParentRuleShapes {
     std::vector<RawShapeOffset> raw_shape_offsets{{0, 0}};
 
@@ -71,11 +71,8 @@ auto build_parent_rule_shapes(log_surgeon::EventHandle const& event, std::string
         }
         auto const start{map(match.range.start)};
         auto const end{map(match.range.end)};
-        parent_shapes.emplace_parent_rule_shape(
-                match.ffi_pointers.fully_qualified_name.as_cpp_view(),
-                start,
-                end - start
-        );
+        parent_shapes
+                .emplace_parent_rule_shape(match.get_fully_qualified_name(), start, end - start);
     }
     return parent_shapes;
 }

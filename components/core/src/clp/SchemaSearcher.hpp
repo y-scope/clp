@@ -104,11 +104,11 @@ public:
     >
     static auto
     search(std::string const& search_string,
-           log_surgeon::ParserHandle& parser,
+           log_surgeon::Parser& parser,
            LogTypeDictionaryReaderType const& logtype_dict,
            VariableDictionaryReaderType const& var_dict,
            bool ignore_case) -> std::vector<SubQuery> {
-        auto const interpretations{parser.query_interpretations("", search_string)};
+        auto const interpretations{parser.search_by_name(search_string, "")};
         auto const normalized_interps{normalize_interpretations(interpretations)};
         return generate_schema_sub_queries(normalized_interps, logtype_dict, var_dict, ignore_case);
     }

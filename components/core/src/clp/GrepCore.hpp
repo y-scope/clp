@@ -55,7 +55,7 @@ public:
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            log_surgeon::ParserHandle* parser
+            log_surgeon::Parser* parser
     );
 
     /**
@@ -141,7 +141,7 @@ std::optional<Query> GrepCore::process_raw_query(
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        log_surgeon::ParserHandle* parser
+        log_surgeon::Parser* parser
 ) {
     std::vector<SubQuery> sub_queries;
     if (nullptr != parser) {

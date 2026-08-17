@@ -70,24 +70,14 @@ constexpr std::array cHeaderRulePatterns{
 }  // namespace
 
 auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
-    auto* builder{log_surgeon::log_surgeon_parsing_spec_builder_new()};
-    log_surgeon::log_surgeon_parsing_spec_builder_set_delimiters(
-            builder,
-            log_surgeon::CCharArray::from_string_view(cDelimiters)
-    );
+    log_surgeon::ParsingSpecBuilder builder;
+    builder.set_delimiters(cDelimiters);
     for (auto const& header_pattern : cHeaderRulePatterns) {
-        if (false
-            == log_surgeon::log_surgeon_parsing_spec_builder_add_rule_with_priority(
-                    builder,
-                    0,
-                    log_surgeon::CCharArray::from_string_view("header"),
-                    log_surgeon::CCharArray::from_string_view(header_pattern)
-            ))
-        {
+        if (false == builder.add_rule_with_priority("header", header_pattern)) {
             throw std::runtime_error("failed to add header rule parsing spec");
         }
     }
-    return LogConverter(max_buffer_size, log_surgeon_parsing_spec_builder_build(builder));
+    return LogConverter(max_buffer_size, builder.build());
 }
 
 auto LogConverter::convert_file(
@@ -131,18 +121,18 @@ auto LogConverter::convert_file(
             auto const match{event->get_leaf_match(0)};
             if (false == match.has_value()) {
                 YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(buf.substr(0, m_parser_offset)));
-            } else if ("timestamp" == match->ffi_pointers.rule_name.as_cpp_view()
-                       && "header" == match->ffi_pointers.root_rule_name.as_cpp_view())
+            } else if ("timestamp" == match->get_rule_name()
+                       && match->get_fully_qualified_name().starts_with("header"))
             {
                 YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(
-                        match->ffi_pointers.lexeme.as_cpp_view(),
+                        match->get_lexeme(),
                         buf.substr(match->range.end, m_parser_offset - match->range.end)
                 ));
             } else {
                 SPDLOG_ERROR(
                         "found a non-timestamp leaf match '{}': '{}'",
-                        match->ffi_pointers.rule_name.as_cpp_view(),
-                        match->ffi_pointers.lexeme.as_cpp_view()
+                        match->get_rule_name(),
+                        match->get_lexeme()
                 );
                 return std::errc::not_supported;
             }

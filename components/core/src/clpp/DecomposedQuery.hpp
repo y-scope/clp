@@ -36,11 +36,9 @@ public:
     };
 
     // Factory methods
-    static auto decompose_query(
-            log_surgeon::ParserHandle& parser,
-            std::string_view rule_name,
-            std::string_view query
-    ) -> ystdlib::error_handling::Result<DecomposedQuery>;
+    static auto
+    decompose_query(log_surgeon::Parser& parser, std::string_view rule_name, std::string_view query)
+            -> ystdlib::error_handling::Result<DecomposedQuery>;
 
     // Methods
     [[nodiscard]] auto get_interpretations() const -> std::vector<Interpretation> const& {

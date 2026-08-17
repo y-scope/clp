@@ -90,7 +90,7 @@ namespace clpp {
  * @return The parent rule shapes with ranges in escaped-shape coordinates.
  */
 [[nodiscard]] auto
-build_parent_rule_shapes(log_surgeon::EventHandle const& event, std::string_view log_shape)
+build_parent_rule_shapes(log_surgeon::LogEvent const& event, std::string_view log_shape)
         -> ParentRuleShapes;
 }  // namespace clpp
 

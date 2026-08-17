@@ -201,7 +201,7 @@ static bool search(
         vector<string> const& search_strings,
         CommandLineArguments& command_line_args,
         Archive& archive,
-        log_surgeon::ParserHandle* parser
+        log_surgeon::Parser* parser
 ) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
@@ -545,9 +545,9 @@ int main(int argc, char const* argv[]) {
     // TODO: if performance is too slow, can make this more efficient by only diffing files with the
     // same checksum
     uint32_t const max_map_schema_length = 100'000;
-    std::map<std::string, log_surgeon::ParserHandle> parser_map;
-    std::unique_ptr<log_surgeon::ParserHandle> one_time_use_parser;
-    log_surgeon::ParserHandle* parser;
+    std::map<std::string, log_surgeon::Parser> parser_map;
+    std::unique_ptr<log_surgeon::Parser> one_time_use_parser;
+    log_surgeon::Parser* parser;
 
     string archive_id;
     Archive archive_reader;
@@ -595,7 +595,7 @@ int main(int argc, char const* argv[]) {
                     parser = &parser_map_it->second;
                 }
             } else {
-                one_time_use_parser = std::make_unique<log_surgeon::ParserHandle>(
+                one_time_use_parser = std::make_unique<log_surgeon::Parser>(
                         clp::load_parser_from_file(parsing_spec_path)
                 );
                 parser = one_time_use_parser.get();

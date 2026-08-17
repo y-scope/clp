@@ -23,7 +23,7 @@ public:
     // Constructors
     FileCompressor(
             boost::uuids::random_generator& uuid_generator,
-            std::optional<log_surgeon::ParserHandle> parser
+            std::optional<log_surgeon::Parser> parser
     )
             : m_uuid_generator(uuid_generator),
               m_parser(parser) {}
@@ -166,7 +166,7 @@ private:
     LibarchiveFileReader m_libarchive_file_reader;
     MessageParser m_message_parser;
     ParsedMessage m_parsed_message;
-    std::optional<log_surgeon::ParserHandle> m_parser;
+    std::optional<log_surgeon::Parser> m_parser;
 };
 }  // namespace clp::clp
 

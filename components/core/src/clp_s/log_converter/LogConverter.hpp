@@ -49,7 +49,7 @@ private:
     static constexpr size_t cDefaultBufferSize{64ULL * 1024ULL};  // 64 KiB
 
     // Constructors
-    explicit LogConverter(size_t max_buffer_size, log_surgeon::ParserHandle parser)
+    explicit LogConverter(size_t max_buffer_size, log_surgeon::Parser parser)
             : m_parser{std::move(parser)},
               m_buffer(max_buffer_size < cDefaultBufferSize ? max_buffer_size : cDefaultBufferSize),
               m_max_buffer_size{max_buffer_size} {}
@@ -80,7 +80,7 @@ private:
     [[nodiscard]] auto grow_buffer_if_full() -> ystdlib::error_handling::Result<void>;
 
     // Data members
-    log_surgeon::ParserHandle m_parser;
+    log_surgeon::Parser m_parser;
     ystdlib::containers::Array<char> m_buffer;
     size_t m_num_bytes_buffered{};
     size_t m_parser_offset{};

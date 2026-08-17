@@ -14,13 +14,13 @@
 
 namespace clpp {
 auto DecomposedQuery::decompose_query(
-        log_surgeon::ParserHandle& parser,
+        log_surgeon::Parser& parser,
         std::string_view rule_name,
         std::string_view query
 ) -> ystdlib::error_handling::Result<DecomposedQuery> {
-    auto const interpretations{parser.query_interpretations(
-            log_surgeon::CCharArray::from_string_view(rule_name),
-            log_surgeon::CCharArray::from_string_view(query)
+    auto const interpretations{parser.search_by_name(
+            log_surgeon::CCharArray::from_string_view(query),
+            log_surgeon::CCharArray::from_string_view(rule_name)
     )};
 
     if (interpretations.empty()) {

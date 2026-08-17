@@ -1017,21 +1017,10 @@ auto SchemaMatch::lookup_decomposed_query(std::string const& column_name, std::s
     }
 
     if (nullptr == m_parser) {
-        if (nullptr == m_parsing_spec) {
-            if (m_parsing_spec_str.empty()) {
-                m_parsing_spec_str
-                        = YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec());
-            }
-            if (m_parsing_spec = log_surgeon::log_surgeon_parsing_spec_from_definition(
-                        log_surgeon::CCharArray::from_string_view(m_parsing_spec_str)
-                );
-                nullptr == m_parsing_spec)
-            {
-                return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-            }
+        m_parser = std::make_unique<log_surgeon::Parser>(log_surgeon::ParsingSpecBuilder{
+                YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec())
         }
-        m_parser = std::make_unique<log_surgeon::ParserHandle>(m_parsing_spec);
-        m_parsing_spec = nullptr;
+                                                                 .build());
     }
 
     auto const [it, inserted]{m_decomposed_query_cache.emplace(

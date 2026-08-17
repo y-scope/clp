@@ -113,27 +113,17 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
     return ErrorCode_Success;
 }
 
-auto load_parser_from_str(std::string const& parsing_spec) -> log_surgeon::ParserHandle {
-    auto* spec{log_surgeon::log_surgeon_parsing_spec_from_definition(
-            log_surgeon::CCharArray::from_string_view(parsing_spec)
-    )};
-    if (nullptr == spec) {
-        throw std::invalid_argument("Failed to create parsing specification:\n" + parsing_spec);
-    }
-    return log_surgeon::ParserHandle{spec};
-}
-
-auto load_parser_from_file(std::string const& parsing_spec_path) -> log_surgeon::ParserHandle {
+auto load_parser_from_file(std::string const& parsing_spec_path) -> log_surgeon::Parser {
     std::ifstream spec_file{parsing_spec_path};
     if (false == spec_file.good()) {
         throw std::invalid_argument(
                 "Parsing specification at " + parsing_spec_path + " failed to open."
         );
     }
-    std::string const rule_text{
+    std::string const spec{
             (std::istreambuf_iterator<char>(spec_file)),
             std::istreambuf_iterator<char>()
     };
-    return load_parser_from_str(rule_text);
+    return log_surgeon::ParsingSpecBuilder{spec}.build();
 }
 }  // namespace clp

@@ -488,11 +488,11 @@ static bool search_archive(
 
     // Load lexers from schema file if it exists
     auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-    std::optional<log_surgeon::ParserHandle> parser_storage;
+    std::optional<log_surgeon::Parser> parser_storage;
     if (std::filesystem::exists(schema_file_path)) {
         parser_storage = load_parser_from_file(schema_file_path.string());
     }
-    log_surgeon::ParserHandle* parser{nullptr};
+    log_surgeon::Parser* parser{nullptr};
     if (parser_storage.has_value()) {
         parser = &parser_storage.value();
     }

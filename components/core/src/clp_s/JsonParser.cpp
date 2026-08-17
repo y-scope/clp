@@ -99,8 +99,10 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
  * or an error code indicating the failure:
  * - clpp::ClppErrorCodeEnum::BadParam: if we failed to read or build a non-empty spec.
  */
-auto build_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_auth) -> ystdlib::
-        error_handling::Result<std::pair<std::unique_ptr<log_surgeon::ParserHandle>, std::string>>;
+auto build_parsing_spec(
+        Path const& spec_path,
+        NetworkAuthOption const& network_auth
+) -> ystdlib::error_handling::Result<std::pair<std::unique_ptr<log_surgeon::Parser>, std::string>>;
 
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
@@ -200,17 +202,13 @@ collect_parent_chain(log_surgeon::Match const& leaf, std::vector<log_surgeon::Ma
     if (0 == leaf.sub_rule_id) {
         return;
     }
-    auto const* cur{leaf.ffi_pointers.parent};
+    auto const* cur{leaf.get_parent()};
     while (true) {
         chain.push_back(cur);
         if (0 == cur->sub_rule_id) {
             break;
         }
-        if (0 == cur->parent_id) {
-            chain.push_back(cur->ffi_pointers.parent);
-            break;
-        }
-        cur = cur->ffi_pointers.parent;
+        cur = cur->get_parent();
     }
     std::reverse(chain.begin(), chain.end());
 }
@@ -258,7 +256,7 @@ auto sync_open_scopes_to_chain(
         auto const node_id{archive_writer.add_node(
                 ancestor_parent_node_id,
                 NodeType::ParentRule,
-                ancestor->ffi_pointers.rule_name.as_cpp_view()
+                ancestor->get_rule_name()
         )};
         auto const schema_start{current_schema.start_unordered_object(NodeType::ParentRule)};
         open_scopes.push_back(
@@ -268,8 +266,10 @@ auto sync_open_scopes_to_chain(
     return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
 }
 
-auto build_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_auth) -> ystdlib::
-        error_handling::Result<std::pair<std::unique_ptr<log_surgeon::ParserHandle>, std::string>> {
+auto build_parsing_spec(
+        Path const& spec_path,
+        NetworkAuthOption const& network_auth
+) -> ystdlib::error_handling::Result<std::pair<std::unique_ptr<log_surgeon::Parser>, std::string>> {
     auto spec_reader{try_create_reader(spec_path, network_auth)};
 
     constexpr size_t cReadChunkSize{4096};
@@ -298,25 +298,9 @@ auto build_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }
 
-    auto* builder{log_surgeon::log_surgeon_parsing_spec_builder_from_definition(
-            log_surgeon::CCharArray::from_string_view(spec_str)
-    )};
-    if (nullptr == builder) {
-        SPDLOG_ERROR(
-                "Failed to create log surgeon specification builder from: \"{}\"",
-                spec_path.path
-        );
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-    }
-
+    log_surgeon::ParsingSpecBuilder builder{spec_str};
     for (auto const& encoding : clpp::cEncodingPatterns) {
-        if (false
-            == log_surgeon::log_surgeon_parsing_spec_add_encoding(
-                    builder,
-                    log_surgeon::CCharArray::from_string_view(encoding.name),
-                    log_surgeon::CCharArray::from_string_view(encoding.pattern)
-            ))
-        {
+        if (false == builder.add_encoding(encoding.name, encoding.pattern)) {
             SPDLOG_ERROR(
                     "Failed to add log surgeon specification encoding: {} - \"{}\"",
                     encoding.name,
@@ -326,13 +310,7 @@ auto build_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_
         }
     }
 
-    auto* parsing_spec{log_surgeon::log_surgeon_parsing_spec_builder_build(builder)};
-    if (nullptr == parsing_spec) {
-        SPDLOG_ERROR("Failed to build log surgeon specification.");
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-    }
-
-    return {std::make_unique<log_surgeon::ParserHandle>(parsing_spec), std::move(spec_str)};
+    return {std::make_unique<log_surgeon::Parser>(builder.build()), std::move(spec_str)};
 }
 }  // namespace
 
@@ -1684,6 +1662,9 @@ void JsonParser::split_archive() {
 
 auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t log_msg_node_id)
         -> ystdlib::error_handling::Result<void> {
+    if (false == m_clpp.has_value()) {
+        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
+    }
     size_t parser_pos{0};
     auto const event{m_clpp->log_surgeon_parser->next_event(str_field, &parser_pos)};
     if (false == event.has_value()) {
@@ -1711,49 +1692,42 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
                 m_current_schema
         )};
 
-        auto const rule_name{match->ffi_pointers.rule_name.as_cpp_view()};
-        auto const lexeme{match->ffi_pointers.lexeme.as_cpp_view()};
+        auto const rule_name{match->get_rule_name()};
+        auto const lexeme{match->get_lexeme()};
 
         SchemaNode::id_t node_id{0};
-        if (0 < match->encoding_idx) {
-            auto const matched_encodings{
-                    m_clpp->log_surgeon_parser->get_encoding(match->encoding_idx)
-            };
-            for (auto const& encoding : matched_encodings) {
-                // TODO clpp: awkward blacklist to temporarily fix auto encoding
-                if ("key_value.key" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
-                    || "key_value.str_value"
-                               == match->ffi_pointers.fully_qualified_name.as_cpp_view()
-                    || "src_loc.file" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
-                    || "path" == match->ffi_pointers.fully_qualified_name.as_cpp_view()
-                    || "has_number" == match->ffi_pointers.fully_qualified_name.as_cpp_view())
+        switch (static_cast<clpp::EncodingType>(match->encoding_idx)) {
+            case clpp::EncodingType::None:
+                break;
+            case clpp::EncodingType::Float: {
+                if (auto const float_node_id{
+                            try_add_float_value(lexeme, parent_node_id, rule_name)
+                    };
+                    float_node_id.has_value())
                 {
+                    node_id = float_node_id.value();
                     break;
                 }
-                if (clpp::cFloatEncodingName == encoding) {
-                    if (auto const float_node_id{
-                                try_add_float_value(lexeme, parent_node_id, rule_name)
-                        };
-                        float_node_id.has_value())
-                    {
-                        node_id = float_node_id.value();
-                        break;
-                    }
-                    SPDLOG_WARN(
-                            "failed float conversion '{}': '{}'",
-                            match->ffi_pointers.fully_qualified_name.as_cpp_view(),
-                            lexeme
-                    );
-                } else if (clpp::cIntEncodingName == encoding) {
-                    if (encoded_variable_t var{0}; clp::EncodedVariableInterpreter::
-                                convert_string_to_representable_integer_var(lexeme, var))
-                    {
-                        node_id = m_archive_writer
-                                          ->add_node(parent_node_id, NodeType::Integer, rule_name);
-                        m_current_parsed_message.add_unordered_value(var);
-                        break;
-                    }
+                SPDLOG_WARN(
+                        "failed float conversion '{}': '{}'",
+                        match->get_fully_qualified_name(),
+                        lexeme
+                );
+                break;
+            }
+            case clpp::EncodingType::Int: {
+                if (encoded_variable_t var{0};
+                    clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                            lexeme,
+                            var
+                    ))
+                {
+                    node_id = m_archive_writer
+                                      ->add_node(parent_node_id, NodeType::Integer, rule_name);
+                    m_current_parsed_message.add_unordered_value(var);
+                    break;
                 }
+                break;
             }
         }
         if (0 == node_id) {
@@ -1767,9 +1741,7 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
                         str_field.substr(log_msg_pos, match->range.start - log_msg_pos)
                 )
         );
-        log_shape.append(
-                fmt::format("%{}%", match->ffi_pointers.fully_qualified_name.as_cpp_view())
-        );
+        log_shape.append(fmt::format("%{}%", match->get_fully_qualified_name()));
         log_msg_pos = match->range.end;
     }
     log_shape.append(clpp::escape_shape_text(str_field.substr(log_msg_pos)));

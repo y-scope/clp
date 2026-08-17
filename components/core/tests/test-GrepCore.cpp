@@ -10,14 +10,12 @@
 
 #include <clp/Defs.h>
 #include <clp/GrepCore.hpp>
+#include <clp/Utils.hpp>
 
-#include "../clp/Utils.hpp"
 #include "search_test_utils.hpp"
 
 using clp::epochtime_t;
 using clp::GrepCore;
-using clp::load_parser_from_str;
-using log_surgeon::ParserHandle;
 using std::pair;
 using std::string;
 using std::vector;
@@ -121,19 +119,17 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
 
     string const raw_query{"text 100 10? 3.14*"};
 
-    std::string spec{R"(delimiters:\ \r\n)"};
+    std::string spec{R"(delimiters: " \r\n")"};
     spec += "\n";
-    spec += R"(int:\d+)";
+    spec += R"(int: "\d+")";
     spec += "\n";
-    spec += R"(float:\d+\.\d+)";
+    spec += R"(float: "\d+\.\d+")";
     spec += "\n";
-    spec += R"(hasNumber:[^ &]*\d+[^ &]*)";
-
+    spec += R"(hasNumber: "[^ &]*\d+[^ &]*")";
     CAPTURE(spec);
 
-    auto parser{load_parser_from_str(spec)};
-
-    auto const interpretations{parser.query_interpretations("", raw_query)};
+    auto parser{log_surgeon::ParsingSpecBuilder{spec}.build()};
+    auto const interpretations{parser.search_by_name(raw_query, "")};
     string interpretation_strings{"interps:"};
     CAPTURE(interpretations.size());
     for (auto const& interpretation : interpretations) {

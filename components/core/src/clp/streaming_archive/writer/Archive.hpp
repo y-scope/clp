@@ -152,8 +152,7 @@ public:
      * @param event
      * @throw FileWriter::OperationFailed if any write fails
      */
-    auto
-    write_msg_using_schema(char* buf, size_t buffer_size, log_surgeon::EventHandle const& event)
+    auto write_msg_using_schema(char* buf, size_t buffer_size, log_surgeon::LogEvent const& event)
             -> void;
 
     /**

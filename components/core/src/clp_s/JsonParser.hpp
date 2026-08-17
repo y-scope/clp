@@ -73,7 +73,7 @@ public:
 private:
     // Types
     struct Clpp {
-        std::unique_ptr<log_surgeon::ParserHandle> log_surgeon_parser;
+        std::unique_ptr<log_surgeon::Parser> log_surgeon_parser;
         std::string parsing_spec_str;
     };
 
