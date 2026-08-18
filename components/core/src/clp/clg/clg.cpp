@@ -8,12 +8,13 @@
 #include <log_surgeon/Lexer.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
+#include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
 #include "../Defs.h"
 #include "../global_metadata_db_utils.hpp"
 #include "../Grep.hpp"
 #include "../GrepCore.hpp"
-#include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
@@ -31,7 +32,6 @@ using clp::Grep;
 using clp::GrepCore;
 using clp::load_lexer_from_file;
 using clp::logtype_dictionary_id_t;
-using clp::Profiler;
 using clp::Query;
 using clp::segment_id_t;
 using clp::streaming_archive::MetadataDB;
@@ -485,7 +485,7 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    Profiler::init();
+    utils::profiling::Reporter const profiler_reporter{"clg", utils::profiling::SpdlogEmitter{}};
     clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clg");
@@ -500,7 +500,7 @@ int main(int argc, char const* argv[]) {
             break;
     }
 
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
+    PROFILE_SCOPE("search");
 
     auto add_implicit_wildcards = [](string const& search_string) -> string {
         return clean_up_wildcard_search_string('*' + search_string + '*');
@@ -613,9 +613,6 @@ int main(int argc, char const* argv[]) {
     }
 
     global_metadata_db->close();
-
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Search)
 
     return 0;
 }

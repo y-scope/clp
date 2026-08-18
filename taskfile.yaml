@@ -37,7 +37,6 @@ vars:
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
   G_PYTHON_WHEELS_BUILD_DIR: "{{.G_BUILD_DIR}}/python-wheels"
   G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust-targets"
-  G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
@@ -174,10 +173,10 @@ tasks:
 
   core:
     cmds:
-      - task: "core-generate"
+      - task: "core-generate-release"
       - task: "core-build"
 
-  core-generate:
+  core-generate-release:
     internal: true
     sources: &core_source_files
       - "{{.G_DEPS_CPP_CHECKSUM_FILE}}"
@@ -194,6 +193,22 @@ tasks:
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
+          EXTRA_ARGS:
+            - "-DCLP_ENABLE_PROFILING=0"
+
+  core-generate-profiling:
+    internal: true
+    sources: *core_source_files
+    deps:
+      - "codegen:clp-s-generate-parsers"
+      - "deps:core"
+    cmds:
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
+          EXTRA_ARGS:
+            - "-DCLP_ENABLE_PROFILING=2"
 
   core-build:
     internal: true
@@ -262,7 +277,6 @@ tasks:
   package-build-deps:
     deps:
       - "core"
-      - "deps:spider"
       - "init"
       - "python-libs"
       - "rust"
