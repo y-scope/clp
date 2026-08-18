@@ -1,6 +1,7 @@
 services:
   spider-worker:
-    image: "ghcr.io/y-scope/clp/clp-spider-worker:main"
+    image: >-
+      ${CLP_SPIDER_WORKER_CONTAINER_IMAGE_REF:-ghcr.io/y-scope/clp/clp-spider-worker:main}
     user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       CLP_CONFIG_PATH: "/etc/clp-config.yaml"
