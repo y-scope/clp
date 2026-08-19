@@ -147,7 +147,7 @@ tasks:
           FILE_SHA256: "84a666725baecb416eeba961694ab49ea65bd85f456792f839872846dd5de06e"
           INCLUDE_PATTERNS: ["*/tools/deployment/spider-compose/**"]
           NUM_COMPONENTS_TO_STRIP: 4
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}/spider-compose"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}/usr/share/spider-compose"
           TAR_FILE: "{{.G_SPIDER_COMPOSE_TAR_FILE}}"
           URL: >-
             https://github.com/y-scope/spider/archive/{{.G_SPIDER_COMPOSE_COMMIT}}.tar.gz
