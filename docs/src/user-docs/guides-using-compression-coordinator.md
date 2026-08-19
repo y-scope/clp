@@ -10,41 +10,36 @@ package.
 TODO: Link to Chenxing's doc.
 
 :::{note}
-Currently, `compression-coordinator` can be deployed only on Kubernetes using the CLP Helm chart.
-Support for Docker Compose deployments is planned for a future release.
+Currently, `compression-coordinator` can be deployed via Kubernetes and not via Docker Compose.
+Support for Docker Compose is planned for a future release.
 :::
 
-Compared with `compression-scheduler`, `compression-coordinator` provides the following
-user-experience, reliability, and performance improvements:
+Compared with the `compression-scheduler`-based architecture (which uses Celery),
+the `compression-coordinator`-based architecture (which uses Spider) provides the following
 
-* **Automatic failure recovery**:
-  * `compression-coordinator` automatically resumes previously submitted jobs (users don't need to
-    restart them manually).
-  * Spider's fault-tolerance model allows it to recover transparently from internal failures without
-    requiring user intervention.
-* **Easier failure handling via a configurable retry policy**: `compression-coordinator` allows
-  users to configure the maximum number of retries for each compression task (retries are
-  unconditional). This can help tasks recover automatically from transient failures, such as
-  temporary network connectivity issues.
+* **Improved failure recovery**:
+  * After a failure and restart, `compression-coordinator` can resume in-progress jobs, whereas
+    `compression-scheduler` assumes that in-progress jobs have hung and so it kills them.
+  * After a failure and restart, Spider can resume in-progress jobs, whereas Celery cannot since
+    the compression tasks aren't idempotent.
+* **Easier failure handling**: With `compression-coordinator` and Spider, if a compression task
+  fails, it can automatically be retried, allowing tasks to automatically recover from transient
+  failures.
   * TODO: Link to #2457.
 * **Improved resource utilization**: `compression-scheduler` processes tasks in batches, where each
   batch must wait for its slowest task to finish. `compression-coordinator` instead schedules
   individual tasks through Spider, allowing resources to be reassigned as soon as individual tasks
   finish.
 * **Bounded job concurrency**: `compression-coordinator` limits the number of compression jobs that
-  can be submitted to Spider concurrently. In contrast, `compression-scheduler` does not bound the
-  number of concurrent jobs, which can cause scheduling overhead to grow significantly at high
-  levels of job concurrency.
-* **Improved fairness between concurrent compression jobs**: Compression jobs submitted by
-  `compression-coordinator` are admitted into a bounded set of active jobs. Tasks from these active
-  jobs are scheduled in round-robin order, while additional submitted jobs remain pending until an
-  active slot becomes available.
-  * `compression-scheduler` achieves similar job-level fairness only when
-    `max_concurrent_tasks_per_job` is set to 1, effectively scheduling one task per job in
-    round-robin order. However, this round-robin scheduling spans an unbounded number of concurrent
-    jobs and can incur significant overhead at high concurrency. Spider provides similar fairness
-    with much lower scheduling overhead through a more efficient architecture and a bounded set of
-    active jobs.
+  can be submitted to Spider concurrently, whereas `compression-scheduler` doesn't; the latter can
+  cause significantly high scheduling overheads when there are many concurrent jobs.
+* **Improved fairness between concurrent compression jobs**: Both architectures process jobs in
+  round-robin order, but the `compression-coordinator`-based architecture does so at the granularity
+  of tasks whereas the `compression-scheduler`-based architecture does so at the granularity of
+  batches of tasks. If `max_concurrent_tasks_per_job` is set to 1, the
+  `compression-scheduler`-based architecture can achieve the same level of fairness as the
+  `compression-coordinator`-based architecture, but with higher overhead since Spider is more
+  efficient than `compression-scheduler`.
 * **Improved all-or-nothing semantics**: Compression jobs coordinated by `compression-coordinator`
   publish all archive metadata to the `clp_<dataset>_archives` table in a single dedicated commit
   operation. The commit operation is both transactional and idempotent, so:
