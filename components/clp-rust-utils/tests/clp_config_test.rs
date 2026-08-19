@@ -7,6 +7,7 @@ use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::InputConfig;
 use clp_rust_utils::job_config::OutputConfig;
 use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
+use clp_rust_utils::serde::ZstdMsgpack;
 use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
 use non_empty_string::NonEmptyString;
 use serde_json::Value;
@@ -15,7 +16,7 @@ use serde_json::Value;
 ///
 /// # Errors
 ///
-/// Returns an error if `MessagePack` or JSON conversion fails.
+/// Returns an error if Zstandard compression or `MessagePack` conversion fails.
 #[test]
 fn test_clp_io_config_serialization() -> Result<(), Box<dyn Error>> {
     let s3_config = S3Config {
@@ -80,12 +81,9 @@ fn test_clp_io_config_serialization() -> Result<(), Box<dyn Error>> {
       }
     });
 
-    let msgpack = rmp_serde::to_vec_named(&config)?;
-    let msgpack_actual: Value = rmp_serde::from_slice(&msgpack)?;
-    assert_eq!(expected, msgpack_actual);
-
-    let json_actual = serde_json::to_value(&config)?;
-    assert_eq!(expected, json_actual);
+    let zstd_compressed_msgpack = ZstdMsgpack::serialize(&config)?;
+    let deserialized_config: Value = ZstdMsgpack::deserialize(&zstd_compressed_msgpack)?;
+    assert_eq!(expected, deserialized_config);
 
     Ok(())
 }

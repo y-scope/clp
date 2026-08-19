@@ -26,11 +26,10 @@ impl ZstdMsgpack {
     /// Returns an error if:
     ///
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
-    /// * Forwards [`zstd::stream::encode_all`]'s return values on failure.
+    /// * Forwards [`zstd::bulk::compress`]'s return values on failure.
     pub fn serialize<ValueType: Serialize + ?Sized>(val: &ValueType) -> Result<Vec<u8>, Error> {
         let msgpack_data = rmp_serde::to_vec_named(val)?;
-        zstd::stream::encode_all(msgpack_data.as_slice(), ZSTD_COMPRESSION_LEVEL)
-            .map_err(Error::Zstd)
+        zstd::bulk::compress(msgpack_data.as_slice(), ZSTD_COMPRESSION_LEVEL).map_err(Error::Zstd)
     }
 
     /// Deserialize an owned value from a Zstandard-compressed `MessagePack` byte sequence.
