@@ -17,6 +17,19 @@ Support for Docker Compose is planned for a future release.
 Compared with the `compression-scheduler`-based architecture (which uses Celery),
 the `compression-coordinator`-based architecture (which uses Spider) provides the following
 
+* **Improved all-or-nothing semantics**: Compression jobs coordinated by `compression-coordinator`
+  publish all archive metadata to the `clp_<dataset>_archives` table in a single dedicated commit
+  operation. The commit operation is both transactional and idempotent, so:
+  * a job-level failure doesn't result in partial updates.
+  * internal task retries don't result in duplicate updates.
+
+  :::{warning}
+  The **all-or-nothing semantics** do not apply to the column metadata table
+  (`<dataset>_column_metadata`), because it is updated during compression job execution. If a
+  compression job fails, this table may contain partial updates. This known limitation is tracked in
+  [this GitHub issue][column-metadata-issue].
+  :::
+
 * **Improved failure recovery**:
   * After a failure and restart, `compression-coordinator` can resume in-progress jobs, whereas
     `compression-scheduler` assumes that in-progress jobs have hung and so it kills them.
@@ -30,9 +43,6 @@ the `compression-coordinator`-based architecture (which uses Spider) provides th
   batch must wait for its slowest task to finish. `compression-coordinator` instead schedules
   individual tasks through Spider, allowing resources to be reassigned as soon as individual tasks
   finish.
-* **Bounded job concurrency**: `compression-coordinator` limits the number of compression jobs that
-  can be submitted to Spider concurrently, whereas `compression-scheduler` doesn't; the latter can
-  cause significantly high scheduling overheads when there are many concurrent jobs.
 * **Improved fairness between concurrent compression jobs**: Both architectures process jobs in
   round-robin order, but the `compression-coordinator`-based architecture does so at the granularity
   of tasks whereas the `compression-scheduler`-based architecture does so at the granularity of
@@ -40,18 +50,9 @@ the `compression-coordinator`-based architecture (which uses Spider) provides th
   `compression-scheduler`-based architecture can achieve the same level of fairness as the
   `compression-coordinator`-based architecture, but with higher overhead since Spider is more
   efficient than `compression-scheduler`.
-* **Improved all-or-nothing semantics**: Compression jobs coordinated by `compression-coordinator`
-  publish all archive metadata to the `clp_<dataset>_archives` table in a single dedicated commit
-  operation. The commit operation is both transactional and idempotent, so:
-  * a job-level failure doesn't result in partial updates.
-  * internal task retries don't result in duplicate updates.
-
-:::{warning}
-The **all-or-nothing semantics** do not apply to the column metadata table
-(`<dataset>_column_metadata`), because it is updated during compression job execution. If a
-compression job fails, this table may contain partial updates. This known limitation is tracked in
-[this GitHub issue][column-metadata-issue].
-:::
+* **Bounded job concurrency**: `compression-coordinator` limits the number of compression jobs that
+  can be submitted to Spider concurrently, whereas `compression-scheduler` doesn't; the latter can
+  cause significantly high scheduling overheads when there are many concurrent jobs.
 
 :::{note}
 `compression-coordinator` currently has the following functional limitations:
