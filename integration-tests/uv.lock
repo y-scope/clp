@@ -514,7 +514,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.46" },
     { name = "strenum", specifier = ">=0.4.15" },
     { name = "structlog", specifier = ">=26.1.0" },
-    { name = "zstandard", specifier = "==0.25.0" },
+    { name = "zstandard", specifier = ">=0.25.0" },
 ]
 
 [package.metadata.requires-dev]
