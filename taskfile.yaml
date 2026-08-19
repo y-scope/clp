@@ -37,6 +37,7 @@ vars:
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
   G_PYTHON_WHEELS_BUILD_DIR: "{{.G_BUILD_DIR}}/python-wheels"
   G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust-targets"
+  G_SPIDER_COMPOSE_BUILD_DIR: "{{.G_BUILD_DIR}}/spider-compose"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
@@ -44,6 +45,10 @@ vars:
 
   # Versions
   G_PACKAGE_VERSION: "0.13.1-dev"
+  # TODO: Spider doesn't tag releases of its Compose deployment yet, so we pin the artifact by
+  # digest rather than by version. Switch to a version tag once Spider publishes one.
+  G_SPIDER_COMPOSE_IMAGE_REF: >-
+    ghcr.io/y-scope/spider/compose@sha256:3f35254027f1c577b25c68c2f08bb17abb03fb4467aafc3012cc540d2c29ef76
 
   # Build parameters
   # NOTE: If CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK is set, it takes precedence. Otherwise, we cap
@@ -62,6 +67,7 @@ vars:
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
+  G_SPIDER_COMPOSE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/spider-compose.md5"
   G_WEBUI_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui.md5"
 
 tasks:
@@ -116,6 +122,34 @@ tasks:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}'/**/.turbo"
       - "rm -f '{{.G_WEBUI_CHECKSUM_FILE}}'"
 
+  download-spider-compose:
+    internal: true
+    run: "once"
+    vars:
+      CHECKSUM_FILE: "{{.G_SPIDER_COMPOSE_CHECKSUM_FILE}}"
+      OUTPUT_DIR: "{{.G_SPIDER_COMPOSE_BUILD_DIR}}"
+    sources: ["{{.TASKFILE}}"]
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - "toolchains:oras"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      # The artifact's layers are titled `spider-compose/*`, so pulling into the build directory
+      # recreates `{{.OUTPUT_DIR}}`.
+      - >-
+        "{{.G_ORAS_TOOLCHAIN_DIR}}/oras" pull
+        "{{.G_SPIDER_COMPOSE_IMAGE_REF}}"
+        --output "{{.G_BUILD_DIR}}"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
   package:
     vars:
       CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
@@ -123,6 +157,8 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/clp-package-image.id"
       - "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/clp-config.schema.json"
+      - "{{.G_SPIDER_COMPOSE_BUILD_DIR}}/**/*"
+      - "{{.G_SPIDER_COMPOSE_BUILD_DIR}}/.env.example"
       - "{{.G_WEBUI_BUILD_DIR}}/settings.json"
       - "{{.TASKFILE}}"
       - "components/package-template/src/**/*"
@@ -130,6 +166,7 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "docker-images:package"
+      - "download-spider-compose"
       - "generate-config-schemas"
       - task: "utils:checksum:validate"
         vars:
@@ -152,6 +189,10 @@ tasks:
         rsync --archive --mkpath
         "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/"
         "{{.OUTPUT_DIR}}/usr/share/config-schemas/"
+      - >-
+        rsync --archive --mkpath
+        "{{.G_SPIDER_COMPOSE_BUILD_DIR}}/"
+        "{{.OUTPUT_DIR}}/usr/share/spider-compose/"
       - >-
         rsync --archive --mkpath
         "{{.G_WEBUI_BUILD_DIR}}/settings.json"
