@@ -16,8 +16,12 @@ jobs:
   api-client-schema-committed:
     permissions:
       contents: "read"
-    # Runs only on Ubuntu Jammy (22.04) since the Rust components are only built on this platform.
-    runs-on: "ubuntu-22.04"
+    runs-on: >-
+      ${{
+        github.repository_owner == 'y-scope'
+        && fromJSON('["self-hosted", "arm64", "ubuntu-noble"]')
+        || 'ubuntu-24.04-arm'
+      }}
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:

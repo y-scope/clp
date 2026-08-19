@@ -235,7 +235,7 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "query_results_uri": "/query_results/1"
+                     *       "query_results_uri": "query_results/1"
                      *     }
                      */
                     "application/json": components["schemas"]["QueryResultsUri"];

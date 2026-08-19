@@ -113,11 +113,7 @@ tasks:
     dir: "{{.G_WEBUI_SRC_DIR}}"
     cmds:
       - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
-      - >-
-        PATH='{{.G_NODEJS_BIN_DIR}}':$PATH
-        pnpm --filter '@webui/api-client' exec
-        openapi-typescript '{{.OPENAPI_SPEC_FILE}}'
-        -o '{{.OUTPUT_FILE}}'
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm --filter '@webui/api-client' run generate"
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
