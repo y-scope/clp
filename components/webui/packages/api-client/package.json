@@ -22,7 +22,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
-    "openapi-fetch": "^0.14.1"
+    "openapi-fetch": "^0.17.0"
   },
   "devDependencies": {
     "@types/node": "24.13.3",
