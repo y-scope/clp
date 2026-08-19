@@ -50,7 +50,8 @@
                 "time_range_end_millisecs": 17356896,
                 "ignore_case": true,
                 "max_num_results": 0,
-                "buffer_results_in_mongodb": true
+                "buffer_results_in_mongodb": true,
+                "count_by_time_bucket_size_millisecs": null
               }
             }
           },
@@ -112,6 +113,15 @@
         "description": "Streams the results of a previously submitted query as Server-Sent Events (SSE).",
         "operationId": "query_results",
         "parameters": [
+          {
+            "name": "raw_docs",
+            "in": "query",
+            "description": "When `true`, each SSE event contains the raw result document from the results cache\nserialized as JSON (including metadata such as the timestamp and the original file path);\notherwise, each event contains only the log message. Only applies to query jobs whose\nresults are buffered in `MongoDB`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
           {
             "name": "search_job_id",
             "in": "path",
@@ -298,6 +308,14 @@
           "buffer_results_in_mongodb": {
             "type": "boolean",
             "description": "Whether to buffer search results in `MongoDB`.\nBy default, search results are buffered in temporary files. When set to `true`, results\nwill be stored in `MongoDB` instead."
+          },
+          "count_by_time_bucket_size_millisecs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The size of each time bucket (in epoch milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`."
           },
           "datasets": {
             "type": [

@@ -98,7 +98,6 @@ def main(
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
 
-        clp_config.validate_api_server()
         clp_config.validate_aws_config_dir(True)
         clp_config.validate_data_dir(True)
         clp_config.validate_logs_dir(True)

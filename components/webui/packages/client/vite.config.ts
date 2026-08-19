@@ -10,6 +10,20 @@ import {defineConfig} from "vite";
 
 
 const packageRoot = path.dirname(fileURLToPath(import.meta.url));
+const webuiRoot = path.resolve(packageRoot, "../..");
+
+/**
+ * Loads and validates the WebUI settings from `components/webui/settings.json`.
+ *
+ * @return The parsed settings.
+ */
+const loadWebuiSettings = () => {
+    const rawSettings: unknown = JSON.parse(
+        readFileSync(path.join(webuiRoot, "settings.json"), "utf8")
+    );
+
+    return Value.Parse(WebuiSettingsSchema, rawSettings);
+};
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -30,14 +44,9 @@ export default defineConfig({
         {
             name: "webui-public-settings",
             configureServer: (server) => {
-                const webuiRoot = path.resolve(packageRoot, "../..");
-
                 server.middlewares.use("/settings.json", (_req, res) => {
                     try {
-                        const rawSettings: unknown = JSON.parse(
-                            readFileSync(path.join(webuiRoot, "settings.json"), "utf8")
-                        );
-                        const settings = Value.Parse(WebuiSettingsSchema, rawSettings);
+                        const settings = loadWebuiSettings();
                         res.setHeader("Content-Type", "application/json");
                         res.end(JSON.stringify(settings.public));
                     } catch {

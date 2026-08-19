@@ -22,10 +22,15 @@
   "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
+    "eventsource-parser": "^4.0.0",
     "openapi-fetch": "^0.17.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.3"
   },
   "devDependencies": {
     "@types/node": "24.13.3",
+    "@types/react": "^19.2.9",
     "eslint": "^9.39.4",
     "eslint-config-yscope": "1.1.2",
     "openapi-typescript": "^7.9.1",

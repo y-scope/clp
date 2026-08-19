@@ -15,13 +15,22 @@ importers:
 
   packages/api-client:
     dependencies:
+      eventsource-parser:
+        specifier: ^4.0.0
+        version: 4.0.0
       openapi-fetch:
         specifier: ^0.17.0
         version: 0.17.0
+      react:
+        specifier: ^19.2.3
+        version: 19.2.7
     devDependencies:
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
+      '@types/react':
+        specifier: ^19.2.9
+        version: 19.2.17
       eslint:
         specifier: ^9.39.4
         version: 9.39.4(jiti@2.7.0)(supports-color@10.2.2)
@@ -55,6 +64,9 @@ importers:
       '@tanstack/react-query-devtools':
         specifier: ^5.91.2
         version: 5.101.0(@tanstack/react-query@5.101.0(react@19.2.7))(react@19.2.7)
+      '@webui/api-client':
+        specifier: workspace:*
+        version: file:packages/api-client(react@19.2.7)
       '@webui/common':
         specifier: workspace:*
         version: link:../common
@@ -352,7 +364,7 @@ importers:
         version: 30.4.2(@types/node@24.13.3)(babel-plugin-macros@3.1.0)(supports-color@10.2.2)(ts-node@10.9.2(@swc/core@1.15.40)(@types/node@24.13.3)(typescript@5.9.3))
       jest-environment-jsdom:
         specifier: ^30.3.0
-        version: 30.4.1
+        version: 30.4.1(supports-color@10.2.2)
       npm-run-all:
         specifier: ^4.1.5
         version: 4.1.5
@@ -3085,6 +3097,11 @@ packages:
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
 
+  '@webui/api-client@file:packages/api-client':
+    resolution: {directory: packages/api-client, type: directory}
+    peerDependencies:
+      react: ^19.2.3
+
   abbrev@2.0.0:
     resolution: {integrity: sha512-6/mh1E2u2YgEsCHdY0Yx5oW+61gZU+1vXaoiHHrpKeuRNNgFvS+/jrwHiQhB5apAf5oB7UB7E19ol2R2LKH8hQ==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
@@ -4159,6 +4176,10 @@ packages:
   eventsource-parser@3.1.0:
     resolution: {integrity: sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg==}
     engines: {node: '>=18.0.0'}
+
+  eventsource-parser@4.0.0:
+    resolution: {integrity: sha512-aIpvYxbqTx4KYWw73KpCt1Rh22tEAJ144F1qR76CT3Ex+LNMEPKf5HFrK5Yz9fMP1EVT0GrfA35VZvWQhMPuSQ==}
+    engines: {node: '>=22.12'}
 
   eventsource@3.0.7:
     resolution: {integrity: sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==}
@@ -8546,7 +8567,7 @@ snapshots:
 
   '@jest/diff-sequences@30.4.0': {}
 
-  '@jest/environment-jsdom-abstract@30.4.1(jsdom@26.1.0)':
+  '@jest/environment-jsdom-abstract@30.4.1(jsdom@26.1.0(supports-color@10.2.2))':
     dependencies:
       '@jest/environment': 30.4.1
       '@jest/fake-timers': 30.4.1
@@ -8555,7 +8576,7 @@ snapshots:
       '@types/node': 24.13.3
       jest-mock: 30.4.1
       jest-util: 30.4.1
-      jsdom: 26.1.0
+      jsdom: 26.1.0(supports-color@10.2.2)
 
   '@jest/environment@30.4.1':
     dependencies:
@@ -8960,7 +8981,7 @@ snapshots:
   '@npmcli/agent@4.0.2':
     dependencies:
       agent-base: 7.1.4
-      http-proxy-agent: 7.0.2
+      http-proxy-agent: 7.0.2(supports-color@10.2.2)
       https-proxy-agent: 7.0.6(supports-color@10.2.2)
       lru-cache: 11.5.1
       socks-proxy-agent: 8.0.5
@@ -10458,6 +10479,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@webui/api-client@file:packages/api-client(react@19.2.7)':
+    dependencies:
+      openapi-fetch: 0.17.0
+      react: 19.2.7
+
   abbrev@2.0.0: {}
 
   abbrev@4.0.0: {}
@@ -11904,6 +11930,8 @@ snapshots:
 
   eventsource-parser@3.1.0: {}
 
+  eventsource-parser@4.0.0: {}
+
   eventsource@3.0.7:
     dependencies:
       eventsource-parser: 3.1.0
@@ -12441,7 +12469,7 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  http-proxy-agent@7.0.2:
+  http-proxy-agent@7.0.2(supports-color@10.2.2):
     dependencies:
       agent-base: 7.1.4
       debug: 4.4.3(supports-color@10.2.2)
@@ -12905,11 +12933,11 @@ snapshots:
       jest-util: 30.4.1
       pretty-format: 30.4.1
 
-  jest-environment-jsdom@30.4.1:
+  jest-environment-jsdom@30.4.1(supports-color@10.2.2):
     dependencies:
       '@jest/environment': 30.4.1
-      '@jest/environment-jsdom-abstract': 30.4.1(jsdom@26.1.0)
-      jsdom: 26.1.0
+      '@jest/environment-jsdom-abstract': 30.4.1(jsdom@26.1.0(supports-color@10.2.2))
+      jsdom: 26.1.0(supports-color@10.2.2)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -13160,13 +13188,13 @@ snapshots:
 
   jsdoc-type-pratt-parser@6.6.0: {}
 
-  jsdom@26.1.0:
+  jsdom@26.1.0(supports-color@10.2.2):
     dependencies:
       cssstyle: 4.6.0
       data-urls: 5.0.0
       decimal.js: 10.6.0
       html-encoding-sniffer: 4.0.0
-      http-proxy-agent: 7.0.2
+      http-proxy-agent: 7.0.2(supports-color@10.2.2)
       https-proxy-agent: 7.0.6(supports-color@10.2.2)
       is-potential-custom-element-name: 1.0.1
       nwsapi: 2.2.24
