@@ -329,13 +329,16 @@ impl ClpDbIngestionConnector {
     ///
     /// # Returns
     ///
-    /// A vector of unfinished compression job contexts on success.
+    /// A vector of tuples on success, where each tuple contains:
+    ///
+    /// * The compression state associated with the compression job.
+    /// * The ID of an unfinished compression job.
+    /// * The number of metadata submitted for the compression job.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`anyhow::Error`] if the number of submitted object metadata rows overflows [`usize`].
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure when failing to
     ///   fetch already-submitted compression jobs.
     async fn get_unfinished_compression_jobs(
@@ -353,25 +356,18 @@ impl ClpDbIngestionConnector {
             .await?;
         let all = all_rows
             .into_iter()
-            .map(|(ingestion_job_id, compression_job_id, num_submitted)| {
-                let num_object_metadata_submitted =
-                    usize::try_from(num_submitted).map_err(|_| {
-                        anyhow::anyhow!(
-                            "submitted object metadata count {num_submitted} for compression job \
-                             {compression_job_id} in ingestion job {ingestion_job_id} cannot be \
-                             represented as usize"
-                        )
-                    })?;
-                Ok(ClpCompressionJobContext {
+            .map(
+                |(ingestion_job_id, compression_job_id, num_submitted)| ClpCompressionJobContext {
                     compression_state: ClpCompressionState {
                         ingestion_job_id,
                         db_pool: self.db_pool.clone(),
                     },
                     compression_job_id,
-                    num_object_metadata_submitted,
-                })
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?;
+                    num_object_metadata_submitted: usize::try_from(num_submitted)
+                        .expect("Number of files submitted is not `usize` compatible"),
+                },
+            )
+            .collect();
         Ok(all)
     }
 
@@ -1111,7 +1107,7 @@ impl ClpCompressionState {
                 .await?;
             let compression_job_id =
                 CompressionJobId::try_from(result.last_insert_id()).map_err(|_| {
-                    anyhow::anyhow!("retrieved ID overflows: {}", result.last_insert_id())
+                    anyhow::anyhow!("The retrieved ID overflows: {}", result.last_insert_id())
                 })?;
 
             // Update compression job ID for ingested objects.
@@ -1145,7 +1141,7 @@ impl ClpCompressionState {
                     != u64::try_from(chunk.len()).expect("size conversion should always succeed")
                 {
                     return Err(anyhow::anyhow!(
-                        "failed to update compression job ID for some objects"
+                        "Failed to update compression job ID for some objects."
                     ));
                 }
             }
