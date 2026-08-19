@@ -5,7 +5,6 @@ includes:
   utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
-  G_SPIDER_COMPOSE_BUILD_DIR: "{{.G_BUILD_DIR}}/spider-compose"
   G_SPIDER_COMPOSE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/spider-compose.md5"
   G_SPIDER_COMPOSE_TASKFILE: "{{.ROOT_DIR}}/taskfiles/compose.yaml"
 
@@ -15,12 +14,12 @@ vars:
     ghcr.io/y-scope/spider/compose@sha256:3f35254027f1c577b25c68c2f08bb17abb03fb4467aafc3012cc540d2c29ef76
 
 tasks:
-  # Downloads Spider's Docker Compose deployment from the OCI artifact that Spider publishes.
   download-spider:
     run: "once"
+    requires:
+      vars: ["OUTPUT_DIR"]
     vars:
       CHECKSUM_FILE: "{{.G_SPIDER_COMPOSE_CHECKSUM_FILE}}"
-      OUTPUT_DIR: "{{.G_SPIDER_COMPOSE_BUILD_DIR}}"
     sources: ["{{.G_SPIDER_COMPOSE_TASKFILE}}"]
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -31,12 +30,10 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      # The artifact's layers are titled `spider-compose/*`, so pulling into the build directory
-      # recreates `{{.OUTPUT_DIR}}`.
       - >-
         "{{.G_ORAS_TOOLCHAIN_DIR}}/oras" pull
         "{{.G_SPIDER_COMPOSE_IMAGE_REF}}"
-        --output "{{.G_BUILD_DIR}}"
+        --output "{{dir .OUTPUT_DIR}}"
       # This command must be last
       - task: "utils:checksum:compute"
         vars:

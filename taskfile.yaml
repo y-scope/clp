@@ -124,16 +124,14 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/clp-package-image.id"
       - "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/clp-config.schema.json"
-      - "{{.G_SPIDER_COMPOSE_BUILD_DIR}}/**/*"
-      - "{{.G_SPIDER_COMPOSE_BUILD_DIR}}/.env.example"
       - "{{.G_WEBUI_BUILD_DIR}}/settings.json"
       - "{{.TASKFILE}}"
+      - "taskfiles/compose.yaml"
       - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "docker-images:package"
-      - "compose:download-spider"
       - "generate-config-schemas"
       - task: "utils:checksum:validate"
         vars:
@@ -141,6 +139,9 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
+      - task: "compose:download-spider"
+        vars:
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}/usr/share/spider-compose"
       - >-
         rsync --archive
         "components/package-template/src/"
@@ -156,10 +157,6 @@ tasks:
         rsync --archive --mkpath
         "{{.G_CONFIG_SCHEMA_BUILD_DIR}}/"
         "{{.OUTPUT_DIR}}/usr/share/config-schemas/"
-      - >-
-        rsync --archive --mkpath
-        "{{.G_SPIDER_COMPOSE_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/usr/share/spider-compose/"
       - >-
         rsync --archive --mkpath
         "{{.G_WEBUI_BUILD_DIR}}/settings.json"
