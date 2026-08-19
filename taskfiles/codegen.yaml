@@ -105,6 +105,8 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_FILE}}"]
     generates: ["{{.CHECKSUM_FILE}}"]
     sources:
+      - "{{.G_WEBUI_SRC_DIR}}/packages/api-client/package.json"
+      - "{{.G_WEBUI_SRC_DIR}}/pnpm-lock.yaml"
       - "{{.OPENAPI_SPEC_FILE}}"
       - "{{.ROOT_TASKFILE}}"
       - "{{.TASKFILE}}"

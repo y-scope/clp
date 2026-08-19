@@ -5,6 +5,8 @@ on:
   push:
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
   # Cancel in-progress jobs for efficiency
@@ -12,11 +14,14 @@ concurrency:
 
 jobs:
   api-client-schema-committed:
+    permissions:
+      contents: "read"
     # Runs only on Ubuntu Jammy (22.04) since the Rust components are only built on this platform.
     runs-on: "ubuntu-22.04"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
+          persist-credentials: false
           submodules: "recursive"
 
       - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
