@@ -1,8 +1,8 @@
 # Using `compression-coordinator`
 
 `compression-coordinator` is a new component that coordinates compression jobs scheduled via
-[Spider][spider]. It's designed to replace the existing `compression-scheduler`, which schedules
-compression jobs using Celery.
+[Spider][spider]. `compression-scheduler` is designed to replace the existing
+`compression-scheduler` which schedules compression jobs using Celery.
 
 To use `compression-coordinator`, enable the Spider scheduling framework when starting the CLP
 package.
