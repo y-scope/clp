@@ -26,7 +26,6 @@ clp-rust-utils = { path = "components/clp-rust-utils" }
 const_format = "0.2.36"
 futures = "0.3.33"
 http-body-util = "0.1.4"
-libzstd-rs-sys = "0.0.1-prerelease.2"
 mongodb = "3.8.0"
 non-empty-string = { version = "0.2.6", features = ["serde"] }
 num_enum = "0.7.6"
@@ -61,3 +60,4 @@ utoipa = "5.5.0"
 utoipa-axum = "0.2.0"
 uuid = { version = "1.24.0", features = ["v4"] }
 yaml_serde = "0.10.4"
+zstd = "0.13.3"

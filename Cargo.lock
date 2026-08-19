@@ -961,7 +961,6 @@ dependencies = [
  "aws-sdk-s3",
  "aws-sdk-sqs",
  "const_format",
- "libzstd-rs-sys",
  "non-empty-string",
  "num_enum",
  "opentelemetry",
@@ -980,6 +979,7 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "yaml_serde",
+ "zstd",
 ]
 
 [[package]]
@@ -2500,16 +2500,6 @@ name = "libyaml-rs"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e126dda6f34391ab7b444f9922055facc83c07a910da3eb16f1e4d9c45dc777"
-
-[[package]]
-name = "libzstd-rs-sys"
-version = "0.0.1-prerelease.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3d32cb930247d5359c4229b1a4c9244536a5402c9e9ed86451803450a47b25c"
-dependencies = [
- "cc",
- "libc",
-]
 
 [[package]]
 name = "linux-raw-sys"
