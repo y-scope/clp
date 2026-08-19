@@ -6,7 +6,6 @@ authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "Brotli>=1.2.0",
     "celery[redis]>=5.6.2",
     "mariadb>=1.1.14",
     "msgpack>=1.1.2",
