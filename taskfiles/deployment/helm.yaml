@@ -1,7 +1,7 @@
 version: "3"
 
 includes:
-  toolchains: "toolchains.yaml"
+  toolchains: "../toolchains.yaml"
 
 vars:
   G_PACKAGE_HELM_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package-helm"
