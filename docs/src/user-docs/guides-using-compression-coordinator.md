@@ -39,10 +39,11 @@ the `compression-coordinator`-based architecture (which uses Spider) provides th
   fails, it can automatically be retried, allowing tasks to automatically recover from transient
   failures.
   * TODO: Link to #2457.
-* **Improved resource utilization**: `compression-scheduler` processes tasks in batches, where each
-  batch must wait for its slowest task to finish. `compression-coordinator` instead schedules
-  individual tasks through Spider, allowing resources to be reassigned as soon as individual tasks
-  finish.
+* **Improved horizontal scalability**: Celery serializes task dispatching, so dispatch overhead
+  grows linearly with the number of tasks submitted by `compression-scheduler`, limiting the
+  benefits of adding Celery workers beyond a certain scale. Spider dispatches tasks concurrently,
+  allowing `compression-coordinator` to scale more effectively as additional Spider workers are
+  added.
 * **Improved fairness between concurrent compression jobs**: Both architectures process jobs in
   round-robin order, but the `compression-coordinator`-based architecture does so at the granularity
   of tasks whereas the `compression-scheduler`-based architecture does so at the granularity of
