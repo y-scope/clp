@@ -1,5 +1,6 @@
 use non_empty_string::NonEmptyString;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Represents the configuration for connecting to an S3 bucket.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,4 +29,6 @@ pub enum AwsAuthentication {
 pub struct AwsCredentials {
     pub access_key_id: String,
     pub secret_access_key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_token: Option<String>,
 }

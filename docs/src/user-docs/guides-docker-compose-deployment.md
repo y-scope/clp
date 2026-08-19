@@ -165,13 +165,13 @@ docker compose \
   up db-table-creator \
     --no-deps
 
-# Start queue (if using Celery)
+# Start queue
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up queue \
     --no-deps --wait
 
-# Start redis (if using Celery)
+# Start redis
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up redis \
@@ -199,12 +199,6 @@ docker compose \
   up compression-scheduler \
     --no-deps --wait
     
-# Start Spider scheduler (optional, only if using Spider)
-docker compose \
-    --project-name "clp-package-$(cat var/log/instance-id)" \
-    up spider-scheduler \
-      --no-deps --wait
-
 # Start query scheduler
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
@@ -245,16 +239,10 @@ docker compose \
 # Worker services (can be started on multiple hosts)
 ################################################################################
 
-# Start compression worker (if using Celery)
+# Start compression worker
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up compression-worker \
-    --no-deps --wait
-    
-# Start Spider compression worker (optional, only if using Spider)
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up spider-compression-worker \
     --no-deps --wait
 
 # Start query worker

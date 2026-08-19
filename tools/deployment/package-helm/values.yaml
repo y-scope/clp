@@ -1,5 +1,6 @@
-nameOverride: ""
-fullnameOverride: ""
+global:
+  fullnameOverride: ""
+  nameOverride: ""
 
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
@@ -100,6 +101,7 @@ scheduling:
   resultsCache: {}
 
   # Core
+  compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
   queryScheduler: {}
@@ -130,6 +132,7 @@ resources:
   resultsCache: {}
 
   # Core
+  compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
   queryScheduler: {}
@@ -163,7 +166,8 @@ clpConfig:
 
   # API server config
   api_server:
-    port: 30301
+    serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
+    port: 30301  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
     default_max_num_query_results: 1000
     query_job_polling:
       initial_backoff_ms: 100
@@ -187,7 +191,21 @@ clpConfig:
     port: 30306
     names:
       clp: "clp-db"
-      spider: "spider-db"
+
+  compression_coordinator:
+    commit_task_hard_timeout_secs: 60
+    commit_task_max_retry: 1
+    commit_task_soft_timeout_secs: 45
+    compression_task_max_retry: 1
+    database_connection_pool_size: 10
+    job_polling_interval_millisecs: 100
+    logging_level: "INFO"
+    resource_group:
+      name: "compression-coordinator"
+    result_polling:
+      init_backoff_millisecs: 100
+      max_backoff_millisecs: 1000
+    termination_timeout_secs: 30
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -256,20 +274,25 @@ clpConfig:
     upsert_interval: 100  # milliseconds
 
   webui:
+    serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
     query_engine: "clp-s"
-    port: 30000
+    port: 30000  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
     presto_max_num_search_results: 1000
     rate_limit: 1000
     results_metadata_collection_name: "results-metadata"
 
   mcp_server: null
-  #   port: 30800
+  #   serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
+  #   port: 30800  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
   #   logging_level: "INFO"
 
   # Presto query engine config. When "presto" is in `bundled`, the chart deploys Presto coordinator
   # and worker pods. When not in `bundled`, set `host` and `port` to an external Presto instance.
   presto: null
+  #   serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
   #   host: "localhost"
+  #   # External endpoint port when Presto isn't bundled; otherwise specifies the coordinator's
+  #   # nodePort when serviceType is "NodePort".
   #   port: 30889
   #   coordinator:
   #     logging_level: "INFO"
@@ -284,7 +307,8 @@ clpConfig:
 
   # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
   log_ingestor:
-    port: 30302
+    serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
+    port: 30302  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
     logging_level: "INFO"
 
   # Where archives should be output to
@@ -359,3 +383,40 @@ serviceAccount:
   annotations:
   # For IRSA on EKS, set:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
+
+# Overrides for the Spider subchart's `values.yaml`
+spider:
+  enabled: false
+  image:
+    worker:
+      repository: "ghcr.io/y-scope/clp/clp-spider-worker"
+      tag: "main"
+  spiderConfig:
+    worker:
+      extra_envs:
+        - name: "CLP_CONFIG_PATH"
+          value: "/etc/clp-config.yaml"
+        - name: "CLP_DB_USER"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include \"clp.fullname\" . }}-database"
+              key: "username"
+        - name: "CLP_DB_PASS"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include \"clp.fullname\" . }}-database"
+              key: "password"
+      extra_volume_mounts:
+        - name: "clp-config"
+          mountPath: "/etc/clp-config.yaml"
+          subPath: "clp-config.yaml"
+          readOnly: true
+        - name: "staged-archives"
+          mountPath: "/var/data/staged-archives"
+      extra_volumes:
+        - name: "clp-config"
+          configMap:
+            name: "{{ include \"clp.fullname\" . }}-config"
+        - name: "staged-archives"
+          emptyDir: {}
+      service_account_name: "{{ include \"clp.fullname\" . }}-service-account"

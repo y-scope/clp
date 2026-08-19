@@ -12,11 +12,9 @@ from typing import Any
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
     ClpConfig,
-    ClpDbUserType,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
-    OrchestrationType,
     StorageEngine,
 )
 from clp_py_utils.clp_logging import configure_logging, get_logger
@@ -39,7 +37,6 @@ from structlog.contextvars import bound_contextvars
 
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.compress.task_manager.celery_task_manager import CeleryTaskManager
-from job_orchestration.scheduler.compress.task_manager.spider_task_manager import SpiderTaskManager
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
@@ -466,6 +463,16 @@ def _schedule_job(
                 )
                 return
         elif input_type == InputType.S3_OBJECT_METADATA.value:
+            if clp_config.compression_coordinator is not None:
+                # NOTE: These jobs are left in PENDING and will eventually be picked up and
+                # scheduled by the compression-coordinator.
+                logger.info(
+                    "compression-coordinator is configured to handle compression jobs submitted"
+                    " by log-ingestor. Skipping job %d.",
+                    job_id,
+                )
+                return
+
             try:
                 _process_s3_object_metadata_input(
                     input_config, paths_to_compress_buffer, db_context
@@ -625,19 +632,7 @@ def main(argv) -> int | None:
     atexit.register(shutdown_telemetry)
     sql_adapter = SqlAdapter(clp_config.database)
 
-    task_manager: CeleryTaskManager | SpiderTaskManager
-    if clp_config.compression_scheduler.type == OrchestrationType.CELERY:
-        task_manager = CeleryTaskManager()
-    elif clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
-        clp_config.database.load_credentials_from_env(ClpDbUserType.SPIDER)
-        task_manager = SpiderTaskManager(
-            clp_config.database.get_container_url(ClpDbUserType.SPIDER)
-        )
-    else:
-        logger.error(
-            f"Unsupported compression scheduler type: {clp_config.compression_scheduler.type}"
-        )
-        return -1
+    task_manager = CeleryTaskManager()
 
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)

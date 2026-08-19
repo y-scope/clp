@@ -1,8 +1,8 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_s3::{
-    Client,
-    config::{Builder, Credentials, Region},
-};
+use aws_sdk_s3::Client;
+use aws_sdk_s3::config::Builder;
+use aws_sdk_s3::config::Credentials;
+use aws_sdk_s3::config::Region;
 use non_empty_string::NonEmptyString;
 
 use crate::clp_config::AwsAuthentication;
@@ -33,7 +33,7 @@ pub async fn create_new_client(
         config_defaults = config_defaults.credentials_provider(Credentials::new(
             credentials.access_key_id.as_str(),
             credentials.secret_access_key.as_str(),
-            None,
+            credentials.session_token.clone(),
             None,
             "clp-credentials-provider",
         ));
