@@ -5,7 +5,6 @@ import {
     useState,
 } from "react";
 
-import {FileEntry} from "@webui/common/schemas/os";
 import {
     Form,
     message,
@@ -13,7 +12,10 @@ import {
     TreeSelectProps,
 } from "antd";
 
-import {listFiles} from "../../../../api/os";
+import {
+    FileEntry,
+    listFiles,
+} from "../../../../api/os";
 import SwitcherIcon from "./SwitcherIcon";
 import {
     ROOT_NODE,

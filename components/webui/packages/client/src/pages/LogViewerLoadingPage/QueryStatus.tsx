@@ -81,7 +81,7 @@ const QueryStatus = () => {
             // `ExtractJobSearchParams`.
             extractJobType: EXTRACT_JOB_TYPE[type as keyof typeof EXTRACT_JOB_TYPE],
             logEventIdx: logEventIdx,
-            onUploadProgress: () => {
+            onRequestStarted: () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
             },
             streamId: streamId,

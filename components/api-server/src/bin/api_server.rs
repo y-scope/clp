@@ -75,8 +75,15 @@ async fn main() -> anyhow::Result<()> {
     let client = api_server::client::Client::connect(&config, &credentials)
         .await
         .context("Cannot connect to CLP")?;
+    let metadata_client =
+        api_server::metadata_client::MetadataClient::connect(&config, &credentials)
+            .await
+            .context("Cannot connect metadata client to CLP")?;
 
-    let router = api_server::routes::from_client(client)?;
+    let router = api_server::routes::from_app_state(api_server::routes::AppState {
+        client,
+        metadata_client,
+    })?;
     startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 
     tracing::info!("Server started at {addr}");

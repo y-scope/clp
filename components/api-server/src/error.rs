@@ -37,8 +37,14 @@ pub enum ClientError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    #[error("Operation timed out: {0}")]
+    Timeout(String),
+
     #[error("Dataset not found: {0}")]
     DatasetNotFound(String),
+
+    #[error("Path not found: {0}")]
+    NotFound(String),
 
     #[error("Invalid search job config: {0}")]
     InvalidSearchJobConfig(String),

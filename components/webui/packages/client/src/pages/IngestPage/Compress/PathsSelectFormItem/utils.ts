@@ -1,5 +1,4 @@
-import {FileEntry} from "@webui/common/schemas/os";
-
+import {FileEntry} from "../../../../api/os";
 import {settings} from "../../../../settings";
 import {
     ROOT_PATH,
@@ -86,11 +85,11 @@ const addServerPrefix = (userPath: string): string => {
  * @return TreeNode with normalized path as id/value
  */
 const toTreeNode = (fileEntry: FileEntry, parentPath: string): TreeNode => {
-    const fullPath = joinPath(removeServerPrefix(fileEntry.parentPath), fileEntry.name);
+    const fullPath = joinPath(removeServerPrefix(fileEntry.parent_path), fileEntry.name);
 
     return {
         id: fullPath,
-        isLeaf: false === fileEntry.isExpandable,
+        isLeaf: false === fileEntry.is_expandable,
         pId: parentPath,
         title: fileEntry.name,
         value: fullPath,

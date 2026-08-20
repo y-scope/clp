@@ -1,5 +1,5 @@
+import type {components} from "@webui/api-client";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import type {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 import {
     type ClpIoConfig,
     type ClpIoFsInputConfig,
@@ -91,12 +91,12 @@ const extractDataFromIoConfig = (clpIoConfig: ClpIoConfig): {
 const mapCompressionJobResponseToTableData = ({
     _id: id,
     compressed_size: compressedSize,
-    duration,
+    duration = null,
     clp_config: clpIoConfig,
-    start_time: startTime,
+    start_time: startTime = null,
     status,
     uncompressed_size: uncompressedSize,
-}: CompressionMetadataDecoded): JobData => {
+}: components["schemas"]["CompressionMetadata"]): JobData => {
     const {dataset, paths} = extractDataFromIoConfig(clpIoConfig as ClpIoConfig);
     let uncompressedSizeText = "";
     let compressedSizeText = "";
