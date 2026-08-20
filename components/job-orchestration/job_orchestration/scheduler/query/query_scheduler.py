@@ -359,6 +359,31 @@ def document_exists(mongodb_uri, collection_name, field, value):
         return 0 != collection.count_documents({field: value})
 
 
+def _create_timestamp_index(results_cache_uri: str, job_id: str) -> None:
+    """
+    Creates a compound ascending index on the `timestamp` and `_id` fields of the job's results
+    collection in the MongoDB results cache. This accelerates sorted reads used by the
+    max-num-latest-results check and any clients that stream results sorted by timestamp.
+    Failures are logged and otherwise ignored so that a results-cache issue doesn't block job
+    dispatch.
+
+    :param results_cache_uri: URI of the MongoDB results cache.
+    :param job_id: ID of the search job whose results collection should be indexed.
+    """
+    try:
+        with pymongo.MongoClient(results_cache_uri) as mongo_client:
+            collection = mongo_client.get_default_database()[job_id]
+            collection.create_index(
+                [("timestamp", pymongo.ASCENDING), ("_id", pymongo.ASCENDING)],
+                name="timestamp-ascending",
+            )
+    except Exception:
+        logger.exception(
+            "Failed to create timestamp index on results collection for job %s.",
+            job_id,
+        )
+
+
 def cancel_job_except_reducer(job: SearchJob):
     """
     Cancels the job apart from releasing the reducer since that requires an async call.
@@ -862,6 +887,7 @@ def handle_pending_query_jobs(
                         max_datasets_per_query=max_datasets_per_query,
                         existing_datasets=existing_datasets,
                         archive_retention_period=archive_retention_period,
+                        results_cache_uri=results_cache_uri,
                         pending_search_jobs=pending_search_jobs,
                         reducer_acquisition_tasks=reducer_acquisition_tasks,
                     )
@@ -1355,6 +1381,7 @@ def _handle_new_search_job(
     max_datasets_per_query: int | None,
     archive_retention_period: int | None,
     existing_datasets: set[str],
+    results_cache_uri: str,
     pending_search_jobs: list,
     reducer_acquisition_tasks: list[asyncio.Task],
 ) -> None:
@@ -1377,6 +1404,9 @@ def _handle_new_search_job(
     :param max_datasets_per_query:
     :param archive_retention_period:
     :param existing_datasets: [out] May be updated with newly fetched datasets.
+    :param results_cache_uri: URI of the MongoDB results cache. Used to create a timestamp index
+        on the job's results collection so that sorted reads (e.g., for max-num-results checks)
+        can be served efficiently.
     :param pending_search_jobs: [out] Appended with the new SearchJob on success.
     :param reducer_acquisition_tasks: [out] Appended with the reducer task for aggregation jobs.
     """
@@ -1490,6 +1520,11 @@ def _handle_new_search_job(
         reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
     else:
         pending_search_jobs.append(new_search_job)
+        # Create a timestamp index on the job's results collection so that sorted reads (e.g.,
+        # the max-num-latest-results check) and any client-side sorted streaming can be served
+        # efficiently. Aggregation jobs write one document per time bucket and don't need the
+        # index.
+        _create_timestamp_index(results_cache_uri, job_id)
     active_jobs[job_id] = new_search_job
 
 

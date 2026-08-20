@@ -163,6 +163,12 @@ struct QueryResultsParams {
     /// results are buffered in `MongoDB`.
     #[serde(default)]
     raw_docs: bool,
+
+    /// When `true`, results buffered in `MongoDB` are streamed sorted by timestamp ascending;
+    /// otherwise, they're streamed in insertion order. Only applies to query jobs whose results
+    /// are buffered in `MongoDB`.
+    #[serde(default)]
+    sorted: bool,
 }
 
 #[utoipa::path(
@@ -189,7 +195,10 @@ async fn query_results(
     Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
     tracing::info!("Fetching results for search job ID: {}", search_job_id);
-    let results_stream = match client.fetch_results(search_job_id, params.raw_docs).await {
+    let results_stream = match client
+        .fetch_results(search_job_id, params.raw_docs, params.sorted)
+        .await
+    {
         Ok(stream) => {
             tracing::info!(
                 "Successfully initiated result stream for search job ID {}",

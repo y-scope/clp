@@ -45,6 +45,7 @@ const useSearchResults = () => {
             };
         },
         rawDocs: true,
+        sorted: true,
     });
 };
 

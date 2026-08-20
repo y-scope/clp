@@ -123,6 +123,15 @@
             }
           },
           {
+            "name": "sorted",
+            "in": "query",
+            "description": "When `true`, results buffered in `MongoDB` are streamed sorted by timestamp ascending;\notherwise, they're streamed in insertion order. Only applies to query jobs whose results\nare buffered in `MongoDB`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "search_job_id",
             "in": "path",
             "required": true,
@@ -315,7 +324,7 @@
               "null"
             ],
             "format": "int64",
-            "description": "The size of each time bucket (in epoch milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`."
+            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`."
           },
           "datasets": {
             "type": [

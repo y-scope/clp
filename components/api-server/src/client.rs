@@ -207,7 +207,7 @@ pub struct QueryConfig {
     #[serde(default)]
     pub buffer_results_in_mongodb: bool,
 
-    /// The size of each time bucket (in epoch milliseconds) for count-by-time aggregation.
+    /// The size of each time bucket (in milliseconds) for count-by-time aggregation.
     /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
     /// search job, and its results are always buffered in `MongoDB`.
     #[serde(default)]
@@ -285,10 +285,19 @@ impl Client {
     ///
     /// Returns an error if:
     ///
+    /// * [`ClientError::InvalidInput`] if `count_by_time_bucket_size_millisecs` is set and is `<=
+    ///   0`.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
+        if let Some(bucket_size) = count_by_time_bucket_size
+            && bucket_size <= 0
+        {
+            return Err(ClientError::InvalidInput(
+                "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
+            ));
+        }
         let mut search_job_config: SearchJobConfig = query_config.into();
         if search_job_config.datasets.is_none() {
             search_job_config.datasets = match self.config.package.storage_engine {
@@ -344,6 +353,7 @@ impl Client {
         &self,
         search_job_id: u64,
         raw_docs: bool,
+        sorted: bool,
     ) -> Result<
         SearchResultStream<
             impl Stream<Item = Result<String, ClientError>> + use<>,
@@ -381,7 +391,7 @@ impl Client {
             // aggregation record (e.g., a time bucket) rather than a log message, so stream the
             // documents whole and without a limit.
             return self
-                .fetch_results_from_mongo(search_job_id, 0, true)
+                .fetch_results_from_mongo(search_job_id, 0, true, false)
                 .await
                 .map(|s| SearchResultStream::Mongo { inner: s });
         }
@@ -400,7 +410,7 @@ impl Client {
             return Ok(stream);
         }
 
-        self.fetch_results_from_mongo(search_job_id, max_num_results, raw_docs)
+        self.fetch_results_from_mongo(search_job_id, max_num_results, raw_docs, sorted)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
     }
@@ -638,6 +648,9 @@ impl Client {
     /// for aggregation results); otherwise the document's "message" field is extracted (used for
     /// search results).
     ///
+    /// When `sorted` is `true`, documents are returned sorted by `timestamp` ascending (then
+    /// `_id` ascending); otherwise, they're returned in insertion order.
+    ///
     /// # Returns
     ///
     /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
@@ -665,19 +678,23 @@ impl Client {
         search_job_id: u64,
         max_num_results: u32,
         raw_docs: bool,
+        sorted: bool,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let database = self
             .mongodb_client
             .database(&self.config.results_cache.db_name);
         let collection: mongodb::Collection<mongodb::bson::Document> =
             database.collection(&search_job_id.to_string());
-        let find_options = if max_num_results > 0 {
-            mongodb::options::FindOptions::builder()
-                .limit(i64::from(max_num_results))
-                .build()
-        } else {
-            mongodb::options::FindOptions::default()
-        };
+        let mut find_options = mongodb::options::FindOptions::default();
+        if max_num_results > 0 {
+            find_options.limit = Some(i64::from(max_num_results));
+        }
+        if sorted {
+            find_options.sort = Some(mongodb::bson::doc! {
+                "timestamp": 1,
+                "_id": 1,
+            });
+        }
         let cursor = collection
             .find(mongodb::bson::doc! {})
             .with_options(find_options)

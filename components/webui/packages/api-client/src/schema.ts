@@ -149,7 +149,7 @@ export interface components {
             buffer_results_in_mongodb?: boolean;
             /**
              * Format: int64
-             * @description The size of each time bucket (in epoch milliseconds) for count-by-time aggregation.
+             * @description The size of each time bucket (in milliseconds) for count-by-time aggregation.
              *     When set, the job is submitted as a count-by-time aggregation job instead of a plain
              *     search job, and its results are always buffered in `MongoDB`.
              */
@@ -300,6 +300,12 @@ export interface operations {
                  *     results are buffered in `MongoDB`.
                  */
                 raw_docs?: boolean;
+                /**
+                 * @description When `true`, results buffered in `MongoDB` are streamed sorted by timestamp ascending;
+                 *     otherwise, they're streamed in insertion order. Only applies to query jobs whose results
+                 *     are buffered in `MongoDB`.
+                 */
+                sorted?: boolean;
             };
             header?: never;
             path: {

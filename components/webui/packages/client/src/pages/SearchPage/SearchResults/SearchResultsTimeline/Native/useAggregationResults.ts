@@ -20,6 +20,7 @@ const useAggregationResults = () => {
         },
         parse: (data) => JSON.parse(data) as TimelineBucket,
         rawDocs: true,
+        sorted: false,
     });
 };
 

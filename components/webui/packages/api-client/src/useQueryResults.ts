@@ -45,6 +45,13 @@ interface UseQueryResultsOptions<T> {
      * messages. Only applies to query jobs whose results are buffered in MongoDB.
      */
     rawDocs?: boolean;
+
+    /**
+     * Whether to request results sorted by timestamp descending from the API server. Only
+     * applies to query jobs whose results are buffered in MongoDB. When `false`, the server
+     * streams results in insertion order and any `compareFn` is still applied client-side.
+     */
+    sorted?: boolean;
 }
 
 /**
@@ -69,7 +76,9 @@ const useQueryResults = <T>(
     // Keep the latest options in a ref so that the stream isn't restarted when callers pass
     // inline callbacks.
     const optionsRef = useRef<UseQueryResultsOptions<T>>(options);
-    optionsRef.current = options;
+    useEffect(() => {
+        optionsRef.current = options;
+    });
 
     // eslint-disable-next-line max-lines-per-function
     useEffect(() => {
@@ -106,7 +115,10 @@ const useQueryResults = <T>(
                 headers: {Accept: "text/event-stream"},
                 params: {
                     path: {search_job_id: Number(jobId)},
-                    query: {raw_docs: optionsRef.current.rawDocs ?? false},
+                    query: {
+                        raw_docs: optionsRef.current.rawDocs ?? false,
+                        sorted: optionsRef.current.sorted ?? false,
+                    },
                 },
                 parseAs: "stream",
                 signal: abortController.signal,
