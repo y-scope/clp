@@ -147,6 +147,13 @@ export interface components {
              *     will be stored in `MongoDB` instead.
              */
             buffer_results_in_mongodb?: boolean;
+            /**
+             * Format: int64
+             * @description The size of each time bucket (in milliseconds) for count-by-time aggregation.
+             *     When set, the job is submitted as a count-by-time aggregation job instead of a plain
+             *     search job, and its results are always buffered in `MongoDB`.
+             */
+            count_by_time_bucket_size_millisecs?: number | null;
             /** @description The datasets to search within. If not provided, only `default` dataset will be searched. */
             datasets?: string[] | null;
             /** @description Whether the string match should be case-insensitive. */
@@ -220,7 +227,8 @@ export interface operations {
                  *       "time_range_end_millisecs": 17356896,
                  *       "ignore_case": true,
                  *       "max_num_results": 0,
-                 *       "buffer_results_in_mongodb": true
+                 *       "buffer_results_in_mongodb": true,
+                 *       "count_by_time_bucket_size_millisecs": null
                  *     }
                  */
                 "application/json": components["schemas"]["QueryConfig"];
@@ -284,7 +292,21 @@ export interface operations {
     };
     query_results: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description When `true`, each SSE event contains the raw result document from the results cache
+                 *     serialized as JSON (including metadata such as the timestamp and the original file path);
+                 *     otherwise, each event contains only the log message. Only applies to query jobs whose
+                 *     results are buffered in `MongoDB`.
+                 */
+                raw_docs?: boolean;
+                /**
+                 * @description When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;
+                 *     otherwise, they're streamed in insertion order. Only applies to query jobs whose results
+                 *     are buffered in `MongoDB`.
+                 */
+                sorted?: boolean;
+            };
             header?: never;
             path: {
                 search_job_id: number;
