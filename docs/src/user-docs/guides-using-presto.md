@@ -45,12 +45,10 @@ the clp-s native query components can optionally be disabled to save resources.
      webui:
        query_engine: "presto"
 
-     # Optional: Disable the clp-s native query pipeline to save resources.
-     # NOTE: The API server depends on the clp-s native query pipeline.
-     api_server: null
-     query_scheduler: null
-     query_worker: null
-     reducer: null
+      # Optional: Disable the clp-s native query pipeline to save resources.
+      query_scheduler: null
+      query_worker: null
+      reducer: null
 
      # Disable results cache retention since the Presto integration doesn't yet support
      # garbage collection of search results.
@@ -146,11 +144,9 @@ Using Presto with CLP via Docker Compose requires:
         retention_period: null
       ```
 
-    * Optional: Disable the native query pipeline to save resources. Note that the API server depends on the native
-      query pipeline, so it must also be disabled altogether.
+    * Optional: Disable the native query pipeline to save resources.
 
       ```yaml
-      api_server: null
       query_scheduler: null
       query_worker: null
       reducer: null
