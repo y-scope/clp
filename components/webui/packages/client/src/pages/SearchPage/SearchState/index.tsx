@@ -24,6 +24,7 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
+    aggregationResultsComplete: false,
     maxNumResults: DEFAULT_MAX_NUM_SEARCH_RESULTS,
     numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
@@ -33,9 +34,9 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     queryString: "",
     searchJobId: null,
     searchResults: null as SearchResult[] | null,
+    searchResultsComplete: false,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
     selectedDatasets: [],
-    submittedMaxNumResults: DEFAULT_MAX_NUM_SEARCH_RESULTS,
     timeRange: DEFAULT_TIME_RANGE,
     timeRangeOption: DEFAULT_TIME_RANGE_OPTION,
     timelineConfig: computeTimelineConfig(DEFAULT_TIME_RANGE),
@@ -46,6 +47,9 @@ interface SearchState {
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
+    /** Whether the active native aggregation stream has ended. */
+    aggregationResultsComplete: boolean;
 
     /**
      * Maximum number of search results to retrieve.
@@ -93,6 +97,9 @@ interface SearchState {
      */
     searchResults: SearchResult[] | null;
 
+    /** Whether the active native search-results stream has ended. */
+    searchResultsComplete: boolean;
+
     /**
      * UI state of search page.
      */
@@ -102,11 +109,6 @@ interface SearchState {
      * Datasets currently selected in the UI dropdown.
      */
     selectedDatasets: string[];
-
-    /**
-     * Maximum number of search results submitted with the active query.
-     */
-    submittedMaxNumResults: number;
 
     /**
      * Time range for search query.
@@ -133,6 +135,10 @@ interface SearchState {
      */
     handleSearchResultsExport: () => void;
 
+    markAggregationResultsComplete: (id: string) => void;
+    markSearchResultsComplete: (id: string) => void;
+    prepareNativeQuery: () => void;
+    startNativeQuery: (searchJobId: string, aggregationJobId: string) => void;
     updateAggregationJobId: (id: string | null) => void;
     updateMaxNumResults: (max: number) => void;
     updateNumSearchResultsMetadata: (num: number) => void;
@@ -145,7 +151,6 @@ interface SearchState {
     updateSearchResults: (results: SearchResult[] | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
     updateSelectedDatasets: (datasets: string[]) => void;
-    updateSubmittedMaxNumResults: (max: number) => void;
     updateTimeRange: (range: [Dayjs, Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
@@ -170,6 +175,54 @@ const useSearchStore = create<SearchState>((set, get) => ({
             message.error("Failed to export results");
             console.error(e);
         }
+    },
+    markAggregationResultsComplete: (id) => {
+        set((state) => {
+            if (state.aggregationJobId !== id) {
+                return {};
+            }
+
+            return {
+                aggregationResultsComplete: true,
+                searchUiState: state.searchResultsComplete &&
+                    state.searchUiState === SEARCH_UI_STATE.QUERYING ?
+                    SEARCH_UI_STATE.DONE :
+                    state.searchUiState,
+            };
+        });
+    },
+    markSearchResultsComplete: (id) => {
+        set((state) => {
+            if (state.searchJobId !== id) {
+                return {};
+            }
+
+            return {
+                searchResultsComplete: true,
+                searchUiState: state.aggregationResultsComplete &&
+                    state.searchUiState === SEARCH_UI_STATE.QUERYING ?
+                    SEARCH_UI_STATE.DONE :
+                    state.searchUiState,
+            };
+        });
+    },
+    prepareNativeQuery: () => {
+        set({
+            aggregationJobId: null,
+            aggregationResultsComplete: false,
+            searchJobId: null,
+            searchResultsComplete: false,
+            searchUiState: SEARCH_UI_STATE.QUERY_ID_PENDING,
+        });
+    },
+    startNativeQuery: (searchJobId, aggregationJobId) => {
+        set({
+            aggregationJobId: aggregationJobId,
+            aggregationResultsComplete: false,
+            searchJobId: searchJobId,
+            searchResultsComplete: false,
+            searchUiState: SEARCH_UI_STATE.QUERYING,
+        });
     },
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
@@ -206,9 +259,6 @@ const useSearchStore = create<SearchState>((set, get) => ({
     },
     updateSelectedDatasets: (datasets) => {
         set({selectedDatasets: datasets});
-    },
-    updateSubmittedMaxNumResults: (max) => {
-        set({submittedMaxNumResults: max});
     },
     updateTimeRange: (range) => {
         set({timeRange: range});

@@ -37,7 +37,10 @@ const WebuiPublicSettingsSchema = Type.Object({
 });
 
 const WebuiServerSettingsSchema = Type.Object({
-    ApiServerUrl: Type.String(),
+    ApiServerUrl: Type.Union([
+        Type.String(),
+        Type.Null(),
+    ]),
 
     SqlDbHost: Type.String(),
     SqlDbName: Type.String(),

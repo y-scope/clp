@@ -29,7 +29,6 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
-    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
@@ -732,7 +731,7 @@ class BaseController(ABC):
             files_table_name = get_files_table_name(table_prefix, None)
 
         logs_input_root_dir = (
-            str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            str(container_clp_config.logs_input.directory)
             if StorageType.FS == self._clp_config.logs_input.type
             else None
         )
@@ -782,8 +781,12 @@ class BaseController(ABC):
 
         server_settings_updates = {
             "ApiServerUrl": (
-                f"http://{container_clp_config.api_server.host}"
-                f":{container_clp_config.api_server.port}"
+                None
+                if container_clp_config.api_server is None
+                else (
+                    f"http://{container_clp_config.api_server.host}"
+                    f":{container_clp_config.api_server.port}"
+                )
             ),
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
