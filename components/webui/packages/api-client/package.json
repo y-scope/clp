@@ -23,9 +23,7 @@
   "type": "module",
   "dependencies": {
     "eventsource-parser": "^4.0.0",
-    "openapi-fetch": "^0.17.0"
-  },
-  "peerDependencies": {
+    "openapi-fetch": "^0.17.0",
     "react": "^19.2.3"
   },
   "devDependencies": {

@@ -13,13 +13,5 @@ allowBuilds:
 # Required for pnpm deploy on v10+ when deploying workspace packages.
 injectWorkspacePackages: true
 
-# Synchronize injected workspace dependencies after a `build` script runs, so the injected
-# copies pick up build outputs (e.g. `dist/`) written into the source package. Without this,
-# packages that are injected (rather than symlinked) due to peer-dependency mismatches —
-# such as `@webui/api-client` (which has a `react` peer dependency) — would have stale
-# `node_modules` copies missing the built `dist/`, breaking module resolution for consumers.
-syncInjectedDepsAfterScripts:
-  - build
-
 # To preserve the effects of `pnpm install --frozen-lockfile` in `task webui`.
 verifyDepsBeforeRun: false
