@@ -63,4 +63,4 @@ _Note that because the query is surrounded by spaces, it will be interpreted int
 [^1]: A "word" is any contiguous group of non-delimiter characters. A delimiter is a character that
 CLP uses to split-up (tokenize) a log event. By default, these delimiters are any non-alphanumeric
 character except `+`, `-`, `.`, and `_`; but users can
-[configure](reference-unstructured-schema-file) these delimiters.
+[configure](reference-unstructured-parsing-specification) these delimiters.
