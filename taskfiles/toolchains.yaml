@@ -11,6 +11,8 @@ vars:
   G_NODEJS_BIN_DIR: "{{.G_NODEJS_BUILD_DIR}}/bin"
   G_NODEJS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/nodejs.md5"
   G_NODEJS_VERSION_FILE: "{{.G_WEBUI_SRC_DIR}}/.node-version"
+  G_ORAS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains-oras.md5"
+  G_ORAS_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/oras"
   G_RUST_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/rust"
   G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_DIR}}/env"
 
@@ -94,6 +96,35 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  oras:
+    internal: true
+    run: "once"
+    vars:
+      CHECKSUM_FILE: "{{.G_ORAS_CHECKSUM_FILE}}"
+      ORAS_VERSION: "1.3.3"
+      OUTPUT_DIR: "{{.G_ORAS_TOOLCHAIN_DIR}}"
+    cmds:
+      - task: "remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          FILE_SHA256: >-
+            {{- if and (eq OS "linux") (eq ARCH "amd64") -}}
+              9ce999f8d2de03fc03968b29d743077a58783e545e5eaa53917ca177352d0e59
+            {{- else if and (eq OS "linux") (eq ARCH "arm64") -}}
+              ac7156f93a21e903f7ad606c792f3560f17e0cd0e36365634701b1e7cc4e4eca
+            {{- else if and (eq OS "darwin") (eq ARCH "amd64") -}}
+              aeb684d8c24c18dce28fd1f7326636e4782b573108e244a93d4b1c4a5ec50f48
+            {{- else if and (eq OS "darwin") (eq ARCH "arm64") -}}
+              f33fc12753c54172b0d0d19eaa0318d3f90fe9b094d96e8b259c881713c92e1c
+            {{- else -}}
+              unsupported
+            {{- end }}
+          INCLUDE_PATTERNS: ["oras"]
+          NUM_COMPONENTS_TO_STRIP: "0"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          URL: >-
+            https://github.com/oras-project/oras/releases/download/v{{.ORAS_VERSION}}/oras_{{.ORAS_VERSION}}_{{OS}}_{{ARCH}}.tar.gz
 
   rust:
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.
