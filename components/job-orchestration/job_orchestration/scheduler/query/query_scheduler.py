@@ -361,11 +361,11 @@ def document_exists(mongodb_uri, collection_name, field, value):
 
 def _create_timestamp_index(results_cache_uri: str, job_id: str) -> None:
     """
-    Creates a compound ascending index on the `timestamp` and `_id` fields of the job's results
-    collection in the MongoDB results cache. This accelerates sorted reads used by the
-    max-num-latest-results check and any clients that stream results sorted by timestamp.
-    Failures are logged and otherwise ignored so that a results-cache issue doesn't block job
-    dispatch.
+    Creates a compound index on the `timestamp` (descending) and `_id` (ascending) fields of
+    the job's results collection in the MongoDB results cache. This accelerates sorted reads
+    used by the max-num-latest-results check and any clients that stream results sorted by
+    timestamp. Failures are logged and otherwise ignored so that a results-cache issue doesn't
+    block job dispatch.
 
     :param results_cache_uri: URI of the MongoDB results cache.
     :param job_id: ID of the search job whose results collection should be indexed.
@@ -374,8 +374,8 @@ def _create_timestamp_index(results_cache_uri: str, job_id: str) -> None:
         with pymongo.MongoClient(results_cache_uri) as mongo_client:
             collection = mongo_client.get_default_database()[job_id]
             collection.create_index(
-                [("timestamp", pymongo.ASCENDING), ("_id", pymongo.ASCENDING)],
-                name="timestamp-ascending",
+                [("timestamp", pymongo.DESCENDING), ("_id", pymongo.ASCENDING)],
+                name="timestamp-descending",
             )
     except Exception:
         logger.exception(

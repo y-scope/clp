@@ -648,7 +648,7 @@ impl Client {
     /// for aggregation results); otherwise the document's "message" field is extracted (used for
     /// search results).
     ///
-    /// When `sorted` is `true`, documents are returned sorted by `timestamp` ascending (then
+    /// When `sorted` is `true`, documents are returned sorted by `timestamp` descending (then
     /// `_id` ascending); otherwise, they're returned in insertion order.
     ///
     /// # Returns
@@ -691,7 +691,7 @@ impl Client {
         }
         if sorted {
             find_options.sort = Some(mongodb::bson::doc! {
-                "timestamp": 1,
+                "timestamp": -1,
                 "_id": 1,
             });
         }

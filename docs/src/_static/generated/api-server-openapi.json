@@ -125,7 +125,7 @@
           {
             "name": "sorted",
             "in": "query",
-            "description": "When `true`, results buffered in `MongoDB` are streamed sorted by timestamp ascending;\notherwise, they're streamed in insertion order. Only applies to query jobs whose results\nare buffered in `MongoDB`.",
+            "description": "When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;\notherwise, they're streamed in insertion order. Only applies to query jobs whose results\nare buffered in `MongoDB`.",
             "required": false,
             "schema": {
               "type": "boolean"

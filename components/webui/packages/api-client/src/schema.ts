@@ -301,7 +301,7 @@ export interface operations {
                  */
                 raw_docs?: boolean;
                 /**
-                 * @description When `true`, results buffered in `MongoDB` are streamed sorted by timestamp ascending;
+                 * @description When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;
                  *     otherwise, they're streamed in insertion order. Only applies to query jobs whose results
                  *     are buffered in `MongoDB`.
                  */
