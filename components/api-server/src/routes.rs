@@ -15,6 +15,7 @@ use serde::Serialize;
 use thiserror::Error;
 use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
+use utoipa::IntoParams;
 use utoipa::OpenApi;
 use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
@@ -111,7 +112,8 @@ async fn health() -> String {
             "time_range_end_millisecs": 17_356_896,
             "ignore_case": true,
             "max_num_results": 0,
-            "buffer_results_in_mongodb": true
+            "buffer_results_in_mongodb": true,
+            "count_by_time_bucket_size_millisecs": null
         })),
     responses(
         (
@@ -151,11 +153,30 @@ struct QueryResultsUri {
     query_results_uri: String,
 }
 
+/// Query parameters for the query results endpoint.
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct QueryResultsParams {
+    /// When `true`, each SSE event contains the raw result document from the results cache
+    /// serialized as JSON (including metadata such as the timestamp and the original file path);
+    /// otherwise, each event contains only the log message. Only applies to query jobs whose
+    /// results are buffered in `MongoDB`.
+    #[serde(default)]
+    raw_docs: bool,
+
+    /// When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;
+    /// otherwise, they're streamed in insertion order. Only applies to query jobs whose results
+    /// are buffered in `MongoDB`.
+    #[serde(default)]
+    sorted: bool,
+}
+
 #[utoipa::path(
     get,
     path = "/query_results/{search_job_id}",
     description = "Streams the results of a previously submitted query as Server-Sent Events \
         (SSE).",
+    params(QueryResultsParams),
     responses(
         (
             status = OK,
@@ -171,9 +192,13 @@ struct QueryResultsUri {
 async fn query_results(
     State(client): State<Client>,
     Path(search_job_id): Path<u64>,
+    Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
     tracing::info!("Fetching results for search job ID: {}", search_job_id);
-    let results_stream = match client.fetch_results(search_job_id).await {
+    let results_stream = match client
+        .fetch_results(search_job_id, params.raw_docs, params.sorted)
+        .await
+    {
         Ok(stream) => {
             tracing::info!(
                 "Successfully initiated result stream for search job ID {}",

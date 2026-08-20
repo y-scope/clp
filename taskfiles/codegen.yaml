@@ -90,6 +90,36 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
+  webui-generate-api-client-schema:
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OPENAPI_SPEC_FILE: "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/api-server-openapi.json"
+      OUTPUT_FILE: "{{.G_WEBUI_SRC_DIR}}/packages/api-client/src/schema.ts"
+    deps:
+      - "openapi"
+      - ":deps:yscope-log-viewer:source"
+      - "toolchains:nodejs"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_FILE}}"]
+    generates: ["{{.CHECKSUM_FILE}}"]
+    sources:
+      - "{{.G_WEBUI_SRC_DIR}}/packages/api-client/package.json"
+      - "{{.G_WEBUI_SRC_DIR}}/pnpm-lock.yaml"
+      - "{{.OPENAPI_SPEC_FILE}}"
+      - "{{.ROOT_TASKFILE}}"
+      - "{{.TASKFILE}}"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
+    cmds:
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm --filter '@webui/api-client' run generate"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_FILE}}"]
+
   openapi:
     deps: ["toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
