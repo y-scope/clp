@@ -45,10 +45,10 @@ the clp-s native query components can optionally be disabled to save resources.
      webui:
        query_engine: "presto"
 
-      # Optional: Disable the clp-s native query pipeline to save resources.
-      query_scheduler: null
-      query_worker: null
-      reducer: null
+     # Optional: Disable the clp-s native query pipeline to save resources.
+     query_scheduler: null
+     query_worker: null
+     reducer: null
 
      # Disable results cache retention since the Presto integration doesn't yet support
      # garbage collection of search results.
