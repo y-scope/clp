@@ -165,13 +165,26 @@ impl Default for Database {
 impl Database {
     /// # Returns
     ///
-    /// The archives table name (`<prefix><dataset>_archives`).
+    /// The archives table name (`<prefix><dataset>_archives`), or `<prefix>archives` when no
+    /// dataset is provided.
     #[must_use]
     pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
-        format!(
-            "{}{}_archives",
-            self.table_prefix,
-            resolve_dataset_name(dataset)
+        self.metadata_table_name(dataset, "archives")
+    }
+
+    /// # Returns
+    ///
+    /// The files table name (`<prefix><dataset>_files`), or `<prefix>files` when no dataset is
+    /// provided.
+    #[must_use]
+    pub fn files_table_name(&self, dataset: Option<&str>) -> String {
+        self.metadata_table_name(dataset, "files")
+    }
+
+    fn metadata_table_name(&self, dataset: Option<&str>, suffix: &str) -> String {
+        dataset.map_or_else(
+            || format!("{}{suffix}", self.table_prefix),
+            |dataset| format!("{}{dataset}_{suffix}", self.table_prefix),
         )
     }
 
@@ -203,6 +216,7 @@ pub struct ApiServer {
     pub port: u16,
     pub query_job_polling: QueryJobPollingConfig,
     pub default_max_num_query_results: u32,
+    pub stream_file_extraction_timeout_secs: u64,
 }
 
 impl Default for ApiServer {
@@ -212,6 +226,7 @@ impl Default for ApiServer {
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
             default_max_num_query_results: 1000,
+            stream_file_extraction_timeout_secs: 1800,
         }
     }
 }
@@ -278,6 +293,7 @@ pub struct ResultsCache {
     pub host: String,
     pub port: u16,
     pub db_name: String,
+    pub stream_collection_name: String,
 }
 
 impl Default for ResultsCache {
@@ -286,6 +302,7 @@ impl Default for ResultsCache {
             host: "localhost".to_owned(),
             port: 27017,
             db_name: "clp-query-results".to_owned(),
+            stream_collection_name: "stream-files".to_owned(),
         }
     }
 }
@@ -295,10 +312,20 @@ impl Default for ResultsCache {
 /// # NOTE
 ///
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Clone, Default, Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct StreamOutput {
     pub storage: StreamOutputStorage,
+    pub target_uncompressed_size: u64,
+}
+
+impl Default for StreamOutput {
+    fn default() -> Self {
+        Self {
+            storage: StreamOutputStorage::default(),
+            target_uncompressed_size: 134_217_728,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -563,11 +590,47 @@ fn default_archive_staging_directory() -> String {
 mod tests {
     use std::path::Path;
 
+    use super::ApiServer;
     use super::ArchiveOutput;
     use super::ArchiveOutputStorage;
     use super::Database;
     use super::LogsInput;
+    use super::ResultsCache;
     use super::SpiderTaskExecutorConfig;
+    use super::StreamOutput;
+
+    #[test]
+    fn metadata_table_names_match_storage_engine_conventions() {
+        let database = Database::default();
+
+        assert_eq!(database.archives_table_name(None), "clp_archives");
+        assert_eq!(database.files_table_name(None), "clp_files");
+        assert_eq!(
+            database.archives_table_name(Some("default")),
+            "clp_default_archives"
+        );
+        assert_eq!(database.files_table_name(Some("logs")), "clp_logs_files");
+    }
+
+    #[test]
+    fn metadata_endpoint_config_values_are_deserialized() {
+        let results_cache: ResultsCache = serde_json::from_value(serde_json::json!({
+            "stream_collection_name": "custom-streams",
+        }))
+        .expect("failed to deserialize results-cache config");
+        let stream_output: StreamOutput = serde_json::from_value(serde_json::json!({
+            "target_uncompressed_size": 4096,
+        }))
+        .expect("failed to deserialize stream-output config");
+        let api_server: ApiServer = serde_json::from_value(serde_json::json!({
+            "stream_file_extraction_timeout_secs": 15,
+        }))
+        .expect("failed to deserialize API-server config");
+
+        assert_eq!(results_cache.stream_collection_name, "custom-streams");
+        assert_eq!(stream_output.target_uncompressed_size, 4096);
+        assert_eq!(api_server.stream_file_extraction_timeout_secs, 15);
+    }
 
     #[test]
     fn deserialize_logs_input_s3_config() {

@@ -738,6 +738,7 @@ class ApiServer(BaseModel):
     port: Port = DEFAULT_PORT
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
     default_max_num_query_results: int = 1000
+    stream_file_extraction_timeout_secs: PositiveInt = 1800
 
     def transform_for_container(self):
         self.host = API_SERVER_COMPONENT_NAME
