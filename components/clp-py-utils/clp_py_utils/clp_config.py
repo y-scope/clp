@@ -991,7 +991,6 @@ class ClpConfig(BaseModel):
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )
 
-
     def load_container_image_ref(self):
         if self.container_image_ref is not None:
             # Accept configured value for debug purposes
