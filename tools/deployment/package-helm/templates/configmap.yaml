@@ -11,6 +11,7 @@ data:
       default_max_num_query_results: {{ .default_max_num_query_results | int }}
       host: "localhost"
       port: 3001
+      stream_file_extraction_timeout_secs: {{ .stream_file_extraction_timeout_secs | int }}
       query_job_polling:
         initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
         max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
@@ -325,7 +326,12 @@ data:
           {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
       },
       "server": {
-        "ApiServerUrl": "http://{{ include "clp.fullname" . }}-api-server:3001",
+        "ApiServerUrl":
+          {{- if .Values.clpConfig.api_server }}
+          "http://{{ include "clp.fullname" . }}-api-server:3001",
+          {{- else }}
+          null,
+          {{- end }}
 
         "SqlDbHost": "{{ include "clp.databaseHost" . }}",
         "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
