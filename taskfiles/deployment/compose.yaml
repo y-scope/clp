@@ -1,0 +1,41 @@
+version: "3"
+
+includes:
+  toolchains: "../toolchains.yaml"
+  utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+vars:
+  G_SPIDER_COMPOSE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/spider-compose.md5"
+  G_SPIDER_COMPOSE_TASKFILE: "{{.ROOT_DIR}}/taskfiles/deployment/compose.yaml"
+
+  # TODO: Spider doesn't tag releases of its Compose deployment yet, so we pin the artifact by
+  # digest rather than by version. Switch to a version tag once Spider publishes one.
+  G_SPIDER_COMPOSE_IMAGE_REF: >-
+    ghcr.io/y-scope/spider/compose@sha256:a9c80a4ef76042f7434407700a36ef01acbfb10b87f4eb1cd155dbf0fc74fabb
+
+tasks:
+  download-spider:
+    run: "once"
+    requires:
+      vars: ["OUTPUT_DIR"]
+    vars:
+      CHECKSUM_FILE: "{{.G_SPIDER_COMPOSE_CHECKSUM_FILE}}"
+    sources: ["{{.G_SPIDER_COMPOSE_TASKFILE}}"]
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - "toolchains:oras"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - >-
+        "{{.G_ORAS_TOOLCHAIN_DIR}}/oras" pull
+        "{{.G_SPIDER_COMPOSE_IMAGE_REF}}"
+        --output "{{.OUTPUT_DIR}}"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
