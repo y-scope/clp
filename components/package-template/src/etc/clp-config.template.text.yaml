@@ -8,6 +8,9 @@ telemetry:
 
 package:
   storage_engine: "clp"
+  # Compression orchestration. Only "celery" is available in clp-text; "spider" requires
+  # storage_engine "clp-s".
+  scheduler: "celery"
 
 webui:
   query_engine: "clp"

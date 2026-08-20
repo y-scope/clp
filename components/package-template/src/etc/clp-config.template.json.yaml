@@ -8,6 +8,9 @@ telemetry:
 
 #package:
 #  storage_engine: "clp-s"
+#  # Compression orchestration: "celery" or "spider". "spider" additionally requires the
+#  # `spider` and `compression_coordinator` blocks below.
+#  scheduler: "celery"
 
 ## API server config
 #api_server:
@@ -57,6 +60,73 @@ telemetry:
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
 #
+## Spider config. Only used when `package.scheduler` is "spider", in which case this block and
+## `compression_coordinator` below are both required.
+## `host` and `port` locate Spider's storage service for compression-coordinator; the deployment
+## rewrites `host` to Spider's in-deployment service name.
+## The `storage`, `scheduler`, and `worker` blocks configure Spider's own services in the Docker
+## Compose deployment. They have no effect in a Helm deployment, where Spider is configured
+## through its subchart. Any field left unset keeps Spider's own default, shown below.
+#spider:
+#  host: "localhost"
+#  port: 50051
+#  storage:
+#    log_level: "INFO"
+#    db_max_connections: 64
+#    inbound_queue:
+#      cleanup_capacity: 256
+#      commit_capacity: 256
+#      task_capacity: 1048576
+#    job_cache_gc:
+#      gc_interval_sec: 30
+#      terminated_job_retention_sec: 300
+#    task_instance_pool:
+#      execution_manager_stale_cutoff_sec: 60
+#      gc_interval_sec: 30
+#      message_channel_capacity: 128
+#  scheduler:
+#    log_level: "INFO"
+#    port: 50052
+#    connection_pool_size: 8
+#    stop_timeout_sec: 30
+#    em_registry:
+#      dead_em_cutoff_sec: 30
+#      liveness_tracking_interval_ms: 1000
+#    round_robin:
+#      active_job_queue_capacity: 16
+#      cleanup_ready_task_capacity: 256
+#      commit_ready_task_capacity: 256
+#      dispatch_queue_capacity: 16
+#      finalizing_job_expiration_timeout_sec: 300
+#      ready_task_capacity: 1048576
+#      storage_poll_timeout_ms: 10
+#      tick_interval_ms: 5
+#  worker:
+#    replicas: 4
+#    log_level: "INFO"
+#    connection_pool_size: 4
+#    scheduler_poll_wait_ms: 1000
+#    max_log_line_bytes: 65536
+#    liveness:
+#      scheduler_heartbeat_interval_sec: 1
+#      storage_heartbeat_interval_sec: 1
+#
+## compression-coordinator config. Required when `package.scheduler` is "spider".
+#compression_coordinator:
+#  logging_level: "INFO"
+#  resource_group:
+#    name: "compression-coordinator"
+#  job_polling_interval_millisecs: 100
+#  max_concurrent_jobs: 1000
+#  result_polling:
+#    init_backoff_millisecs: 100
+#    max_backoff_millisecs: 1000
+#  compression_task_max_retry: 1
+#  commit_task_max_retry: 1
+#  database_connection_pool_size: 10
+#  termination_timeout_secs: 30
+#  commit_task_soft_timeout_secs: 45
+#  commit_task_hard_timeout_secs: 60
 #query_scheduler:
 #  host: "localhost"
 #  port: 7000

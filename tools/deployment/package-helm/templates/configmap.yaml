@@ -155,6 +155,9 @@ data:
     {{- end }}
     package:
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+      scheduler: {{ ternary "spider" "celery" .Values.spider.enabled | quote }}
+      {{- /* `spider.enabled` gates the subchart and the coordinator, so it is the switch;
+             any `clpConfig.package.scheduler` is ignored. */}}
     {{- with .Values.clpConfig.query_scheduler }}
     query_scheduler:
       host: "{{ include "clp.fullname" $ }}-query-scheduler"
