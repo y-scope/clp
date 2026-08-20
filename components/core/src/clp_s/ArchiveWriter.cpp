@@ -550,14 +550,14 @@ ArchiveWriter::update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRu
     return ystdlib::error_handling::success();
 }
 
-auto ArchiveWriter::update_log_shape_dict(std::string_view log_shape)
+auto ArchiveWriter::update_log_shape_dict(clpp::TextShape<std::string> const& log_shape)
         -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>> {
     if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
     clpp::log_shape_id_t id{};
-    bool new_entry{m_clpp->log_shape_dict->add_entry(log_shape, id)};
+    bool new_entry{m_clpp->log_shape_dict->add_entry(log_shape.view(), id)};
     m_clpp->log_shape_stats.at_or_create(id).increment_count();
     return {id, new_entry};
 }

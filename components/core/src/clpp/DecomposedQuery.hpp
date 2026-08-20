@@ -9,6 +9,8 @@
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clpp/TextShape.hpp>
+
 namespace clpp {
 class DecomposedQuery {
 public:
@@ -26,12 +28,12 @@ public:
 
     struct Interpretation {
         // Constructors
-        Interpretation(std::string_view shape_query, std::vector<LeafQuery> leaf_queries)
-                : m_shape_query(shape_query),
+        Interpretation(TextShape<std::string> shape_query, std::vector<LeafQuery> leaf_queries)
+                : m_shape_query(std::move(shape_query)),
                   m_leaf_queries(std::move(leaf_queries)) {}
 
         // Data members
-        std::string m_shape_query;
+        TextShape<std::string> m_shape_query;
         std::vector<LeafQuery> m_leaf_queries;
     };
 

@@ -20,6 +20,10 @@ namespace clpp {
 class ParentRuleShapes {
 public:
     // Types
+    /**
+     * A parent rule shape represented as a string view into the log shape string.
+     * Its name is the corresponding name from the parsing spec.
+     */
     struct ParentRuleShape {
         // Constructors
         ParentRuleShape(std::string_view name, size_t start, size_t size)

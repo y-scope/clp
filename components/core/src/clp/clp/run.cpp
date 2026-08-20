@@ -10,6 +10,9 @@
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
 
+#include <clp/FileReader.hpp>
+#include <clpp/utils.hpp>
+
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -64,11 +67,12 @@ int run(int argc, char const* argv[]) {
         std::optional<log_surgeon::Parser> parser;
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
-            auto parser_result{build_parser_from_file(schema_file_path)};
+            FileReader spec_reader{schema_file_path};
+            auto parser_result{clpp::build_parser(spec_reader)};
             if (parser_result.has_error()) {
                 return -1;
             }
-            parser = std::move(parser_result.value());
+            parser = std::move(parser_result.value().first);
         }
 
         boost::filesystem::path path_prefix_to_remove(

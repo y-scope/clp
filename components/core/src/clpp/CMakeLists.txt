@@ -7,10 +7,9 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 Defs.hpp
                 ErrorCode.cpp
                 ErrorCode.hpp
+                TextShape.hpp
                 LogShapeStat.cpp
                 LogShapeStat.hpp
-                LogShapeUtils.cpp
-                LogShapeUtils.hpp
                 ParentRuleShapes.cpp
                 ParentRuleShapes.hpp
                 utils.cpp

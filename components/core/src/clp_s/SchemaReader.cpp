@@ -28,19 +28,10 @@
 #include <clp_s/Utils.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
-#include <clpp/LogShapeUtils.hpp>
+#include <clpp/TextShape.hpp>
 
 namespace clp_s {
 namespace {
-/**
- * Collapses `%%` to `%` in a shape text segment, JSON-escapes the result, and
- * appends it as a string segment to the compiled shape.
- *
- * @param text The escaped shape text.
- * @param out The compiled shape to append the segment to.
- */
-auto add_literal_segment(std::string_view text, SchemaReader::CompiledShape& out) -> void;
-
 /**
  * Builds a map from column name to the list of reader indices (in schema order) for all
  * column-consuming (leaf rule) nodes in the given schema sub-span.
@@ -85,13 +76,6 @@ find_log_type_id_in_schema(std::span<SchemaNode::id_t> schema, SchemaTree const&
  * reader.
  */
 [[nodiscard]] auto node_type_consumes_column(NodeType type) -> bool;
-
-auto add_literal_segment(std::string_view text, SchemaReader::CompiledShape& out) -> void {
-    auto const unescaped{clpp::unescape_shape_text(text)};
-    std::string escaped;
-    StringUtils::escape_json_string(escaped, unescaped);
-    out.segments.emplace_back(std::move(escaped));
-}
 
 [[nodiscard]] auto build_name_to_reader_indices(
         std::span<SchemaNode::id_t> schema_sub_span,
@@ -1014,17 +998,18 @@ auto SchemaReader::emit_parent_rule_shape_substring(
         clpp::log_shape_id_t log_shape_id,
         std::string_view parent_rule_column_name
 ) -> ystdlib::error_handling::Result<void> {
-    if (nullptr == m_log_shape_dict) {
+    if (nullptr == m_log_shape_dict || nullptr == m_parent_rule_shapes) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
-    auto const log_shape{m_log_shape_dict->get_value(log_shape_id)};
-    auto const substring{
-            narrow_log_shape_to_parent_rule(log_shape, log_shape_id, parent_rule_column_name)
-    };
-    if (substring.empty()) {
+    clpp::TextShape<std::string_view> const log_shape{m_log_shape_dict->get_value(log_shape_id)};
+    auto const parent_rule_shape{log_shape.narrow_to_parent_rule(
+            m_parent_rule_shapes->at(log_shape_id),
+            parent_rule_column_name
+    )};
+    if (parent_rule_shape.empty()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
-    m_json_serializer.add_constant_string_field(clpp::cShapeFunction, substring);
+    m_json_serializer.add_constant_string_field(clpp::cShapeFunction, parent_rule_shape.view());
     return ystdlib::error_handling::success();
 }
 
@@ -1033,8 +1018,10 @@ auto SchemaReader::emit_log_shape(clpp::log_shape_id_t log_shape_id)
     if (nullptr == m_log_shape_dict) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
-    auto const& log_shape_str{m_log_shape_dict->get_value(log_shape_id)};
-    m_json_serializer.add_constant_string_field(clpp::cShapeFunction, log_shape_str);
+    m_json_serializer.add_constant_string_field(
+            clpp::cShapeFunction,
+            m_log_shape_dict->get_value(log_shape_id)
+    );
     return ystdlib::error_handling::success();
 }
 
@@ -1342,28 +1329,6 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     return column_idx;
 }
 
-auto SchemaReader::narrow_log_shape_to_parent_rule(
-        std::string_view log_shape,
-        clpp::log_shape_id_t log_shape_id,
-        std::string_view parent_rule_column_name
-) -> std::string_view {
-    if (nullptr == m_parent_rule_shapes || log_shape_id >= m_parent_rule_shapes->size()) {
-        return {};
-    }
-    auto const& metadata{m_parent_rule_shapes->at(log_shape_id)};
-    for (auto const& match : metadata.get()) {
-        if (match.m_name == parent_rule_column_name) {
-            if (match.m_start < log_shape.size()
-                && match.m_start + match.m_size <= log_shape.size())
-            {
-                return std::string_view{log_shape.data() + match.m_start, match.m_size};
-            }
-            return {};
-        }
-    }
-    return {};
-}
-
 auto SchemaReader::compile_shape(
         clpp::log_shape_id_t log_shape_id,
         std::string_view parent_rule_column_name,
@@ -1374,14 +1339,20 @@ auto SchemaReader::compile_shape(
 
     std::string_view shape_to_scan;
     if (nullptr != m_log_shape_dict) {
-        auto const& log_shape{m_log_shape_dict->get_value(log_shape_id)};
+        clpp::TextShape<std::string_view> const log_shape{
+                m_log_shape_dict->get_value(log_shape_id)
+        };
         if (false == log_shape.empty()) {
-            shape_to_scan = parent_rule_column_name.empty() ? log_shape
-                                                            : narrow_log_shape_to_parent_rule(
-                                                                      log_shape,
-                                                                      log_shape_id,
-                                                                      parent_rule_column_name
-                                                              );
+            if (parent_rule_column_name.empty()) {
+                shape_to_scan = log_shape.view();
+            } else if (nullptr != m_parent_rule_shapes) {
+                shape_to_scan = log_shape
+                                        .narrow_to_parent_rule(
+                                                m_parent_rule_shapes->at(log_shape_id),
+                                                parent_rule_column_name
+                                        )
+                                        .view();
+            }
         }
     }
 
@@ -1396,42 +1367,37 @@ auto SchemaReader::compile_shape(
     )};
     std::unordered_map<std::string, size_t> name_to_next_reader_idx;
 
-    size_t pos{0};
-    while (pos < shape_to_scan.size()) {
-        auto pct{clpp::find_placeholder_delimiter(shape_to_scan, pos)};
-        if (std::string_view::npos == pct) {
-            add_literal_segment(shape_to_scan.substr(pos), compiled_shape);
-            break;
-        }
-        if (pct > pos) {
-            add_literal_segment(shape_to_scan.substr(pos, pct - pos), compiled_shape);
-        }
-        auto end_pct{shape_to_scan.find('%', pct + 1)};
-        if (std::string_view::npos == end_pct) {
-            add_literal_segment(shape_to_scan.substr(pct), compiled_shape);
-            break;
-        }
-        auto const column_name{shape_to_scan.substr(pct + 1, end_pct - pct - 1)};
-        auto const column_name_str{std::string(column_name)};
-        auto it{name_to_reader_indices.find(column_name_str)};
-        if (name_to_reader_indices.end() != it) {
-            auto& next_reader_idx{name_to_next_reader_idx[column_name_str]};
-            if (next_reader_idx < it->second.size()) {
-                auto reader_idx{it->second.at(next_reader_idx++)};
-                compiled_shape.segments.emplace_back(m_columns.at(reader_idx));
-            } else {
+    clpp::TextShape<std::string_view> const log_shape{shape_to_scan};
+    for (auto const& seg : log_shape.segments()) {
+        switch (seg.type) {
+            case clpp::TextShape<std::string_view>::Segment::Type::Literal: {
+                auto const unescaped{
+                        clpp::TextShape<std::string_view>::unescape_literal_text(seg.text)
+                };
+                std::string json_escaped;
+                StringUtils::escape_json_string(json_escaped, unescaped);
+                compiled_shape.segments.emplace_back(std::move(json_escaped));
+                break;
+            }
+            case clpp::TextShape<std::string_view>::Segment::Type::Placeholder: {
+                auto const column_name{seg.text};
+                auto const column_name_str{std::string(column_name)};
+                auto it{name_to_reader_indices.find(column_name_str)};
+                if (name_to_reader_indices.end() != it) {
+                    auto& next_reader_idx{name_to_next_reader_idx[column_name_str]};
+                    if (next_reader_idx < it->second.size()) {
+                        auto reader_idx{it->second.at(next_reader_idx++)};
+                        compiled_shape.segments.emplace_back(m_columns.at(reader_idx));
+                        break;
+                    }
+                }
                 std::string literal{"%"};
                 literal.append(column_name);
                 literal.push_back('%');
                 compiled_shape.segments.emplace_back(std::move(literal));
+                break;
             }
-        } else {
-            std::string literal{"%"};
-            literal.append(column_name);
-            literal.push_back('%');
-            compiled_shape.segments.emplace_back(std::move(literal));
         }
-        pos = end_pct + 1;
     }
 
     return compiled_shape;

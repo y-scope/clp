@@ -13,7 +13,9 @@
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
 
+#include <clp/FileReader.hpp>
 #include <clp/streaming_archive/reader/File.hpp>
+#include <clpp/utils.hpp>
 
 #include "../Defs.h"
 #include "../global_metadata_db_utils.hpp"
@@ -585,11 +587,12 @@ int main(int argc, char const* argv[]) {
             size_t num_bytes_read;
             file_reader.read(buf, max_map_schema_length, num_bytes_read);
             auto build_parser = [&parsing_spec_path]() -> log_surgeon::Parser {
-                auto result{clp::build_parser_from_file(parsing_spec_path.string())};
+                clp::FileReader spec_reader{parsing_spec_path.string()};
+                auto result{clpp::build_parser(spec_reader)};
                 if (result.has_error()) {
                     throw std::runtime_error("Failed to build parser from parsing specification.");
                 }
-                return std::move(result.value());
+                return std::move(result.value().first);
             };
             if (num_bytes_read < max_map_schema_length) {
                 auto parser_map_it{parser_map.find(buf)};

@@ -14,6 +14,9 @@
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
 
+#include <clp/FileReader.hpp>
+#include <clpp/utils.hpp>
+
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"
 #include "../Defs.h"
@@ -489,11 +492,12 @@ static bool search_archive(
     auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
     std::optional<log_surgeon::Parser> parser_storage;
     if (std::filesystem::exists(schema_file_path)) {
-        auto parser_result{clp::build_parser_from_file(schema_file_path.string())};
+        clp::FileReader spec_reader{schema_file_path.string()};
+        auto parser_result{clpp::build_parser(spec_reader)};
         if (parser_result.has_error()) {
             return false;
         }
-        parser_storage = std::move(parser_result.value());
+        parser_storage = std::move(parser_result.value().first);
     }
     log_surgeon::Parser* parser{nullptr};
     if (parser_storage.has_value()) {

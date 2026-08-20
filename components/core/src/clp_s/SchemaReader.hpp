@@ -639,19 +639,6 @@ private:
     ) -> ystdlib::error_handling::Result<size_t>;
 
     /**
-     * Narrows a log shape to the substring corresponding to the ParentRule.
-     * @param log_shape
-     * @param log_shape_id
-     * @param parent_rule_column_name
-     * @return The narrowed shape substring, or empty string_view on failure.
-     */
-    [[nodiscard]] auto narrow_log_shape_to_parent_rule(
-            std::string_view log_shape,
-            clpp::log_shape_id_t log_shape_id,
-            std::string_view parent_rule_column_name
-    ) -> std::string_view;
-
-    /**
      * Reconstructs the original raw log text for a single message by walking the compiled
      * shape and writing into the output buffer.
      *

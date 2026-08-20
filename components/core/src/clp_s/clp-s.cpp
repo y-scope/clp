@@ -368,7 +368,7 @@ auto output_log_shape_stats(
                     {"archive_id", archive_id},
                     {"id", i},
                     {"count", shape_stats.at(i).get_count()},
-                    {"shape", std::string{log_shape_dict->get_entry(i).get_value()}}
+                    {"shape", log_shape_dict->get_entry(i).get_value()}
             };
             output_handler.write(entry.dump());
             output_handler.write("\n");

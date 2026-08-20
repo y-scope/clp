@@ -1106,7 +1106,7 @@ auto SchemaMatch::resolve_clpp_query(
                 [&](std::string_view value) -> bool {
                     return clp::string_utils::wildcard_match_unsafe(
                             value,
-                            interpretation.m_shape_query,
+                            interpretation.m_shape_query.view(),
                             !m_ignore_case
                     );
                 }

@@ -5,7 +5,6 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
-#include <clp_s/Defs.hpp>
 #include <clp_s/ZstdCompressor.hpp>
 #include <clp_s/ZstdDecompressor.hpp>
 #include <clpp/Array.hpp>

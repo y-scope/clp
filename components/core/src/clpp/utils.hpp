@@ -1,28 +1,34 @@
 #ifndef CLPP_UTILS_HPP
 #define CLPP_UTILS_HPP
 
-#include <memory>
-#include <string_view>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/ReaderInterface.hpp>
+
 namespace clpp {
 /**
- * Builds a log-surgeon parser from a parsing specification text, registering the encoding patterns
- * from `clpp::cEncodingPatterns`.
+ * Builds a log-surgeon parser from a parsing specification read with a `clp::ReaderInterface`,
+ * and registers the encoding patterns from `clpp::cEncodingPatterns`.
  *
- * @param spec_str The parsing specification text.
- * @return A result containing the built parser, or an error code indicating the failure:
- * - clpp::ClppErrorCodeEnum::BadParam if `spec_str` is empty or an encoding fails to be added.
+ * @param reader A `clp::ReaderInterface` positioned at the beginning of the parsing specification.
+ * @return A result containing a pair of:
+ * - The built parser.
+ * - The parsing spec contents/text.
+ * or an error code indicating the failure:
+ * - clpp::ClppErrorCodeEnum::BadParam if reading the spec fails, it is empty, or adding an encoding
+ * pattern fails.
  */
-[[nodiscard]] auto build_parsing_spec(std::string_view spec_str)
-        -> ystdlib::error_handling::Result<std::unique_ptr<log_surgeon::Parser>>;
+[[nodiscard]] auto build_parser(clp::ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<std::pair<log_surgeon::Parser, std::string>>;
 
 /**
  * Collects the chain of ancestor matches that become `ParentRule` schema-tree nodes for a leaf,
- * in root->leaf order.
+ * in leaf->root order.
  *
  * If the leaf is a root rule `chain` is left empty. Otherwise every ancestor from the leaf's parent
  * up to and including the root-rule ancestor becomes an element.

@@ -31,6 +31,7 @@
 #include <clpp/Defs.hpp>
 #include <clpp/LogShapeStat.hpp>
 #include <clpp/ParentRuleShapes.hpp>
+#include <clpp/TextShape.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {
@@ -309,7 +310,7 @@ public:
      * @return True if the log shape is a new entry in the dictionary, false otherwise.
      * @return ClppErrorCodeEnum::Unsupported if experimental stats are not enabled.
      */
-    auto update_log_shape_dict(std::string_view log_shape)
+    auto update_log_shape_dict(clpp::TextShape<std::string> const& log_shape)
             -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>>;
 
     auto update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)

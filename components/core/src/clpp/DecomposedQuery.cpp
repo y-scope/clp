@@ -3,14 +3,14 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
-#include <fmt/format.h>
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clpp/ErrorCode.hpp>
-#include <clpp/LogShapeUtils.hpp>
+#include <clpp/TextShape.hpp>
 
 namespace clpp {
 auto DecomposedQuery::decompose_query(
@@ -29,17 +29,17 @@ auto DecomposedQuery::decompose_query(
 
     std::vector<Interpretation> interps;
     for (auto const& sub_queries : interpretations) {
-        std::string shape_query;
+        TextShape<std::string> shape_query;
         std::vector<LeafQuery> leaf_queries;
         for (auto const& sub_query : sub_queries) {
             if (sub_query.qualified_name.empty()) {
-                shape_query.append(clpp::escape_shape_text(sub_query.value));
+                shape_query.escape_and_append(sub_query.value);
             } else {
                 leaf_queries.emplace_back(sub_query.qualified_name, sub_query.value);
-                shape_query.append(fmt::format("%{}%", sub_query.qualified_name));
+                shape_query.append_placeholder(sub_query.qualified_name);
             }
         }
-        interps.emplace_back(shape_query, leaf_queries);
+        interps.emplace_back(std::move(shape_query), std::move(leaf_queries));
     }
 
     return DecomposedQuery{interps};

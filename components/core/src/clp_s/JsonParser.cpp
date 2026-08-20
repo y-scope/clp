@@ -51,7 +51,7 @@
 #include <clp_s/Utils.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
-#include <clpp/LogShapeUtils.hpp>
+#include <clpp/TextShape.hpp>
 #include <clpp/utils.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
@@ -87,17 +87,6 @@ auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
  */
 auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
         -> bool;
-
-/**
- * Reads a parsing spec into a string that can be used by log-surgeon to build the parser.
- *
- * @param spec_path Path input to `clp_s::try_create_reader`.
- * @param network_auth Network input to `clp_s::try_create_reader` for relevant paths.
- * @return A result containing the parsing spec's contents or an error code indicating the failure:
- * - clpp::ClppErrorCodeEnum::BadParam if reading the spec fails or it is empty.
- */
-auto read_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_auth)
-        -> ystdlib::error_handling::Result<std::string>;
 
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
@@ -145,6 +134,40 @@ private:
     bool m_is_complete{false};
 };
 
+/**
+ * An open `ParentRule` unordered object scope during `parse_str_field`. `match` identifies the
+ * scope within a `parse_str_field` call. `schema_start` is the scopes starting position in the
+ * schema and used when closing the unordered object.
+ */
+struct ParentScope {
+    log_surgeon::Match const* match;
+    size_t schema_start;
+    SchemaNode::id_t tree_node_id;
+};
+
+/**
+ * Updates the stack of open `ParentRule` scopes and schema unordered objects to reflect the nesting
+ * at the innermost match in `match_ancestors`. Returns the schema tree node ID of the innermost
+ * open scope (that new child schema nodes should use).
+ * The schema is updated as unordered objects ending prior to `match_ancestors` are closed, while
+ * new parent rules in `match_ancestors` are created as new open unordered objects (and added to the
+ * schema tree).
+ *
+ * @param match_ancestors The ancestor chain of matches to update to (innermost->outermost).
+ * @param open_scopes The current stack of open scopes to update (outermost->innermost).
+ * @param schema The schema whose unordered objects to open and/or close.
+ * @param archive_writer Used to add `ParentRule` tree nodes for newly opened scopes.
+ * @param log_msg_node_id The `LogMessage` tree node ID owning the root scope.
+ * @return The schema tree node ID of the innermost open scope.
+ */
+auto update_match_ancestors_scopes(
+        std::vector<log_surgeon::Match const*> const& match_ancestors,
+        std::vector<ParentScope>& open_scopes,
+        Schema& schema,
+        SchemaNode::id_t log_msg_node_id,
+        ArchiveWriter& archive_writer
+) -> SchemaNode::id_t;
+
 auto trim_trailing_whitespace(std::string_view str) -> std::string_view {
     size_t substr_size{str.size()};
     for (auto it{str.rbegin()}; str.rend() != it; ++it) {
@@ -163,56 +186,27 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
     return false == restore_result.has_error() && float_str == restore_result.value();
 }
 
-// TODO clpp: might be better to move all this into clpp/
-
-/**
- * An open `ParentRule` unordered-object scope during `parse_str_field`. `match` borrows from
- * the log_surgeon event (valid only for one `parse_str_field` call) and identifies the scope;
- * `schema_start` is passed to `Schema::end_unordered_object` to close it.
- */
-struct ParentScope {
-    log_surgeon::Match const* match;
-    size_t schema_start;
-    SchemaNode::id_t tree_node_id;
-};
-
-/**
- * Syncs the stack of open `ParentRule` scopes against a leaf's ancestor chain by `Match` identity:
- * closes scopes whose position in the chain diverged, then opens one unordered-object scope per
- * new ancestor. Returns the schema-tree node ID the leaf should attach to — the innermost open
- * scope, or `log_msg_node_id` when no scope is open.
- *
- * The sync compares `Match const*` pointers, which is valid across sibling leaves because
- * log-surgeon stores each `Match` in a stable `Vec` for the event's lifetime: a shared ancestor is
- * the same `Match` object (same address) on every leaf that descends from it, not a re-emitted
- * copy.
- *
- * @param open_scopes The current stack of open scopes; mutated in place.
- * @param parent_chain The leaf's ancestor chain in root->leaf order (borrowed from the event).
- * @param log_msg_node_id The `LogMessage` tree node ID owning the top-level scope.
- * @param archive_writer Used to add `ParentRule` tree nodes for newly opened scopes.
- * @param current_schema Used to open/close unordered-object scopes.
- * @return The schema-tree node ID the leaf attaches to.
- */
-auto sync_open_scopes_to_chain(
+auto update_match_ancestors_scopes(
+        std::vector<log_surgeon::Match const*> const& match_ancestors,
         std::vector<ParentScope>& open_scopes,
-        std::vector<log_surgeon::Match const*> const& parent_chain,
+        Schema& schema,
         SchemaNode::id_t log_msg_node_id,
-        ArchiveWriter& archive_writer,
-        Schema& current_schema
+        ArchiveWriter& archive_writer
 ) -> SchemaNode::id_t {
-    size_t common{0};
-    while (common < open_scopes.size() && common < parent_chain.size()
-           && open_scopes.at(common).match == parent_chain.at(common))
+    size_t common_ancestors{0};
+    while (common_ancestors < open_scopes.size() && common_ancestors < match_ancestors.size()
+           && open_scopes.at(open_scopes.size() - 1 - common_ancestors).match
+                      == match_ancestors.at(common_ancestors))
     {
-        ++common;
+        ++common_ancestors;
     }
-    while (open_scopes.size() > common) {
-        current_schema.end_unordered_object(open_scopes.back().schema_start);
+    while (open_scopes.size() > common_ancestors) {
+        schema.end_unordered_object(open_scopes.back().schema_start);
         open_scopes.pop_back();
     }
-    for (size_t j{common}; j < parent_chain.size(); ++j) {
-        auto const* ancestor{parent_chain.at(j)};
+    for (size_t i{match_ancestors.size()}; i > common_ancestors;) {
+        --i;
+        auto const* ancestor{match_ancestors.at(i)};
         auto const ancestor_parent_node_id{
                 open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id
         };
@@ -221,45 +215,12 @@ auto sync_open_scopes_to_chain(
                 NodeType::ParentRule,
                 ancestor->get_rule_name()
         )};
-        auto const schema_start{current_schema.start_unordered_object(NodeType::ParentRule)};
+        auto const schema_start{schema.start_unordered_object(NodeType::ParentRule)};
         open_scopes.push_back(
                 {.match = ancestor, .schema_start = schema_start, .tree_node_id = node_id}
         );
     }
     return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
-}
-
-auto read_parsing_spec(Path const& spec_path, NetworkAuthOption const& network_auth)
-        -> ystdlib::error_handling::Result<std::string> {
-    auto spec_reader{try_create_reader(spec_path, network_auth)};
-
-    constexpr size_t cReadChunkSize{4096};
-    std::string spec_str;
-    while (true) {
-        auto const prev_size{spec_str.size()};
-        spec_str.resize(prev_size + cReadChunkSize);
-        size_t bytes_read{};
-        auto const code{
-                spec_reader->try_read(spec_str.data() + prev_size, cReadChunkSize, bytes_read)
-        };
-        if (clp::ErrorCode_EndOfFile == code) {
-            spec_str.resize(prev_size);
-            break;
-        }
-        if (clp::ErrorCode_Success != code) {
-            spec_str.resize(prev_size);
-            SPDLOG_ERROR("Failed to read parsing specification from: \"{}\"", spec_path.path);
-            return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-        }
-        spec_str.resize(prev_size + bytes_read);
-    }
-
-    if (spec_str.empty()) {
-        SPDLOG_ERROR("Parsing specification at \"{}\" is empty.", spec_path.path);
-        return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
-    }
-
-    return spec_str;
 }
 }  // namespace
 
@@ -314,15 +275,14 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_writer->open(m_archive_options);
 
     if (option.experimental) {
-        auto spec{read_parsing_spec(option.experimental->parsing_spec_path, option.network_auth)};
-        if (spec.has_error()) {
-            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-        }
-        auto parser{clpp::build_parsing_spec(spec.value())};
+        auto spec_reader{
+                try_create_reader(option.experimental->parsing_spec_path, option.network_auth)
+        };
+        auto parser{clpp::build_parser(*spec_reader)};
         if (parser.has_error()) {
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
-        m_clpp.emplace(std::move(parser.value()), std::move(spec.value()));
+        m_clpp.emplace(std::move(parser.value().first), std::move(parser.value().second));
     }
 }
 
@@ -1617,37 +1577,35 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
     size_t parser_pos{0};
-    auto const event{m_clpp->log_surgeon_parser->next_event(str_field, &parser_pos)};
+    auto const event{m_clpp->log_surgeon_parser.next_event(str_field, &parser_pos)};
     if (false == event.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
     auto msg_obj{m_current_schema.start_unordered_object(NodeType::LogMessage)};
 
-    std::string log_shape{};
-    log_shape.reserve(str_field.size());
+    clpp::TextShape<std::string> log_shape{str_field.size()};
     size_t log_msg_pos{0};
     std::vector<log_surgeon::Match const*> parent_chain;
     std::vector<ParentScope> open_scopes;
-    for (size_t i{0};; ++i) {
-        auto const match{event->get_leaf_match(i)};
-        if (false == match.has_value()) {
-            break;
+    for (auto const& match : event->get_all_matches()) {
+        if (false == match.is_leaf) {
+            continue;
         }
 
-        clpp::collect_parent_chain(match.value(), parent_chain);
-        auto const parent_node_id{sync_open_scopes_to_chain(
-                open_scopes,
+        clpp::collect_parent_chain(match, parent_chain);
+        auto const parent_node_id{update_match_ancestors_scopes(
                 parent_chain,
+                open_scopes,
+                m_current_schema,
                 log_msg_node_id,
-                *m_archive_writer,
-                m_current_schema
+                *m_archive_writer
         )};
 
-        auto const rule_name{match->get_rule_name()};
-        auto const lexeme{match->get_lexeme()};
+        auto const rule_name{match.get_rule_name()};
+        auto const lexeme{match.get_lexeme()};
 
         SchemaNode::id_t node_id{0};
-        switch (static_cast<clpp::EncodingType>(match->encoding_idx)) {
+        switch (static_cast<clpp::EncodingType>(match.encoding_idx)) {
             case clpp::EncodingType::None:
                 break;
             case clpp::EncodingType::Float: {
@@ -1661,7 +1619,7 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
                 }
                 SPDLOG_WARN(
                         "failed float conversion '{}': '{}'",
-                        match->get_fully_qualified_name(),
+                        match.get_fully_qualified_name(),
                         lexeme
                 );
                 break;
@@ -1687,15 +1645,11 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
         }
         m_current_schema.insert_unordered(node_id);
 
-        log_shape.append(
-                clpp::escape_shape_text(
-                        str_field.substr(log_msg_pos, match->range.start - log_msg_pos)
-                )
-        );
-        log_shape.append(fmt::format("%{}%", match->get_fully_qualified_name()));
-        log_msg_pos = match->range.end;
+        log_shape.escape_and_append(str_field.substr(log_msg_pos, match.range.start - log_msg_pos));
+        log_shape.append_placeholder(match.get_fully_qualified_name());
+        log_msg_pos = match.range.end;
     }
-    log_shape.append(clpp::escape_shape_text(str_field.substr(log_msg_pos)));
+    log_shape.escape_and_append(str_field.substr(log_msg_pos));
 
     // Close remaining scopes so `LogType`/`LogTypeID` stay direct children of the `LogMessage`
     // span rather than nesting inside a parent-rule scope.
@@ -1715,7 +1669,7 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
     ));
 
     if (new_log_shape) {
-        auto parent_shapes{clpp::build_parent_rule_shapes(*event, log_shape)};
+        auto parent_shapes{YSTDLIB_ERROR_HANDLING_TRYX(log_shape.build_parent_rule_shapes(*event))};
         YSTDLIB_ERROR_HANDLING_TRYV(
                 m_archive_writer->update_parent_rule_shapes(log_shape_id, parent_shapes)
         );
