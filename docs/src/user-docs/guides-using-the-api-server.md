@@ -12,6 +12,12 @@ a default configuration. You can uncomment and modify this section to override t
 All available API endpoints are defined in the [OpenAPI] Specification. You can explore the API
 using [Swagger UI][swagger-ui].
 
+:::{note}
+`clp-text` doesn't support buffering search results in the file system or S3. When using
+`clp-text`, set `buffer_results_in_mongodb` to `true` so that results are buffered in `MongoDB`
+instead.
+:::
+
 ## Example: Submitting search queries and receiving results
 
 The API server exposes endpoints to submit search queries, and returns search results as a
