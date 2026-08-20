@@ -1,18 +1,29 @@
 import {useQuery} from "@tanstack/react-query";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
+import {Nullable} from "@webui/common/utility-types";
 import dayjs from "dayjs";
 
+import {apiClient} from "../../../api/search";
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
-import {fetchDatasetNames} from "../../SearchPage/SearchControls/Dataset/sql";
 import Files from "./Files";
 import styles from "./index.module.css";
 import Messages from "./Messages";
-import {
-    DETAILS_DEFAULT,
-    fetchClpDetails,
-    fetchClpsDetails,
-} from "./sql";
 import TimeRange from "./TimeRange";
+
+
+interface DetailsItem {
+    begin_timestamp: Nullable<number>;
+    end_timestamp: Nullable<number>;
+    num_files: Nullable<number>;
+    num_messages: Nullable<number>;
+}
+
+const DETAILS_DEFAULT: DetailsItem = {
+    begin_timestamp: null,
+    end_timestamp: null,
+    num_files: 0,
+    num_messages: 0,
+};
 
 
 /**
@@ -21,25 +32,17 @@ import TimeRange from "./TimeRange";
  * @return
  */
 const Details = () => {
-    const {data: datasetNames = [], isSuccess: isSuccessDatasetNames} = useQuery({
-        queryKey: ["datasets"],
-        queryFn: fetchDatasetNames,
-        enabled: CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE,
-    });
-
     const {data: details = DETAILS_DEFAULT, isPending} = useQuery({
-        queryKey: [
-            "details",
-            datasetNames,
-        ],
+        queryKey: ["details"],
         queryFn: async () => {
-            if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
-                return fetchClpDetails();
+            // eslint-disable-next-line new-cap
+            const {data, response} = await apiClient.GET("/metadata/ingestion_details", {});
+            if ("undefined" === typeof data) {
+                throw new Error(`Failed to fetch details: HTTP ${response.status}`);
             }
 
-            return fetchClpsDetails(datasetNames);
+            return data ?? DETAILS_DEFAULT;
         },
-        enabled: CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE || isSuccessDatasetNames,
     });
 
     if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {

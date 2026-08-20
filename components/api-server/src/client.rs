@@ -238,6 +238,20 @@ pub struct Client {
 }
 
 impl Client {
+    /// Creates a client using the supplied shared database clients.
+    #[must_use]
+    pub fn new(
+        config: &Config,
+        mongodb_client: mongodb::Client,
+        sql_pool: sqlx::Pool<sqlx::MySql>,
+    ) -> Self {
+        Self {
+            config: config.clone(),
+            mongodb_client,
+            sql_pool,
+        }
+    }
+
     /// Factory method to create a new client with active connections to both `MySQL` and `MongoDB`
     /// databases.
     ///

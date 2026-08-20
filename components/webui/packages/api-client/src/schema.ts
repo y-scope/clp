@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/compression/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Submits a compression job. */
+        post: operations["compression_job"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -12,6 +29,142 @@ export interface paths {
             cookie?: never;
         };
         get: operations["health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/column_metadata/{dataset_name}/timestamp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Gets the timestamp column names for a given dataset (CLP-S only). */
+        get: operations["timestamp_column_names"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/compression_jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Gets recent compression-job metadata (most recent first), with the decoded CLP IO config for each job. */
+        get: operations["compression_metadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Gets the names of all datasets. */
+        get: operations["datasets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/ingestion_details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Gets ingestion details (timestamp range, file count, message count) across all datasets. Returns `null` when no data has been ingested yet. */
+        get: operations["ingestion_details"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/query_speed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Gets the query speed (total uncompressed bytes scanned and job duration) for a search job across the given datasets. Returns `null` when the job hasn't scanned any archives or hasn't finished yet. */
+        get: operations["query_speed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/space_savings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Gets aggregated space-savings statistics (total uncompressed and compressed sizes) across all datasets. */
+        get: operations["space_savings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/time_range": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Gets the earliest and latest log entry timestamps across the given datasets. For the CLP storage engine, the `dataset` parameter is ignored. Returns `null` when no archives exist yet. */
+        get: operations["time_range"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/os/ls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Lists files and directories at the specified path. */
+        get: operations["list_files"];
         put?: never;
         post?: never;
         delete?: never;
@@ -71,6 +224,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stream_files/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Extracts a stream file containing the log event at the given index in the stream with the given ID. If the stream has already been extracted, returns its metadata directly; otherwise submits an extraction job and waits for it to complete. */
+        post: operations["extract_stream_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/usage/compression": {
         parameters: {
             query?: never;
@@ -92,8 +262,67 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Response body containing the ID of a newly created compression job. */
+        CompressionJob: {
+            /**
+             * Format: int64
+             * @description The ID of the newly created compression job.
+             */
+            job_id: number;
+        };
+        /** @description Request body for submitting a compression job. */
+        CompressionJobCreation: {
+            /** @description Dataset to compress into (CLP-S only). Optional for the CLP storage engine. */
+            dataset?: string | null;
+            /** @description Absolute filesystem paths of the files to compress. */
+            paths: string[];
+            /** @description Timestamp key to use when parsing logs. */
+            timestamp_key?: string | null;
+            /** @description Whether the input is unstructured. Defaults to `true` for CLP and `false` for CLP-S. */
+            unstructured?: boolean | null;
+        };
         /** @enum {string} */
         CompressionJobStatus: "Pending" | "Running" | "Succeeded" | "Failed" | "Killed";
+        /** @description A row of compression metadata, with the decoded CLP IO config. */
+        CompressionMetadata: {
+            /**
+             * Format: int64
+             * @description The compression job's ID. Named `_id` to match the webui's existing JSON contract.
+             */
+            _id: number;
+            /**
+             * @description Decoded CLP IO config (as a JSON value) since the stored config is a zstd-compressed
+             *     msgpack blob.
+             */
+            clp_config: unknown;
+            /**
+             * Format: int64
+             * @description Total compressed archive size, in bytes.
+             */
+            compressed_size: number;
+            /**
+             * Format: double
+             * @description Wall-clock duration the job ran, in seconds. Absent if the job did not complete.
+             */
+            duration?: number | null;
+            /** @description Time the job started executing (RFC 3339). Absent if the job hasn't started. */
+            start_time?: string | null;
+            /**
+             * Format: int32
+             * @description Current status of the job. Matches `CompressionJobStatus` in
+             *     `job_orchestration.scheduler.constants`.
+             */
+            status: number;
+            /** @description Status message for the job. */
+            status_msg: string;
+            /**
+             * Format: int64
+             * @description Total uncompressed size of input files, in bytes.
+             */
+            uncompressed_size: number;
+            /** @description Time the job was last updated (RFC 3339). */
+            update_time: string;
+        };
         /** @description Resource usage statistics for the compression job with the specified ID. */
         CompressionUsage: {
             /**
@@ -139,6 +368,51 @@ export interface components {
              */
             uncompressed_size_bytes: number;
         };
+        /**
+         * @description A directory entry returned by the file-listing endpoint.
+         *
+         *     Serialized in camelCase to match the webui's existing `FileEntry` JSON contract.
+         */
+        DirEntry: {
+            /** @description Whether the entry is a directory or symlink that can be expanded. */
+            isExpandable: boolean;
+            /** @description The entry's file name. */
+            name: string;
+            /** @description Path of the directory containing the entry. */
+            parentPath: string;
+        };
+        /**
+         * @description Mirror of the extract variants of `job_orchestration.scheduler.constants.QueryJobType`.
+         *     Must be kept in sync with [`clp_rust_utils::job_config::QueryJobType`].
+         * @enum {string}
+         */
+        ExtractJobType: "ExtractIr" | "ExtractJson";
+        /**
+         * @description Ingestion details statistics. The whole value is `None` when no data has been ingested
+         *     yet.
+         */
+        IngestionDetails: {
+            /**
+             * Format: int64
+             * @description Earliest log entry timestamp (epoch milliseconds).
+             */
+            begin_timestamp: number;
+            /**
+             * Format: int64
+             * @description Latest log entry timestamp (epoch milliseconds).
+             */
+            end_timestamp: number;
+            /**
+             * Format: int64
+             * @description Number of distinct ingested files.
+             */
+            num_files: number;
+            /**
+             * Format: int64
+             * @description Total number of ingested messages.
+             */
+            num_messages: number;
+        };
         /** @description Defines the request configuration for submitting a search query. */
         QueryConfig: {
             /**
@@ -180,6 +454,87 @@ export interface components {
             /** @description The uri to get the query results. */
             query_results_uri: string;
         };
+        /**
+         * @description Query-speed statistics for a search job. The whole value is `None` until the job has
+         *     scanned archives and finished (its duration is recorded only on completion).
+         */
+        QuerySpeed: {
+            /**
+             * Format: double
+             * @description Total uncompressed size of the archives the job scanned, in bytes.
+             */
+            bytes: number;
+            /**
+             * Format: double
+             * @description Wall-clock duration the job ran, in seconds.
+             */
+            duration: number;
+        };
+        /** @description Aggregated space-savings statistics. */
+        SpaceSavings: {
+            /**
+             * Format: int64
+             * @description Total compressed size of all archives, in bytes.
+             */
+            total_compressed_size: number;
+            /**
+             * Format: int64
+             * @description Total uncompressed size of all archives, in bytes.
+             */
+            total_uncompressed_size: number;
+        };
+        /** @description Request body for the stream-files extract endpoint. */
+        StreamFileExtraction: {
+            /** @description Dataset the stream belongs to (CLP-S only; `null` for the CLP storage engine). */
+            dataset?: string | null;
+            /** @description The type of extraction job to submit. */
+            extract_job_type: components["schemas"]["ExtractJobType"];
+            /**
+             * Format: int64
+             * @description Index of the log event the extracted stream file must contain.
+             */
+            log_event_idx: number;
+            /** @description ID of the stream to extract. */
+            stream_id: string;
+        };
+        /** @description Extracted stream-file metadata returned by the stream-files extract endpoint. */
+        StreamFileMetadata: {
+            /**
+             * Format: int64
+             * @description Index of the first log event in the stream file (inclusive).
+             */
+            begin_msg_ix: number;
+            /**
+             * Format: int64
+             * @description Index of the last log event in the stream file (exclusive).
+             */
+            end_msg_ix: number;
+            /** @description Whether this is the stream's last chunk. */
+            is_last_chunk: boolean;
+            /**
+             * @description The resolved stream-file path: a pre-signed URL when stream-files S3 storage is
+             *     configured, otherwise a path relative to the webui `/streams` static mount.
+             */
+            path: string;
+            /** @description ID of the stream the file was extracted from. */
+            stream_id: string;
+        };
+        /**
+         * @description Earliest and latest log entry timestamps across the selected datasets. The whole value
+         *     is `None` when no archives exist yet (or, for CLP-S, when no datasets were selected).
+         */
+        TimeRange: {
+            /**
+             * Format: int64
+             * @description Earliest log entry timestamp (epoch milliseconds).
+             */
+            begin_timestamp: number;
+            /**
+             * Format: int64
+             * @description Latest log entry timestamp (epoch milliseconds).
+             */
+            end_timestamp: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -189,6 +544,43 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    compression_job: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompressionJobCreation"];
+            };
+        };
+        responses: {
+            /** @description The created compression job. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompressionJob"];
+                };
+            };
+            /** @description Invalid dataset name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     health: {
         parameters: {
             query?: never;
@@ -205,6 +597,254 @@ export interface operations {
                 content: {
                     "text/plain": string;
                 };
+            };
+        };
+    };
+    timestamp_column_names: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Invalid dataset name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dataset not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    compression_metadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompressionMetadata"][];
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    datasets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ingestion_details: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["IngestionDetails"];
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    query_speed: {
+        parameters: {
+            query: {
+                /** @description Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine. */
+                dataset?: string;
+                /** @description The search job ID whose scan speed should be computed. */
+                search_job_id: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["QuerySpeed"];
+                };
+            };
+            /** @description Invalid dataset name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    space_savings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpaceSavings"];
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    time_range: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine. */
+                dataset?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["TimeRange"];
+                };
+            };
+            /** @description Invalid dataset name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_files: {
+        parameters: {
+            query: {
+                /** @description The absolute filesystem path to list. */
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirEntry"][];
+                };
+            };
+            /** @description Path not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -324,6 +964,42 @@ export interface operations {
                     /** @example data: {"timestamp": 1633036800, "message": "Example log message"}\n */
                     "text/event-stream": string;
                 };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    extract_stream_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StreamFileExtraction"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StreamFileMetadata"];
+                };
+            };
+            /** @description Invalid dataset name or extract job type */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             500: {
                 headers: {

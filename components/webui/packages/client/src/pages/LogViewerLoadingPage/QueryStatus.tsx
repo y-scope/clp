@@ -9,7 +9,6 @@ import {
     Value,
 } from "@sinclair/typebox/value";
 import {Nullable} from "@webui/common/utility-types";
-import {isAxiosError} from "axios";
 
 import {submitExtractStreamJob} from "../../api/stream-files";
 import {
@@ -96,13 +95,9 @@ const QueryStatus = () => {
                     `#logEventNum=${innerLogEventNum}`;
             })
             .catch((e: unknown) => {
-                let msg = "Unknown error.";
-                if (isAxiosError<{message: string}>(e)) {
-                    msg = e.message;
-                    if ("undefined" !== typeof e.response) {
-                        msg = e.response.data.message;
-                    }
-                }
+                const msg = `Unable to extract stream with streamId=${streamId} at ` +
+                    `logEventIdx=${logEventIdx}.`;
+
                 console.error(msg, e);
                 setErrorMsg(msg);
             });

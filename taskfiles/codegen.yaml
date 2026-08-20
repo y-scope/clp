@@ -93,7 +93,7 @@ tasks:
   webui-generate-api-client-schema:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OPENAPI_SPEC_FILE: "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/api-server-openapi.json"
+      OPENAPI_SPEC_FILE: "{{.G_WEBUI_SRC_DIR}}/packages/api-client/openapi.json"
       OUTPUT_FILE: "{{.G_WEBUI_SRC_DIR}}/packages/api-client/src/schema.ts"
     deps:
       - "openapi"
@@ -126,6 +126,7 @@ tasks:
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo run --bin api-server-openapi-codegen --release \
-        -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/api-server-openapi.json"
+        -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/api-server-openapi.json" \
+        "{{.G_WEBUI_SRC_DIR}}/packages/api-client/openapi.json"
       cargo run --bin log-ingestor-openapi-codegen --release \
         -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/log-ingestor-openapi.json"

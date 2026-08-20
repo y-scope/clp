@@ -21,12 +21,24 @@ use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+mod webui;
+
 use crate::client::Client;
 use crate::client::ClientError;
 use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
 use crate::client::ValidatedCompressionUsageParams;
+use crate::webui_client::WebuiClient;
+
+/// Shared application state passed to all route handlers.
+#[derive(Clone)]
+pub struct AppState {
+    /// Client for search query orchestration.
+    pub client: Client,
+    /// Client for metadata, compression-job, and stream-file operations.
+    pub webui_client: WebuiClient,
+}
 
 /// Factory method to create an Axum router configured with all API routes.
 ///
@@ -39,21 +51,18 @@ use crate::client::ValidatedCompressionUsageParams;
 /// Returns an error if:
 ///
 /// * Forwards [`OpenApi::to_json`]'s return values on failure.
-pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
-    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error> {
+    let (router, _) = OpenApiRouter::with_openapi(WebUiApiDoc::openapi())
         .route("/", get(health))
         .routes(routes!(health))
         .routes(routes!(query))
         .routes(routes!(query_results))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
-        .route(
-            "/column_metadata/{dataset_name}/timestamp",
-            get(get_timestamp_column_names),
-        )
-        .with_state(client)
+        .merge(webui::router())
+        .with_state(state)
         .split_for_parts();
-    let api_json = api.to_json()?;
+    let api_json = ApiDoc::openapi().to_json()?;
     let router = router
         .route(
             "/openapi.json",
@@ -74,7 +83,28 @@ mod api_doc {
     use super::__path_query;
     use super::__path_query_results;
     use super::CompressionUsage;
+    use super::webui::__path_compression_job;
+    use super::webui::__path_compression_metadata;
+    use super::webui::__path_datasets;
+    use super::webui::__path_extract_stream_file;
+    use super::webui::__path_ingestion_details;
+    use super::webui::__path_list_files;
+    use super::webui::__path_query_speed;
+    use super::webui::__path_space_savings;
+    use super::webui::__path_time_range;
+    use super::webui::__path_timestamp_column_names;
     use crate::client::CompressionJobStatus;
+    use crate::webui_client::CompressionJob;
+    use crate::webui_client::CompressionJobCreation;
+    use crate::webui_client::CompressionMetadata;
+    use crate::webui_client::DirEntry;
+    use crate::webui_client::ExtractJobType;
+    use crate::webui_client::IngestionDetails;
+    use crate::webui_client::QuerySpeed;
+    use crate::webui_client::SpaceSavings;
+    use crate::webui_client::StreamFileExtraction;
+    use crate::webui_client::StreamFileMetadata;
+    use crate::webui_client::TimeRange;
 
     #[derive(utoipa::OpenApi)]
     #[openapi(
@@ -87,6 +117,48 @@ mod api_doc {
         components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
+
+    #[derive(utoipa::OpenApi)]
+    #[openapi(
+        info(
+            title = "API Server",
+            description = "API Server for CLP",
+            contact(name = "YScope")
+        ),
+        paths(
+            health,
+            query,
+            query_results,
+            cancel_query,
+            compression_usage,
+            datasets,
+            time_range,
+            space_savings,
+            ingestion_details,
+            query_speed,
+            timestamp_column_names,
+            compression_metadata,
+            list_files,
+            compression_job,
+            extract_stream_file,
+        ),
+        components(schemas(
+            CompressionUsage,
+            CompressionJobStatus,
+            CompressionJob,
+            CompressionJobCreation,
+            CompressionMetadata,
+            DirEntry,
+            ExtractJobType,
+            IngestionDetails,
+            QuerySpeed,
+            SpaceSavings,
+            StreamFileExtraction,
+            StreamFileMetadata,
+            TimeRange,
+        ))
+    )]
+    pub struct WebUiApiDoc;
 }
 pub use api_doc::*;
 
@@ -126,11 +198,11 @@ async fn health() -> String {
     )
 )]
 async fn query(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
     tracing::info!("Submitting query: {:?}", query_config);
-    let search_job_id = match client.submit_query(query_config).await {
+    let search_job_id = match state.client.submit_query(query_config).await {
         Ok(id) => {
             tracing::info!("Submitted query with search job ID: {}", id);
             id
@@ -190,12 +262,13 @@ struct QueryResultsParams {
     )
 )]
 async fn query_results(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Path(search_job_id): Path<u64>,
     Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
     tracing::info!("Fetching results for search job ID: {}", search_job_id);
-    let results_stream = match client
+    let results_stream = match state
+        .client
         .fetch_results(search_job_id, params.raw_docs, params.sorted)
         .await
     {
@@ -244,11 +317,11 @@ async fn query_results(
     )
 )]
 async fn cancel_query(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Path(search_job_id): Path<u64>,
 ) -> Result<StatusCode, HandlerError> {
     tracing::info!("Cancelling search job ID: {}", search_job_id);
-    match client.cancel_search_job(search_job_id).await {
+    match state.client.cancel_search_job(search_job_id).await {
         Ok(()) => {
             tracing::info!(
                 "Successfully submitted cancellation request for search job ID: {}",
@@ -267,24 +340,6 @@ async fn cancel_query(
     }
 }
 
-async fn get_timestamp_column_names(
-    State(client): State<Client>,
-    Path(dataset_name): Path<String>,
-) -> Result<Json<Vec<String>>, HandlerError> {
-    let names = client
-        .get_timestamp_column_names(&dataset_name)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                "Failed to get timestamp column names for dataset '{}': {:?}",
-                dataset_name,
-                err
-            );
-            HandlerError::from(err)
-        })?;
-    Ok(Json(names))
-}
-
 #[utoipa::path(
     get,
     path = "/usage/compression",
@@ -300,7 +355,7 @@ async fn get_timestamp_column_names(
     )
 )]
 async fn compression_usage(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Query(params): Query<CompressionUsageParams>,
 ) -> Result<Json<Vec<CompressionUsage>>, HandlerError> {
     let validated = ValidatedCompressionUsageParams::try_from(params)?;
@@ -311,7 +366,8 @@ async fn compression_usage(
         validated.job_statuses,
     );
     Ok(Json(
-        client
+        state
+            .client
             .get_compression_usage(&validated)
             .await
             .inspect_err(|err| {
@@ -340,7 +396,9 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::SearchJobNotFound(_)
+            | ClientError::DatasetNotFound(_)
+            | ClientError::NotFound(_) => Self::NotFound,
             ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
                 Self::BadRequest(format!("{err}"))
             }

@@ -1,0 +1,1038 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API Server",
+    "description": "API Server for CLP",
+    "contact": {
+      "name": "YScope"
+    },
+    "license": {
+      "name": ""
+    },
+    "version": "0.13.1-dev"
+  },
+  "paths": {
+    "/compression/jobs": {
+      "post": {
+        "tags": [],
+        "description": "Submits a compression job.",
+        "operationId": "compression_job",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompressionJobCreation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The created compression job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompressionJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid dataset name"
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [],
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metadata/column_metadata/{dataset_name}/timestamp": {
+      "get": {
+        "tags": [],
+        "description": "Gets the timestamp column names for a given dataset (CLP-S only).",
+        "operationId": "timestamp_column_names",
+        "parameters": [
+          {
+            "name": "dataset_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid dataset name"
+          },
+          "404": {
+            "description": "Dataset not found"
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/metadata/compression_jobs": {
+      "get": {
+        "tags": [],
+        "description": "Gets recent compression-job metadata (most recent first), with the decoded CLP IO config for each job.",
+        "operationId": "compression_metadata",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompressionMetadata"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/metadata/datasets": {
+      "get": {
+        "tags": [],
+        "description": "Gets the names of all datasets.",
+        "operationId": "datasets",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/metadata/ingestion_details": {
+      "get": {
+        "tags": [],
+        "description": "Gets ingestion details (timestamp range, file count, message count) across all datasets. Returns `null` when no data has been ingested yet.",
+        "operationId": "ingestion_details",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IngestionDetails"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/metadata/query_speed": {
+      "get": {
+        "tags": [],
+        "description": "Gets the query speed (total uncompressed bytes scanned and job duration) for a search job across the given datasets. Returns `null` when the job hasn't scanned any archives or hasn't finished yet.",
+        "operationId": "query_speed",
+        "parameters": [
+          {
+            "name": "dataset",
+            "in": "query",
+            "description": "Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search_job_id",
+            "in": "query",
+            "description": "The search job ID whose scan speed should be computed.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/QuerySpeed"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid dataset name"
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/metadata/space_savings": {
+      "get": {
+        "tags": [],
+        "description": "Gets aggregated space-savings statistics (total uncompressed and compressed sizes) across all datasets.",
+        "operationId": "space_savings",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceSavings"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/metadata/time_range": {
+      "get": {
+        "tags": [],
+        "description": "Gets the earliest and latest log entry timestamps across the given datasets. For the CLP storage engine, the `dataset` parameter is ignored. Returns `null` when no archives exist yet.",
+        "operationId": "time_range",
+        "parameters": [
+          {
+            "name": "dataset",
+            "in": "query",
+            "description": "Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TimeRange"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid dataset name"
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/os/ls": {
+      "get": {
+        "tags": [],
+        "description": "Lists files and directories at the specified path.",
+        "operationId": "list_files",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "description": "The absolute filesystem path to list.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DirEntry"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Path not found"
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/query": {
+      "post": {
+        "tags": [],
+        "description": "Submits a new query job.",
+        "operationId": "query",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryConfig"
+              },
+              "example": {
+                "query_string": "*",
+                "datasets": [
+                  "default"
+                ],
+                "time_range_begin_millisecs": 0,
+                "time_range_end_millisecs": 17356896,
+                "ignore_case": true,
+                "max_num_results": 0,
+                "buffer_results_in_mongodb": true,
+                "count_by_time_bucket_size_millisecs": null
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The URI to fetch the results of the submitted query.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResultsUri"
+                },
+                "example": {
+                  "query_results_uri": "query_results/1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/query/{search_job_id}": {
+      "delete": {
+        "tags": [],
+        "description": "Cancels a previously submitted query job.",
+        "operationId": "cancel_query",
+        "parameters": [
+          {
+            "name": "search_job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cancellation request was submitted successfully."
+          },
+          "404": {
+            "description": "No cancellable query job with the given ID was found."
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/query_results/{search_job_id}": {
+      "get": {
+        "tags": [],
+        "description": "Streams the results of a previously submitted query as Server-Sent Events (SSE).",
+        "operationId": "query_results",
+        "parameters": [
+          {
+            "name": "raw_docs",
+            "in": "query",
+            "description": "When `true`, each SSE event contains the raw result document from the results cache\nserialized as JSON (including metadata such as the timestamp and the original file path);\notherwise, each event contains only the log message. Only applies to query jobs whose\nresults are buffered in `MongoDB`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "sorted",
+            "in": "query",
+            "description": "When `true`, results buffered in `MongoDB` are streamed sorted by timestamp descending;\notherwise, they're streamed in insertion order. Only applies to query jobs whose results\nare buffered in `MongoDB`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search_job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream of query results. Each event contains a single line of the query result in JSON format.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "data: {\"timestamp\": 1633036800, \"message\": \"Example log message\"}\\n"
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/stream_files/extract": {
+      "post": {
+        "tags": [],
+        "description": "Extracts a stream file containing the log event at the given index in the stream with the given ID. If the stream has already been extracted, returns its metadata directly; otherwise submits an extraction job and waits for it to complete.",
+        "operationId": "extract_stream_file",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamFileExtraction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamFileMetadata"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid dataset name or extract job type"
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/usage/compression": {
+      "get": {
+        "tags": [],
+        "description": "Gets resource usage statistics for compression jobs within the given time range.",
+        "operationId": "compression_usage",
+        "parameters": [
+          {
+            "name": "time_range_begin_millisecs",
+            "in": "query",
+            "description": "Start of usage window (epoch milliseconds, inclusive).",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "time_range_end_millisecs",
+            "in": "query",
+            "description": "End of usage window (epoch milliseconds, exclusive).",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "job_status",
+            "in": "query",
+            "description": "Job statuses to include as a comma-separated list (e.g.\n`job_status=succeeded,failed`). Recognized values (case-insensitive):\n`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.\nDefaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of jobs to return. Must be > 0; defaults to 1000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompressionUsage"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters (e.g., time_range_begin_millisecs > time_range_end_millisecs, missing required fields)"
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CompressionJob": {
+        "type": "object",
+        "description": "Response body containing the ID of a newly created compression job.",
+        "required": [
+          "job_id"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The ID of the newly created compression job."
+          }
+        }
+      },
+      "CompressionJobCreation": {
+        "type": "object",
+        "description": "Request body for submitting a compression job.",
+        "required": [
+          "paths"
+        ],
+        "properties": {
+          "dataset": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Dataset to compress into (CLP-S only). Optional for the CLP storage engine."
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Absolute filesystem paths of the files to compress."
+          },
+          "timestamp_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Timestamp key to use when parsing logs."
+          },
+          "unstructured": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the input is unstructured. Defaults to `true` for CLP and `false` for CLP-S."
+          }
+        },
+        "additionalProperties": false
+      },
+      "CompressionJobStatus": {
+        "type": "string",
+        "enum": [
+          "Pending",
+          "Running",
+          "Succeeded",
+          "Failed",
+          "Killed"
+        ]
+      },
+      "CompressionMetadata": {
+        "type": "object",
+        "description": "A row of compression metadata, with the decoded CLP IO config.",
+        "required": [
+          "_id",
+          "status",
+          "status_msg",
+          "update_time",
+          "uncompressed_size",
+          "compressed_size",
+          "clp_config"
+        ],
+        "properties": {
+          "_id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The compression job's ID. Named `_id` to match the webui's existing JSON contract."
+          },
+          "clp_config": {
+            "description": "Decoded CLP IO config (as a JSON value) since the stored config is a zstd-compressed\nmsgpack blob."
+          },
+          "compressed_size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total compressed archive size, in bytes."
+          },
+          "duration": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Wall-clock duration the job ran, in seconds. Absent if the job did not complete."
+          },
+          "start_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Time the job started executing (RFC 3339). Absent if the job hasn't started."
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Current status of the job. Matches `CompressionJobStatus` in\n`job_orchestration.scheduler.constants`."
+          },
+          "status_msg": {
+            "type": "string",
+            "description": "Status message for the job."
+          },
+          "uncompressed_size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total uncompressed size of input files, in bytes."
+          },
+          "update_time": {
+            "type": "string",
+            "description": "Time the job was last updated (RFC 3339)."
+          }
+        }
+      },
+      "CompressionUsage": {
+        "type": "object",
+        "description": "Resource usage statistics for the compression job with the specified ID.",
+        "required": [
+          "id",
+          "job_status",
+          "time_creation_millisecs",
+          "time_begin_millisecs",
+          "uncompressed_size_bytes",
+          "compressed_size_bytes",
+          "num_tasks"
+        ],
+        "properties": {
+          "compressed_size_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total compressed archive size, in bytes."
+          },
+          "duration_secs": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Wall-clock duration the job ran, in seconds. Absent if the job did not complete."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Compression job ID."
+          },
+          "job_status": {
+            "$ref": "#/components/schemas/CompressionJobStatus",
+            "description": "Current status of the job."
+          },
+          "num_tasks": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of tasks the job was split into."
+          },
+          "tasks_duration_secs": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Sum of all task durations, in seconds. Absent if no tasks reported a duration."
+          },
+          "time_begin_millisecs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Time the job started executing (epoch milliseconds)."
+          },
+          "time_creation_millisecs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Time the job was created (epoch milliseconds)."
+          },
+          "uncompressed_size_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total uncompressed size of input files, in bytes."
+          }
+        }
+      },
+      "DirEntry": {
+        "type": "object",
+        "description": "A directory entry returned by the file-listing endpoint.\n\nSerialized in camelCase to match the webui's existing `FileEntry` JSON contract.",
+        "required": [
+          "isExpandable",
+          "name",
+          "parentPath"
+        ],
+        "properties": {
+          "isExpandable": {
+            "type": "boolean",
+            "description": "Whether the entry is a directory or symlink that can be expanded."
+          },
+          "name": {
+            "type": "string",
+            "description": "The entry's file name."
+          },
+          "parentPath": {
+            "type": "string",
+            "description": "Path of the directory containing the entry."
+          }
+        }
+      },
+      "ExtractJobType": {
+        "type": "string",
+        "description": "Mirror of the extract variants of `job_orchestration.scheduler.constants.QueryJobType`.\nMust be kept in sync with [`clp_rust_utils::job_config::QueryJobType`].",
+        "enum": [
+          "ExtractIr",
+          "ExtractJson"
+        ]
+      },
+      "IngestionDetails": {
+        "type": "object",
+        "description": "Ingestion details statistics. The whole value is `None` when no data has been ingested\nyet.",
+        "required": [
+          "begin_timestamp",
+          "end_timestamp",
+          "num_files",
+          "num_messages"
+        ],
+        "properties": {
+          "begin_timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Earliest log entry timestamp (epoch milliseconds)."
+          },
+          "end_timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Latest log entry timestamp (epoch milliseconds)."
+          },
+          "num_files": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of distinct ingested files."
+          },
+          "num_messages": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total number of ingested messages."
+          }
+        }
+      },
+      "QueryConfig": {
+        "type": "object",
+        "description": "Defines the request configuration for submitting a search query.",
+        "required": [
+          "query_string"
+        ],
+        "properties": {
+          "buffer_results_in_mongodb": {
+            "type": "boolean",
+            "description": "Whether to buffer search results in `MongoDB`.\nBy default, search results are buffered in temporary files. When set to `true`, results\nwill be stored in `MongoDB` instead."
+          },
+          "count_by_time_bucket_size_millisecs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`."
+          },
+          "datasets": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "The datasets to search within. If not provided, only `default` dataset will be searched."
+          },
+          "ignore_case": {
+            "type": "boolean",
+            "description": "Whether the string match should be case-insensitive."
+          },
+          "max_num_results": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The maximum number of results to return. Set to `0` for no limit.",
+            "minimum": 0
+          },
+          "query_string": {
+            "type": "string",
+            "description": "The search query as a KQL string."
+          },
+          "time_range_begin_millisecs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The beginning timestamp (in epoch milliseconds) for the search range (inclusive)."
+          },
+          "time_range_end_millisecs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The ending timestamp (in epoch milliseconds) for the search range (inclusive)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "QueryResultsUri": {
+        "type": "object",
+        "required": [
+          "query_results_uri"
+        ],
+        "properties": {
+          "query_results_uri": {
+            "type": "string",
+            "description": "The uri to get the query results."
+          }
+        },
+        "additionalProperties": false
+      },
+      "QuerySpeed": {
+        "type": "object",
+        "description": "Query-speed statistics for a search job. The whole value is `None` until the job has\nscanned archives and finished (its duration is recorded only on completion).",
+        "required": [
+          "bytes",
+          "duration"
+        ],
+        "properties": {
+          "bytes": {
+            "type": "number",
+            "format": "double",
+            "description": "Total uncompressed size of the archives the job scanned, in bytes."
+          },
+          "duration": {
+            "type": "number",
+            "format": "double",
+            "description": "Wall-clock duration the job ran, in seconds."
+          }
+        }
+      },
+      "SpaceSavings": {
+        "type": "object",
+        "description": "Aggregated space-savings statistics.",
+        "required": [
+          "total_uncompressed_size",
+          "total_compressed_size"
+        ],
+        "properties": {
+          "total_compressed_size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total compressed size of all archives, in bytes."
+          },
+          "total_uncompressed_size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total uncompressed size of all archives, in bytes."
+          }
+        }
+      },
+      "StreamFileExtraction": {
+        "type": "object",
+        "description": "Request body for the stream-files extract endpoint.",
+        "required": [
+          "extract_job_type",
+          "log_event_idx",
+          "stream_id"
+        ],
+        "properties": {
+          "dataset": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Dataset the stream belongs to (CLP-S only; `null` for the CLP storage engine)."
+          },
+          "extract_job_type": {
+            "$ref": "#/components/schemas/ExtractJobType",
+            "description": "The type of extraction job to submit."
+          },
+          "log_event_idx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Index of the log event the extracted stream file must contain."
+          },
+          "stream_id": {
+            "type": "string",
+            "description": "ID of the stream to extract.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "StreamFileMetadata": {
+        "type": "object",
+        "description": "Extracted stream-file metadata returned by the stream-files extract endpoint.",
+        "required": [
+          "begin_msg_ix",
+          "end_msg_ix",
+          "is_last_chunk",
+          "path",
+          "stream_id"
+        ],
+        "properties": {
+          "begin_msg_ix": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Index of the first log event in the stream file (inclusive)."
+          },
+          "end_msg_ix": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Index of the last log event in the stream file (exclusive)."
+          },
+          "is_last_chunk": {
+            "type": "boolean",
+            "description": "Whether this is the stream's last chunk."
+          },
+          "path": {
+            "type": "string",
+            "description": "The resolved stream-file path: a pre-signed URL when stream-files S3 storage is\nconfigured, otherwise a path relative to the webui `/streams` static mount."
+          },
+          "stream_id": {
+            "type": "string",
+            "description": "ID of the stream the file was extracted from."
+          }
+        }
+      },
+      "TimeRange": {
+        "type": "object",
+        "description": "Earliest and latest log entry timestamps across the selected datasets. The whole value\nis `None` when no archives exist yet (or, for CLP-S, when no datasets were selected).",
+        "required": [
+          "begin_timestamp",
+          "end_timestamp"
+        ],
+        "properties": {
+          "begin_timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Earliest log entry timestamp (epoch milliseconds)."
+          },
+          "end_timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Latest log entry timestamp (epoch milliseconds)."
+          }
+        }
+      }
+    }
+  }
+}

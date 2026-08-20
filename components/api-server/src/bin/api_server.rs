@@ -1,6 +1,9 @@
 use anyhow::Context;
 use clap::Parser;
+use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package;
+use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
+use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::serde::yaml;
 
 #[derive(Parser)]
@@ -72,11 +75,43 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context(format!("Cannot listen to {addr}"))?;
 
-    let client = api_server::client::Client::connect(&config, &credentials)
+    let sql_pool = create_clp_db_mysql_pool(&config.database, &credentials.database, 10)
         .await
-        .context("Cannot connect to CLP")?;
+        .context("Cannot connect to MySQL")?;
+    let mongo_uri = format!(
+        "mongodb://{}:{}/{}?directConnection=true",
+        config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
+    );
+    let mongodb_client = mongodb::Client::with_uri_str(mongo_uri)
+        .await
+        .context("Cannot connect to MongoDB")?;
 
-    let router = api_server::routes::from_client(client)?;
+    let client = api_server::client::Client::new(&config, mongodb_client.clone(), sql_pool.clone());
+    let stream_output_s3_client = match &config.stream_output.storage {
+        StreamOutputStorage::S3 { s3_config, .. } => Some(
+            clp_rust_utils::s3::create_new_client(
+                s3_config
+                    .region_code
+                    .as_ref()
+                    .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str),
+                s3_config.endpoint_url.as_ref(),
+                &s3_config.aws_authentication,
+            )
+            .await,
+        ),
+        StreamOutputStorage::Fs { .. } => None,
+    };
+    let webui_client = api_server::webui_client::WebuiClient::new(
+        &config,
+        mongodb_client,
+        sql_pool,
+        stream_output_s3_client,
+    );
+
+    let router = api_server::routes::from_app_state(api_server::routes::AppState {
+        client,
+        webui_client,
+    })?;
     startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 
     tracing::info!("Server started at {addr}");
