@@ -11,7 +11,7 @@ vars:
   # TODO: Spider doesn't tag releases of its Compose deployment yet, so we pin the artifact by
   # digest rather than by version. Switch to a version tag once Spider publishes one.
   G_SPIDER_COMPOSE_IMAGE_REF: >-
-    ghcr.io/y-scope/spider/compose@sha256:3f35254027f1c577b25c68c2f08bb17abb03fb4467aafc3012cc540d2c29ef76
+    ghcr.io/y-scope/spider/compose@sha256:a9c80a4ef76042f7434407700a36ef01acbfb10b87f4eb1cd155dbf0fc74fabb
 
 tasks:
   download-spider:
@@ -33,7 +33,7 @@ tasks:
       - >-
         "{{.G_ORAS_TOOLCHAIN_DIR}}/oras" pull
         "{{.G_SPIDER_COMPOSE_IMAGE_REF}}"
-        --output "{{dir .OUTPUT_DIR}}"
+        --output "{{.OUTPUT_DIR}}"
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
