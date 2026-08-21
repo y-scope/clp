@@ -31,10 +31,12 @@ const WebuiPublicSettingsSchema = Type.Object({
 });
 
 const WebuiServerSettingsSchema = Type.Object({
-    ApiServerUrl: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
+    /**
+     * Base URL of the API server. Always set: `validate_webui_config` in
+     * `clp_package_utils.general` and the Helm chart's `webui-deployment.yaml` both reject a
+     * deployment whose `api_server` is null.
+     */
+    ApiServerUrl: Type.String(),
 
     MongoDbHost: Type.String(),
     MongoDbName: Type.String(),

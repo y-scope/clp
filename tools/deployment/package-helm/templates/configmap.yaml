@@ -320,12 +320,7 @@ data:
           {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
       },
       "server": {
-        "ApiServerUrl":
-          {{- if .Values.clpConfig.api_server }}
-          "http://{{ include "clp.fullname" . }}-api-server:3001",
-          {{- else }}
-          null,
-          {{- end }}
+        "ApiServerUrl": "http://{{ include "clp.fullname" . }}-api-server:3001",
 
         "MongoDbHost": "{{ include "clp.resultsCacheHost" . }}",
         "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},

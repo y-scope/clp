@@ -639,6 +639,9 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = API_SERVER_COMPONENT_NAME
+        # NOTE: currently unreachable — `_set_up_env_for_webui` calls `validate_webui_config`,
+        # which rejects a null `api_server`, and the Web UI is always deployed. This branch is
+        # kept as the seam for making the Web UI optional.
         if self._clp_config.api_server is None:
             logger.info("The API Server is not configured, skipping %s creation...", component_name)
             return EnvVarsDict({"CLP_API_SERVER_ENABLED": "0"})
@@ -745,13 +748,10 @@ class BaseController(ABC):
         }
 
         server_settings_updates = {
+            # `validate_webui_config` above rejects a null `api_server`, so it is always set here.
             "ApiServerUrl": (
-                None
-                if container_clp_config.api_server is None
-                else (
-                    f"http://{container_clp_config.api_server.host}"
-                    f":{container_clp_config.api_server.port}"
-                )
+                f"http://{container_clp_config.api_server.host}"
+                f":{container_clp_config.api_server.port}"
             ),
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbName": self._clp_config.results_cache.db_name,
