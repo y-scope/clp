@@ -1,6 +1,7 @@
 //! The commit worker that publishes a compression job's archives to CLP's metadata store.
 
 use anyhow::Context;
+use clp_rust_utils::clp_config::package::config::MetadataTableScope;
 use clp_rust_utils::clp_config::package::credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
@@ -64,7 +65,9 @@ pub(super) async fn commit(
     }
     let archives_table = config
         .database
-        .archives_table_name(Some(resolve_dataset_name(dataset.as_deref())));
+        .archives_table_name(MetadataTableScope::Dataset(resolve_dataset_name(
+            dataset.as_deref(),
+        )));
 
     let pool = create_clp_db_mysql_pool(&config.database, &db_credentials_from_env()?, 1)
         .await

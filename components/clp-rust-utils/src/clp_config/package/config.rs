@@ -172,42 +172,55 @@ impl Default for Database {
     }
 }
 
+/// Which set of metadata tables a name refers to.
+///
+/// The CLP storage engine keeps a single, dataset-less set of metadata tables; CLP-S keeps one set
+/// per dataset. Naming the two cases stops a bare `None` from meaning "the dataset-less tables"
+/// in one helper and "the default dataset's tables" in another.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MetadataTableScope<'a> {
+    /// The CLP storage engine's single, dataset-less table set (`<prefix><suffix>`).
+    Global,
+
+    /// One CLP-S dataset's table set (`<prefix><dataset>_<suffix>`).
+    Dataset(&'a str),
+}
+
 impl Database {
     /// # Returns
     ///
-    /// The archives table name (`<prefix><dataset>_archives`), or `<prefix>archives` when no
-    /// dataset is provided.
+    /// The archives table name for `scope`.
     #[must_use]
-    pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
-        self.metadata_table_name(dataset, "archives")
+    pub fn archives_table_name(&self, scope: MetadataTableScope<'_>) -> String {
+        self.metadata_table_name(scope, "archives")
     }
 
     /// # Returns
     ///
-    /// The files table name (`<prefix><dataset>_files`), or `<prefix>files` when no dataset is
-    /// provided.
+    /// The files table name for `scope`.
     #[must_use]
-    pub fn files_table_name(&self, dataset: Option<&str>) -> String {
-        self.metadata_table_name(dataset, "files")
+    pub fn files_table_name(&self, scope: MetadataTableScope<'_>) -> String {
+        self.metadata_table_name(scope, "files")
     }
 
-    fn metadata_table_name(&self, dataset: Option<&str>, suffix: &str) -> String {
-        dataset.map_or_else(
-            || format!("{}{suffix}", self.table_prefix),
-            |dataset| format!("{}{dataset}_{suffix}", self.table_prefix),
-        )
-    }
-
+    /// Column metadata only exists per dataset, so this helper takes a dataset rather than a
+    /// [`MetadataTableScope`].
+    ///
     /// # Returns
     ///
     /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
     #[must_use]
-    pub fn column_metadata_table_name(&self, dataset: Option<&str>) -> String {
-        format!(
-            "{}{}_column_metadata",
-            self.table_prefix,
-            resolve_dataset_name(dataset)
-        )
+    pub fn column_metadata_table_name(&self, dataset: &str) -> String {
+        format!("{}{dataset}_column_metadata", self.table_prefix)
+    }
+
+    fn metadata_table_name(&self, scope: MetadataTableScope<'_>, suffix: &str) -> String {
+        match scope {
+            MetadataTableScope::Global => format!("{}{suffix}", self.table_prefix),
+            MetadataTableScope::Dataset(dataset) => {
+                format!("{}{dataset}_{suffix}", self.table_prefix)
+            }
+        }
     }
 
     /// # Returns
@@ -605,6 +618,7 @@ mod tests {
     use super::ArchiveOutputStorage;
     use super::Database;
     use super::LogsInput;
+    use super::MetadataTableScope;
     use super::ResultsCache;
     use super::SpiderTaskExecutorConfig;
     use super::StreamOutput;
@@ -613,13 +627,39 @@ mod tests {
     fn metadata_table_names_match_storage_engine_conventions() {
         let database = Database::default();
 
-        assert_eq!(database.archives_table_name(None), "clp_archives");
-        assert_eq!(database.files_table_name(None), "clp_files");
         assert_eq!(
-            database.archives_table_name(Some("default")),
+            database.archives_table_name(MetadataTableScope::Global),
+            "clp_archives"
+        );
+        assert_eq!(
+            database.files_table_name(MetadataTableScope::Global),
+            "clp_files"
+        );
+        assert_eq!(
+            database.archives_table_name(MetadataTableScope::Dataset("default")),
             "clp_default_archives"
         );
-        assert_eq!(database.files_table_name(Some("logs")), "clp_logs_files");
+        assert_eq!(
+            database.files_table_name(MetadataTableScope::Dataset("logs")),
+            "clp_logs_files"
+        );
+        assert_eq!(
+            database.column_metadata_table_name("default"),
+            "clp_default_column_metadata"
+        );
+        assert_eq!(database.datasets_table_name(), "clp_datasets");
+    }
+
+    #[test]
+    fn dataset_scope_uses_the_resolved_dataset_name() {
+        use crate::dataset::CLP_DEFAULT_DATASET_NAME;
+        use crate::dataset::resolve_dataset_name;
+
+        let database = Database::default();
+        let scope = MetadataTableScope::Dataset(resolve_dataset_name(None));
+
+        assert_eq!(resolve_dataset_name(None), CLP_DEFAULT_DATASET_NAME);
+        assert_eq!(database.archives_table_name(scope), "clp_default_archives");
     }
 
     #[test]

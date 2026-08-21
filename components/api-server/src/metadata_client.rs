@@ -18,11 +18,13 @@ use clp_rust_utils::clp_config::package::config::CONTAINER_INPUT_LOGS_ROOT_DIR;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::clp_config::package::config::LogsInput;
+use clp_rust_utils::clp_config::package::config::MetadataTableScope;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::clp_config::package::credentials::Credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::dataset::is_valid_dataset_name;
+use clp_rust_utils::dataset::resolve_dataset_name;
 use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_TASKS_TABLE_NAME;
@@ -215,20 +217,32 @@ impl MetadataClient {
         Ok(())
     }
 
-    /// Builds the archives table name for a dataset (CLP-S) or the single CLP archives table
-    /// (CLP). For CLP, `dataset` is ignored and the configured `clp_archives` table is used.
-    fn archives_table(&self, dataset: Option<&str>) -> String {
+    /// # Returns
+    ///
+    /// The table scope for `dataset` under the configured storage engine: [`Global`] for CLP,
+    /// which keeps a single dataset-less table set, and the named (or default) dataset for CLP-S.
+    ///
+    /// [`Global`]: MetadataTableScope::Global
+    fn table_scope<'a>(&self, dataset: Option<&'a str>) -> MetadataTableScope<'a> {
         match self.storage_engine() {
-            StorageEngine::Clp => self.database().archives_table_name(None),
-            StorageEngine::ClpS => self.database().archives_table_name(dataset),
+            StorageEngine::Clp => MetadataTableScope::Global,
+            StorageEngine::ClpS => MetadataTableScope::Dataset(resolve_dataset_name(dataset)),
         }
     }
 
+    /// # Returns
+    ///
+    /// The archives table name for `dataset` under the configured storage engine.
+    fn archives_table(&self, dataset: Option<&str>) -> String {
+        self.database()
+            .archives_table_name(self.table_scope(dataset))
+    }
+
+    /// # Returns
+    ///
+    /// The files table name for `dataset` under the configured storage engine.
     fn files_table(&self, dataset: Option<&str>) -> String {
-        match self.storage_engine() {
-            StorageEngine::Clp => self.database().files_table_name(None),
-            StorageEngine::ClpS => self.database().files_table_name(dataset),
-        }
+        self.database().files_table_name(self.table_scope(dataset))
     }
 
     /// Fetches all dataset names from the datasets table, ordered by name.
@@ -542,9 +556,7 @@ impl MetadataClient {
         if !is_valid_dataset_name(dataset_name) {
             return Err(ClientError::InvalidDatasetName);
         }
-        let table_name = self
-            .database()
-            .column_metadata_table_name(Some(dataset_name));
+        let table_name = self.database().column_metadata_table_name(dataset_name);
         let names: Vec<String> =
             sqlx::query_scalar(&build_timestamp_column_names_query(&table_name))
                 .bind(TIMESTAMP_TYPE)
