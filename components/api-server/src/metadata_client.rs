@@ -392,12 +392,16 @@ impl MetadataClient {
             StorageEngine::Clp => {
                 let archives = self.archives_table(None);
                 let files = self.files_table(None);
-                format!(
-                    "SELECT (SELECT MIN(begin_timestamp) FROM `{archives}`) AS begin_timestamp, \
-                     (SELECT MAX(end_timestamp) FROM `{archives}`) AS end_timestamp, (SELECT \
-                     COUNT(DISTINCT orig_file_id) FROM `{files}`) AS num_files, (SELECT \
-                     CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) FROM `{files}`) AS \
-                     num_messages"
+                build_ingestion_details_query(
+                    &format!(
+                        "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
+                         end_timestamp FROM `{archives}`"
+                    ),
+                    &format!(
+                        "SELECT COUNT(DISTINCT orig_file_id) AS num_files, \
+                         CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) AS num_messages FROM \
+                         `{files}`"
+                    ),
                 )
             }
             StorageEngine::ClpS => {
@@ -432,12 +436,16 @@ impl MetadataClient {
                     })
                     .collect::<Vec<_>>()
                     .join("\nUNION ALL\n");
-                format!(
-                    "SELECT (SELECT MIN(begin_timestamp) FROM ({archives_union}) AS a) AS \
-                     begin_timestamp, (SELECT MAX(end_timestamp) FROM ({archives_union}) AS a) AS \
-                     end_timestamp, (SELECT CAST(SUM(num_files) AS SIGNED) FROM ({files_union}) \
-                     AS f) AS num_files, (SELECT CAST(SUM(num_messages) AS SIGNED) FROM \
-                     ({files_union}) AS f) AS num_messages"
+                build_ingestion_details_query(
+                    &format!(
+                        "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
+                         end_timestamp FROM ({archives_union}) AS archives_combined"
+                    ),
+                    &format!(
+                        "SELECT CAST(SUM(num_files) AS SIGNED) AS num_files, \
+                         CAST(SUM(num_messages) AS SIGNED) AS num_messages FROM ({files_union}) \
+                         AS files_combined"
+                    ),
                 )
             }
         };
@@ -946,6 +954,22 @@ fn build_timestamp_column_names_query(table_name: &str) -> String {
     format!("SELECT DISTINCT name FROM `{table_name}` WHERE type IN (?, ?) ORDER BY name")
 }
 
+/// Combines an archives aggregate and a files aggregate into the single row the
+/// ingestion-details endpoint returns.
+///
+/// `archives_source` must be a sub-query producing exactly one row with `begin_timestamp` and
+/// `end_timestamp` columns; `files_source` must produce exactly one row with `num_files` and
+/// `num_messages`. Cross-joining two single-row sources keeps each underlying table referenced
+/// exactly once — referencing them from separate scalar sub-queries instead makes `MySQL`
+/// evaluate each source once per referencing column.
+fn build_ingestion_details_query(archives_source: &str, files_source: &str) -> String {
+    format!(
+        "SELECT a.begin_timestamp AS begin_timestamp, a.end_timestamp AS end_timestamp, \
+         f.num_files AS num_files, f.num_messages AS num_messages FROM ({archives_source}) AS a, \
+         ({files_source}) AS f"
+    )
+}
+
 /// Validates a compression-job request before any I/O, mirroring the checks the Web UI's
 /// now-removed `POST /api/compress` route ran against `CompressionJobCreationSchema`.
 ///
@@ -1062,6 +1086,32 @@ mod tests {
             sql,
             "SELECT DISTINCT name FROM `clp_mydataset_column_metadata` WHERE type IN (?, ?) ORDER \
              BY name"
+        );
+    }
+
+    #[test]
+    fn ingestion_details_query_references_each_source_once() {
+        let sql = build_ingestion_details_query(
+            "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS end_timestamp \
+             FROM `clp_archives`",
+            "SELECT COUNT(DISTINCT orig_file_id) AS num_files, CAST(COALESCE(SUM(num_messages), \
+             0) AS SIGNED) AS num_messages FROM `clp_files`",
+        );
+
+        assert_eq!(sql.matches("`clp_archives`").count(), 1);
+        assert_eq!(sql.matches("`clp_files`").count(), 1);
+        assert_eq!(sql.matches("num_files").count(), 3);
+    }
+
+    #[test]
+    fn ingestion_details_query_selects_the_four_expected_columns() {
+        let sql = build_ingestion_details_query("SELECT 1", "SELECT 2");
+
+        assert_eq!(
+            sql,
+            "SELECT a.begin_timestamp AS begin_timestamp, a.end_timestamp AS end_timestamp, \
+             f.num_files AS num_files, f.num_messages AS num_messages FROM (SELECT 1) AS a, \
+             (SELECT 2) AS f"
         );
     }
 
