@@ -18,13 +18,13 @@ import {
 } from "../../../../api/os";
 import SwitcherIcon from "./SwitcherIcon";
 import {
-    ROOT_NODE,
     ROOT_PATH,
     TreeNode,
 } from "./typings";
 import {
     addServerPrefix,
     getListHeight,
+    getRootNode,
     toTreeNode,
 } from "./utils";
 
@@ -40,7 +40,7 @@ type TreeExpandKeys = Parameters<NonNullable<TreeSelectProps["onTreeExpand"]>>[0
  * @return
  */
 const PathsSelectFormItem = () => {
-    const [treeData, setTreeData] = useState<TreeNode[]>([ROOT_NODE]);
+    const [treeData, setTreeData] = useState<TreeNode[]>(() => [getRootNode()]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
     const [listHeight, setListHeight] = useState<number>(getListHeight);
 
@@ -140,7 +140,7 @@ const PathsSelectFormItem = () => {
                 treeDataSimpleMode={true}
                 treeExpandedKeys={expandedKeys}
                 treeLine={true}
-                treeNodeLabelProp={"value"}
+                treeNodeLabelProp={"displayPath"}
                 onTreeExpand={handleTreeExpand}/>
         </Form.Item>
     );

@@ -1,3 +1,5 @@
+import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "@webui/common/config";
+
 import {FileEntry} from "../../../../api/os";
 import {settings} from "../../../../settings";
 import {
@@ -78,6 +80,60 @@ const addServerPrefix = (userPath: string): string => {
 };
 
 /**
+ * Converts a user-facing path into the path CLP records as the log file's original path, so the
+ * Compress form and the Jobs table describe the same file identically.
+ *
+ * `LogsInputRootDir` is the logs-input directory as mounted inside the containers
+ * (`/mnt/logs/<host-path-without-anchor>` for a package deployment, `/mnt/logs` for Helm), and
+ * compression jobs are always stored with `path_prefix_to_remove` set to
+ * `CONTAINER_INPUT_LOGS_ROOT_DIR`. Removing that prefix therefore yields exactly the prefix the
+ * Jobs table strips back off.
+ *
+ * @param userPath The user-facing path (e.g., "/app.log")
+ * @return The displayed path (e.g., "/var/log/app.log")
+ * @throws Error if `LogsInputRootDir` is not configured.
+ */
+const toDisplayPath = (userPath: string): string => {
+    const logsInputRootDir = settings.LogsInputRootDir;
+    if (null === logsInputRootDir) {
+        throw new Error("LogsInputRootDir is not configured.");
+    }
+
+    const displayPrefix = logsInputRootDir.startsWith(CONTAINER_INPUT_LOGS_ROOT_DIR) ?
+        logsInputRootDir.slice(CONTAINER_INPUT_LOGS_ROOT_DIR.length) :
+        logsInputRootDir;
+
+    const joined = joinPath(displayPrefix, userPath);
+    if ("" === joined) {
+        return ROOT_PATH;
+    }
+    if (ROOT_PATH !== joined && joined.endsWith("/")) {
+        return joined.slice(0, -1);
+    }
+
+    return joined;
+};
+
+/**
+ * Builds the root tree node, labelled with the configured logs-input directory.
+ *
+ * @return A node whose label matches the Jobs table.
+ * @throws Error if `LogsInputRootDir` is not configured.
+ */
+const getRootNode = (): TreeNode => {
+    const displayPath = toDisplayPath(ROOT_PATH);
+
+    return {
+        displayPath: displayPath,
+        id: ROOT_PATH,
+        isLeaf: false,
+        pId: null,
+        title: displayPath,
+        value: ROOT_PATH,
+    };
+};
+
+/**
  * Converts API file listing item to an Ant Design TreeSelect node.
  *
  * @param fileEntry File item from the `/os/ls` API response
@@ -88,6 +144,7 @@ const toTreeNode = (fileEntry: FileEntry, parentPath: string): TreeNode => {
     const fullPath = joinPath(removeServerPrefix(fileEntry.parent_path), fileEntry.name);
 
     return {
+        displayPath: toDisplayPath(fullPath),
         id: fullPath,
         isLeaf: false === fileEntry.is_expandable,
         pId: parentPath,
@@ -100,6 +157,8 @@ const toTreeNode = (fileEntry: FileEntry, parentPath: string): TreeNode => {
 export {
     addServerPrefix,
     getListHeight,
+    getRootNode,
     ROOT_PATH,
+    toDisplayPath,
     toTreeNode,
 };
