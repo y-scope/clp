@@ -23,7 +23,9 @@ const fetchAllTimeRange = async (selectedDatasets: string[]): Promise<[Dayjs, Da
         throw new Error(buildApiErrorMessage("Failed to fetch time range", error, response));
     }
 
-    if (null === data.begin_timestamp || null === data.end_timestamp) {
+    // The generated schema types both fields as optional and nullable, so check for a number
+    // rather than only for `null` — `dayjs.utc(undefined)` would silently yield the current time.
+    if ("number" !== typeof data.begin_timestamp || "number" !== typeof data.end_timestamp) {
         return DEFAULT_TIME_RANGE;
     }
 
