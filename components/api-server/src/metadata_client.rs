@@ -22,7 +22,7 @@ use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::clp_config::package::credentials::Credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
-use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::is_valid_dataset_name;
 use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_TASKS_TABLE_NAME;
@@ -204,11 +204,11 @@ impl MetadataClient {
         &self.config.archive_output
     }
 
-    /// Validates that `dataset` (when set) only contains alphanumeric characters and
-    /// underscores.
+    /// Validates that `dataset` (when set) is a usable dataset name — see
+    /// [`is_valid_dataset_name`].
     fn validate_dataset(dataset: Option<&str>) -> Result<(), ClientError> {
         if let Some(name) = dataset
-            && !VALID_DATASET_NAME_REGEX.is_match(name)
+            && !is_valid_dataset_name(name)
         {
             return Err(ClientError::InvalidDatasetName);
         }
@@ -531,7 +531,7 @@ impl MetadataClient {
         &self,
         dataset_name: &str,
     ) -> Result<Vec<String>, ClientError> {
-        if !VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
+        if !is_valid_dataset_name(dataset_name) {
             return Err(ClientError::InvalidDatasetName);
         }
         let table_name = self
@@ -606,7 +606,7 @@ impl MetadataClient {
         &self,
         creation: CompressionJobCreation,
     ) -> Result<CompressionJob, ClientError> {
-        Self::validate_dataset(creation.dataset.as_deref())?;
+        validate_compression_job_creation(&creation)?;
         let archive_output = self.archive_output();
         let storage_engine = self.storage_engine();
         let LogsInput::Fs { config: logs_input } = &self.config.logs_input else {
@@ -946,6 +946,23 @@ fn build_timestamp_column_names_query(table_name: &str) -> String {
     format!("SELECT DISTINCT name FROM `{table_name}` WHERE type IN (?, ?) ORDER BY name")
 }
 
+/// Validates a compression-job request before any I/O, mirroring the checks the Web UI's
+/// now-removed `POST /api/compress` route ran against `CompressionJobCreationSchema`.
+///
+/// # Errors
+///
+/// Returns [`ClientError::InvalidDatasetName`] if `dataset` is set but not a usable dataset name.
+/// Returns [`ClientError::InvalidInput`] if `paths` is empty.
+fn validate_compression_job_creation(creation: &CompressionJobCreation) -> Result<(), ClientError> {
+    MetadataClient::validate_dataset(creation.dataset.as_deref())?;
+    if creation.paths.is_empty() {
+        return Err(ClientError::InvalidInput(
+            "A compression job must specify at least one path".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 /// Builds the `ClpIoConfig` submitted to the `compression_jobs` table.
 ///
 /// Field names mirror `job_orchestration.scheduler.job_config`. `path_prefix_to_remove` is always
@@ -1046,6 +1063,28 @@ mod tests {
             "SELECT DISTINCT name FROM `clp_mydataset_column_metadata` WHERE type IN (?, ?) ORDER \
              BY name"
         );
+    }
+
+    #[test]
+    fn compression_job_creation_rejects_an_empty_path_list() {
+        let mut request = creation(Some("mydataset"), None);
+        request.paths.clear();
+
+        let error = validate_compression_job_creation(&request)
+            .expect_err("empty path list should be rejected");
+
+        assert!(matches!(error, ClientError::InvalidInput(_)));
+    }
+
+    #[test]
+    fn compression_job_creation_rejects_an_overlong_dataset_name() {
+        let long_name = "a".repeat(clp_rust_utils::dataset::DATASET_NAME_MAX_LEN + 1);
+        let request = creation(Some(&long_name), None);
+
+        let error = validate_compression_job_creation(&request)
+            .expect_err("overlong dataset name should be rejected");
+
+        assert!(matches!(error, ClientError::InvalidDatasetName));
     }
 
     #[test]
