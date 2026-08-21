@@ -1,11 +1,6 @@
 # Using the API server
 
-`clp-json` includes an API server that provides a RESTful interface for interacting with CLP.
-
-:::{note}
-Currently, the API server only supports [clp-json][release-choices]. Support for `clp-text` will be
-added in a future release.
-:::
+CLP includes an API server that provides a RESTful interface for interacting with CLP.
 
 ## Starting the API server
 
@@ -16,6 +11,12 @@ a default configuration. You can uncomment and modify this section to override t
 
 All available API endpoints are defined in the [OpenAPI] Specification. You can explore the API
 using [Swagger UI][swagger-ui].
+
+:::{note}
+`clp-text` doesn't support buffering search results in the file system or S3. When using
+`clp-text`, set `buffer_results_in_mongodb` to `true` so that results are buffered in `MongoDB`
+instead.
+:::
 
 ## Example: Submitting search queries and receiving results
 
@@ -64,6 +65,5 @@ following commands to submit a query to clp-json and stream the results.
    ```
 
 [OpenAPI]: https://swagger.io/specification/
-[release-choices]: ./quick-start/index.md#choosing-a-flavor
 [server-sent-events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
 [swagger-ui]: https://petstore.swagger.io/?url=https://docs.yscope.com/clp/DOCS_VAR_CLP_GIT_REF/_static/generated/api-server-openapi.json

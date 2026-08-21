@@ -325,6 +325,8 @@ data:
           {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
       },
       "server": {
+        "ApiServerUrl": "http://{{ include "clp.fullname" . }}-api-server:3001",
+
         "SqlDbHost": "{{ include "clp.databaseHost" . }}",
         "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
         "SqlDbPort": {{ include "clp.databasePort" . | int }},

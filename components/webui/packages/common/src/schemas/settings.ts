@@ -37,6 +37,8 @@ const WebuiPublicSettingsSchema = Type.Object({
 });
 
 const WebuiServerSettingsSchema = Type.Object({
+    ApiServerUrl: Type.String(),
+
     SqlDbHost: Type.String(),
     SqlDbName: Type.String(),
     SqlDbPort: Type.Integer({minimum: 1, maximum: 65535}),

@@ -7,7 +7,6 @@ edition = { workspace = true }
 aws-config = { workspace = true }
 aws-sdk-s3 = { workspace = true }
 aws-sdk-sqs = { workspace = true }
-brotli = { workspace = true }
 const_format = { workspace = true }
 non-empty-string = { workspace = true }
 num_enum = { workspace = true }
@@ -26,7 +25,7 @@ tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
 utoipa = { workspace = true }
+zstd = { workspace = true }
 
 [dev-dependencies]
-hex = { workspace = true }
 serde_json = { workspace = true }

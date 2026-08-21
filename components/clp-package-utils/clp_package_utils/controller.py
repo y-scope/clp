@@ -781,6 +781,10 @@ class BaseController(ABC):
         }
 
         server_settings_updates = {
+            "ApiServerUrl": (
+                f"http://{container_clp_config.api_server.host}"
+                f":{container_clp_config.api_server.port}"
+            ),
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbPort": container_clp_config.database.port,

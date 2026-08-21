@@ -1,14 +1,27 @@
-import {brotliCompressSync} from "node:zlib";
+import {
+    constants as zlibConstants,
+    zstdCompressSync,
+    type ZstdOptions,
+} from "node:zlib";
 
 import type {MySQLPromisePool} from "@fastify/mysql";
 import {encode} from "@msgpack/msgpack";
-import {ClpIoConfig} from "@webui/common/schemas/compression";
-import {FastifyInstance} from "fastify";
+import type {ClpIoConfig} from "@webui/common/schemas/compression";
+import type {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
-import {ResultSetHeader} from "mysql2";
+import type {ResultSetHeader} from "mysql2";
 
 import {publicSettings} from "../../../settings.js";
 import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../../../typings/compression.js";
+
+
+const ZSTD_COMPRESSION_LEVEL = 3;
+
+const ZSTD_COMPRESSION_OPTIONS: ZstdOptions = {
+    params: {
+        [zlibConstants.ZSTD_c_compressionLevel]: ZSTD_COMPRESSION_LEVEL,
+    },
+};
 
 
 /**
@@ -53,7 +66,7 @@ class CompressionJobDbManager {
             VALUES (?)
             `,
             [
-                Buffer.from(brotliCompressSync(encode(jobConfig))),
+                Buffer.from(zstdCompressSync(encode(jobConfig), ZSTD_COMPRESSION_OPTIONS)),
             ]
         );
 

@@ -1,4 +1,5 @@
 packages:
+  - "packages/api-client"
   - "packages/client"
   - "packages/common"
   - "packages/server"
