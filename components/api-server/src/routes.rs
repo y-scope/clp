@@ -715,6 +715,39 @@ mod tests {
         String::from_utf8(bytes.to_vec()).expect("body is not utf-8")
     }
 
+    #[test]
+    fn parse_datasets_returns_nothing_for_a_missing_or_empty_parameter() {
+        assert_eq!(parse_datasets(None), Vec::<String>::new());
+        assert_eq!(parse_datasets(Some(String::new())), Vec::<String>::new());
+        assert_eq!(parse_datasets(Some("   ".to_owned())), Vec::<String>::new());
+        assert_eq!(parse_datasets(Some(",,".to_owned())), Vec::<String>::new());
+    }
+
+    #[test]
+    fn parse_datasets_splits_trims_and_drops_empty_entries() {
+        assert_eq!(parse_datasets(Some("a".to_owned())), vec!["a".to_owned()]);
+        assert_eq!(
+            parse_datasets(Some("a,b".to_owned())),
+            vec!["a".to_owned(), "b".to_owned()]
+        );
+        assert_eq!(
+            parse_datasets(Some("  a , b ".to_owned())),
+            vec!["a".to_owned(), "b".to_owned()]
+        );
+        assert_eq!(
+            parse_datasets(Some("a,,b,".to_owned())),
+            vec!["a".to_owned(), "b".to_owned()]
+        );
+    }
+
+    #[test]
+    fn parse_datasets_preserves_the_given_order_and_duplicates() {
+        assert_eq!(
+            parse_datasets(Some("b,a,b".to_owned())),
+            vec!["b".to_owned(), "a".to_owned(), "b".to_owned()]
+        );
+    }
+
     #[tokio::test]
     async fn reject_begin_greater_than_end() {
         let app = test_app();

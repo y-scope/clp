@@ -1129,6 +1129,36 @@ fn decode_clp_config(blob: &[u8]) -> Result<serde_json::Value, ClientError> {
 mod tests {
     use super::*;
 
+    /// A uniquely named directory under the system temp dir, removed on drop.
+    ///
+    /// The workspace has no `tempfile` dependency, and these tests only need a private directory
+    /// with a stable name per test.
+    struct TempDir {
+        path: PathBuf,
+    }
+
+    impl TempDir {
+        fn new(label: &str) -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "clp-api-server-test-{}-{label}",
+                std::process::id()
+            ));
+            let _ignored = std::fs::remove_dir_all(&path);
+            std::fs::create_dir_all(&path).expect("failed to create the test directory");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ignored = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
     fn creation(dataset: Option<&str>, timestamp_key: Option<&str>) -> CompressionJobCreation {
         CompressionJobCreation {
             paths: vec!["/app.log".to_owned()],
@@ -1223,6 +1253,125 @@ mod tests {
             configured,
             canonical
         ));
+    }
+
+    #[tokio::test]
+    async fn resolve_compression_paths_roots_requests_at_the_input_directory() {
+        let temp = TempDir::new("resolve-happy");
+        std::fs::create_dir_all(temp.path().join("a/b")).expect("failed to create a/b");
+        std::fs::write(temp.path().join("a/b/app.log"), b"x").expect("failed to write app.log");
+
+        let resolved = resolve_compression_paths(temp.path(), &["/a/b/app.log".to_owned()])
+            .await
+            .expect("expected the path to resolve");
+
+        let expected = std::fs::canonicalize(temp.path().join("a/b/app.log"))
+            .expect("failed to canonicalize the expected path");
+        assert_eq!(resolved, vec![expected.to_string_lossy().into_owned()]);
+    }
+
+    #[tokio::test]
+    async fn resolve_compression_paths_accepts_the_root_itself() {
+        let temp = TempDir::new("resolve-root");
+
+        let resolved = resolve_compression_paths(temp.path(), &["/".to_owned()])
+            .await
+            .expect("expected the root to resolve");
+
+        let expected =
+            std::fs::canonicalize(temp.path()).expect("failed to canonicalize the expected path");
+        assert_eq!(resolved, vec![expected.to_string_lossy().into_owned()]);
+    }
+
+    #[tokio::test]
+    async fn resolve_compression_paths_rejects_relative_paths() {
+        let temp = TempDir::new("resolve-relative");
+
+        let error = resolve_compression_paths(temp.path(), &["a/b.log".to_owned()])
+            .await
+            .expect_err("a relative path should be rejected");
+
+        assert!(matches!(error, ClientError::InvalidInput(_)));
+    }
+
+    #[tokio::test]
+    async fn resolve_compression_paths_rejects_parent_directory_components() {
+        let temp = TempDir::new("resolve-traversal");
+
+        let error = resolve_compression_paths(temp.path(), &["/../etc/passwd".to_owned()])
+            .await
+            .expect_err("a path with a parent-directory component should be rejected");
+
+        assert!(matches!(error, ClientError::InvalidInput(_)));
+    }
+
+    #[tokio::test]
+    async fn resolve_compression_paths_reports_missing_paths_as_not_found() {
+        let temp = TempDir::new("resolve-missing");
+
+        let error = resolve_compression_paths(temp.path(), &["/nope.log".to_owned()])
+            .await
+            .expect_err("a missing path should be rejected");
+
+        assert!(matches!(error, ClientError::NotFound(_)));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn resolve_compression_paths_rejects_symlinks_escaping_the_root() {
+        let temp = TempDir::new("resolve-symlink");
+        let outside = TempDir::new("resolve-symlink-outside");
+        std::fs::write(outside.path().join("secret.log"), b"x")
+            .expect("failed to write secret.log");
+        std::os::unix::fs::symlink(
+            outside.path().join("secret.log"),
+            temp.path().join("link.log"),
+        )
+        .expect("failed to create the symlink");
+
+        let error = resolve_compression_paths(temp.path(), &["/link.log".to_owned()])
+            .await
+            .expect_err("a symlink leaving the root should be rejected");
+
+        assert!(matches!(error, ClientError::InvalidInput(_)));
+    }
+
+    #[tokio::test]
+    async fn canonicalize_listing_path_maps_missing_paths_to_not_found() {
+        let temp = TempDir::new("canonicalize-missing");
+        let missing = temp.path().join("does-not-exist");
+
+        let error = canonicalize_listing_path(&missing, "/does-not-exist")
+            .await
+            .expect_err("a missing path should be rejected");
+
+        match error {
+            ClientError::NotFound(display) => assert_eq!(display, "/does-not-exist"),
+            other => panic!("expected NotFound, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn clp_config_blob_round_trips_through_zstd_msgpack() {
+        let config = build_compression_job_config(
+            &StorageEngine::ClpS,
+            &ArchiveOutput::default(),
+            &["/mnt/logs/app.log".to_owned()],
+            &creation(Some("mydataset"), Some("ts")),
+        );
+
+        let blob = ZstdMsgpack::serialize(&config).expect("failed to encode the config");
+        let decoded = decode_clp_config(&blob).expect("failed to decode the config");
+
+        assert_eq!(decoded, config);
+    }
+
+    #[test]
+    fn decoding_a_non_zstd_blob_reports_malformed_data() {
+        let error =
+            decode_clp_config(b"not a zstd frame").expect_err("a non-zstd blob should not decode");
+
+        assert!(matches!(error, ClientError::MalformedData));
     }
 
     #[test]
