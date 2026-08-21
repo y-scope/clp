@@ -14,6 +14,7 @@ use chrono::DateTime;
 use chrono::Utc;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::ArchiveOutput;
+use clp_rust_utils::clp_config::package::config::CONTAINER_INPUT_LOGS_ROOT_DIR;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::clp_config::package::config::LogsInput;
@@ -617,39 +618,12 @@ impl MetadataClient {
         let paths_to_compress =
             resolve_compression_paths(Path::new(&logs_input.directory), &creation.paths).await?;
 
-        // Build the ClpIoConfig. Field names mirror `job_orchestration.scheduler.job_config`.
-        let mut input = serde_json::json!({
-            "dataset": null,
-            "path_prefix_to_remove": logs_input.directory,
-            "paths_to_compress": paths_to_compress,
-            "timestamp_key": null,
-            "type": "fs",
-            "unstructured": true,
-        });
-        let output = serde_json::json!({
-            "compression_level": archive_output.compression_level,
-            "target_archive_size": archive_output.target_archive_size,
-            "target_dictionaries_size": archive_output.target_dictionaries_size,
-            "target_encoded_file_size": archive_output.target_encoded_file_size,
-            "target_segment_size": archive_output.target_segment_size,
-        });
-
-        if StorageEngine::ClpS == storage_engine {
-            input["unstructured"] = serde_json::Value::Bool(false);
-            if let Some(dataset) = &creation.dataset
-                && !dataset.is_empty()
-            {
-                input["dataset"] = serde_json::Value::String(dataset.clone());
-            }
-            if let Some(timestamp_key) = &creation.timestamp_key {
-                input["timestamp_key"] = serde_json::Value::String(timestamp_key.clone());
-            }
-            if Some(true) == creation.unstructured {
-                input["unstructured"] = serde_json::Value::Bool(true);
-            }
-        }
-
-        let job_config = serde_json::json!({"input": input, "output": output});
+        let job_config = build_compression_job_config(
+            &storage_engine,
+            archive_output,
+            &paths_to_compress,
+            &creation,
+        );
         let compressed = ZstdMsgpack::serialize(&job_config)?;
 
         let result = sqlx::query(&format!(
@@ -972,6 +946,51 @@ fn build_timestamp_column_names_query(table_name: &str) -> String {
     format!("SELECT DISTINCT name FROM `{table_name}` WHERE type IN (?, ?) ORDER BY name")
 }
 
+/// Builds the `ClpIoConfig` submitted to the `compression_jobs` table.
+///
+/// Field names mirror `job_orchestration.scheduler.job_config`. `path_prefix_to_remove` is always
+/// [`CONTAINER_INPUT_LOGS_ROOT_DIR`] so that the original paths recorded for Web UI jobs match
+/// those recorded by the CLI (`clp_package_utils.scripts.native.compress`).
+fn build_compression_job_config(
+    storage_engine: &StorageEngine,
+    archive_output: &ArchiveOutput,
+    paths_to_compress: &[String],
+    creation: &CompressionJobCreation,
+) -> serde_json::Value {
+    let mut input = serde_json::json!({
+        "dataset": null,
+        "path_prefix_to_remove": CONTAINER_INPUT_LOGS_ROOT_DIR,
+        "paths_to_compress": paths_to_compress,
+        "timestamp_key": null,
+        "type": "fs",
+        "unstructured": true,
+    });
+    let output = serde_json::json!({
+        "compression_level": archive_output.compression_level,
+        "target_archive_size": archive_output.target_archive_size,
+        "target_dictionaries_size": archive_output.target_dictionaries_size,
+        "target_encoded_file_size": archive_output.target_encoded_file_size,
+        "target_segment_size": archive_output.target_segment_size,
+    });
+
+    if &StorageEngine::ClpS == storage_engine {
+        input["unstructured"] = serde_json::Value::Bool(false);
+        if let Some(dataset) = &creation.dataset
+            && !dataset.is_empty()
+        {
+            input["dataset"] = serde_json::Value::String(dataset.clone());
+        }
+        if let Some(timestamp_key) = &creation.timestamp_key {
+            input["timestamp_key"] = serde_json::Value::String(timestamp_key.clone());
+        }
+        if Some(true) == creation.unstructured {
+            input["unstructured"] = serde_json::Value::Bool(true);
+        }
+    }
+
+    serde_json::json!({"input": input, "output": output})
+}
+
 /// Internal document shape for the stream-files `MongoDB` collection.
 #[derive(Debug, Deserialize)]
 struct StreamFileMetadataDoc {
@@ -1003,6 +1022,15 @@ fn decode_clp_config(blob: &[u8]) -> Result<serde_json::Value, ClientError> {
 mod tests {
     use super::*;
 
+    fn creation(dataset: Option<&str>, timestamp_key: Option<&str>) -> CompressionJobCreation {
+        CompressionJobCreation {
+            paths: vec!["/app.log".to_owned()],
+            dataset: dataset.map(str::to_owned),
+            timestamp_key: timestamp_key.map(str::to_owned),
+            unstructured: None,
+        }
+    }
+
     #[test]
     fn query_job_type_values() {
         assert_eq!(i32::from(QueryJobType::ExtractIr), 1);
@@ -1018,5 +1046,40 @@ mod tests {
             "SELECT DISTINCT name FROM `clp_mydataset_column_metadata` WHERE type IN (?, ?) ORDER \
              BY name"
         );
+    }
+
+    #[test]
+    fn compression_job_config_strips_the_container_input_logs_root() {
+        let config = build_compression_job_config(
+            &StorageEngine::Clp,
+            &ArchiveOutput::default(),
+            &["/mnt/logs/var/log/app.log".to_owned()],
+            &creation(None, None),
+        );
+
+        assert_eq!(config["input"]["path_prefix_to_remove"], "/mnt/logs");
+        assert_eq!(config["input"]["type"], "fs");
+        assert_eq!(config["input"]["unstructured"], true);
+        assert!(config["input"]["dataset"].is_null());
+        assert!(config["input"]["timestamp_key"].is_null());
+        assert_eq!(
+            config["input"]["paths_to_compress"],
+            serde_json::json!(["/mnt/logs/var/log/app.log"])
+        );
+    }
+
+    #[test]
+    fn compression_job_config_carries_the_clp_s_fields() {
+        let config = build_compression_job_config(
+            &StorageEngine::ClpS,
+            &ArchiveOutput::default(),
+            &["/mnt/logs/app.log".to_owned()],
+            &creation(Some("mydataset"), Some("ts")),
+        );
+
+        assert_eq!(config["input"]["path_prefix_to_remove"], "/mnt/logs");
+        assert_eq!(config["input"]["unstructured"], false);
+        assert_eq!(config["input"]["dataset"], "mydataset");
+        assert_eq!(config["input"]["timestamp_key"], "ts");
     }
 }

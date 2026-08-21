@@ -11,6 +11,16 @@ use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
 use crate::dataset::resolve_dataset_name;
 
+/// The directory inside CLP containers where the configured logs-input directory is mounted
+/// (mirror of `clp_py_utils.clp_config.CONTAINER_INPUT_LOGS_ROOT_DIR`).
+///
+/// # NOTE
+///
+/// * Must be kept in sync with the Python definition.
+/// * Every deployment path mounts `logs_input.directory` at or below this path, so it is always a
+///   prefix of the container-visible `logs_input.directory`.
+pub const CONTAINER_INPUT_LOGS_ROOT_DIR: &str = "/mnt/logs";
+
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
 /// # NOTE
