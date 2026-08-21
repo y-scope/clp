@@ -1,4 +1,3 @@
-import type {components} from "@webui/api-client";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     type ClpIoConfig,
@@ -7,6 +6,7 @@ import {
 } from "@webui/common/schemas/compression";
 import dayjs from "dayjs";
 
+import type {CompressionMetadata} from "../../../api/compress-metadata";
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import {JobData} from "../Jobs/typings";
 import {formatSizeInBytes} from "./units";
@@ -96,8 +96,8 @@ const mapCompressionJobResponseToTableData = ({
     start_time: startTime = null,
     status,
     uncompressed_size: uncompressedSize,
-}: components["schemas"]["CompressionMetadata"]): JobData => {
-    const {dataset, paths} = extractDataFromIoConfig(clpIoConfig as ClpIoConfig);
+}: CompressionMetadata): JobData => {
+    const {dataset, paths} = extractDataFromIoConfig(clpIoConfig);
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";
