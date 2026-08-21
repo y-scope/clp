@@ -14,7 +14,6 @@ from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
-    AwsAuthType,
     BundledService,
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_ROOT_PASS_ENV_VAR_NAME,
@@ -1047,21 +1046,6 @@ class DockerComposeController(BaseController):
         env_vars |= {
             "CLP_RESTART_POLICY": self._restart_policy,
         }
-
-        # Credentials
-        if self._clp_config.stream_output.storage.type == StorageType.S3:
-            stream_output_aws_auth = (
-                self._clp_config.stream_output.storage.s3_config.aws_authentication
-            )
-            if stream_output_aws_auth.type == AwsAuthType.credentials:
-                env_vars |= {
-                    "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID": (
-                        stream_output_aws_auth.credentials.access_key_id
-                    ),
-                    "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY": (
-                        stream_output_aws_auth.credentials.secret_access_key
-                    ),
-                }
 
         # Identity config
         env_vars |= {
