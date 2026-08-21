@@ -280,6 +280,27 @@ services:
       "--config", "/etc/clp-config.yaml"
     ]
 
+  compression-coordinator:
+    <<: *service_defaults
+    hostname: "compression_coordinator"
+    environment:
+      <<: *clp_telemetry_env_defaults
+      CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
+      OTEL_SERVICE_NAME: "compression-coordinator"
+      RUST_LOG: "${CLP_COMPRESSION_COORDINATOR_LOGGING_LEVEL:-INFO}"
+    volumes:
+      - *volume_clp_config_readonly
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+      spider-storage:
+        condition: "service_healthy"
+    command: [
+      "/opt/clp/bin/compression-coordinator",
+      "--config", "/etc/clp-config.yaml"
+    ]
+
   compression-worker:
     <<: *service_defaults
     hostname: "compression_worker"
