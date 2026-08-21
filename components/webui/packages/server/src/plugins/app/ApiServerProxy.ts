@@ -11,7 +11,10 @@ import {serverSettings} from "../../settings.js";
 export default fp(
     async (fastify) => {
         if (null === serverSettings.ApiServerUrl) {
-            fastify.log.info("API server proxy is disabled because ApiServerUrl is not configured");
+            fastify.log.error(
+                "ApiServerUrl is not configured; /api/v1 will not be proxied and every " +
+                "metadata, compression, file-listing, and stream-extraction request will fail.",
+            );
 
             return;
         }

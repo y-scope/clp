@@ -1,3 +1,6 @@
+{{- if not .Values.clpConfig.api_server }}
+{{- fail "clpConfig.api_server is required when the Web UI is deployed: the Web UI reads all metadata through the API server." }}
+{{- end }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
