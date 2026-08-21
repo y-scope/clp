@@ -1,0 +1,15 @@
+services:
+  spider-worker:
+    image: >-
+      ${CLP_SPIDER_WORKER_CONTAINER_IMAGE_REF:-ghcr.io/y-scope/clp/clp-spider-worker:main}
+    user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
+    environment:
+      CLP_CONFIG_PATH: "/etc/clp-config.yaml"
+      CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
+    volumes:
+      - type: "bind"
+        source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yaml"
+        target: "/etc/clp-config.yaml"
+        read_only: true
+      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
