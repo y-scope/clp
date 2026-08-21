@@ -661,10 +661,15 @@ impl MetadataClient {
 
     /// Lists files and directories at the specified path.
     ///
+    /// Paths outside the configured logs-input root are rejected before the requested path is
+    /// touched, so they cannot be used to probe for the existence of arbitrary paths.
+    ///
     /// # Errors
     ///
     /// Returns [`ClientError::InvalidInput`] if filesystem input is not configured, if the path
-    /// is relative, or if the path resolves outside the configured input root.
+    /// is relative, if it contains a parent-directory component, or if it is outside the
+    /// configured input root.
+    /// Returns [`ClientError::NotFound`] if a path inside the root doesn't exist.
     /// Returns [`ClientError::Io`] if the path cannot be read.
     pub async fn list_files(&self, path: String) -> Result<Vec<DirEntry>, ClientError> {
         let path_buf = PathBuf::from(&path);
@@ -678,9 +683,17 @@ impl MetadataClient {
                 "File listing is unavailable when logs_input is not filesystem-backed".to_owned(),
             ));
         };
-        let root = tokio::fs::canonicalize(&logs_input.directory).await?;
-        let canonical_path = canonicalize_listing_path(&path_buf, &path).await?;
-        if !canonical_path.starts_with(&root) {
+        let configured_root = Path::new(&logs_input.directory);
+        let canonical_root = tokio::fs::canonicalize(configured_root).await?;
+        let normalized = normalize_listing_path(&path_buf, &path)?;
+        if !is_under_logs_input_root(&normalized, configured_root, &canonical_root) {
+            return Err(ClientError::InvalidInput(format!(
+                "Path '{path}' is outside the configured logs-input directory"
+            )));
+        }
+
+        let canonical_path = canonicalize_listing_path(&normalized, &path).await?;
+        if !canonical_path.starts_with(&canonical_root) {
             return Err(ClientError::InvalidInput(format!(
                 "Path '{path}' is outside the configured logs-input directory"
             )));
@@ -699,7 +712,7 @@ impl MetadataClient {
             } else if file_type.is_symlink() {
                 let target = tokio::fs::canonicalize(entry.path()).await;
                 match target {
-                    Ok(target) if target.starts_with(&root) => {
+                    Ok(target) if target.starts_with(&canonical_root) => {
                         tokio::fs::metadata(target).await?.is_dir()
                     }
                     Ok(_) | Err(_) => false,
@@ -915,6 +928,47 @@ async fn canonicalize_listing_path(
     })
 }
 
+/// Normalizes an absolute listing path lexically, rejecting any parent-directory component.
+///
+/// This runs before the requested path is touched so that a path outside the configured logs-input
+/// root is rejected identically whether or not it exists — otherwise the 400-vs-404 split turns the
+/// endpoint into an existence oracle for arbitrary paths in the container.
+///
+/// # Errors
+///
+/// Returns [`ClientError::InvalidInput`] if `path` contains a `..` or prefix component.
+fn normalize_listing_path(path: &Path, display_path: &str) -> Result<PathBuf, ClientError> {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::RootDir => normalized.push(Component::RootDir.as_os_str()),
+            Component::CurDir => {}
+            Component::Normal(segment) => normalized.push(segment),
+            Component::ParentDir | Component::Prefix(_) => {
+                return Err(ClientError::InvalidInput(format!(
+                    "Path '{display_path}' contains an invalid component"
+                )));
+            }
+        }
+    }
+    Ok(normalized)
+}
+
+/// # Returns
+///
+/// Whether `normalized` sits under the logs-input root.
+///
+/// Both the configured directory and its canonical form are accepted: `/os/ls` receives paths the
+/// Web UI built from the *configured* `logs_input.directory`, which differs from the canonical
+/// form when any component of it is a symlink.
+fn is_under_logs_input_root(
+    normalized: &Path,
+    configured_root: &Path,
+    canonical_root: &Path,
+) -> bool {
+    normalized.starts_with(configured_root) || normalized.starts_with(canonical_root)
+}
+
 async fn resolve_compression_paths(
     root: &Path,
     requested_paths: &[String],
@@ -1125,6 +1179,50 @@ mod tests {
              f.num_files AS num_files, f.num_messages AS num_messages FROM (SELECT 1) AS a, \
              (SELECT 2) AS f"
         );
+    }
+
+    #[test]
+    fn normalize_listing_path_strips_redundant_components() {
+        let normalized = normalize_listing_path(Path::new("/mnt/logs/./var//log"), "/mnt/logs")
+            .expect("expected the path to normalize");
+
+        assert_eq!(normalized, PathBuf::from("/mnt/logs/var/log"));
+    }
+
+    #[test]
+    fn normalize_listing_path_rejects_parent_directory_components() {
+        let error = normalize_listing_path(Path::new("/mnt/logs/../etc"), "/mnt/logs/../etc")
+            .expect_err("a parent-directory component should be rejected");
+
+        assert!(matches!(error, ClientError::InvalidInput(_)));
+    }
+
+    #[test]
+    fn logs_input_root_check_accepts_the_configured_and_canonical_roots() {
+        let configured = Path::new("/mnt/logs");
+        let canonical = Path::new("/private/mnt/logs");
+
+        assert!(is_under_logs_input_root(
+            Path::new("/mnt/logs/app.log"),
+            configured,
+            canonical
+        ));
+        assert!(is_under_logs_input_root(
+            Path::new("/private/mnt/logs/app.log"),
+            configured,
+            canonical
+        ));
+        assert!(is_under_logs_input_root(configured, configured, canonical));
+        assert!(!is_under_logs_input_root(
+            Path::new("/etc/shadow"),
+            configured,
+            canonical
+        ));
+        assert!(!is_under_logs_input_root(
+            Path::new("/mnt/logsother/app.log"),
+            configured,
+            canonical
+        ));
     }
 
     #[test]
