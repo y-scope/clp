@@ -2,11 +2,14 @@
 
 from pathlib import Path
 
+import pytest
 from clp_mcp_server.constants import QueryJobType
 from clp_package_utils.general import JobType
 from clp_py_utils.clp_config import StorageEngine
 from clp_py_utils.core import FileMetadata
 from job_orchestration.scheduler.constants import CompressionJobStatus
+
+pytestmark = pytest.mark.smoke
 
 
 def test_clp_native_py_project_enum_classes() -> None:
