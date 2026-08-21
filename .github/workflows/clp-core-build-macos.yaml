@@ -111,16 +111,14 @@ jobs:
       # stamp-gated, so dropping it is safe. `opentelemetry-proto`'s `.git` must stay: its populate
       # step runs `git` on every reconfigure.
       #
-      # Gating matches the Linux jobs; `deps:core` is its own step here, so the save keys off its
-      # outcome rather than a marker file.
+      # TEST BRANCH ONLY: the `main` gate is removed so this branch can write its own cache
+      # entries and demonstrate a restore. Do not merge.
       - name: "Drop mongo-c-driver's packfile before caching"
         if: &deps_cache_save_condition >-
           !cancelled()
           && false == matrix.use_shared_libs
           && 'success' == steps.deps_core.outcome
           && 'true' != steps.deps_cache_restore.outputs.cache-hit
-          && 'pull_request' != github.event_name
-          && 'refs/heads/main' == github.ref
         run: "rm -rf build/deps/cpp/mongocxx-build/_deps/mongo-c-driver-src/.git"
         shell: "bash"
 
