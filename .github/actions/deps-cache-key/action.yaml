@@ -1,0 +1,82 @@
+name: "deps-cache-key"
+description: >-
+  Computes the `actions/cache` key for the C++ dependency artifacts produced by `task deps:core`.
+
+inputs:
+  os_name:
+    description: "Name of the OS whose dependency image the artifacts are built in."
+    required: true
+  arch:
+    description: "Target architecture the artifacts are built for."
+    required: false
+    default: "x86_64"
+  env_hash:
+    description: >-
+      Identity of the toolchain that produced the artifacts, replacing the hash of the dependency
+      image's sources. Set this where the toolchain isn't described by files in the repository --
+      on macOS the compiler comes from the runner image and Homebrew, so it has to be captured at
+      runtime. Leave unset for the containerized Linux builds.
+    required: false
+    default: ""
+
+outputs:
+  key:
+    description: "Cache key identifying the exact dependency tree the current sources describe."
+    value: "${{steps.compute.outputs.key}}"
+
+runs:
+  using: "composite"
+  steps:
+    - id: "compute"
+      shell: "bash"
+
+      # The key identifies the dependency tree exactly: `ENV_HASH` the toolchain that compiles it,
+      # `TASKFILE_HASH` the definitions (versions, URLs, CMake flags) that describe it. Both are
+      # hashed from files in the repository, so the key is known at checkout, before the dependency
+      # image is pulled and therefore in time to restore into.
+      #
+      # The callers deliberately pass no `restore-keys`, so a key that doesn't match exactly is a
+      # miss and the tree is rebuilt from scratch. `restore-keys` would instead fall back to the
+      # newest entry sharing a prefix, which after a dependency bump means unpacking a
+      # `build/deps/cpp` built from the *previous* versions and running `task deps:core` on top of
+      # it. That only ever adds to the tree: the new version is downloaded, rebuilt, and installed
+      # over the old one, but `cmake --install` doesn't remove what the old one left behind, so
+      # headers and libraries that the bump deleted or renamed survive in the install prefixes and
+      # the core build can still find them. The result is a tree that matches neither version, and
+      # nothing downstream would flag it.
+      #
+      # The cost of matching exactly is that a dependency bump pays for a full rebuild -- which is
+      # what every run pays today -- so the worst case is a slow run rather than a wrong binary.
+      env:
+        IMAGE_HASH: >-
+          ${{hashFiles(
+            'components/core/tools/scripts/corporate-proxy-container.sh',
+            'components/core/tools/scripts/lib_install/*.sh',
+            'components/core/tools/scripts/lib_install/pipx-packages/**',
+            format('components/core/tools/docker-images/clp-env-base-{0}/**', inputs.os_name),
+            format('components/core/tools/scripts/lib_install/{0}/**', inputs.os_name)
+          )}}
+        TASKFILE_HASH: >-
+          ${{hashFiles(
+            'taskfile.yaml',
+            'taskfiles/deps/**/*.yaml',
+            'tools/yscope-dev-utils/exports/taskfiles/**/*.yaml'
+          )}}
+        INPUT_ENV_HASH: "${{inputs.env_hash}}"
+      run: |
+        # An explicit `env_hash` wins: on macOS the image patterns match nothing meaningful, so
+        # `IMAGE_HASH` would describe the wrong thing entirely.
+        env_hash="${INPUT_ENV_HASH}"
+        if [[ -z "${env_hash}" ]] ; then
+          env_hash="${IMAGE_HASH}"
+        fi
+
+        # `hashFiles` returns an empty string when nothing matches, which would leave two different
+        # environments sharing a key. Fail loudly instead.
+        if [[ -z "${env_hash}" || -z "${TASKFILE_HASH}" ]] ; then
+          echo "::error::deps-cache-key: no files matched the hashed patterns" >&2
+          exit 1
+        fi
+
+        echo "key=deps-core-${{inputs.arch}}-${{inputs.os_name}}-${env_hash}-${TASKFILE_HASH}" \
+          >> "$GITHUB_OUTPUT"
