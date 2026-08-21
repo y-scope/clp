@@ -5,6 +5,7 @@ import {
 } from "@webui/common/schemas/compression";
 
 import {apiClient} from "../search";
+import {buildApiErrorMessage} from "../utils";
 
 
 type ApiCompressionJobCreation =
@@ -27,9 +28,9 @@ const submitCompressionJob = async (payload: CompressionJobCreation): Promise<Co
     };
 
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.POST("/compression/jobs", {body});
+    const {data, error, response} = await apiClient.POST("/compression/jobs", {body});
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to submit compression job: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to submit compression job", error, response));
     }
 
     return {jobId: data.job_id};

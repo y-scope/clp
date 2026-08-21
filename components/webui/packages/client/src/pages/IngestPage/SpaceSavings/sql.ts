@@ -1,4 +1,5 @@
 import {apiClient} from "../../../api/search";
+import {buildApiErrorMessage} from "../../../api/utils";
 
 
 /**
@@ -26,9 +27,9 @@ const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
  */
 const fetchClpSpaceSavings = async (): Promise<SpaceSavingsItem> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/space_savings", {});
+    const {data, error, response} = await apiClient.GET("/metadata/space_savings", {});
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch space savings: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to fetch space savings", error, response));
     }
 
     return {
@@ -52,12 +53,12 @@ const fetchClpsSpaceSavings = async (
     }
 
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/space_savings", {
+    const {data, error, response} = await apiClient.GET("/metadata/space_savings", {
         params: {query: {dataset: datasetNames.join(",")}},
     });
 
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch space savings: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to fetch space savings", error, response));
     }
 
     return {

@@ -6,6 +6,7 @@ import {
 } from "@webui/common/schemas/compression";
 
 import {apiClient} from "../search";
+import {buildApiErrorMessage} from "../utils";
 
 
 type CompressionMetadata =
@@ -36,9 +37,9 @@ const parseClpIoConfig = (clpConfig: unknown): ClpIoConfig => {
  */
 const fetchCompressionJobs = async (): Promise<CompressionMetadata[]> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/compression_jobs", {});
+    const {data, error, response} = await apiClient.GET("/metadata/compression_jobs", {});
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch compression jobs: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to fetch compression jobs", error, response));
     }
 
     return data.map((job) => ({

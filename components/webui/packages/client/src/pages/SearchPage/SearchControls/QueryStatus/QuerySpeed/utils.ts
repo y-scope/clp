@@ -1,4 +1,5 @@
 import {apiClient} from "../../../../../api/search";
+import {buildApiErrorMessage} from "../../../../../api/utils";
 
 
 interface QuerySpeedResp {
@@ -17,7 +18,7 @@ interface QuerySpeedResp {
  */
 const fetchQuerySpeed = async (datasetNames: string[], jobId: string): Promise<QuerySpeedResp> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/query_speed", {
+    const {data, error, response} = await apiClient.GET("/metadata/query_speed", {
         params: {
             query: {
                 dataset: datasetNames.join(","),
@@ -27,7 +28,7 @@ const fetchQuerySpeed = async (datasetNames: string[], jobId: string): Promise<Q
     });
 
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch query speed: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to fetch query speed", error, response));
     }
 
     return {

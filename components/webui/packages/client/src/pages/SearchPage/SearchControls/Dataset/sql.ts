@@ -1,4 +1,5 @@
 import {apiClient} from "../../../../api/search";
+import {buildApiErrorMessage} from "../../../../api/utils";
 
 
 /**
@@ -9,9 +10,9 @@ import {apiClient} from "../../../../api/search";
  */
 const fetchDatasetNames = async (): Promise<string[]> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/datasets", {});
+    const {data, error, response} = await apiClient.GET("/metadata/datasets", {});
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch dataset names: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to fetch dataset names", error, response));
     }
 
     return data;

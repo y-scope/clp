@@ -3,6 +3,7 @@ import {QUERY_JOB_TYPE} from "@webui/common/query";
 import {Nullable} from "@webui/common/utility-types";
 
 import {apiClient} from "../search";
+import {buildApiErrorMessage} from "../utils";
 
 
 interface SubmitExtractStreamJobProps {
@@ -61,10 +62,10 @@ const submitExtractStreamJob = async ({
     });
 
     onRequestStarted();
-    const {data, response} = await request;
+    const {data, error, response} = await request;
 
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to extract stream file: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to extract stream file", error, response));
     }
 
     return {data};

@@ -1,4 +1,5 @@
 import {apiClient} from "../../../../../api/search";
+import {buildApiErrorMessage} from "../../../../../api/utils";
 
 
 /**
@@ -10,13 +11,13 @@ import {apiClient} from "../../../../../api/search";
  */
 const fetchTimestampColumns = async (datasetName: string): Promise<string[]> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET(
+    const {data, error, response} = await apiClient.GET(
         "/metadata/column_metadata/{dataset_name}/timestamp",
         {params: {path: {dataset_name: datasetName}}},
     );
 
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch timestamp columns: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to fetch timestamp columns", error, response));
     }
 
     return data;

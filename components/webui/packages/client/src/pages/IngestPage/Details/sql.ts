@@ -1,6 +1,7 @@
 import {Nullable} from "@webui/common/utility-types";
 
 import {apiClient} from "../../../api/search";
+import {buildApiErrorMessage} from "../../../api/utils";
 
 
 /**
@@ -32,9 +33,9 @@ const DETAILS_DEFAULT: DetailsItem = {
  */
 const fetchClpDetails = async (): Promise<DetailsItem> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/ingestion_details", {});
+    const {data, error, response} = await apiClient.GET("/metadata/ingestion_details", {});
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch details: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to fetch details", error, response));
     }
 
     return {
@@ -60,12 +61,12 @@ const fetchClpsDetails = async (
     }
 
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/ingestion_details", {
+    const {data, error, response} = await apiClient.GET("/metadata/ingestion_details", {
         params: {query: {dataset: datasetNames.join(",")}},
     });
 
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch details: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to fetch details", error, response));
     }
 
     return {
