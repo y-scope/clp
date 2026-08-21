@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include <log_surgeon/log_surgeon.hpp>
 #include <spdlog/spdlog.h>
@@ -57,17 +56,5 @@ auto build_parser(clp::ReaderInterface& reader)
     }
 
     return std::make_pair(builder.build(), std::move(spec_str));
-}
-
-auto
-collect_parent_chain(log_surgeon::Match const& leaf, std::vector<log_surgeon::Match const*>& chain)
-        -> void {
-    chain.clear();
-    for (auto const* cur{leaf.get_parent()}; nullptr != cur; cur = cur->get_parent()) {
-        chain.push_back(cur);
-        if (0 == cur->sub_rule_id) {
-            break;
-        }
-    }
 }
 }  // namespace clpp

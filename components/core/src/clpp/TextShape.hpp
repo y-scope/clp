@@ -265,12 +265,12 @@ public:
         }
     }
 
-    auto append_placeholder(std::string_view column_name) -> void
+    auto append_placeholder(std::string_view placeholder) -> void
     requires TextShapeBuilderReq<Storage>
     {
-        m_storage.reserve(m_storage.size() + column_name.size() + 2);
+        m_storage.reserve(m_storage.size() + placeholder.size() + 2);
         m_storage.push_back('%');
-        m_storage.append(column_name);
+        m_storage.append(placeholder);
         m_storage.push_back('%');
     }
 

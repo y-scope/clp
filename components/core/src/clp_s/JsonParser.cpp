@@ -146,22 +146,21 @@ struct ParentScope {
 };
 
 /**
- * Updates the stack of open `ParentRule` scopes and schema unordered objects to reflect the nesting
- * at the innermost match in `match_ancestors`. Returns the schema tree node ID of the innermost
- * open scope (that new child schema nodes should use).
- * The schema is updated as unordered objects ending prior to `match_ancestors` are closed, while
- * new parent rules in `match_ancestors` are created as new open unordered objects (and added to the
- * schema tree).
+ * Updates the stack of open `ParentRule` scopes and schema unordered objects to reflect the parents
+ * of `leaf`. Returns the schema tree node ID of the innermost open scope (that new leaf rule schema
+ * nodes should use).
+ * The open schema unordered object that are not parents of `leaf` are closed, while new unordered
+ * objects are begun for parent rules of `leaf` not already in `open_scopes`.
  *
- * @param match_ancestors The ancestor chain of matches to update to (innermost->outermost).
+ * @param leaf The leaf match to update the open scopes to.
  * @param open_scopes The current stack of open scopes to update (outermost->innermost).
  * @param schema The schema whose unordered objects to open and/or close.
  * @param archive_writer Used to add `ParentRule` tree nodes for newly opened scopes.
  * @param log_msg_node_id The `LogMessage` tree node ID owning the root scope.
  * @return The schema tree node ID of the innermost open scope.
  */
-auto update_match_ancestors_scopes(
-        std::vector<log_surgeon::Match const*> const& match_ancestors,
+auto update_open_parent_scopes(
+        log_surgeon::Match const& leaf,
         std::vector<ParentScope>& open_scopes,
         Schema& schema,
         SchemaNode::id_t log_msg_node_id,
@@ -186,38 +185,45 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
     return false == restore_result.has_error() && float_str == restore_result.value();
 }
 
-auto update_match_ancestors_scopes(
-        std::vector<log_surgeon::Match const*> const& match_ancestors,
+auto update_open_parent_scopes(
+        log_surgeon::Match const& leaf,
         std::vector<ParentScope>& open_scopes,
         Schema& schema,
         SchemaNode::id_t log_msg_node_id,
         ArchiveWriter& archive_writer
 ) -> SchemaNode::id_t {
-    size_t common_ancestors{0};
-    while (common_ancestors < open_scopes.size() && common_ancestors < match_ancestors.size()
-           && open_scopes.at(open_scopes.size() - 1 - common_ancestors).match
-                      == match_ancestors.at(common_ancestors))
-    {
-        ++common_ancestors;
+    // TODO clpp: change when Adrian updates
+    std::vector<log_surgeon::Match const*> parent_matches;
+    for (auto const* cur{&leaf}; 0 != cur->sub_rule_id;) {
+        cur = cur->get_parent();
+        parent_matches.push_back(cur);
     }
-    while (open_scopes.size() > common_ancestors) {
+
+    size_t common_parents{0};
+    while (common_parents < open_scopes.size() && common_parents < parent_matches.size()
+           && open_scopes.at(open_scopes.size() - 1 - common_parents).match
+                      == parent_matches.at(common_parents))
+    {
+        ++common_parents;
+    }
+    while (open_scopes.size() > common_parents) {
         schema.end_unordered_object(open_scopes.back().schema_start);
         open_scopes.pop_back();
     }
-    for (size_t i{match_ancestors.size()}; i > common_ancestors;) {
+    for (size_t i{parent_matches.size()}; i > common_parents;) {
         --i;
-        auto const* ancestor{match_ancestors.at(i)};
-        auto const ancestor_parent_node_id{
+        auto const* parent{parent_matches.at(i)};
+        auto const parent_node_id{
                 open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id
         };
         auto const node_id{archive_writer.add_node(
-                ancestor_parent_node_id,
+                parent_node_id,
                 NodeType::ParentRule,
-                ancestor->get_rule_name()
+                parent->get_rule_name()
         )};
         auto const schema_start{schema.start_unordered_object(NodeType::ParentRule)};
         open_scopes.push_back(
-                {.match = ancestor, .schema_start = schema_start, .tree_node_id = node_id}
+                {.match = parent, .schema_start = schema_start, .tree_node_id = node_id}
         );
     }
     return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
@@ -1585,25 +1591,21 @@ auto JsonParser::parse_str_field(std::string_view str_field, SchemaNode::id_t lo
 
     clpp::TextShape<std::string> log_shape{str_field.size()};
     size_t log_msg_pos{0};
-    std::vector<log_surgeon::Match const*> parent_chain;
     std::vector<ParentScope> open_scopes;
     for (auto const& match : event->get_all_matches()) {
         if (false == match.is_leaf) {
             continue;
         }
 
-        clpp::collect_parent_chain(match, parent_chain);
-        auto const parent_node_id{update_match_ancestors_scopes(
-                parent_chain,
+        auto const rule_name{match.get_rule_name()};
+        auto const lexeme{match.get_lexeme()};
+        auto const parent_node_id{update_open_parent_scopes(
+                match,
                 open_scopes,
                 m_current_schema,
                 log_msg_node_id,
                 *m_archive_writer
         )};
-
-        auto const rule_name{match.get_rule_name()};
-        auto const lexeme{match.get_lexeme()};
-
         SchemaNode::id_t node_id{0};
         switch (static_cast<clpp::EncodingType>(match.encoding_idx)) {
             case clpp::EncodingType::None:
