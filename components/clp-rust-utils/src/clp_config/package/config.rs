@@ -11,6 +11,16 @@ use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
 use crate::dataset::resolve_dataset_name;
 
+/// The directory inside CLP containers where the configured logs-input directory is mounted
+/// (mirror of `clp_py_utils.clp_config.CONTAINER_INPUT_LOGS_ROOT_DIR`).
+///
+/// # NOTE
+///
+/// * Must be kept in sync with the Python definition.
+/// * Every deployment path mounts `logs_input.directory` at or below this path, so it is always a
+///   prefix of the container-visible `logs_input.directory`.
+pub const CONTAINER_INPUT_LOGS_ROOT_DIR: &str = "/mnt/logs";
+
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
 /// # NOTE
@@ -162,29 +172,55 @@ impl Default for Database {
     }
 }
 
+/// Which set of metadata tables a name refers to.
+///
+/// The CLP storage engine keeps a single, dataset-less set of metadata tables; CLP-S keeps one set
+/// per dataset. Naming the two cases stops a bare `None` from meaning "the dataset-less tables"
+/// in one helper and "the default dataset's tables" in another.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MetadataTableScope<'a> {
+    /// The CLP storage engine's single, dataset-less table set (`<prefix><suffix>`).
+    Global,
+
+    /// One CLP-S dataset's table set (`<prefix><dataset>_<suffix>`).
+    Dataset(&'a str),
+}
+
 impl Database {
     /// # Returns
     ///
-    /// The archives table name (`<prefix><dataset>_archives`).
+    /// The archives table name for `scope`.
     #[must_use]
-    pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
-        format!(
-            "{}{}_archives",
-            self.table_prefix,
-            resolve_dataset_name(dataset)
-        )
+    pub fn archives_table_name(&self, scope: MetadataTableScope<'_>) -> String {
+        self.metadata_table_name(scope, "archives")
     }
 
     /// # Returns
     ///
+    /// The files table name for `scope`.
+    #[must_use]
+    pub fn files_table_name(&self, scope: MetadataTableScope<'_>) -> String {
+        self.metadata_table_name(scope, "files")
+    }
+
+    /// Column metadata only exists per dataset, so this helper takes a dataset rather than a
+    /// [`MetadataTableScope`].
+    ///
+    /// # Returns
+    ///
     /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
     #[must_use]
-    pub fn column_metadata_table_name(&self, dataset: Option<&str>) -> String {
-        format!(
-            "{}{}_column_metadata",
-            self.table_prefix,
-            resolve_dataset_name(dataset)
-        )
+    pub fn column_metadata_table_name(&self, dataset: &str) -> String {
+        format!("{}{dataset}_column_metadata", self.table_prefix)
+    }
+
+    fn metadata_table_name(&self, scope: MetadataTableScope<'_>, suffix: &str) -> String {
+        match scope {
+            MetadataTableScope::Global => format!("{}{suffix}", self.table_prefix),
+            MetadataTableScope::Dataset(dataset) => {
+                format!("{}{dataset}_{suffix}", self.table_prefix)
+            }
+        }
     }
 
     /// # Returns
@@ -203,6 +239,7 @@ pub struct ApiServer {
     pub port: u16,
     pub query_job_polling: QueryJobPollingConfig,
     pub default_max_num_query_results: u32,
+    pub stream_file_extraction_timeout_secs: u64,
 }
 
 impl Default for ApiServer {
@@ -212,6 +249,7 @@ impl Default for ApiServer {
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
             default_max_num_query_results: 1000,
+            stream_file_extraction_timeout_secs: 1800,
         }
     }
 }
@@ -278,6 +316,7 @@ pub struct ResultsCache {
     pub host: String,
     pub port: u16,
     pub db_name: String,
+    pub stream_collection_name: String,
 }
 
 impl Default for ResultsCache {
@@ -286,6 +325,7 @@ impl Default for ResultsCache {
             host: "localhost".to_owned(),
             port: 27017,
             db_name: "clp-query-results".to_owned(),
+            stream_collection_name: "stream-files".to_owned(),
         }
     }
 }
@@ -295,10 +335,20 @@ impl Default for ResultsCache {
 /// # NOTE
 ///
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Clone, Default, Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct StreamOutput {
     pub storage: StreamOutputStorage,
+    pub target_uncompressed_size: u64,
+}
+
+impl Default for StreamOutput {
+    fn default() -> Self {
+        Self {
+            storage: StreamOutputStorage::default(),
+            target_uncompressed_size: 134_217_728,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -563,11 +613,74 @@ fn default_archive_staging_directory() -> String {
 mod tests {
     use std::path::Path;
 
+    use super::ApiServer;
     use super::ArchiveOutput;
     use super::ArchiveOutputStorage;
     use super::Database;
     use super::LogsInput;
+    use super::MetadataTableScope;
+    use super::ResultsCache;
     use super::SpiderTaskExecutorConfig;
+    use super::StreamOutput;
+
+    #[test]
+    fn metadata_table_names_match_storage_engine_conventions() {
+        let database = Database::default();
+
+        assert_eq!(
+            database.archives_table_name(MetadataTableScope::Global),
+            "clp_archives"
+        );
+        assert_eq!(
+            database.files_table_name(MetadataTableScope::Global),
+            "clp_files"
+        );
+        assert_eq!(
+            database.archives_table_name(MetadataTableScope::Dataset("default")),
+            "clp_default_archives"
+        );
+        assert_eq!(
+            database.files_table_name(MetadataTableScope::Dataset("logs")),
+            "clp_logs_files"
+        );
+        assert_eq!(
+            database.column_metadata_table_name("default"),
+            "clp_default_column_metadata"
+        );
+        assert_eq!(database.datasets_table_name(), "clp_datasets");
+    }
+
+    #[test]
+    fn dataset_scope_uses_the_resolved_dataset_name() {
+        use crate::dataset::CLP_DEFAULT_DATASET_NAME;
+        use crate::dataset::resolve_dataset_name;
+
+        let database = Database::default();
+        let scope = MetadataTableScope::Dataset(resolve_dataset_name(None));
+
+        assert_eq!(resolve_dataset_name(None), CLP_DEFAULT_DATASET_NAME);
+        assert_eq!(database.archives_table_name(scope), "clp_default_archives");
+    }
+
+    #[test]
+    fn metadata_endpoint_config_values_are_deserialized() {
+        let results_cache: ResultsCache = serde_json::from_value(serde_json::json!({
+            "stream_collection_name": "custom-streams",
+        }))
+        .expect("failed to deserialize results-cache config");
+        let stream_output: StreamOutput = serde_json::from_value(serde_json::json!({
+            "target_uncompressed_size": 4096,
+        }))
+        .expect("failed to deserialize stream-output config");
+        let api_server: ApiServer = serde_json::from_value(serde_json::json!({
+            "stream_file_extraction_timeout_secs": 15,
+        }))
+        .expect("failed to deserialize API-server config");
+
+        assert_eq!(results_cache.stream_collection_name, "custom-streams");
+        assert_eq!(stream_output.target_uncompressed_size, 4096);
+        assert_eq!(api_server.stream_file_extraction_timeout_secs, 15);
+    }
 
     #[test]
     fn deserialize_logs_input_s3_config() {
@@ -594,9 +707,7 @@ mod tests {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
-                crate::clp_config::AwsAuthentication::Default => {
-                    panic!("Expected credentials, got `default`")
-                }
+                other => panic!("Expected credentials, got {other:?}"),
             },
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }

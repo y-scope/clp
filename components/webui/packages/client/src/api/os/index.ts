@@ -1,5 +1,12 @@
-import {FileListing} from "@webui/common/schemas/os";
-import axios from "axios";
+import type {components} from "@webui/api-client";
+
+import {apiClient} from "../search";
+import {buildApiErrorMessage} from "../utils";
+
+
+type FileEntry = components["schemas"]["DirEntry"];
+
+type FileListing = FileEntry[];
 
 
 /**
@@ -7,13 +14,20 @@ import axios from "axios";
  *
  * @param path
  * @return
+ * @throws {Error} If the request fails or the API server returns an unexpected response.
  */
 const listFiles = async (path: string): Promise<FileListing> => {
-    const {data} = await axios.get<FileListing>("/api/os/ls", {
-        params: {path},
-    });
+    // eslint-disable-next-line new-cap
+    const {data, error, response} = await apiClient.GET("/os/ls", {params: {query: {path}}});
+    if ("undefined" === typeof data) {
+        throw new Error(buildApiErrorMessage("Failed to list files", error, response));
+    }
 
     return data;
 };
 
 export {listFiles};
+export type {
+    FileEntry,
+    FileListing,
+};

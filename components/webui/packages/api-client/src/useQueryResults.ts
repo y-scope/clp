@@ -89,8 +89,6 @@ const useQueryResults = <T>(
             };
         }
 
-        console.log(`Streaming query results for job ID: ${jobId}`);
-
         const abortController = new AbortController();
         const collected: T[] = [];
         let flushTimeout: ReturnType<typeof setTimeout> | null = null;

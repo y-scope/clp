@@ -2,28 +2,24 @@
  * Tree node for Ant Design TreeSelect in simple mode (treeDataSimpleMode).
  */
 interface TreeNode {
+    /**
+     * Path shown to the user, including the logs-input directory. Matches the original path the
+     * Jobs table displays for the resulting compression job.
+     */
+    displayPath: string;
+
     id: string;
     isLeaf: boolean;
     pId: string | null;
     title: string;
+
+    /**
+     * Path submitted to the API server, relative to the configured logs-input root.
+     */
     value: string;
 }
 
 const ROOT_PATH = "/";
 
-/**
- * Root tree node representing the filesystem root.
- */
-const ROOT_NODE: TreeNode = Object.freeze({
-    id: ROOT_PATH,
-    isLeaf: false,
-    pId: null,
-    title: ROOT_PATH,
-    value: ROOT_PATH,
-});
-
 export type {TreeNode};
-export {
-    ROOT_NODE,
-    ROOT_PATH,
-};
+export {ROOT_PATH};

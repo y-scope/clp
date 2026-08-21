@@ -1,3 +1,6 @@
+{{- if not .Values.clpConfig.api_server }}
+{{- fail "clpConfig.api_server is required when the Web UI is deployed: the Web UI reads all metadata through the API server." }}
+{{- end }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -35,16 +38,6 @@ spec:
           image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
-            - name: "CLP_DB_PASS"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "password"
-            - name: "CLP_DB_USER"
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database
-                  key: "username"
             - name: "HOST"
               value: "0.0.0.0"
             - name: "NODE_ENV"
@@ -55,15 +48,6 @@ spec:
               value: "4000"
             - name: "RATE_LIMIT"
               value: {{ .Values.clpConfig.webui.rate_limit | quote }}
-            {{- with .Values.clpConfig.stream_output.storage }}
-            {{- if and (eq .type "s3") (eq .s3_config.aws_authentication.type "credentials") }}
-            - name: "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID"
-              value: {{ .s3_config.aws_authentication.credentials.access_key_id | quote }}
-            - name: "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY"
-              value: {{ .s3_config.aws_authentication.credentials.secret_access_key | quote }}
-            {{- end }}{{/* if and (eq .type "s3")
-                                  (eq .s3_config.aws_authentication.type "credentials") */}}
-            {{- end }}{{/* with .Values.clpConfig.stream_output.storage */}}
           {{- include "clp.createResourceLimits" (dict
               "root" .
               "component" "webui"
@@ -76,12 +60,6 @@ spec:
               mountPath: "/opt/clp/etc/webui/settings.json"
               subPath: "webui-settings.json"
               readOnly: true
-            {{- if .Values.clpConfig.aws_config }}
-            - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
-            {{- end }}
-            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
-            {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
@@ -105,12 +83,6 @@ spec:
         - name: "webui-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if .Values.clpConfig.aws_config }}
-        - {{- include "clp.awsConfigVolume" . | nindent 10 }}
-        {{- end }}
-        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-        - {{- include "clp.logsInputVolume" . | nindent 10 }}
-        {{- end }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .

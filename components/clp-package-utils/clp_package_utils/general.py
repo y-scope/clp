@@ -653,7 +653,10 @@ def validate_webui_config(
         )
 
     if clp_config.api_server is None:
-        raise ValueError("The API server must be enabled when the Web UI is enabled.")
+        raise ValueError(
+            "The API server must be enabled when the Web UI is enabled; the Web UI reads all"
+            " metadata through the API server, including in Presto mode."
+        )
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
 

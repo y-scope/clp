@@ -4,7 +4,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
+use clp_rust_utils::clp_config::package::config::MetadataTableScope;
 use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::resolve_dataset_name;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -391,10 +393,11 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::MetadataTableCreation`] if either table cannot be created.
     async fn upsert_metadata_tables(&self) -> Result<(), Error> {
-        let archives_table = self.db_config.archives_table_name(self.dataset.as_deref());
-        let column_metadata_table = self
+        let dataset = resolve_dataset_name(self.dataset.as_deref());
+        let archives_table = self
             .db_config
-            .column_metadata_table_name(self.dataset.as_deref());
+            .archives_table_name(MetadataTableScope::Dataset(dataset));
+        let column_metadata_table = self.db_config.column_metadata_table_name(dataset);
 
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS `{archives_table}` (

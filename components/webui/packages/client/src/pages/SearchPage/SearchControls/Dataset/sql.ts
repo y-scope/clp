@@ -1,36 +1,21 @@
-import {querySql} from "../../../../api/sql";
-import {settings} from "../../../../settings";
+import {apiClient} from "../../../../api/search";
+import {buildApiErrorMessage} from "../../../../api/utils";
 
-
-/**
- * Column names for the datasets table.
- */
-enum CLP_DATASETS_TABLE_COLUMN_NAMES {
-    NAME = "name",
-}
-
-/**
- * SQL query to get all dataset names.
- */
-const GET_DATASETS_SQL = `
-    SELECT
-        ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME} AS name
-    FROM ${settings.SqlDbClpDatasetsTableName}
-    ORDER BY ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME};
-`;
-
-interface DatasetItem {
-    [CLP_DATASETS_TABLE_COLUMN_NAMES.NAME]: string;
-}
 
 /**
  * Fetches all dataset names from the datasets table.
  *
  * @return
+ * @throws {Error} If the request fails or the API server returns an unexpected response.
  */
 const fetchDatasetNames = async (): Promise<string[]> => {
-    const resp = await querySql<DatasetItem[]>(GET_DATASETS_SQL);
-    return resp.data.map((dataset) => dataset.name);
+    // eslint-disable-next-line new-cap
+    const {data, error, response} = await apiClient.GET("/metadata/datasets", {});
+    if ("undefined" === typeof data) {
+        throw new Error(buildApiErrorMessage("Failed to fetch dataset names", error, response));
+    }
+
+    return data;
 };
 
 export {fetchDatasetNames};

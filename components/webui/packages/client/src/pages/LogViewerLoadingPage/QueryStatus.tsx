@@ -9,7 +9,6 @@ import {
     Value,
 } from "@sinclair/typebox/value";
 import {Nullable} from "@webui/common/utility-types";
-import {isAxiosError} from "axios";
 
 import {submitExtractStreamJob} from "../../api/stream-files";
 import {
@@ -81,7 +80,7 @@ const QueryStatus = () => {
             // `ExtractJobSearchParams`.
             extractJobType: EXTRACT_JOB_TYPE[type as keyof typeof EXTRACT_JOB_TYPE],
             logEventIdx: logEventIdx,
-            onUploadProgress: () => {
+            onRequestStarted: () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
             },
             streamId: streamId,
@@ -96,13 +95,10 @@ const QueryStatus = () => {
                     `#logEventNum=${innerLogEventNum}`;
             })
             .catch((e: unknown) => {
-                let msg = "Unknown error.";
-                if (isAxiosError<{message: string}>(e)) {
-                    msg = e.message;
-                    if ("undefined" !== typeof e.response) {
-                        msg = e.response.data.message;
-                    }
-                }
+                const msg = e instanceof Error ?
+                    e.message :
+                    "Unknown error.";
+
                 console.error(msg, e);
                 setErrorMsg(msg);
             });

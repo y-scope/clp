@@ -8,6 +8,7 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::job_config::QueryJobType;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -27,6 +28,26 @@ use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
 use crate::client::ValidatedCompressionUsageParams;
+use crate::metadata_client::CompressionJob;
+use crate::metadata_client::CompressionJobCreation;
+use crate::metadata_client::CompressionMetadata;
+use crate::metadata_client::DirEntry;
+use crate::metadata_client::IngestionDetails;
+use crate::metadata_client::MetadataClient;
+use crate::metadata_client::QuerySpeed;
+use crate::metadata_client::SpaceSavings;
+use crate::metadata_client::StreamFileExtraction;
+use crate::metadata_client::StreamFileMetadata;
+use crate::metadata_client::TimeRange;
+
+/// Shared application state passed to all route handlers.
+#[derive(Clone)]
+pub struct AppState {
+    /// Client for search query orchestration.
+    pub client: Client,
+    /// Client for metadata, compression-job, and stream-file operations.
+    pub metadata_client: MetadataClient,
+}
 
 /// Factory method to create an Axum router configured with all API routes.
 ///
@@ -39,7 +60,7 @@ use crate::client::ValidatedCompressionUsageParams;
 /// Returns an error if:
 ///
 /// * Forwards [`OpenApi::to_json`]'s return values on failure.
-pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
+pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error> {
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
         .routes(routes!(health))
@@ -47,11 +68,17 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
         .routes(routes!(query_results))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
-        .route(
-            "/column_metadata/{dataset_name}/timestamp",
-            get(get_timestamp_column_names),
-        )
-        .with_state(client)
+        .routes(routes!(datasets))
+        .routes(routes!(time_range))
+        .routes(routes!(space_savings))
+        .routes(routes!(ingestion_details))
+        .routes(routes!(query_speed))
+        .routes(routes!(timestamp_column_names))
+        .routes(routes!(compression_metadata))
+        .routes(routes!(list_files))
+        .routes(routes!(compression_job))
+        .routes(routes!(extract_stream_file))
+        .with_state(state)
         .split_for_parts();
     let api_json = api.to_json()?;
     let router = router
@@ -69,11 +96,32 @@ mod api_doc {
     // Using `super::...` can cause `super` to appear as a tag in the generated OpenAPI
     // documentation. Importing the paths directly prevents this issue.
     use super::__path_cancel_query;
+    use super::__path_compression_job;
+    use super::__path_compression_metadata;
     use super::__path_compression_usage;
+    use super::__path_datasets;
+    use super::__path_extract_stream_file;
     use super::__path_health;
+    use super::__path_ingestion_details;
+    use super::__path_list_files;
     use super::__path_query;
     use super::__path_query_results;
+    use super::__path_query_speed;
+    use super::__path_space_savings;
+    use super::__path_time_range;
+    use super::__path_timestamp_column_names;
+    use super::CompressionJob;
+    use super::CompressionJobCreation;
+    use super::CompressionMetadata;
     use super::CompressionUsage;
+    use super::DirEntry;
+    use super::IngestionDetails;
+    use super::QueryJobType;
+    use super::QuerySpeed;
+    use super::SpaceSavings;
+    use super::StreamFileExtraction;
+    use super::StreamFileMetadata;
+    use super::TimeRange;
     use crate::client::CompressionJobStatus;
 
     #[derive(utoipa::OpenApi)]
@@ -83,8 +131,38 @@ mod api_doc {
             description = "API Server for CLP",
             contact(name = "YScope")
         ),
-        paths(health, query, query_results, cancel_query, compression_usage),
-        components(schemas(CompressionUsage, CompressionJobStatus))
+        paths(
+            health,
+            query,
+            query_results,
+            cancel_query,
+            compression_usage,
+            datasets,
+            time_range,
+            space_savings,
+            ingestion_details,
+            query_speed,
+            timestamp_column_names,
+            compression_metadata,
+            list_files,
+            compression_job,
+            extract_stream_file,
+        ),
+        components(schemas(
+            CompressionUsage,
+            CompressionJobStatus,
+            CompressionJob,
+            CompressionJobCreation,
+            CompressionMetadata,
+            DirEntry,
+            QueryJobType,
+            IngestionDetails,
+            QuerySpeed,
+            SpaceSavings,
+            StreamFileExtraction,
+            StreamFileMetadata,
+            TimeRange,
+        ))
     )]
     pub struct ApiDoc;
 }
@@ -126,11 +204,11 @@ async fn health() -> String {
     )
 )]
 async fn query(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
     tracing::info!("Submitting query: {:?}", query_config);
-    let search_job_id = match client.submit_query(query_config).await {
+    let search_job_id = match state.client.submit_query(query_config).await {
         Ok(id) => {
             tracing::info!("Submitted query with search job ID: {}", id);
             id
@@ -190,12 +268,13 @@ struct QueryResultsParams {
     )
 )]
 async fn query_results(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Path(search_job_id): Path<u64>,
     Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
     tracing::info!("Fetching results for search job ID: {}", search_job_id);
-    let results_stream = match client
+    let results_stream = match state
+        .client
         .fetch_results(search_job_id, params.raw_docs, params.sorted)
         .await
     {
@@ -244,11 +323,11 @@ async fn query_results(
     )
 )]
 async fn cancel_query(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Path(search_job_id): Path<u64>,
 ) -> Result<StatusCode, HandlerError> {
     tracing::info!("Cancelling search job ID: {}", search_job_id);
-    match client.cancel_search_job(search_job_id).await {
+    match state.client.cancel_search_job(search_job_id).await {
         Ok(()) => {
             tracing::info!(
                 "Successfully submitted cancellation request for search job ID: {}",
@@ -267,24 +346,6 @@ async fn cancel_query(
     }
 }
 
-async fn get_timestamp_column_names(
-    State(client): State<Client>,
-    Path(dataset_name): Path<String>,
-) -> Result<Json<Vec<String>>, HandlerError> {
-    let names = client
-        .get_timestamp_column_names(&dataset_name)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                "Failed to get timestamp column names for dataset '{}': {:?}",
-                dataset_name,
-                err
-            );
-            HandlerError::from(err)
-        })?;
-    Ok(Json(names))
-}
-
 #[utoipa::path(
     get,
     path = "/usage/compression",
@@ -300,7 +361,7 @@ async fn get_timestamp_column_names(
     )
 )]
 async fn compression_usage(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Query(params): Query<CompressionUsageParams>,
 ) -> Result<Json<Vec<CompressionUsage>>, HandlerError> {
     let validated = ValidatedCompressionUsageParams::try_from(params)?;
@@ -311,12 +372,265 @@ async fn compression_usage(
         validated.job_statuses,
     );
     Ok(Json(
-        client
+        state
+            .client
             .get_compression_usage(&validated)
             .await
             .inspect_err(|err| {
                 tracing::error!("Failed to fetch compression usage: {:?}", err);
             })?,
+    ))
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct DatasetsParams {
+    /// Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.
+    #[serde(default)]
+    dataset: Option<String>,
+}
+
+fn parse_datasets(dataset: Option<String>) -> Vec<String> {
+    dataset
+        .map(|s| {
+            s.split(',')
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[utoipa::path(
+    get,
+    path = "/metadata/datasets",
+    description = "Gets the names of all datasets.",
+    responses(
+        (status = OK, body = Vec<String>),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn datasets(State(state): State<AppState>) -> Result<Json<Vec<String>>, HandlerError> {
+    Ok(Json(state.metadata_client.get_dataset_names().await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/metadata/time_range",
+    description = "Gets the earliest and latest log entry timestamps across the given \
+        datasets. For the CLP storage engine, the `dataset` parameter is ignored.",
+    params(DatasetsParams),
+    responses(
+        (status = OK, body = TimeRange),
+        (status = BAD_REQUEST, description = "Invalid dataset name"),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn time_range(
+    State(state): State<AppState>,
+    Query(params): Query<DatasetsParams>,
+) -> Result<Json<TimeRange>, HandlerError> {
+    let datasets = parse_datasets(params.dataset);
+    Ok(Json(state.metadata_client.get_time_range(&datasets).await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/metadata/space_savings",
+    description = "Gets aggregated space-savings statistics (total uncompressed and \
+        compressed sizes) across the given datasets. For the CLP storage engine, the \
+        `dataset` parameter is ignored.",
+    params(DatasetsParams),
+    responses(
+        (status = OK, body = SpaceSavings),
+        (status = BAD_REQUEST, description = "Invalid dataset name"),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn space_savings(
+    State(state): State<AppState>,
+    Query(params): Query<DatasetsParams>,
+) -> Result<Json<SpaceSavings>, HandlerError> {
+    let datasets = parse_datasets(params.dataset);
+    Ok(Json(
+        state.metadata_client.get_space_savings(&datasets).await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/metadata/ingestion_details",
+    description = "Gets ingestion details (timestamp range, file count, message count) \
+        across the given datasets. For the CLP storage engine, the `dataset` parameter is \
+        ignored.",
+    params(DatasetsParams),
+    responses(
+        (status = OK, body = IngestionDetails),
+        (status = BAD_REQUEST, description = "Invalid dataset name"),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn ingestion_details(
+    State(state): State<AppState>,
+    Query(params): Query<DatasetsParams>,
+) -> Result<Json<IngestionDetails>, HandlerError> {
+    let datasets = parse_datasets(params.dataset);
+    Ok(Json(
+        state
+            .metadata_client
+            .get_ingestion_details(&datasets)
+            .await?,
+    ))
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct QuerySpeedParams {
+    /// Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.
+    #[serde(default)]
+    dataset: Option<String>,
+    /// The search job ID whose scan speed should be computed.
+    search_job_id: i64,
+}
+
+#[utoipa::path(
+    get,
+    path = "/metadata/query_speed",
+    description = "Gets the query speed (total uncompressed bytes scanned and job duration) \
+        for a search job across the given datasets.",
+    params(QuerySpeedParams),
+    responses(
+        (status = OK, body = QuerySpeed),
+        (status = BAD_REQUEST, description = "Invalid dataset name"),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn query_speed(
+    State(state): State<AppState>,
+    Query(params): Query<QuerySpeedParams>,
+) -> Result<Json<QuerySpeed>, HandlerError> {
+    let datasets = parse_datasets(params.dataset);
+    Ok(Json(
+        state
+            .metadata_client
+            .get_query_speed(&datasets, params.search_job_id)
+            .await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/metadata/column_metadata/{dataset_name}/timestamp",
+    description = "Gets the timestamp column names for a given dataset (CLP-S only).",
+    responses(
+        (status = OK, body = Vec<String>),
+        (status = BAD_REQUEST, description = "Invalid dataset name"),
+        (status = NOT_FOUND, description = "Dataset not found"),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn timestamp_column_names(
+    State(state): State<AppState>,
+    Path(dataset_name): Path<String>,
+) -> Result<Json<Vec<String>>, HandlerError> {
+    Ok(Json(
+        state
+            .metadata_client
+            .get_timestamp_column_names(&dataset_name)
+            .await?,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/metadata/compression_jobs",
+    description = "Gets recent compression-job metadata (most recent first), with the \
+        decoded CLP IO config for each job.",
+    responses(
+        (status = OK, body = Vec<CompressionMetadata>),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn compression_metadata(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<CompressionMetadata>>, HandlerError> {
+    Ok(Json(
+        state.metadata_client.get_compression_metadata().await?,
+    ))
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct ListFilesParams {
+    /// The absolute filesystem path to list.
+    path: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/os/ls",
+    description = "Lists files and directories at the specified path.",
+    params(ListFilesParams),
+    responses(
+        (status = OK, body = Vec<DirEntry>),
+        (status = BAD_REQUEST, description = "Path is outside the configured logs-input root"),
+        (status = NOT_FOUND, description = "Path not found"),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn list_files(
+    State(state): State<AppState>,
+    Query(params): Query<ListFilesParams>,
+) -> Result<Json<Vec<DirEntry>>, HandlerError> {
+    Ok(Json(state.metadata_client.list_files(params.path).await?))
+}
+
+#[utoipa::path(
+    post,
+    path = "/compression/jobs",
+    description = "Submits a compression job.",
+    request_body(content = CompressionJobCreation),
+    responses(
+        (status = CREATED, body = CompressionJob, description = "The created compression job."),
+        (status = BAD_REQUEST, description = "Invalid dataset name"),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn compression_job(
+    State(state): State<AppState>,
+    Json(creation): Json<CompressionJobCreation>,
+) -> Result<(StatusCode, Json<CompressionJob>), HandlerError> {
+    let job = state
+        .metadata_client
+        .submit_compression_job(creation)
+        .await?;
+    Ok((StatusCode::CREATED, Json(job)))
+}
+
+#[utoipa::path(
+    post,
+    path = "/stream_files/extract",
+    description = "Extracts a stream file containing the log event at the given index in the \
+        stream with the given ID. If the stream has already been extracted, returns its \
+        metadata directly; otherwise submits an extraction job and waits for it to complete.",
+    request_body(content = StreamFileExtraction),
+    responses(
+        (status = OK, body = StreamFileMetadata),
+        (status = BAD_REQUEST, description = "Invalid dataset name or extract job type"),
+        (status = GATEWAY_TIMEOUT, description = "Stream extraction timed out"),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn extract_stream_file(
+    State(state): State<AppState>,
+    Json(extraction): Json<StreamFileExtraction>,
+) -> Result<Json<StreamFileMetadata>, HandlerError> {
+    Ok(Json(
+        state
+            .metadata_client
+            .extract_stream_file(extraction)
+            .await?,
     ))
 }
 
@@ -329,6 +643,8 @@ enum HandlerError {
     NotFound,
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Gateway timeout: {0}")]
+    GatewayTimeout(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -340,10 +656,13 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::SearchJobNotFound(_)
+            | ClientError::DatasetNotFound(_)
+            | ClientError::NotFound(_) => Self::NotFound,
             ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
                 Self::BadRequest(format!("{err}"))
             }
+            ClientError::Timeout(_) => Self::GatewayTimeout(format!("{err}")),
             _ => Self::InternalServer,
         }
     }
@@ -356,6 +675,7 @@ impl IntoResponse for HandlerError {
             Self::NotFound => StatusCode::NOT_FOUND.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
         }
     }
 }
@@ -393,6 +713,39 @@ mod tests {
             .expect("failed to read body")
             .to_bytes();
         String::from_utf8(bytes.to_vec()).expect("body is not utf-8")
+    }
+
+    #[test]
+    fn parse_datasets_returns_nothing_for_a_missing_or_empty_parameter() {
+        assert_eq!(parse_datasets(None), Vec::<String>::new());
+        assert_eq!(parse_datasets(Some(String::new())), Vec::<String>::new());
+        assert_eq!(parse_datasets(Some("   ".to_owned())), Vec::<String>::new());
+        assert_eq!(parse_datasets(Some(",,".to_owned())), Vec::<String>::new());
+    }
+
+    #[test]
+    fn parse_datasets_splits_trims_and_drops_empty_entries() {
+        assert_eq!(parse_datasets(Some("a".to_owned())), vec!["a".to_owned()]);
+        assert_eq!(
+            parse_datasets(Some("a,b".to_owned())),
+            vec!["a".to_owned(), "b".to_owned()]
+        );
+        assert_eq!(
+            parse_datasets(Some("  a , b ".to_owned())),
+            vec!["a".to_owned(), "b".to_owned()]
+        );
+        assert_eq!(
+            parse_datasets(Some("a,,b,".to_owned())),
+            vec!["a".to_owned(), "b".to_owned()]
+        );
+    }
+
+    #[test]
+    fn parse_datasets_preserves_the_given_order_and_duplicates() {
+        assert_eq!(
+            parse_datasets(Some("b,a,b".to_owned())),
+            vec!["b".to_owned(), "a".to_owned(), "b".to_owned()]
+        );
     }
 
     #[tokio::test]

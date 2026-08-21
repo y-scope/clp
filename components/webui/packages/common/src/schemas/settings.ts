@@ -27,29 +27,20 @@ const WebuiPublicSettingsSchema = Type.Object({
 
     PrestoMaxNumSearchResults: Type.Integer({minimum: 1}),
 
-    SqlDbClpArchivesTableName: Type.String(),
-    SqlDbClpDatasetsTableName: Type.String(),
-    SqlDbClpFilesTableName: Type.String(),
-    SqlDbClpTablePrefix: Type.String(),
-    SqlDbCompressionJobsTableName: Type.String(),
-
     MongoDbSearchResultsMetadataCollectionName: Type.String(),
 });
 
 const WebuiServerSettingsSchema = Type.Object({
+    /**
+     * Base URL of the API server. Always set: `validate_webui_config` in
+     * `clp_package_utils.general` and the Helm chart's `webui-deployment.yaml` both reject a
+     * deployment whose `api_server` is null.
+     */
     ApiServerUrl: Type.String(),
-
-    SqlDbHost: Type.String(),
-    SqlDbName: Type.String(),
-    SqlDbPort: Type.Integer({minimum: 1, maximum: 65535}),
-
-    SqlDbQueryJobsTableName: Type.String(),
 
     MongoDbHost: Type.String(),
     MongoDbName: Type.String(),
     MongoDbPort: Type.Integer({minimum: 1, maximum: 65535}),
-
-    MongoDbStreamFilesCollectionName: Type.String(),
 
     ClientDir: Type.String(),
     LogViewerDir: Type.String(),
@@ -57,26 +48,6 @@ const WebuiServerSettingsSchema = Type.Object({
         Type.String(),
         Type.Null(),
     ]),
-
-    StreamFilesS3PathPrefix: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
-    StreamFilesS3Profile: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
-    StreamFilesS3Region: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
-    StreamTargetUncompressedSize: Type.Integer({minimum: 1}),
-
-    ArchiveOutputCompressionLevel: Type.Integer({minimum: 1, maximum: 19}),
-    ArchiveOutputTargetArchiveSize: Type.Integer({minimum: 1}),
-    ArchiveOutputTargetDictionariesSize: Type.Integer({minimum: 1}),
-    ArchiveOutputTargetEncodedFileSize: Type.Integer({minimum: 1}),
-    ArchiveOutputTargetSegmentSize: Type.Integer({minimum: 1}),
 
     PrestoHost: Type.Union([
         Type.String(),

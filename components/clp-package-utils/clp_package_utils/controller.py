@@ -14,7 +14,6 @@ from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
-    AwsAuthType,
     BundledService,
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_ROOT_PASS_ENV_VAR_NAME,
@@ -26,17 +25,14 @@ from clp_py_utils.clp_config import (
     ClpConfig,
     ClpDbNameType,
     ClpDbUserType,
-    COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
-    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     OTEL_COLLECTOR_COMPONENT_NAME,
-    QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     QueryEngine,
@@ -44,14 +40,8 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
-)
-from clp_py_utils.clp_metadata_db_utils import (
-    get_archives_table_name,
-    get_datasets_table_name,
-    get_files_table_name,
 )
 from clp_py_utils.core import resolve_host_path_in_container
 
@@ -649,6 +639,9 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = API_SERVER_COMPONENT_NAME
+        # NOTE: currently unreachable — `_set_up_env_for_webui` calls `validate_webui_config`,
+        # which rejects a null `api_server`, and the Web UI is always deployed. This branch is
+        # kept as the seam for making the Web UI optional.
         if self._clp_config.api_server is None:
             logger.info("The API Server is not configured, skipping %s creation...", component_name)
             return EnvVarsDict({"CLP_API_SERVER_ENABLED": "0"})
@@ -720,37 +713,16 @@ class BaseController(ABC):
         validate_webui_config(self._clp_config, settings_json_path)
 
         # Read, update, and write back the Web UI settings.json
-        clp_db_connection_params = self._clp_config.database.get_clp_connection_params_and_type(
-            True
-        )
-        table_prefix = clp_db_connection_params["table_prefix"]
-        if StorageEngine.CLP_S == self._clp_config.package.storage_engine:
-            archives_table_name = ""
-            files_table_name = ""
-        else:
-            archives_table_name = get_archives_table_name(table_prefix, None)
-            files_table_name = get_files_table_name(table_prefix, None)
-
         logs_input_root_dir = (
-            str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            str(container_clp_config.logs_input.directory)
             if StorageType.FS == self._clp_config.logs_input.type
             else None
         )
 
         stream_storage = self._clp_config.stream_output.storage
         stream_files_dir = None
-        stream_files_s3_path_prefix = None
-        stream_files_s3_profile = None
-        stream_files_s3_region = None
         if StorageType.FS == stream_storage.type:
             stream_files_dir = str(container_clp_config.stream_output.get_directory())
-        elif StorageType.S3 == stream_storage.type:
-            s3_config = stream_storage.s3_config
-            stream_files_s3_path_prefix = f"{s3_config.bucket}/{s3_config.key_prefix}"
-
-            auth = s3_config.aws_authentication
-            stream_files_s3_profile = auth.profile if AwsAuthType.profile == auth.type else None
-            stream_files_s3_region = s3_config.region_code
 
         query_engine = self._clp_config.webui.query_engine
         presto_host = None
@@ -770,47 +742,23 @@ class BaseController(ABC):
             "LogsInputType": self._clp_config.logs_input.type,
             "MaxDatasetsPerQuery": max_datasets_per_query,
             "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
-            "SqlDbClpArchivesTableName": archives_table_name,
-            "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
-            "SqlDbClpFilesTableName": files_table_name,
-            "SqlDbClpTablePrefix": table_prefix,
-            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
         }
 
         server_settings_updates = {
+            # `validate_webui_config` above rejects a null `api_server`, so it is always set here.
             "ApiServerUrl": (
                 f"http://{container_clp_config.api_server.host}"
                 f":{container_clp_config.api_server.port}"
             ),
-            "SqlDbHost": container_clp_config.database.host,
-            "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
-            "SqlDbPort": container_clp_config.database.port,
-            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbName": self._clp_config.results_cache.db_name,
             "MongoDbPort": container_clp_config.results_cache.port,
-            "MongoDbStreamFilesCollectionName": (
-                self._clp_config.results_cache.stream_collection_name
-            ),
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamFilesDir": stream_files_dir,
-            "StreamFilesS3PathPrefix": stream_files_s3_path_prefix,
-            "StreamFilesS3Profile": stream_files_s3_profile,
-            "StreamFilesS3Region": stream_files_s3_region,
-            "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
-            "ArchiveOutputCompressionLevel": self._clp_config.archive_output.compression_level,
-            "ArchiveOutputTargetArchiveSize": self._clp_config.archive_output.target_archive_size,
-            "ArchiveOutputTargetDictionariesSize": (
-                self._clp_config.archive_output.target_dictionaries_size
-            ),
-            "ArchiveOutputTargetEncodedFileSize": (
-                self._clp_config.archive_output.target_encoded_file_size
-            ),
-            "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
             "PrestoHost": presto_host,
             "PrestoPort": presto_port,
         }
@@ -1098,21 +1046,6 @@ class DockerComposeController(BaseController):
         env_vars |= {
             "CLP_RESTART_POLICY": self._restart_policy,
         }
-
-        # Credentials
-        if self._clp_config.stream_output.storage.type == StorageType.S3:
-            stream_output_aws_auth = (
-                self._clp_config.stream_output.storage.s3_config.aws_authentication
-            )
-            if stream_output_aws_auth.type == AwsAuthType.credentials:
-                env_vars |= {
-                    "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID": (
-                        stream_output_aws_auth.credentials.access_key_id
-                    ),
-                    "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY": (
-                        stream_output_aws_auth.credentials.secret_access_key
-                    ),
-                }
 
         # Identity config
         env_vars |= {

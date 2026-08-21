@@ -54,6 +54,11 @@ const AbsolutePathSchema = Type.String({
 
 /**
  * Schema for request to create a new compression job.
+ *
+ * NOTE: This schema is no longer a server-side validator — the request now goes to the API
+ * server's `POST /api/v1/compression/jobs`. The equivalent rules are enforced there by
+ * `validate_compression_job_creation` and `resolve_compression_paths` in
+ * `components/api-server/src/metadata_client.rs`. Keep the two in sync.
  */
 const CompressionJobCreationSchema = Type.Object({
     paths: Type.Array(AbsolutePathSchema, {minItems: 1}),

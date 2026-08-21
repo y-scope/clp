@@ -3,6 +3,8 @@ import {
     type paths,
 } from "@webui/api-client";
 
+import {buildApiErrorMessage} from "../utils";
+
 
 type QueryConfig = paths["/query"]["post"]["requestBody"]["content"]["application/json"];
 
@@ -21,9 +23,9 @@ const submitQuery = async (queryConfig: QueryConfig): Promise<number> => {
     console.log("Submitting query:", JSON.stringify(queryConfig));
 
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.POST("/query", {body: queryConfig});
+    const {data, error, response} = await apiClient.POST("/query", {body: queryConfig});
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to submit query: HTTP ${response.status}`);
+        throw new Error(buildApiErrorMessage("Failed to submit query", error, response));
     }
 
     const jobId = Number(data.query_results_uri.split("/").pop());
@@ -44,12 +46,14 @@ const cancelQuery = async (searchJobId: number): Promise<void> => {
     console.log("Cancelling query job:", searchJobId);
 
     // eslint-disable-next-line new-cap
-    const {response} = await apiClient.DELETE("/query/{search_job_id}", {
+    const {error, response} = await apiClient.DELETE("/query/{search_job_id}", {
         params: {path: {search_job_id: searchJobId}},
     });
 
     if (false === response.ok) {
-        throw new Error(`Failed to cancel query job ${searchJobId}: HTTP ${response.status}`);
+        throw new Error(
+            buildApiErrorMessage(`Failed to cancel query job ${searchJobId}`, error, response)
+        );
     }
 };
 

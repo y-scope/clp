@@ -8,8 +8,8 @@ import {SearchResult} from "./typings";
 
 /**
  * Custom hook to stream search results for the current searchJobId from the API server's SSE
- * endpoint. When the stream ends, the search UI state is updated to `DONE` (or `FAILED` if the
- * stream errors out), unless the query has already been cancelled.
+ * endpoint. The search UI state is updated to `DONE` only after this stream and the aggregation
+ * stream have both ended.
  *
  * @return
  */
@@ -20,15 +20,16 @@ const useSearchResults = () => {
         // Sort by timestamp (desc) to match the previous MongoDB cursor ordering.
         compareFn: (a, b) => b.timestamp - a.timestamp,
         onDone: () => {
-            const {searchUiState, updateSearchUiState} = useSearchStore.getState();
-            if (searchUiState === SEARCH_UI_STATE.QUERYING) {
-                updateSearchUiState(SEARCH_UI_STATE.DONE);
+            if (null !== searchJobId) {
+                useSearchStore.getState().markSearchResultsComplete(searchJobId);
             }
         },
         onError: (err) => {
             console.error("Failed to stream search results:", err);
-            const {searchUiState, updateSearchUiState} = useSearchStore.getState();
-            if (searchUiState === SEARCH_UI_STATE.QUERYING) {
+            const {searchUiState, updateSearchUiState, searchJobId: currentJobId} =
+                useSearchStore.getState();
+
+            if (searchJobId === currentJobId && searchUiState === SEARCH_UI_STATE.QUERYING) {
                 updateSearchUiState(SEARCH_UI_STATE.FAILED);
             }
         },

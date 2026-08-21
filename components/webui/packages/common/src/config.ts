@@ -44,12 +44,20 @@ enum SqlTableSuffix {
  */
 const CLP_DEFAULT_TABLE_PREFIX = "clp_";
 
+/**
+ * Matching the `CONTAINER_INPUT_LOGS_ROOT_DIR` in `clp_py_utils.clp_config`. Every deployment
+ * mounts the configured logs-input directory at or below this path, and compression jobs are
+ * stored with `path_prefix_to_remove` set to it.
+ */
+const CONTAINER_INPUT_LOGS_ROOT_DIR = "/mnt/logs";
+
 
 export {
     CLP_DEFAULT_DATASET_NAME,
     CLP_DEFAULT_TABLE_PREFIX,
     CLP_QUERY_ENGINES,
     CLP_STORAGE_ENGINES,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
     SqlTableSuffix,
     STORAGE_TYPE,
 };

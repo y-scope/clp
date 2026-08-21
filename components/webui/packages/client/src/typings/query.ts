@@ -43,15 +43,6 @@ const ExtractJobSearchParams = Type.Object({
     dataset: Type.Optional(Type.String()),
 });
 
-interface ExtractStreamResp {
-    _id: string;
-    begin_msg_ix: number;
-    end_msg_ix: number;
-    is_last_chunk: boolean;
-    path: string;
-    stream_id: string;
-}
-
 interface QueryLoadingStateDescription {
     label: string;
     description: string;
@@ -77,7 +68,6 @@ const QUERY_LOADING_STATE_DESCRIPTIONS: Record<QUERY_LOADING_STATE, QueryLoading
     });
 
 
-export type {ExtractStreamResp};
 export {
     EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,

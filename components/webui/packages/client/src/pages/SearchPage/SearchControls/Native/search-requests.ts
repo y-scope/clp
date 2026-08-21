@@ -83,7 +83,7 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
     store.updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
     store.updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
     store.updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
-    store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
+    store.prepareNativeQuery();
 
     const queryConfig = buildQueryConfig(payload);
     Promise.all([
@@ -94,12 +94,7 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
         }),
     ])
         .then(([searchJobId, aggregationJobId]) => {
-            store.updateSearchJobId(searchJobId.toString());
-            store.updateAggregationJobId(aggregationJobId.toString());
-            store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
-            store.updateSubmittedMaxNumResults(
-                payload.maxNumResults ?? SEARCH_STATE_DEFAULT.submittedMaxNumResults
-            );
+            store.startNativeQuery(searchJobId.toString(), aggregationJobId.toString());
             console.debug(
                 "Search jobs created - ",
                 "Search job ID:",

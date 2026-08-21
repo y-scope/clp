@@ -5,6 +5,8 @@ use serde::Serialize;
 use strum::EnumString;
 use utoipa::ToSchema;
 
+pub const COMPRESSION_JOBS_TABLE_NAME: &str = "compression_jobs";
+
 pub type CompressionJobId = i32;
 
 // Mirror of `job_orchestration.scheduler.constants.CompressionJobStatus`. Must be kept in sync.
