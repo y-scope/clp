@@ -536,23 +536,22 @@ impl MetadataClient {
         let table_name = self
             .database()
             .column_metadata_table_name(Some(dataset_name));
-        let names: Vec<String> = sqlx::query_scalar(&format!(
-            "SELECT name FROM `{table_name}` WHERE type IN (?, ?)"
-        ))
-        .bind(TIMESTAMP_TYPE)
-        .bind(DEPRECATED_TIMESTAMP_TYPE)
-        .fetch_all(&self.sql_pool)
-        .await
-        .map_err(|err| {
-            if let sqlx::Error::Database(db_err) = &err
-                && let Some(mysql_err) =
-                    db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-                && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
-            {
-                return ClientError::DatasetNotFound(dataset_name.to_owned());
-            }
-            err.into()
-        })?;
+        let names: Vec<String> =
+            sqlx::query_scalar(&build_timestamp_column_names_query(&table_name))
+                .bind(TIMESTAMP_TYPE)
+                .bind(DEPRECATED_TIMESTAMP_TYPE)
+                .fetch_all(&self.sql_pool)
+                .await
+                .map_err(|err| {
+                    if let sqlx::Error::Database(db_err) = &err
+                        && let Some(mysql_err) =
+                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
+                    {
+                        return ClientError::DatasetNotFound(dataset_name.to_owned());
+                    }
+                    err.into()
+                })?;
         Ok(names)
     }
 
@@ -964,6 +963,15 @@ async fn resolve_compression_paths(
     Ok(resolved_paths)
 }
 
+/// Builds the query that fetches a dataset's timestamp column names.
+///
+/// `DISTINCT` is required because the column-metadata table's primary key is `(name, type)`, so a
+/// column recorded as both [`DEPRECATED_TIMESTAMP_TYPE`] and [`TIMESTAMP_TYPE`] would otherwise be
+/// returned twice. `ORDER BY` keeps the Web UI's default timestamp-key selection deterministic.
+fn build_timestamp_column_names_query(table_name: &str) -> String {
+    format!("SELECT DISTINCT name FROM `{table_name}` WHERE type IN (?, ?) ORDER BY name")
+}
+
 /// Internal document shape for the stream-files `MongoDB` collection.
 #[derive(Debug, Deserialize)]
 struct StreamFileMetadataDoc {
@@ -999,5 +1007,16 @@ mod tests {
     fn query_job_type_values() {
         assert_eq!(i32::from(QueryJobType::ExtractIr), 1);
         assert_eq!(i32::from(QueryJobType::ExtractJson), 2);
+    }
+
+    #[test]
+    fn timestamp_column_names_query_is_deduplicated_and_ordered() {
+        let sql = build_timestamp_column_names_query("clp_mydataset_column_metadata");
+
+        assert_eq!(
+            sql,
+            "SELECT DISTINCT name FROM `clp_mydataset_column_metadata` WHERE type IN (?, ?) ORDER \
+             BY name"
+        );
     }
 }
