@@ -22,7 +22,9 @@ use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::clp_config::package::credentials::Credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
+use clp_rust_utils::job_config::QUERY_TASKS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryJobType;
 use clp_rust_utils::serde::ZstdMsgpack;
@@ -493,11 +495,12 @@ impl MetadataClient {
             }
         };
         let sql = format!(
-            "WITH qt AS ( SELECT job_id, archive_id FROM query_tasks WHERE archive_id IS NOT NULL \
-             AND job_id = ? ), totals AS ( SELECT qt.job_id, SUM(ca.uncompressed_size) AS \
-             total_uncompressed_bytes FROM qt JOIN ({archives_subquery}) ca ON qt.archive_id = \
-             ca.id ) SELECT CAST(totals.total_uncompressed_bytes AS DOUBLE) AS bytes, qj.duration \
-             AS duration FROM query_jobs qj JOIN totals ON totals.job_id = qj.id"
+            "WITH qt AS ( SELECT job_id, archive_id FROM {QUERY_TASKS_TABLE_NAME} WHERE \
+             archive_id IS NOT NULL AND job_id = ? ), totals AS ( SELECT qt.job_id, \
+             SUM(ca.uncompressed_size) AS total_uncompressed_bytes FROM qt JOIN \
+             ({archives_subquery}) ca ON qt.archive_id = ca.id ) SELECT \
+             CAST(totals.total_uncompressed_bytes AS DOUBLE) AS bytes, qj.duration AS duration \
+             FROM {QUERY_JOBS_TABLE_NAME} qj JOIN totals ON totals.job_id = qj.id"
         );
         let row = sqlx::query(&sql)
             .bind(search_job_id)
@@ -560,10 +563,11 @@ impl MetadataClient {
     ///
     /// Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
     pub async fn get_compression_metadata(&self) -> Result<Vec<CompressionMetadata>, ClientError> {
-        let rows = sqlx::query(
+        let rows = sqlx::query(&format!(
             "SELECT id, status, status_msg, start_time, update_time, duration, uncompressed_size, \
-             compressed_size, clp_config FROM compression_jobs ORDER BY id DESC LIMIT ?",
-        )
+             compressed_size, clp_config FROM {COMPRESSION_JOBS_TABLE_NAME} ORDER BY id DESC \
+             LIMIT ?"
+        ))
         .bind(COMPRESSION_METADATA_QUERY_LIMIT)
         .fetch_all(&self.sql_pool)
         .await?;
@@ -649,10 +653,12 @@ impl MetadataClient {
         let job_config = serde_json::json!({"input": input, "output": output});
         let compressed = ZstdMsgpack::serialize(&job_config)?;
 
-        let result = sqlx::query("INSERT INTO compression_jobs (clp_config) VALUES (?)")
-            .bind(compressed)
-            .execute(&self.sql_pool)
-            .await?;
+        let result = sqlx::query(&format!(
+            "INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (?)"
+        ))
+        .bind(compressed)
+        .execute(&self.sql_pool)
+        .await?;
         Ok(CompressionJob {
             job_id: i64::try_from(result.last_insert_id()).map_err(|_| {
                 ClientError::InvalidInput("compression job id out of range".to_owned())
