@@ -36,6 +36,7 @@ REDIS_COMPONENT_NAME = "redis"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 OTEL_COLLECTOR_COMPONENT_NAME = "otel-collector"
+COMPRESSION_COORDINATOR_COMPONENT_NAME = "compression_coordinator"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
@@ -45,6 +46,8 @@ API_SERVER_COMPONENT_NAME = "api_server"
 LOG_INGESTOR_COMPONENT_NAME = "log_ingestor"
 WEBUI_COMPONENT_NAME = "webui"
 MCP_SERVER_COMPONENT_NAME = "mcp_server"
+SPIDER_COMPONENT_NAME = "spider"
+SPIDER_STORAGE_COMPONENT_NAME = "spider-storage"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
 # Action names
@@ -135,6 +138,14 @@ class DatabaseEngine(KebabCaseStrEnum):
 DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
 
 
+class CompressionOrchestration(KebabCaseStrEnum):
+    CELERY = auto()
+    SPIDER = auto()
+
+
+CompressionOrchestrationStr = Annotated[CompressionOrchestration, StrEnumSerializer]
+
+
 class QueryEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
@@ -161,6 +172,7 @@ AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
 
 class Package(BaseModel):
     storage_engine: StorageEngineStr = StorageEngine.CLP_S
+    scheduler: CompressionOrchestrationStr = CompressionOrchestration.CELERY
 
 
 class ClpDbUserType(KebabCaseStrEnum):
@@ -750,9 +762,94 @@ class LogIngestor(BaseModel):
     logging_level: LoggingLevelRust = "INFO"
 
 
+class SpiderInboundQueue(BaseModel):
+    cleanup_capacity: PositiveInt | None = None
+    commit_capacity: PositiveInt | None = None
+    task_capacity: PositiveInt | None = None
+
+
+class SpiderJobCacheGc(BaseModel):
+    gc_interval_sec: PositiveInt | None = None
+    terminated_job_retention_sec: PositiveInt | None = None
+
+
+class SpiderTaskInstancePool(BaseModel):
+    execution_manager_stale_cutoff_sec: PositiveInt | None = None
+    gc_interval_sec: PositiveInt | None = None
+    message_channel_capacity: PositiveInt | None = None
+
+
+class SpiderStorage(BaseModel):
+    log_level: LoggingLevelRust | None = None
+    db_max_connections: PositiveInt | None = None
+    inbound_queue: SpiderInboundQueue = SpiderInboundQueue()
+    job_cache_gc: SpiderJobCacheGc = SpiderJobCacheGc()
+    task_instance_pool: SpiderTaskInstancePool = SpiderTaskInstancePool()
+
+
+class SpiderEmRegistry(BaseModel):
+    dead_em_cutoff_sec: PositiveInt | None = None
+    liveness_tracking_interval_ms: PositiveInt | None = None
+
+
+class SpiderRoundRobin(BaseModel):
+    active_job_queue_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    dispatch_queue_capacity: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
+    ready_task_capacity: PositiveInt | None = None
+    storage_poll_timeout_ms: PositiveInt | None = None
+    tick_interval_ms: PositiveInt | None = None
+
+
+class SpiderScheduler(BaseModel):
+    log_level: LoggingLevelRust | None = None
+    port: Port | None = None
+    connection_pool_size: PositiveInt | None = None
+    stop_timeout_sec: PositiveInt | None = None
+    em_registry: SpiderEmRegistry = SpiderEmRegistry()
+    round_robin: SpiderRoundRobin = SpiderRoundRobin()
+
+
+class SpiderLiveness(BaseModel):
+    scheduler_heartbeat_interval_sec: PositiveInt | None = None
+    storage_heartbeat_interval_sec: PositiveInt | None = None
+
+
+class SpiderWorker(BaseModel):
+    replicas: PositiveInt | None = None
+    log_level: LoggingLevelRust | None = None
+    connection_pool_size: PositiveInt | None = None
+    scheduler_poll_wait_ms: PositiveInt | None = None
+    max_log_line_bytes: PositiveInt | None = None
+    liveness: SpiderLiveness = SpiderLiveness()
+
+
 class Spider(BaseModel):
+    """
+    Spider deployment config.
+
+    `host` and `port` locate Spider's storage service for `compression-coordinator`, and are the
+    only fields any component reads from this object. The nested `storage`, `scheduler`, and
+    `worker` sections configure Spider's own services and are consumed by the Docker Compose
+    controller, which emits them as `SPIDER_*` environment variables; they have no effect in a
+    Helm deployment, where Spider is configured through its subchart. Every nested field defaults
+    to `None`, in which case the controller emits no environment variable and the default in
+    Spider's shipped Compose config applies.
+    """
+
+    DEFAULT_PORT: ClassVar[int] = 50051
+
     host: DomainStr = "localhost"
-    port: Port = 6000
+    port: Port = DEFAULT_PORT
+
+    storage: SpiderStorage = SpiderStorage()
+    scheduler: SpiderScheduler = SpiderScheduler()
+    worker: SpiderWorker = SpiderWorker()
+
+    def transform_for_container(self):
+        self.host = SPIDER_STORAGE_COMPONENT_NAME
 
 
 class SpiderResourceGroup(BaseModel):
@@ -765,6 +862,7 @@ class PollingBackoff(BaseModel):
 
 
 class CompressionCoordinator(BaseModel):
+    logging_level: LoggingLevelRust = "INFO"
     resource_group: SpiderResourceGroup = SpiderResourceGroup(name="compression-coordinator")
     job_polling_interval_millisecs: PositiveInt = 100
     max_concurrent_jobs: PositiveInt = 1000
@@ -1026,6 +1124,24 @@ class ClpConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_compression_orchestration_config(self):
+        if CompressionOrchestration.SPIDER != self.package.scheduler:
+            return self
+        if self.spider is None:
+            msg = (
+                "`spider` must be configured when `package.scheduler` is"
+                f" `{CompressionOrchestration.SPIDER}`."
+            )
+            raise ValueError(msg)
+        if self.compression_coordinator is None:
+            msg = (
+                "`compression_coordinator` must be configured when `package.scheduler` is"
+                f" `{CompressionOrchestration.SPIDER}`."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
     def validate_compression_coordinator_config(self):
         if self.compression_coordinator is None:
             return self
@@ -1109,6 +1225,8 @@ class ClpConfig(BaseModel):
             self.reducer.transform_for_container()
         if self.presto is not None:
             self.presto.transform_for_container()
+        if self.spider is not None:
+            self.spider.transform_for_container()
 
 
 class WorkerConfig(BaseModel):

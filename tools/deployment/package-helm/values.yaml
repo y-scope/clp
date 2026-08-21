@@ -163,6 +163,8 @@ clpConfig:
 
   package:
     storage_engine: "clp-s"
+    # NOTE: `scheduler` is not configurable here. It is derived from `spider.enabled` below,
+    # since that value is what gates the Spider subchart and the compression coordinator.
 
   # API server config
   api_server:
@@ -385,6 +387,9 @@ serviceAccount:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
 
 # Overrides for the Spider subchart's `values.yaml`
+# `enabled` is this deployment's compression-orchestration switch: it gates the Spider
+# subchart and the compression coordinator, and sets `package.scheduler` in the generated
+# CLP config. The Celery compression scheduler and worker run either way.
 spider:
   enabled: false
   image:
