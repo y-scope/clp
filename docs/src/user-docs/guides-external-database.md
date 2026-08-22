@@ -237,16 +237,16 @@ clpConfig:
   database:
     type: "mariadb"  # "mariadb" or "mysql"
     host: "<mariadb-hostname-or-ip>"
-    port: 3306
+    port: <mariadb-port>
 
   results_cache:
     host: "<mongodb-hostname-or-ip>"
-    port: 27017
+    port: <mongodb-port>
 
 credentials:
   database:
     username: "clp-user"
-    password: "<password>"
+    password: "<your-mariadb-password>"
 ```
 
 ## Using an external database with Spider
@@ -280,10 +280,10 @@ credentials:
        bundled: []
        database:
          host: "<mariadb-hostname-or-ip>"
-         port: 3306
+         port: <mariadb-port>
          name: "spider-db"
          username: "clp-user"
-         password: "<password>"
+         password: "<your-mariadb-password>"
    ```
 
 [aws-rds]: https://aws.amazon.com/rds/
