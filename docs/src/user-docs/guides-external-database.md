@@ -17,10 +17,9 @@ CLP requires two databases:
 * **MariaDB/MySQL** - for storing metadata about archives, files, and jobs.
 * **MongoDB** - for caching query results.
 
-In addition, when Spider-orchestrated compression is enabled, Spider requires its own
-MariaDB/MySQL database for compression and search job metadata storage. It can be hosted on the
-same database server as CLP's (see
-[Using an external database with Spider](#using-an-external-database-with-spider)).
+In addition, when Spider is used as the scheduler, it requires a MariaDB/MySQL database for
+compression and search job metadata storage. It can be hosted on the same database server as
+CLP's (see [Using an external database with Spider](#using-an-external-database-with-spider)).
 
 ## MariaDB/MySQL setup
 
@@ -58,14 +57,6 @@ remote connections:
    ```bash
    sudo systemctl restart mariadb
    ```
-
-### Verifying the MariaDB connection
-
-You can verify the MariaDB connection by running:
-
-```bash
-mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
-```
 
 ### Using AWS RDS for MariaDB/MySQL
 
@@ -139,14 +130,6 @@ For production deployments, it's highly recommended to enable authentication and
 MongoDB. See the [MongoDB security documentation][mongodb-security] for details.
 :::
 
-### Verifying the MongoDB connection
-
-You can verify the MongoDB connection by running:
-
-```bash
-mongosh "mongodb://<mongodb-hostname-or-ip>:27017/clp-query-results"
-```
-
 ### Using AWS DocumentDB or MongoDB Atlas
 
 When using AWS DocumentDB or MongoDB Atlas:
@@ -160,7 +143,7 @@ When using AWS DocumentDB or MongoDB Atlas:
 
 First, create a database and user for CLP on your MariaDB/MySQL server:
 
-1. Connect to the server as root:
+1. Connect to MariaDB as root:
 
    ```bash
    sudo mysql
@@ -196,7 +179,52 @@ First, create a database and user for CLP on your MariaDB/MySQL server:
    EXIT;
    ```
 
-Then configure the Helm chart to use the external databases:
+You can verify the connection by running:
+
+```bash
+mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
+```
+
+Then configure CLP to use the external databases, depending on how you deploy CLP:
+
+### Configuring with Docker Compose
+
+1. Edit `etc/clp-config.yaml` to specify which services are bundled (managed by the
+   [CLP Docker Compose project][docker-compose-orchestration]):
+
+   ```yaml
+   # Remove "database" and "results_cache" from this list to use external instances
+   bundled:
+     # - "database"
+     - "queue"
+     - "redis"
+     # - "results_cache"
+     - "otel_collector"
+   ```
+
+2. Configure the connection details for your external databases in `etc/clp-config.yaml`:
+
+   ```yaml
+   database:
+     host: "<mariadb-hostname-or-ip>"
+     port: <mariadb-port>
+
+   results_cache:
+     host: "<mongodb-hostname-or-ip>"
+     port: <mongodb-port>
+   ```
+
+3. Set the credentials in `etc/credentials.yaml`:
+
+   ```yaml
+   database:
+     username: "clp-user"
+     password: "<your-mariadb-password>"
+   ```
+
+### Configuring with the Helm chart
+
+Configure the external databases in your Helm values file:
 
 ```{code-block} yaml
 :caption: external-database-values.yaml
@@ -226,25 +254,10 @@ credentials:
     password: "<password>"
 ```
 
-:::{note}
-The database hosts must be reachable from inside the Kubernetes cluster, so use a hostname or IP
-address that's routable from pods (not `localhost`).
-:::
-
-Install (or upgrade) the chart with the values file:
-
-```bash
-helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f external-database-values.yaml
-```
-
-The chart's `db-table-creator` job creates CLP's tables on the external database automatically; no
-manual table creation is needed.
-
 ## Using an external database with Spider
 
-When Spider-orchestrated compression is enabled (`spider.enabled: true`), Spider stores its state
-in its own MariaDB/MySQL database, which the Spider subchart bundles by default. To use an external
-database instead:
+When Spider is enabled (`spider.enabled: true`), it stores its state in its own MariaDB/MySQL
+database, which the Spider subchart bundles by default. To use an external database instead:
 
 1. Create the Spider database on your MariaDB/MySQL server:
 
@@ -271,7 +284,7 @@ database instead:
    spider:
      enabled: true
      spiderConfig:
-       # Remove "database" from this list to use an external instance.
+       # Remove "database" from this bundled list to use an external instance.
        bundled: []
        database:
          host: "<mariadb-hostname-or-ip>"
@@ -280,9 +293,6 @@ database instead:
          username: "clp-user"
          password: "<password>"
    ```
-
-Spider creates its tables on the external database automatically at startup; no manual table
-creation is needed.
 
 [aws-rds]: https://aws.amazon.com/rds/
 [azure-databases]: https://azure.microsoft.com/en-us/products/category/databases
