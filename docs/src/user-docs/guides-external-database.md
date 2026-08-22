@@ -1,15 +1,15 @@
 # External database setup
 
-This guide explains how to set up external databases for CLP's [Kubernetes deployment][k8s-guide]
-instead of using the databases bundled with the Helm chart. If the host(s) on which you're running
-CLP are ephemeral, you should use external databases for metadata storage, and
-[object storage](guides-using-object-storage/index.md) for CLP's archives and streams; this will
-ensure data is persisted even if a host is replaced.
+This guide explains how to set up external databases for CLP instead of using the bundled
+databases. If the host(s) on which you're running CLP are ephemeral, you should use external
+databases for metadata storage, and [object storage](guides-using-object-storage/index.md) for CLP's
+archives and streams; this will ensure data is persisted even if a host is replaced.
 
 :::{warning}
-The CLP Helm chart bundles MariaDB/MongoDB databases by default. This guide is only for users who
-want to customize their deployment by using their own database servers or cloud-managed databases
-(e.g., [AWS RDS][aws-rds], [Azure Database][azure-databases]).
+Both the [CLP Docker Compose project][docker-compose-orchestration] and the
+[CLP Helm chart][k8s-guide] include MariaDB/MongoDB databases by default. This guide is only for
+users who want to customize their deployment by using their own database servers or cloud-managed
+databases (e.g., [AWS RDS][aws-rds], [Azure Database][azure-databases]).
 :::
 
 CLP requires two databases:
@@ -18,13 +18,14 @@ CLP requires two databases:
 * **MongoDB** - for caching query results.
 
 In addition, when Spider-orchestrated compression is enabled, Spider requires its own
-MariaDB/MySQL database. It can be hosted on the same database server as CLP's (see
+MariaDB/MySQL database for compression and search job metadata storage. It can be hosted on the
+same database server as CLP's (see
 [Using an external database with Spider](#using-an-external-database-with-spider)).
 
 ## MariaDB/MySQL setup
 
-CLP is compatible with any MariaDB or MySQL database server. The instructions below use Ubuntu as
-an example, but you can use any compatible database installation or cloud-managed service.
+CLP is compatible with any MariaDB or MySQL database. The instructions below use Ubuntu as an
+example, but you can use any compatible database installation or cloud-managed service.
 
 ### Installing MariaDB on Ubuntu
 
@@ -58,16 +59,30 @@ remote connections:
    sudo systemctl restart mariadb
    ```
 
+### Verifying the MariaDB connection
+
+You can verify the MariaDB connection by running:
+
+```bash
+mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
+```
+
 ### Using AWS RDS for MariaDB/MySQL
 
 When using AWS RDS:
 
 1. Create a MariaDB or MySQL RDS instance in the AWS Console.
 2. Note the endpoint hostname and port (the default is `3306`).
-3. Ensure the RDS security group allows inbound connections on port 3306 from your CLP hosts.
+3. Create the database and user using a MySQL client:
 
-You can then connect to the instance with `mysql -h <rds-endpoint> -u admin -p` and follow the
-database and user creation steps in the sections below.
+   ```bash
+   mysql -h <rds-endpoint> -u admin -p
+   ```
+
+   Then follow the database and user creation steps in
+   [Using an external database with CLP](#using-an-external-database-with-clp).
+
+4. Ensure the RDS security group allows inbound connections on port 3306 from your CLP hosts.
 
 ## MongoDB setup
 
@@ -78,14 +93,15 @@ installation documentation][mongodb-install].
 Running an external MongoDB on the **same host** as CLP (i.e., using `localhost` or `127.0.0.1` as
 the `results_cache` host) is not supported. CLP's `results-cache-indices-creator` initializes a
 MongoDB replica set using the configured hostname, which MongoDB must be able to resolve to itself;
-`localhost` from inside a container does not resolve to the host machine.
+`localhost` from inside a Docker container does not resolve to the host machine.
 
 Instead, either:
 
 * Keep `results_cache` in the `bundled` list (recommended for single-host deployments).
 * Use a truly remote MongoDB instance and specify its hostname or IP.
-* If you must use a same-host MongoDB, set `clpConfig.results_cache.host` to the host's
-  non-loopback IP address (e.g., `192.168.1.10`) and ensure MongoDB is bound to that address.
+* If you must use a same-host MongoDB, configure `results_cache.host` in `clp-config.yaml` to the
+  host's non-loopback IP address (e.g., `192.168.1.10`) and ensure MongoDB is bound to that
+  address.
 :::
 
 ### Creating the CLP database in MongoDB
@@ -180,12 +196,6 @@ First, create a database and user for CLP on your MariaDB/MySQL server:
    EXIT;
    ```
 
-You can verify the connection by running:
-
-```bash
-mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
-```
-
 Then configure the Helm chart to use the external databases:
 
 ```{code-block} yaml
@@ -276,6 +286,7 @@ creation is needed.
 
 [aws-rds]: https://aws.amazon.com/rds/
 [azure-databases]: https://azure.microsoft.com/en-us/products/category/databases
+[docker-compose-orchestration]: guides-docker-compose-deployment.md
 [k8s-guide]: guides-k8s-deployment.md
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
