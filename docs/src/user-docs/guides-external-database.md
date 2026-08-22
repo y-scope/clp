@@ -18,8 +18,8 @@ CLP requires two databases:
 * **MongoDB** - for caching query results.
 
 In addition, when Spider is used as the scheduler, it requires a MariaDB/MySQL database for
-compression and search job metadata storage. It can be hosted on the same database server as
-CLP's (see [Using an external database with Spider](#using-an-external-database-with-spider)).
+metadata storage. It can be hosted on the same database server as CLP's (see
+[Using an external database with Spider](#using-an-external-database-with-spider)).
 
 ## MariaDB/MySQL setup
 
@@ -64,16 +64,10 @@ When using AWS RDS:
 
 1. Create a MariaDB or MySQL RDS instance in the AWS Console.
 2. Note the endpoint hostname and port (the default is `3306`).
-3. Create the database and user using a MySQL client:
+3. Ensure the RDS security group allows inbound connections on port 3306 from your CLP hosts.
 
-   ```bash
-   mysql -h <rds-endpoint> -u admin -p
-   ```
-
-   Then follow the database and user creation steps in
-   [Using an external database with CLP](#using-an-external-database-with-clp).
-
-4. Ensure the RDS security group allows inbound connections on port 3306 from your CLP hosts.
+You can then connect to the instance with `mysql -h <rds-endpoint> -u admin -p` and follow the
+database and user creation steps in the sections below.
 
 ## MongoDB setup
 
