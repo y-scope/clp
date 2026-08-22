@@ -277,7 +277,9 @@ credentials:
      enabled: true
      spiderConfig:
        # Remove "database" from this bundled list to use an external instance.
-       bundled: []
+       bundled: [
+         # "database"
+       ]
        database:
          host: "<mariadb-hostname-or-ip>"
          port: <mariadb-port>
