@@ -276,7 +276,7 @@ credentials:
    spider:
      enabled: true
      spiderConfig:
-       # Remove "database" from this bundled list to use an external instance.
+       # Remove "database" from this list to use external instances.
        bundled: [
          # "database"
        ]
