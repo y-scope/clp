@@ -67,7 +67,8 @@ When using AWS RDS:
 3. Ensure the RDS security group allows inbound connections on port 3306 from your CLP hosts.
 
 You can then connect to the instance with `mysql -h <rds-endpoint> -u admin -p` and follow the
-database and user creation steps in the sections below.
+database and user creation steps in
+[Using an external database with CLP](#using-an-external-database-with-clp).
 
 ## MongoDB setup
 
