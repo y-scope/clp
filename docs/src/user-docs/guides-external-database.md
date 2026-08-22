@@ -180,7 +180,7 @@ You can verify the connection by running:
 mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
 ```
 
-Then configure CLP to use the external databases, depending on how you deploy CLP:
+Then configure CLP to use the external databases, depending on how you deploy it:
 
 ### Configuring with Docker Compose
 
@@ -250,9 +250,6 @@ credentials:
 ```
 
 ## Using an external database with Spider
-
-When Spider is enabled (`spider.enabled: true`), it stores its state in its own MariaDB/MySQL
-database, which the Spider subchart bundles by default. To use an external database instead:
 
 1. Create the Spider database on your MariaDB/MySQL server:
 
