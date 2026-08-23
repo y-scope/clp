@@ -4,6 +4,12 @@
 [Spider][spider]. `compression-scheduler` is designed to replace the existing
 `compression-scheduler` which schedules compression jobs using Celery.
 
+:::{note}
+`compression-coordinator` has not yet reached feature-parity with `compression-scheduler` (see
+the [limitations](#limitations) section for details). Until then, the two are meant to run
+side-by-side, with `compression-scheduler` handling any jobs that `compression-coordinator` doesn't
+yet support.
+:::
 To use `compression-coordinator`, enable the Spider scheduling framework when starting the CLP
 package.
 
@@ -16,18 +22,19 @@ Support for Docker Compose is planned for a future release.
 
 Compared with the `compression-scheduler`-based architecture (which uses Celery),
 the `compression-coordinator`-based architecture (which uses Spider) provides the following
+user-experience, reliability, and performance improvements:
 
 * **Improved all-or-nothing semantics**: Compression jobs coordinated by `compression-coordinator`
-  publish all archive metadata to the `clp_<dataset>_archives` table in a single dedicated commit
-  operation. The commit operation is both transactional and idempotent, so:
+  publish all archive metadata to the `clp_<dataset>_archives` table in a single commit operation.
+  The commit operation is both transactional and idempotent, so:
   * a job-level failure doesn't result in partial updates.
   * internal task retries don't result in duplicate updates.
 
   :::{warning}
   The **all-or-nothing semantics** do not apply to the column metadata table
-  (`<dataset>_column_metadata`), because it is updated during compression job execution. If a
-  compression job fails, this table may contain partial updates. This known limitation is tracked in
-  [this GitHub issue][column-metadata-issue].
+  (`clp_<dataset>_column_metadata`), since it's still updated during compression job execution. So
+  if a compression job fails, this table may contain partial updates. This limitation is tracked in
+  [y-scope/clp#2480][column-metadata-issue].
   :::
 
 * **Improved failure recovery**:
@@ -39,15 +46,13 @@ the `compression-coordinator`-based architecture (which uses Spider) provides th
   fails, it can automatically be retried, allowing tasks to automatically recover from transient
   failures.
   * TODO: Link to #2457.
-* **Improved horizontal scalability**: Celery serializes task dispatching, so dispatch overhead
-  grows linearly with the number of tasks submitted by `compression-scheduler`, limiting the
-  benefits of adding Celery workers beyond a certain scale. Spider dispatches tasks concurrently,
-  allowing `compression-coordinator` to scale more effectively as additional Spider workers are
-  added.
+* **Improved horizontal scalability**: With Celery, tasks are dispatched to the task queue serially,
+  whereas with Spider, tasks are dispatched in parallel. Thus, if we add more workers, at some
+  point, Spider scales better whereas Celery gets bottlenecked by the task-dispatching overhead.
 * **Improved fairness between concurrent compression jobs**: Both architectures process jobs in
   round-robin order, but the `compression-coordinator`-based architecture does so at the granularity
-  of tasks whereas the `compression-scheduler`-based architecture does so at the granularity of
-  batches of tasks. If `max_concurrent_tasks_per_job` is set to 1, the
+  of *tasks* whereas the `compression-scheduler`-based architecture does so at the granularity of
+  *batches of tasks*. If `max_concurrent_tasks_per_job` is set to `1`, the
   `compression-scheduler`-based architecture can achieve the same level of fairness as the
   `compression-coordinator`-based architecture, but with higher overhead since Spider is more
   efficient than `compression-scheduler`.
@@ -55,7 +60,8 @@ the `compression-coordinator`-based architecture (which uses Spider) provides th
   can be submitted to Spider concurrently, whereas `compression-scheduler` doesn't; the latter can
   cause significantly high scheduling overheads when there are many concurrent jobs.
 
-:::{note}
+# Limitations
+
 `compression-coordinator` currently has the following functional limitations:
 
 * It's only available when using `clp-json`.
@@ -64,14 +70,6 @@ the `compression-coordinator`-based architecture (which uses Spider) provides th
 
 Additional capabilities will be introduced in future releases as it moves toward feature parity with
 `compression-scheduler`.
-:::
-
-:::{note}
-`compression-scheduler` is planned for deprecation and will eventually be fully replaced by
-`compression-coordinator`. Currently, `compression-scheduler` continues to run alongside
-`compression-coordinator` to handle compression jobs that `compression-coordinator` doesn't yet
-support.
-:::
 
 [column-metadata-issue]: https://github.com/y-scope/clp/issues/2480
 [spider]: https://github.com/y-scope/spider
