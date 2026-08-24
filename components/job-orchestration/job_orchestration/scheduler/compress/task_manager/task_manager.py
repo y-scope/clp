@@ -5,13 +5,17 @@ from typing import Any
 
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 
+TASK_GET_RESULT_DEFAULT_TIMEOUT_SECONDS = 10
+
 
 class TaskManager(ABC):
     """Abstract base class for a scheduler framework."""
 
     class ResultHandle(ABC):
         @abstractmethod
-        def get_result(self, timeout: float) -> list[CompressionTaskResult] | None:
+        def get_result(
+            self, timeout: float = TASK_GET_RESULT_DEFAULT_TIMEOUT_SECONDS
+        ) -> list[CompressionTaskResult] | None:
             """
             Gets the result of a compression job.
             :param timeout: Maximum time (in seconds) to wait for retrieving the result. Depending

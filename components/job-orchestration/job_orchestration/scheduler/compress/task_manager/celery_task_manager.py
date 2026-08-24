@@ -6,13 +6,15 @@ from typing import Any
 import celery
 
 from job_orchestration.executor.compress.celery_compress import compress
-from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
+from job_orchestration.scheduler.compress.task_manager.task_manager import (
+    TASK_GET_RESULT_DEFAULT_TIMEOUT_SECONDS,
+    TaskManager,
+)
 from job_orchestration.scheduler.task_result import CompressionTaskResult
 
 logger = logging.getLogger(__name__)
 
-TASK_RESULT_GET_INTERVAL_SECONDS = 0.005
-TASK_RESULT_DEFAULT_GET_TIMEOUT_SECONDS = 10
+TASK_GET_RESULT_INTERVAL_SECONDS = 0.005
 
 
 class CeleryTaskManager(TaskManager):
@@ -21,13 +23,13 @@ class CeleryTaskManager(TaskManager):
             self._celery_result: celery.result.GroupResult = celery_result
 
         def get_result(
-            self, timeout: float = TASK_RESULT_DEFAULT_GET_TIMEOUT_SECONDS
+            self, timeout: float = TASK_GET_RESULT_DEFAULT_TIMEOUT_SECONDS
         ) -> list[CompressionTaskResult] | None:
             if not self._celery_result.ready():
                 return None
             try:
                 results = self._celery_result.get(
-                    timeout=timeout, interval=TASK_RESULT_GET_INTERVAL_SECONDS
+                    timeout=timeout, interval=TASK_GET_RESULT_INTERVAL_SECONDS
                 )
                 return [CompressionTaskResult.model_validate(res) for res in results]
             except celery.exceptions.TimeoutError:
