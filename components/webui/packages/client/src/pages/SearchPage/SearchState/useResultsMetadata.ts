@@ -1,13 +1,19 @@
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {SearchResultsMetadataDocument} from "@webui/common/metadata";
 
 import MongoSocketCollection from "../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../api/socket/useCursor";
+import {SETTINGS_QUERY_ENGINE} from "../../../config";
 import {settings} from "../../../settings";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "./index";
 
 
 /**
  * Custom hook to get result metadata for the current searchJobId.
+ *
+ * NOTE: Results metadata only exists for Presto searches. Native (CLP/CLP-S) searches are
+ * served by the API server, which doesn't maintain results metadata; their state is instead
+ * driven by the results SSE stream.
  *
  * @return
  */
@@ -17,7 +23,8 @@ const useResultsMetadata = () => {
     const resultsMetadataCursor = useCursor<SearchResultsMetadataDocument>(
         () => {
             // If there is no active search job, there is no metadata to fetch.
-            if (searchJobId === SEARCH_STATE_DEFAULT.searchJobId
+            if (searchJobId === SEARCH_STATE_DEFAULT.searchJobId ||
+                CLP_QUERY_ENGINES.PRESTO !== SETTINGS_QUERY_ENGINE
             ) {
                 return null;
             }

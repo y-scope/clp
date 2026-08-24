@@ -1,0 +1,52 @@
+name: "clp-webui-generated-code-checks"
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  api-client-schema-committed:
+    permissions:
+      contents: "read"
+    runs-on: >-
+      ${{
+        github.repository_owner == 'y-scope'
+        && fromJSON('["self-hosted", "arm64", "ubuntu-noble"]')
+        || 'ubuntu-24.04-arm'
+      }}
+    steps:
+      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"  # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: "recursive"
+
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
+
+      - name: "Generate the api-client schema"
+        shell: "bash"
+        run: "task codegen:webui-generate-api-client-schema"
+
+      - name: "Check if the generated schema is the latest"
+        shell: "bash"
+        run: |-
+          schema_path="components/webui/packages/api-client/src/schema.ts"
+          stale_files="$(git status --porcelain "${schema_path}")"
+          if [[ -n "${stale_files}" ]]; then
+            echo >&2 "ERROR: The following generated files are out of date:"
+            echo >&2 "${stale_files}"
+            echo >&2 ""
+            echo >&2 "Please run 'task codegen:webui-generate-api-client-schema' locally and" \
+              "commit the updated files."
+            git diff >&2 "${schema_path}"
+            exit 1
+          fi

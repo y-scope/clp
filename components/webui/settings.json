@@ -19,6 +19,8 @@
         "MongoDbSearchResultsMetadataCollectionName": "results-metadata"
     },
     "server": {
+        "ApiServerUrl": "http://localhost:3001",
+
         "SqlDbHost": "localhost",
         "SqlDbName": "clp-db",
         "SqlDbPort": 3306,
