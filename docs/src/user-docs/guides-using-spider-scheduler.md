@@ -12,8 +12,8 @@ providing the following benefits:
 
 :::{note}
 In the current release, CLP uses Spider only for compression jobs coordinated by
-`compression-coordinator`. Support for orchestrating search jobs with Spider is under development
-and will be introduced in a future release.
+`compression-coordinator`. Support for orchestrating search jobs with Spider is planned for a future
+release.
 
 Spider is planned to become the default job execution framework for CLP, eventually replacing the
 existing Celery-based job orchestration components.
@@ -36,13 +36,13 @@ When deploying CLP on Kubernetes using Helm, enable Spider by setting `spider.en
 The CLP Helm chart will then automatically deploy the following components:
 
 * **Spider subchart**: Deploys all the Spider services required to schedule and execute jobs.
-* **compression-coordinator**: Coordinates supported CLP compression jobs and submits them to
-  Spider for execution.
+* **compression-coordinator**: Coordinates CLP compression jobs and submits them to Spider for
+  execution.
 
-:::{note}
-In the current release, `compression-coordinator` supports only compression jobs that use certain
-CLP package configurations. See "Using compression-coordinator" for the current limitations.
-:::
+  :::{note}
+  In the current release, `compression-coordinator` supports only compression jobs that use certain
+  CLP package configurations. See "Using compression-coordinator" for the current limitations.
+  :::
 
 #### Set up
 
@@ -76,7 +76,9 @@ CLP package configurations. See "Using compression-coordinator" for the current 
        compression_task_max_retry: 1
        # Maximum number of times a failed commit task can be retried.
        commit_task_max_retry: 1
-
+       # Maximum number of compression jobs that can be submitted to Spider concurrently.
+       max_concurrent_jobs: 1000
+   
      logs_input:
        # In the current release, compression jobs coordinated by `compression-coordinator` require
        # input logs to be stored in S3.
@@ -200,12 +202,12 @@ that the scheduler can keep enough tasks available for dispatch and avoid underu
 Sets the maximum number of ready tasks that the Spider scheduler can buffer for scheduling.
 
 A larger capacity allows the scheduler to consider more ready tasks at once, which can improve
-fairness across active jobs and better accommodate workloads with high task submission rates.
+fairness across active jobs and better accommodate workloads with high job submission rates.
 However, buffering more tasks also increases the scheduler's memory usage.
 
 Consider:
 
-* Increasing this value for workloads that produce large numbers of ready tasks or have high task
+* Increasing this value for workloads that produce large numbers of ready tasks or have high job
   submission rates.
 * Decreasing this value if scheduler memory usage is a concern and the workload does not require a
   large ready-task buffer.
