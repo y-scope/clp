@@ -20,6 +20,9 @@ pub enum Error {
         field: &'static str,
     },
 
+    #[error("invalid configuration: {0}")]
+    InvalidConfiguration(String),
+
     #[error("invalid dataset: {0}")]
     InvalidDataset(String),
 
@@ -56,6 +59,9 @@ pub enum Error {
 
     #[error("sqlx error: {0}")]
     Sqlx(#[from] sqlx::Error),
+
+    #[error("semaphore error: {0}")]
+    Semaphore(String),
 
     /// Failed to build or serialize the compression task graph.
     #[error("failed to build the compression task graph: {0}")]

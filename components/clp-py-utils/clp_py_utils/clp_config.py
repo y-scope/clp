@@ -732,10 +732,16 @@ class QueryJobPollingConfig(BaseModel):
 
 
 class ApiServer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 3001
+
     host: DomainStr = "localhost"
-    port: Port = 3001
+    port: Port = DEFAULT_PORT
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
     default_max_num_query_results: int = 1000
+
+    def transform_for_container(self):
+        self.host = API_SERVER_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class LogIngestor(BaseModel):
@@ -761,6 +767,7 @@ class PollingBackoff(BaseModel):
 class CompressionCoordinator(BaseModel):
     resource_group: SpiderResourceGroup = SpiderResourceGroup(name="compression-coordinator")
     job_polling_interval_millisecs: PositiveInt = 100
+    max_concurrent_jobs: PositiveInt = 1000
     result_polling: PollingBackoff = PollingBackoff(
         init_backoff_millisecs=100, max_backoff_millisecs=1000
     )
@@ -984,12 +991,6 @@ class ClpConfig(BaseModel):
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )
 
-    def validate_api_server(self):
-        if StorageEngine.CLP == self.package.storage_engine and self.api_server is not None:
-            raise ValueError(
-                f"The API server is only compatible with storage engine `{StorageEngine.CLP_S}`."
-            )
-
     def load_container_image_ref(self):
         if self.container_image_ref is not None:
             # Accept configured value for debug purposes
@@ -1100,6 +1101,8 @@ class ClpConfig(BaseModel):
             self.redis.transform_for_container(BundledService.REDIS in self.bundled)
         self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
         self.otel_collector.transform_for_container(BundledService.OTEL_COLLECTOR in self.bundled)
+        if self.api_server is not None:
+            self.api_server.transform_for_container()
         if self.query_scheduler is not None:
             self.query_scheduler.transform_for_container()
         if self.reducer is not None:
