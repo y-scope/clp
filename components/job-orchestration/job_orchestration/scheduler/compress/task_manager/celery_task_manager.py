@@ -14,12 +14,15 @@ logger = logging.getLogger(__name__)
 TASK_RESULT_GET_INTERVAL_SECONDS = 0.005
 TASK_RESULT_DEFAULT_GET_TIMEOUT_SECONDS = 10
 
+
 class CeleryTaskManager(TaskManager):
     class ResultHandle(TaskManager.ResultHandle):
         def __init__(self, celery_result: celery.result.GroupResult) -> None:
             self._celery_result: celery.result.GroupResult = celery_result
 
-        def get_result(self, timeout: float = TASK_RESULT_DEFAULT_GET_TIMEOUT_SECONDS) -> list[CompressionTaskResult] | None:
+        def get_result(
+            self, timeout: float = TASK_RESULT_DEFAULT_GET_TIMEOUT_SECONDS
+        ) -> list[CompressionTaskResult] | None:
             if not self._celery_result.ready():
                 return None
             try:
