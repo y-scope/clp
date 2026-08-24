@@ -11,7 +11,7 @@ class TaskManager(ABC):
 
     class ResultHandle(ABC):
         @abstractmethod
-        def get_result(self, timeout: float = 0.1) -> list[CompressionTaskResult] | None:
+        def get_result(self, timeout: float) -> list[CompressionTaskResult] | None:
             """
             Gets the result of a compression job.
             :param timeout: Maximum time (in seconds) to wait for retrieving the result. Depending
