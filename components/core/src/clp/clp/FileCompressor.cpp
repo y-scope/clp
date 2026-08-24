@@ -12,13 +12,13 @@
 #include <boost/filesystem/path.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
 #include "../BufferedReader.hpp"
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ir/types.hpp"
 #include "../ir/utils.hpp"
 #include "../LogSurgeonReader.hpp"
-#include "../Profiler.hpp"
 #include "../streaming_archive/writer/utils.hpp"
 #include "../utf8_utils.hpp"
 #include "utils.hpp"
@@ -123,10 +123,8 @@ bool FileCompressor::compress_file(
         streaming_archive::writer::Archive& archive_writer,
         bool use_heuristic
 ) {
+    PROFILE_SCOPE("compress.parse_log_file");
     string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
-
-    PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
 
     BufferedReader buffered_file_reader{make_unique<FileReader>(file_to_compress.get_path())};
 
@@ -180,10 +178,6 @@ bool FileCompressor::compress_file(
             succeeded = false;
         }
     }
-
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
-    PROFILER_SPDLOG_INFO("Done parsing {}", file_name)
 
     return succeeded;
 }

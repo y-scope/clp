@@ -17,8 +17,14 @@ webui:
 #  rate_limit: 1000
 #  presto_max_num_search_results: 1000
 
-# API server config
-api_server: null
+## API server config
+#api_server:
+#  host: "localhost"
+#  port: 3001
+#  default_max_num_query_results: 1000
+#  query_job_polling:
+#    initial_backoff_ms: 100
+#    max_backoff_ms: 5000
 
 # log-ingestor is not supported in clp-text
 log_ingestor: null

@@ -26,7 +26,7 @@ use clp_rust_utils::clp_config::package::config::SpiderResourceGroup;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
-use clp_rust_utils::serde::BrotliMsgpack;
+use clp_rust_utils::serde::ZstdMsgpack;
 use const_format::formatcp;
 use spider_client::SpiderClient;
 use spider_core::task::ExecutionPolicy;
@@ -290,7 +290,7 @@ impl Coordinator {
         for job_row in new_job_rows {
             let job_id = job_row.id;
             let clp_io_config: ClpIoConfig =
-                match BrotliMsgpack::deserialize(&job_row.serialized_clp_io_config) {
+                match ZstdMsgpack::deserialize(&job_row.serialized_clp_io_config) {
                     Ok(clp_io_config) => clp_io_config,
                     Err(e) => {
                         tracing::error!(
@@ -511,7 +511,7 @@ impl Coordinator {
             .await?
         {
             let clp_io_config: ClpIoConfig =
-                match BrotliMsgpack::deserialize(&row.serialized_clp_io_config) {
+                match ZstdMsgpack::deserialize(&row.serialized_clp_io_config) {
                     Ok(clp_io_config) => clp_io_config,
                     Err(e) => {
                         tracing::error!(

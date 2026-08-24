@@ -9,11 +9,19 @@ pub type QueryJobId = i32;
 
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 
+/// Mirror of `job_orchestration.scheduler.job_config.AggregationConfig`. Must be kept in sync.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct AggregationConfig {
+    pub job_id: Option<i64>,
+    pub reducer_host: Option<String>,
+    pub reducer_port: Option<u16>,
+    pub do_count_aggregation: Option<bool>,
+    /// Milliseconds
+    pub count_by_time_bucket_size: Option<i64>,
+}
+
 /// Mirror of `job_orchestration.scheduler.job_config.SearchJobConfig`. Must be kept in sync.
-///
-/// # NOTE
-///
-/// `aggregation_config` is currently unused and thus uses a placeholder unit type.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
@@ -25,7 +33,7 @@ pub struct SearchJobConfig {
     pub ignore_case: bool,
     pub path_filter: Option<String>,
     pub network_address: Option<(String, u16)>,
-    pub aggregation_config: Option<()>,
+    pub aggregation_config: Option<AggregationConfig>,
     pub write_to_file: bool,
 }
 

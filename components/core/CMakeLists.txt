@@ -55,8 +55,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
-# Profiling options
-add_definitions(-DPROF_ENABLED=0)
+set(CLP_ENABLE_PROFILING "0" CACHE STRING "Profiling level (unset/0 = off, 1 = base, 2 = debug)")
+if(NOT CLP_ENABLE_PROFILING MATCHES "^(0|1|2)$")
+    message(FATAL_ERROR
+        "Unsupported CLP_ENABLE_PROFILING value '${CLP_ENABLE_PROFILING}'. "
+        "Supported values: 0 (off), 1 (base), 2 (debug)."
+    )
+endif()
 
 # Compile-in debug logging statements
 #add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
@@ -351,6 +356,7 @@ endif()
 
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
+add_subdirectory(src/utils)
 
 add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
@@ -567,8 +573,6 @@ set(SOURCE_FILES_unitTest
         src/clp/ParsedMessage.cpp
         src/clp/ParsedMessage.hpp
         src/clp/Platform.hpp
-        src/clp/Profiler.cpp
-        src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
         src/clp/QueryToken.cpp
@@ -582,8 +586,6 @@ set(SOURCE_FILES_unitTest
         src/clp/SQLiteDB.hpp
         src/clp/SQLitePreparedStatement.cpp
         src/clp/SQLitePreparedStatement.hpp
-        src/clp/Stopwatch.cpp
-        src/clp/Stopwatch.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
         src/clp/streaming_archive/ArchiveMetadata.hpp
         src/clp/streaming_archive/Constants.hpp
@@ -649,6 +651,10 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
+        src/utils/profiling/test/test_Profiler.cpp
+        src/utils/profiling/test/test_Reporter.cpp
+        src/utils/profiling/test/test_ScopedProfiler.cpp
+        src/utils/profiling/test/emitters.hpp
         tests/LogSuppressor.hpp
         tests/MockLogTypeDictionary.hpp
         tests/MockVariableDictionary.hpp
@@ -679,7 +685,6 @@ set(SOURCE_FILES_unitTest
         tests/test-SchemaSearcher.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
-        tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
@@ -707,6 +712,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::search::sql
             clp_s::timestamp_parser
             clp_s::timestamp_pattern
+            utils::profiling
             )
 
     add_executable(unitTest

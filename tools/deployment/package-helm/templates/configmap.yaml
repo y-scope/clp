@@ -81,6 +81,8 @@ data:
         .Values.clpConfig.compression_coordinator.database_connection_pool_size | int }}
       job_polling_interval_millisecs: {{
         .Values.clpConfig.compression_coordinator.job_polling_interval_millisecs | int }}
+      max_concurrent_jobs: {{
+        .Values.clpConfig.compression_coordinator.max_concurrent_jobs | int }}
       resource_group:
         name: {{ .Values.clpConfig.compression_coordinator.resource_group.name | quote }}
       result_polling:
@@ -325,6 +327,8 @@ data:
           {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
       },
       "server": {
+        "ApiServerUrl": "http://{{ include "clp.fullname" . }}-api-server:3001",
+
         "SqlDbHost": "{{ include "clp.databaseHost" . }}",
         "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
         "SqlDbPort": {{ include "clp.databasePort" . | int }},

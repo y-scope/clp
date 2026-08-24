@@ -10,6 +10,7 @@ use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::clp_config::package::credentials::Credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
+use clp_rust_utils::job_config::AggregationConfig;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -205,6 +206,12 @@ pub struct QueryConfig {
     /// will be stored in `MongoDB` instead.
     #[serde(default)]
     pub buffer_results_in_mongodb: bool,
+
+    /// The size of each time bucket (in milliseconds) for count-by-time aggregation.
+    /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
+    /// search job, and its results are always buffered in `MongoDB`.
+    #[serde(default)]
+    pub count_by_time_bucket_size_millisecs: Option<i64>,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
@@ -266,7 +273,9 @@ impl Client {
         })
     }
 
-    /// Submits a search or aggregation query as a job.
+    /// Submits a search or aggregation query as a job. The job is a count-by-time aggregation
+    /// job if `count_by_time_bucket_size_millisecs` is set in the query config; otherwise it's a
+    /// plain search job.
     ///
     /// # Returns
     ///
@@ -276,9 +285,19 @@ impl Client {
     ///
     /// Returns an error if:
     ///
+    /// * [`ClientError::InvalidInput`] if `count_by_time_bucket_size_millisecs` is set and is `<=
+    ///   0`.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
+        let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
+        if let Some(bucket_size) = count_by_time_bucket_size
+            && bucket_size <= 0
+        {
+            return Err(ClientError::InvalidInput(
+                "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
+            ));
+        }
         let mut search_job_config: SearchJobConfig = query_config.into();
         if search_job_config.datasets.is_none() {
             search_job_config.datasets = match self.config.package.storage_engine {
@@ -289,6 +308,14 @@ impl Client {
         if search_job_config.max_num_results == 0 {
             search_job_config.max_num_results =
                 self.get_api_server_config().default_max_num_query_results;
+        }
+        if let Some(bucket_size) = count_by_time_bucket_size {
+            search_job_config.aggregation_config = Some(AggregationConfig {
+                count_by_time_bucket_size: Some(bucket_size),
+                ..AggregationConfig::default()
+            });
+            // Aggregation results are always buffered in MongoDB.
+            search_job_config.write_to_file = false;
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
@@ -325,6 +352,8 @@ impl Client {
     pub async fn fetch_results(
         &self,
         search_job_id: u64,
+        raw_docs: bool,
+        sorted: bool,
     ) -> Result<
         SearchResultStream<
             impl Stream<Item = Result<String, ClientError>> + use<>,
@@ -357,6 +386,16 @@ impl Client {
         let job_config = self.get_job_config(search_job_id).await?;
         let max_num_results = job_config.max_num_results;
 
+        if job_config.aggregation_config.is_some() {
+            // Aggregation results are always buffered in MongoDB. Each document is an
+            // aggregation record (e.g., a time bucket) rather than a log message, so stream the
+            // documents whole and without a limit.
+            return self
+                .fetch_results_from_mongo(search_job_id, 0, true, false)
+                .await
+                .map(|s| SearchResultStream::Mongo { inner: s });
+        }
+
         if job_config.write_to_file {
             let stream = match &self.config.stream_output.storage {
                 StreamOutputStorage::Fs { .. } => SearchResultStream::File {
@@ -371,7 +410,7 @@ impl Client {
             return Ok(stream);
         }
 
-        self.fetch_results_from_mongo(search_job_id, max_num_results)
+        self.fetch_results_from_mongo(search_job_id, max_num_results, raw_docs, sorted)
             .await
             .map(|s| SearchResultStream::Mongo { inner: s })
     }
@@ -605,6 +644,13 @@ impl Client {
     /// When `max_num_results` is greater than 0, the query is limited to at most that many
     /// documents.
     ///
+    /// When `raw_docs` is `true`, each document is serialized to JSON whole (used
+    /// for aggregation results); otherwise the document's "message" field is extracted (used for
+    /// search results).
+    ///
+    /// When `sorted` is `true`, documents are returned sorted by `timestamp` descending (then
+    /// `_id` ascending); otherwise, they're returned in insertion order.
+    ///
     /// # Returns
     ///
     /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
@@ -620,7 +666,7 @@ impl Client {
     /// * [`ClientError::MalformedData`] if a retrieved document does not contain a "message" field,
     ///   or if the "message" field is not a BSON string.
     /// * Forwards [`mongodb::error::Error`] produced by the `MongoDB` cursor item access.
-    /// * Forwards [`serde_json::from_str`]'s return values on failure.
+    /// * Forwards [`serde_json::to_string`]'s return values on failure.
     ///
     /// # Errors
     ///
@@ -631,26 +677,34 @@ impl Client {
         &self,
         search_job_id: u64,
         max_num_results: u32,
+        raw_docs: bool,
+        sorted: bool,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let database = self
             .mongodb_client
             .database(&self.config.results_cache.db_name);
         let collection: mongodb::Collection<mongodb::bson::Document> =
             database.collection(&search_job_id.to_string());
-        let find_options = if max_num_results > 0 {
-            mongodb::options::FindOptions::builder()
-                .limit(i64::from(max_num_results))
-                .build()
-        } else {
-            mongodb::options::FindOptions::default()
-        };
+        let mut find_options = mongodb::options::FindOptions::default();
+        if max_num_results > 0 {
+            find_options.limit = Some(i64::from(max_num_results));
+        }
+        if sorted {
+            find_options.sort = Some(mongodb::bson::doc! {
+                "timestamp": -1,
+                "_id": 1,
+            });
+        }
         let cursor = collection
             .find(mongodb::bson::doc! {})
             .with_options(find_options)
             .await?;
 
-        let mapped = cursor.map(|res| {
+        let mapped = cursor.map(move |res| {
             let doc = res?;
+            if raw_docs {
+                return Ok(serde_json::to_string(&doc)?);
+            }
             let Some(msg) = doc.get("message") else {
                 return Err(ClientError::MalformedData);
             };

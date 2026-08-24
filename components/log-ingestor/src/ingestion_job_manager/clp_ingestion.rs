@@ -1,3 +1,5 @@
+//! CLP database-backed S3 ingestion and compression job coordination.
+
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -1068,7 +1070,7 @@ impl ClpCompressionState {
     ///
     /// * [`anyhow::Error`] if the submitted compression job ID overflows.
     /// * [`anyhow::Error`] if one or more object metadata rows fail to be updated in the DB.
-    /// * Forwards [`clp_rust_utils::serde::BrotliMsgpack::serialize`]'s return values on failure.
+    /// * Forwards [`clp_rust_utils::serde::ZstdMsgpack::serialize`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Connection::begin`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
@@ -1100,7 +1102,7 @@ impl ClpCompressionState {
 
             // Submit compression job
             let result = sqlx::query(COMPRESSION_JOB_SUBMISSION_QUERY)
-                .bind(clp_rust_utils::serde::BrotliMsgpack::serialize(&io_config)?)
+                .bind(clp_rust_utils::serde::ZstdMsgpack::serialize(&io_config)?)
                 .execute(&mut *tx)
                 .await?;
             let compression_job_id =

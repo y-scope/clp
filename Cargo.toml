@@ -21,13 +21,11 @@ aws-config = "1.10.1"
 aws-sdk-s3 = "1.141.0"
 aws-sdk-sqs = "1.105.0"
 axum = { version = "0.8.9", features = ["json"] }
-brotli = "8.0.4"
 chrono = { version = "0.4.45", features = ["serde"] }
 clap = { version = "4.6.6", features = ["derive"] }
 clp-rust-utils = { path = "components/clp-rust-utils" }
 const_format = "0.2.36"
 futures = "0.3.33"
-hex = "0.4.3"
 http-body-util = "0.1.4"
 mongodb = "3.8.0"
 non-empty-string = { version = "0.2.6", features = ["serde"] }
@@ -63,3 +61,4 @@ utoipa = "5.5.0"
 utoipa-axum = "0.2.0"
 uuid = { version = "1.24.0", features = ["v4"] }
 yaml_serde = "0.10.4"
+zstd = "0.13.3"

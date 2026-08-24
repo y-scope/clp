@@ -1,36 +1,27 @@
-import MongoSocketCollection from "../../../../../api/socket/MongoSocketCollection";
-import {useCursor} from "../../../../../api/socket/useCursor";
+import {useQueryResults} from "@webui/api-client/useQueryResults";
+
+import {apiClient} from "../../../../../api/search";
 import {TimelineBucket} from "../../../../../components/ResultsTimeline/typings";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
+import useSearchStore from "../../../SearchState/index";
 
 
 /**
- * Custom hook to get aggregation results for the current aggregationJobId.
+ * Custom hook to stream aggregation results for the current aggregationJobId from the API
+ * server's SSE endpoint.
  *
  * @return
  */
 const useAggregationResults = () => {
-    const {aggregationJobId} = useSearchStore();
+    const aggregationJobId = useSearchStore((state) => state.aggregationJobId);
 
-    const aggregationResultsCursor = useCursor<TimelineBucket>(
-        () => {
-            // If there is no active aggregation job, there are no results to fetch. The cursor will
-            // return null.
-            if (aggregationJobId === SEARCH_STATE_DEFAULT.aggregationJobId) {
-                return null;
-            }
-
-            console.log(
-                `Subscribing to updates to aggregation results with job ID: ${aggregationJobId}`
-            );
-
-            const collection = new MongoSocketCollection(aggregationJobId);
-            return collection.find({}, {});
+    return useQueryResults<TimelineBucket>(apiClient, aggregationJobId, {
+        onError: (err) => {
+            console.error("Failed to stream aggregation results:", err);
         },
-        [aggregationJobId]
-    );
-
-    return aggregationResultsCursor;
+        parse: (data) => JSON.parse(data) as TimelineBucket,
+        rawDocs: true,
+        sorted: false,
+    });
 };
 
 export {useAggregationResults};
