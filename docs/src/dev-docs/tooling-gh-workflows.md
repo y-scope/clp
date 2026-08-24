@@ -98,7 +98,7 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   arch-suffixed tag (e.g. `:main-amd64`).
 * `musllinux_1_2-deps-image-merge`: On push to `main`, merges the per-arch tags produced by
   `musllinux_1_2-deps-image` into a single multi-arch `:main` manifest.
-* `ubuntu-jammy-x86-deps-image` / `ubuntu-jammy-aarch64-deps-image`: Builds a container image
+* `ubuntu-jammy-x86_64-deps-image` / `ubuntu-jammy-aarch64-deps-image`: Builds a container image
   containing the dependencies necessary to build CLP-core in an Ubuntu Jammy x86/aarch64
   environment.
 * `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
@@ -117,8 +117,8 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
 * `ubuntu-jammy-integration-tests-core`: Runs CLP-core's integration tests using the binaries built
   in the `ubuntu-jammy-binaries` job, and then uploads the logs from the tests.
 * `package-image`: Builds the CLP package container image.
-* `package-image-multiarch-manifest`: On pushes to or scheduled runs on `main`, merges the per-arch
-  tags produced by `package-image` into a single multi-arch manifest.
+* `package-image-multiarch-manifest`: When run on `main`, merges the per-arch tags produced by
+  `package-image` into a single multi-arch manifest.
 * `spider-worker-image`: Builds a container image containing CLP-core and `clp-tdl-package`.
 
 When the PR or commit doesn't change any of the files that affect CLP's dependencies (or the
