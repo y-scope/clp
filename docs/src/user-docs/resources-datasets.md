@@ -35,4 +35,3 @@ For evaluation results comparing CLP and other tools, see our
 [7]: https://zenodo.org/records/10516345
 
 [8]: https://zenodo.org/records/10516401
-
