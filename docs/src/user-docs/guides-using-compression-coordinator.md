@@ -10,10 +10,9 @@ the [limitations](#limitations) section for details). Until then, the two are me
 side-by-side, with `compression-scheduler` handling any jobs that `compression-coordinator` doesn't
 yet support.
 :::
-To use `compression-coordinator`, enable the Spider scheduling framework when starting the CLP
-package.
 
-TODO: Link to Chenxing's doc.
+To use `compression-coordinator`, enable the Spider scheduling framework when starting the CLP
+package. See [Using Spider scheduler][using-spider-scheduler] for details.
 
 :::{note}
 Currently, `compression-coordinator` can be deployed via Kubernetes and not via Docker Compose.
@@ -73,3 +72,4 @@ Additional capabilities will be introduced in future releases as it moves toward
 
 [column-metadata-issue]: https://github.com/y-scope/clp/issues/2480
 [spider]: https://github.com/y-scope/spider
+[using-spider-scheduler]: guides-using-spider-scheduler.md
