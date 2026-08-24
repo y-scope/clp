@@ -152,7 +152,7 @@ Enables Spider and deploys its related CLP components.
 
 :::{confval} spider.spiderConfig.database
 :type: `map`
-:default: The Spider subchart's bundled database
+:default: The default configuration for Spider subchart's bundled database
 
 Configures the database that Spider uses for metadata storage. By default, the Spider subchart
 deploys a bundled database and connects to it. To use an external database instead, see
