@@ -92,6 +92,30 @@ data:
           .Values.clpConfig.compression_coordinator.result_polling.max_backoff_millisecs | int }}
       termination_timeout_secs: {{
         .Values.clpConfig.compression_coordinator.termination_timeout_secs | int }}
+    search_coordinator:
+      commit_task_hard_timeout_secs: {{
+        .Values.clpConfig.search_coordinator.commit_task_hard_timeout_secs | int }}
+      commit_task_max_retry: {{
+        .Values.clpConfig.search_coordinator.commit_task_max_retry | int }}
+      commit_task_soft_timeout_secs: {{
+        .Values.clpConfig.search_coordinator.commit_task_soft_timeout_secs | int }}
+      database_connection_pool_size: {{
+        .Values.clpConfig.search_coordinator.database_connection_pool_size | int }}
+      job_polling_interval_millisecs: {{
+        .Values.clpConfig.search_coordinator.job_polling_interval_millisecs | int }}
+      max_concurrent_jobs: {{
+        .Values.clpConfig.search_coordinator.max_concurrent_jobs | int }}
+      resource_group:
+        name: {{ .Values.clpConfig.search_coordinator.resource_group.name | quote }}
+      result_polling:
+        init_backoff_millisecs: {{
+          .Values.clpConfig.search_coordinator.result_polling.init_backoff_millisecs | int }}
+        max_backoff_millisecs: {{
+          .Values.clpConfig.search_coordinator.result_polling.max_backoff_millisecs | int }}
+      search_task_max_retry: {{
+        .Values.clpConfig.search_coordinator.search_task_max_retry | int }}
+      termination_timeout_secs: {{
+        .Values.clpConfig.search_coordinator.termination_timeout_secs | int }}
     spider:
       host: "{{ include "clp.spiderStorageHost" . }}"
       port: {{ include "clp.spiderStoragePort" . | int }}
