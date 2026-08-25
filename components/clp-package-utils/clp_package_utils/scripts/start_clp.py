@@ -19,7 +19,6 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
-    validate_compression_orchestration_config,
     validate_output_storage_config,
     validate_retention_config,
 )
@@ -95,7 +94,6 @@ def main(
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
         if clp_config.redis is not None:
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
-        validate_compression_orchestration_config(clp_config)
         clp_config.validate_logs_input_config(True)
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
