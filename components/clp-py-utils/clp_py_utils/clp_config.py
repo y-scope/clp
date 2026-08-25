@@ -1128,6 +1128,8 @@ class ClpConfig(BaseModel):
     @model_validator(mode="after")
     def validate_compression_orchestration_config(self):
         if CompressionOrchestration.SPIDER != self.package.scheduler:
+            # Neither service is deployed in this mode, so no `spider` or
+            # `compression_coordinator` config check is necessary.
             return self
         if self.spider is None:
             msg = (
