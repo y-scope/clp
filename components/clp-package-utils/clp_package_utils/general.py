@@ -21,6 +21,8 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     ClpConfig,
+    COMPRESSION_COORDINATOR_COMPONENT_NAME,
+    CompressionOrchestration,
     CONTAINER_AWS_CONFIG_DIRECTORY,
     CONTAINER_CLP_HOME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -657,6 +659,29 @@ def validate_webui_config(
         raise ValueError("The API server must be enabled when the Web UI is enabled.")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_compression_orchestration_config(clp_config: ClpConfig):
+    """
+    :param clp_config:
+    :raise ValueError: If a component that only the Spider deployment runs is configured while
+        `package.scheduler` selects another orchestration.
+    """
+    scheduler = clp_config.package.scheduler
+    if CompressionOrchestration.SPIDER == scheduler:
+        return
+
+    for component_name, component_config in (
+        (SPIDER_COMPONENT_NAME, clp_config.spider),
+        (COMPRESSION_COORDINATOR_COMPONENT_NAME, clp_config.compression_coordinator),
+    ):
+        if component_config is not None:
+            msg = (
+                f"`{component_name}` is configured but `package.scheduler` is `{scheduler}`, so it"
+                f" won't be deployed. Set `package.scheduler` to"
+                f" `{CompressionOrchestration.SPIDER}` or remove `{component_name}`."
+            )
+            raise ValueError(msg)
 
 
 def validate_spider_config(clp_config: ClpConfig):
