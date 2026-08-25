@@ -68,10 +68,8 @@ jobs:
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
-      # The macOS toolchain comes from the runner image and Homebrew rather than a pinned
-      # container, so hash what is installed rather than the install script -- otherwise a tree
-      # built under one Xcode could be restored under another and never rebuilt. Must run after
-      # `install-all.sh`.
+      # The macOS toolchain comes from the runner image and Homebrew, so hash what is installed
+      # rather than the install script. Must run after `install-all.sh`.
       - id: "toolchain"
         name: "Capture the macOS toolchain identity"
         run: |
@@ -107,12 +105,9 @@ jobs:
         run: "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
         shell: "bash"
 
-      # `mongocxx` never re-reads `mongo-c-driver`'s ~270MB packfile and its populate step is
-      # stamp-gated, so dropping it is safe. `opentelemetry-proto`'s `.git` must stay: its populate
-      # step runs `git` on every reconfigure.
-      #
-      # Gating matches the Linux jobs; `deps:core` is its own step here, so the save keys off its
-      # outcome rather than a marker file.
+      # `mongocxx` never re-reads `mongo-c-driver`'s ~220MB packfile, which barely compresses;
+      # `opentelemetry-proto`'s `.git` must stay, since its populate step runs `git` every
+      # reconfigure. Gating matches the Linux jobs, keyed off `deps_core`'s own outcome.
       - name: "Drop mongo-c-driver's packfile before caching"
         if: &deps_cache_save_condition >-
           !cancelled()

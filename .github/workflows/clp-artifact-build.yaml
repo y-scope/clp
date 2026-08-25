@@ -378,11 +378,9 @@ jobs:
         id: "deps_cache_restore"
         uses: "actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684"
         with:
-          # The CMake build directories are needed too, or a restore would recompile everything;
-          # `.task` is needed or `deps:utils:clean-outdated-cpp-checksum-files` wipes the restored
-          # checksums. A `!` exclusion cannot prune anything here -- `actions/cache` resolves
-          # `path` with `implicitDescendants: false` and `tar` recurses in regardless -- so large
-          # paths are dropped by the cleanup step before the save instead.
+          # `.task` must travel with the tree, or `clean-outdated-cpp-checksum-files` wipes the
+          # restored checksums. A `!` exclusion can't prune anything here (`implicitDescendants:
+          # false`), so large paths are deleted before the save instead.
           path: &deps_cache_paths |-
             build/deps/cpp
             .task
@@ -405,15 +403,11 @@ jobs:
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-      # `mongocxx` never re-reads `mongo-c-driver`'s ~270MB packfile and its populate step is
-      # stamp-gated, so dropping it is safe. `opentelemetry-proto`'s `.git` must stay: its populate
-      # step runs `git` on every reconfigure.
-      #
-      # The save is gated to `main` because entries are branch-scoped but share one 10GB quota
-      # (reads are unaffected -- every ref can restore from `main`); skipped on an exact hit,
-      # because `saveCache` archives before reserving the key; and taken from one matrix leg only,
-      # since `use_shared_libs` never reaches `deps:core` so both legs share a key. The
-      # `.deps-core-ok` marker keeps it reachable when the unit tests fail.
+      # `mongocxx` never re-reads `mongo-c-driver`'s ~220MB packfile, which barely compresses;
+      # `opentelemetry-proto`'s `.git` must stay, since its populate step runs `git` every
+      # reconfigure. Saved only from `main` (entries are branch-scoped but share one quota), only
+      # on a miss (`saveCache` archives before reserving the key), and only from the leg whose
+      # `.deps-core-ok` marker shows `deps:core` succeeded even if the tests didn't.
       - name: "Drop mongo-c-driver's packfile before caching"
         if: &deps_cache_save_condition >-
           !cancelled()
