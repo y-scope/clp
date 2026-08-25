@@ -403,11 +403,10 @@ jobs:
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-      # `mongocxx` clones `mongo-c-driver` to build it and leaves a ~220MB `.git` behind. Nothing
-      # reads it again, and a packfile barely compresses, so it would roughly double the cache
-      # entry. Don't do the same to `opentelemetry-proto`: its build re-runs `git` on every
-      # reconfigure and fails without it.
-      - name: "Drop mongo-c-driver's packfile before caching"
+      # `mongocxx` clones `mongo-c-driver` to build it. It needs the checked-out source, but not
+      # the `.git` directory the clone brings with it -- dropping that before the save takes
+      # ~200MB off the cache entry.
+      - name: "Drop mongo-c-driver's .git directory before caching"
         if: &deps_cache_save_condition >-
           !cancelled()
           && false == matrix.use_shared_libs
@@ -483,7 +482,7 @@ jobs:
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-      - name: "Drop mongo-c-driver's packfile before caching"
+      - name: "Drop mongo-c-driver's .git directory before caching"
         if: *deps_cache_save_condition
         run: "rm -rf build/deps/cpp/mongocxx-build/_deps/mongo-c-driver-src/.git"
         shell: "bash"
@@ -609,7 +608,7 @@ jobs:
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-      - name: "Drop mongo-c-driver's packfile before caching"
+      - name: "Drop mongo-c-driver's .git directory before caching"
         if: *deps_cache_save_condition
         run: "rm -rf build/deps/cpp/mongocxx-build/_deps/mongo-c-driver-src/.git"
         shell: "bash"
@@ -681,7 +680,7 @@ jobs:
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-      - name: "Drop mongo-c-driver's packfile before caching"
+      - name: "Drop mongo-c-driver's .git directory before caching"
         if: *deps_cache_save_condition
         run: "rm -rf build/deps/cpp/mongocxx-build/_deps/mongo-c-driver-src/.git"
         shell: "bash"
