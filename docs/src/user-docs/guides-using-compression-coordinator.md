@@ -44,7 +44,9 @@ user-experience, reliability, and performance improvements:
 * **Easier failure handling**: With `compression-coordinator` and Spider, if a compression task
   fails, it can automatically be retried, allowing tasks to automatically recover from transient
   failures.
-  * TODO: Link to #2457.
+  * To configure the maximum number of retries for compression and commit tasks, set
+    `compression_task_max_retry` and `commit_task_max_retry`, respectively, in the
+    `compression-coordinator` configuration.
 * **Improved horizontal scalability**: With Celery, tasks are dispatched to the task queue serially,
   whereas with Spider, tasks are dispatched in parallel. Thus, if we add more workers, at some
   point, Spider scales better whereas Celery gets bottlenecked by the task-dispatching overhead.
@@ -55,9 +57,13 @@ user-experience, reliability, and performance improvements:
   `compression-scheduler`-based architecture can achieve the same level of fairness as the
   `compression-coordinator`-based architecture, but with higher overhead since Spider is more
   efficient than `compression-scheduler`.
+  * To configure the maximum number of jobs Spider schedules concurrently, set
+    {confval}`spider.spiderConfig.scheduler.config.active_job_queue_size`.
 * **Bounded job concurrency**: `compression-coordinator` limits the number of compression jobs that
   can be submitted to Spider concurrently, whereas `compression-scheduler` doesn't; the latter can
   cause significantly high scheduling overheads when there are many concurrent jobs.
+  * To configure the maximum number of compression jobs that `compression-coordinator` submits to
+    Spider concurrently, set `max_concurrent_jobs` in the `compression-coordinator` configuration.
 
 # Limitations
 
