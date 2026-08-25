@@ -222,15 +222,15 @@ def _record_search_bytes_scanned(
 ) -> None:
     if archive_sizes is None:
         logger.error(
-            "Archive-size metadata is missing for the completed search task; scan byte metrics "
+            "Archive-size metadata is missing for the completed search task; bytes scanned metrics "
             "were not emitted."
         )
         return
     uncompressed_size, compressed_size = archive_sizes
     if uncompressed_size < 0 or compressed_size < 0:
         logger.error(
-            "Search task result contains negative archive-size metadata; scan byte metrics were not"
-            " emitted."
+            "Search task result contains negative archive-size metadata; bytes scanned metrics were "
+            "not emitted."
         )
         return
 
