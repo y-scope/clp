@@ -403,11 +403,10 @@ jobs:
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-      # `mongocxx` never re-reads `mongo-c-driver`'s ~220MB packfile, which barely compresses;
-      # `opentelemetry-proto`'s `.git` must stay, since its populate step runs `git` every
-      # reconfigure. Saved only from `main` (entries are branch-scoped but share one quota), only
-      # on a miss (`saveCache` archives before reserving the key), and only from the leg whose
-      # `.deps-core-ok` marker shows `deps:core` succeeded even if the tests didn't.
+      # `mongocxx` clones `mongo-c-driver` to build it and leaves a ~220MB `.git` behind. Nothing
+      # reads it again, and a packfile barely compresses, so it would roughly double the cache
+      # entry. Don't do the same to `opentelemetry-proto`: its build re-runs `git` on every
+      # reconfigure and fails without it.
       - name: "Drop mongo-c-driver's packfile before caching"
         if: &deps_cache_save_condition >-
           !cancelled()

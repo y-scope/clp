@@ -105,9 +105,10 @@ jobs:
         run: "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
         shell: "bash"
 
-      # `mongocxx` never re-reads `mongo-c-driver`'s ~220MB packfile, which barely compresses;
-      # `opentelemetry-proto`'s `.git` must stay, since its populate step runs `git` every
-      # reconfigure. Gating matches the Linux jobs, keyed off `deps_core`'s own outcome.
+      # `mongocxx` clones `mongo-c-driver` to build it and leaves a ~220MB `.git` behind. Nothing
+      # reads it again, and a packfile barely compresses, so it would roughly double the cache
+      # entry. Don't do the same to `opentelemetry-proto`: its build re-runs `git` on every
+      # reconfigure and fails without it.
       - name: "Drop mongo-c-driver's packfile before caching"
         if: &deps_cache_save_condition >-
           !cancelled()
