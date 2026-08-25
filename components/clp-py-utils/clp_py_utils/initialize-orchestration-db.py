@@ -81,6 +81,7 @@ def main(argv):
                     `dispatch_time` DATETIME NULL DEFAULT NULL,
                     `clp_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
+                    INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
                     INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE,
                     INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE,
@@ -121,7 +122,7 @@ def main(argv):
                     INDEX `job_id` (`job_id`) USING BTREE,
                     INDEX `TASK_STATUS` (`status`) USING BTREE,
                     INDEX `TASK_START_TIME` (`start_time`) USING BTREE,
-                    CONSTRAINT `{COMPRESSION_TASKS_TABLE_NAME}` FOREIGN KEY (`job_id`) 
+                    CONSTRAINT `{COMPRESSION_TASKS_TABLE_NAME}` FOREIGN KEY (`job_id`)
                     REFERENCES `{COMPRESSION_JOBS_TABLE_NAME}` (`id`)
                     ON UPDATE NO ACTION ON DELETE NO ACTION
                 ) ROW_FORMAT=DYNAMIC
@@ -134,15 +135,23 @@ def main(argv):
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `type` INT NOT NULL,
                     `status` INT NOT NULL DEFAULT '{QueryJobStatus.PENDING}',
+                    `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                    `start_time` DATETIME(3) NULL DEFAULT NULL,
+                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP()
+                        ON UPDATE CURRENT_TIMESTAMP(),
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
-                    `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
+                    `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+                    `dispatch_time` DATETIME NULL DEFAULT NULL,
                     `job_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
-                    INDEX `JOB_STATUS` (`status`) USING BTREE
+                    INDEX `JOB_STATUS` (`status`) USING BTREE,
+                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE,
+                    INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE,
+                    INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
@@ -161,7 +170,7 @@ def main(argv):
                     INDEX `job_id` (`job_id`) USING BTREE,
                     INDEX `TASK_STATUS` (`status`) USING BTREE,
                     INDEX `TASK_START_TIME` (`start_time`) USING BTREE,
-                    CONSTRAINT `{QUERY_TASKS_TABLE_NAME}` FOREIGN KEY (`job_id`) 
+                    CONSTRAINT `{QUERY_TASKS_TABLE_NAME}` FOREIGN KEY (`job_id`)
                     REFERENCES `{QUERY_JOBS_TABLE_NAME}` (`id`)
                     ON UPDATE NO ACTION ON DELETE NO ACTION
                 ) ROW_FORMAT=DYNAMIC

@@ -208,6 +208,21 @@ clpConfig:
       max_backoff_millisecs: 1000
     termination_timeout_secs: 30
 
+  search_coordinator:
+    commit_task_hard_timeout_secs: 60
+    commit_task_max_retry: 1
+    commit_task_soft_timeout_secs: 45
+    database_connection_pool_size: 10
+    job_polling_interval_millisecs: 100
+    max_concurrent_jobs: 1000
+    resource_group:
+      name: "search-coordinator"
+    result_polling:
+      init_backoff_millisecs: 100
+      max_backoff_millisecs: 1000
+    search_task_max_retry: 1
+    termination_timeout_secs: 30
+
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
     logging_level: "INFO"
