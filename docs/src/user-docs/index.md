@@ -84,7 +84,7 @@ Configure retention periods for archives and search results.
 :::
 
 :::{grid-item-card}
-:link: guides-compression-coordinator
+:link: guides-using-compression-coordinator
 Using `compression-coordinator`
 ^^^
 Using `compression-coordinator` to coordinate compression jobs.

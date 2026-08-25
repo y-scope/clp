@@ -1,7 +1,7 @@
 # Using `compression-coordinator`
 
 `compression-coordinator` is a new component that coordinates compression jobs scheduled via
-[Spider][spider]. `compression-scheduler` is designed to replace the existing
+[Spider][spider]. `compression-coordinator` is designed to replace the existing
 `compression-scheduler` which schedules compression jobs using Celery.
 
 :::{note}
@@ -65,7 +65,7 @@ user-experience, reliability, and performance improvements:
   * To configure the maximum number of compression jobs that `compression-coordinator` submits to
     Spider concurrently, set `max_concurrent_jobs` in the `compression-coordinator` configuration.
 
-# Limitations
+## Limitations
 
 `compression-coordinator` currently has the following functional limitations:
 
