@@ -1127,18 +1127,20 @@ class ClpConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_compression_orchestration_config(self):
-        scheduler = self.package.scheduler
-        spider_only_configs = {
-            SPIDER_COMPONENT_NAME: self.spider,
-            COMPRESSION_COORDINATOR_COMPONENT_NAME: self.compression_coordinator,
-        }
-        for name, config in spider_only_configs.items():
-            if CompressionOrchestration.SPIDER == scheduler and config is None:
-                msg = f"`{name}` must be configured when `package.scheduler` is `{scheduler}`."
-                raise ValueError(msg)
-            if CompressionOrchestration.SPIDER != scheduler and config is not None:
-                msg = f"`{name}` must not be configured when `package.scheduler` is `{scheduler}`."
-                raise ValueError(msg)
+        if CompressionOrchestration.SPIDER != self.package.scheduler:
+            return self
+        if self.spider is None:
+            msg = (
+                "`spider` must be configured when `package.scheduler` is"
+                f" `{CompressionOrchestration.SPIDER}`."
+            )
+            raise ValueError(msg)
+        if self.compression_coordinator is None:
+            msg = (
+                "`compression_coordinator` must be configured when `package.scheduler` is"
+                f" `{CompressionOrchestration.SPIDER}`."
+            )
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
