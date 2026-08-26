@@ -3,6 +3,7 @@ name: "clp-core-build-macos"
 on:
   pull_request:
     paths: &monitored_paths
+      - ".github/actions/deps-cache-key/**"
       - ".github/workflows/clp-core-build-macos.yaml"
       - ".gitmodules"
       - "components/core/cmake/**"
