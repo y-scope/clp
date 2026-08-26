@@ -368,10 +368,21 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
+      - id: "deps_image"
+        uses: "./.github/actions/prepare-image"
+        env:
+          OS_NAME: "centos-stream-9"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+
       - id: "deps_cache_key"
         uses: "./.github/actions/deps-cache-key"
         with:
           os_name: "centos-stream-9"
+          env_hash: "${{steps.deps_image.outputs.image_id}}"
 
       # NOTE: Restoring after the `chown` above avoids chowning the restored tree (~2.3GB).
       - name: "Restore deps:core cache"
@@ -394,6 +405,7 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
             && touch /mnt/repo/build/.deps-core-ok
@@ -452,10 +464,22 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
+      - id: "deps_image"
+        uses: "./.github/actions/prepare-image"
+        env:
+          OS_NAME: "manylinux_2_28"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          arch: "amd64"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+
       - id: "deps_cache_key"
         uses: "./.github/actions/deps-cache-key"
         with:
           os_name: "manylinux_2_28"
+          env_hash: "${{steps.deps_image.outputs.image_id}}"
 
       - name: "Restore deps:core cache"
         id: "deps_cache_restore"
@@ -473,6 +497,7 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
             && touch /mnt/repo/build/.deps-core-ok
@@ -578,10 +603,22 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
+      - id: "deps_image"
+        uses: "./.github/actions/prepare-image"
+        env:
+          OS_NAME: "musllinux_1_2"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          arch: "amd64"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+
       - id: "deps_cache_key"
         uses: "./.github/actions/deps-cache-key"
         with:
           os_name: "musllinux_1_2"
+          env_hash: "${{steps.deps_image.outputs.image_id}}"
 
       - name: "Restore deps:core cache"
         id: "deps_cache_restore"
@@ -599,6 +636,7 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
             && touch /mnt/repo/build/.deps-core-ok
@@ -653,10 +691,19 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
+      - id: "deps_image"
+        uses: "./.github/actions/prepare-image"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+
       - id: "deps_cache_key"
         uses: "./.github/actions/deps-cache-key"
         with:
           os_name: "ubuntu-jammy"
+          env_hash: "${{steps.deps_image.outputs.image_id}}"
 
       - name: "Restore deps:core cache"
         id: "deps_cache_restore"
@@ -671,6 +718,7 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
             && touch /mnt/repo/build/.deps-core-ok

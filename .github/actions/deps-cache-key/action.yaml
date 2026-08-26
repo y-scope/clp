@@ -4,7 +4,7 @@ description: >-
 
 inputs:
   os_name:
-    description: "Name of the OS whose dependency image the artifacts are built in."
+    description: "Name of the OS whose build environment produced the dependency artifacts."
     required: true
   arch:
     description: "Target architecture the artifacts are built for."
@@ -12,16 +12,13 @@ inputs:
     default: "x86_64"
   env_hash:
     description: >-
-      Identity of the toolchain that produced the artifacts, replacing the hash of the dependency
-      image's sources. Set this where the toolchain isn't described by files in the repository --
-      on macOS the compiler comes from the runner image and Homebrew, so it has to be captured at
-      runtime. Leave unset for the containerized Linux builds.
-    required: false
-    default: ""
+      SHA-256 identity of the build environment. Linux callers pass the resolved platform image ID;
+      macOS callers hash the installed compiler and Homebrew toolchain.
+    required: true
 
 outputs:
   key:
-    description: "Cache key identifying the exact dependency tree the current sources describe."
+    description: "Cache key identifying the exact build environment and dependency definitions."
     value: "${{steps.compute.outputs.key}}"
 
 runs:
@@ -30,10 +27,10 @@ runs:
     - id: "compute"
       shell: "bash"
 
-      # The key identifies the dependency tree exactly: `ENV_HASH` the toolchain that compiles it,
-      # `TASKFILE_HASH` the definitions (versions, URLs, CMake flags) that describe it. Both are
-      # hashed from files in the repository, so the key is known at checkout, before the dependency
-      # image is pulled and therefore in time to restore into.
+      # The key identifies the dependency tree exactly: `ENV_HASH` identifies the environment that
+      # compiles it, while `TASKFILE_HASH` covers the definitions (versions, URLs, and CMake flags)
+      # that describe it. Linux callers resolve the platform image before restoring the cache so
+      # mutable base-image tags and unversioned OS packages cannot reuse an incompatible tree.
       #
       # The callers deliberately pass no `restore-keys`, so a key that doesn't match exactly is a
       # miss and the tree is rebuilt from scratch. `restore-keys` would instead fall back to the
@@ -48,14 +45,6 @@ runs:
       # The cost of matching exactly is that a dependency bump pays for a full rebuild -- which is
       # what every run pays today -- so the worst case is a slow run rather than a wrong binary.
       env:
-        IMAGE_HASH: >-
-          ${{hashFiles(
-            'components/core/tools/scripts/corporate-proxy-container.sh',
-            'components/core/tools/scripts/lib_install/*.sh',
-            'components/core/tools/scripts/lib_install/pipx-packages/**',
-            format('components/core/tools/docker-images/clp-env-base-{0}/**', inputs.os_name),
-            format('components/core/tools/scripts/lib_install/{0}/**', inputs.os_name)
-          )}}
         TASKFILE_HASH: >-
           ${{hashFiles(
             'taskfile.yaml',
@@ -64,17 +53,16 @@ runs:
           )}}
         INPUT_ENV_HASH: "${{inputs.env_hash}}"
       run: |
-        # An explicit `env_hash` wins: on macOS the image patterns match nothing meaningful, so
-        # `IMAGE_HASH` would describe the wrong thing entirely.
-        env_hash="${INPUT_ENV_HASH}"
-        if [[ -z "${env_hash}" ]] ; then
-          env_hash="${IMAGE_HASH}"
-        fi
+        env_hash="${INPUT_ENV_HASH#sha256:}"
 
-        # `hashFiles` returns an empty string when nothing matches, which would leave two different
-        # environments sharing a key. Fail loudly instead.
-        if [[ -z "${env_hash}" || -z "${TASKFILE_HASH}" ]] ; then
-          echo "::error::deps-cache-key: no files matched the hashed patterns" >&2
+        if [[ ! "${env_hash}" =~ ^[0-9a-f]{64}$ ]]; then
+          echo "::error::deps-cache-key: env_hash must be a SHA-256 value" >&2
+          exit 1
+        fi
+        # `hashFiles` returns an empty string when nothing matches. Fail rather than let unrelated
+        # dependency definitions share a key.
+        if [[ -z "${TASKFILE_HASH}" ]] ; then
+          echo "::error::deps-cache-key: no dependency definition files matched" >&2
           exit 1
         fi
 
