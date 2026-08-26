@@ -424,8 +424,6 @@ jobs:
           && false == matrix.use_shared_libs
           && '' != hashFiles('build/.deps-core-ok')
           && 'true' != steps.deps_cache_restore.outputs.cache-hit
-          && 'pull_request' != github.event_name
-          && 'refs/heads/main' == github.ref
         run: "rm -rf build/deps/cpp/mongocxx-build/_deps/mongo-c-driver-src/.git"
         shell: "bash"
 
