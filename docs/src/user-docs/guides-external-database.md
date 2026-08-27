@@ -19,10 +19,6 @@ CLP requires two types of databases:
   * metadata about Spider's jobs (only when Spider is used for scheduling).
 * **MongoDB** - for caching query results.
 
-In addition, when Spider is used as the scheduler, it requires a MariaDB/MySQL database for
-metadata storage. It can be hosted on the same database server as CLP's (see
-[Using an external database with Spider](#using-an-external-database-with-spider)).
-
 ## MariaDB/MySQL setup
 
 CLP is compatible with any MariaDB or MySQL database. The instructions below use Ubuntu as an
@@ -39,8 +35,8 @@ sudo apt install mariadb-server
 
 ### Configuring MariaDB for remote connections
 
-If CLP components will connect from a different host, you need to configure MariaDB to accept
-remote connections:
+If CLP components will connect from a different host, you need to configure MariaDB to accept remote
+connections:
 
 1. Edit the MariaDB configuration file:
 
