@@ -1,6 +1,6 @@
 dependencies:
 - name: spider
   repository: https://github.com/y-scope/spider/raw/gh-pages
-  version: 0.1.8
-digest: sha256:8f49c09d52edef214a19f9442f5275a39b39a5259657f9314a25b1ed79308785
-generated: "2026-07-30T15:54:39.26863006-04:00"
+  version: 0.2.0-rc.1
+digest: sha256:12067aac4f6ead7f8b5a9f4a8fb378f0447e5cf6b27d98fb4444daa2494b7072
+generated: "2026-08-26T17:57:39.112599575-04:00"
