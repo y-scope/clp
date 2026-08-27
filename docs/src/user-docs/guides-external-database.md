@@ -188,7 +188,11 @@ You can verify the connection by running:
 mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
 ```
 
-#### Configuring CLP to use an external database
+### Configuring CLP to use an external database
+
+::::{tab-set}
+:::{tab-item} Docker Compose
+:sync: docker
 
 1. Edit `etc/clp-config.yaml` to specify which services are bundled (managed by the
    [CLP Docker Compose project][docker-compose-orchestration]):
@@ -223,14 +227,17 @@ mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
      password: "<your-mariadb-password>"
    ```
 
-:::{note}
+```{note}
 When using external databases in a multi-host deployment, you do **not** need to start the
 `database` and `results-cache` Docker Compose services. Skip those services when following the
 [multi-host deployment guide][multi-host-guide]. However, you still need to run the database
 initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
+```
+
 :::
 
-### Configuring with the Helm chart
+:::{tab-item} Kubernetes
+:sync: k8s
 
 Configure the external databases in your Helm values file:
 
@@ -259,6 +266,9 @@ credentials:
     username: "clp-user"
     password: "<your-mariadb-password>"
 ```
+
+:::
+::::
 
 ## Using an external database with Spider
 
