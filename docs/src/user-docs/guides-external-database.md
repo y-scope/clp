@@ -188,9 +188,7 @@ You can verify the connection by running:
 mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
 ```
 
-Then configure CLP to use the external databases, depending on how you deploy it:
-
-### Configuring with Docker Compose
+#### Configuring CLP to use an external database
 
 1. Edit `etc/clp-config.yaml` to specify which services are bundled (managed by the
    [CLP Docker Compose project][docker-compose-orchestration]):
