@@ -33,7 +33,7 @@ class CeleryTaskManager(TaskManager):
                 )
                 return [CompressionTaskResult.model_validate(res) for res in results]
             except celery.exceptions.TimeoutError:
-                logger.exception("Timed out waiting for task result.")
+                logger.exception("Compression task timed out waiting for result.")
                 raise
             except celery.exceptions.SoftTimeLimitExceeded:
                 logger.exception("Compression task exceeded soft time limit.")
