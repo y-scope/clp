@@ -19,6 +19,8 @@ Currently, `compression-coordinator` can be deployed via Kubernetes and not via 
 Support for Docker Compose is planned for a future release.
 :::
 
+## Benefits
+
 Compared with the `compression-scheduler`-based architecture (which uses Celery),
 the `compression-coordinator`-based architecture (which uses Spider) provides the following
 user-experience, reliability, and performance improvements:
@@ -37,10 +39,10 @@ user-experience, reliability, and performance improvements:
   :::
 
 * **Improved failure recovery**:
-  * After a failure and restart, `compression-coordinator` can resume in-progress jobs, whereas
+  * After `compression-coordinator` fails and restarts, it can resume in-progress jobs, whereas
     `compression-scheduler` assumes that in-progress jobs have hung and so it kills them.
-  * After a failure and restart, Spider can resume in-progress jobs, whereas Celery cannot since
-    the compression tasks aren't idempotent.
+  * After Spider fails and restarts, it can resume in-progress jobs, whereas Celery cannot since the
+    compression tasks aren't idempotent.
 * **Easier failure handling**: With `compression-coordinator` and Spider, if a compression task
   fails, it can automatically be retried, allowing tasks to automatically recover from transient
   failures.
@@ -49,7 +51,7 @@ user-experience, reliability, and performance improvements:
     `compression-coordinator` configuration.
 * **Improved horizontal scalability**: With Celery, tasks are dispatched to the task queue serially,
   whereas with Spider, tasks are dispatched in parallel. Thus, if we add more workers, at some
-  point, Spider scales better whereas Celery gets bottlenecked by the task-dispatching overhead.
+  point, Spider scales better whereas Celery gets bottlenecked by its task-dispatching overhead.
 * **Improved fairness between concurrent compression jobs**: Both architectures process jobs in
   round-robin order, but the `compression-coordinator`-based architecture does so at the granularity
   of *tasks* whereas the `compression-scheduler`-based architecture does so at the granularity of

@@ -41,8 +41,8 @@ The CLP Helm chart will then automatically deploy the following components:
 
   :::{note}
   In the current release, `compression-coordinator` supports only compression jobs that use certain
-  CLP package configurations. See [this section][using-compression-coordinator-limitations] for the
-  current limitations.
+  CLP package configurations. Other notable limitations are listed
+  [here][using-compression-coordinator-limitations].
   :::
 
 #### Set up
