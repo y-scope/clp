@@ -1,4 +1,4 @@
-//! Spider TDL task package `clp`: the CLP tasks the Spider task executor loads.
+//! Spider TDL package `clp`, providing CLP compression and query tasks for Spider task executors.
 
 pub mod common;
 mod task;
