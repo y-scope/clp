@@ -8,10 +8,7 @@ vars:
   G_SPIDER_COMPOSE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/spider-compose.md5"
   G_SPIDER_COMPOSE_TASKFILE: "{{.ROOT_DIR}}/taskfiles/deployment/compose.yaml"
 
-  # TODO: Spider doesn't tag releases of its Compose deployment yet, so we pin the artifact by
-  # digest rather than by version. Switch to a version tag once Spider publishes one.
-  G_SPIDER_COMPOSE_IMAGE_REF: >-
-    ghcr.io/y-scope/spider/compose@sha256:a9c80a4ef76042f7434407700a36ef01acbfb10b87f4eb1cd155dbf0fc74fabb
+  G_SPIDER_COMPOSE_IMAGE_REF: "ghcr.io/y-scope/spider/compose:v0.1.0-rc.1-huntsman"
 
 tasks:
   download-spider:
