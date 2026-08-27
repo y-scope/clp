@@ -21,10 +21,13 @@ CLP requires two types of databases:
 
 ## MariaDB/MySQL setup
 
-CLP is compatible with any MariaDB or MySQL database. The instructions below use Ubuntu as an
-example, but you can use any compatible database installation or cloud-managed service.
+You can use any compatible MariaDB or MySQL database installation or cloud-managed service. Below
+are instructions for:
 
-### Installing MariaDB on Ubuntu
+* [MariaDB on Ubuntu](#mariadb-on-ubuntu)
+* [AWS RDS for MariaDB/MySQL](#aws-rds-for-mariadbmysql)
+
+### MariaDB on Ubuntu
 
 Install MariaDB server:
 
@@ -32,8 +35,6 @@ Install MariaDB server:
 sudo apt update
 sudo apt install mariadb-server
 ```
-
-### Configuring MariaDB for remote connections
 
 If CLP components will connect from a different host, you need to configure MariaDB to accept remote
 connections:
@@ -56,9 +57,10 @@ connections:
    sudo systemctl restart mariadb
    ```
 
-### Using AWS RDS for MariaDB/MySQL
+Next, follow the steps for using [CLP](#using-an-external-database-with-clp) and/or
+[Spider](#using-an-external-database-with-spider) with the database.
 
-When using AWS RDS:
+### AWS RDS for MariaDB/MySQL
 
 1. Create a MariaDB or MySQL RDS instance in the AWS Console.
 2. Note the endpoint hostname and port (the default is `3306`).
@@ -234,7 +236,6 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 Configure the external databases in your Helm values file:
 
-```{code-block} yaml
 :caption: external-database-values.yaml
 
 clpConfig:
@@ -270,20 +271,23 @@ credentials:
    CREATE DATABASE `spider-db`;
    ```
 
-2. Grant privileges on the database. If Spider shares the same database server as CLP, you don't
-   need a separate user - grant the CLP user privileges on the Spider database:
+3. Grant `clp-user` privileges on the Spider database. (or if you prefer, create a separate user and
+   grant that privileges on the Spider database).
+
+   :::{note}
+   If you want, you can use a separate user for the Spider database. Simply create a  user by
+   following step 3 in [Using an external database with CLP](#using-an-external-database-with-clp),
+   then change the command below to grant that user permissions instead of `clp-user`.
+   :::
 
    ```sql
    GRANT ALL PRIVILEGES ON `spider-db`.* TO 'clp-user'@'%';
    FLUSH PRIVILEGES;
    ```
 
-   Otherwise, create a dedicated user first, following the same steps as in
-   [Using an external database with CLP](#using-an-external-database-with-clp).
+4. Configure the Spider subchart to use the external database:
 
-3. Configure the Spider subchart to use the external database:
-
-   ```{code-block} yaml
+   
    :caption: external-database-values.yaml (continued)
 
    spider:
