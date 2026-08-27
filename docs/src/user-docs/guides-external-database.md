@@ -12,9 +12,11 @@ users who want to customize their deployment by using their own database servers
 databases (e.g., [AWS RDS][aws-rds], [Azure Database][azure-databases]).
 :::
 
-CLP requires two databases:
+CLP requires two types of databases:
 
-* **MariaDB/MySQL** - for storing metadata about archives, files, and jobs.
+* **MariaDB/MySQL** - for storing:
+  * metadata about CLP's archives, files, compression jobs, and query jobs.
+  * metadata about Spider's jobs (only when Spider is used for scheduling).
 * **MongoDB** - for caching query results.
 
 In addition, when Spider is used as the scheduler, it requires a MariaDB/MySQL database for
