@@ -14,11 +14,6 @@ yet support.
 To use `compression-coordinator`, enable the Spider scheduling framework when starting the CLP
 package. See [Using Spider scheduler][using-spider-scheduler] for details.
 
-:::{note}
-Currently, `compression-coordinator` can be deployed via Kubernetes and not via Docker Compose.
-Support for Docker Compose is planned for a future release.
-:::
-
 ## Benefits
 
 Compared with the `compression-scheduler`-based architecture (which uses Celery),
@@ -69,7 +64,9 @@ user-experience, reliability, and performance improvements:
 
 ## Limitations
 
-`compression-coordinator` currently has the following functional limitations:
+`compression-coordinator` currently has the following limitations.
+
+### Functional limitations
 
 * It's only available when using `clp-json`.
 * It only handles compression jobs created by `log-ingestor`.
@@ -77,6 +74,11 @@ user-experience, reliability, and performance improvements:
 
 Additional capabilities will be introduced in future releases as it moves toward feature parity with
 `compression-scheduler`.
+
+### Deployment limitations
+
+Currently, `compression-coordinator` can be deployed via Kubernetes and not via Docker Compose.
+Support for Docker Compose is planned for a future release.
 
 [column-metadata-issue]: https://github.com/y-scope/clp/issues/2480
 [spider]: https://github.com/y-scope/spider
