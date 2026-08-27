@@ -236,8 +236,7 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 Configure the external databases in your Helm values file:
 
-:caption: external-database-values.yaml
-
+```yaml
 clpConfig:
   # Remove "database" and "results_cache" from this list to use external instances.
   bundled:
@@ -265,7 +264,13 @@ credentials:
 
 ## Using an external database with Spider
 
-1. Create the Spider database on your MariaDB/MySQL server:
+1. Connect to MariaDB as root:
+
+   ```bash
+   sudo mysql
+   ```
+
+2. Create the Spider database:
 
    ```sql
    CREATE DATABASE `spider-db`;
@@ -287,9 +292,7 @@ credentials:
 
 4. Configure the Spider subchart to use the external database:
 
-   
-   :caption: external-database-values.yaml (continued)
-
+   ```yaml
    spider:
      enabled: true
      spiderConfig:
