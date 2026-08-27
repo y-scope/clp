@@ -3272,6 +3272,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "query-coordinator"
+version = "0.13.1-dev"
+dependencies = [
+ "async-trait",
+ "clp-rust-utils",
+ "spider-client",
+ "spider-core",
+ "thiserror",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -4,7 +4,8 @@ members = [
     "components/clp-rust-utils",
     "components/clp-tdl-package",
     "components/compression-coordinator",
-    "components/log-ingestor"
+    "components/log-ingestor",
+    "components/query-coordinator"
 ]
 resolver = "3"
 
