@@ -66,9 +66,10 @@ Next, follow the steps for using [CLP](#using-an-external-database-with-clp) and
 2. Note the endpoint hostname and port (the default is `3306`).
 3. Ensure the RDS security group allows inbound connections on port 3306 from your CLP hosts.
 
-You can then connect to the instance with `mysql -h <rds-endpoint> -u admin -p` and follow the
-database and user creation steps in
-[Using an external database with CLP](#using-an-external-database-with-clp).
+You can then connect to the instance with `mysql -h <rds-endpoint> -u admin -p`.
+
+Next, follow the steps for using [CLP](#using-an-external-database-with-clp) and/or
+[Spider](#using-an-external-database-with-spider) with the database.
 
 ## MongoDB setup
 
@@ -144,7 +145,15 @@ When using AWS DocumentDB or MongoDB Atlas:
 
 ## Using an external database with CLP
 
-First, create a database and user for CLP on your MariaDB/MySQL server:
+To use an external database with CLP, you'll need to:
+
+* [Create a database](#creating-a-database)
+* [Configure CLP to use the database](#configuring-clp-to-use-an-external-database)
+
+#### Creating a database
+
+The steps below are for a MariaDB installation on Ubuntu but should be adaptable for the database
+you're using.
 
 1. Connect to MariaDB as root:
 
