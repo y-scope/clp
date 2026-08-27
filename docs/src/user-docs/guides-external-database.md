@@ -150,7 +150,7 @@ To use an external database with CLP, you'll need to:
 * [Create a database](#creating-a-database)
 * [Configure CLP to use the database](#configuring-clp-to-use-an-external-database)
 
-#### Creating a database
+### Creating a database
 
 The steps below are for a MariaDB installation on Ubuntu but should be adaptable for the database
 you're using.
