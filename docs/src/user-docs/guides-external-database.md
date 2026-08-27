@@ -125,6 +125,14 @@ For production deployments, it's highly recommended to enable authentication and
 MongoDB. See the [MongoDB security documentation][mongodb-security] for details.
 :::
 
+### Verifying the MongoDB connection
+
+You can verify the MongoDB connection by running:
+
+```bash
+mongosh "mongodb://<mongodb-hostname-or-ip>:27017/clp-query-results"
+```
+
 ### Using AWS DocumentDB or MongoDB Atlas
 
 When using AWS DocumentDB or MongoDB Atlas:
@@ -217,6 +225,13 @@ Then configure CLP to use the external databases, depending on how you deploy it
      password: "<your-mariadb-password>"
    ```
 
+:::{note}
+When using external databases in a multi-host deployment, you do **not** need to start the
+`database` and `results-cache` Docker Compose services. Skip those services when following the
+[multi-host deployment guide][multi-host-guide]. However, you still need to run the database
+initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
+:::
+
 ### Configuring with the Helm chart
 
 Configure the external databases in your Helm values file:
@@ -294,3 +309,4 @@ credentials:
 [k8s-guide]: guides-k8s-deployment.md
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
+[multi-host-guide]: guides-docker-compose-deployment.md#starting-clp
