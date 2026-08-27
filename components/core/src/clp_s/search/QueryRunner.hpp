@@ -115,6 +115,49 @@ protected:
      */
     void initialize_reader(int32_t column_id, BaseColumnReader* column_reader);
 
+public:
+    /**
+     * Restricts the scan to the given `log_event_idx` ranges.
+     *
+     * The ranges must be sorted, disjoint, and safe to skip outside of -- that is, every disjunct
+     * of the query must be guarded by a "$" filter, which `EvaluateRangeIndexFilters` establishes.
+     * Rows are stored in log order, so each range is a contiguous run in every table, which is
+     * what lets a table stop once the last range is behind it.
+     * @param ranges
+     */
+    void set_skippable_ranges(std::vector<std::pair<size_t, size_t>> ranges) {
+        m_skippable_ranges = std::move(ranges);
+    }
+
+    /**
+     * @return Whether every remaining row in the current table lies past the last range, so that
+     * the caller can stop reading it.
+     */
+    [[nodiscard]] auto current_table_exhausted() const -> bool { return m_past_last_range; }
+
+protected:
+    /**
+     * Points the range gate at a table and rewinds it.
+     *
+     * A subclass that overrides `init` rather than delegating to it must call this, or the gate
+     * has no column to read and silently does nothing.
+     * @param reader
+     */
+    void init_range_gate(SchemaReader* reader);
+
+private:
+    /**
+     * @param cur_message
+     * @return Whether `cur_message` can be rejected without evaluating the query, having fallen
+     * outside every range. Sets `m_past_last_range` once the row is beyond the last one.
+     */
+    [[nodiscard]] auto skip_by_range(uint64_t cur_message) -> bool;
+
+    std::vector<std::pair<size_t, size_t>> m_skippable_ranges;
+    BaseColumnReader* m_log_event_idx_reader{nullptr};
+    size_t m_range_cursor{0};
+    bool m_past_last_range{false};
+
 private:
     enum class ExpressionType : uint8_t {
         And,

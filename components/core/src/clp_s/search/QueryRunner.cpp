@@ -1,5 +1,9 @@
 #include "QueryRunner.hpp"
 
+#include <cstdlib>
+#include <cstdio>
+#include <variant>
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -104,6 +108,8 @@ void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_
 void QueryRunner::init(SchemaReader* reader, std::vector<BaseColumnReader*> const& column_readers) {
     m_reader = reader;
 
+    init_range_gate(reader);
+
     clear_readers();
 
     for (auto column_reader : column_readers) {
@@ -154,7 +160,44 @@ std::string& QueryRunner::get_cached_decompressed_unstructured_array(int32_t col
     return rit.first->second;
 }
 
+void QueryRunner::init_range_gate(SchemaReader* reader) {
+    // Each table is walked from its first row, so the cursor restarts with it.
+    m_log_event_idx_reader = nullptr == reader ? nullptr : reader->get_log_event_idx_column();
+    m_range_cursor = 0;
+    m_past_last_range = false;
+}
+
+auto QueryRunner::skip_by_range(uint64_t cur_message) -> bool {
+    if (m_skippable_ranges.empty() || nullptr == m_log_event_idx_reader) {
+        return false;
+    }
+
+    auto const value = m_log_event_idx_reader->extract_value(cur_message);
+    auto const* log_event_idx = std::get_if<int64_t>(&value);
+    if (nullptr == log_event_idx || *log_event_idx < 0) {
+        return false;
+    }
+    auto const idx = static_cast<size_t>(*log_event_idx);
+
+    // Rows arrive in log order, so the cursor only moves forward across a table.
+    while (m_range_cursor < m_skippable_ranges.size()
+           && idx >= m_skippable_ranges[m_range_cursor].second)
+    {
+        ++m_range_cursor;
+    }
+    if (m_range_cursor >= m_skippable_ranges.size()) {
+        m_past_last_range = true;
+        return true;
+    }
+    return idx < m_skippable_ranges[m_range_cursor].first;
+}
+
 bool QueryRunner::filter(uint64_t cur_message) {
+    // A row outside every range cannot satisfy the query, so it is rejected on an integer
+    // comparison rather than a walk of the expression tree.
+    if (skip_by_range(cur_message)) {
+        return false;
+    }
     m_cur_message = cur_message;
     m_extracted_unstructured_arrays.clear();
     return evaluate(m_expr.get(), m_schema);

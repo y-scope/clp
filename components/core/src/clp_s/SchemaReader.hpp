@@ -279,6 +279,13 @@ public:
     int32_t get_schema_id() const { return m_schema_id; }
 
     /**
+     * @return The reader for this table's log_event_idx column, or nullptr if it has none.
+     */
+    [[nodiscard]] BaseColumnReader* get_log_event_idx_column() const {
+        return m_log_event_idx_column;
+    }
+
+    /**
      * @param schema
      * @return the first column ID found in the given schema, or -1 if the schema contains no
      * columns

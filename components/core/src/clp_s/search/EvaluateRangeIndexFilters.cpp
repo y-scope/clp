@@ -1,5 +1,7 @@
 #include "EvaluateRangeIndexFilters.hpp"
 
+#include <algorithm>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -27,9 +29,88 @@
 using clp::ffi::ir_stream::search::evaluate_filter_against_literal_type_value_pair;
 
 namespace clp_s::search {
+auto EvaluateRangeIndexFilters::every_disjunct_is_guarded(ast::Expression* expr) const -> bool {
+    if (nullptr == expr || expr->is_inverted()) {
+        return false;
+    }
+    if (auto* filter_expr = dynamic_cast<ast::FilterExpr*>(expr); nullptr != filter_expr) {
+        return constants::cRangeIndexNamespace == filter_expr->get_column()->get_namespace();
+    }
+    if (false == expr->has_only_expression_operands()) {
+        return false;
+    }
+    if (nullptr != dynamic_cast<ast::OrExpr*>(expr)) {
+        // Every branch must be guarded: one unguarded branch can match a row outside the ranges.
+        for (auto it = expr->op_begin(); it != expr->op_end(); ++it) {
+            if (false == every_disjunct_is_guarded(static_cast<ast::Expression*>(it->get()))) {
+                return false;
+            }
+        }
+        return expr->op_begin() != expr->op_end();
+    }
+    if (nullptr != dynamic_cast<ast::AndExpr*>(expr)) {
+        // One guarded conjunct is enough: a false guard makes the whole conjunction false.
+        for (auto it = expr->op_begin(); it != expr->op_end(); ++it) {
+            if (every_disjunct_is_guarded(static_cast<ast::Expression*>(it->get()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+    return false;
+}
+
+void EvaluateRangeIndexFilters::gather_matching_ranges(ast::Expression* expr) {
+    if (nullptr == expr) {
+        return;
+    }
+    if (auto* filter_expr = dynamic_cast<ast::FilterExpr*>(expr); nullptr != filter_expr) {
+        if (constants::cRangeIndexNamespace != filter_expr->get_column()->get_namespace()) {
+            return;
+        }
+        for (auto const& range : m_range_index) {
+            if (evaluate_filter(filter_expr, range.fields)) {
+                m_skippable_ranges.emplace_back(range.start_index, range.end_index);
+            }
+        }
+        return;
+    }
+    if (expr->has_only_expression_operands()) {
+        for (auto it = expr->op_begin(); it != expr->op_end(); ++it) {
+            gather_matching_ranges(static_cast<ast::Expression*>(it->get()));
+        }
+    }
+}
+
+void EvaluateRangeIndexFilters::collect_skippable_ranges(ast::Expression* expr) {
+    m_skippable_ranges.clear();
+    if (false == every_disjunct_is_guarded(expr)) {
+        return;
+    }
+    gather_matching_ranges(expr);
+    if (m_skippable_ranges.empty()) {
+        return;
+    }
+
+    // The union across filters, not the intersection: two "$" filters ANDed together match rows in
+    // both, which is a subset of either, so skipping outside the union is still correct and does
+    // not require reasoning about how the filters combine.
+    std::sort(m_skippable_ranges.begin(), m_skippable_ranges.end());
+    std::vector<std::pair<size_t, size_t>> merged;
+    for (auto const& range : m_skippable_ranges) {
+        if (false == merged.empty() && range.first <= merged.back().second) {
+            merged.back().second = std::max(merged.back().second, range.second);
+            continue;
+        }
+        merged.push_back(range);
+    }
+    m_skippable_ranges = std::move(merged);
+}
+
 auto EvaluateRangeIndexFilters::run(std::shared_ptr<ast::Expression>& expr)
         -> std::shared_ptr<ast::Expression> {
     bool must_renormalize{false};
+    collect_skippable_ranges(expr.get());
     std::vector<std::pair<ast::Expression*, std::optional<ast::OpList::iterator>>> work_list;
     work_list.emplace_back(expr.get(), std::nullopt);
     while (false == work_list.empty()) {
