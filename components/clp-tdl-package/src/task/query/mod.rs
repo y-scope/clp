@@ -6,9 +6,9 @@ use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
 use spider_tdl::task;
 
-/// Searches one CLP-S archive and writes its matches directly to the results cache.
-#[task(name = "search::clp_s_search_to_results_cache")]
-pub(crate) fn clp_s_search_to_results_cache_task(
+/// Queries one CLP-S archive and writes its matches directly to the results cache.
+#[task(name = "query::clp_s_query_to_results_cache")]
+pub(crate) fn clp_s_query_to_results_cache_task(
     ctx: TaskContext,
     query_job_id: i32,
     clp_s_query_option: ClpSQueryOption,

@@ -31,6 +31,6 @@ spider_tdl::register_tdl_package! {
     tasks: [
         task::compression::s3_compress_task,
         task::compression::commit_task,
-        task::query::clp_s_search_to_results_cache_task,
+        task::query::clp_s_query_to_results_cache_task,
     ],
 }
