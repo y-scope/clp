@@ -1,0 +1,117 @@
+name: "prepare-image"
+description: "Pulls or loads a container image and reports its immutable platform image ID"
+
+inputs:
+  image_name:
+    description: "Name of the image (without registry or repository) to prepare"
+    required: true
+  use_published_image:
+    description: "Whether to pull the published image instead of loading a workflow artifact"
+    required: true
+  arch:
+    description: >-
+      Target architecture (e.g. "amd64" or "arm64"). Published multi-arch images are pulled for
+      this platform; locally-built image artifact names use it as a suffix. Leave empty for legacy
+      single-architecture images.
+    required: false
+    default: ""
+
+outputs:
+  image_id:
+    description: "Docker's immutable, platform-specific image ID, including the sha256: prefix"
+    value: "${{steps.inspect.outputs.image_id}}"
+
+runs:
+  using: "composite"
+  steps:
+    - id: "get_image_props"
+      env:
+        ARCH: "${{inputs.arch}}"
+        IMAGE_NAME: "${{inputs.image_name}}"
+        TEMP_DIR: "${{runner.temp}}"
+        USE_PUBLISHED_IMAGE: "${{inputs.use_published_image}}"
+      run: |
+        if [[ -n "${ARCH}" ]]; then
+          arch_suffix="-${ARCH}"
+        else
+          arch_suffix=""
+        fi
+
+        case "${USE_PUBLISHED_IMAGE}" in
+          true)
+            # Docker doesn't support repository names with uppercase characters.
+            repository=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+            echo "qualified_image_name=ghcr.io/${repository}/${IMAGE_NAME}:main" \
+              >> "$GITHUB_OUTPUT"
+            ;;
+          false)
+            # clp-core-build-containers arch-suffixes locally-built image artifacts.
+            local_name="${IMAGE_NAME}${arch_suffix}"
+            echo "artifact_name=${local_name}" >> "$GITHUB_OUTPUT"
+            echo "tar_path=${TEMP_DIR}/${local_name}.tar" >> "$GITHUB_OUTPUT"
+            echo "qualified_image_name=${local_name}:latest" >> "$GITHUB_OUTPUT"
+            ;;
+          *)
+            echo "::error::prepare-image: use_published_image must be 'true' or 'false'" >&2
+            exit 1
+            ;;
+        esac
+      shell: "bash"
+
+    - if: "inputs.use_published_image == 'true'"
+      name: "Pull published image"
+      env:
+        ARCH: "${{inputs.arch}}"
+        IMAGE_NAME: "${{steps.get_image_props.outputs.qualified_image_name}}"
+      run: |
+        if [[ -n "${ARCH}" ]]; then
+          docker pull --platform "linux/${ARCH}" "${IMAGE_NAME}"
+        else
+          docker pull "${IMAGE_NAME}"
+        fi
+      shell: "bash"
+
+    - if: "inputs.use_published_image == 'false'"
+      uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+      with:
+        name: "${{steps.get_image_props.outputs.artifact_name}}"
+        path: "${{runner.temp}}"
+
+    - if: "inputs.use_published_image == 'false'"
+      name: "Load locally-built image"
+      env:
+        TAR_PATH: "${{steps.get_image_props.outputs.tar_path}}"
+      run: "docker load --input \"${TAR_PATH}\""
+      shell: "bash"
+
+    - id: "inspect"
+      name: "Capture image identity"
+      env:
+        EXPECTED_ARCH: "${{inputs.arch}}"
+        IMAGE_NAME: "${{steps.get_image_props.outputs.qualified_image_name}}"
+      run: |
+        image_id=$(docker image inspect --format '{{.Id}}' "${IMAGE_NAME}")
+        if [[ ! "${image_id}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+          echo "::error::prepare-image: invalid image ID '${image_id}'" >&2
+          exit 1
+        fi
+
+        image_os=$(docker image inspect --format '{{.Os}}' "${image_id}")
+        if [[ "linux" != "${image_os}" ]]; then
+          echo "::error::prepare-image: expected a Linux image, got '${image_os}'" >&2
+          exit 1
+        fi
+
+        image_arch=$(docker image inspect --format '{{.Architecture}}' "${image_id}")
+        if [[ -n "${EXPECTED_ARCH}" && "${EXPECTED_ARCH}" != "${image_arch}" ]]; then
+          printf \
+            "::error::prepare-image: expected architecture '%s', got '%s'\n" \
+            "${EXPECTED_ARCH}" \
+            "${image_arch}" \
+            >&2
+          exit 1
+        fi
+
+        echo "image_id=${image_id}" >> "$GITHUB_OUTPUT"
+        echo "Prepared ${IMAGE_NAME} as ${image_id} (${image_os}/${image_arch})"
+      shell: "bash"
