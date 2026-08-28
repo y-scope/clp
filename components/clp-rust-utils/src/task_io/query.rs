@@ -1,11 +1,11 @@
-//! Protocol types exchanged with the Spider tasks that run CLP-S query jobs.
+//! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP query jobs.
 
 use std::num::NonZeroU32;
 
 use serde::Deserialize;
 use serde::Serialize;
 
-/// The job-wide CLP-S options shared by every archive-query task in a query job.
+/// `clp-s` tuning and engine options for a query job.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ClpSQueryOption {
     /// The query string passed positionally to `clp-s`.
