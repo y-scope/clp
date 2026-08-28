@@ -289,6 +289,13 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 ## Using an external database with Spider
 
+To use an external database with Spider, you'll need to:
+
+* [Create a database](#creating-the-spider-database)
+* [Configure Spider to use the database](#configuring-spider-to-use-an-external-database)
+
+### Creating the Spider database
+
 1. Connect to MariaDB as root:
 
    ```bash
