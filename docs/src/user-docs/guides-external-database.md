@@ -248,33 +248,43 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 :::{tab-item} Kubernetes
 :sync: k8s
 
-Configure the external databases in your Helm values file:
+1. Edit your Helm values file to specify which services are bundled (deployed by the
+   [CLP Helm chart][k8s-guide]):
 
-```yaml
-clpConfig:
-  # Remove "database" and "results_cache" from this list to use external instances.
-  bundled:
-    # - "database"
-    - "queue"
-    - "redis"
-    # - "results_cache"
-    - "otel_collector"
-    - "presto"
+   ```yaml
+   clpConfig:
+     # Remove "database" and "results_cache" from this list to use external instances
+     bundled:
+       # - "database"
+       - "queue"
+       - "redis"
+       # - "results_cache"
+       - "otel_collector"
+       - "presto"
+   ```
 
-  database:
-    type: "mariadb"  # "mariadb" or "mysql"
-    host: "<mariadb-hostname-or-ip>"
-    port: <mariadb-port>
+2. Configure the connection details for your external databases in the values file:
 
-  results_cache:
-    host: "<mongodb-hostname-or-ip>"
-    port: <mongodb-port>
+   ```yaml
+   clpConfig:
+     database:
+       type: "mariadb"  # "mariadb" or "mysql"
+       host: "<mariadb-hostname-or-ip>"
+       port: <mariadb-port>
 
-credentials:
-  database:
-    username: "clp-user"
-    password: "<your-mariadb-password>"
-```
+     results_cache:
+       host: "<mongodb-hostname-or-ip>"
+       port: <mongodb-port>
+   ```
+
+3. Set the credentials in the values file:
+
+   ```yaml
+   credentials:
+     database:
+       username: "clp-user"
+       password: "<your-mariadb-password>"
+   ```
 
 :::
 ::::
@@ -307,7 +317,10 @@ credentials:
    FLUSH PRIVILEGES;
    ```
 
-4. Configure the Spider subchart to use the external database:
+### Configuring Spider to use an external database
+
+1. Edit your Helm values file to specify that the Spider database is not bundled (deployed by the
+   Spider subchart):
 
    ```yaml
    spider:
@@ -317,6 +330,13 @@ credentials:
        bundled: [
          # "database"
        ]
+   ```
+
+2. Configure the connection details for the Spider database in the values file:
+
+   ```yaml
+   spider:
+     spiderConfig:
        database:
          host: "<mariadb-hostname-or-ip>"
          port: <mariadb-port>
