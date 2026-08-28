@@ -204,9 +204,7 @@ async fn timestamp_column_names(
 async fn compression_metadata(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<CompressionMetadata>>, HandlerError> {
-    Ok(Json(
-        state.webui_client.get_compression_metadata().await?,
-    ))
+    Ok(Json(state.webui_client.get_compression_metadata().await?))
 }
 
 /// Query parameters for the file-listing endpoint.
@@ -250,10 +248,7 @@ async fn compression_job(
     State(state): State<AppState>,
     Json(creation): Json<CompressionJobCreation>,
 ) -> Result<(StatusCode, Json<CompressionJob>), HandlerError> {
-    let job = state
-        .webui_client
-        .submit_compression_job(creation)
-        .await?;
+    let job = state.webui_client.submit_compression_job(creation).await?;
     Ok((StatusCode::CREATED, Json(job)))
 }
 
@@ -275,9 +270,6 @@ async fn extract_stream_file(
     Json(extraction): Json<StreamFileExtraction>,
 ) -> Result<Json<StreamFileMetadata>, HandlerError> {
     Ok(Json(
-        state
-            .webui_client
-            .extract_stream_file(extraction)
-            .await?,
+        state.webui_client.extract_stream_file(extraction).await?,
     ))
 }

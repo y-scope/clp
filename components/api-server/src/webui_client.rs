@@ -423,8 +423,8 @@ impl WebuiClient {
             StorageEngine::Clp => {
                 let table = self.table_name(None, "archives");
                 let row = sqlx::query(&format!(
-                    "SELECT MIN(begin_timestamp) AS begin_timestamp, \
-                     MAX(end_timestamp) AS end_timestamp FROM `{table}`"
+                    "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
+                     end_timestamp FROM `{table}`"
                 ))
                 .fetch_one(&self.sql_pool)
                 .await?;
@@ -436,13 +436,13 @@ impl WebuiClient {
                 }
                 let union = self.dataset_union(datasets, "archives", |table| {
                     format!(
-                        "SELECT MIN(begin_timestamp) AS begin_timestamp, \
-                         MAX(end_timestamp) AS end_timestamp FROM `{table}`"
+                        "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
+                         end_timestamp FROM `{table}`"
                     )
                 })?;
                 let sql = format!(
-                    "SELECT MIN(begin_timestamp) AS begin_timestamp, \
-                     MAX(end_timestamp) AS end_timestamp FROM ({union}) AS combined"
+                    "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
+                     end_timestamp FROM ({union}) AS combined"
                 );
                 let row = sqlx::query(&sql).fetch_one(&self.sql_pool).await?;
                 Ok(TimeRange::try_from(row).ok())
@@ -468,10 +468,9 @@ impl WebuiClient {
             StorageEngine::Clp => {
                 let table = self.table_name(None, "archives");
                 format!(
-                    "SELECT \
-                       CAST(COALESCE(SUM(uncompressed_size), 0) AS SIGNED) AS total_uncompressed_size, \
-                       CAST(COALESCE(SUM(size), 0) AS SIGNED) AS total_compressed_size \
-                     FROM `{table}`"
+                    "SELECT CAST(COALESCE(SUM(uncompressed_size), 0) AS SIGNED) AS \
+                     total_uncompressed_size, CAST(COALESCE(SUM(size), 0) AS SIGNED) AS \
+                     total_compressed_size FROM `{table}`"
                 )
             }
             StorageEngine::ClpS => {
@@ -486,10 +485,9 @@ impl WebuiClient {
                     format!("SELECT uncompressed_size, size FROM `{table}`")
                 })?;
                 format!(
-                    "SELECT \
-                       CAST(COALESCE(SUM(uncompressed_size), 0) AS SIGNED) AS total_uncompressed_size, \
-                       CAST(COALESCE(SUM(size), 0) AS SIGNED) AS total_compressed_size \
-                     FROM ({union}) AS archives_combined"
+                    "SELECT CAST(COALESCE(SUM(uncompressed_size), 0) AS SIGNED) AS \
+                     total_uncompressed_size, CAST(COALESCE(SUM(size), 0) AS SIGNED) AS \
+                     total_compressed_size FROM ({union}) AS archives_combined"
                 )
             }
         };
@@ -516,12 +514,11 @@ impl WebuiClient {
                 let archives = self.table_name(None, "archives");
                 let files = self.table_name(None, "files");
                 format!(
-                    "SELECT \
-                       (SELECT MIN(begin_timestamp) FROM `{archives}`) AS begin_timestamp, \
-                       (SELECT MAX(end_timestamp) FROM `{archives}`) AS end_timestamp, \
-                       (SELECT COUNT(DISTINCT orig_file_id) FROM `{files}`) AS num_files, \
-                       (SELECT CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) FROM `{files}`) \
-                         AS num_messages"
+                    "SELECT (SELECT MIN(begin_timestamp) FROM `{archives}`) AS begin_timestamp, \
+                     (SELECT MAX(end_timestamp) FROM `{archives}`) AS end_timestamp, (SELECT \
+                     COUNT(DISTINCT orig_file_id) FROM `{files}`) AS num_files, (SELECT \
+                     CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) FROM `{files}`) AS \
+                     num_messages"
                 )
             }
             StorageEngine::ClpS => {
@@ -531,26 +528,23 @@ impl WebuiClient {
                 }
                 let archives_union = self.dataset_union(&datasets, "archives", |table| {
                     format!(
-                        "SELECT MIN(begin_timestamp) AS begin_timestamp, \
-                         MAX(end_timestamp) AS end_timestamp FROM `{table}`"
+                        "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
+                         end_timestamp FROM `{table}`"
                     )
                 })?;
                 let files_union = self.dataset_union(&datasets, "files", |table| {
                     format!(
                         "SELECT COUNT(DISTINCT orig_file_id) AS num_files, \
-                         CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) AS num_messages \
-                         FROM `{table}`"
+                         CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) AS num_messages FROM \
+                         `{table}`"
                     )
                 })?;
                 format!(
-                    "SELECT a.begin_timestamp, a.end_timestamp, f.num_files, f.num_messages \
-                     FROM \
-                       (SELECT MIN(begin_timestamp) AS begin_timestamp, \
-                               MAX(end_timestamp) AS end_timestamp \
-                        FROM ({archives_union}) AS archives_combined) AS a, \
-                       (SELECT CAST(SUM(num_files) AS SIGNED) AS num_files, \
-                               CAST(SUM(num_messages) AS SIGNED) AS num_messages \
-                        FROM ({files_union}) AS files_combined) AS f"
+                    "SELECT a.begin_timestamp, a.end_timestamp, f.num_files, f.num_messages FROM \
+                     (SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
+                     end_timestamp FROM ({archives_union}) AS archives_combined) AS a, (SELECT \
+                     CAST(SUM(num_files) AS SIGNED) AS num_files, CAST(SUM(num_messages) AS \
+                     SIGNED) AS num_messages FROM ({files_union}) AS files_combined) AS f"
                 )
             }
         };
@@ -592,18 +586,11 @@ impl WebuiClient {
             }
         };
         let sql = format!(
-            "WITH qt AS ( \
-               SELECT job_id, archive_id FROM query_tasks \
-               WHERE archive_id IS NOT NULL AND job_id = ? \
-             ), \
-             totals AS ( \
-               SELECT qt.job_id, SUM(ca.uncompressed_size) AS total_uncompressed_bytes \
-               FROM qt JOIN ({archives_subquery}) ca ON qt.archive_id = ca.id \
-             ) \
-             SELECT \
-               CAST(totals.total_uncompressed_bytes AS DOUBLE) AS bytes, \
-               qj.duration AS duration \
-             FROM query_jobs qj JOIN totals ON totals.job_id = qj.id"
+            "WITH qt AS ( SELECT job_id, archive_id FROM query_tasks WHERE archive_id IS NOT NULL \
+             AND job_id = ? ), totals AS ( SELECT qt.job_id, SUM(ca.uncompressed_size) AS \
+             total_uncompressed_bytes FROM qt JOIN ({archives_subquery}) ca ON qt.archive_id = \
+             ca.id ) SELECT CAST(totals.total_uncompressed_bytes AS DOUBLE) AS bytes, qj.duration \
+             AS duration FROM query_jobs qj JOIN totals ON totals.job_id = qj.id"
         );
         let row = sqlx::query(&sql)
             .bind(search_job_id)
@@ -626,8 +613,7 @@ impl WebuiClient {
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidDatasetName`] if the dataset name is invalid.
-    /// * [`ClientError::DatasetNotFound`] if the dataset's column-metadata table doesn't
-    ///   exist.
+    /// * [`ClientError::DatasetNotFound`] if the dataset's column-metadata table doesn't exist.
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
     pub async fn get_timestamp_column_names(
         &self,
@@ -674,12 +660,8 @@ impl WebuiClient {
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
     pub async fn get_compression_metadata(&self) -> Result<Vec<CompressionMetadata>, ClientError> {
         let rows = sqlx::query(
-            "SELECT \
-               id, status, status_msg, start_time, update_time, duration, \
-               uncompressed_size, compressed_size, clp_config \
-             FROM compression_jobs \
-             ORDER BY id DESC \
-             LIMIT ?",
+            "SELECT id, status, status_msg, start_time, update_time, duration, uncompressed_size, \
+             compressed_size, clp_config FROM compression_jobs ORDER BY id DESC LIMIT ?",
         )
         .bind(COMPRESSION_METADATA_QUERY_LIMIT)
         .fetch_all(&self.sql_pool)
@@ -856,9 +838,8 @@ impl WebuiClient {
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidDatasetName`] if the dataset name is invalid.
-    /// * [`ClientError::InvalidInput`] if `stream_id` is empty, or if the extract job fails,
-    ///   is cancelled, or produces
-    ///   no stream file containing the log event.
+    /// * [`ClientError::InvalidInput`] if `stream_id` is empty, or if the extract job fails, is
+    ///   cancelled, or produces no stream file containing the log event.
     /// * [`ClientError::Aws`] if a pre-signed URL couldn't be generated.
     /// * Forwards [`mongodb::error::Error`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
@@ -929,8 +910,8 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::Aws`] if the stream-output S3 client was not configured, or if a
-    ///   pre-signed URL couldn't be generated.
+    /// * [`ClientError::Aws`] if the stream-output S3 client was not configured, or if a pre-signed
+    ///   URL couldn't be generated.
     async fn generate_presigned_stream_url(
         &self,
         s3_config: &S3Config,
