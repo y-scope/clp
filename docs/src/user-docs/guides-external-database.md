@@ -203,11 +203,10 @@ mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
 :::{tab-item} Docker Compose
 :sync: docker
 
-1. Edit `etc/clp-config.yaml` to specify which services are bundled (managed by the
-   [CLP Docker Compose project][docker-compose-orchestration]):
+1. Edit `etc/clp-config.yaml` to specify which services are bundled:
 
    ```yaml
-   # Remove "database" and "results_cache" from this list to use external instances
+   # Remove "database" and "results_cache" from this list to use external instances.
    bundled:
      # - "database"
      - "queue"
@@ -248,12 +247,11 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 :::{tab-item} Kubernetes
 :sync: k8s
 
-1. Edit your Helm values file to specify which services are bundled (deployed by the
-   [CLP Helm chart][k8s-guide]):
+1. Edit your Helm values file to specify which services are bundled:
 
    ```yaml
    clpConfig:
-     # Remove "database" and "results_cache" from this list to use external instances
+     # Remove "database" and "results_cache" from this list to use external instances.
      bundled:
        # - "database"
        - "queue"
@@ -319,8 +317,7 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 ### Configuring Spider to use an external database
 
-1. Edit your Helm values file to specify that the Spider database is not bundled (deployed by the
-   Spider subchart):
+1. Edit your Helm values file to specify that the Spider database is not bundled:
 
    ```yaml
    spider:
