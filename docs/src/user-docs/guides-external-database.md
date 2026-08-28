@@ -307,7 +307,7 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
    grant that privileges on the Spider database).
 
    :::{note}
-   If you want, you can use a separate user for the Spider database. Simply create a  user by
+   If you want, you can use a separate user for the Spider database. Simply create a user by
    following step 3 in [Using an external database with CLP](#using-an-external-database-with-clp),
    then change the command below to grant that user permissions instead of `clp-user`.
    :::
