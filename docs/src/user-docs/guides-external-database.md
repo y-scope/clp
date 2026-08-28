@@ -321,7 +321,6 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
    ```yaml
    spider:
-     enabled: true
      spiderConfig:
        # Remove "database" from this list to use external instances.
        bundled: [
