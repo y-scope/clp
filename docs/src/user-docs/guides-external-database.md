@@ -147,10 +147,10 @@ When using AWS DocumentDB or MongoDB Atlas:
 
 To use an external database with CLP, you'll need to:
 
-* [Create a database](#creating-a-database)
+* [Create the CLP database](#creating-the-clp-database)
 * [Configure CLP to use the database](#configuring-clp-to-use-an-external-database)
 
-### Creating a database
+### Creating the CLP database
 
 The steps below are for a MariaDB installation on Ubuntu but should be adaptable for the database
 you're using.
@@ -291,7 +291,7 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 
 To use an external database with Spider, you'll need to:
 
-* [Create a database](#creating-the-spider-database)
+* [Create the Spider database](#creating-the-spider-database)
 * [Configure Spider to use the database](#configuring-spider-to-use-an-external-database)
 
 ### Creating the Spider database
