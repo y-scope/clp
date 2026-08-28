@@ -328,7 +328,6 @@ To use an external database with Spider, you'll need to:
 
    ```yaml
    spider:
-     enabled: true
      spiderConfig:
        # Remove "database" from this list to use external instances.
        bundled: [
