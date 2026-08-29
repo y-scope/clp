@@ -14,52 +14,45 @@ inputs:
   arch:
     description: >-
       Target architecture (e.g. "amd64" or "arm64") when consuming a single arch of a
-      multi-arch image. When set and using a published image, the bare multi-arch tag
-      ":main" is pulled (Docker auto-selects the runner's arch). When set and using a
-      locally-built image, the arch-suffixed artifact/image (e.g. "<image_name>-amd64")
-      produced by clp-core-build-containers is loaded. When empty, the bare image_name
-      is used (legacy behaviour).
+      multi-arch image. When set and using a published image, the bare multi-arch tag ":main" is
+      pulled for that platform. When set and using a locally-built image, the arch-suffixed
+      artifact/image (e.g. "<image_name>-amd64") produced by clp-core-build-containers is loaded.
+      When empty, the bare image_name is used (legacy behaviour).
+    required: false
+    default: ""
+  prepared_image_id:
+    description: >-
+      Immutable image ID returned by prepare-image. When set, the image is already available in the
+      local Docker daemon and won't be pulled or loaded again.
     required: false
     default: ""
 
 runs:
   using: "composite"
   steps:
-    - id: "get_image_props"
-      run: |
-        arch="${{inputs.arch}}"
-        if [[ -n "$arch" ]]; then
-          arch_suffix="-${arch}"
-        else
-          arch_suffix=""
-        fi
-
-        if [[ "${{inputs.use_published_image}}" == "true" ]] ; then
-          # Docker doesn't support repository names with uppercase characters, so we convert to
-          # lowercase here. The published image is a multi-arch manifest tagged ":main", so Docker
-          # auto-selects the runner's architecture on pull.
-          repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
-          echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}:main" \
-            >> "$GITHUB_OUTPUT"
-        else
-          # The locally-built image (from clp-core-build-containers) is tagged/loaded under
-          # an arch-suffixed name when `arch` is set.
-          local_name="${{inputs.image_name}}${arch_suffix}"
-          echo "artifact_name=${local_name}" >> "$GITHUB_OUTPUT"
-          echo "tar_path=/tmp/${local_name}.tar" >> "$GITHUB_OUTPUT"
-          echo "qualified_image_name=${local_name}:latest" >> "$GITHUB_OUTPUT"
-        fi
-      shell: "bash"
-
-    - if: "inputs.use_published_image == 'false'"
-      uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+    - if: "inputs.prepared_image_id == ''"
+      id: "prepare_image"
+      uses: "./.github/actions/prepare-image"
       with:
-        name: "${{steps.get_image_props.outputs.artifact_name}}"
-        path: "/tmp"
+        image_name: "${{inputs.image_name}}"
+        use_published_image: "${{inputs.use_published_image}}"
+        arch: "${{inputs.arch}}"
 
-    - if: "inputs.use_published_image == 'false'"
-      name: "Load image"
-      run: "docker load --input '${{steps.get_image_props.outputs.tar_path}}'"
+    - id: "select_image"
+      env:
+        INPUT_IMAGE_ID: "${{inputs.prepared_image_id}}"
+        PREPARED_IMAGE_ID: "${{steps.prepare_image.outputs.image_id}}"
+      run: |
+        image_id="${INPUT_IMAGE_ID:-${PREPARED_IMAGE_ID}}"
+        if [[ ! "${image_id}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+          echo "::error::run-on-image: invalid prepared image ID '${image_id}'" >&2
+          exit 1
+        fi
+        if ! docker image inspect "${image_id}" >/dev/null; then
+          echo "::error::run-on-image: prepared image '${image_id}' is not available" >&2
+          exit 1
+        fi
+        echo "image_id=${image_id}" >> "$GITHUB_OUTPUT"
       shell: "bash"
 
     - run: "./tools/scripts/deps-download/init.sh"
@@ -68,10 +61,9 @@ runs:
     # `--env npm_config_cache` overrides the default `/.npm` to avoid permission issues.
     - run: >-
         docker run
-        ${{inputs.use_published_image == 'true' && '--pull=always' || ''}}
         --user $(id -u):$(id -g)
         --volume "$GITHUB_WORKSPACE":/mnt/repo
         --workdir /mnt/repo
-        ${{steps.get_image_props.outputs.qualified_image_name}}
+        ${{steps.select_image.outputs.image_id}}
         bash -c "${{inputs.run_command}}"
       shell: "bash"
