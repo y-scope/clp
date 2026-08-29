@@ -5,7 +5,7 @@ use std::num::NonZeroU32;
 use serde::Deserialize;
 use serde::Serialize;
 
-/// `clp-s` tuning and engine options for a query job.
+/// `clp-s` options for a query job.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ClpSQueryOption {
     /// The query string passed positionally to `clp-s`.
