@@ -9,12 +9,11 @@ use spider_tdl::task;
 /// Queries one CLP-S archive and writes its matches directly to the results cache.
 #[task(name = "query::clp_s_query_to_results_cache")]
 pub(crate) fn clp_s_query_to_results_cache_task(
-    ctx: TaskContext,
-    query_job_id: i32,
-    clp_s_query_option: ClpSQueryOption,
-    dataset: String,
-    archive_id: String,
-) -> Result<QueryTaskOutput, TdlError> {
-    let _ = (ctx, query_job_id, clp_s_query_option, dataset, archive_id);
+    _ctx: TaskContext,
+    _query_job_id: i32,
+    _clp_s_query_option: ClpSQueryOption,
+    _dataset: String,
+    _archive_id: String,
+) -> Result<(), TdlError> {
     todo!("Implement the CLP-S results-cache query task")
 }
