@@ -14,11 +14,11 @@ pub struct ClpSQueryOption {
     /// The maximum number of results retained by one archive-query invocation.
     pub max_num_results: NonZeroU32,
 
-    /// The inclusive lower timestamp bound (`--tge`), in Unix epoch microseconds.
-    pub begin_timestamp: Option<i64>,
+    /// Inclusive `--tge` bound in Unix epoch milliseconds.
+    pub begin_timestamp_millisecs: Option<i64>,
 
-    /// The inclusive upper timestamp bound (`--tle`), in Unix epoch microseconds.
-    pub end_timestamp: Option<i64>,
+    /// Inclusive `--tle` bound in Unix epoch milliseconds.
+    pub end_timestamp_millisecs: Option<i64>,
 
     /// Whether `clp-s` performs a case-insensitive search.
     pub ignore_case: bool,
@@ -37,4 +37,3 @@ pub struct QueryTaskOutput {
     /// The identifier of the queried archive.
     pub archive_id: String,
 }
-
