@@ -26,8 +26,8 @@ use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
 use crate::common::runtime;
-use crate::task::clp_s::clp_binary_path;
-use crate::task::clp_s::s3_credential_env;
+use crate::task::utils::clp_binary_path;
+use crate::task::utils::s3_credential_env;
 
 /// Compresses the given S3 objects into archives, uploads them to S3, and returns their metadata
 /// for the commit task.

@@ -21,8 +21,8 @@ use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
 use crate::common::runtime;
-use crate::task::clp_s::clp_binary_path;
-use crate::task::clp_s::s3_credential_env;
+use crate::task::utils::clp_binary_path;
+use crate::task::utils::s3_credential_env;
 
 /// Queries one archive with clp-s, streaming the matches into the results cache.
 ///
