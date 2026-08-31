@@ -12,7 +12,7 @@ pub(crate) fn clp_s_query_to_results_cache_task(
     _ctx: TaskContext,
     _query_job_id: QueryJobId,
     _clp_s_query_option: ClpSQueryOption,
-    _dataset: String,
+    _dataset: Option<String>,
     _archive_id: String,
 ) -> Result<(), TdlError> {
     todo!("Implement the CLP-S results-cache query task")
