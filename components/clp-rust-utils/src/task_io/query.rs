@@ -2,6 +2,7 @@
 
 use std::num::NonZeroU32;
 
+use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -9,7 +10,7 @@ use serde::Serialize;
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ClpSQueryOption {
     /// The query string passed positionally to `clp-s`.
-    pub query_string: String,
+    pub query_string: NonEmptyString,
 
     /// The maximum number of results retained by one archive-query invocation.
     pub max_num_results: NonZeroU32,
@@ -32,8 +33,8 @@ pub struct ClpSQueryOption {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct QueryTaskOutput {
     /// The resolved dataset containing the queried archive.
-    pub dataset: String,
+    pub dataset: NonEmptyString,
 
     /// The identifier of the queried archive.
-    pub archive_id: String,
+    pub archive_id: NonEmptyString,
 }
