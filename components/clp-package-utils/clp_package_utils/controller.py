@@ -1372,6 +1372,7 @@ class DockerComposeController(BaseController):
                 "--file",
                 self._get_docker_file_name(),
                 "down",
+                "--remove-orphans",
             ],
             cwd=self._clp_home,
             check=True,
