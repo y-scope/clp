@@ -1,9 +1,9 @@
 # External database setup
 
-This guide explains how to set up external databases for CLP instead of using the bundled
-databases. If the host(s) on which you're running CLP are ephemeral, you should use external
-databases for metadata storage, and [object storage](guides-using-object-storage/index.md) for CLP's
-archives and streams; this will ensure data is persisted even if a host is replaced.
+This guide explains how to set up external databases for CLP instead of using the bundled databases.
+If the host(s) on which you're running CLP are ephemeral, you should use external databases for
+metadata storage, and [object storage](guides-using-object-storage/index.md) for CLP's archives and
+streams; this will ensure data is persisted even if a host is replaced.
 
 :::{warning}
 Both the [CLP Docker Compose project][docker-compose-orchestration] and the
@@ -308,13 +308,12 @@ To use an external database with Spider, you'll need to:
    CREATE DATABASE `spider-db`;
    ```
 
-3. Grant `clp-user` privileges on the Spider database. (or if you prefer, create a separate user and
-   grant that privileges on the Spider database).
+3. Grant `clp-user` privileges on the Spider database.
 
    :::{note}
    If you want, you can use a separate user for the Spider database. Simply create a user by
-   following step 3 in [Using an external database with CLP](#using-an-external-database-with-clp),
-   then change the command below to grant that user permissions instead of `clp-user`.
+   following step 3 in [Creating the CLP database](#creating-the-clp-database), then replace
+   `clp-user` with that user in all remaining instructions below.
    :::
 
    ```sql
