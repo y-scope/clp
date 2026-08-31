@@ -125,7 +125,7 @@ async def test_read_results_returns_docs(mock_clp_config: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_read_results_supports_legacy_docs(mock_clp_config: Any) -> None:
+async def test_read_results_supports_legacy_docs(mock_clp_config: SimpleNamespace) -> None:
     """Tests reading legacy results with top-level archive and log-event fields."""
     connector = ClpConnector(mock_clp_config)
     mock_docs = [

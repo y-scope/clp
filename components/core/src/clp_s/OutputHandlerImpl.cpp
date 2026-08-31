@@ -47,7 +47,7 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
 
     auto const command_status = reply["ok"];
     if (false == static_cast<bool>(command_status)) {
-        return true;
+        return false;
     }
     if (bsoncxx::type::k_double == command_status.type()) {
         return 1.0 == command_status.get_double().value;
