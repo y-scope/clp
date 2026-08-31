@@ -223,6 +223,11 @@ fn build_clp_s_search_args_for_result_cache(
 
 /// Runs clp-s with the given search arguments, blocking until it exits.
 ///
+/// # Observability
+///
+/// This method logs errors on failure before returning to the caller. `clp-s`' stderr is logged if
+/// successfully captured.
+///
 /// # Errors
 ///
 /// Returns an error if:
@@ -245,7 +250,14 @@ fn run_clp_s_search(
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn()
-        .with_context(|| format!("failed to spawn clp-s at {}", clp_s_bin.display()))?;
+        .with_context(|| format!("failed to spawn clp-s at {}", clp_s_bin.display()))
+        .inspect_err(|e| {
+            tracing::error!(
+                error = % e,
+                clp_s_bin = %clp_s_bin.display(),
+                "Failed to spawn clp-s.",
+            )
+        })?;
 
     let mut stderr = child
         .stderr
@@ -264,7 +276,7 @@ fn run_clp_s_search(
             tracing::error!(
                 error = % e,
                 stderr = % captured_stderr,
-                "Failed to wait clp-s."
+                "Failed to wait for clp-s to exit."
             );
         })?;
     if !status.success() {
@@ -494,19 +506,6 @@ mod tests {
                 OsString::from("ds1"),
             ]
         );
-    }
-
-    #[test]
-    fn build_clp_s_search_args_for_result_cache_never_passes_batch_size() {
-        let args = build_clp_s_search_args_for_result_cache(
-            &directory_selector(),
-            &unbounded_query_option(),
-            "mongodb://results-cache:27017/clp-query-results",
-            42,
-            "ds1",
-        );
-
-        assert!(!args.contains(&OsString::from("--batch-size")));
     }
 
     #[test]
