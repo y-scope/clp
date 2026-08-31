@@ -197,6 +197,9 @@ impl Database {
 }
 
 /// The default maximum number of results retained for a query.
+///
+/// Mirror of `clp_py_utils.clp_config.ApiServer.default_max_num_query_results`. Must be kept in
+/// sync.
 pub const DEFAULT_MAX_NUM_QUERY_RESULTS: u32 = 1000;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
