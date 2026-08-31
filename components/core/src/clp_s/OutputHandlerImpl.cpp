@@ -153,7 +153,7 @@ ErrorCode ResultsCacheOutputHandler::finish() {
                                                     ),
                                                     bsoncxx::builder::basic::kvp(
                                                             constants::results_cache::search::
-                                                                    cLogEventIx,
+                                                                    cLogEventIdx,
                                                             result.log_event_idx
                                                     )
                                             )
@@ -169,14 +169,6 @@ ErrorCode ResultsCacheOutputHandler::finish() {
                                     bsoncxx::builder::basic::kvp(
                                             constants::results_cache::search::cTimestamp,
                                             result.timestamp
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cArchiveId,
-                                            std::move(result.archive_id)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cLogEventIx,
-                                            result.log_event_idx
                                     ),
                                     bsoncxx::builder::basic::kvp(
                                             std::string{constants::results_cache::search::cDataset},

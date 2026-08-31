@@ -55,7 +55,7 @@ constexpr char cIsLastChunk[]{"is_last_chunk"};
 namespace results_cache::search {
 constexpr char cId[]{"_id"};
 constexpr char cOrigFilePath[]{"orig_file_path"};
-constexpr char cLogEventIx[]{"log_event_ix"};
+constexpr char cLogEventIdx[]{"log_event_idx"};
 constexpr char cTimestamp[]{"timestamp"};
 constexpr char cMessage[]{"message"};
 constexpr char cArchiveId[]{"archive_id"};

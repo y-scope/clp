@@ -49,11 +49,10 @@ def _get_expired_job_ids(
         closing(sql_adapter.create_connection(True)) as db_conn,
         closing(db_conn.cursor()) as db_cursor,
     ):
-        for begin_ix in range(0, len(job_ids), MAX_NUM_JOB_IDS_PER_QUERY):
-            job_ids_batch = job_ids[begin_ix : begin_ix + MAX_NUM_JOB_IDS_PER_QUERY]
+        for begin_idx in range(0, len(job_ids), MAX_NUM_JOB_IDS_PER_QUERY):
+            job_ids_batch = job_ids[begin_idx : begin_idx + MAX_NUM_JOB_IDS_PER_QUERY]
             job_id_placeholders = ",".join(["%s"] * len(job_ids_batch))
-            query = (
-                f"""
+            query = f"""
                 SELECT id
                 FROM `{QUERY_JOBS_TABLE_NAME}`
                 WHERE id IN ({job_id_placeholders})
@@ -62,8 +61,7 @@ def _get_expired_job_ids(
                     CAST(duration * 1000000 AS SIGNED),
                     creation_time
                 ) < TIMESTAMPADD(MINUTE, %s, CURRENT_TIMESTAMP(3))
-                """  # noqa: S608
-            )
+                """
             db_cursor.execute(
                 query,
                 [*job_ids_batch, -retention_period_minutes],
