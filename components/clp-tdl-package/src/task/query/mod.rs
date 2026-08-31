@@ -2,6 +2,7 @@
 
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
+use clp_rust_utils::task_io::query::QueryOutputHandle;
 use non_empty_string::NonEmptyString;
 use spider_tdl::TaskContext;
 use spider_tdl::task;
@@ -13,6 +14,7 @@ pub(crate) fn clp_s_search_task(
     _clp_s_query_option: ClpSQueryOption,
     _dataset: Option<NonEmptyString>,
     _archive_id: NonEmptyString,
+    _output_handle: QueryOutputHandle,
 ) -> Result<(), spider_tdl::TdlError> {
     todo!("Implement the CLP-S search task")
 }
