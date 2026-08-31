@@ -1,4 +1,4 @@
-//! The `clp-s` search worker that queries a single archive into the results cache.
+//! The `clp-s` search worker that queries a single archive.
 
 use std::ffi::OsString;
 use std::io::Read;
@@ -24,7 +24,8 @@ use crate::common::runtime;
 use crate::task::utils::clp_binary_path;
 use crate::task::utils::s3_credential_env;
 
-/// Queries one archive with clp-s, streaming the matches into the results cache.
+/// Searches one archive with clp-s, handles the search results according to the given
+/// `output_handle`.
 ///
 /// A pure worker function called by a spider-tdl task wrapper, which formats any returned
 /// `anyhow::Error` into a user-space TDL error.
@@ -34,7 +35,8 @@ use crate::task::utils::s3_credential_env;
 /// Returns an error if:
 ///
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
-/// * `output_handle` is not [`OutputHandle::ResultsCache`].
+/// * `output_handle` is not [`OutputHandle::ResultsCache`]. The current implementation only
+///   supports result cache output streaming.
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
 pub(super) fn search(
@@ -50,7 +52,7 @@ pub(super) fn search(
         anyhow::bail!("the clp-s query task requires the `clp-s` storage engine");
     }
     let OutputHandle::ResultsCache { uri } = output_handle else {
-        anyhow::bail!("unsupported query output handler: only `results_cache` is supported");
+        anyhow::bail!("unsupported query output handler");
     };
 
     let dataset = resolve_dataset_name(dataset);
@@ -62,17 +64,28 @@ pub(super) fn search(
         query_job_id = % query_job_id,
         dataset = % dataset,
         archive_id = % archive_id,
-        "CLP-S query task started.",
+        "clp-s query task started.",
     );
 
     let clp_home = clp_home();
     let (archive_selector, credential_env) =
-        resolve_archive_input(&runtime(), clp_home, config, dataset, archive_id)?;
-    let args = build_clp_s_search_args(
+        resolve_archive_input(&runtime(), clp_home, config, dataset, archive_id).inspect_err(
+            |e| {
+                tracing::error!(
+                    job_id = % ctx.job_id,
+                    task_id = % ctx.task_id,
+                    task_instance_id = % ctx.task_instance_id,
+                    query_job_id = % query_job_id,
+                    error = % e,
+                    "Failed to resolve the archive input."
+                );
+            },
+        )?;
+    let args = build_clp_s_search_args_for_result_cache(
         &archive_selector,
         clp_s_query_option,
         uri.as_str(),
-        &query_job_id.to_string(),
+        query_job_id,
         dataset,
     );
     run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
@@ -82,12 +95,12 @@ pub(super) fn search(
         task_id = % ctx.task_id,
         task_instance_id = % ctx.task_instance_id,
         query_job_id = % query_job_id,
-        "CLP-S query task completed successfully.",
+        "clp-s query task completed successfully.",
     );
     Ok(())
 }
 
-/// How clp-s addresses the archive to search.
+/// Selector for clp-s to address the archive to search.
 enum ArchiveSelector {
     /// A local dataset archives directory plus the `--archive-id` selecting one archive in it.
     Directory { path: PathBuf, archive_id: String },
@@ -100,8 +113,11 @@ enum ArchiveSelector {
 ///
 /// # Returns
 ///
-/// The archive selector and the credential env vars clp-s should run with, which are empty for
-/// filesystem-backed archive output.
+/// A tuple containing:
+///
+/// * The archive selector.
+/// * The credential env vars clp-s should run with, which are empty for filesystem-backed archive
+///   output.
 ///
 /// # Errors
 ///
@@ -152,16 +168,14 @@ fn resolve_archive_input(
 /// Builds the clp-s command-line arguments for a single-archive search writing to the results
 /// cache.
 ///
-/// `--batch-size` is left unset so clp-s applies its own default.
-///
 /// # Returns
 ///
 /// The ordered clp-s arguments.
-fn build_clp_s_search_args(
+fn build_clp_s_search_args_for_result_cache(
     archive_selector: &ArchiveSelector,
     clp_s_query_option: &ClpSQueryOption,
     results_cache_uri: &str,
-    collection: &str,
+    query_job_id: i32,
     dataset: &str,
 ) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
@@ -199,7 +213,7 @@ fn build_clp_s_search_args(
         OsString::from("--uri"),
         OsString::from(results_cache_uri),
         OsString::from("--collection"),
-        OsString::from(collection),
+        OsString::from(query_job_id.to_string()),
         OsString::from("--max-num-results"),
         OsString::from(max_num_results.to_string()),
         OsString::from("--dataset"),
@@ -209,8 +223,6 @@ fn build_clp_s_search_args(
 }
 
 /// Runs clp-s with the given search arguments, blocking until it exits.
-///
-/// stdout is discarded; stderr is captured so it can be surfaced if clp-s fails.
 ///
 /// # Errors
 ///
@@ -262,7 +274,7 @@ fn run_clp_s_search(
             stderr = % captured_stderr,
             "clp-s exited on failure."
         );
-        anyhow::bail!("clp-s exited with {status}: {captured_stderr}");
+        anyhow::bail!("clp-s exited on error with status={status}");
     }
     Ok(())
 }
@@ -292,7 +304,7 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ArchiveSelector;
-    use super::build_clp_s_search_args;
+    use super::build_clp_s_search_args_for_result_cache;
     use super::resolve_archive_input;
     use super::search;
 
@@ -394,11 +406,11 @@ mod tests {
         };
 
         assert_eq!(
-            build_clp_s_search_args(
+            build_clp_s_search_args_for_result_cache(
                 &directory_selector(),
                 &clp_s_query_option,
                 "mongodb://results-cache:27017/clp-query-results",
-                "42",
+                42,
                 "ds1",
             ),
             vec![
@@ -428,11 +440,11 @@ mod tests {
     #[test]
     fn build_clp_s_search_args_fs_without_timestamps_or_ignore_case() {
         assert_eq!(
-            build_clp_s_search_args(
+            build_clp_s_search_args_for_result_cache(
                 &directory_selector(),
                 &unbounded_query_option(),
                 "mongodb://results-cache:27017/clp-query-results",
-                "42",
+                42,
                 "default",
             ),
             vec![
@@ -457,13 +469,13 @@ mod tests {
     #[test]
     fn build_clp_s_search_args_s3_uses_object_url_and_no_archive_id() {
         assert_eq!(
-            build_clp_s_search_args(
+            build_clp_s_search_args_for_result_cache(
                 &ArchiveSelector::ObjectUrl(
                     "https://bucket.s3.amazonaws.com/LIB1/ds1/archive-id".to_string()
                 ),
                 &unbounded_query_option(),
                 "mongodb://results-cache:27017/clp-query-results",
-                "42",
+                42,
                 "ds1",
             ),
             vec![
@@ -487,11 +499,11 @@ mod tests {
 
     #[test]
     fn build_clp_s_search_args_never_passes_batch_size() {
-        let args = build_clp_s_search_args(
+        let args = build_clp_s_search_args_for_result_cache(
             &directory_selector(),
             &unbounded_query_option(),
             "mongodb://results-cache:27017/clp-query-results",
-            "42",
+            42,
             "ds1",
         );
 
@@ -574,11 +586,11 @@ mod tests {
             "ds1",
             "archive-id".to_string(),
         )?;
-        let args = build_clp_s_search_args(
+        let args = build_clp_s_search_args_for_result_cache(
             &selector,
             &unbounded_query_option(),
             "mongodb://results-cache:27017/clp-query-results",
-            "42",
+            42,
             "ds1",
         );
 
@@ -632,7 +644,7 @@ mod tests {
         )
         .expect_err("the file output handler is unsupported");
 
-        assert!(error.to_string().contains("results_cache"));
+        assert!(error.to_string().contains("unsupported"));
     }
 
     #[test]
