@@ -6,7 +6,7 @@ use regex::Regex;
 pub const CLP_DEFAULT_DATASET_NAME: &str = "default";
 
 pub static VALID_DATASET_NAME_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9_]+$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9_]{1,44}$").unwrap());
 
 /// # Returns
 ///

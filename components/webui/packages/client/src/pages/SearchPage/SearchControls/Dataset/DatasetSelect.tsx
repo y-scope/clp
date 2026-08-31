@@ -11,10 +11,10 @@ import {
     SelectProps,
 } from "antd";
 
+import {apiClient} from "../../../../api/search";
 import {SETTINGS_MAX_DATASETS_PER_QUERY} from "../../../../config";
 import useSearchStore from "../../SearchState";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import {fetchDatasetNames} from "./sql";
 
 
 interface DatasetSelectProps {
@@ -41,7 +41,15 @@ const DatasetSelect = ({isMultiSelect, maxTagCount, ...selectProps}: DatasetSele
 
     const {data, isPending, isSuccess, error} = useQuery({
         queryKey: ["datasets"],
-        queryFn: fetchDatasetNames,
+        queryFn: async () => {
+            // eslint-disable-next-line new-cap
+            const {data: datasetNames, response} = await apiClient.GET("/metadata/datasets", {});
+            if ("undefined" === typeof datasetNames) {
+                throw new Error(`Failed to fetch dataset names: HTTP ${response.status}`);
+            }
+
+            return datasetNames;
+        },
     });
 
     /**

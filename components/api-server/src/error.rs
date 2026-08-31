@@ -40,6 +40,9 @@ pub enum ClientError {
     #[error("Dataset not found: {0}")]
     DatasetNotFound(String),
 
+    #[error("Path not found: {0}")]
+    NotFound(String),
+
     #[error("Invalid search job config: {0}")]
     InvalidSearchJobConfig(String),
 
