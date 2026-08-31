@@ -1,5 +1,6 @@
 #include "OutputHandlerImpl.hpp"
 
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -34,6 +35,86 @@ namespace clp_s {
 namespace {
 constexpr int32_t cDuplicateKeyErrorCode{11'000};
 
+/**
+ * Checks whether a bulk-write reply reports a successful command.
+ * @param reply The raw MongoDB bulk-write reply.
+ * @return true if the reply contains no command error, false otherwise.
+ */
+[[nodiscard]] auto is_successful_command_reply(bsoncxx::document::view const& reply) -> bool {
+    if (static_cast<bool>(reply["code"]) || static_cast<bool>(reply["errmsg"])) {
+        return false;
+    }
+
+    auto const command_status = reply["ok"];
+    if (false == static_cast<bool>(command_status)) {
+        return true;
+    }
+    if (bsoncxx::type::k_double == command_status.type()) {
+        return 1.0 == command_status.get_double().value;
+    }
+    if (bsoncxx::type::k_int32 == command_status.type()) {
+        return 1 == command_status.get_int32().value;
+    }
+    if (bsoncxx::type::k_int64 == command_status.type()) {
+        return 1 == command_status.get_int64().value;
+    }
+    return false;
+}
+
+/**
+ * Checks whether a bulk-write reply contains any write-concern errors.
+ * @param reply The raw MongoDB bulk-write reply.
+ * @return true if the reply contains a write-concern error, false otherwise.
+ */
+[[nodiscard]] auto has_write_concern_errors(bsoncxx::document::view const& reply) -> bool {
+    if (static_cast<bool>(reply["writeConcernError"])) {
+        return true;
+    }
+
+    auto const errors_element = reply["writeConcernErrors"];
+    if (false == static_cast<bool>(errors_element)) {
+        return false;
+    }
+    if (bsoncxx::type::k_array != errors_element.type()) {
+        return true;
+    }
+    auto const errors = errors_element.get_array().value;
+    return errors.begin() != errors.end();
+}
+
+/**
+ * Checks whether an entry from a bulk-write reply's `writeErrors` array is a duplicate-key error.
+ * @param write_error The write-error entry to inspect.
+ * @return true if the entry has MongoDB's duplicate-key error code, false otherwise.
+ */
+[[nodiscard]] auto is_duplicate_key_write_error(bsoncxx::array::element const& write_error)
+        -> bool {
+    if (bsoncxx::type::k_document != write_error.type()) {
+        return false;
+    }
+
+    auto const code = write_error.get_document().value["code"];
+    if (false == static_cast<bool>(code)) {
+        return false;
+    }
+    if (bsoncxx::type::k_int32 == code.type()) {
+        return cDuplicateKeyErrorCode == code.get_int32().value;
+    }
+    if (bsoncxx::type::k_int64 == code.type()) {
+        return cDuplicateKeyErrorCode == code.get_int64().value;
+    }
+    return false;
+}
+
+/**
+ * Returns whether the bulk write failed only because some documents already exist.
+ *
+ * Command and write-concern errors are rejected since they mean MongoDB did not confirm the
+ * outcome of the entire batch. At least one write error must be present, and every write error
+ * must be a duplicate-key error.
+ * @param exception The exception containing the raw MongoDB bulk-write reply.
+ * @return true if the reply contains only duplicate-key write errors, false otherwise.
+ */
 [[nodiscard]] auto contains_only_duplicate_key_write_errors(
         mongocxx::bulk_write_exception const& exception
 ) -> bool {
@@ -42,36 +123,23 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
         return false;
     }
 
-    auto const write_errors_element = raw_server_error->view()["writeErrors"];
+    auto const reply = raw_server_error->view();
+    if (false == is_successful_command_reply(reply) || has_write_concern_errors(reply)) {
+        return false;
+    }
+
+    auto const write_errors_element = reply["writeErrors"];
     if (false == static_cast<bool>(write_errors_element)
         || bsoncxx::type::k_array != write_errors_element.type())
     {
         return false;
     }
 
-    bool found_write_error{false};
-    for (auto const& write_error_element : write_errors_element.get_array().value) {
-        if (bsoncxx::type::k_document != write_error_element.type()) {
-            return false;
-        }
-        auto const code_element = write_error_element.get_document().value["code"];
-        if (false == static_cast<bool>(code_element)) {
-            return false;
-        }
-        if (bsoncxx::type::k_int32 == code_element.type()) {
-            if (cDuplicateKeyErrorCode != code_element.get_int32().value) {
-                return false;
-            }
-        } else if (bsoncxx::type::k_int64 == code_element.type()) {
-            if (cDuplicateKeyErrorCode != code_element.get_int64().value) {
-                return false;
-            }
-        } else {
-            return false;
-        }
-        found_write_error = true;
+    auto const write_errors = write_errors_element.get_array().value;
+    if (write_errors.begin() == write_errors.end()) {
+        return false;
     }
-    return found_write_error;
+    return std::all_of(write_errors.begin(), write_errors.end(), is_duplicate_key_write_error);
 }
 }  // namespace
 
@@ -204,24 +272,6 @@ ErrorCode ResultsCacheOutputHandler::finish() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-auto ResultsCacheOutputHandler::insert_results() -> bool {
-    try {
-        mongocxx::options::insert options;
-        options.ordered(false);
-        m_collection.insert_many(m_results, options);
-    } catch (mongocxx::bulk_write_exception const& exception) {
-        if (false == contains_only_duplicate_key_write_errors(exception)) {
-            SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
-            return false;
-        }
-    } catch (mongocxx::exception const& exception) {
-        SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
-        return false;
-    }
-    m_results.clear();
-    return true;
-}
-
 void ResultsCacheOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
@@ -252,6 +302,24 @@ void ResultsCacheOutputHandler::write(
                 )
         );
     }
+}
+
+auto ResultsCacheOutputHandler::insert_results() -> bool {
+    try {
+        mongocxx::options::insert options;
+        options.ordered(false);
+        m_collection.insert_many(m_results, options);
+    } catch (mongocxx::bulk_write_exception const& exception) {
+        if (false == contains_only_duplicate_key_write_errors(exception)) {
+            SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+            return false;
+        }
+    } catch (mongocxx::exception const& exception) {
+        SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+        return false;
+    }
+    m_results.clear();
+    return true;
 }
 
 CountReducerOutputHandler::CountReducerOutputHandler(int reducer_socket_fd)
