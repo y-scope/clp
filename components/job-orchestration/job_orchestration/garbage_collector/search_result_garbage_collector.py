@@ -1,3 +1,5 @@
+"""Garbage-collect cached search results."""
+
 import asyncio
 from contextlib import closing
 from typing import Any, cast, Final
@@ -31,7 +33,7 @@ def _get_expired_job_ids(
     """
     Filter query-job IDs by whether their retention periods have ended.
 
-    MariaDB computes each query's completion time as `creation_time + duration`. A query-job ID is
+    MariaDB computes each query's completion time as `start_time + duration`. A query-job ID is
     included when the time since completion is greater than `retention_period_minutes`.
 
     :param database_config: Configuration for the orchestration database.
@@ -59,7 +61,7 @@ def _get_expired_job_ids(
                 AND TIMESTAMPADD(
                     MICROSECOND,
                     CAST(duration * 1000000 AS SIGNED),
-                    creation_time
+                    start_time
                 ) < TIMESTAMPADD(MINUTE, %s, CURRENT_TIMESTAMP(3))
                 """
             db_cursor.execute(
