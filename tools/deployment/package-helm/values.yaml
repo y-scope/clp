@@ -393,6 +393,23 @@ spider:
       repository: "ghcr.io/y-scope/clp/clp-spider-worker"
       tag: "main"
   spiderConfig:
+    # List of third-party services bundled (deployed) as part of the Spider subchart.
+    # Remove a service from this list to use an external instance instead, and configure its
+    # connection details accordingly in the service-specific sections below.
+    bundled:
+      - "database"
+
+    # Connection config for the Spider database service; defaults to the Spider subchart's
+    # `values.yaml`. When "database" is in `bundled`, the host is automatically set to the bundled
+    # service name (ignored). When external, set these to the external service's address and
+    # credentials.
+    # database:
+    #   host: "localhost"
+    #   port: 3306
+    #   name: "spider-db"
+    #   username: "spider-user"
+    #   password: "spider-password"
+
     worker:
       extra_envs:
         - name: "CLP_CONFIG_PATH"
