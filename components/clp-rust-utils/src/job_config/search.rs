@@ -3,6 +3,8 @@ use num_enum::TryFromPrimitive;
 use serde::Deserialize;
 use serde::Serialize;
 
+pub type QueryJobId = i32;
+
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 
 /// Mirror of `job_orchestration.scheduler.job_config.AggregationConfig`. Must be kept in sync.
