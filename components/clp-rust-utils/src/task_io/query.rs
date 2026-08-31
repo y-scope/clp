@@ -25,17 +25,3 @@ pub struct ClpSQueryOption {
     /// Whether `clp-s` performs a case-insensitive search.
     pub ignore_case: bool,
 }
-
-/// The graph output of one successfully completed archive-query task.
-///
-/// Query results are written directly to the results cache and are not returned through Spider.
-/// This output only identifies the archive whose query invocation completed; it does not
-/// finalize the query job.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct QueryTaskOutput {
-    /// The resolved dataset containing the queried archive.
-    pub dataset: NonEmptyString,
-
-    /// The identifier of the queried archive.
-    pub archive_id: NonEmptyString,
-}
