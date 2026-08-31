@@ -631,7 +631,10 @@ class BaseController(ABC):
         """
         component_name = COMPRESSION_COORDINATOR_COMPONENT_NAME
         coordinator_config = self._clp_config.compression_coordinator
-        if coordinator_config is None:
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
             logger.info("%s is not configured, skipping environment setup...", component_name)
             return EnvVarsDict()
 
