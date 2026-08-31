@@ -165,8 +165,7 @@ fn resolve_archive_input(
     Ok((ArchiveSelector::ObjectUrl(url), credential_env))
 }
 
-/// Builds the clp-s command-line arguments for a single-archive search writing to the results
-/// cache.
+/// Builds the clp-s command-line arguments for a single-archive search writing to the result cache.
 ///
 /// # Returns
 ///
@@ -174,7 +173,7 @@ fn resolve_archive_input(
 fn build_clp_s_search_args_for_result_cache(
     archive_selector: &ArchiveSelector,
     clp_s_query_option: &ClpSQueryOption,
-    results_cache_uri: &str,
+    result_cache_uri: &str,
     query_job_id: i32,
     dataset: &str,
 ) -> Vec<OsString> {
@@ -211,7 +210,7 @@ fn build_clp_s_search_args_for_result_cache(
     args.extend([
         OsString::from("results-cache"),
         OsString::from("--uri"),
-        OsString::from(results_cache_uri),
+        OsString::from(result_cache_uri),
         OsString::from("--collection"),
         OsString::from(query_job_id.to_string()),
         OsString::from("--max-num-results"),
@@ -396,7 +395,7 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_fs_with_timestamps_and_ignore_case() {
+    fn build_clp_s_search_args_for_result_cache_fs_with_timestamps_and_ignore_case() {
         let clp_s_query_option = ClpSQueryOption {
             query_string: "level: \"ERROR\"".to_string(),
             max_num_results: Some(NonZeroU32::new(7).expect("7 is nonzero")),
@@ -438,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_fs_without_timestamps_or_ignore_case() {
+    fn build_clp_s_search_args_for_result_cache_fs_without_timestamps_or_ignore_case() {
         assert_eq!(
             build_clp_s_search_args_for_result_cache(
                 &directory_selector(),
@@ -467,7 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_s3_uses_object_url_and_no_archive_id() {
+    fn build_clp_s_search_args_for_result_cache_s3_uses_object_url_and_no_archive_id() {
         assert_eq!(
             build_clp_s_search_args_for_result_cache(
                 &ArchiveSelector::ObjectUrl(
@@ -498,7 +497,7 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_never_passes_batch_size() {
+    fn build_clp_s_search_args_for_result_cache_never_passes_batch_size() {
         let args = build_clp_s_search_args_for_result_cache(
             &directory_selector(),
             &unbounded_query_option(),
