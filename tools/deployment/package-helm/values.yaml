@@ -200,6 +200,7 @@ clpConfig:
     database_connection_pool_size: 10
     job_polling_interval_millisecs: 100
     logging_level: "INFO"
+    max_concurrent_jobs: 1000
     resource_group:
       name: "compression-coordinator"
     result_polling:
