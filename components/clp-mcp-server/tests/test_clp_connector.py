@@ -111,9 +111,9 @@ async def test_read_results_returns_docs(mock_clp_config: Any) -> None:
     """Tests reading results returns expected documents."""
     connector = ClpConnector(mock_clp_config)
     mock_docs = [
-        {"_id": "1", "archive_id": "archA", "log_event_ix": 1},
-        {"_id": "2", "archive_id": "archB", "log_event_ix": 2},
-        {"_id": "3", "archive_id": "archC", "log_event_ix": 3},
+        {"_id": {"archive_id": "archA", "log_event_idx": 1}},
+        {"_id": {"archive_id": "archB", "log_event_idx": 2}},
+        {"_id": {"archive_id": "archC", "log_event_idx": 3}},
     ]
     mock_collection = AsyncMock()
     mock_collection.find = MagicMock(return_value=_aiter(mock_docs))
@@ -129,8 +129,8 @@ async def test_read_results_adds_link_field(mock_clp_config: Any) -> None:
     """Ensures read_results adds a 'link' field."""
     connector = ClpConnector(mock_clp_config)
     mock_docs = [
-        {"_id": "1", "archive_id": "archA", "log_event_ix": 10},
-        {"_id": "2", "archive_id": "archB", "log_event_ix": 20},
+        {"_id": {"archive_id": "archA", "log_event_idx": 10}},
+        {"_id": {"archive_id": "archB", "log_event_idx": 20}},
     ]
     mock_collection = AsyncMock()
     mock_collection.find = MagicMock(return_value=_aiter(mock_docs))
@@ -142,8 +142,8 @@ async def test_read_results_adds_link_field(mock_clp_config: Any) -> None:
     for original, result in zip(mock_docs, results, strict=True):
         expected_link = (
             f"http://{mock_clp_config.webui.host}:{mock_clp_config.webui.port}"
-            f"/streamFile?type=json&streamId={original['archive_id']}"
-            f"&dataset=default&logEventIdx={original['log_event_ix']}"
+            f"/streamFile?type=json&streamId={original['_id']['archive_id']}"
+            f"&dataset=default&logEventIdx={original['_id']['log_event_idx']}"
         )
         assert result["link"] == expected_link
 

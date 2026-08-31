@@ -160,12 +160,16 @@ class ClpConnector:
         collection = self._results_cache[str(query_id)]
         results = []
 
-        async for doc in collection.find({}, limit=SEARCH_MAX_NUM_RESULTS):
+        async for raw_doc in collection.find({}, limit=SEARCH_MAX_NUM_RESULTS):
+            doc = dict(raw_doc)
+            result_id = doc["_id"]
+            doc["archive_id"] = result_id["archive_id"]
+            doc["log_event_idx"] = result_id["log_event_idx"]
             doc["link"] = (
                 f"{self._webui_addr}/streamFile?type=json"
                 f"&streamId={doc['archive_id']}"
                 f"&dataset={CLP_DEFAULT_DATASET_NAME}"
-                f"&logEventIdx={doc['log_event_ix']}"
+                f"&logEventIdx={doc['log_event_idx']}"
             )
             doc["_id"] = None
             results.append(doc)

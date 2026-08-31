@@ -6,6 +6,25 @@ import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 import {SearchResult} from "./typings";
 
 
+interface SearchResultId {
+    archive_id: string;
+    log_event_idx: number;
+}
+
+interface LegacyObjectId {
+    $oid: string;
+}
+
+type RawSearchResult =
+    (Omit<SearchResult, "_id" | "log_event_idx"> & {
+        _id: LegacyObjectId | string;
+        log_event_ix: number;
+    }) |
+    (Omit<SearchResult, "_id" | "archive_id" | "log_event_idx"> & {
+        _id: SearchResultId;
+    });
+
+
 /**
  * Custom hook to stream search results for the current searchJobId from the API server's SSE
  * endpoint. When the stream ends, the search UI state is updated to `DONE` (or `FAILED` if the
@@ -33,15 +52,23 @@ const useSearchResults = () => {
             }
         },
         parse: (data) => {
-            // MongoDB ObjectIds are serialized as `{"$oid": "..."}` in the SSE stream.
-            const doc = JSON.parse(data) as Omit<SearchResult, "_id"> &
-                {_id: string | {$oid: string}};
+            const doc = JSON.parse(data) as RawSearchResult;
+
+            if ("log_event_ix" in doc) {
+                return {
+                    ...doc,
+                    _id: "object" === typeof doc._id ?
+                        doc._id.$oid :
+                        doc._id,
+                    log_event_idx: doc.log_event_ix,
+                };
+            }
 
             return {
                 ...doc,
-                _id: "object" === typeof doc._id ?
-                    doc._id.$oid :
-                    doc._id,
+                archive_id: doc._id.archive_id,
+                _id: JSON.stringify(doc._id),
+                log_event_idx: doc._id.log_event_idx,
             };
         },
         rawDocs: true,
