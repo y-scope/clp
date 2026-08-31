@@ -53,6 +53,7 @@ constexpr char cIsLastChunk[]{"is_last_chunk"};
 }  // namespace results_cache::decompression
 
 namespace results_cache::search {
+constexpr char cId[]{"_id"};
 constexpr char cOrigFilePath[]{"orig_file_path"};
 constexpr char cLogEventIx[]{"log_event_ix"};
 constexpr char cTimestamp[]{"timestamp"};

@@ -7,10 +7,13 @@
 
 #include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/builder/basic/kvp.hpp>
+#include <bsoncxx/types.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <mongocxx/exception/bulk_write_exception.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
+#include <mongocxx/options/insert.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
@@ -28,6 +31,50 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
+namespace {
+constexpr int32_t cDuplicateKeyErrorCode{11'000};
+
+[[nodiscard]] auto contains_only_duplicate_key_write_errors(
+        mongocxx::bulk_write_exception const& exception
+) -> bool {
+    auto const& raw_server_error = exception.raw_server_error();
+    if (false == raw_server_error.has_value()) {
+        return false;
+    }
+
+    auto const write_errors_element = raw_server_error->view()["writeErrors"];
+    if (false == static_cast<bool>(write_errors_element)
+        || bsoncxx::type::k_array != write_errors_element.type())
+    {
+        return false;
+    }
+
+    bool found_write_error{false};
+    for (auto const& write_error_element : write_errors_element.get_array().value) {
+        if (bsoncxx::type::k_document != write_error_element.type()) {
+            return false;
+        }
+        auto const code_element = write_error_element.get_document().value["code"];
+        if (false == static_cast<bool>(code_element)) {
+            return false;
+        }
+        if (bsoncxx::type::k_int32 == code_element.type()) {
+            if (cDuplicateKeyErrorCode != code_element.get_int32().value) {
+                return false;
+            }
+        } else if (bsoncxx::type::k_int64 == code_element.type()) {
+            if (cDuplicateKeyErrorCode != code_element.get_int64().value) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+        found_write_error = true;
+    }
+    return found_write_error;
+}
+}  // namespace
+
 void FileOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
@@ -97,6 +144,21 @@ ErrorCode ResultsCacheOutputHandler::finish() {
                     std::move(
                             bsoncxx::builder::basic::make_document(
                                     bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cId,
+                                            bsoncxx::builder::basic::make_document(
+                                                    bsoncxx::builder::basic::kvp(
+                                                            constants::results_cache::search::
+                                                                    cArchiveId,
+                                                            result.archive_id
+                                                    ),
+                                                    bsoncxx::builder::basic::kvp(
+                                                            constants::results_cache::search::
+                                                                    cLogEventIx,
+                                                            result.log_event_idx
+                                                    )
+                                            )
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
                                             constants::results_cache::search::cOrigFilePath,
                                             std::move(result.original_path)
                                     ),
@@ -126,24 +188,46 @@ ErrorCode ResultsCacheOutputHandler::finish() {
             count++;
 
             if (count == m_batch_size) {
-                m_collection.insert_many(m_results);
-                m_results.clear();
+                if (false == insert_results()) {
+                    return ErrorCode::ErrorCodeFailureDbBulkWrite;
+                }
                 count = 0;
             }
         } catch (mongocxx::exception const& e) {
+            SPDLOG_ERROR("Failed to build or insert search results - {}", e.what());
             return ErrorCode::ErrorCodeFailureDbBulkWrite;
         }
     }
 
     try {
         if (false == m_results.empty()) {
-            m_collection.insert_many(m_results);
-            m_results.clear();
+            if (false == insert_results()) {
+                return ErrorCode::ErrorCodeFailureDbBulkWrite;
+            }
         }
     } catch (mongocxx::exception const& e) {
+        SPDLOG_ERROR("Failed to insert final search-results batch - {}", e.what());
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
     return ErrorCode::ErrorCodeSuccess;
+}
+
+auto ResultsCacheOutputHandler::insert_results() -> bool {
+    try {
+        mongocxx::options::insert options;
+        options.ordered(false);
+        m_collection.insert_many(m_results, options);
+    } catch (mongocxx::bulk_write_exception const& exception) {
+        if (false == contains_only_duplicate_key_write_errors(exception)) {
+            SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+            return false;
+        }
+    } catch (mongocxx::exception const& exception) {
+        SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+        return false;
+    }
+    m_results.clear();
+    return true;
 }
 
 void ResultsCacheOutputHandler::write(
