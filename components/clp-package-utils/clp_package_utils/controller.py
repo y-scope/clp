@@ -564,29 +564,29 @@ class BaseController(ABC):
         # Storage config
         env_vars |= {
             "SPIDER_STORAGE_LOG_LEVEL": storage.log_level,
-            "SPIDER_STORAGE_DB_MAX_CONNECTIONS": _optional_str(storage.db_max_connections),
-            "SPIDER_STORAGE_INBOUND_QUEUE_CLEANUP_CAPACITY": _optional_str(
+            "SPIDER_STORAGE_DB_MAX_CONNECTIONS": _str_or_none(storage.db_max_connections),
+            "SPIDER_STORAGE_INBOUND_QUEUE_CLEANUP_CAPACITY": _str_or_none(
                 storage.inbound_queue.cleanup_capacity
             ),
-            "SPIDER_STORAGE_INBOUND_QUEUE_COMMIT_CAPACITY": _optional_str(
+            "SPIDER_STORAGE_INBOUND_QUEUE_COMMIT_CAPACITY": _str_or_none(
                 storage.inbound_queue.commit_capacity
             ),
-            "SPIDER_STORAGE_INBOUND_QUEUE_TASK_CAPACITY": _optional_str(
+            "SPIDER_STORAGE_INBOUND_QUEUE_TASK_CAPACITY": _str_or_none(
                 storage.inbound_queue.task_capacity
             ),
-            "SPIDER_STORAGE_JOB_CACHE_GC_INTERVAL_SEC": _optional_str(
+            "SPIDER_STORAGE_JOB_CACHE_GC_INTERVAL_SEC": _str_or_none(
                 storage.job_cache_gc.gc_interval_sec
             ),
-            "SPIDER_STORAGE_JOB_CACHE_TERMINATED_JOB_RETENTION_SEC": _optional_str(
+            "SPIDER_STORAGE_JOB_CACHE_TERMINATED_JOB_RETENTION_SEC": _str_or_none(
                 storage.job_cache_gc.terminated_job_retention_sec
             ),
-            "SPIDER_STORAGE_TASK_INSTANCE_POOL_EXECUTION_MANAGER_STALE_CUTOFF_SEC": _optional_str(
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_EXECUTION_MANAGER_STALE_CUTOFF_SEC": _str_or_none(
                 storage.task_instance_pool.execution_manager_stale_cutoff_sec
             ),
-            "SPIDER_STORAGE_TASK_INSTANCE_POOL_GC_INTERVAL_SEC": _optional_str(
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_GC_INTERVAL_SEC": _str_or_none(
                 storage.task_instance_pool.gc_interval_sec
             ),
-            "SPIDER_STORAGE_TASK_INSTANCE_POOL_MESSAGE_CHANNEL_CAPACITY": _optional_str(
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_MESSAGE_CHANNEL_CAPACITY": _str_or_none(
                 storage.task_instance_pool.message_channel_capacity
             ),
         }
@@ -595,28 +595,28 @@ class BaseController(ABC):
         env_vars |= {
             "SPIDER_SCHEDULER_LOG_LEVEL": scheduler.log_level,
             "SPIDER_SCHEDULER_POLICY": scheduler.policy,
-            "SPIDER_SCHEDULER_CONNECTION_POOL_SIZE": _optional_str(scheduler.connection_pool_size),
-            "SPIDER_SCHEDULER_STOP_TIMEOUT_SEC": _optional_str(scheduler.stop_timeout_sec),
-            "SPIDER_SCHEDULER_EM_REGISTRY_DEAD_EM_CUTOFF_SEC": _optional_str(
+            "SPIDER_SCHEDULER_CONNECTION_POOL_SIZE": _str_or_none(scheduler.connection_pool_size),
+            "SPIDER_SCHEDULER_STOP_TIMEOUT_SEC": _str_or_none(scheduler.stop_timeout_sec),
+            "SPIDER_SCHEDULER_EM_REGISTRY_DEAD_EM_CUTOFF_SEC": _str_or_none(
                 scheduler.em_registry.dead_em_cutoff_sec
             ),
-            "SPIDER_SCHEDULER_EM_REGISTRY_LIVENESS_TRACKING_INTERVAL_MS": _optional_str(
+            "SPIDER_SCHEDULER_EM_REGISTRY_LIVENESS_TRACKING_INTERVAL_MS": _str_or_none(
                 scheduler.em_registry.liveness_tracking_interval_ms
             ),
         }
-        env_vars |= _get_env_for_spider_scheduler_policy(scheduler)
+        env_vars |= _get_spider_scheduler_policy_env_vars(scheduler)
 
         # Worker config
         env_vars |= {
-            "SPIDER_WORKER_REPLICAS": _optional_str(worker.replicas),
+            "SPIDER_WORKER_REPLICAS": _str_or_none(worker.replicas),
             "SPIDER_WORKER_LOG_LEVEL": worker.log_level,
-            "SPIDER_WORKER_CONNECTION_POOL_SIZE": _optional_str(worker.connection_pool_size),
-            "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _optional_str(worker.scheduler_poll_wait_ms),
-            "SPIDER_WORKER_MAX_LOG_LINE_BYTES": _optional_str(worker.max_log_line_bytes),
-            "SPIDER_WORKER_LIVENESS_SCHEDULER_HEARTBEAT_INTERVAL_SEC": _optional_str(
+            "SPIDER_WORKER_CONNECTION_POOL_SIZE": _str_or_none(worker.connection_pool_size),
+            "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _str_or_none(worker.scheduler_poll_wait_ms),
+            "SPIDER_WORKER_MAX_LOG_LINE_BYTES": _str_or_none(worker.max_log_line_bytes),
+            "SPIDER_WORKER_LIVENESS_SCHEDULER_HEARTBEAT_INTERVAL_SEC": _str_or_none(
                 worker.liveness.scheduler_heartbeat_interval_sec
             ),
-            "SPIDER_WORKER_LIVENESS_STORAGE_HEARTBEAT_INTERVAL_SEC": _optional_str(
+            "SPIDER_WORKER_LIVENESS_STORAGE_HEARTBEAT_INTERVAL_SEC": _str_or_none(
                 worker.liveness.storage_heartbeat_interval_sec
             ),
         }
@@ -1257,7 +1257,7 @@ class DockerComposeController(BaseController):
 
         # Paths
         env_vars |= {
-            "CLP_AWS_CONFIG_DIR_HOST": _optional_str(self._clp_config.aws_config_directory),
+            "CLP_AWS_CONFIG_DIR_HOST": _str_or_none(self._clp_config.aws_config_directory),
             "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
             "CLP_TMP_DIR_HOST": str(self._clp_config.tmp_directory),
@@ -1503,7 +1503,7 @@ def _chown_recursively(
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
 
 
-def _get_env_for_spider_round_robin_scheduler(scheduler: SpiderScheduler) -> EnvVarsDict:
+def _get_spider_round_robin_scheduler_env_vars(scheduler: SpiderScheduler) -> EnvVarsDict:
     """
     :param scheduler:
     :return: Dictionary of environment variables necessary to tune the round-robin policy.
@@ -1511,28 +1511,28 @@ def _get_env_for_spider_round_robin_scheduler(scheduler: SpiderScheduler) -> Env
     round_robin = scheduler.round_robin
     return EnvVarsDict(
         {
-            "SPIDER_SCHEDULER_ROUND_ROBIN_ACTIVE_JOB_QUEUE_CAPACITY": _optional_str(
+            "SPIDER_SCHEDULER_ROUND_ROBIN_ACTIVE_JOB_QUEUE_CAPACITY": _str_or_none(
                 round_robin.active_job_queue_capacity
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _optional_str(
+            "SPIDER_SCHEDULER_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
                 round_robin.cleanup_ready_task_capacity
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _optional_str(
+            "SPIDER_SCHEDULER_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
                 round_robin.commit_ready_task_capacity
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _optional_str(
+            "SPIDER_SCHEDULER_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
                 round_robin.dispatch_queue_capacity
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": _optional_str(
+            "SPIDER_SCHEDULER_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": _str_or_none(
                 round_robin.finalizing_job_expiration_timeout_sec
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_READY_TASK_CAPACITY": _optional_str(
+            "SPIDER_SCHEDULER_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
                 round_robin.ready_task_capacity
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _optional_str(
+            "SPIDER_SCHEDULER_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
                 round_robin.storage_poll_timeout_ms
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_TICK_INTERVAL_MS": _optional_str(
+            "SPIDER_SCHEDULER_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
                 round_robin.tick_interval_ms
             ),
         }
@@ -1542,11 +1542,11 @@ def _get_env_for_spider_round_robin_scheduler(scheduler: SpiderScheduler) -> Env
 _SPIDER_SCHEDULER_POLICY_ENV_GETTERS: dict[
     SpiderSchedulerPolicy, Callable[[SpiderScheduler], EnvVarsDict]
 ] = {
-    SpiderSchedulerPolicy.ROUND_ROBIN: _get_env_for_spider_round_robin_scheduler,
+    SpiderSchedulerPolicy.ROUND_ROBIN: _get_spider_round_robin_scheduler_env_vars,
 }
 
 
-def _get_env_for_spider_scheduler_policy(scheduler: SpiderScheduler) -> EnvVarsDict:
+def _get_spider_scheduler_policy_env_vars(scheduler: SpiderScheduler) -> EnvVarsDict:
     """
     :param scheduler:
     :return: Dictionary of environment variables necessary to tune the policy selected by
@@ -1562,7 +1562,7 @@ def _get_env_for_spider_scheduler_policy(scheduler: SpiderScheduler) -> EnvVarsD
     return get_env(scheduler)
 
 
-def _optional_str(value: int | pathlib.Path | None) -> str | None:
+def _str_or_none(value: int | pathlib.Path | None) -> str | None:
     """
     :param value:
     :return: `value` as a string, or None if `value` is None.
