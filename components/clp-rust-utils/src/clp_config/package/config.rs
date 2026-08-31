@@ -196,6 +196,9 @@ impl Database {
     }
 }
 
+/// The default maximum number of results retained for a query.
+pub const DEFAULT_MAX_NUM_QUERY_RESULTS: u32 = 1000;
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct ApiServer {
@@ -211,7 +214,7 @@ impl Default for ApiServer {
             host: "localhost".to_owned(),
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
-            default_max_num_query_results: 1000,
+            default_max_num_query_results: DEFAULT_MAX_NUM_QUERY_RESULTS,
         }
     }
 }
