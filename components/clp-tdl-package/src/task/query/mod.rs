@@ -16,5 +16,5 @@ pub(crate) fn clp_s_search_task(
     _archive_id: NonEmptyString,
     _query_output_handle: QueryOutputHandle,
 ) -> Result<(), spider_tdl::TdlError> {
-    todo!("query task is not implemented")
+    todo!("clp-s search task is not implemented")
 }

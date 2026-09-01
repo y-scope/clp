@@ -29,6 +29,4 @@ pub struct ClpSQueryOption {
 /// The output handler that `clp-s` writes a query task's results to.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum QueryOutputHandle {
-    /// Writes results to the results-cache collection named after the query job's ID.
-    ResultsCache,
 }
