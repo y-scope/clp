@@ -36,11 +36,11 @@ namespace {
 constexpr int32_t cDuplicateKeyErrorCode{11'000};
 
 /**
- * Checks whether a bulk-write reply reports a successful command.
+ * Checks whether an aggregated bulk-write reply contains any command errors.
  * @param reply The raw MongoDB bulk-write reply.
- * @return true if the reply contains no command error, false otherwise.
+ * @return true if the reply contains a command error, false otherwise.
  */
-[[nodiscard]] auto is_successful_command_reply(bsoncxx::document::view const& reply) -> bool;
+[[nodiscard]] auto has_command_errors(bsoncxx::document::view const& reply) -> bool;
 
 /**
  * Checks whether a bulk-write reply contains any write-concern errors.
@@ -59,6 +59,10 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
 /**
  * Returns whether the bulk write failed only because some documents already exist.
  *
+ * The C++ driver exposes per-write failures through `raw_server_error()`. In this aggregated reply,
+ * command errors are stored in `errorReplies`, write-concern errors in `writeConcernErrors`, and
+ * individual write failures in `writeErrors`.
+ *
  * Command and write-concern errors are rejected since they mean MongoDB did not confirm the
  * outcome of the entire batch. At least one write error must be present, and every write error
  * must be a duplicate-key error.
@@ -69,25 +73,16 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
         mongocxx::bulk_write_exception const& exception
 ) -> bool;
 
-[[nodiscard]] auto is_successful_command_reply(bsoncxx::document::view const& reply) -> bool {
-    if (static_cast<bool>(reply["code"]) || static_cast<bool>(reply["errmsg"])) {
+[[nodiscard]] auto has_command_errors(bsoncxx::document::view const& reply) -> bool {
+    auto const errors_element = reply["errorReplies"];
+    if (false == static_cast<bool>(errors_element)) {
         return false;
     }
-
-    auto const command_status = reply["ok"];
-    if (false == static_cast<bool>(command_status)) {
-        return false;
+    if (bsoncxx::type::k_array != errors_element.type()) {
+        return true;
     }
-    if (bsoncxx::type::k_double == command_status.type()) {
-        return 1.0 == command_status.get_double().value;
-    }
-    if (bsoncxx::type::k_int32 == command_status.type()) {
-        return 1 == command_status.get_int32().value;
-    }
-    if (bsoncxx::type::k_int64 == command_status.type()) {
-        return 1 == command_status.get_int64().value;
-    }
-    return false;
+    auto const errors = errors_element.get_array().value;
+    return errors.begin() != errors.end();
 }
 
 [[nodiscard]] auto has_write_concern_errors(bsoncxx::document::view const& reply) -> bool {
@@ -134,7 +129,7 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
     }
 
     auto const reply = raw_server_error->view();
-    if (false == is_successful_command_reply(reply) || has_write_concern_errors(reply)) {
+    if (has_command_errors(reply) || has_write_concern_errors(reply)) {
         return false;
     }
 
