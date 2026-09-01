@@ -15,5 +15,4 @@ documented below.
 
 ### Query
 
-* `query::clp_s_query_to_results_cache`: Query a single `clp-s` archive and write the matching log
-  events directly to the results cache.
+* `query::clp_s_search`: Query a single `clp-s` archive.

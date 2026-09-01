@@ -10,13 +10,6 @@ use spider_tdl::task;
 
 mod search;
 
-/// Queries one CLP-S archive and writes its matches to the given output handler.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`TdlError::ExecutionError`] if [`search::search`] fails.
 #[task(name = "query::clp_s_search")]
 pub(crate) fn clp_s_search_task(
     ctx: TaskContext,
