@@ -245,28 +245,21 @@ ErrorCode ResultsCacheOutputHandler::finish() {
                             )
                     )
             );
-            count++;
-
-            if (count == m_batch_size) {
-                if (false == insert_results()) {
-                    return ErrorCode::ErrorCodeFailureDbBulkWrite;
-                }
-                count = 0;
-            }
         } catch (mongocxx::exception const& e) {
-            SPDLOG_ERROR("Failed to build or insert search results - {}", e.what());
+            SPDLOG_ERROR("Failed to build search result - {}", e.what());
             return ErrorCode::ErrorCodeFailureDbBulkWrite;
         }
-    }
 
-    try {
-        if (false == m_results.empty()) {
+        count++;
+        if (count == m_batch_size) {
             if (false == insert_results()) {
                 return ErrorCode::ErrorCodeFailureDbBulkWrite;
             }
+            count = 0;
         }
-    } catch (mongocxx::exception const& e) {
-        SPDLOG_ERROR("Failed to insert final search-results batch - {}", e.what());
+    }
+
+    if (false == m_results.empty() && false == insert_results()) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
     return ErrorCode::ErrorCodeSuccess;
