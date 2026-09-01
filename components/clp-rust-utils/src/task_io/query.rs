@@ -12,8 +12,8 @@ pub struct ClpSQueryOption {
     /// The query string passed positionally to `clp-s`.
     pub query_string: NonEmptyString,
 
-    /// The per-archive result limit. When absent,
-    /// [`crate::clp_config::package::config::DEFAULT_MAX_NUM_QUERY_RESULTS`] is used.
+    /// The per-archive result limit. When absent, the task omits `--max-num-results` and uses the
+    /// `clp-s` default.
     pub max_num_results: Option<NonZeroU32>,
 
     /// Inclusive `--tge` bound in Unix epoch milliseconds.
