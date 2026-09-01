@@ -2,7 +2,6 @@
 
 use std::ffi::OsString;
 use std::io::Read;
-use std::num::NonZeroU32;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -14,6 +13,7 @@ use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::resolve_dataset_name;
+use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
@@ -42,7 +42,7 @@ use crate::task::utils::s3_credential_env;
 pub(super) fn search(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
-    query_job_id: i32,
+    query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
     output_handle: &OutputHandle,
     dataset: Option<&str>,
@@ -174,7 +174,7 @@ fn build_clp_s_search_args_for_result_cache(
     archive_selector: &ArchiveSelector,
     clp_s_query_option: &ClpSQueryOption,
     result_cache_uri: &str,
-    query_job_id: i32,
+    query_job_id: QueryJobId,
     dataset: &str,
 ) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
@@ -191,33 +191,31 @@ fn build_clp_s_search_args_for_result_cache(
         }
     }
 
-    args.push(OsString::from(&clp_s_query_option.query_string));
-    if let Some(begin_timestamp) = clp_s_query_option.begin_timestamp {
+    args.push(OsString::from(clp_s_query_option.query_string.as_str()));
+    if let Some(begin_timestamp_millisecs) = clp_s_query_option.begin_timestamp_millisecs {
         args.push(OsString::from("--tge"));
-        args.push(OsString::from(begin_timestamp.to_string()));
+        args.push(OsString::from(begin_timestamp_millisecs.to_string()));
     }
-    if let Some(end_timestamp) = clp_s_query_option.end_timestamp {
+    if let Some(end_timestamp_millisecs) = clp_s_query_option.end_timestamp_millisecs {
         args.push(OsString::from("--tle"));
-        args.push(OsString::from(end_timestamp.to_string()));
+        args.push(OsString::from(end_timestamp_millisecs.to_string()));
     }
     if clp_s_query_option.ignore_case {
         args.push(OsString::from("--ignore-case"));
     }
 
-    let max_num_results = clp_s_query_option
-        .max_num_results
-        .map_or(u32::MAX, NonZeroU32::get);
     args.extend([
         OsString::from("results-cache"),
         OsString::from("--uri"),
         OsString::from(result_cache_uri),
         OsString::from("--collection"),
         OsString::from(query_job_id.to_string()),
-        OsString::from("--max-num-results"),
-        OsString::from(max_num_results.to_string()),
-        OsString::from("--dataset"),
-        OsString::from(dataset),
     ]);
+    if let Some(max_num_results) = clp_s_query_option.max_num_results {
+        args.push(OsString::from("--max-num-results"));
+        args.push(OsString::from(max_num_results.to_string()));
+    }
+    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
     args
 }
 
@@ -254,9 +252,9 @@ fn run_clp_s_search(
         .inspect_err(|e| {
             tracing::error!(
                 error = % e,
-                clp_s_bin = %clp_s_bin.display(),
+                clp_s_bin = % clp_s_bin.display(),
                 "Failed to spawn clp-s.",
-            )
+            );
         })?;
 
     let mut stderr = child
@@ -324,10 +322,10 @@ mod tests {
     /// A query option with no timestamp bounds, no result limit, and case-sensitive matching.
     fn unbounded_query_option() -> ClpSQueryOption {
         ClpSQueryOption {
-            query_string: "level: \"ERROR\"".to_string(),
+            query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
             max_num_results: None,
-            begin_timestamp: None,
-            end_timestamp: None,
+            begin_timestamp_millisecs: None,
+            end_timestamp_millisecs: None,
             ignore_case: false,
         }
     }
@@ -409,10 +407,10 @@ mod tests {
     #[test]
     fn build_clp_s_search_args_for_result_cache_fs_with_timestamps_and_ignore_case() {
         let clp_s_query_option = ClpSQueryOption {
-            query_string: "level: \"ERROR\"".to_string(),
+            query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
             max_num_results: Some(NonZeroU32::new(7).expect("7 is nonzero")),
-            begin_timestamp: Some(1_310_138_944_000),
-            end_timestamp: Some(1_311_208_074_120),
+            begin_timestamp_millisecs: Some(1_310_138_944_000),
+            end_timestamp_millisecs: Some(1_311_208_074_120),
             ignore_case: true,
         };
 
@@ -449,6 +447,46 @@ mod tests {
     }
 
     #[test]
+    fn build_clp_s_search_args_for_result_cache_omits_max_num_results_when_unset() {
+        let clp_s_query_option = ClpSQueryOption {
+            query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
+            max_num_results: None,
+            begin_timestamp_millisecs: Some(1_310_138_944_000),
+            end_timestamp_millisecs: Some(1_311_208_074_120),
+            ignore_case: true,
+        };
+
+        assert_eq!(
+            build_clp_s_search_args_for_result_cache(
+                &directory_selector(),
+                &clp_s_query_option,
+                "mongodb://results-cache:27017/clp-query-results",
+                42,
+                "ds1",
+            ),
+            vec![
+                OsString::from("s"),
+                OsString::from("/archives/ds1"),
+                OsString::from("--archive-id"),
+                OsString::from("archive-id"),
+                OsString::from("level: \"ERROR\""),
+                OsString::from("--tge"),
+                OsString::from("1310138944000"),
+                OsString::from("--tle"),
+                OsString::from("1311208074120"),
+                OsString::from("--ignore-case"),
+                OsString::from("results-cache"),
+                OsString::from("--uri"),
+                OsString::from("mongodb://results-cache:27017/clp-query-results"),
+                OsString::from("--collection"),
+                OsString::from("42"),
+                OsString::from("--dataset"),
+                OsString::from("ds1"),
+            ]
+        );
+    }
+
+    #[test]
     fn build_clp_s_search_args_for_result_cache_fs_without_timestamps_or_ignore_case() {
         assert_eq!(
             build_clp_s_search_args_for_result_cache(
@@ -469,8 +507,6 @@ mod tests {
                 OsString::from("mongodb://results-cache:27017/clp-query-results"),
                 OsString::from("--collection"),
                 OsString::from("42"),
-                OsString::from("--max-num-results"),
-                OsString::from("4294967295"),
                 OsString::from("--dataset"),
                 OsString::from("default"),
             ]
@@ -500,8 +536,6 @@ mod tests {
                 OsString::from("mongodb://results-cache:27017/clp-query-results"),
                 OsString::from("--collection"),
                 OsString::from("42"),
-                OsString::from("--max-num-results"),
-                OsString::from("4294967295"),
                 OsString::from("--dataset"),
                 OsString::from("ds1"),
             ]
