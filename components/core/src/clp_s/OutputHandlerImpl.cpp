@@ -40,6 +40,35 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
  * @param reply The raw MongoDB bulk-write reply.
  * @return true if the reply contains no command error, false otherwise.
  */
+[[nodiscard]] auto is_successful_command_reply(bsoncxx::document::view const& reply) -> bool;
+
+/**
+ * Checks whether a bulk-write reply contains any write-concern errors.
+ * @param reply The raw MongoDB bulk-write reply.
+ * @return true if the reply contains a write-concern error, false otherwise.
+ */
+[[nodiscard]] auto has_write_concern_errors(bsoncxx::document::view const& reply) -> bool;
+
+/**
+ * Checks whether an entry from a bulk-write reply's `writeErrors` array is a duplicate-key error.
+ * @param write_error The write-error entry to inspect.
+ * @return true if the entry has MongoDB's duplicate-key error code, false otherwise.
+ */
+[[nodiscard]] auto is_duplicate_key_write_error(bsoncxx::array::element const& write_error) -> bool;
+
+/**
+ * Returns whether the bulk write failed only because some documents already exist.
+ *
+ * Command and write-concern errors are rejected since they mean MongoDB did not confirm the
+ * outcome of the entire batch. At least one write error must be present, and every write error
+ * must be a duplicate-key error.
+ * @param exception The exception containing the raw MongoDB bulk-write reply.
+ * @return true if the reply contains only duplicate-key write errors, false otherwise.
+ */
+[[nodiscard]] auto contains_only_duplicate_key_write_errors(
+        mongocxx::bulk_write_exception const& exception
+) -> bool;
+
 [[nodiscard]] auto is_successful_command_reply(bsoncxx::document::view const& reply) -> bool {
     if (static_cast<bool>(reply["code"]) || static_cast<bool>(reply["errmsg"])) {
         return false;
@@ -61,11 +90,6 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
     return false;
 }
 
-/**
- * Checks whether a bulk-write reply contains any write-concern errors.
- * @param reply The raw MongoDB bulk-write reply.
- * @return true if the reply contains a write-concern error, false otherwise.
- */
 [[nodiscard]] auto has_write_concern_errors(bsoncxx::document::view const& reply) -> bool {
     if (static_cast<bool>(reply["writeConcernError"])) {
         return true;
@@ -82,11 +106,6 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
     return errors.begin() != errors.end();
 }
 
-/**
- * Checks whether an entry from a bulk-write reply's `writeErrors` array is a duplicate-key error.
- * @param write_error The write-error entry to inspect.
- * @return true if the entry has MongoDB's duplicate-key error code, false otherwise.
- */
 [[nodiscard]] auto is_duplicate_key_write_error(bsoncxx::array::element const& write_error)
         -> bool {
     if (bsoncxx::type::k_document != write_error.type()) {
@@ -106,15 +125,6 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
     return false;
 }
 
-/**
- * Returns whether the bulk write failed only because some documents already exist.
- *
- * Command and write-concern errors are rejected since they mean MongoDB did not confirm the
- * outcome of the entire batch. At least one write error must be present, and every write error
- * must be a duplicate-key error.
- * @param exception The exception containing the raw MongoDB bulk-write reply.
- * @return true if the reply contains only duplicate-key write errors, false otherwise.
- */
 [[nodiscard]] auto contains_only_duplicate_key_write_errors(
         mongocxx::bulk_write_exception const& exception
 ) -> bool {
