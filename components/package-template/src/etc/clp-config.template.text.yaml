@@ -17,8 +17,14 @@ webui:
 #  rate_limit: 1000
 #  presto_max_num_search_results: 1000
 
-# API server config
-api_server: null
+## API server config
+#api_server:
+#  host: "localhost"
+#  port: 3001
+#  default_max_num_query_results: 1000
+#  query_job_polling:
+#    initial_backoff_ms: 100
+#    max_backoff_ms: 5000
 
 # log-ingestor is not supported in clp-text
 log_ingestor: null
@@ -36,12 +42,13 @@ log_ingestor: null
 #credentials_file_path: "etc/credentials.yaml"
 #
 ## Remove any bundled services below if you wish to use your own.
-#bundled:
-#  - "database"
-#  - "queue"
-#  - "redis"
-#  - "results_cache"
-#  - "otel_collector"
+#bundled: [
+#  "database",
+#  "queue",
+#  "redis",
+#  "results_cache",
+#  "otel_collector",
+#]
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -49,18 +56,11 @@ log_ingestor: null
 #  port: 3306
 #  names:
 #    clp: "clp-db"
-#    spider: "spider-db"
 #
 #compression_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
-#  type: "celery"  # "celery" or "spider"
-#
-#spider_scheduler:
-#  host: "localhost"
-#  port: 6000
-#  logging_level: "INFO"
 #
 #query_scheduler:
 #  host: "localhost"

@@ -440,6 +440,12 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     /// This method associates the given Spider job ID with the compression job in the CLP database
     /// and updates the compression job status to [`CompressionJobStatus::Running`].
     ///
+    /// This method also ensures that the job has a valid `dispatch_time`, which the coordinator
+    /// uses to mark jobs as dispatched. A coordinator restart may occur before the marker is
+    /// persisted, leaving the Spider job running without a valid `dispatch_time`. Therefore, this
+    /// method sets the field as part of row update if it has not already been set by the
+    /// coordinator.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -455,7 +461,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             i32::try_from(num_tasks).map_err(|_| Error::TooManyCompressionTasks(num_tasks))?;
         sqlx::query(formatcp!(
             "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, `num_tasks` \
-             = ?, `start_time` = CURRENT_TIMESTAMP(3) WHERE `id` = ?"
+             = ?, `start_time` = CURRENT_TIMESTAMP(3), `dispatch_time` = \
+             COALESCE(`dispatch_time`, CURRENT_TIMESTAMP()) WHERE `id` = ?"
         ))
         .bind(spider_job_id.get())
         .bind(CompressionJobStatus::Running)

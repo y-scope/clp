@@ -516,8 +516,6 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
             "password": secrets.token_urlsafe(8),
             "root_username": "root",
             "root_password": secrets.token_urlsafe(8),
-            "spider_username": "spider-user",
-            "spider_password": secrets.token_urlsafe(8),
         },
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
@@ -653,6 +651,9 @@ def validate_webui_config(
         raise ValueError(
             f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
         )
+
+    if clp_config.api_server is None:
+        raise ValueError("The API server must be enabled when the Web UI is enabled.")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
 

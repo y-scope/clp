@@ -35,7 +35,6 @@ from clp_py_utils.clp_config import (
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
-    OrchestrationType,
     OTEL_COLLECTOR_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
@@ -45,9 +44,6 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    SPIDER_DB_PASS_ENV_VAR_NAME,
-    SPIDER_DB_USER_ENV_VAR_NAME,
-    SPIDER_SCHEDULER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -192,9 +188,6 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_DB_NAME": self._clp_config.database.names[ClpDbNameType.CLP],
         }
-        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
-            env_vars["SPIDER_DB_NAME"] = self._clp_config.database.names[ClpDbNameType.SPIDER]
-
         if BundledService.DATABASE not in self._clp_config.bundled:
             env_vars |= {
                 "CLP_DB_CONNECT_PORT": str(self._clp_config.database.port),
@@ -214,10 +207,8 @@ class BaseController(ABC):
         env_vars |= {
             CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
             CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
-            SPIDER_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].password,
             CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
             CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
-            SPIDER_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.SPIDER].username,
         }
 
         return env_vars
@@ -379,32 +370,6 @@ class BaseController(ABC):
         # Credentials
         env_vars |= {
             CLP_REDIS_PASS_ENV_VAR_NAME: self._clp_config.redis.password,
-        }
-
-        return env_vars
-
-    def _set_up_env_for_spider_scheduler(self) -> EnvVarsDict:
-        """
-        Sets up environment variables for the Spider scheduler component.
-
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = SPIDER_SCHEDULER_COMPONENT_NAME
-        if self._clp_config.compression_scheduler.type != OrchestrationType.SPIDER:
-            logger.info(
-                "%s is not configured, skipping environment setup...",
-                component_name,
-            )
-            return EnvVarsDict()
-
-        logger.info("Setting up environment for %s...", component_name)
-
-        env_vars = EnvVarsDict()
-
-        # Connection config
-        env_vars |= {
-            "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self._clp_config.spider_scheduler.host),
-            "SPIDER_SCHEDULER_PORT": str(self._clp_config.spider_scheduler.port),
         }
 
         return env_vars
@@ -816,6 +781,10 @@ class BaseController(ABC):
         }
 
         server_settings_updates = {
+            "ApiServerUrl": (
+                f"http://{container_clp_config.api_server.host}"
+                f":{container_clp_config.api_server.port}"
+            ),
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
             "SqlDbPort": container_clp_config.database.port,
@@ -1199,7 +1168,6 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_database()
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
-        env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_otel_collector()
         env_vars |= self._set_up_env_for_compression_scheduler()
@@ -1231,11 +1199,10 @@ class DockerComposeController(BaseController):
             should_compose_project_be_running=False, project_name=self._project_name
         )
 
-        orchestration_type = self._clp_config.compression_scheduler.type
-        logger.info("Starting CLP using Docker Compose (%s orchestration)...", orchestration_type)
+        logger.info("Starting CLP using Docker Compose...")
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
-        cmd += ["--file", self._get_docker_file_name()]
+        cmd += ["--file", "docker-compose.yaml"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
@@ -1285,14 +1252,6 @@ class DockerComposeController(BaseController):
         """
         # This will change when we move from single to multi-container workers. See y-scope/clp#1424
         return max(1, multiprocessing.cpu_count() // 2)
-
-    def _get_docker_file_name(self) -> str:
-        """
-        :return: The Docker Compose file name to use based on the config.
-        """
-        if self._clp_config.compression_scheduler.type == OrchestrationType.SPIDER:
-            return "docker-compose-spider.yaml"
-        return "docker-compose.yaml"
 
     def _emit_topology_metrics(self) -> None:
         timestamp_ns = int(time.time() * 1e9)

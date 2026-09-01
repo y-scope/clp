@@ -72,12 +72,13 @@ To configure CLP for multi-host deployment, you'll need to:
      project) vs. external.
 
      ```yaml
-     bundled:
+     bundled: [
        # Remove services you want to run on specific hosts or use external instances
-       - database      # Remove if running on a dedicated host or using external MySQL-compatible DB
-       - queue         # Remove if running on a dedicated host or using external RabbitMQ
-       - redis         # Remove if running on a dedicated host or using external Redis
-       - results_cache # Remove if running on a dedicated host or using external MongoDB
+       "database",       # Remove if running on a dedicated host or using external MariaDB/MySQL
+       "queue",          # Remove if running on a dedicated host or using external RabbitMQ
+       "redis",          # Remove if running on a dedicated host or using external Redis
+       "results_cache",  # Remove if running on a dedicated host or using external MongoDB
+     ]
      ```
 
    * For each service, set the `host` and `port` fields to the actual hostname/IP and port where you
@@ -165,13 +166,13 @@ docker compose \
   up db-table-creator \
     --no-deps
 
-# Start queue (if using Celery)
+# Start queue
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up queue \
     --no-deps --wait
 
-# Start redis (if using Celery)
+# Start redis
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up redis \

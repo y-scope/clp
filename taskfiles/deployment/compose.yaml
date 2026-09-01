@@ -1,0 +1,38 @@
+version: "3"
+
+includes:
+  toolchains: "../toolchains.yaml"
+  utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+vars:
+  G_SPIDER_COMPOSE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/spider-compose.md5"
+  G_SPIDER_COMPOSE_TASKFILE: "{{.ROOT_DIR}}/taskfiles/deployment/compose.yaml"
+
+  G_SPIDER_COMPOSE_IMAGE_REF: "ghcr.io/y-scope/spider/compose:v0.1.0-rc.1-huntsman"
+
+tasks:
+  download-spider:
+    run: "once"
+    requires:
+      vars: ["OUTPUT_DIR"]
+    vars:
+      CHECKSUM_FILE: "{{.G_SPIDER_COMPOSE_CHECKSUM_FILE}}"
+    sources: ["{{.G_SPIDER_COMPOSE_TASKFILE}}"]
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - "toolchains:oras"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - >-
+        "{{.G_ORAS_TOOLCHAIN_DIR}}/oras" pull
+        "{{.G_SPIDER_COMPOSE_IMAGE_REF}}"
+        --output "{{.OUTPUT_DIR}}"
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]

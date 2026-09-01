@@ -2,6 +2,9 @@ name: "clp-package-spider"
 
 include:
   - "docker-compose.utils.yaml"
+  - path:
+      - "usr/share/spider-compose/compose.yaml"
+      - "compose.clp-spider.yaml"
 
 services:
   database:
@@ -13,38 +16,6 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "db-table-creator"
-
-  spider-scheduler:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "spider-scheduler"
-
-  compression-scheduler:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "compression-scheduler"
-    # Override: Spider does NOT require `queue` or `redis`.
-    depends_on:
-      db-table-creator:
-        condition: "service_completed_successfully"
-    environment:
-      SPIDER_DB_PASS: "${SPIDER_DB_PASS:?Please set a value.}"
-      SPIDER_DB_USER: "${SPIDER_DB_USER:?Please set a value.}"
-
-  compression-worker:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "spider-compression-worker"
-
-  webui:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "webui"
-
-  garbage-collector:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "garbage-collector"
 
   queue:
     extends:
@@ -66,6 +37,36 @@ services:
       file: "docker-compose-all.yaml"
       service: "results-cache-indices-creator"
 
+  compression-scheduler:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "compression-scheduler"
+
+  compression-worker:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "compression-worker"
+
+  compression-coordinator:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "compression-coordinator"
+
+  webui:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "webui"
+
+  garbage-collector:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "garbage-collector"
+
+  api-server:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "api-server"
+
   query-scheduler:
     extends:
       file: "docker-compose-all.yaml"
@@ -80,6 +81,11 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "reducer"
+
+  mcp-server:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "mcp-server"
 
   log-ingestor:
     extends:
