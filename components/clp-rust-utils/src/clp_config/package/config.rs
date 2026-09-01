@@ -11,6 +11,12 @@ use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
 use crate::dataset::resolve_dataset_name;
 
+/// The default maximum number of results retained for a query.
+///
+/// Mirror of `clp_py_utils.clp_config.ApiServer.default_max_num_query_results`. Must be kept in
+/// sync.
+pub const DEFAULT_MAX_NUM_QUERY_RESULTS: u32 = 1000;
+
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
 /// # NOTE
@@ -195,12 +201,6 @@ impl Database {
         format!("{}datasets", self.table_prefix)
     }
 }
-
-/// The default maximum number of results retained for a query.
-///
-/// Mirror of `clp_py_utils.clp_config.ApiServer.default_max_num_query_results`. Must be kept in
-/// sync.
-pub const DEFAULT_MAX_NUM_QUERY_RESULTS: u32 = 1000;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
