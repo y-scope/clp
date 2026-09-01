@@ -30,7 +30,10 @@ concurrency:
 
 jobs:
   rust-checks:
-    runs-on: "ubuntu-22.04"
+    # Stays on GH_RUNNER_LINUX_LIGHT_X64: tests:rust-all uses LocalStack on
+    # 127.0.0.1, broken on self-hosted.
+    runs-on: >-
+      ${{ fromJSON(vars.GH_RUNNER_LINUX_LIGHT_X64 || '["ubuntu-24.04"]') }}
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:

@@ -33,6 +33,7 @@ concurrency:
 jobs:
   build-macos:
     name: "build-macos"
+    if: "vars.GH_DISABLE_MACOS != 'true'"
     strategy:
       matrix:
         os:

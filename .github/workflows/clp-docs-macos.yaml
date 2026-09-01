@@ -1,4 +1,4 @@
-name: "clp-docs"
+name: "clp-docs-macos"
 
 on:
   pull_request:
@@ -8,19 +8,25 @@ on:
     - cron: "15 0 * * *"
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
   # Cancel in-progress jobs for efficiency
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: "build"
-    runs-on: >-
-      ${{ fromJSON(vars.GH_RUNNER_LINUX_LIGHT_X64 || '["ubuntu-24.04"]') }}
+  build-macos:
+    if: "vars.GH_DISABLE_MACOS != 'true'"
+    name: "build-macos"
+    runs-on: "macos-15"
+    permissions:
+      # To check out the repository.
+      contents: "read"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
+          persist-credentials: false
           lfs: "true"
           submodules: "recursive"
 
@@ -33,16 +39,3 @@ jobs:
       - name: "Build docs"
         shell: "bash"
         run: "task docs:site"
-
-      # Upload the built docs so we can download and deploy them from y-scope/yscope-docs
-      - if: >-
-          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name)
-          && ('refs/heads/main' == github.ref || startsWith(github.ref, 'refs/tags/v'))
-        uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-        with:
-          name: "docs-html"
-          path: "build/docs/html"
-          if-no-files-found: "error"
-
-          # Retain the artifact for a week in case there was a deployment issue
-          retention-days: 7
