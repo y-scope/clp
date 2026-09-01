@@ -23,7 +23,7 @@
 # is an error — it means the build was invoked without proper CA setup.
 #
 # Supports:
-#   - DNF-based (manylinux_2_28, centos-stream-9)
+#   - DNF-based (manylinux_2_28)
 #   - APK/APT-based (musllinux_1_2, ubuntu-jammy)
 #
 # CA bundle path used by tools (via env vars in the Dockerfile):
@@ -60,7 +60,7 @@ echo "corporate-proxy-container: installing CA certificates..."
 cp "$ca_cert" "${corp_ca_bundle}"
 
 if [[ -d /etc/pki/tls/certs ]]; then
-    # RHEL/CentOS/manylinux: also copy to the system bundle for tools that
+    # RHEL/manylinux: also copy to the system bundle for tools that
     # don't use env vars.
     cp "$ca_cert" "/etc/pki/tls/certs/ca-bundle.crt"
     echo "corporate-proxy-container: installed CA bundle (RHEL/manylinux)."

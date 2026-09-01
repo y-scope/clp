@@ -41,7 +41,6 @@ jobs:
         || 'ubuntu-24.04'
       }}
     outputs:
-      centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
       manylinux_2_28_image_changed: "${{steps.filter.outputs.manylinux_2_28_image}}"
       musllinux_1_2_image_changed: "${{steps.filter.outputs.musllinux_1_2_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
@@ -79,10 +78,6 @@ jobs:
               - "components/core/tools/scripts/corporate-proxy-host.sh"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/scripts/lib_install/pipx-packages/**"
-            centos_stream_9_image:
-              - *_deps_images_common_paths
-              - "components/core/tools/docker-images/clp-env-base-centos-stream-9/**"
-              - "components/core/tools/scripts/lib_install/centos-stream-9/**"
             manylinux_2_28_image:
               - *_deps_images_common_paths
               - "components/core/tools/docker-images/clp-env-base-manylinux_2_28/**"
@@ -119,32 +114,6 @@ jobs:
               - ".github/workflows/clp-artifact-build.yaml"
               - ".gitmodules"
               - "integration-tests/**"
-
-  centos-stream-9-deps-image:
-    name: "centos-stream-9-deps-image"
-    if: "needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'true'"
-    needs: "filter-relevant-changes"
-    runs-on: *runner
-    steps:
-      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
-        with:
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - uses: "./.github/actions/clp-core-build-containers"
-        env:
-          OS_NAME: "centos-stream-9"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
-          docker_context: "components/core"
-          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
-            /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
 
   manylinux_2_28-deps-image:
     name: "manylinux_2_28-${{matrix.arch}}-deps-image"
@@ -345,97 +314,6 @@ jobs:
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
 
-  centos-stream-9-binaries:
-    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
-    if: >-
-      success()
-      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
-    needs:
-      - "centos-stream-9-deps-image"
-      - "filter-relevant-changes"
-    strategy:
-      matrix:
-        use_shared_libs: [true, false]
-    name: "centos-stream-9-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
-    continue-on-error: true
-    runs-on: *runner
-    steps:
-      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
-        with:
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - id: "deps_image"
-        uses: "./.github/actions/prepare-image"
-        env:
-          OS_NAME: "centos-stream-9"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
-          use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-
-      - id: "deps_cache_key"
-        uses: "./.github/actions/deps-cache-key"
-        with:
-          os_name: "centos-stream-9"
-          env_hash: "${{steps.deps_image.outputs.image_id}}"
-
-      # NOTE: Restoring after the `chown` above avoids chowning the restored tree (~2.3GB).
-      - name: "Restore deps:core cache"
-        id: "deps_cache_restore"
-        uses: "actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
-        with:
-          # `.task` must travel with the tree, or `clean-outdated-cpp-checksum-files` wipes the
-          # restored checksums. A `!` exclusion can't prune anything here (`implicitDescendants:
-          # false`), so large paths are deleted before the save instead.
-          path: &deps_cache_paths |-
-            build/deps/cpp
-            .task
-          key: "${{steps.deps_cache_key.outputs.key}}"
-
-      - uses: "./.github/actions/run-on-image"
-        env:
-          OS_NAME: "centos-stream-9"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
-          use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
-          run_command: >-
-            CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
-            && touch /mnt/repo/build/.deps-core-ok
-            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
-            ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
-            --source-dir /mnt/repo/components/core
-            --build-dir /mnt/repo/components/core/build
-            --num-jobs $(getconf _NPROCESSORS_ONLN)
-
-      # `mongocxx` clones `mongo-c-driver` to build it. It needs the checked-out source, but not
-      # the `.git` directory the clone brings with it -- dropping that before the save takes
-      # ~200MB off the cache entry.
-      - name: "Drop mongo-c-driver's .git directory before caching"
-        if: &deps_cache_save_condition >-
-          !cancelled()
-          && false == matrix.use_shared_libs
-          && '' != hashFiles('build/.deps-core-ok')
-          && 'true' != steps.deps_cache_restore.outputs.cache-hit
-          && 'pull_request' != github.event_name
-          && 'refs/heads/main' == github.ref
-        run: "rm -rf build/deps/cpp/mongocxx-build/_deps/mongo-c-driver-src/.git"
-        shell: "bash"
-
-      - name: "Update deps:core cache"
-        if: *deps_cache_save_condition
-        uses: "actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
-        with:
-          path: *deps_cache_paths
-          key: "${{steps.deps_cache_key.outputs.key}}"
-
   manylinux_2_28-x86_64-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
@@ -485,7 +363,9 @@ jobs:
         id: "deps_cache_restore"
         uses: "actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
         with:
-          path: *deps_cache_paths
+          path: &deps_cache_paths |-
+            build/deps/cpp
+            .task
           key: "${{steps.deps_cache_key.outputs.key}}"
 
       - uses: "./.github/actions/run-on-image"
@@ -508,7 +388,13 @@ jobs:
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
       - name: "Drop mongo-c-driver's .git directory before caching"
-        if: *deps_cache_save_condition
+        if: &deps_cache_save_condition >-
+          !cancelled()
+          && false == matrix.use_shared_libs
+          && '' != hashFiles('build/.deps-core-ok')
+          && 'true' != steps.deps_cache_restore.outputs.cache-hit
+          && 'pull_request' != github.event_name
+          && 'refs/heads/main' == github.ref
         run: "rm -rf build/deps/cpp/mongocxx-build/_deps/mongo-c-driver-src/.git"
         shell: "bash"
 
