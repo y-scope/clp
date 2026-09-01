@@ -28,5 +28,5 @@ pub struct ClpSQueryOption {
 
 /// The output handler that `clp-s` writes a query task's results to.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub enum QueryOutputHandle {
+pub enum OutputHandle {
 }
