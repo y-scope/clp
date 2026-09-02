@@ -153,13 +153,14 @@ clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
   # Remove a service from this list to use an external instance instead, and configure its host/port
   # accordingly in the service-specific sections below.
-  bundled:
-    - "database"
-    - "queue"
-    - "redis"
-    - "results_cache"
-    - "otel_collector"
-    - "presto"
+  bundled: [
+    "database",
+    "queue",
+    "redis",
+    "results_cache",
+    "otel_collector",
+    "presto",
+  ]
 
   package:
     storage_engine: "clp-s"
@@ -396,8 +397,9 @@ spider:
     # List of third-party services bundled (deployed) as part of the Spider subchart.
     # Remove a service from this list to use an external instance instead, and configure its
     # connection details accordingly in the service-specific sections below.
-    bundled:
-      - "database"
+    bundled: [
+      "database",
+    ]
 
     # Connection config for the Spider database service; defaults to the Spider subchart's
     # `values.yaml`. When "database" is in `bundled`, the host is automatically set to the bundled
