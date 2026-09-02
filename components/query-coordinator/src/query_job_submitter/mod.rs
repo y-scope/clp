@@ -5,6 +5,7 @@ mod spider;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use clp_rust_utils::job_config::ArchiveId;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
@@ -14,6 +15,19 @@ use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
 
 use crate::Error;
+
+/// Identifies an archive handled by query tasks.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ArchiveMetadata {
+    /// The archive's ID.
+    pub id: ArchiveId,
+
+    /// The archive's dataset, or `None` for the default dataset.
+    pub dataset: Option<NonEmptyString>,
+
+    /// The archive's compressed size in bytes.
+    pub size: u64,
+}
 
 /// The terminal outcome of a query job.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -28,10 +42,25 @@ pub enum QueryJobOutcome {
     UnexpectedlyCancelled,
 }
 
-/// Registers CLP-S query jobs with a distributed task scheduler.
+/// Drives CLP query jobs on a Spider (Huntsman) cluster.
+>>>>>>> query-coordinator/crate
 #[async_trait]
 pub trait QueryJobSubmitter: Clone + Send + Sync {
-    /// Registers, but does not start, one query task per `(dataset, archive_id)` pair.
+    /// Builds the query task graph for the given archives and registers it with Spider, without
+    /// starting it.
+    ///
+    /// # Parameters
+    ///
+    /// * `query_job_id` - The unique ID of the CLP query job.
+    /// * `resource_group_id` - The Spider resource group to register the job under.
+    /// * `clp_s_query_option` - `clp-s` query options shared by every task in the job.
+    /// * `output_handle` - The output handle selecting how the query outputs are returned.
+    /// * `archives_to_search` - The archives to search, each represents a query task paired with
+    ///   the task execution policy.
+    ///
+    /// # Returns
+    ///
+    /// The job ID issued by Spider on success.
     ///
     /// # Errors
     ///
@@ -42,8 +71,7 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
         output_handle: OutputHandle,
-        archives: Vec<(Option<NonEmptyString>, NonEmptyString)>,
-        query_task_execution_policy: ExecutionPolicy,
+        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error>;
 
     /// Idempotently starts `spider_job_id` and waits for it to reach a terminal state.

@@ -1,9 +1,12 @@
+use non_empty_string::NonEmptyString;
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
 use serde::Deserialize;
 use serde::Serialize;
 
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
+
+pub type ArchiveId = NonEmptyString;
 
 pub type QueryJobId = i32;
 
