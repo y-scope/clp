@@ -35,7 +35,7 @@ inputs:
   # Image handling
   pull:
     default: "false"
-    description: "Whether to always pull the base image"
+    description: "Whether to pull the base image"
     required: false
   push:
     description: "Whether to push the built image"
@@ -67,11 +67,8 @@ runs:
       id: "compute-meta"
       shell: "bash"
       run: |
-        image_name="${{inputs.image_name}}"
-        dockerfile_path="${{inputs.dockerfile_path}}"
-
-        echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
-        echo "IMAGE_NAME=$image_name" >> "$GITHUB_OUTPUT"
+        echo "DOCKERFILE=${{inputs.dockerfile_path}}" >> "$GITHUB_OUTPUT"
+        echo "IMAGE_NAME=${{inputs.image_name}}" >> "$GITHUB_OUTPUT"
 
     - name: "Extract GitHub Metadata"
       id: "extract-gh-meta"
@@ -104,8 +101,8 @@ runs:
         # Disable provenance to create a simple image instead of a manifest list.
         # This allows `docker manifest create` to combine the per-arch images later.
         provenance: false
-        pull: "${{inputs.pull_image == 'true'}}"
-        push: "${{inputs.push_image == 'true'}}"
+        pull: "${{inputs.pull == 'true'}}"
+        push: "${{inputs.push == 'true'}}"
         tags: "${{steps.extract-gh-meta.outputs.tags}}"
         labels: "${{steps.extract-gh-meta.outputs.labels}}"
         build-args: |
