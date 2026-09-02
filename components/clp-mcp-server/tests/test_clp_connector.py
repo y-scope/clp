@@ -125,24 +125,6 @@ async def test_read_results_returns_docs(mock_clp_config: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_read_results_supports_legacy_docs(mock_clp_config: SimpleNamespace) -> None:
-    """Tests reading legacy results with top-level archive and log-event fields."""
-    connector = ClpConnector(mock_clp_config)
-    mock_docs = [
-        {"_id": "1", "archive_id": "archA", "log_event_ix": 1},
-        {"_id": "2", "archive_id": "archB", "log_event_ix": 2},
-    ]
-    mock_collection = AsyncMock()
-    mock_collection.find = MagicMock(return_value=_aiter(mock_docs))
-
-    with patch.object(connector, "_results_cache", {"12": mock_collection}):
-        results = await connector.read_results("12")
-
-    assert [result["archive_id"] for result in results] == ["archA", "archB"]
-    assert [result["log_event_idx"] for result in results] == [1, 2]
-
-
-@pytest.mark.asyncio
 async def test_read_results_adds_link_field(mock_clp_config: Any) -> None:
     """Ensures read_results adds a 'link' field."""
     connector = ClpConnector(mock_clp_config)

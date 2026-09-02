@@ -163,11 +163,8 @@ class ClpConnector:
         async for raw_doc in collection.find({}, limit=SEARCH_MAX_NUM_RESULTS):
             doc = dict(raw_doc)
             result_id = doc["_id"]
-            if isinstance(result_id, dict):
-                doc["archive_id"] = result_id["archive_id"]
-                doc["log_event_idx"] = result_id["log_event_idx"]
-            else:
-                doc["log_event_idx"] = doc.pop("log_event_ix")
+            doc["archive_id"] = result_id["archive_id"]
+            doc["log_event_idx"] = result_id["log_event_idx"]
             doc["link"] = (
                 f"{self._webui_addr}/streamFile?type=json"
                 f"&streamId={doc['archive_id']}"

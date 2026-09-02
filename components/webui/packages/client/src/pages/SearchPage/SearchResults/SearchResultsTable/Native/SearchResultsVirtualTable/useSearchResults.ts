@@ -16,15 +16,7 @@ interface ClpSSearchResultId {
     log_event_idx: number;
 }
 
-interface LegacyObjectId {
-    $oid: string;
-}
-
 type RawSearchResult =
-    (Omit<SearchResult, "_id" | "log_event_idx"> & {
-        _id: LegacyObjectId | string;
-        log_event_ix: number;
-    }) |
     (Omit<SearchResult, "_id" | "log_event_idx" | "orig_file_id"> & {
         _id: ClpSearchResultId;
     }) |
@@ -61,16 +53,6 @@ const useSearchResults = () => {
         },
         parse: (data) => {
             const doc = JSON.parse(data) as RawSearchResult;
-
-            if ("log_event_ix" in doc) {
-                return {
-                    ...doc,
-                    _id: "object" === typeof doc._id ?
-                        doc._id.$oid :
-                        doc._id,
-                    log_event_idx: doc.log_event_ix,
-                };
-            }
 
             if ("orig_file_id" in doc._id) {
                 return {
