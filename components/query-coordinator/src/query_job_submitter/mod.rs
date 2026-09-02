@@ -36,14 +36,16 @@ pub enum QueryJobOutcome {
     Succeeded,
 
     /// At least one archive query failed.
-    Failed { error_message: String },
+    Failed {
+        /// The error reported by Spider.
+        error_message: String,
+    },
 
     /// Spider cancelled the job unexpectedly. User-requested cancellation is outside the MVP.
     UnexpectedlyCancelled,
 }
 
 /// Drives CLP query jobs on a Spider (Huntsman) cluster.
->>>>>>> query-coordinator/crate
 #[async_trait]
 pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// Builds the query task graph for the given archives and registers it with Spider, without
@@ -75,6 +77,16 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     ) -> Result<JobId, Error>;
 
     /// Idempotently starts `spider_job_id` and waits for it to reach a terminal state.
+    ///
+    /// # Parameters
+    ///
+    /// * `spider_job_id` - The ID of the Spider job to start and monitor.
+    /// * `initial_poll_backoff` - The initial delay after a non-terminal job-state poll.
+    /// * `max_poll_backoff` - The maximum delay between job-state polls.
+    ///
+    /// # Returns
+    ///
+    /// The terminal query-job outcome on success.
     ///
     /// # Errors
     ///

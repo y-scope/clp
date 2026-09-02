@@ -38,8 +38,13 @@ impl QueryJobSubmitter for SpiderClient {
     ///
     /// Returns an error if:
     ///
-    /// * Starting the job fails for a reason other than it already having been started.
-    /// * Fetching the Spider job state fails.
+    /// * Forwards [`SpiderClient::start_job`]'s return values on failure, except
+    ///   [`ClientError::InvalidJobState`].
+    /// * Forwards [`SpiderClient::get_job_state`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if Spider returns a terminal state without a corresponding [`QueryJobOutcome`].
     async fn run_query_job_to_completion(
         &self,
         spider_job_id: JobId,
@@ -67,12 +72,20 @@ impl QueryJobSubmitter for SpiderClient {
 
         Ok(match terminal_state {
             JobState::Succeeded => QueryJobOutcome::Succeeded,
-            JobState::Failed => QueryJobOutcome::Failed {
-                error_message: self
-                    .get_job_error(spider_job_id)
-                    .await
-                    .unwrap_or_else(|error| format!("<failed to fetch job error: {error}>")),
-            },
+            JobState::Failed => {
+                let error_message = match self.get_job_error(spider_job_id).await {
+                    Ok(error_message) => error_message,
+                    Err(error) => {
+                        tracing::warn!(
+                            spider_job_id = % spider_job_id,
+                            error = % error,
+                            "Failed to fetch the Spider job error.",
+                        );
+                        format!("<failed to fetch job error: {error}>")
+                    }
+                };
+                QueryJobOutcome::Failed { error_message }
+            }
             JobState::Cancelled => QueryJobOutcome::UnexpectedlyCancelled,
             _ => unreachable!("a terminal Spider state must have a terminal outcome"),
         })

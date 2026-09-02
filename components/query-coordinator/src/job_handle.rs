@@ -8,13 +8,13 @@ use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
-use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
 use sqlx::MySqlPool;
 
 use crate::Error;
+use crate::query_job_submitter::ArchiveMetadata;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
 
@@ -26,16 +26,13 @@ pub struct QueryPlan {
     /// Result destination shared by every archive task.
     pub output_handle: OutputHandle,
 
-    /// One optional dataset and non-empty archive ID pair per task.
-    pub archives: Vec<(Option<NonEmptyString>, NonEmptyString)>,
-
-    /// Execution policy applied to every archive task.
-    pub query_task_execution_policy: ExecutionPolicy,
+    /// The archives to query, each paired with its task execution policy.
+    pub archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
 }
 
 /// Spider polling options shared by query-job handles.
 pub struct SpiderOption {
-    /// Delay before the first Spider job-state poll.
+    /// Initial delay after a non-terminal Spider job-state poll.
     pub initial_poll_backoff: Duration,
 
     /// Maximum delay between Spider job-state polls.
@@ -43,6 +40,10 @@ pub struct SpiderOption {
 }
 
 /// Drives one already-planned query job through submission and terminal persistence.
+///
+/// # Type Parameters
+///
+/// * `SubmitterType` - The type of the job submitter for Spider job submission.
 pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     db_pool: MySqlPool,
     query_job_id: QueryJobId,
@@ -53,7 +54,11 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
 }
 
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
-    /// Constructs a handle for an already-planned query job.
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// A newly created [`QueryJobHandle`] for the given already-planned query job.
     pub fn new(
         db_pool: MySqlPool,
         query_job_id: QueryJobId,
@@ -74,21 +79,29 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
     /// Submits the prepared graph and drives the query job to a terminal state.
     ///
-    /// On an orchestration failure, this method makes a best-effort attempt to mark the CLP query
-    /// job as failed before returning the original error.
+    /// On a submission failure, this method makes a best-effort attempt to mark the CLP query job
+    /// as failed before returning the original error. After the job is durably running, monitoring
+    /// and terminal-persistence failures leave it running so recovery can reattach to Spider.
     ///
     /// # Errors
     ///
-    /// Returns an error if submission, submission persistence, polling, or terminal persistence
-    /// fails.
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::submit`]'s return values on failure.
+    /// * Forwards [`Self::to_completion`]'s return values on failure.
     pub async fn run(self) -> Result<(), Error> {
-        tracing::info!(query_job_id = %self.query_job_id, "Starting query job.");
+        tracing::info!(query_job_id = % self.query_job_id, "Starting query job.");
 
-        let result = self.submit_and_wait().await;
-        if let Err(error) = &result {
-            self.report_failure(error).await;
-        }
-        result
+        let spider_job_id = match self.submit().await {
+            Ok(spider_job_id) => spider_job_id,
+            Err(error) => {
+                if !matches!(error, Error::JobNotPending(_)) {
+                    self.report_failure(&error).await;
+                }
+                return Err(error);
+            }
+        };
+        self.to_completion(spider_job_id).await
     }
 
     /// Resumes a query job that was already submitted to Spider.
@@ -97,23 +110,34 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// # Errors
     ///
-    /// Returns an error if polling or terminal persistence fails.
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::to_completion`]'s return values on failure.
     pub async fn recover(self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         tracing::info!(
-            query_job_id = %self.query_job_id,
-            spider_job_id = %spider_job_id,
+            query_job_id = % self.query_job_id,
+            spider_job_id = % spider_job_id,
             "Recovering query job.",
         );
 
-        let result = self.to_completion(spider_job_id).await;
-        if let Err(error) = &result {
-            self.report_failure(error).await;
-        }
-        result
+        self.to_completion(spider_job_id).await
     }
 
-    async fn submit_and_wait(&self) -> Result<(), Error> {
-        let num_tasks = self.query_plan.archives.len();
+    /// Submits the query job to Spider and persists its running state.
+    ///
+    /// # Returns
+    ///
+    /// The submitted Spider job ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::TooManyQueryTasks`] if the number of query tasks exceeds `i32`'s range.
+    /// * Forwards [`QueryJobSubmitter::submit_query_job`]'s return values on failure.
+    /// * Forwards [`Self::persist_submission`]'s return values on failure.
+    async fn submit(&self) -> Result<SpiderJobId, Error> {
+        let num_tasks = self.query_plan.archives_to_search.len();
         let persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;
         let spider_job_id = self
@@ -123,23 +147,30 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 self.resource_group_id,
                 self.query_plan.clp_s_query_option.clone(),
                 self.query_plan.output_handle.clone(),
-                self.query_plan.archives.clone(),
-                self.query_plan.query_task_execution_policy.clone(),
+                self.query_plan.archives_to_search.clone(),
             )
             .await?;
 
         tracing::info!(
-            query_job_id = %self.query_job_id,
-            spider_job_id = %spider_job_id,
+            query_job_id = % self.query_job_id,
+            spider_job_id = % spider_job_id,
             num_tasks,
             "Query job submitted.",
         );
 
         self.persist_submission(spider_job_id, persisted_num_tasks)
             .await?;
-        self.to_completion(spider_job_id).await
+        Ok(spider_job_id)
     }
 
+    /// Persists the Spider job ID and marks the query job as running.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::JobNotPending`] if the query job is no longer pending.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn persist_submission(
         &self,
         spider_job_id: SpiderJobId,
@@ -164,6 +195,14 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         Ok(())
     }
 
+    /// Waits for the associated Spider job to complete and finalizes the query job.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::TerminalStatusPersistence`] if the terminal query-job status cannot be persisted.
+    /// * Forwards [`QueryJobSubmitter::run_query_job_to_completion`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         let outcome = self
             .job_submitter
@@ -175,40 +214,39 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .await?;
 
         tracing::info!(
-            query_job_id = %self.query_job_id,
-            spider_job_id = %spider_job_id,
-            outcome = ?outcome,
+            query_job_id = % self.query_job_id,
+            spider_job_id = % spider_job_id,
+            outcome = ? outcome,
             "Query job reached a terminal Spider state.",
         );
 
-        match outcome {
-            QueryJobOutcome::Succeeded => {
-                self.update_terminal_status(QueryJobStatus::Succeeded, "", false)
-                    .await
-            }
-            QueryJobOutcome::Failed { error_message } => {
-                self.update_terminal_status(
-                    QueryJobStatus::Failed,
-                    &format!("The Spider query job failed: {error_message}"),
-                    false,
-                )
-                .await
-            }
-            QueryJobOutcome::UnexpectedlyCancelled => {
-                self.update_terminal_status(
-                    QueryJobStatus::Failed,
-                    "The Spider query job was unexpectedly cancelled.",
-                    false,
-                )
-                .await
-            }
-        }
+        let (status, status_message) = match outcome {
+            QueryJobOutcome::Succeeded => (QueryJobStatus::Succeeded, String::new()),
+            QueryJobOutcome::Failed { error_message } => (
+                QueryJobStatus::Failed,
+                format!("The Spider query job failed: {error_message}"),
+            ),
+            QueryJobOutcome::UnexpectedlyCancelled => (
+                QueryJobStatus::Failed,
+                "The Spider query job was unexpectedly cancelled.".to_string(),
+            ),
+        };
+        self.update_terminal_status(status, &status_message, false)
+            .await
+            .map_err(|source| Error::TerminalStatusPersistence {
+                query_job_id: self.query_job_id,
+                source,
+            })
     }
 
+    /// Reports a query-job orchestration failure.
+    ///
+    /// Logs the original error and makes a best-effort attempt to mark the query job as failed. If
+    /// terminal-status persistence fails, the status-update error is logged and otherwise ignored.
     async fn report_failure(&self, error: &Error) {
         tracing::error!(
-            query_job_id = %self.query_job_id,
-            error = %error,
+            query_job_id = % self.query_job_id,
+            error = % error,
             "Query-job orchestration failed.",
         );
 
@@ -221,8 +259,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .await
         {
             tracing::error!(
-                query_job_id = %self.query_job_id,
-                error = %status_error,
+                query_job_id = % self.query_job_id,
+                error = % status_error,
                 "Failed to persist the query-job failure.",
             );
         }
@@ -230,12 +268,20 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
     /// Updates a non-terminal query job while preserving every existing terminal or cancellation
     /// state. When `allow_pending` is false, only a running job may transition.
+    /// A zero-row update is treated as success so an ineligible or missing job row is left
+    /// unchanged.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn update_terminal_status(
         &self,
         status: QueryJobStatus,
         status_message: &str,
         allow_pending: bool,
-    ) -> Result<(), Error> {
+    ) -> Result<(), sqlx::Error> {
         let eligible_statuses = if allow_pending { "?, ?" } else { "?" };
         let query = format!(
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = LEFT(?, 512), \
