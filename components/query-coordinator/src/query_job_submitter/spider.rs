@@ -15,9 +15,9 @@ use crate::query_job_submitter::QueryJobSubmitter;
 
 #[async_trait]
 impl QueryJobSubmitter for SpiderClient {
-    /// # Errors
+    /// # Panics
     ///
-    /// Task-graph construction and submission are not implemented yet.
+    /// Panics because task-graph construction and submission are not implemented yet.
     async fn submit_query_job(
         &self,
         _query_job_id: QueryJobId,
@@ -26,6 +26,6 @@ impl QueryJobSubmitter for SpiderClient {
         _output_handle: OutputHandle,
         _archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error> {
-        todo!("Construct and submit the CLP-S query task graph")
+        todo!("construct and submit the clp-s query task graph")
     }
 }
