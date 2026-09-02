@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
+use clp_rust_utils::task_io::query::OutputHandle;
 use non_empty_string::NonEmptyString;
 use spider_client::SpiderClient;
 use spider_core::task::ExecutionPolicy;
@@ -22,6 +23,7 @@ impl QueryJobSubmitter for SpiderClient {
         query_job_id: QueryJobId,
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
+        output_handle: OutputHandle,
         archives: Vec<(Option<NonEmptyString>, NonEmptyString)>,
         query_task_execution_policy: ExecutionPolicy,
     ) -> Result<JobId, Error> {
@@ -29,6 +31,7 @@ impl QueryJobSubmitter for SpiderClient {
             query_job_id,
             resource_group_id,
             clp_s_query_option,
+            output_handle,
             archives,
             query_task_execution_policy,
         );
