@@ -30,7 +30,21 @@ pub struct ArchiveMetadata {
 /// Drives CLP query jobs on a Spider (Huntsman) cluster.
 #[async_trait]
 pub trait QueryJobSubmitter: Clone + Send + Sync {
-    /// Registers, but does not start, one query task per archive.
+    /// Builds the query task graph for the given archives and registers it with Spider, without
+    /// starting it.
+    ///
+    /// # Parameters
+    ///
+    /// * `query_job_id` - The unique ID of the CLP query job.
+    /// * `resource_group_id` - The Spider resource group to register the job under.
+    /// * `clp_s_query_options` - `clp-s` query options shared by every task in the job.
+    /// * `output_handle` - The output handle selecting how the query outputs are returned.
+    /// * `archives_to_search` - The archives to search, each represents a query task paired with
+    ///   the task execution policy.
+    ///
+    /// # Returns
+    ///
+    /// The job ID issued by Spider on success.
     ///
     /// # Errors
     ///
