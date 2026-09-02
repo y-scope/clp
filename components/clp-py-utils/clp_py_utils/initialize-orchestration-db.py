@@ -11,7 +11,7 @@ from job_orchestration.scheduler.constants import (
     QueryJobStatus,
     QueryTaskStatus,
 )
-from mysql.connector.errorcode import ER_DUP_KEYNAME
+from mysql.connector.errorcode import ER_DUP_FIELDNAME, ER_DUP_KEYNAME
 from pydantic import ValidationError
 
 from clp_py_utils.clp_config import (
@@ -134,18 +134,52 @@ def main(argv):
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `type` INT NOT NULL,
                     `status` INT NOT NULL DEFAULT '{QueryJobStatus.PENDING}',
+                    `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_config` MEDIUMBLOB NOT NULL,
+                    `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
-                    INDEX `JOB_STATUS` (`status`) USING BTREE
+                    INDEX `JOB_STATUS` (`status`) USING BTREE,
+                    INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
+
+            # Upgrade query-job tables created before Spider lifecycle support was added.
+            query_jobs_table_upgrades = (
+                (
+                    f"""
+                    ALTER TABLE `{QUERY_JOBS_TABLE_NAME}`
+                    ADD COLUMN `status_msg` VARCHAR(512) NOT NULL DEFAULT '' AFTER `status`
+                    """,
+                    ER_DUP_FIELDNAME,
+                ),
+                (
+                    f"""
+                    ALTER TABLE `{QUERY_JOBS_TABLE_NAME}`
+                    ADD COLUMN `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL AFTER `job_config`
+                    """,
+                    ER_DUP_FIELDNAME,
+                ),
+                (
+                    f"""
+                    ALTER TABLE `{QUERY_JOBS_TABLE_NAME}`
+                    ADD INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
+                    """,
+                    ER_DUP_KEYNAME,
+                ),
+            )
+            for upgrade_query, duplicate_error_code in query_jobs_table_upgrades:
+                try:
+                    scheduling_db_cursor.execute(upgrade_query)
+                except Exception as err:
+                    if not (hasattr(err, "errno") and err.errno == duplicate_error_code):
+                        raise
 
             scheduling_db_cursor.execute(
                 f"""

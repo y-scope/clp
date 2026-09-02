@@ -3280,7 +3280,10 @@ dependencies = [
  "non-empty-string",
  "spider-client",
  "spider-core",
+ "sqlx",
  "thiserror",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
