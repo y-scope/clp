@@ -285,9 +285,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let eligible_statuses = if allow_pending { "?, ?" } else { "?" };
         let query = format!(
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = LEFT(?, 512), \
-             `duration` = \
-             CASE WHEN `start_time` IS NULL THEN 0 ELSE TIMESTAMPDIFF(MICROSECOND, `start_time`, \
-             CURRENT_TIMESTAMP(3)) / 1000000.0 END WHERE `id` = ? AND `status` IN \
+             `duration` = CASE WHEN `start_time` IS NULL THEN 0 ELSE TIMESTAMPDIFF(MICROSECOND, \
+             `start_time`, CURRENT_TIMESTAMP(3)) / 1000000.0 END WHERE `id` = ? AND `status` IN \
              ({eligible_statuses})"
         );
         let mut query = sqlx::query(&query)
