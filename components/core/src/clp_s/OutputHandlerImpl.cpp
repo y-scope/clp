@@ -1,6 +1,5 @@
 #include "OutputHandlerImpl.hpp"
 
-#include <algorithm>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -8,7 +7,6 @@
 
 #include <bsoncxx/builder/basic/document.hpp>
 #include <bsoncxx/builder/basic/kvp.hpp>
-#include <bsoncxx/types.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/bulk_write_exception.hpp>
@@ -18,6 +16,7 @@
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/MongoDBUtils.hpp>
 #include <clp_s/ResultsCacheUtils.hpp>
 
 #include "../clp/networking/socket_utils.hpp"
@@ -32,122 +31,6 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
-namespace {
-constexpr int32_t cDuplicateKeyErrorCode{11'000};
-
-/**
- * Checks whether an aggregated bulk-write reply contains any command errors.
- * @param reply The raw MongoDB bulk-write reply.
- * @return true if the reply contains a command error, false otherwise.
- */
-[[nodiscard]] auto has_command_errors(bsoncxx::document::view const& reply) -> bool;
-
-/**
- * Checks whether a bulk-write reply contains any write-concern errors.
- * @param reply The raw MongoDB bulk-write reply.
- * @return true if the reply contains a write-concern error, false otherwise.
- */
-[[nodiscard]] auto has_write_concern_errors(bsoncxx::document::view const& reply) -> bool;
-
-/**
- * Checks whether an entry from a bulk-write reply's `writeErrors` array is a duplicate-key error.
- * @param write_error The write-error entry to inspect.
- * @return true if the entry has MongoDB's duplicate-key error code, false otherwise.
- */
-[[nodiscard]] auto is_duplicate_key_write_error(bsoncxx::array::element const& write_error) -> bool;
-
-/**
- * Returns whether the bulk write failed only because some documents already exist.
- *
- * The C++ driver exposes per-write failures through `raw_server_error()`. In this aggregated reply,
- * command errors are stored in `errorReplies`, write-concern errors in `writeConcernErrors`, and
- * individual write failures in `writeErrors`.
- *
- * Command and write-concern errors are rejected since they mean MongoDB did not confirm the
- * outcome of the entire batch. At least one write error must be present, and every write error
- * must be a duplicate-key error.
- * @param exception The exception containing the raw MongoDB bulk-write reply.
- * @return true if the reply contains only duplicate-key write errors, false otherwise.
- */
-[[nodiscard]] auto contains_only_duplicate_key_write_errors(
-        mongocxx::bulk_write_exception const& exception
-) -> bool;
-
-[[nodiscard]] auto has_command_errors(bsoncxx::document::view const& reply) -> bool {
-    auto const errors_element = reply["errorReplies"];
-    if (false == static_cast<bool>(errors_element)) {
-        return false;
-    }
-    if (bsoncxx::type::k_array != errors_element.type()) {
-        return true;
-    }
-    auto const errors = errors_element.get_array().value;
-    return errors.begin() != errors.end();
-}
-
-[[nodiscard]] auto has_write_concern_errors(bsoncxx::document::view const& reply) -> bool {
-    if (static_cast<bool>(reply["writeConcernError"])) {
-        return true;
-    }
-
-    auto const errors_element = reply["writeConcernErrors"];
-    if (false == static_cast<bool>(errors_element)) {
-        return false;
-    }
-    if (bsoncxx::type::k_array != errors_element.type()) {
-        return true;
-    }
-    auto const errors = errors_element.get_array().value;
-    return errors.begin() != errors.end();
-}
-
-[[nodiscard]] auto is_duplicate_key_write_error(bsoncxx::array::element const& write_error)
-        -> bool {
-    if (bsoncxx::type::k_document != write_error.type()) {
-        return false;
-    }
-
-    auto const code = write_error.get_document().value["code"];
-    if (false == static_cast<bool>(code)) {
-        return false;
-    }
-    if (bsoncxx::type::k_int32 == code.type()) {
-        return cDuplicateKeyErrorCode == code.get_int32().value;
-    }
-    if (bsoncxx::type::k_int64 == code.type()) {
-        return cDuplicateKeyErrorCode == code.get_int64().value;
-    }
-    return false;
-}
-
-[[nodiscard]] auto contains_only_duplicate_key_write_errors(
-        mongocxx::bulk_write_exception const& exception
-) -> bool {
-    auto const& raw_server_error = exception.raw_server_error();
-    if (false == raw_server_error.has_value()) {
-        return false;
-    }
-
-    auto const reply = raw_server_error->view();
-    if (has_command_errors(reply) || has_write_concern_errors(reply)) {
-        return false;
-    }
-
-    auto const write_errors_element = reply["writeErrors"];
-    if (false == static_cast<bool>(write_errors_element)
-        || bsoncxx::type::k_array != write_errors_element.type())
-    {
-        return false;
-    }
-
-    auto const write_errors = write_errors_element.get_array().value;
-    if (write_errors.begin() == write_errors.end()) {
-        return false;
-    }
-    return std::all_of(write_errors.begin(), write_errors.end(), is_duplicate_key_write_error);
-}
-}  // namespace
-
 void FileOutputHandler::write(
         string_view message,
         epochtime_t timestamp,

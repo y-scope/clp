@@ -6,7 +6,12 @@ import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 import {SearchResult} from "./typings";
 
 
-interface SearchResultId {
+interface ClpSearchResultId {
+    log_event_idx: number;
+    orig_file_id: string;
+}
+
+interface ClpSSearchResultId {
     archive_id: string;
     log_event_idx: number;
 }
@@ -20,8 +25,11 @@ type RawSearchResult =
         _id: LegacyObjectId | string;
         log_event_ix: number;
     }) |
+    (Omit<SearchResult, "_id" | "log_event_idx" | "orig_file_id"> & {
+        _id: ClpSearchResultId;
+    }) |
     (Omit<SearchResult, "_id" | "archive_id" | "log_event_idx"> & {
-        _id: SearchResultId;
+        _id: ClpSSearchResultId;
     });
 
 
@@ -61,6 +69,15 @@ const useSearchResults = () => {
                         doc._id.$oid :
                         doc._id,
                     log_event_idx: doc.log_event_ix,
+                };
+            }
+
+            if ("orig_file_id" in doc._id) {
+                return {
+                    ...doc,
+                    _id: JSON.stringify(doc._id),
+                    log_event_idx: doc._id.log_event_idx,
+                    orig_file_id: doc._id.orig_file_id,
                 };
             }
 

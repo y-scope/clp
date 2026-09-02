@@ -208,6 +208,13 @@ private:
         return m_latest_results.size() >= m_max_num_results;
     }
 
+    /**
+     * Inserts the pending results as an unordered batch. Duplicate-key errors are treated as
+     * success so that retries converge on the complete result set.
+     * @return true on success or duplicate-key-only errors, false otherwise.
+     */
+    [[nodiscard]] auto insert_results() -> bool;
+
     mongocxx::client m_client;
     mongocxx::collection m_collection;
     std::vector<bsoncxx::document::value> m_results;
