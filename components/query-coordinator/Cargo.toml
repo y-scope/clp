@@ -6,6 +6,7 @@ edition = { workspace = true }
 [dependencies]
 async-trait = { workspace = true }
 clp-rust-utils = { workspace = true }
+non-empty-string = { workspace = true }
 spider-client = { workspace = true }
 spider-core = { workspace = true }
 thiserror = { workspace = true }

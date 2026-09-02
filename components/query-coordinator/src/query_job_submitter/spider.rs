@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
+use non_empty_string::NonEmptyString;
 use spider_client::SpiderClient;
 use spider_core::task::ExecutionPolicy;
 use spider_core::types::id::JobId;
@@ -21,7 +22,7 @@ impl QueryJobSubmitter for SpiderClient {
         query_job_id: QueryJobId,
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
-        archives: Vec<(String, String)>,
+        archives: Vec<(Option<NonEmptyString>, NonEmptyString)>,
         query_task_execution_policy: ExecutionPolicy,
     ) -> Result<JobId, Error> {
         let _ = (
