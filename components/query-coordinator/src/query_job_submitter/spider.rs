@@ -1,4 +1,4 @@
-//! [`QueryJobSubmitter`] skeleton for [`spider_client::SpiderClient`].
+//! [`QueryJobSubmitter`] implementation for [`spider_client::SpiderClient`].
 
 use async_trait::async_trait;
 use clp_rust_utils::job_config::QueryJobId;

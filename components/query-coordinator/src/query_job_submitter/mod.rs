@@ -14,7 +14,7 @@ use spider_core::types::id::ResourceGroupId;
 
 use crate::Error;
 
-/// Coordinator-side metadata for an archive query task.
+/// Identifies an archive handled by query tasks.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ArchiveMetadata {
     /// The archive's ID.
@@ -27,7 +27,7 @@ pub struct ArchiveMetadata {
     pub size: u64,
 }
 
-/// Registers CLP-S query jobs with a distributed task scheduler.
+/// Drives CLP query jobs on a Spider (Huntsman) cluster.
 #[async_trait]
 pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// Registers, but does not start, one query task per archive.
