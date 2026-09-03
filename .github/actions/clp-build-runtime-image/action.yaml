@@ -2,25 +2,43 @@ name: "clp-build-runtime-image"
 description: "Builds a container image to be used for running CLP."
 
 inputs:
+  # Registry properties
   image_registry:
     default: "ghcr.io"
     description: "Container image registry"
-    required: false
-  image_registry_username:
-    default: "${{github.actor}}"
-    description: "Container image registry username"
     required: false
   image_registry_password:
     default: ""
     description: "Container image registry password"
     required: false
+  image_registry_username:
+    default: "${{github.actor}}"
+    description: "Container image registry username"
+    required: false
+
+  # Image properties
   arch:
     description: "Target architecture (amd64 or arm64)"
     default: "amd64"
     required: false
+  dockerfile_path:
+    description: "Path to the Dockerfile"
+    required: true
+  image_name:
+    description: "Container image name"
+    required: true
   platform_version_codename:
     description: >-
       Platform version codename (e.g. jammy, noble) used as the runtime image base version.
+    required: true
+
+  # Image handling
+  pull:
+    default: "false"
+    description: "Whether to pull the base image"
+    required: false
+  push:
+    description: "Whether to push the built image"
     required: true
 
 runs:
@@ -49,12 +67,8 @@ runs:
       id: "compute-meta"
       shell: "bash"
       run: |
-        base_path="./tools/docker-images"
-        image_name="clp-package"
-        dockerfile_path="$base_path/$image_name/Dockerfile"
-
-        echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
-        echo "IMAGE_NAME=$image_name" >> "$GITHUB_OUTPUT"
+        echo "DOCKERFILE=${{inputs.dockerfile_path}}" >> "$GITHUB_OUTPUT"
+        echo "IMAGE_NAME=${{inputs.image_name}}" >> "$GITHUB_OUTPUT"
 
     - name: "Extract GitHub Metadata"
       id: "extract-gh-meta"
@@ -79,7 +93,6 @@ runs:
         fi
 
     - name: "Build and Push"
-      if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
       uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
       with:
         context: "./"
@@ -88,7 +101,8 @@ runs:
         # Disable provenance to create a simple image instead of a manifest list.
         # This allows `docker manifest create` to combine the per-arch images later.
         provenance: false
-        push: true
+        pull: "${{inputs.pull == 'true'}}"
+        push: "${{inputs.push == 'true'}}"
         tags: "${{steps.extract-gh-meta.outputs.tags}}"
         labels: "${{steps.extract-gh-meta.outputs.labels}}"
         build-args: |
