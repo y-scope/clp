@@ -20,9 +20,6 @@ use crate::query_job_submitter::QueryJobSubmitter;
 
 #[async_trait]
 impl QueryJobSubmitter for SpiderClient {
-    /// # Panics
-    ///
-    /// Panics because task-graph construction and submission are not implemented yet.
     async fn submit_query_job(
         &self,
         _query_job_id: QueryJobId,
