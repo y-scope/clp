@@ -16,11 +16,16 @@ interface ClpSSearchResultId {
     log_event_idx: number;
 }
 
+type SearchResultWithoutId = Omit<
+    SearchResult,
+    "_id" | "archive_id" | "log_event_idx" | "orig_file_id"
+>;
+
 type RawSearchResult =
-    (Omit<SearchResult, "_id" | "log_event_idx" | "orig_file_id"> & {
+    (SearchResultWithoutId & {
         _id: ClpSearchResultId;
     }) |
-    (Omit<SearchResult, "_id" | "archive_id" | "log_event_idx"> & {
+    (SearchResultWithoutId & {
         _id: ClpSSearchResultId;
     });
 
@@ -58,6 +63,7 @@ const useSearchResults = () => {
                 return {
                     ...doc,
                     _id: JSON.stringify(doc._id),
+                    archive_id: "",
                     log_event_idx: doc._id.log_event_idx,
                     orig_file_id: doc._id.orig_file_id,
                 };
@@ -65,9 +71,10 @@ const useSearchResults = () => {
 
             return {
                 ...doc,
-                archive_id: doc._id.archive_id,
                 _id: JSON.stringify(doc._id),
+                archive_id: doc._id.archive_id,
                 log_event_idx: doc._id.log_event_idx,
+                orig_file_id: "",
             };
         },
         rawDocs: true,
