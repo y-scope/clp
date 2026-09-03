@@ -1008,7 +1008,10 @@ jobs:
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           arch: "${{matrix.arch}}"
+          dockerfile_path: "./tools/docker-images/clp-package/Dockerfile"
+          image_name: "clp-package"
           platform_version_codename: "jammy"
+          push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
@@ -1049,17 +1052,34 @@ jobs:
           done
 
   spider-worker-image:
-    name: "spider-worker-image"
-    # Run if the dependency-image job succeeded or was skipped because the image is unchanged.
+    name: "spider-worker-image-${{matrix.arch}}"
     if: >-
       !cancelled() && !failure() && (
-        needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-        || needs.ubuntu-jammy-x86_64-deps-image.result == 'success'
+        needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false' ||
+        (needs.ubuntu-jammy-x86_64-deps-image.result == 'success'
+        && (needs.ubuntu-jammy-aarch64-deps-image.result == 'success'
+        || needs.ubuntu-jammy-aarch64-deps-image.result == 'skipped'))
       )
     needs:
       - "filter-relevant-changes"
+      - "ubuntu-jammy-aarch64-deps-image"
       - "ubuntu-jammy-x86_64-deps-image"
-    runs-on: *runner
+    strategy:
+      matrix:
+        # Only build arm64 images on push to main to save CI resources on PRs.
+        arch: >-
+          ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+          && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
+    runs-on: >-
+      ${{
+        matrix.arch == 'amd64'
+        && (github.repository_owner == 'y-scope'
+            && fromJSON('["self-hosted", "x64", "ubuntu-noble"]')
+            || 'ubuntu-24.04')
+        || (github.repository_owner == 'y-scope'
+            && fromJSON('["self-hosted", "arm64", "ubuntu-noble"]')
+            || 'ubuntu-24.04-arm')
+      }}
     permissions:
       # To check out the repository.
       contents: "read"
@@ -1078,7 +1098,10 @@ jobs:
       - name: "Build the CLP artifacts required for Spider worker"
         uses: "./.github/actions/run-on-image"
         with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}ubuntu-jammy"
+          image_name: >-
+            ${{format('{0}ubuntu-jammy',
+            matrix.arch == 'amd64' && env.DEPS_IMAGE_NAME_PREFIX_X86
+            || env.DEPS_IMAGE_NAME_PREFIX_AARCH64)}}
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -1087,9 +1110,29 @@ jobs:
             HOME=/tmp
             task core clp-tdl-package
 
+      - uses: "./.github/actions/clp-build-runtime-image"
+        with:
+          image_registry: "ghcr.io"
+          image_registry_username: "${{github.actor}}"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          arch: "${{matrix.arch}}"
+          dockerfile_path: "./tools/docker-images/clp-spider-worker/Dockerfile"
+          image_name: "clp-spider-worker"
+          platform_version_codename: "jammy"
+          pull: true
+          push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
+
+  spider-worker-image-multiarch-manifest:
+    name: "spider-worker-image-multiarch-manifest"
+    if: >-
+      github.event_name != 'pull_request'
+      && github.ref == 'refs/heads/main'
+      && needs.spider-worker-image.result == 'success'
+    needs: "spider-worker-image"
+    runs-on: *runner
+    steps:
       - name: "Login to Image Registry"
         uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
-        if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
         with:
           registry: "ghcr.io"
           username: "${{github.actor}}"
@@ -1104,21 +1147,17 @@ jobs:
           echo "repository=${lowercase_repo}" >> "$GITHUB_OUTPUT"
         shell: "bash"
 
-      - id: "spider_worker_image_meta"
-        uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"  # v5.7.0
-        with:
-          images: >-
-            ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-spider-worker
-          tags: "type=raw,value=${{github.ref_name}}"
-
-      # Publish on non-PR runs of `main`, including scheduled and manually dispatched runs.
-      # NOTE: Pull requests still build the image to validate the Dockerfile.
-      - uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"  # v6.15.0
-        with:
-          context: "."
-          file: "tools/docker-images/clp-spider-worker/Dockerfile"
-          provenance: false
-          pull: true
-          push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
-          tags: "${{steps.spider_worker_image_meta.outputs.tags}}"
-          labels: "${{steps.spider_worker_image_meta.outputs.labels}}"
+      - name: "Create and Push Multi-arch Manifest"
+        shell: "bash"
+        run: |
+          image_base="ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-spider-worker"
+          tags=("${{github.ref_name}}")
+          if [ "${{github.event_name}}" = "schedule" ]; then
+            tags+=("nightly")
+          fi
+          for tag in "${tags[@]}"; do
+            docker manifest create "${image_base}:${tag}" \
+              "${image_base}:${tag}-amd64" \
+              "${image_base}:${tag}-arm64"
+            docker manifest push "${image_base}:${tag}"
+          done
