@@ -17,7 +17,5 @@ pub(crate) fn clp_s_search_task(
     _archive_id: ArchiveId,
     _output_handle: OutputHandle,
 ) -> Result<(), spider_tdl::TdlError> {
-    Err(spider_tdl::TdlError::ExecutionError(
-        "clp-s search task is not implemented".to_owned(),
-    ))
+    todo!("clp-s search task is not implemented")
 }
