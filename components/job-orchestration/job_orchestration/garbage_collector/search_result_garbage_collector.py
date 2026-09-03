@@ -19,6 +19,7 @@ from job_orchestration.garbage_collector.constants import (
     MIN_TO_SECONDS,
     SEARCH_RESULT_GARBAGE_COLLECTOR_NAME,
 )
+from job_orchestration.scheduler.constants import QueryJobStatus
 
 # Constants
 MONGODB_ID_KEY: Final[str] = "_id"
@@ -34,7 +35,8 @@ def _get_expired_job_ids(
     Filter query-job IDs by whether their retention periods have ended.
 
     MariaDB computes each query's completion time as `start_time + duration`. A query-job ID is
-    included when the time since completion is greater than `retention_period_minutes`.
+    included when the time since completion is greater than `retention_period_minutes`. For a
+    terminated query without a completion time, `creation_time` is used instead.
 
     :param database_config: Configuration for the orchestration database.
     :param job_ids: Query-job IDs to filter.
@@ -58,15 +60,27 @@ def _get_expired_job_ids(
                 SELECT id
                 FROM `{QUERY_JOBS_TABLE_NAME}`
                 WHERE id IN ({job_id_placeholders})
-                AND TIMESTAMPADD(
-                    MICROSECOND,
-                    CAST(duration * 1000000 AS SIGNED),
-                    start_time
-                ) < TIMESTAMPADD(MINUTE, %s, CURRENT_TIMESTAMP(3))
+                AND (
+                    TIMESTAMPADD(
+                        MICROSECOND,
+                        CAST(duration * 1000000 AS SIGNED),
+                        start_time
+                    ) < TIMESTAMPADD(MINUTE, %s, CURRENT_TIMESTAMP(3))
+                    OR (
+                        (start_time IS NULL OR duration IS NULL)
+                        AND status IN (
+                            {QueryJobStatus.SUCCEEDED},
+                            {QueryJobStatus.FAILED},
+                            {QueryJobStatus.CANCELLED},
+                            {QueryJobStatus.KILLED}
+                        )
+                        AND creation_time < TIMESTAMPADD(MINUTE, %s, CURRENT_TIMESTAMP(3))
+                    )
+                )
                 """
             db_cursor.execute(
                 query,
-                [*job_ids_batch, -retention_period_minutes],
+                [*job_ids_batch, -retention_period_minutes, -retention_period_minutes],
             )
             rows = cast("list[tuple[int]]", db_cursor.fetchall())
             expired_job_ids.extend(row[0] for row in rows)
