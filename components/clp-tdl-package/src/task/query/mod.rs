@@ -9,9 +9,6 @@ use spider_tdl::TaskContext;
 use spider_tdl::task;
 
 #[task(name = "query::clp_s_search")]
-/// # Panics
-///
-/// Panics because `clp-s` search tasks are not implemented yet.
 pub(crate) fn clp_s_search_task(
     _ctx: TaskContext,
     _query_job_id: QueryJobId,
@@ -20,5 +17,7 @@ pub(crate) fn clp_s_search_task(
     _archive_id: ArchiveId,
     _output_handle: OutputHandle,
 ) -> Result<(), spider_tdl::TdlError> {
-    todo!("clp-s search task is not implemented")
+    Err(spider_tdl::TdlError::ExecutionError(
+        "clp-s search task is not implemented".to_owned(),
+    ))
 }
