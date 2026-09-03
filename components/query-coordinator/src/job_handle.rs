@@ -59,7 +59,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// # Returns
     ///
     /// A newly created [`QueryJobHandle`] for the given already-planned query job.
-    pub fn new(
+    pub const fn new(
         db_pool: MySqlPool,
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
