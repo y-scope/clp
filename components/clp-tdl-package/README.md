@@ -12,3 +12,7 @@ documented below.
 
 * `compression::clp_s_s3_compress`: Compress inputs from S3 using `clp-s`.
 * `compression::commit`: Commit compression task outcomes to the CLP metadata database.
+
+### Query
+
+* `query::clp_s_search`: Query a single `clp-s` archive.
