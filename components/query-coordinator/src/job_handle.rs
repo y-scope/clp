@@ -138,7 +138,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`Self::persist_submission`]'s return values on failure.
     async fn submit(&self) -> Result<SpiderJobId, Error> {
         let num_tasks = self.query_plan.archives_to_search.len();
-        let persisted_num_tasks =
+        let _persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;
         let spider_job_id = self
             .job_submitter
@@ -158,7 +158,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             "Query job submitted.",
         );
 
-        self.persist_submission(spider_job_id, persisted_num_tasks)
+        self.persist_submission(spider_job_id, _persisted_num_tasks)
             .await?;
         Ok(spider_job_id)
     }
