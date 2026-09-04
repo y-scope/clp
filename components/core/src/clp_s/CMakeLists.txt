@@ -492,6 +492,8 @@ set(
         ErrorCode.hpp
         kv_ir_search.cpp
         kv_ir_search.hpp
+        MongoDBUtils.cpp
+        MongoDBUtils.hpp
         OutputHandlerImpl.cpp
         OutputHandlerImpl.hpp
         ResultsCacheUtils.cpp

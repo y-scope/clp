@@ -10,6 +10,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
+#include <mongocxx/options/insert.hpp>
 #include <mongocxx/uri.hpp>
 
 #include "../../reducer/Pipeline.hpp"
@@ -208,8 +209,16 @@ private:
         return m_latest_results.size() >= m_max_num_results;
     }
 
+    /**
+     * Inserts the pending results as an unordered batch. Duplicate-key errors are treated as
+     * success so that retries converge on the complete result set.
+     * @return Whether insertion succeeded or produced only duplicate-key errors.
+     */
+    [[nodiscard]] auto insert_results() -> bool;
+
     mongocxx::client m_client;
     mongocxx::collection m_collection;
+    mongocxx::options::insert m_insert_options;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
     uint64_t m_max_num_results;

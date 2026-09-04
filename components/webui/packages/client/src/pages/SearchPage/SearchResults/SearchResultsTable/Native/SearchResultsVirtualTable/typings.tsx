@@ -25,7 +25,7 @@ interface SearchResult {
     archive_id: string;
     dataset: string;
     filePath: string;
-    log_event_ix: number;
+    log_event_idx: number;
     message: string;
     orig_file_id: string;
     orig_file_path: string;
@@ -90,7 +90,7 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         render: (_, record) => (
             <Message
                 dataset={record.dataset}
-                logEventIdx={record.log_event_ix}
+                logEventIdx={record.log_event_idx}
                 message={record.message}
                 streamId={getStreamId(record)}
                 fileText={
