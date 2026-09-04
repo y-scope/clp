@@ -1,6 +1,7 @@
 #include "MongoDBUtils.hpp"
 
 #include <algorithm>
+#include <cstdint>
 
 #include <bsoncxx/types.hpp>
 #include <mongocxx/exception/bulk_write_exception.hpp>
