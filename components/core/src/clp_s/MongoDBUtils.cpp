@@ -12,21 +12,21 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
 /**
  * Checks whether an aggregated bulk-write reply contains any command errors.
  * @param reply The raw MongoDB bulk-write reply.
- * @return true if the reply contains a command error, false otherwise.
+ * @return Whether the reply contains a command error.
  */
 [[nodiscard]] auto has_command_errors(bsoncxx::document::view const& reply) -> bool;
 
 /**
  * Checks whether a bulk-write reply contains any write-concern errors.
  * @param reply The raw MongoDB bulk-write reply.
- * @return true if the reply contains a write-concern error, false otherwise.
+ * @return Whether the reply contains a write-concern error.
  */
 [[nodiscard]] auto has_write_concern_errors(bsoncxx::document::view const& reply) -> bool;
 
 /**
  * Checks whether an entry from a bulk-write reply's `writeErrors` array is a duplicate-key error.
  * @param write_error The write-error entry to inspect.
- * @return true if the entry has MongoDB's duplicate-key error code, false otherwise.
+ * @return Whether the entry has MongoDB's duplicate-key error code.
  */
 [[nodiscard]] auto is_duplicate_key_write_error(bsoncxx::array::element const& write_error) -> bool;
 

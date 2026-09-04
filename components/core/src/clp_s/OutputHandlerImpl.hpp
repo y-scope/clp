@@ -203,7 +203,7 @@ private:
     /**
      * Inserts the pending results as an unordered batch. Duplicate-key errors are treated as
      * success so that retries converge on the complete result set.
-     * @return true on success or duplicate-key-only errors, false otherwise.
+     * @return Whether insertion succeeded or produced only duplicate-key errors.
      */
     [[nodiscard]] auto insert_results() -> bool;
 

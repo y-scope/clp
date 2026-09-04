@@ -11,7 +11,7 @@ namespace clp_s {
  * outcome of the entire batch. At least one write error must be present, and every write error
  * must be a duplicate-key error.
  * @param exception The exception containing the raw MongoDB bulk-write reply.
- * @return true if the reply contains only duplicate-key write errors, false otherwise.
+ * @return Whether the reply contains only duplicate-key write errors.
  */
 [[nodiscard]] auto contains_only_duplicate_key_write_errors(
         mongocxx::bulk_write_exception const& exception
