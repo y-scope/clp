@@ -148,6 +148,14 @@ if(BUILD_TESTING AND CLP_BUILD_TESTING)
     set(CLP_ENABLE_TESTS ON)
 endif()
 
+# Always enable profiling if building tests.
+set(CLP_ENABLE_PROFILING_EFFECTIVE "${CLP_ENABLE_PROFILING}")
+if(CLP_ENABLE_TESTS AND CLP_ENABLE_PROFILING LESS "1")
+    set(CLP_ENABLE_PROFILING_EFFECTIVE "1")
+endif()
+
+add_definitions(-DCLP_ENABLE_PROFILING=${CLP_ENABLE_PROFILING_EFFECTIVE})
+
 if(CLP_NEED_ABSL)
     find_package(absl REQUIRED)
     if (absl_FOUND)
@@ -194,6 +202,13 @@ if(CLP_NEED_DATE)
     endif()
 endif()
 
+if(CLP_NEED_FAST_FLOAT)
+    find_package(FastFloat REQUIRED)
+    if (FastFloat_FOUND)
+        message(STATUS "Found FastFloat (fast_float) ${FastFloat_VERSION}")
+    endif()
+endif()
+
 if(CLP_NEED_FMT)
     find_package(fmt REQUIRED)
     if(fmt_FOUND)
@@ -202,9 +217,9 @@ if(CLP_NEED_FMT)
 endif()
 
 if(CLP_NEED_LOG_SURGEON)
-    find_package(log_surgeon REQUIRED)
-    if(log_surgeon_FOUND)
-        message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+    find_package(log-surgeon REQUIRED)
+    if(log-surgeon_FOUND)
+        message(STATUS "Found log-surgeon ${log-surgeon_VERSION}")
     endif()
 endif()
 
@@ -363,6 +378,7 @@ add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
 add_subdirectory(src/glt/glt)
 add_subdirectory(src/clp/make_dictionaries_readable)
+add_subdirectory(src/clpp)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
@@ -547,8 +563,6 @@ set(SOURCE_FILES_unitTest
         src/clp/LibarchiveFileReader.hpp
         src/clp/LibarchiveReader.cpp
         src/clp/LibarchiveReader.hpp
-        src/clp/LogSurgeonReader.cpp
-        src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
         src/clp/LogTypeDictionaryEntry.hpp
         src/clp/LogTypeDictionaryEntryReq.hpp
@@ -679,7 +693,6 @@ set(SOURCE_FILES_unitTest
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
-        tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-regex_utils.cpp
         tests/test-SchemaSearcher.cpp
@@ -738,7 +751,7 @@ if(CLP_ENABLE_TESTS)
             ${CURL_LIBRARIES}
             date::date
             fmt::fmt
-            log_surgeon::log_surgeon
+            log-surgeon::log-surgeon
             LibArchive::LibArchive
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient

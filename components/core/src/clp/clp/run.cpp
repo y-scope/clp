@@ -1,14 +1,17 @@
 #include "run.hpp"
 
-#include <fstream>
 #include <memory>
 #include <string>
 #include <unordered_set>
 
-#include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/log_surgeon.hpp>
+#include <log_surgeon/rust_compat.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
+
+#include <clp/FileReader.hpp>
+#include <clpp/utils.hpp>
 
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
@@ -61,35 +64,15 @@ int run(int argc, char const* argv[]) {
 
     auto command = command_line_args.get_command();
     if (CommandLineArguments::Command::Compress == command) {
-        /// TODO: make this not a unique_ptr and test performance difference
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser;
+        std::optional<log_surgeon::Parser> parser;
         if (!command_line_args.get_use_heuristic()) {
             std::string const& schema_file_path = command_line_args.get_schema_file_path();
-            reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
-            // Capture groups are temporarily disabled, until NFA intersection support for search.
-            auto const& lexer{reader_parser->get_log_parser().m_lexer};
-            for (auto const& [rule_id, rule_name] : lexer.m_id_symbol) {
-                auto optional_captures{lexer.get_captures_from_rule_id(rule_id)};
-                if (false == optional_captures.has_value()) {
-                    continue;
-                }
-
-                auto const& captures{optional_captures.value()};
-                if (captures.empty()) {
-                    continue;
-                }
-
-                if ("header" == rule_name && 1 == captures.size()
-                    && "timestamp" == captures[0]->get_name())
-                {
-                    continue;
-                }
-
-                throw std::runtime_error(
-                        schema_file_path + ": error: the schema rule '" + rule_name
-                        + "' has a regex pattern containing capture groups.\n"
-                );
+            FileReader spec_reader{schema_file_path};
+            auto parser_result{clpp::build_parser(spec_reader)};
+            if (parser_result.has_error()) {
+                return -1;
             }
+            parser = std::move(parser_result.value().first);
         }
 
         boost::filesystem::path path_prefix_to_remove(
@@ -134,7 +117,7 @@ int run(int argc, char const* argv[]) {
                     empty_directory_paths,
                     grouped_files_to_compress,
                     command_line_args.get_target_encoded_file_size(),
-                    std::move(reader_parser),
+                    parser,
                     command_line_args.get_use_heuristic()
             );
         } catch (TraceableException& e) {

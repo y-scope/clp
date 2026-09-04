@@ -3,13 +3,19 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <set>
+#include <stdexcept>
 
-#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
+
+#include <clp/FileReader.hpp>
+#include <clp/streaming_archive/reader/File.hpp>
+#include <clpp/utils.hpp>
 
 #include "../Defs.h"
 #include "../global_metadata_db_utils.hpp"
@@ -30,7 +36,6 @@ using clp::GlobalMetadataDB;
 using clp::GlobalMetadataDBConfig;
 using clp::Grep;
 using clp::GrepCore;
-using clp::load_lexer_from_file;
 using clp::logtype_dictionary_id_t;
 using clp::Query;
 using clp::segment_id_t;
@@ -199,8 +204,7 @@ static bool search(
         vector<string> const& search_strings,
         CommandLineArguments& command_line_args,
         Archive& archive,
-        log_surgeon::lexers::ByteLexer& lexer,
-        bool use_heuristic
+        log_surgeon::Parser* parser
 ) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
@@ -221,8 +225,7 @@ static bool search(
                     search_begin_ts,
                     search_end_ts,
                     command_line_args.ignore_case(),
-                    lexer,
-                    use_heuristic
+                    parser
             );
             if (query_processing_result.has_value()) {
                 auto& query = query_processing_result.value();
@@ -545,9 +548,9 @@ int main(int argc, char const* argv[]) {
     // TODO: if performance is too slow, can make this more efficient by only diffing files with the
     // same checksum
     uint32_t const max_map_schema_length = 100'000;
-    std::map<std::string, log_surgeon::lexers::ByteLexer> lexer_map;
-    log_surgeon::lexers::ByteLexer one_time_use_lexer;
-    log_surgeon::lexers::ByteLexer* lexer_ptr;
+    std::map<std::string, log_surgeon::Parser> parser_map;
+    std::unique_ptr<log_surgeon::Parser> one_time_use_parser;
+    log_surgeon::Parser* parser;
 
     string archive_id;
     Archive archive_reader;
@@ -572,41 +575,42 @@ int main(int argc, char const* argv[]) {
             continue;
         }
 
-        // Open archive
         if (!open_archive(archive_path.string(), archive_reader)) {
             return -1;
         }
 
-        // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-        bool use_heuristic = true;
-        if (std::filesystem::exists(schema_file_path)) {
-            use_heuristic = false;
-
+        auto parsing_spec_path{archive_path / clp::streaming_archive::cSchemaFileName};
+        if (std::filesystem::exists(parsing_spec_path)) {
             char buf[max_map_schema_length];
-            FileReader file_reader{schema_file_path};
+            FileReader file_reader{parsing_spec_path};
 
             size_t num_bytes_read;
             file_reader.read(buf, max_map_schema_length, num_bytes_read);
+            auto build_parser = [&parsing_spec_path]() -> log_surgeon::Parser {
+                clp::FileReader spec_reader{parsing_spec_path.string()};
+                auto result{clpp::build_parser(spec_reader)};
+                if (result.has_error()) {
+                    throw std::runtime_error("Failed to build parser from parsing specification.");
+                }
+                return std::move(result.value().first);
+            };
             if (num_bytes_read < max_map_schema_length) {
-                auto lexer_map_it = lexer_map.find(buf);
-                // if there is a chance there might be a difference make a new lexer as it's pretty
-                // fast to create
-                if (lexer_map_it == lexer_map.end()) {
-                    auto insert_result = lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
-                    lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, *lexer_ptr);
+                auto parser_map_it{parser_map.find(buf)};
+                // If there's a chance there might be a difference, make a new parser as it's fast.
+                if (parser_map_it == parser_map.end()) {
+                    auto insert_result{parser_map.emplace(buf, build_parser())};
+                    parser = &insert_result.first->second;
                 } else {
-                    lexer_ptr = &lexer_map_it->second;
+                    parser = &parser_map_it->second;
                 }
             } else {
-                lexer_ptr = &one_time_use_lexer;
-                load_lexer_from_file(schema_file_path, one_time_use_lexer);
+                one_time_use_parser = std::make_unique<log_surgeon::Parser>(build_parser());
+                parser = one_time_use_parser.get();
             }
         }
 
         // Perform search
-        if (!search(search_strings, command_line_args, archive_reader, *lexer_ptr, use_heuristic)) {
+        if (false == search(search_strings, command_line_args, archive_reader, parser)) {
             return -1;
         }
         archive_reader.close();

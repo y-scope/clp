@@ -79,8 +79,6 @@ set(
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
-        ../clp/LogSurgeonReader.cpp
-        ../clp/LogSurgeonReader.hpp
         ../clp/LogTypeDictionaryEntryReq.hpp
         ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/networking/socket_utils.cpp
@@ -111,6 +109,8 @@ set(
         ../clp/time_types.hpp
         ../clp/TraceableException.hpp
         ../clp/type_utils.hpp
+        ../clp/Utils.cpp
+        ../clp/Utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
         ../clp/VariableDictionaryEntryReq.hpp
@@ -166,12 +166,13 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 absl::flat_hash_map
                 absl::flat_hash_set
                 clp::string_utils
-                log_surgeon::log_surgeon
+                log-surgeon::log-surgeon
                 utils::profiling
                 ystdlib::containers
                 zstd::libzstd_static
                 PRIVATE
                 Boost::regex
+                clpp::core
                 fmt::fmt
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
@@ -378,6 +379,9 @@ set(
         JsonSerializer.hpp
         PackedStreamReader.cpp
         PackedStreamReader.hpp
+         # SchemaReader relies on Projection... need to refactor
+        search/Projection.cpp
+        search/Projection.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
         Schema.cpp
@@ -414,6 +418,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 absl::flat_hash_map
                 clp::string_utils
                 clp_s::io
+                clp_s::search
                 clp_s::timestamp_parser
                 clp_s::timestamp_pattern
                 msgpack-cxx

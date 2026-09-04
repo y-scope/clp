@@ -13,7 +13,7 @@
 namespace clp_s::indexer {
 IndexManager::IndexManager(
         std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config,
-        bool should_create_table
+        IndexManager::Options const& options
 ) {
     try {
         auto const& db_config = optional_db_config.value();
@@ -32,7 +32,8 @@ IndexManager::IndexManager(
     m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
         m_mysql_index_storage->add_field(field_name, field_type);
     };
-    m_should_create_table = should_create_table;
+    m_should_create_table = options.should_create_table;
+    m_experimental = options.experimental;
     m_output_type = OutputType::Database;
 }
 
@@ -46,7 +47,7 @@ void IndexManager::update_metadata(std::string const& dataset_name, Path const& 
     m_mysql_index_storage->init(dataset_name, m_should_create_table);
 
     ArchiveReader archive_reader;
-    archive_reader.open(archive_path, NetworkAuthOption{});
+    archive_reader.open(archive_path, {.m_experimental = m_experimental});
 
     traverse_schema_tree_and_update_metadata(
             archive_reader.get_schema_tree(),

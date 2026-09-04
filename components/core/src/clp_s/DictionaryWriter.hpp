@@ -54,6 +54,8 @@ public:
      */
     size_t get_data_size() const { return m_data_size; }
 
+    [[nodiscard]] auto get_next_id() const -> uint64_t { return m_next_id; }
+
 protected:
     // Types
     using value_to_id_t = absl::flat_hash_map<std::string, DictionaryIdType>;

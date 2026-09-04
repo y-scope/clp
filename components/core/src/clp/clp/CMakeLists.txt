@@ -68,8 +68,6 @@ set(
         ../LibarchiveFileReader.hpp
         ../LibarchiveReader.cpp
         ../LibarchiveReader.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryEntryReq.hpp
@@ -187,9 +185,10 @@ if(CLP_BUILD_EXECUTABLES)
                 PRIVATE
                 absl::flat_hash_map
                 Boost::filesystem Boost::program_options
+                clpp::core
                 date::date
                 fmt::fmt
-                log_surgeon::log_surgeon
+                log-surgeon::log-surgeon
                 spdlog::spdlog
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 LibArchive::LibArchive

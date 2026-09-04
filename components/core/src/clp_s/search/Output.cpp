@@ -47,7 +47,10 @@ bool Output::filter() {
         return false;
     }
 
-    for (auto schema_id : m_archive_reader->get_schema_ids()) {
+    auto const& schema_ids = m_archive_reader->get_schema_ids();
+    m_result_metrics.num_archive_schemas = schema_ids.size();
+    m_result_metrics.num_clpp_interpretations = m_match->get_num_clpp_interpretations();
+    for (auto schema_id : schema_ids) {
         m_result_metrics.num_archive_records
                 += m_archive_reader->get_num_messages_for_schema(schema_id);
         if (m_match->schema_matched(schema_id)) {
@@ -92,6 +95,14 @@ bool Output::filter() {
         }
     }
 
+    // If the parent rule shapes are needed for projection, ensure they've been read before opening
+    // the packed streams as the reader checkout logic will prevent future reading.
+    if (m_archive_reader->get_log_shape_dictionary() != nullptr
+        && false == m_archive_reader->get_projection()->is_return_all_columns())
+    {
+        std::ignore = m_archive_reader->get_parent_rule_shapes();
+    }
+
     m_query_runner.global_init();
     m_archive_reader->open_packed_streams();
 
@@ -103,6 +114,9 @@ bool Output::filter() {
             continue;
         }
         scanned_any_ert = true;
+        ++m_result_metrics.num_schemas_scanned;
+        m_result_metrics.num_messages_evaluated
+                += m_archive_reader->get_num_messages_for_schema(schema_id);
 
         auto& reader = m_archive_reader->read_schema_table(
                 schema_id,
@@ -110,6 +124,11 @@ bool Output::filter() {
                 m_should_marshal_records
         );
         auto& filter = m_query_runner.prepare_filter(reader);
+        if (nullptr != dynamic_cast<ColumnScan*>(&filter)) {
+            ++m_result_metrics.num_column_scan_filters;
+        } else {
+            ++m_result_metrics.num_query_runner_filters;
+        }
 
         bool schema_has_match{false};
         if (m_output_handler->should_output_metadata()) {
@@ -119,12 +138,14 @@ bool Output::filter() {
             {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
+                m_result_metrics.num_bytes_output += message.size();
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, filter)) {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
+                m_result_metrics.num_bytes_output += message.size();
                 m_output_handler->write(message);
             }
         }
