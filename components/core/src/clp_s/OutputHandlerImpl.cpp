@@ -105,7 +105,7 @@ ErrorCode ResultsCacheOutputHandler::finish() {
                                                     bsoncxx::builder::basic::kvp(
                                                             constants::results_cache::search::
                                                                     cArchiveId,
-                                                            result.archive_id
+                                                            std::move(result.archive_id)
                                                     ),
                                                     bsoncxx::builder::basic::kvp(
                                                             constants::results_cache::search::
