@@ -1,6 +1,5 @@
 #include "MongoDBUtils.hpp"
 
-#include <algorithm>
 #include <cstdint>
 
 #include <bsoncxx/types.hpp>
@@ -79,8 +78,10 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
 }
 }  // namespace
 
-auto contains_only_duplicate_key_write_errors(mongocxx::bulk_write_exception const& exception)
-        -> bool {
+auto contains_only_duplicate_key_write_errors(
+        mongocxx::bulk_write_exception const& exception,
+        size_t num_documents
+) -> bool {
     auto const& raw_server_error = exception.raw_server_error();
     if (false == raw_server_error.has_value()) {
         return false;
@@ -102,6 +103,26 @@ auto contains_only_duplicate_key_write_errors(mongocxx::bulk_write_exception con
     if (write_errors.empty()) {
         return false;
     }
-    return std::all_of(write_errors.begin(), write_errors.end(), is_duplicate_key_write_error);
+
+    size_t num_write_errors{0};
+    for (auto const& write_error : write_errors) {
+        if (false == is_duplicate_key_write_error(write_error)) {
+            return false;
+        }
+        ++num_write_errors;
+    }
+
+    auto const num_inserted_element = reply["nInserted"];
+    if (false == static_cast<bool>(num_inserted_element)
+        || bsoncxx::type::k_int32 != num_inserted_element.type())
+    {
+        return false;
+    }
+    auto const num_inserted = num_inserted_element.get_int32().value;
+    if (num_inserted < 0) {
+        return false;
+    }
+
+    return static_cast<size_t>(num_inserted) + num_write_errors == num_documents;
 }
 }  // namespace clp_s

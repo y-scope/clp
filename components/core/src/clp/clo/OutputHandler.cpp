@@ -163,7 +163,7 @@ auto ResultsCacheOutputHandler::insert_results() -> bool {
     try {
         m_collection.insert_many(m_results, m_insert_options);
     } catch (mongocxx::bulk_write_exception const& exception) {
-        if (false == clp_s::contains_only_duplicate_key_write_errors(exception)) {
+        if (false == clp_s::contains_only_duplicate_key_write_errors(exception, m_results.size())) {
             SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
             return false;
         }
