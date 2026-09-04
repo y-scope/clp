@@ -32,17 +32,17 @@ def _get_expired_job_ids(
     database_config: Database, job_ids: list[int], retention_period_minutes: int
 ) -> list[int]:
     """
-    Filter query-job IDs by whether their retention periods have ended.
+    Filters query job IDs by whether their retention periods have ended.
 
-    MariaDB computes each query's completion time as `start_time + duration`. A query-job ID is
+    MariaDB computes each query's completion time as `start_time + duration`. A query job ID is
     included when the time since completion is greater than `retention_period_minutes`. For a
     terminated query without a completion time, `creation_time` is used instead.
 
     :param database_config: Configuration for the orchestration database.
-    :param job_ids: Query-job IDs to filter.
+    :param job_ids: Query job IDs to filter.
     :param retention_period_minutes: Length of the retention period following query completion, in
         minutes.
-    :return: Query-job IDs completed more than `retention_period_minutes` ago.
+    :return: Query job IDs completed more than `retention_period_minutes` ago.
     """
     if len(job_ids) == 0:
         return []
@@ -100,9 +100,9 @@ def _collect_and_sweep_expired_search_results(
     results_metadata_collection_name: str,
 ) -> None:
     """
-    Remove search results whose query completion time is older than the retention cutoff.
+    Removes search results whose query completion time is older than the retention cutoff.
 
-    Numeric MongoDB collection names are interpreted as query-job IDs. Collections selected by
+    Numeric MongoDB collection names are interpreted as query job IDs. Collections selected by
     `_get_expired_job_ids` are dropped along with their result metadata documents.
 
     :param result_cache_config: MongoDB result-cache and retention configuration.
