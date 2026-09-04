@@ -7,9 +7,9 @@ namespace clp_s {
 /**
  * Returns whether the bulk write failed only because some documents already exist.
  *
- * Command and write-concern errors are rejected since they mean MongoDB did not confirm the
- * outcome of the entire batch. At least one write error must be present, and every write error
- * must be a duplicate-key error.
+ * Command and write-concern errors are rejected since they mean MongoDB did not confirm the outcome
+ * of the entire batch. At least one write error must be present, and every write error must be a
+ * duplicate-key error.
  * @param exception The exception containing the raw MongoDB bulk-write reply.
  * @return Whether the reply contains only duplicate-key write errors.
  */
