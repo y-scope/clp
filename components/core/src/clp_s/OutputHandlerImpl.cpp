@@ -12,7 +12,6 @@
 #include <mongocxx/exception/bulk_write_exception.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
-#include <mongocxx/options/insert.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
@@ -86,6 +85,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
           m_max_num_results{max_num_results},
           m_dataset{dataset} {
     m_collection = connect_to_results_cache(uri, collection, m_client);
+    m_insert_options.ordered(false);
     m_results.reserve(m_batch_size);
 }
 
@@ -187,9 +187,7 @@ void ResultsCacheOutputHandler::write(
 
 auto ResultsCacheOutputHandler::insert_results() -> bool {
     try {
-        mongocxx::options::insert options;
-        options.ordered(false);
-        m_collection.insert_many(m_results, options);
+        m_collection.insert_many(m_results, m_insert_options);
     } catch (mongocxx::bulk_write_exception const& exception) {
         if (false == contains_only_duplicate_key_write_errors(exception)) {
             SPDLOG_ERROR("Failed to insert search results - {}", exception.what());

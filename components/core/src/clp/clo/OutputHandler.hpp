@@ -10,6 +10,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
+#include <mongocxx/options/insert.hpp>
 #include <mongocxx/uri.hpp>
 
 #include "../../reducer/Pipeline.hpp"
@@ -217,6 +218,7 @@ private:
 
     mongocxx::client m_client;
     mongocxx::collection m_collection;
+    mongocxx::options::insert m_insert_options;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
     uint64_t m_max_num_results;
