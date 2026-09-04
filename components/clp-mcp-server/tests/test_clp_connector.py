@@ -142,8 +142,8 @@ async def test_read_results_adds_link_field(mock_clp_config: Any) -> None:
     for original, result in zip(mock_docs, results, strict=True):
         expected_link = (
             f"http://{mock_clp_config.webui.host}:{mock_clp_config.webui.port}"
-            f"/streamFile?type=json&streamId={original['_id']['archive_id']}"
-            f"&dataset=default&logEventIdx={original['_id']['log_event_idx']}"
+            f"/streamFile?type=json&streamId={original['archive_id']}"
+            f"&dataset=default&logEventIdx={original['log_event_idx']}"
         )
         assert result["link"] == expected_link
 
