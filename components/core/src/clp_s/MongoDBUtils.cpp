@@ -39,7 +39,7 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
         return true;
     }
     auto const errors = errors_element.get_array().value;
-    return errors.begin() != errors.end();
+    return false == errors.empty();
 }
 
 [[nodiscard]] auto has_write_concern_errors(bsoncxx::document::view const& reply) -> bool {
@@ -55,7 +55,7 @@ constexpr int32_t cDuplicateKeyErrorCode{11'000};
         return true;
     }
     auto const errors = errors_element.get_array().value;
-    return errors.begin() != errors.end();
+    return false == errors.empty();
 }
 
 [[nodiscard]] auto is_duplicate_key_write_error(bsoncxx::array::element const& write_error)
@@ -98,7 +98,7 @@ auto contains_only_duplicate_key_write_errors(mongocxx::bulk_write_exception con
     }
 
     auto const write_errors = write_errors_element.get_array().value;
-    if (write_errors.begin() == write_errors.end()) {
+    if (write_errors.empty()) {
         return false;
     }
     return std::all_of(write_errors.begin(), write_errors.end(), is_duplicate_key_write_error);
