@@ -128,7 +128,7 @@ def _collect_and_sweep_expired_search_results(
             deleted_job_ids.append(job_id)
 
     if len(deleted_job_ids) != 0:
-        logger.debug("Deleted search results of job(s): %s.", deleted_job_ids)
+        logger.debug(f"Deleted search results of job(s): {deleted_job_ids}.")
     else:
         logger.debug("No search results matched the expiry criteria.")
 
@@ -139,7 +139,7 @@ async def search_result_garbage_collector(clp_config: ClpConfig) -> None:
 
     sweep_interval_secs = clp_config.garbage_collector.sweep_interval.search_result * MIN_TO_SECONDS
 
-    logger.info("%s started.", SEARCH_RESULT_GARBAGE_COLLECTOR_NAME)
+    logger.info(f"{SEARCH_RESULT_GARBAGE_COLLECTOR_NAME} started.")
     try:
         while True:
             _collect_and_sweep_expired_search_results(
@@ -149,5 +149,5 @@ async def search_result_garbage_collector(clp_config: ClpConfig) -> None:
             )
             await asyncio.sleep(sweep_interval_secs)
     except Exception:
-        logger.exception("%s exited with failure.", SEARCH_RESULT_GARBAGE_COLLECTOR_NAME)
+        logger.exception(f"{SEARCH_RESULT_GARBAGE_COLLECTOR_NAME} exited with failure.")
         raise
