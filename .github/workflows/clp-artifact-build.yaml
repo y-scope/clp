@@ -333,7 +333,9 @@ jobs:
 
   ubuntu-jammy-aarch64-deps-image:
     name: "ubuntu-jammy-aarch64-deps-image"
-    if: "needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true'"
+    if: >-
+      needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'true'
+      && needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true'
     needs: "calc-build-triggers"
     runs-on: "ubuntu-24.04-arm"
     steps:
