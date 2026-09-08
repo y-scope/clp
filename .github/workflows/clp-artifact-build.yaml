@@ -209,7 +209,7 @@ jobs:
   manylinux_2_28-deps-image-merge:
     name: "manylinux_2_28-deps-image-merge"
     if: >-
-      needs.calc-build-triggers.outputs.manylinux_2_28_publish_image
+      needs.calc-build-triggers.outputs.manylinux_2_28_publish_image == 'true'
       && needs.manylinux_2_28-deps-image.result == 'success'
     needs:
       - "calc-build-triggers"
@@ -242,7 +242,7 @@ jobs:
   musllinux_1_2-deps-image-merge:
     name: "musllinux_1_2-deps-image-merge"
     if: >-
-      needs.calc-build-triggers.outputs.musllinux_1_2_publish_image
+      needs.calc-build-triggers.outputs.musllinux_1_2_publish_image == 'true'
       && needs.musllinux_1_2-deps-image.result == 'success'
     needs:
       - "calc-build-triggers"
@@ -333,7 +333,7 @@ jobs:
 
   ubuntu-jammy-aarch64-deps-image:
     name: "ubuntu-jammy-aarch64-deps-image"
-    if: "needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image"
+    if: "needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true'"
     needs: "calc-build-triggers"
     runs-on: "ubuntu-24.04-arm"
     steps:
@@ -1016,9 +1016,11 @@ jobs:
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
     if: >-
-      needs.calc-build-triggers.outputs.package_publish_image
+      needs.calc-build-triggers.outputs.package_publish_image == 'true'
       && needs.package-image.result == 'success'
-    needs: "package-image"
+    needs:
+      - "calc-build-triggers"
+      - "package-image"
     runs-on: *runner
     steps:
       - name: "Login to Image Registry"
@@ -1123,9 +1125,11 @@ jobs:
   spider-worker-image-multiarch-manifest:
     name: "spider-worker-image-multiarch-manifest"
     if: >-
-      needs.calc-build-triggers.outputs.spider_worker_publish_image
+      needs.calc-build-triggers.outputs.spider_worker_publish_image == 'true'
       && needs.spider-worker-image.result == 'success'
-    needs: "spider-worker-image"
+    needs:
+      - "calc-build-triggers"
+      - "spider-worker-image"
     runs-on: *runner
     steps:
       - name: "Login to Image Registry"
