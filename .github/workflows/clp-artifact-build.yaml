@@ -66,6 +66,10 @@ jobs:
       ubuntu_jammy_use_published_image: >-
         ${{steps.filter.outputs.ubuntu_jammy_image == 'false'
         || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+      package_publish_image: >-
+        ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+      spider_worker_publish_image: >-
+        ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
 
       # Other outputs
       clp_changed: "${{steps.filter.outputs.clp}}"
@@ -447,7 +451,7 @@ jobs:
       success()
       || (!cancelled() && !failure() && (
         needs.calc-build-triggers.outputs.clp_changed == 'true'
-        || needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'
+        || needs.calc-build-triggers.outputs.manylinux_2_28_image_changed == 'true'
       ))
     needs:
       - "calc-build-triggers"
@@ -583,7 +587,7 @@ jobs:
       success()
       || (!cancelled() && !failure() && (
         needs.calc-build-triggers.outputs.clp_changed == 'true'
-        || needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'true'
+        || needs.calc-build-triggers.outputs.musllinux_1_2_image_changed == 'true'
       ))
     needs:
       - "calc-build-triggers"
@@ -1007,13 +1011,12 @@ jobs:
           dockerfile_path: "./tools/docker-images/clp-package/Dockerfile"
           image_name: "clp-package"
           platform_version_codename: "jammy"
-          push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
+          push: "${{needs.calc-build-triggers.outputs.package_publish_image}}"
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
     if: >-
-      github.event_name != 'pull_request'
-      && github.ref == 'refs/heads/main'
+      needs.calc-build-triggers.outputs.package_publish_image
       && needs.package-image.result == 'success'
     needs: "package-image"
     runs-on: *runner
@@ -1115,13 +1118,12 @@ jobs:
           image_name: "clp-spider-worker"
           platform_version_codename: "jammy"
           pull: true
-          push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
+          push: "${{needs.calc-build-triggers.outputs.spider_worker_publish_image}}"
 
   spider-worker-image-multiarch-manifest:
     name: "spider-worker-image-multiarch-manifest"
     if: >-
-      github.event_name != 'pull_request'
-      && github.ref == 'refs/heads/main'
+      needs.calc-build-triggers.outputs.spider_worker_publish_image
       && needs.spider-worker-image.result == 'success'
     needs: "spider-worker-image"
     runs-on: *runner
