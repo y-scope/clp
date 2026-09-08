@@ -362,8 +362,8 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.calc-build-triggers.outputs.clp_changed == 'true')
     needs:
-      - "centos-stream-9-deps-image"
       - "calc-build-triggers"
+      - "centos-stream-9-deps-image"
     strategy:
       matrix:
         use_shared_libs: [true, false]
