@@ -971,7 +971,7 @@ jobs:
       matrix:
         # To save CI resources in PRs, only build arm64 images when they'll be published.
         arch: >-
-          ${{needs.calc-build-triggers.outputs.package_publish_image
+          ${{needs.calc-build-triggers.outputs.package_publish_image == 'true'
           && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
     runs-on: >-
       ${{
@@ -1075,7 +1075,7 @@ jobs:
       matrix:
         # To save CI resources in PRs, only build arm64 images when they'll be published.
         arch: >-
-          ${{needs.calc-build-triggers.outputs.spider_worker_publish_image
+          ${{needs.calc-build-triggers.outputs.spider_worker_publish_image == 'true'
           && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
     runs-on: >-
       ${{
