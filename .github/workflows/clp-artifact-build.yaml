@@ -44,32 +44,30 @@ jobs:
       # Container-image outputs
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
       centos_stream_9_publish_image: >-
-        ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
       centos_stream_9_use_published_image: >-
         ${{steps.filter.outputs.centos_stream_9_image == 'false'
-        || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
       manylinux_2_28_image_changed: "${{steps.filter.outputs.manylinux_2_28_image}}"
       manylinux_2_28_publish_image: >-
-        ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
       manylinux_2_28_use_published_image: >-
         ${{steps.filter.outputs.manylinux_2_28_image == 'false'
-        || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
       musllinux_1_2_image_changed: "${{steps.filter.outputs.musllinux_1_2_image}}"
       musllinux_1_2_publish_image: >-
-        ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
       musllinux_1_2_use_published_image: >-
         ${{steps.filter.outputs.musllinux_1_2_image == 'false'
-        || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
-      ubuntu_jammy_publish_image: >-
-        ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+      ubuntu_jammy_publish_image: "${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}"
       ubuntu_jammy_use_published_image: >-
         ${{steps.filter.outputs.ubuntu_jammy_image == 'false'
-        || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-      package_publish_image: >-
-        ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
+      package_publish_image: "${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}"
       spider_worker_publish_image: >-
-        ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
 
       # Other outputs
       clp_changed: "${{steps.filter.outputs.clp}}"
@@ -83,6 +81,12 @@ jobs:
       - name: "Work around actions/runner-images/issues/6775"
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
+
+      - name: "Calculate workflow triggers"
+        id: "calc_workflow_triggers"
+        run: >-
+          echo "is_push_or_run_on_main=${{github.event_name != 'pull_request'
+          && github.ref == 'refs/heads/main'}}" >> "$GITHUB_OUTPUT"
 
       - name: "Filter relevant changes"
         uses: "dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36"
@@ -965,9 +969,9 @@ jobs:
       - "ubuntu-jammy-aarch64-deps-image"
     strategy:
       matrix:
-        # Only build arm64 images on push to main to save CI resources on PRs.
+        # To save CI resources in PRs, only build arm64 images when they'll be published.
         arch: >-
-          ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+          ${{needs.calc-build-triggers.outputs.package_publish_image
           && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
     runs-on: >-
       ${{
@@ -1069,9 +1073,9 @@ jobs:
       - "ubuntu-jammy-x86_64-deps-image"
     strategy:
       matrix:
-        # Only build arm64 images on push to main to save CI resources on PRs.
+        # To save CI resources in PRs, only build arm64 images when they'll be published.
         arch: >-
-          ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+          ${{needs.calc-build-triggers.outputs.spider_worker_publish_image
           && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
     runs-on: >-
       ${{
