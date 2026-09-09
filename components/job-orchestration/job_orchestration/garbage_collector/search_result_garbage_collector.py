@@ -134,7 +134,7 @@ def _collect_and_sweep_expired_search_results(
 
 
 async def search_result_garbage_collector(clp_config: ClpConfig) -> None:
-    """Run search-result collection and sweeping at the configured interval."""
+    """Runs search-result collection and sweeping at the configured interval."""
     configure_logging(logger, SEARCH_RESULT_GARBAGE_COLLECTOR_NAME)
 
     sweep_interval_secs = clp_config.garbage_collector.sweep_interval.search_result * MIN_TO_SECONDS
