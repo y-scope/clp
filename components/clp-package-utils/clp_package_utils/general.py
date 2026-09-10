@@ -31,6 +31,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
@@ -656,6 +657,10 @@ def validate_webui_config(
         raise ValueError("The API server must be enabled when the Web UI is enabled.")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_spider_config(clp_config: ClpConfig):
+    validate_port(f"{SPIDER_COMPONENT_NAME}.port", clp_config.spider.host, clp_config.spider.port)
 
 
 def validate_mcp_server_config(clp_config: ClpConfig, logs_dir: pathlib.Path):
