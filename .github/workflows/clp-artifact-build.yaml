@@ -90,7 +90,7 @@ jobs:
 
       - name: "Calculate workflow triggers"
         id: "calc_workflow_triggers"
-        run: >-
+        run: |- 
           # Iteratively construct semver regex (taken from https://semver.org)
           semver_core_id='(:?0|[1-9]\d*)'
           semver_core_regex="${semver_core_id}\\.${semver_core_id}\\.${semver_core_id}"
@@ -110,7 +110,8 @@ jobs:
           semver_regex+='$'
 
           is_workflow_dispatch_on_semver_ref=false
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF_NAME" =~ $semver_regex ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" \
+            && "$GITHUB_REF_NAME" =~ $semver_regex ]]; then
             is_workflow_dispatch_on_semver_ref=true
           fi
 
