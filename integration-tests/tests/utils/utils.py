@@ -7,6 +7,8 @@ from typing import Any
 
 import yaml
 
+MIN_QUOTED_LENGTH = 2
+
 
 def clear_directory(directory: Path) -> None:
     """
@@ -101,6 +103,18 @@ def resolve_path_env_var(var_name: str) -> Path:
     :raise: Propagates `Path.resolve`'s exceptions.
     """
     return Path(get_env_var(var_name)).expanduser().resolve()
+
+
+def strip_surrounding_quotes(text: str) -> str:
+    """
+    Removes a single pair of matching surrounding quotes (`"` or `'`) from `text`, if present.
+
+    :param text:
+    :return: The processed text string.
+    """
+    if len(text) >= MIN_QUOTED_LENGTH and text[0] == text[-1] and text[0] in ('"', "'"):
+        return text[1:-1]
+    return text
 
 
 def validate_dir_exists(dir_path: Path) -> None:
