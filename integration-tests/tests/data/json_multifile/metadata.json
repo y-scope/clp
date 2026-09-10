@@ -2,6 +2,9 @@
     "dataset_name": "json_multifile",
     "unstructured": false,
     "timestamp_key": "timestamp",
+    "timestamp_format": {
+        "kind": "epoch_ms"
+    },
     "begin_ts": 1310138944000,
     "end_ts": 1311208074120,
     "logs_subdir": "logs",
@@ -11,6 +14,5 @@
         "sts-135-2011-07-11.jsonl",
         "sts-135-2011-07-19.jsonl",
         "sts-135-2011-07-21.jsonl"
-    ],
-    "single_match_wildcard_query": "\"detail\":\"Roll program complete, heads down attitude achieved for ascent\""
+    ]
 }
