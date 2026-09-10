@@ -77,6 +77,7 @@ jobs:
 
       # Other outputs
       clp_changed: "${{steps.filter.outputs.clp}}"
+      is_semver_ref: "${{steps.calc_workflow_triggers.outputs.is_semver_ref}}"
       yscope_clp_core_changed: "${{steps.filter.outputs.yscope-clp-core}}"
       integration_tests_changed: "${{steps.filter.outputs.integration-tests}}"
     steps:
@@ -92,30 +93,35 @@ jobs:
         id: "calc_workflow_triggers"
         run: |- 
           # Iteratively construct semver regex (taken from https://semver.org)
-          semver_core_id='(:?0|[1-9]\d*)'
+          semver_core_id='(0|[1-9][0-9]*)'
           semver_core_regex="${semver_core_id}\\.${semver_core_id}\\.${semver_core_id}"
 
-          semver_prerelease_id_regex='(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
+          semver_prerelease_id_regex='(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)'
           semver_prerelease_regex="${semver_prerelease_id_regex}"
-          semver_prerelease_regex+="(?:\\.${semver_prerelease_id_regex})*"
+          semver_prerelease_regex+="(\\.${semver_prerelease_id_regex})*"
 
           semver_build_metadata_id_regex='[0-9a-zA-Z-]+'
           semver_build_metadata_regex="${semver_build_metadata_id_regex}"
-          semver_build_metadata_regex+="(?:\.${semver_build_metadata_id_regex})*"
+          semver_build_metadata_regex+="(\.${semver_build_metadata_id_regex})*"
 
           semver_regex="^v"
           semver_regex+="${semver_core_regex}"
-          semver_regex+="(?:-${semver_prerelease_regex})?"
-          semver_regex+="(?:\+${semver_build_metadata_regex})?"
+          semver_regex+="(-${semver_prerelease_regex})?"
+          semver_regex+="(\+${semver_build_metadata_regex})?"
           semver_regex+='$'
 
+          is_semver_ref=false
+          if [[ "$GITHUB_REF_NAME" =~ $semver_regex ]]; then
+            is_semver_ref=true
+          fi
+
           is_workflow_dispatch_on_semver_ref=false
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" \
-            && "$GITHUB_REF_NAME" =~ $semver_regex ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$is_semver_ref" == "true" ]]; then
             is_workflow_dispatch_on_semver_ref=true
           fi
 
           {
+            echo "is_semver_ref=$is_semver_ref"
             echo "is_push_or_run_on_main=${{github.event_name != 'pull_request'
             && github.ref == 'refs/heads/main'}}"
             echo "is_workflow_dispatch_on_semver_ref=$is_workflow_dispatch_on_semver_ref"
