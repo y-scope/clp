@@ -27,3 +27,8 @@ echo "Generating config files corresponding to user-configured properties..."
 python3 "${script_dir}/init.py" \
     --clp-package-dir "${clp_package_dir}" \
     --output-file "${script_dir}/../.env"
+
+echo "Generating split filter file for user-configured datasets..."
+python3 "${script_dir}/generate-split-filter-file.py" \
+    --clp-package-dir "${clp_package_dir}" \
+    --output-file "${script_dir}/../coordinator/config-template/split-filter.json"
