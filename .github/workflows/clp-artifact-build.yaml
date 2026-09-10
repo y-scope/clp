@@ -109,25 +109,14 @@ jobs:
           semver_regex+="(?:\+${semver_build_metadata_regex})?"
           semver_regex+='$'
 
-          is_semver_ref=false
-          if [[ "$GITHUB_REF_NAME" =~ $semver_regex ]]; then
-            is_semver_ref=true
-          fi
-
-          is_push_or_run_on_main=false
-          if [[ "$GITHUB_EVENT_NAME" == "true" ]] ; then
-            if [[ "$GITHUB_REF_NAME" == "refs/heads/main" ]] ; then
-              is_push_or_run_on_main=true
-            fi
-          fi
-          
           is_workflow_dispatch_on_semver_ref=false
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$is_semver_ref" == "true" ]] ; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF_NAME" =~ $semver_regex ]]; then
             is_workflow_dispatch_on_semver_ref=true
           fi
 
           {
-            echo "is_push_or_run_on_main=$is_push_or_run_on_main"
+            echo "is_push_or_run_on_main=${{github.event_name != 'pull_request'
+            && github.ref == 'refs/heads/main'}}"
             echo "is_workflow_dispatch_on_semver_ref=$is_workflow_dispatch_on_semver_ref"
           } >> "$GITHUB_OUTPUT"
 
