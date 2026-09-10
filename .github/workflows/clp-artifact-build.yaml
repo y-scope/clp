@@ -63,17 +63,17 @@ jobs:
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       ubuntu_jammy_publish_image: >-
         ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_semver_ref == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_workflow_dispatch_on_semver_ref == 'true'}}
       ubuntu_jammy_use_published_image: >-
         ${{steps.filter.outputs.ubuntu_jammy_image == 'false'
         || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_semver_ref == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_workflow_dispatch_on_semver_ref == 'true'}}
       package_publish_image: >-
         ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_semver_ref == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_workflow_dispatch_on_semver_ref == 'true'}}
       spider_worker_publish_image: >-
         ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_semver_ref == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_workflow_dispatch_on_semver_ref == 'true'}}
 
       # Other outputs
       clp_changed: "${{steps.filter.outputs.clp}}"
@@ -114,20 +114,21 @@ jobs:
             is_semver_ref=true
           fi
 
-
           is_push_or_run_on_main=false
-          is_push_or_run_on_semver_ref=false          
-          if [[ "${{github.event_name != 'pull_request'}}" == "true" ]] ; then
+          if [[ "$GITHUB_EVENT_NAME" == "true" ]] ; then
             if [[ "$GITHUB_REF_NAME" == "refs/heads/main" ]] ; then
               is_push_or_run_on_main=true
-            elif [[ "$GITHUB_REF_NAME" =~ $semver_regex ]]; then
-              is_push_or_run_on_semver_ref=true
             fi
+          fi
+          
+          is_workflow_dispatch_on_semver_ref=false
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$is_semver_ref" == "true" ]] ; then
+            is_workflow_dispatch_on_semver_ref=true
           fi
 
           {
             echo "is_push_or_run_on_main=$is_push_or_run_on_main"
-            echo "is_push_or_run_on_semver_ref=$is_push_or_run_on_semver_ref"
+            echo "is_workflow_dispatch_on_semver_ref=$is_workflow_dispatch_on_semver_ref"
           } >> "$GITHUB_OUTPUT"
 
       - name: "Filter relevant changes"
