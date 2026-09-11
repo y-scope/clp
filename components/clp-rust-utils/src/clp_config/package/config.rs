@@ -381,6 +381,20 @@ impl ArchiveOutput {
             .to_string_lossy()
             .into_owned()
     }
+
+    /// Derives the S3 object key of an archive in a dataset.
+    ///
+    /// # Returns
+    ///
+    /// The dataset's archive storage directory joined with `archive_id`, where a `None` dataset
+    /// resolves to `default`.
+    #[must_use]
+    pub fn dataset_archive_object_key(&self, dataset: Option<&str>, archive_id: &str) -> String {
+        format!(
+            "{}/{archive_id}",
+            self.dataset_archive_storage_directory(dataset)
+        )
+    }
 }
 
 impl Default for ArchiveOutput {
@@ -696,6 +710,38 @@ mod tests {
         assert_eq!(
             archive_output.dataset_archive_storage_directory(None),
             "prefix/default"
+        );
+    }
+
+    #[test]
+    fn dataset_archive_object_key_joins_prefix_dataset_and_id() {
+        use non_empty_string::NonEmptyString;
+
+        use crate::clp_config::AwsAuthentication;
+        use crate::clp_config::S3Config;
+        use crate::types::non_empty_string::ExpectedNonEmpty;
+
+        let archive_output = ArchiveOutput {
+            storage: ArchiveOutputStorage::S3 {
+                staging_directory: "var/data/staged-archives".to_owned(),
+                s3_config: S3Config {
+                    bucket: NonEmptyString::from_static_str("bucket"),
+                    region_code: None,
+                    key_prefix: NonEmptyString::from_static_str("LIB1/"),
+                    endpoint_url: None,
+                    aws_authentication: AwsAuthentication::Default,
+                },
+            },
+            ..ArchiveOutput::default()
+        };
+
+        assert_eq!(
+            archive_output.dataset_archive_object_key(None, "abc"),
+            "LIB1/default/abc"
+        );
+        assert_eq!(
+            archive_output.dataset_archive_object_key(Some("mydataset"), "abc"),
+            "LIB1/mydataset/abc"
         );
     }
 
