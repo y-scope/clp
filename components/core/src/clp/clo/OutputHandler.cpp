@@ -4,8 +4,11 @@
 #include <string>
 #include <string_view>
 
+#include <mongocxx/exception/bulk_write_exception.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
+
+#include <clp_s/MongoDBUtils.hpp>
 
 #include "../../reducer/CountOperator.hpp"
 #include "../../reducer/network_utils.hpp"
@@ -51,6 +54,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
 )
         : m_batch_size(batch_size),
           m_max_num_results(max_num_results) {
+    m_insert_options.ordered(false);
     try {
         auto mongo_uri = mongocxx::uri(uri);
         m_client = mongocxx::client(mongo_uri);
@@ -106,16 +110,23 @@ ErrorCode ResultsCacheOutputHandler::flush() {
                     std::move(
                             bsoncxx::builder::basic::make_document(
                                     bsoncxx::builder::basic::kvp(
-                                            cResultsCacheKeys::SearchOutput::OrigFileId,
-                                            std::move(result.orig_file_id)
+                                            cResultsCacheKeys::SearchOutput::Id,
+                                            bsoncxx::builder::basic::make_document(
+                                                    bsoncxx::builder::basic::kvp(
+                                                            cResultsCacheKeys::SearchOutput::
+                                                                    OrigFileId,
+                                                            result.orig_file_id
+                                                    ),
+                                                    bsoncxx::builder::basic::kvp(
+                                                            cResultsCacheKeys::SearchOutput::
+                                                                    LogEventIdx,
+                                                            result.log_event_ix
+                                                    )
+                                            )
                                     ),
                                     bsoncxx::builder::basic::kvp(
                                             cResultsCacheKeys::SearchOutput::OrigFilePath,
                                             std::move(result.orig_file_path)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            cResultsCacheKeys::SearchOutput::LogEventIx,
-                                            result.log_event_ix
                                     ),
                                     bsoncxx::builder::basic::kvp(
                                             cResultsCacheKeys::SearchOutput::Timestamp,
@@ -128,27 +139,40 @@ ErrorCode ResultsCacheOutputHandler::flush() {
                             )
                     )
             );
-            count++;
-
-            if (count == m_batch_size) {
-                m_collection.insert_many(m_results);
-                m_results.clear();
-                count = 0;
-            }
         } catch (mongocxx::exception const& e) {
+            SPDLOG_ERROR("Failed to build search result - {}", e.what());
             return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
+        }
+
+        count++;
+        if (count == m_batch_size) {
+            if (false == insert_results()) {
+                return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
+            }
+            count = 0;
         }
     }
 
-    try {
-        if (false == m_results.empty()) {
-            m_collection.insert_many(m_results);
-            m_results.clear();
-        }
-    } catch (mongocxx::exception const& e) {
+    if (false == m_results.empty() && false == insert_results()) {
         return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
     }
     return ErrorCode::ErrorCode_Success;
+}
+
+auto ResultsCacheOutputHandler::insert_results() -> bool {
+    try {
+        m_collection.insert_many(m_results, m_insert_options);
+    } catch (mongocxx::bulk_write_exception const& exception) {
+        if (false == clp_s::contains_only_duplicate_key_write_errors(exception, m_results.size())) {
+            SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+            return false;
+        }
+    } catch (mongocxx::exception const& exception) {
+        SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+        return false;
+    }
+    m_results.clear();
+    return true;
 }
 
 CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
