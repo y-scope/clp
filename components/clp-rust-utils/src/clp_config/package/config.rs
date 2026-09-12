@@ -381,6 +381,20 @@ impl ArchiveOutput {
             .to_string_lossy()
             .into_owned()
     }
+
+    /// Derives the S3 object key of an archive in a dataset.
+    ///
+    /// # Returns
+    ///
+    /// The dataset's archive storage directory joined with `archive_id`, where a `None` dataset
+    /// resolves to `default`.
+    #[must_use]
+    pub fn dataset_archive_object_key(&self, dataset: Option<&str>, archive_id: &str) -> String {
+        format!(
+            "{}/{archive_id}",
+            self.dataset_archive_storage_directory(dataset)
+        )
+    }
 }
 
 impl Default for ArchiveOutput {
@@ -473,6 +487,37 @@ impl Default for Telemetry {
         Self {
             disable: false,
             endpoint: "https://telemetry.yscope.io".to_owned(),
+        }
+    }
+}
+
+/// Query coordinator configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct QueryCoordinator {
+    pub resource_group: SpiderResourceGroup,
+    pub job_polling_interval_millisecs: NonZeroU64,
+    pub max_concurrent_jobs: NonZeroUsize,
+    pub result_polling: PollingBackoff,
+}
+
+impl Default for QueryCoordinator {
+    fn default() -> Self {
+        Self {
+            resource_group: SpiderResourceGroup {
+                name: NonEmptyString::new("query-coordinator".to_owned())
+                    .expect("default resource group name should not be empty"),
+            },
+            job_polling_interval_millisecs: NonZeroU64::new(100)
+                .expect("default jobs poll delay should not be zero"),
+            max_concurrent_jobs: NonZeroUsize::new(1000)
+                .expect("default maximum number of concurrent jobs should not be zero"),
+            result_polling: PollingBackoff {
+                init_backoff_millisecs: NonZeroU64::new(100)
+                    .expect("default result polling init backoff should not be zero"),
+                max_backoff_millisecs: NonZeroU64::new(1000)
+                    .expect("default result polling max backoff should not be zero"),
+            },
         }
     }
 }
@@ -696,6 +741,38 @@ mod tests {
         assert_eq!(
             archive_output.dataset_archive_storage_directory(None),
             "prefix/default"
+        );
+    }
+
+    #[test]
+    fn dataset_archive_object_key_joins_prefix_dataset_and_id() {
+        use non_empty_string::NonEmptyString;
+
+        use crate::clp_config::AwsAuthentication;
+        use crate::clp_config::S3Config;
+        use crate::types::non_empty_string::ExpectedNonEmpty;
+
+        let archive_output = ArchiveOutput {
+            storage: ArchiveOutputStorage::S3 {
+                staging_directory: "var/data/staged-archives".to_owned(),
+                s3_config: S3Config {
+                    bucket: NonEmptyString::from_static_str("bucket"),
+                    region_code: None,
+                    key_prefix: NonEmptyString::from_static_str("LIB1/"),
+                    endpoint_url: None,
+                    aws_authentication: AwsAuthentication::Default,
+                },
+            },
+            ..ArchiveOutput::default()
+        };
+
+        assert_eq!(
+            archive_output.dataset_archive_object_key(None, "abc"),
+            "LIB1/default/abc"
+        );
+        assert_eq!(
+            archive_output.dataset_archive_object_key(Some("mydataset"), "abc"),
+            "LIB1/mydataset/abc"
         );
     }
 
