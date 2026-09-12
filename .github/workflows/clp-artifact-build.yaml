@@ -1024,14 +1024,14 @@ jobs:
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           arch: "${{matrix.arch}}"
-          dockerfile_path: "./tools/docker-images/clp-package/Dockerfile"
-          image_name: "clp-package"
-          platform_version_codename: "jammy"
           docker_metadata_action_tags: &docker_metadata_action_tags |-
-            type=schedule
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
+            type=schedule
+          dockerfile_path: "./tools/docker-images/clp-package/Dockerfile"
+          image_name: "clp-package"
+          platform_version_codename: "jammy"
           push: "${{needs.calc-build-triggers.outputs.package_publish_image}}"
 
   package-image-multiarch-manifest:
@@ -1116,10 +1116,10 @@ jobs:
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           arch: "${{matrix.arch}}"
+          docker_metadata_action_tags: *docker_metadata_action_tags
           dockerfile_path: "./tools/docker-images/clp-spider-worker/Dockerfile"
           image_name: "clp-spider-worker"
           platform_version_codename: "jammy"
-          docker_metadata_action_tags: *docker_metadata_action_tags
           pull: true
           push: "${{needs.calc-build-triggers.outputs.spider_worker_publish_image}}"
 

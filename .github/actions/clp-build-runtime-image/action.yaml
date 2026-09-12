@@ -21,6 +21,9 @@ inputs:
     description: "Target architecture (amd64 or arm64)"
     default: "amd64"
     required: false
+  docker_metadata_action_tags:
+    description: "`tags` input for docker/metadata-action"
+    required: true
   dockerfile_path:
     description: "Path to the Dockerfile"
     required: true
@@ -30,9 +33,6 @@ inputs:
   platform_version_codename:
     description: >-
       Platform version codename (e.g. jammy, noble) used as the runtime image base version.
-    required: true
-  docker_metadata_action_tags:
-    description: "`tags` input for docker/metadata-action"
     required: true
 
   # Image handling

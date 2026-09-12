@@ -17,11 +17,11 @@ inputs:
     required: false
 
   # Image properties
-  image_name:
-    description: "Container image name"
-    required: true
   docker_metadata_action_tags:
     description: "`tags` input for docker/metadata-action"
+    required: true
+  image_name:
+    description: "Container image name"
     required: true
 
 runs:
