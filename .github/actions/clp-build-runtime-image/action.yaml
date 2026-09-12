@@ -31,6 +31,9 @@ inputs:
     description: >-
       Platform version codename (e.g. jammy, noble) used as the runtime image base version.
     required: true
+  tags:
+    description: "Docker image metadata tags"
+    required: true
 
   # Image handling
   pull:
@@ -76,6 +79,7 @@ runs:
       with:
         images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
           /${{steps.compute-meta.outputs.IMAGE_NAME}}"
+        tags: "${{inputs.tags}}"
         flavor: |
           suffix=-${{inputs.arch}}
 

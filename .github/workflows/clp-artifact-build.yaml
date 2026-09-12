@@ -23,6 +23,11 @@ env:
   # (e.g. ":main-amd64") by clp-core-build-containers' `arch` input and merged into a
   # multi-arch ":main" manifest by the *-deps-image-merge jobs.
   DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-"
+  CONTAINER_IMAGE_TAGS: &container_image_tags |-
+    type=schedule
+    type=ref,event=branch
+    type=ref,event=pr
+    type=semver,pattern={{version}}
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
@@ -63,17 +68,17 @@ jobs:
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       ubuntu_jammy_publish_image: >-
         ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_workflow_dispatch_on_semver_ref == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
       ubuntu_jammy_use_published_image: >-
         ${{steps.filter.outputs.ubuntu_jammy_image == 'false'
         || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_workflow_dispatch_on_semver_ref == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
       package_publish_image: >-
         ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_workflow_dispatch_on_semver_ref == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
       spider_worker_publish_image: >-
         ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_workflow_dispatch_on_semver_ref == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
 
       # Other outputs
       clp_changed: "${{steps.filter.outputs.clp}}"
@@ -91,7 +96,7 @@ jobs:
 
       - name: "Calculate workflow triggers"
         id: "calc_workflow_triggers"
-        run: |- 
+        run: |-
           # Iteratively construct semver regex (taken from https://semver.org)
           semver_core_id='(0|[1-9][0-9]*)'
           semver_core_regex="${semver_core_id}\\.${semver_core_id}\\.${semver_core_id}"
@@ -115,16 +120,17 @@ jobs:
             is_semver_ref=true
           fi
 
-          is_workflow_dispatch_on_semver_ref=false
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$is_semver_ref" == "true" ]]; then
-            is_workflow_dispatch_on_semver_ref=true
+          is_push_semver_tag=false
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF_TYPE" == "tag"
+            && "$is_semver_ref" == "true" ]]; then
+            is_push_semver_tag=true
           fi
 
           {
             echo "is_semver_ref=$is_semver_ref"
             echo "is_push_or_run_on_main=${{github.event_name != 'pull_request'
             && github.ref == 'refs/heads/main'}}"
-            echo "is_workflow_dispatch_on_semver_ref=$is_workflow_dispatch_on_semver_ref"
+            echo "is_push_semver_tag=$is_push_semver_tag"
           } >> "$GITHUB_OUTPUT"
 
       - name: "Filter relevant changes"
@@ -1056,6 +1062,7 @@ jobs:
           dockerfile_path: "./tools/docker-images/clp-package/Dockerfile"
           image_name: "clp-package"
           platform_version_codename: "jammy"
+          tags: *container_image_tags
           push: "${{needs.calc-build-triggers.outputs.package_publish_image}}"
 
   package-image-multiarch-manifest:
@@ -1068,34 +1075,13 @@ jobs:
       - "package-image"
     runs-on: *runner
     steps:
-      - name: "Login to Image Registry"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      - uses: "./.github/actions/create-image-multiarch-manifest"
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
-
-      - name: "Sanitize Repository Name"
-        id: "sanitization"
-        shell: "bash"
-        run: |
-          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
-            >> "$GITHUB_OUTPUT"
-
-      - name: "Create and Push Multi-arch Manifest"
-        shell: "bash"
-        run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/clp-package"
-          tags=("${{github.ref_name}}")
-          if [ "${{github.event_name}}" = "schedule" ]; then
-            tags+=("nightly")
-          fi
-          for tag in "${tags[@]}"; do
-            docker manifest create "${image_base}:${tag}" \
-              "${image_base}:${tag}-amd64" \
-              "${image_base}:${tag}-arm64"
-            docker manifest push "${image_base}:${tag}"
-          done
+          image_name: "clp-package"
+          image_registry: "ghcr.io"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry_username: "${{github.actor}}"
+          tags: *container_image_tags
 
   spider-worker-image:
     name: "spider-worker-image-${{matrix.arch}}"
@@ -1164,6 +1150,7 @@ jobs:
           dockerfile_path: "./tools/docker-images/clp-spider-worker/Dockerfile"
           image_name: "clp-spider-worker"
           platform_version_codename: "jammy"
+          tags: *container_image_tags
           pull: true
           push: "${{needs.calc-build-triggers.outputs.spider_worker_publish_image}}"
 
@@ -1177,33 +1164,10 @@ jobs:
       - "spider-worker-image"
     runs-on: *runner
     steps:
-      - name: "Login to Image Registry"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      - uses: "./.github/actions/create-image-multiarch-manifest"
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
-
-      - name: "Sanitize the repo's name"
-        id: "sanitize_repo_name"
-        run: |-
-          # Docker doesn't support repository names with uppercase characters, so we convert to
-          # lowercase here.
-          lowercase_repo=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
-          echo "repository=${lowercase_repo}" >> "$GITHUB_OUTPUT"
-        shell: "bash"
-
-      - name: "Create and Push Multi-arch Manifest"
-        shell: "bash"
-        run: |
-          image_base="ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-spider-worker"
-          tags=("${{github.ref_name}}")
-          if [ "${{github.event_name}}" = "schedule" ]; then
-            tags+=("nightly")
-          fi
-          for tag in "${tags[@]}"; do
-            docker manifest create "${image_base}:${tag}" \
-              "${image_base}:${tag}-amd64" \
-              "${image_base}:${tag}-arm64"
-            docker manifest push "${image_base}:${tag}"
-          done
+          image_name: "clp-spider-worker"
+          image_registry: "ghcr.io"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry_username: "${{github.actor}}"
+          tags: *container_image_tags
