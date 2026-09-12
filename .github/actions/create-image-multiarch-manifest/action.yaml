@@ -42,7 +42,7 @@ runs:
     - id: "extract-image-tags"
       uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
       with:
-        images: "${{inputs.image_registry}}/${{steps.sanitize-repo-name.outputs.repository}}
+        images: "${{inputs.image_registry}}/${{steps.sanitize-repo-name.outputs.repository}}\
           /${{inputs.image_name}}"
         tags: "${{inputs.docker_metadata_action_tags}}"
 
