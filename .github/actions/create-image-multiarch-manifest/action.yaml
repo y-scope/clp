@@ -33,7 +33,7 @@ runs:
         username: "${{inputs.image_registry_username}}"
         password: "${{inputs.image_registry_password}}"
 
-    - id: "sanitize_repo_name"
+    - id: "sanitize-repo-name"
       shell: "bash"
       run: >-
         echo "repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')"
@@ -42,19 +42,19 @@ runs:
     - id: "extract-image-tags"
       uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
       with:
-        images: "${{inputs.image_registry}}/${{steps.sanitize_repo_name.outputs.repository}}
+        images: "${{inputs.image_registry}}/${{steps.sanitize-repo-name.outputs.repository}}
           /${{inputs.image_name}}"
         tags: "${{inputs.docker_metadata_action_tags}}"
 
     - name: "Create and push multi-arch manifest"
       shell: "bash"
       run: |-
-        while IFS= read -r image_tag; do
-          if [[ -z "$image_tag" ]]; then
+        while IFS= read -r tag; do
+          if [[ -z "$tag" ]]; then
+            # Skip empty tags
             continue
           fi
-          docker manifest create "$image_tag" \
-            "${image_tag}-amd64" \
-            "${image_tag}-arm64"
-          docker manifest push "$image_tag"
+
+          docker manifest create "$tag" "${tag}-amd64" "${tag}-arm64"
+          docker manifest push "$tag"
         done <<< "${{steps.extract-image-tags.outputs.tags}}"
