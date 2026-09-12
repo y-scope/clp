@@ -20,7 +20,7 @@ inputs:
   image_name:
     description: "Container image name"
     required: true
-  tags:
+  docker_metadata_action_tags:
     description: "`tags` input for docker/metadata-action"
     required: true
 
@@ -44,7 +44,7 @@ runs:
       with:
         images: "${{inputs.image_registry}}/${{steps.sanitize_repo_name.outputs.repository}}
           /${{inputs.image_name}}"
-        tags: "${{inputs.tags}}"
+        tags: "${{inputs.docker_metadata_action_tags}}"
 
     - name: "Create and push multi-arch manifest"
       shell: "bash"

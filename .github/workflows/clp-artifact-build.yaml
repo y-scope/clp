@@ -23,11 +23,6 @@ env:
   # (e.g. ":main-amd64") by clp-core-build-containers' `arch` input and merged into a
   # multi-arch ":main" manifest by the *-deps-image-merge jobs.
   DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-"
-  CONTAINER_IMAGE_TAGS: &container_image_tags |-
-    type=schedule
-    type=ref,event=branch
-    type=ref,event=pr
-    type=semver,pattern={{version}}
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
@@ -265,28 +260,13 @@ jobs:
       - "manylinux_2_28-deps-image"
     runs-on: *runner
     steps:
-      - name: "Login to Image Registry"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      - uses: "./.github/actions/create-image-multiarch-manifest"
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
-
-      - name: "Sanitize Repository Name"
-        id: "sanitization"
-        shell: "bash"
-        run: |
-          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
-            >> "$GITHUB_OUTPUT"
-
-      - name: "Create and Push Multi-arch Manifest"
-        shell: "bash"
-        run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/${{env.DEPS_IMAGE_NAME_PREFIX}}manylinux_2_28"
-          docker manifest create "${image_base}:main" \
-            "${image_base}:main-amd64" \
-            "${image_base}:main-arm64"
-          docker manifest push "${image_base}:main"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}manylinux_2_28"
+          image_registry: "ghcr.io"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry_username: "${{github.actor}}"
+          docker_metadata_action_tags: "type=raw,value=main"
 
   musllinux_1_2-deps-image-merge:
     name: "musllinux_1_2-deps-image-merge"
@@ -298,28 +278,13 @@ jobs:
       - "musllinux_1_2-deps-image"
     runs-on: *runner
     steps:
-      - name: "Login to Image Registry"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      - uses: "./.github/actions/create-image-multiarch-manifest"
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
-
-      - name: "Sanitize Repository Name"
-        id: "sanitization"
-        shell: "bash"
-        run: |
-          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
-            >> "$GITHUB_OUTPUT"
-
-      - name: "Create and Push Multi-arch Manifest"
-        shell: "bash"
-        run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/${{env.DEPS_IMAGE_NAME_PREFIX}}musllinux_1_2"
-          docker manifest create "${image_base}:main" \
-            "${image_base}:main-amd64" \
-            "${image_base}:main-arm64"
-          docker manifest push "${image_base}:main"
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}musllinux_1_2"
+          image_registry: "ghcr.io"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry_username: "${{github.actor}}"
+          docker_metadata_action_tags: "type=raw,value=main"
 
   musllinux_1_2-deps-image:
     name: "musllinux_1_2-${{matrix.arch}}-deps-image"
@@ -1062,7 +1027,11 @@ jobs:
           dockerfile_path: "./tools/docker-images/clp-package/Dockerfile"
           image_name: "clp-package"
           platform_version_codename: "jammy"
-          tags: *container_image_tags
+          docker_metadata_action_tags: &docker_metadata_action_tags |-
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
           push: "${{needs.calc-build-triggers.outputs.package_publish_image}}"
 
   package-image-multiarch-manifest:
@@ -1081,7 +1050,7 @@ jobs:
           image_registry: "ghcr.io"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           image_registry_username: "${{github.actor}}"
-          tags: *container_image_tags
+          docker_metadata_action_tags: *docker_metadata_action_tags
 
   spider-worker-image:
     name: "spider-worker-image-${{matrix.arch}}"
@@ -1150,7 +1119,7 @@ jobs:
           dockerfile_path: "./tools/docker-images/clp-spider-worker/Dockerfile"
           image_name: "clp-spider-worker"
           platform_version_codename: "jammy"
-          tags: *container_image_tags
+          docker_metadata_action_tags: *docker_metadata_action_tags
           pull: true
           push: "${{needs.calc-build-triggers.outputs.spider_worker_publish_image}}"
 
@@ -1170,4 +1139,4 @@ jobs:
           image_registry: "ghcr.io"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           image_registry_username: "${{github.actor}}"
-          tags: *container_image_tags
+          docker_metadata_action_tags: *docker_metadata_action_tags
