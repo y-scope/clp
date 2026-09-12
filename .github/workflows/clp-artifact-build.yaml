@@ -253,6 +253,10 @@ jobs:
       - "manylinux_2_28-deps-image"
     runs-on: *runner
     steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
       - uses: "./.github/actions/create-image-multiarch-manifest"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}manylinux_2_28"
@@ -271,6 +275,10 @@ jobs:
       - "musllinux_1_2-deps-image"
     runs-on: *runner
     steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
       - uses: "./.github/actions/create-image-multiarch-manifest"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}musllinux_1_2"
@@ -1037,6 +1045,10 @@ jobs:
       - "package-image"
     runs-on: *runner
     steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
       - uses: "./.github/actions/create-image-multiarch-manifest"
         with:
           image_name: "clp-package"
@@ -1126,6 +1138,10 @@ jobs:
       - "spider-worker-image"
     runs-on: *runner
     steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
       - uses: "./.github/actions/create-image-multiarch-manifest"
         with:
           image_name: "clp-spider-worker"
