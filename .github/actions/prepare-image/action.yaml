@@ -5,6 +5,9 @@ inputs:
   image_name:
     description: "Name of the image (without registry or repository) to prepare"
     required: true
+  image_tag:
+    description: "Tag of the image to prepare when pulling a published image"
+    required: true
   use_published_image:
     description: "Whether to pull the published image instead of loading a workflow artifact"
     required: true
@@ -28,6 +31,7 @@ runs:
       env:
         ARCH: "${{inputs.arch}}"
         IMAGE_NAME: "${{inputs.image_name}}"
+        IMAGE_TAG: "${{inputs.image_tag}}"
         TEMP_DIR: "${{runner.temp}}"
         USE_PUBLISHED_IMAGE: "${{inputs.use_published_image}}"
       run: |
@@ -41,7 +45,7 @@ runs:
           true)
             # Docker doesn't support repository names with uppercase characters.
             repository=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
-            echo "qualified_image_name=ghcr.io/${repository}/${IMAGE_NAME}:main" \
+            echo "qualified_image_name=ghcr.io/${repository}/${IMAGE_NAME}:${IMAGE_TAG}" \
               >> "$GITHUB_OUTPUT"
             ;;
           false)

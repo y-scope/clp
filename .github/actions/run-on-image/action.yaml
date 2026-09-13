@@ -5,6 +5,9 @@ inputs:
   image_name:
     description: "Name of the container image (without registry or repository) to use"
     required: true
+  image_tag:
+    description: "Tag of the image to use when pulling a published image"
+    required: true
   use_published_image:
     description: "Whether to use the published container image"
     required: true
@@ -14,10 +17,10 @@ inputs:
   arch:
     description: >-
       Target architecture (e.g. "amd64" or "arm64") when consuming a single arch of a
-      multi-arch image. When set and using a published image, the bare multi-arch tag ":main" is
-      pulled for that platform. When set and using a locally-built image, the arch-suffixed
-      artifact/image (e.g. "<image_name>-amd64") produced by clp-core-build-containers is loaded.
-      When empty, the bare image_name is used (legacy behaviour).
+      multi-arch image. When set and using a published image, `image_tag` is pulled for that
+      platform. When set and using a locally-built image, the arch-suffixed artifact/image (e.g.
+      "<image_name>-amd64") produced by clp-core-build-containers is loaded. When empty, the bare
+      image_name is used (legacy behaviour).
     required: false
     default: ""
   prepared_image_id:
@@ -35,6 +38,7 @@ runs:
       uses: "./.github/actions/prepare-image"
       with:
         image_name: "${{inputs.image_name}}"
+        image_tag: "${{inputs.image_tag}}"
         use_published_image: "${{inputs.use_published_image}}"
         arch: "${{inputs.arch}}"
 
