@@ -66,8 +66,7 @@ jobs:
         || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
       ubuntu_jammy_use_published_image: >-
         ${{steps.filter.outputs.ubuntu_jammy_image == 'false'
-        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
       package_publish_image: >-
         ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
         || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
