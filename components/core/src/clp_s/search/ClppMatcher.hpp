@@ -38,7 +38,7 @@ public:
      * If the archive is not experimental construction is skipped and the object is invalid.
      * @param archive_reader
      * @param case_sensitive Whether matching is case sensitive.
-     * @throws std::runtime_error if the log shape dictionary is not valid.
+     * @throw std::runtime_error if the log shape dictionary is not valid.
      */
     ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive);
 
@@ -60,10 +60,11 @@ public:
      * `rule_name` is empty, then returns the possible interpretations.
      * @param query
      * @param rule_name A qualified parent rule name, or empty to decompose against every log shape.
-     * @return The matching interpretations, or an error code indicating the failure:
-     * - Forwards `decompose_by_log_shape`'s return values.
+     * @return The matching interpretations (empty if no interpretation matched a shape), or an
+     * error code indicating the failure:
+     * - Forwards `decompose_by_log_shapes`'s return values.
      * - Forwards `decompose_by_rule_name`'s return values.
-     * @throws std::system_error (clpp::ClppErrorCodeEnum::Unsupported) if built without
+     * @throw std::system_error (clpp::ClppErrorCodeEnum::Unsupported) if built without
      * CLP_BUILD_CLPP_DECOMPOSITION.
      */
     [[nodiscard]] auto decompose_query(std::string_view query, std::string_view rule_name)
@@ -76,14 +77,13 @@ private:
      * @return The matching interpretations, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
      */
-    [[nodiscard]] auto decompose_by_log_shape(std::string_view query)
+    [[nodiscard]] auto decompose_by_log_shapes(std::string_view query)
             -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
 
     /**
      * Decomposes `query` against the parent rule `rule_name`, then matches each interpretation's
      * shape query against `rule_name` in relevant log shapes.
      * @return The matching interpretations, or an error code indicating the failure:
-     * - Forwards `clpp::decompose_by_rule_name`'s return values.
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
      */
     [[nodiscard]] auto decompose_by_rule_name(std::string_view query, std::string_view rule_name)

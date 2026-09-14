@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <log_surgeon/log_surgeon.hpp>
-#include <ystdlib/error_handling/Result.hpp>
 
 #include <clpp/TextShape.hpp>
 
@@ -50,16 +49,14 @@ struct Interpretation {
  * @param parser
  * @param query
  * @param rule_name The qualified (dot-separated) log-surgeon rule name.
- * @return The interpretations, or an error code indicating the failure:
- * - clpp::ClppErrorCodeEnum::DecomposeQueryFailure if log-surgeon returned no interpretations.
- * @throws std::system_error (clpp::ClppErrorCodeEnum::Unsupported) if built without
- * CLP_BUILD_CLPP_DECOMPOSITION.
+ * @return A vector of the interpretations for `query` on `rule_name`.
+ * @throw Propagates `log_surgeon::Parser::search_by_name`'s exceptions.
  */
 [[nodiscard]] auto decompose_by_rule_name(
         log_surgeon::Parser& parser,
         std::string_view query,
         std::string_view rule_name
-) -> ystdlib::error_handling::Result<std::vector<Interpretation>>;
+) -> std::vector<Interpretation>;
 
 /**
  * Decomposes `query` against `log_shapes`, returning a list of interpretations for every shape.
@@ -70,8 +67,7 @@ struct Interpretation {
  * @param log_shapes
  * @return A vector of the interpretations for every shape in `log_shapes`. The vector is the same
  * size and order of `log_shapes`, with empty elements for shapes that cannot match the query.
- * @throws std::system_error (clpp::ClppErrorCodeEnum::Unsupported) if built without
- * CLP_BUILD_CLPP_DECOMPOSITION.
+ * @throw Propagates `log_surgeon::Parser::search_by_log_shapes`'s exceptions.
  */
 auto decompose_by_log_shapes(
         log_surgeon::Parser& parser,

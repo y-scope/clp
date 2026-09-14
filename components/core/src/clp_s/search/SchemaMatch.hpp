@@ -164,9 +164,8 @@ private:
      * schema's query (m_schema_to_query) keeps only the interpretations relevant to it.
      * @param rule_name The parent rule name, or empty for a LogMessage node.
      * @return The filter expression, or nullptr if no interpretation matched.
-     * @throws std::runtime_error if decomposition fails.
-     * @throws std::system_error (clpp::ClppErrorCodeEnum::Unsupported) if built without
-     * CLP_BUILD_CLPP_DECOMPOSITION.
+     * @throw std::runtime_error if `ClppMatcher::decompose_query` returns an error.
+     * @throw Propagates `ClppMatcher::decompose_query`'s exceptions.
      */
     auto build_decomposed_query_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,

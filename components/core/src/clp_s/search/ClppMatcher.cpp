@@ -17,6 +17,12 @@
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 
+#if 0 == CLP_BUILD_CLPP_DECOMPOSITION
+    #include <system_error>
+
+    #include <clpp/ErrorCode.hpp>
+#endif
+
 namespace clp_s::search {
 ClppMatcher::ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive)
         : m_archive_reader{archive_reader},
@@ -56,13 +62,22 @@ auto ClppMatcher::find_matching_schemas(
 
 auto ClppMatcher::decompose_query(std::string_view query, std::string_view rule_name)
         -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
+#if 0 == CLP_BUILD_CLPP_DECOMPOSITION
+    throw std::system_error{
+            ystdlib::error_handling::make_error_code(
+                    clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported}
+            ),
+        "clp+ query decomposition is not supported in this build; rebuild with"
+        " -DCLP_BUILD_CLPP_DECOMPOSITION=ON"
+    };
+#endif
     if (rule_name.empty()) {
-        return decompose_by_log_shape(query);
+        return decompose_by_log_shapes(query);
     }
     return decompose_by_rule_name(query, rule_name);
 }
 
-auto ClppMatcher::decompose_by_log_shape(std::string_view query)
+auto ClppMatcher::decompose_by_log_shapes(std::string_view query)
         -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
     std::vector<std::string_view> log_shapes;
     auto const& entries{m_archive_reader->get_log_shape_dictionary()->get_entries()};
@@ -101,9 +116,7 @@ auto ClppMatcher::decompose_by_rule_name(std::string_view query, std::string_vie
         }
                                                                  .build());
     }
-    auto interpretations{
-            YSTDLIB_ERROR_HANDLING_TRYX(clpp::decompose_by_rule_name(*m_parser, query, rule_name))
-    };
+    auto interpretations{clpp::decompose_by_rule_name(*m_parser, query, rule_name)};
     std::vector<InterpretationMatch> matches;
     matches.reserve(interpretations.size());
     for (auto& interpretation : interpretations) {
