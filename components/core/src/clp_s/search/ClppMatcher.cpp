@@ -17,12 +17,6 @@
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 
-#if 0 == CLP_BUILD_CLPP_DECOMPOSITION
-    #include <system_error>
-
-    #include <clpp/ErrorCode.hpp>
-#endif
-
 namespace clp_s::search {
 ClppMatcher::ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive)
         : m_archive_reader{archive_reader},
@@ -62,15 +56,6 @@ auto ClppMatcher::find_matching_schemas(
 
 auto ClppMatcher::decompose_query(std::string_view query, std::string_view rule_name)
         -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
-#if 0 == CLP_BUILD_CLPP_DECOMPOSITION
-    throw std::system_error{
-            ystdlib::error_handling::make_error_code(
-                    clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported}
-            ),
-        "clp+ query decomposition is not supported in this build; rebuild with"
-        " -DCLP_BUILD_CLPP_DECOMPOSITION=ON"
-    };
-#endif
     if (rule_name.empty()) {
         return decompose_by_log_shapes(query);
     }

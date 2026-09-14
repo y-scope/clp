@@ -165,7 +165,6 @@ private:
      * @param rule_name The parent rule name, or empty for a LogMessage node.
      * @return The filter expression, or nullptr if no interpretation matched.
      * @throw std::runtime_error if `ClppMatcher::decompose_query` returns an error.
-     * @throw Propagates `ClppMatcher::decompose_query`'s exceptions.
      */
     auto build_decomposed_query_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,

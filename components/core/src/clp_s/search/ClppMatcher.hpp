@@ -64,8 +64,6 @@ public:
      * error code indicating the failure:
      * - Forwards `decompose_by_log_shapes`'s return values.
      * - Forwards `decompose_by_rule_name`'s return values.
-     * @throw std::system_error (clpp::ClppErrorCodeEnum::Unsupported) if built without
-     * CLP_BUILD_CLPP_DECOMPOSITION.
      */
     [[nodiscard]] auto decompose_query(std::string_view query, std::string_view rule_name)
             -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;

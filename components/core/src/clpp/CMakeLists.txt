@@ -17,6 +17,11 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         )
         add_library(clpp::core ALIAS clpp_core)
         target_compile_features(clpp_core PRIVATE cxx_std_20)
+        target_compile_definitions(
+                clpp_core
+                PRIVATE
+                CLP_BUILD_CLPP_DECOMPOSITION=$<BOOL:${CLP_BUILD_CLPP_DECOMPOSITION}>
+        )
         target_include_directories(clpp_core PUBLIC ../)
         target_link_libraries(
                 clpp_core

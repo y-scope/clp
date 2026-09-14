@@ -35,11 +35,6 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 ${CLP_S_SEARCH_SOURCES}
         )
         add_library(clp_s::search ALIAS clp_s_search)
-        target_compile_definitions(
-                clp_s_search
-                PRIVATE
-                CLP_BUILD_CLPP_DECOMPOSITION=$<BOOL:${CLP_BUILD_CLPP_DECOMPOSITION}>
-        )
         target_compile_features(clp_s_search PRIVATE cxx_std_20)
         target_include_directories(clp_s_search PUBLIC ../../)
         target_link_libraries(

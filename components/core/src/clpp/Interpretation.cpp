@@ -4,14 +4,19 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
+
+#if CLP_BUILD_CLPP_DECOMPOSITION
+    #include <system_error>
+
+    #include <clpp/ErrorCode.hpp>
+    #include <ystdlib/error_handling/Result.hpp>
+#endif
 
 #include <log_surgeon/log_surgeon.hpp>
 
-#include <clpp/TextShape.hpp>
-
 namespace clpp {
+#if CLP_BUILD_CLPP_DECOMPOSITION
 namespace {
 /**
  * Builds a query interpretation from log-surgeon sub-query segments. Segments without a rule name
@@ -75,6 +80,35 @@ auto decompose_by_log_shapes(
     }
     return interpretations_per_shape;
 }
+#else
+namespace {
+constexpr std::string_view cDecompositionUnsupportedMessage{
+        "clp+ query decomposition is not supported in this build; rebuild with"
+        " -DCLP_BUILD_CLPP_DECOMPOSITION=ON"
+};
+}  // namespace
+
+auto decompose_by_rule_name(log_surgeon::Parser&, std::string_view, std::string_view)
+        -> std::vector<Interpretation> {
+    throw std::system_error{
+            ystdlib::error_handling::make_error_code(
+                    clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported}
+            ),
+            std::string{cDecompositionUnsupportedMessage}
+    };
+}
+
+auto
+decompose_by_log_shapes(log_surgeon::Parser&, std::string_view, std::span<std::string_view const>)
+        -> std::vector<std::vector<Interpretation>> {
+    throw std::system_error{
+            ystdlib::error_handling::make_error_code(
+                    clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported}
+            ),
+            std::string{cDecompositionUnsupportedMessage}
+    };
+}
+#endif
 
 auto split_qualified_name(std::string_view const qualified_name) -> std::vector<std::string_view> {
     std::vector<std::string_view> rule_names;
