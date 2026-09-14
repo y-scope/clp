@@ -11,31 +11,11 @@
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/FunctionCall.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/TraceableException.hpp>
 #include <clpp/Defs.hpp>
 
 namespace clp_s::search {
-namespace {
-/**
- * Builds a dotted column name string from a column descriptor's tokens.
- * @param column The column descriptor.
- * @return The dotted column name.
- */
-auto column_descriptor_to_string(ast::ColumnDescriptor& column) -> std::string;
-
-auto column_descriptor_to_string(ast::ColumnDescriptor& column) -> std::string {
-    std::string result;
-    for (auto it{column.descriptor_begin()}; column.descriptor_end() != it;) {
-        if (column.descriptor_begin() != it) {
-            result.append(".");
-        }
-        result.append(it->get_token());
-        ++it;
-    }
-    return result;
-}
-}  // namespace
-
 auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column, NodeMask::Mode mode)
         -> void {
     if (column->is_unresolved_descriptor()) {
@@ -142,7 +122,7 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
                                 "columns; no LogMessage or ParentRule nodes match column \"{}\".",
                                 NodeMask::Mode::Decompose == entry.m_mode ? clpp::cDecomposeFunction
                                                                           : clpp::cShapeFunction,
-                                column_descriptor_to_string(*entry.m_column)
+                                ast::column_descriptor_to_string(*entry.m_column)
                         )
                 );
             }

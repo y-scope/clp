@@ -225,25 +225,9 @@ private:
     std::shared_ptr<SchemaTree> m_tree;
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
     bool m_clpp_decomposed_query{false};
+    bool m_clpp_node_matched{false};
     uint64_t m_num_clpp_interpretations{0};
     ClppMatcher m_clpp_matcher;
-
-    /**
-     * Expands a wildcard at a CLPP node (LogMessage or ParentRule) by iterating
-     * the node's children and dispatching each child to CLPP decomposition
-     * (for ParentRule children) or direct leaf filters.
-     *
-     * @param resolved_column The resolved column descriptor for the CLPP node.
-     * @param node The schema-tree node.
-     * @param filter The FilterExpr containing the operation and operand.
-     * @param possibilities The expression (must be an OrExpr) to add child results to.
-     */
-    void expand_clpp_node_children(
-            std::shared_ptr<ast::ColumnDescriptor> const& resolved_column,
-            SchemaNode const& node,
-            ast::FilterExpr const& filter,
-            std::shared_ptr<ast::Expression> const& possibilities
-    );
 
     /**
      * Populates the column mapping for a given column

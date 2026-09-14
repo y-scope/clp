@@ -32,6 +32,7 @@
 #include <clp_s/search/ast/Literal.hpp>
 #include <clp_s/search/ast/OrExpr.hpp>
 #include <clp_s/search/ast/OrOfAndForm.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/search/ast/StringLiteral.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
@@ -127,8 +128,20 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
         } else if (auto const column{std::dynamic_pointer_cast<ast::ColumnDescriptor>(*it)};
                    nullptr != column)
         {
+            m_clpp_node_matched = false;
             auto [mapped_succesfully, new_and_expr]{populate_column_mapping(column, cur)};
             if (false == mapped_succesfully) {
+                if (column->get_subtree_type().has_value()
+                    && clpp::cShapeFunction == column->get_subtree_type().value()
+                    && false == m_clpp_node_matched)
+                {
+                    throw std::runtime_error{fmt::format(
+                            "{}(<col>) can only be applied to LogMessage or ParentRule columns; no "
+                            "LogMessage or ParentRule nodes match column \"{}\".",
+                            clpp::cShapeFunction,
+                            ast::column_descriptor_to_string(*column)
+                    )};
+                }
                 // no matching columns -- replace this expression with empty;
                 return EmptyExpr::create();
             }
@@ -181,17 +194,17 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
                             column->get_namespace()
                     );
                     resolved_column->set_matching_type(literal_type);
+                    resolved_column->set_subtree_type(column->get_subtree_type());
 
                     auto const& filter{dynamic_cast<FilterExpr const&>(*cur.get())};
                     if (NodeType::LogMessage == matched_node_type
                         || NodeType::ParentRule == matched_node_type)
                     {
-                        expand_clpp_node_children(
-                                resolved_column,
-                                m_tree->get_node(node_id),
-                                filter,
-                                possibilities
-                        );
+                        if (auto result{build_clpp_query_filter(resolved_column, node_id, filter)};
+                            nullptr != result)
+                        {
+                            possibilities->add_operand(result);
+                        }
                     } else if (FilterOperation::EXISTS == filter.get_operation()
                                || FilterOperation::NEXISTS == filter.get_operation())
                     {
@@ -285,49 +298,6 @@ auto SchemaMatch::populate_column_mapping(
     return {matched, expr};
 }
 
-auto SchemaMatch::expand_clpp_node_children(
-        std::shared_ptr<ast::ColumnDescriptor> const& resolved_column,
-        SchemaNode const& node,
-        ast::FilterExpr const& filter,
-        std::shared_ptr<ast::Expression> const& possibilities
-) -> void {
-    auto const op{filter.get_operation()};
-
-    for (auto const child_id : node.get_children_ids()) {
-        auto const& child_node{m_tree->get_node(child_id)};
-        auto child_column{resolved_column->copy_with_new_id()};
-        child_column->get_descriptor_list().emplace_back(
-                DescriptorToken::create_descriptor_from_literal_token(child_node.get_key_name())
-        );
-
-        if (NodeType::ParentRule == child_node.get_type()) {
-            if (auto clpp_result{build_clpp_query_filter(child_column, child_id, filter)};
-                nullptr != clpp_result)
-            {
-                possibilities->add_operand(clpp_result->copy());
-            }
-        } else {
-            auto child_literal_type{SchemaNode::node_to_literal_type(child_node.get_type())};
-            child_column->set_matching_type(child_literal_type);
-            if (false == child_column->matches_any(ast::cAllTypes)) {
-                continue;
-            }
-            auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(child_id);
-            descriptors_it->second.emplace(child_column);
-            if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
-                auto child_filter{FilterExpr::create(child_column, op, filter.is_inverted())};
-                possibilities->add_operand(child_filter);
-            } else {
-                auto child_operand{filter.get_operand()};
-                auto child_filter{
-                        FilterExpr::create(child_column, op, child_operand, filter.is_inverted())
-                };
-                possibilities->add_operand(child_filter);
-            }
-        }
-    }
-}
-
 auto SchemaMatch::populate_column_mapping(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         int32_t node_id,
@@ -354,6 +324,10 @@ auto SchemaMatch::populate_column_mapping(
     }
     int32_t prev_level = 0;
     bool matched = false;
+    bool const is_shape_query{
+            column->get_subtree_type().has_value()
+            && clpp::cShapeFunction == column->get_subtree_type().value()
+    };
     while (false == work_list.empty()) {
         auto& cur = work_list.top();
         auto [cur_depth, cur_it, cur_node_id] = cur;
@@ -417,10 +391,16 @@ auto SchemaMatch::populate_column_mapping(
         } else if ((next_at_descriptor_list_end
                     && column->matches_type(SchemaNode::node_to_literal_type(cur_node.get_type()))))
         {
+            bool const is_clpp_node{
+                    NodeType::LogMessage == cur_node.get_type()
+                    || NodeType::ParentRule == cur_node.get_type()
+            };
+            if (is_shape_query && false == is_clpp_node) {
+                continue;
+            }
+            m_clpp_node_matched |= is_clpp_node;
             if (false == column->is_unresolved_descriptor()) {
-                if (NodeType::LogMessage == cur_node.get_type()
-                    || NodeType::ParentRule == cur_node.get_type())
-                {
+                if (is_clpp_node) {
                     if (column->is_clpp_resolved()) {
                         matched = true;
                         continue;
@@ -448,7 +428,9 @@ auto SchemaMatch::populate_column_mapping(
                 node_ids_it->second.emplace(cur_node_id);
             }
             matched = true;
-            continue;
+            if (false == (wildcard_descriptor && is_clpp_node)) {
+                continue;
+            }
         }
 
         // Allow matching a wildcard zero times
