@@ -32,8 +32,8 @@ concurrency:
   cancel-in-progress: "${{github.ref != 'refs/heads/main'}}"
 
 jobs:
-  filter-relevant-changes:
-    name: "filter-relevant-changes"
+  calc-build-triggers:
+    name: "calc-build-triggers"
     runs-on: &runner >-
       ${{
         github.repository_owner == 'y-scope'
@@ -41,10 +41,35 @@ jobs:
         || 'ubuntu-24.04'
       }}
     outputs:
+      # Container-image outputs
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
+      centos_stream_9_publish_image: >-
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
+      centos_stream_9_use_published_image: >-
+        ${{steps.filter.outputs.centos_stream_9_image == 'false'
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
       manylinux_2_28_image_changed: "${{steps.filter.outputs.manylinux_2_28_image}}"
+      manylinux_2_28_publish_image: >-
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
+      manylinux_2_28_use_published_image: >-
+        ${{steps.filter.outputs.manylinux_2_28_image == 'false'
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
       musllinux_1_2_image_changed: "${{steps.filter.outputs.musllinux_1_2_image}}"
+      musllinux_1_2_publish_image: >-
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
+      musllinux_1_2_use_published_image: >-
+        ${{steps.filter.outputs.musllinux_1_2_image == 'false'
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
+      ubuntu_jammy_publish_image: "${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}"
+      ubuntu_jammy_use_published_image: >-
+        ${{steps.filter.outputs.ubuntu_jammy_image == 'false'
+        || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
+      package_publish_image: "${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}"
+      spider_worker_publish_image: >-
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
+
+      # Other outputs
       clp_changed: "${{steps.filter.outputs.clp}}"
       yscope_clp_core_changed: "${{steps.filter.outputs.yscope-clp-core}}"
       integration_tests_changed: "${{steps.filter.outputs.integration-tests}}"
@@ -56,6 +81,12 @@ jobs:
       - name: "Work around actions/runner-images/issues/6775"
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
+
+      - name: "Calculate workflow triggers"
+        id: "calc_workflow_triggers"
+        run: >-
+          echo "is_push_or_run_on_main=${{github.event_name != 'pull_request'
+          && github.ref == 'refs/heads/main'}}" >> "$GITHUB_OUTPUT"
 
       - name: "Filter relevant changes"
         uses: "dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36"
@@ -122,8 +153,8 @@ jobs:
 
   centos-stream-9-deps-image:
     name: "centos-stream-9-deps-image"
-    if: "needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'true'"
-    needs: "filter-relevant-changes"
+    if: "needs.calc-build-triggers.outputs.centos_stream_9_image_changed == 'true'"
+    needs: "calc-build-triggers"
     runs-on: *runner
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
@@ -142,14 +173,13 @@ jobs:
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          push_deps_image: "${{needs.calc-build-triggers.outputs.centos_stream_9_publish_image}}"
           token: "${{secrets.GITHUB_TOKEN}}"
 
   manylinux_2_28-deps-image:
     name: "manylinux_2_28-${{matrix.arch}}-deps-image"
-    if: "needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'"
-    needs: "filter-relevant-changes"
+    if: "needs.calc-build-triggers.outputs.manylinux_2_28_image_changed == 'true'"
+    needs: "calc-build-triggers"
     strategy:
       fail-fast: false
       matrix:
@@ -177,21 +207,16 @@ jobs:
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          push_deps_image: "${{needs.calc-build-triggers.outputs.manylinux_2_28_publish_image}}"
           token: "${{secrets.GITHUB_TOKEN}}"
 
   manylinux_2_28-deps-image-merge:
     name: "manylinux_2_28-deps-image-merge"
-    # Only merge per-arch tags into a multi-arch ":main" manifest on push to main; on PRs the
-    # deps image is consumed as a local tar artifact, so no merge is needed. Gated on the
-    # manylinux deps-image matrix result, which is 'success' only when both arch legs
-    # (amd64 + arm64) succeeded and pushed their arch-suffixed ":main-<arch>" tags.
     if: >-
-      github.event_name != 'pull_request'
-      && github.ref == 'refs/heads/main'
+      needs.calc-build-triggers.outputs.manylinux_2_28_publish_image == 'true'
       && needs.manylinux_2_28-deps-image.result == 'success'
     needs:
+      - "calc-build-triggers"
       - "manylinux_2_28-deps-image"
     runs-on: *runner
     steps:
@@ -220,15 +245,11 @@ jobs:
 
   musllinux_1_2-deps-image-merge:
     name: "musllinux_1_2-deps-image-merge"
-    # Only merge per-arch tags into a multi-arch ":main" manifest on push to main; on PRs the
-    # deps image is consumed as a local tar artifact, so no merge is needed. Gated on the
-    # musllinux deps-image matrix result, which is 'success' only when both arch legs
-    # (amd64 + arm64) succeeded and pushed their arch-suffixed ":main-<arch>" tags.
     if: >-
-      github.event_name != 'pull_request'
-      && github.ref == 'refs/heads/main'
+      needs.calc-build-triggers.outputs.musllinux_1_2_publish_image == 'true'
       && needs.musllinux_1_2-deps-image.result == 'success'
     needs:
+      - "calc-build-triggers"
       - "musllinux_1_2-deps-image"
     runs-on: *runner
     steps:
@@ -257,8 +278,8 @@ jobs:
 
   musllinux_1_2-deps-image:
     name: "musllinux_1_2-${{matrix.arch}}-deps-image"
-    if: "needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'true'"
-    needs: "filter-relevant-changes"
+    if: "needs.calc-build-triggers.outputs.musllinux_1_2_image_changed == 'true'"
+    needs: "calc-build-triggers"
     strategy:
       fail-fast: false
       matrix:
@@ -286,14 +307,13 @@ jobs:
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          push_deps_image: "${{needs.calc-build-triggers.outputs.musllinux_1_2_publish_image}}"
           token: "${{secrets.GITHUB_TOKEN}}"
 
   ubuntu-jammy-x86_64-deps-image:
     name: "ubuntu-jammy-x86_64-deps-image"
-    if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
-    needs: "filter-relevant-changes"
+    if: "needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'true'"
+    needs: "calc-build-triggers"
     runs-on: *runner
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
@@ -312,17 +332,15 @@ jobs:
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          push_deps_image: "${{needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image}}"
           token: "${{secrets.GITHUB_TOKEN}}"
 
   ubuntu-jammy-aarch64-deps-image:
     name: "ubuntu-jammy-aarch64-deps-image"
     if: >-
-      needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'
-      && github.event_name != 'pull_request'
-      && github.ref == 'refs/heads/main'
-    needs: "filter-relevant-changes"
+      needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'true'
+      && needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true'
+    needs: "calc-build-triggers"
     runs-on: "ubuntu-24.04-arm"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
@@ -341,18 +359,17 @@ jobs:
           docker_context: "components/core"
           docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
             /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          push_deps_image: "${{needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image}}"
           token: "${{secrets.GITHUB_TOKEN}}"
 
   centos-stream-9-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
       success()
-      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+      || (!cancelled() && !failure() && needs.calc-build-triggers.outputs.clp_changed == 'true')
     needs:
+      - "calc-build-triggers"
       - "centos-stream-9-deps-image"
-      - "filter-relevant-changes"
     strategy:
       matrix:
         use_shared_libs: [true, false]
@@ -375,8 +392,7 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.centos_stream_9_use_published_image}}
 
       - id: "deps_cache_key"
         uses: "./.github/actions/deps-cache-key"
@@ -403,8 +419,7 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.centos_stream_9_use_published_image}}
           prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
@@ -441,13 +456,13 @@ jobs:
     if: >-
       success()
       || (!cancelled() && !failure() && (
-        needs.filter-relevant-changes.outputs.clp_changed == 'true'
-        || needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'
+        needs.calc-build-triggers.outputs.clp_changed == 'true'
+        || needs.calc-build-triggers.outputs.manylinux_2_28_image_changed == 'true'
       ))
     needs:
+      - "calc-build-triggers"
       - "manylinux_2_28-deps-image"
       - "manylinux_2_28-deps-image-merge"
-      - "filter-relevant-changes"
     strategy:
       matrix:
         use_shared_libs: [true, false]
@@ -472,8 +487,7 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           arch: "amd64"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.manylinux_2_28_use_published_image}}
 
       - id: "deps_cache_key"
         uses: "./.github/actions/deps-cache-key"
@@ -495,8 +509,7 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           arch: "amd64"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.manylinux_2_28_use_published_image}}
           prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
@@ -523,12 +536,12 @@ jobs:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
       success() || (!cancelled() && !failure() && (
-        needs.filter-relevant-changes.outputs.clp_changed == 'true'
-        || needs.filter-relevant-changes.outputs.yscope_clp_core_changed == 'true'
-        || needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'
+        needs.calc-build-triggers.outputs.clp_changed == 'true'
+        || needs.calc-build-triggers.outputs.yscope_clp_core_changed == 'true'
+        || needs.calc-build-triggers.outputs.manylinux_2_28_image_changed == 'true'
       ))
     needs:
-      - "filter-relevant-changes"
+      - "calc-build-triggers"
       - "manylinux_2_28-deps-image"
       - "manylinux_2_28-deps-image-merge"
     env:
@@ -550,8 +563,7 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           arch: "amd64"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.manylinux_2_28_use_published_image}}
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
             task python-wheels-yscope-clp-core
@@ -580,13 +592,13 @@ jobs:
     if: >-
       success()
       || (!cancelled() && !failure() && (
-        needs.filter-relevant-changes.outputs.clp_changed == 'true'
-        || needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'true'
+        needs.calc-build-triggers.outputs.clp_changed == 'true'
+        || needs.calc-build-triggers.outputs.musllinux_1_2_image_changed == 'true'
       ))
     needs:
+      - "calc-build-triggers"
       - "musllinux_1_2-deps-image"
       - "musllinux_1_2-deps-image-merge"
-      - "filter-relevant-changes"
     strategy:
       matrix:
         use_shared_libs: [true, false]
@@ -611,8 +623,7 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           arch: "amd64"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.musllinux_1_2_use_published_image}}
 
       - id: "deps_cache_key"
         uses: "./.github/actions/deps-cache-key"
@@ -634,8 +645,7 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           arch: "amd64"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.musllinux_1_2_use_published_image}}
           prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
@@ -663,12 +673,12 @@ jobs:
     if: >-
       success()
       || (!cancelled() && !failure() && (
-          needs.filter-relevant-changes.outputs.clp_changed == 'true'
-          || needs.filter-relevant-changes.outputs.integration_tests_changed == 'true'
+          needs.calc-build-triggers.outputs.clp_changed == 'true'
+          || needs.calc-build-triggers.outputs.integration_tests_changed == 'true'
         )
       )
     needs:
-      - "filter-relevant-changes"
+      - "calc-build-triggers"
       - "ubuntu-jammy-x86_64-deps-image"
     strategy:
       matrix:
@@ -696,8 +706,7 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.ubuntu_jammy_use_published_image}}
 
       - id: "deps_cache_key"
         uses: "./.github/actions/deps-cache-key"
@@ -716,8 +725,7 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.ubuntu_jammy_use_published_image}}
           prepared_image_id: "${{steps.deps_image.outputs.image_id}}"
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
@@ -827,9 +835,9 @@ jobs:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
       success()
-      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+      || (!cancelled() && !failure() && needs.calc-build-triggers.outputs.clp_changed == 'true')
     needs:
-      - "filter-relevant-changes"
+      - "calc-build-triggers"
       - "ubuntu-jammy-x86_64-deps-image"
     runs-on: *runner
     steps:
@@ -868,8 +876,7 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX_X86}}${{env.OS_NAME}}"
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.ubuntu_jammy_use_published_image}}
           # TODO: We set HOME due to permission issues inside the container used in run-on-image.
           # See: https://github.com/y-scope/clp/issues/1145
           run_command: >-
@@ -951,20 +958,20 @@ jobs:
     # NOTE: The aarch64 job is skipped on PRs, so we accept both 'success' and 'skipped'.
     if: >-
       !cancelled() && !failure() && (
-        needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false' ||
+        needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'false' ||
         (needs.ubuntu-jammy-x86_64-deps-image.result == 'success'
         && (needs.ubuntu-jammy-aarch64-deps-image.result == 'success'
         || needs.ubuntu-jammy-aarch64-deps-image.result == 'skipped'))
       )
     needs:
-      - "filter-relevant-changes"
+      - "calc-build-triggers"
       - "ubuntu-jammy-x86_64-deps-image"
       - "ubuntu-jammy-aarch64-deps-image"
     strategy:
       matrix:
-        # Only build arm64 images on push to main to save CI resources on PRs.
+        # To save CI resources in PRs, only build arm64 images when they'll be published.
         arch: >-
-          ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+          ${{needs.calc-build-triggers.outputs.package_publish_image == 'true'
           && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
     runs-on: >-
       ${{
@@ -995,8 +1002,7 @@ jobs:
             matrix.arch == 'amd64' && env.DEPS_IMAGE_NAME_PREFIX_X86
             || env.DEPS_IMAGE_NAME_PREFIX_AARCH64)}}
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.ubuntu_jammy_use_published_image}}
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
             HOME=/tmp
@@ -1011,15 +1017,16 @@ jobs:
           dockerfile_path: "./tools/docker-images/clp-package/Dockerfile"
           image_name: "clp-package"
           platform_version_codename: "jammy"
-          push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
+          push: "${{needs.calc-build-triggers.outputs.package_publish_image}}"
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
     if: >-
-      github.event_name != 'pull_request'
-      && github.ref == 'refs/heads/main'
+      needs.calc-build-triggers.outputs.package_publish_image == 'true'
       && needs.package-image.result == 'success'
-    needs: "package-image"
+    needs:
+      - "calc-build-triggers"
+      - "package-image"
     runs-on: *runner
     steps:
       - name: "Login to Image Registry"
@@ -1055,20 +1062,20 @@ jobs:
     name: "spider-worker-image-${{matrix.arch}}"
     if: >-
       !cancelled() && !failure() && (
-        needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false' ||
+        needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'false' ||
         (needs.ubuntu-jammy-x86_64-deps-image.result == 'success'
         && (needs.ubuntu-jammy-aarch64-deps-image.result == 'success'
         || needs.ubuntu-jammy-aarch64-deps-image.result == 'skipped'))
       )
     needs:
-      - "filter-relevant-changes"
+      - "calc-build-triggers"
       - "ubuntu-jammy-aarch64-deps-image"
       - "ubuntu-jammy-x86_64-deps-image"
     strategy:
       matrix:
-        # Only build arm64 images on push to main to save CI resources on PRs.
+        # To save CI resources in PRs, only build arm64 images when they'll be published.
         arch: >-
-          ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+          ${{needs.calc-build-triggers.outputs.spider_worker_publish_image == 'true'
           && fromJSON('["amd64", "arm64"]') || fromJSON('["amd64"]')}}
     runs-on: >-
       ${{
@@ -1103,8 +1110,7 @@ jobs:
             matrix.arch == 'amd64' && env.DEPS_IMAGE_NAME_PREFIX_X86
             || env.DEPS_IMAGE_NAME_PREFIX_AARCH64)}}
           use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+            ${{needs.calc-build-triggers.outputs.ubuntu_jammy_use_published_image}}
           run_command: >-
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
             HOME=/tmp
@@ -1120,15 +1126,16 @@ jobs:
           image_name: "clp-spider-worker"
           platform_version_codename: "jammy"
           pull: true
-          push: "${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}"
+          push: "${{needs.calc-build-triggers.outputs.spider_worker_publish_image}}"
 
   spider-worker-image-multiarch-manifest:
     name: "spider-worker-image-multiarch-manifest"
     if: >-
-      github.event_name != 'pull_request'
-      && github.ref == 'refs/heads/main'
+      needs.calc-build-triggers.outputs.spider_worker_publish_image == 'true'
       && needs.spider-worker-image.result == 'success'
-    needs: "spider-worker-image"
+    needs:
+      - "calc-build-triggers"
+      - "spider-worker-image"
     runs-on: *runner
     steps:
       - name: "Login to Image Registry"
