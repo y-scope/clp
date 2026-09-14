@@ -148,14 +148,16 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::NoTaskInputs`] if no query task inputs are produced.
     /// * [`Error::TooManyQueryTasks`] if the number of query tasks exceeds `i32`'s range.
+    /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
     /// * Forwards [`QueryJobSubmitter::submit_query_job`]'s return values on failure.
     /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
     async fn submit(&self) -> Result<SpiderJobId, Error> {
         let archives_to_search = self.prepare_task_inputs().await?;
         let num_tasks = archives_to_search.len();
         if num_tasks == 0 {
-            return Err(Error::NoArchivesToSearch);
+            return Err(Error::NoTaskInputs);
         }
         let persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;

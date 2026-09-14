@@ -9,6 +9,9 @@ pub enum Error {
     #[error("query job {0} is no longer pending")]
     JobNotPending(clp_rust_utils::job_config::QueryJobId),
 
+    #[error("no archives were partitioned into query task inputs")]
+    NoTaskInputs,
+
     #[error("spider request failure: {0}")]
     SpiderClient(#[from] spider_client::error::ClientError),
 
@@ -17,7 +20,4 @@ pub enum Error {
 
     #[error("number of query tasks {0} exceeds `i32::MAX`")]
     TooManyQueryTasks(usize),
-
-    #[error("no archives were selected for the query job")]
-    NoArchivesToSearch,
 }
