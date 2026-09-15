@@ -9,7 +9,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <log_surgeon/log_surgeon.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
@@ -20,7 +19,6 @@
 #include <clp/LogTypeDictionaryReaderReq.hpp>
 #include <clp/Query.hpp>
 #include <clp/QueryToken.hpp>
-#include <clp/SchemaSearcher.hpp>
 #include <clp/VariableDictionaryReaderReq.hpp>
 
 namespace clp {
@@ -41,7 +39,6 @@ public:
      * @param search_begin_ts
      * @param search_end_ts
      * @param ignore_case
-     * @param parser Pointer to parser used for interpreting query. If `nullptr` use heurustic mode.
      * @return Query if it may match a message, std::nullopt otherwise
      */
     template <
@@ -54,8 +51,7 @@ public:
             std::string const& search_string,
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
-            bool ignore_case,
-            log_surgeon::Parser* parser
+            bool ignore_case
     );
 
     /**
@@ -140,97 +136,86 @@ std::optional<Query> GrepCore::process_raw_query(
         std::string const& search_string,
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
-        bool ignore_case,
-        log_surgeon::Parser* parser
+        bool ignore_case
 ) {
     std::vector<SubQuery> sub_queries;
-    if (nullptr != parser) {
-        sub_queries = SchemaSearcher::search(
-                search_string,
-                *parser,
+    // Split search_string into tokens with wildcards
+    std::vector<QueryToken> query_tokens;
+    size_t begin_pos{0};
+    size_t end_pos{0};
+    bool is_var{false};
+    std::string search_string_for_sub_queries{search_string};
+
+    // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support for
+    // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
+    // message uses the original wildcards, so correctness will be maintained.
+    string_utils::replace_unescaped_char(
+            string_utils::cWildcardEscapeChar,
+            string_utils::cSingleCharWildcard,
+            string_utils::cZeroOrMoreCharsWildcard,
+            search_string_for_sub_queries
+    );
+
+    // Clean-up in case any instances of "?*" or "*?" were changed into "**"
+    search_string_for_sub_queries
+            = string_utils::clean_up_wildcard_search_string(search_string_for_sub_queries);
+    while (get_bounds_of_next_potential_var(
+            search_string_for_sub_queries,
+            begin_pos,
+            end_pos,
+            is_var
+    ))
+    {
+        query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
+    }
+    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since
+    // we fall-back to decompression + wildcard matching for those.
+    std::vector<QueryToken*> ambiguous_tokens;
+    for (auto& query_token : query_tokens) {
+        if (false == query_token.has_greedy_wildcard_in_middle()
+            && query_token.is_ambiguous_token())
+        {
+            ambiguous_tokens.push_back(&query_token);
+        }
+    }
+
+    // Generate a sub-query for each combination of ambiguous tokens
+    // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we
+    // need to create:
+    // - (token1 as logtype) (token2 as logtype)
+    // - (token1 as logtype) (token2 as var)
+    // - (token1 as var) (token2 as logtype)
+    // - (token1 as var) (token2 as var)
+    bool type_of_one_token_changed{true};
+    while (type_of_one_token_changed) {
+        SubQuery sub_query;
+        auto matchability{generate_logtypes_and_vars_for_subquery(
                 logtype_dict,
                 var_dict,
-                ignore_case
-        );
-    } else {
-        // Split search_string into tokens with wildcards
-        std::vector<QueryToken> query_tokens;
-        size_t begin_pos{0};
-        size_t end_pos{0};
-        bool is_var{false};
-        std::string search_string_for_sub_queries{search_string};
-
-        // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support for
-        // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
-        // message uses the original wildcards, so correctness will be maintained.
-        string_utils::replace_unescaped_char(
-                string_utils::cWildcardEscapeChar,
-                string_utils::cSingleCharWildcard,
-                string_utils::cZeroOrMoreCharsWildcard,
-                search_string_for_sub_queries
-        );
-
-        // Clean-up in case any instances of "?*" or "*?" were changed into "**"
-        search_string_for_sub_queries
-                = string_utils::clean_up_wildcard_search_string(search_string_for_sub_queries);
-        while (get_bounds_of_next_potential_var(
                 search_string_for_sub_queries,
-                begin_pos,
-                end_pos,
-                is_var
-        ))
-        {
-            query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
-        }
-        // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since
-        // we fall-back to decompression + wildcard matching for those.
-        std::vector<QueryToken*> ambiguous_tokens;
-        for (auto& query_token : query_tokens) {
-            if (false == query_token.has_greedy_wildcard_in_middle()
-                && query_token.is_ambiguous_token())
-            {
-                ambiguous_tokens.push_back(&query_token);
-            }
+                query_tokens,
+                ignore_case,
+                sub_query
+        )};
+        switch (matchability) {
+            case SubQueryMatchabilityResult::SupercedesAllSubQueries:
+                // Since other sub-queries will be superceded by this one, we can stop
+                // processing now.
+                return Query{search_begin_ts, search_end_ts, ignore_case, search_string, {}};
+            case SubQueryMatchabilityResult::MayMatch:
+                sub_queries.push_back(std::move(sub_query));
+                break;
+            case SubQueryMatchabilityResult::WontMatch:
+            default:
+                break;
         }
 
-        // Generate a sub-query for each combination of ambiguous tokens
-        // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we
-        // need to create:
-        // - (token1 as logtype) (token2 as logtype)
-        // - (token1 as logtype) (token2 as var)
-        // - (token1 as var) (token2 as logtype)
-        // - (token1 as var) (token2 as var)
-        bool type_of_one_token_changed{true};
-        while (type_of_one_token_changed) {
-            SubQuery sub_query;
-            auto matchability{generate_logtypes_and_vars_for_subquery(
-                    logtype_dict,
-                    var_dict,
-                    search_string_for_sub_queries,
-                    query_tokens,
-                    ignore_case,
-                    sub_query
-            )};
-            switch (matchability) {
-                case SubQueryMatchabilityResult::SupercedesAllSubQueries:
-                    // Since other sub-queries will be superceded by this one, we can stop
-                    // processing now.
-                    return Query{search_begin_ts, search_end_ts, ignore_case, search_string, {}};
-                case SubQueryMatchabilityResult::MayMatch:
-                    sub_queries.push_back(std::move(sub_query));
-                    break;
-                case SubQueryMatchabilityResult::WontMatch:
-                default:
-                    break;
-            }
-
-            // Update combination of ambiguous tokens
-            type_of_one_token_changed = false;
-            for (auto* ambiguous_token : ambiguous_tokens) {
-                if (ambiguous_token->change_to_next_possible_type()) {
-                    type_of_one_token_changed = true;
-                    break;
-                }
+        // Update combination of ambiguous tokens
+        type_of_one_token_changed = false;
+        for (auto* ambiguous_token : ambiguous_tokens) {
+            if (ambiguous_token->change_to_next_possible_type()) {
+                type_of_one_token_changed = true;
+                break;
             }
         }
     }

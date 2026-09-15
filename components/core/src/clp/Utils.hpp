@@ -8,8 +8,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <log_surgeon/log_surgeon.hpp>
-
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "FileReader.hpp"

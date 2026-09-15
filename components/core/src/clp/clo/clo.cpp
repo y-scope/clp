@@ -6,16 +6,12 @@
 #include <set>
 #include <string>
 
-#include <log_surgeon/log_surgeon.hpp>
 #include <mongocxx/instance.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
-
-#include <clp/FileReader.hpp>
-#include <clpp/utils.hpp>
 
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"
@@ -488,22 +484,6 @@ static bool search_archive(
         return false;
     }
 
-    // Load lexers from schema file if it exists
-    auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-    std::optional<log_surgeon::Parser> parser_storage;
-    if (std::filesystem::exists(schema_file_path)) {
-        clp::FileReader spec_reader{schema_file_path.string()};
-        auto parser_result{clpp::build_parser(spec_reader)};
-        if (parser_result.has_error()) {
-            return false;
-        }
-        parser_storage = std::move(parser_result.value().first);
-    }
-    log_surgeon::Parser* parser{nullptr};
-    if (parser_storage.has_value()) {
-        parser = &parser_storage.value();
-    }
-
     Archive archive_reader;
     archive_reader.open(archive_path.string());
     archive_reader.refresh_dictionaries();
@@ -521,8 +501,7 @@ static bool search_archive(
             wildcard_search_string,
             search_begin_ts,
             search_end_ts,
-            command_line_args.ignore_case(),
-            parser
+            command_line_args.ignore_case()
     );
     if (false == query_processing_result.has_value()) {
         return true;

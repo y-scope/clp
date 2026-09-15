@@ -7,8 +7,6 @@
 #include <memory>
 #include <string>
 
-#include <log_surgeon/log_surgeon.hpp>
-
 #include <clp/FileReader.hpp>
 #include <clp/spdlog_with_specializations.hpp>
 

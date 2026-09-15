@@ -45,8 +45,6 @@ set(
         ../Grep.hpp
         ../GrepCore.cpp
         ../GrepCore.hpp
-        ../SchemaSearcher.cpp
-        ../SchemaSearcher.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
@@ -150,10 +148,8 @@ if(CLP_BUILD_EXECUTABLES)
                 PRIVATE
                 absl::flat_hash_map
                 Boost::filesystem Boost::program_options
-                clpp::core
                 date::date
                 fmt::fmt
-                log-surgeon::log-surgeon
                 MariaDBClient::MariaDBClient
                 msgpack-cxx
                 nlohmann_json::nlohmann_json

@@ -9,8 +9,9 @@
 #if CLP_BUILD_CLPP_DECOMPOSITION
     #include <system_error>
 
-    #include <clpp/ErrorCode.hpp>
     #include <ystdlib/error_handling/Result.hpp>
+
+    #include <clpp/ErrorCode.hpp>
 #endif
 
 #include <log_surgeon/log_surgeon.hpp>

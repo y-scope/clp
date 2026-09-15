@@ -1,24 +1,12 @@
-#include <cstddef>
-#include <cstdint>
-#include <filesystem>
 #include <string>
-#include <utility>
-#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-#include <log_surgeon/log_surgeon.hpp>
 
-#include <clp/Defs.h>
 #include <clp/GrepCore.hpp>
 #include <clp/Utils.hpp>
 
-#include "search_test_utils.hpp"
-
-using clp::epochtime_t;
 using clp::GrepCore;
-using std::pair;
 using std::string;
-using std::vector;
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     string str;
@@ -110,70 +98,4 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(is_var == false);
 
     REQUIRE(GrepCore::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == false);
-}
-
-TEST_CASE("process_raw_query", "[dfa_search]") {
-    constexpr epochtime_t cNoBeginTimestamp{0};
-    constexpr epochtime_t cNoEndTimestamp{0};
-    constexpr bool cIgnoreCase{true};
-
-    string const raw_query{"text 100 10? 3.14*"};
-
-    std::string spec{R"(delimiters: " \r\n")"};
-    spec += "\n";
-    spec += R"(int: "\d+")";
-    spec += "\n";
-    spec += R"(float: "\d+\.\d+")";
-    spec += "\n";
-    spec += R"(hasNumber: "[^ &]*\d+[^ &]*")";
-    CAPTURE(spec);
-
-    auto parser{log_surgeon::ParsingSpecBuilder{spec}.build()};
-    auto const interpretations{parser.search_by_name(raw_query, "")};
-    string interpretation_strings{"interps:"};
-    CAPTURE(interpretations.size());
-    for (auto const& interpretation : interpretations) {
-        string interp_string;
-        for (auto const& token : interpretation) {
-            if (token.qualified_name.empty()) {
-                interp_string += token.value;
-                continue;
-            }
-            interp_string += "<" + token.qualified_name + ">(" + token.value + ")";
-        }
-        interpretation_strings += "\n" + interp_string;
-    }
-    CAPTURE(interpretation_strings);
-
-    MockVariableDictionary const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
-    MockLogTypeDictionary const logtype_dict{make_logtype_dict(
-            {{"text ", 'i', " ", 'i', " ", 'f'},
-             {"text ", 'i', " ", 'd', " ", 'f'},
-             {"text ", 'i', " ", 'd', " 3.14ab&"},
-             {"text ", 'i', " ", 'd', " 3.14abc&"},
-             {"text ", 'i', " ", 'd', " 3.15ab&"},
-             {"text ", 'i', " 10& ", 'f'}}
-    )};
-
-    auto const query{GrepCore::process_raw_query(
-            logtype_dict,
-            var_dict,
-            raw_query,
-            cNoBeginTimestamp,
-            cNoEndTimestamp,
-            cIgnoreCase,
-            &parser
-    )};
-
-    REQUIRE(query.has_value());
-    auto const& sub_queries{query.value().get_sub_queries()};
-
-    VarInfo const wild_int{false, true, {}};
-    VarInfo const wild_has_num{true, true, {1LL}};
-    size_t i{0};
-    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
-    check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
-    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {2LL, 3LL});
-    check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
-    REQUIRE(4 == sub_queries.size());
 }

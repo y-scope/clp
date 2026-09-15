@@ -12,7 +12,6 @@
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <log_surgeon/log_surgeon.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
@@ -62,21 +61,8 @@ public:
         }
     };
 
-    TimestampPattern* m_old_ts_pattern;
-    size_t m_target_data_size_of_dicts;
-    UserConfig m_archive_user_config;
-    std::string m_path_for_compression;
-    group_id_t m_group_id;
-    size_t m_target_encoded_file_size;
-    std::string m_schema_file_path;
-
     // Constructors
-    Archive()
-            : m_segments_dir_fd(-1),
-              m_compression_level(0),
-              m_global_metadata_db(nullptr),
-              m_old_ts_pattern(nullptr),
-              m_schema_file_path() {}
+    Archive() : m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr) {}
 
     // Destructor
     ~Archive();
@@ -144,16 +130,6 @@ public:
      */
     void
     write_msg(epochtime_t timestamp, std::string const& message, size_t num_uncompressed_bytes);
-
-    /**
-     * Encodes and writes a message to the given file using schema file
-     * @param buf
-     * @param buffer_size
-     * @param event
-     * @throw FileWriter::OperationFailed if any write fails
-     */
-    auto write_msg_using_schema(char* buf, size_t buffer_size, log_surgeon::LogEvent const& event)
-            -> void;
 
     /**
      * Writes an IR log event to the current encoded file
@@ -293,13 +269,6 @@ private:
      */
     auto update_global_metadata() -> void;
 
-    /**
-     * Add a rule match to the logtype and variable dictionaries.
-     * @param match_string The contents of the match.
-     * @param match_name The name of the match.
-     */
-    auto add_token_to_dicts(std::string_view match_string, std::string_view match_name) -> void;
-
     // Variables
     boost::uuids::uuid m_id;
     std::string m_id_as_string;
@@ -321,8 +290,6 @@ private:
     LogTypeDictionaryWriter m_logtype_dict;
     // Holds preallocated logtype dictionary entry for performance
     LogTypeDictionaryEntry m_logtype_dict_entry;
-    std::vector<encoded_variable_t> m_encoded_vars;
-    std::vector<variable_dictionary_id_t> m_var_ids;
     VariableDictionaryWriter m_var_dict;
 
     boost::uuids::random_generator m_uuid_generator;

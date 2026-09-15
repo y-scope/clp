@@ -994,8 +994,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                                 query_string,
                                 placeholder_timestamp,
                                 placeholder_timestamp,
-                                m_ignore_case,
-                                nullptr
+                                m_ignore_case
                         )
                 );
             }

@@ -40,10 +40,6 @@ public:
 
     std::string const& get_output_dir() const { return m_output_dir; }
 
-    std::string const& get_schema_file_path() const { return m_parsing_spec_path; }
-
-    bool get_use_heuristic() const { return (m_parsing_spec_path.empty()); }
-
     bool show_progress() const { return m_show_progress; }
 
     bool sort_input_files() const { return m_sort_input_files; }
@@ -93,7 +89,6 @@ private:
     size_t m_ir_target_size{128ULL * 1024 * 1024};
     bool m_sort_input_files;
     std::string m_output_dir;
-    std::string m_parsing_spec_path;
     bool m_show_progress;
     bool m_print_archive_stats_progress;
     size_t m_target_encoded_file_size;

@@ -3,11 +3,8 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
-#include <memory>
 #include <set>
-#include <stdexcept>
 
-#include <log_surgeon/log_surgeon.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
 #include <utils/profiling/Reporter.hpp>
@@ -15,14 +12,12 @@
 
 #include <clp/FileReader.hpp>
 #include <clp/streaming_archive/reader/File.hpp>
-#include <clpp/utils.hpp>
 
 #include "../Defs.h"
 #include "../global_metadata_db_utils.hpp"
 #include "../Grep.hpp"
 #include "../GrepCore.hpp"
 #include "../spdlog_with_specializations.hpp"
-#include "../streaming_archive/Constants.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 
@@ -203,8 +198,7 @@ static bool open_archive(string const& archive_path, Archive& archive_reader) {
 static bool search(
         vector<string> const& search_strings,
         CommandLineArguments& command_line_args,
-        Archive& archive,
-        log_surgeon::Parser* parser
+        Archive& archive
 ) {
     ErrorCode error_code;
     auto search_begin_ts = command_line_args.get_search_begin_ts();
@@ -224,8 +218,7 @@ static bool search(
                     search_string,
                     search_begin_ts,
                     search_end_ts,
-                    command_line_args.ignore_case(),
-                    parser
+                    command_line_args.ignore_case()
             );
             if (query_processing_result.has_value()) {
                 auto& query = query_processing_result.value();
@@ -545,13 +538,6 @@ int main(int argc, char const* argv[]) {
     }
     global_metadata_db->open();
 
-    // TODO: if performance is too slow, can make this more efficient by only diffing files with the
-    // same checksum
-    uint32_t const max_map_schema_length = 100'000;
-    std::map<std::string, log_surgeon::Parser> parser_map;
-    std::unique_ptr<log_surgeon::Parser> one_time_use_parser;
-    log_surgeon::Parser* parser;
-
     string archive_id;
     Archive archive_reader;
     for (auto archive_ix = std::unique_ptr<GlobalMetadataDB::ArchiveIterator>(get_archive_iterator(
@@ -579,38 +565,8 @@ int main(int argc, char const* argv[]) {
             return -1;
         }
 
-        auto parsing_spec_path{archive_path / clp::streaming_archive::cSchemaFileName};
-        if (std::filesystem::exists(parsing_spec_path)) {
-            char buf[max_map_schema_length];
-            FileReader file_reader{parsing_spec_path};
-
-            size_t num_bytes_read;
-            file_reader.read(buf, max_map_schema_length, num_bytes_read);
-            auto build_parser = [&parsing_spec_path]() -> log_surgeon::Parser {
-                clp::FileReader spec_reader{parsing_spec_path.string()};
-                auto result{clpp::build_parser(spec_reader)};
-                if (result.has_error()) {
-                    throw std::runtime_error("Failed to build parser from parsing specification.");
-                }
-                return std::move(result.value().first);
-            };
-            if (num_bytes_read < max_map_schema_length) {
-                auto parser_map_it{parser_map.find(buf)};
-                // If there's a chance there might be a difference, make a new parser as it's fast.
-                if (parser_map_it == parser_map.end()) {
-                    auto insert_result{parser_map.emplace(buf, build_parser())};
-                    parser = &insert_result.first->second;
-                } else {
-                    parser = &parser_map_it->second;
-                }
-            } else {
-                one_time_use_parser = std::make_unique<log_surgeon::Parser>(build_parser());
-                parser = one_time_use_parser.get();
-            }
-        }
-
         // Perform search
-        if (false == search(search_strings, command_line_args, archive_reader, parser)) {
+        if (false == search(search_strings, command_line_args, archive_reader)) {
             return -1;
         }
         archive_reader.close();

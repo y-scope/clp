@@ -4,7 +4,6 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -14,7 +13,6 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <log_surgeon/log_surgeon.hpp>
 #include <nlohmann/json.hpp>
 
 #include <clp/Defs.h>
@@ -121,22 +119,6 @@ void Archive::open(UserConfig const& user_config) {
     m_target_segment_uncompressed_size = user_config.target_segment_uncompressed_size;
     m_next_segment_id = 0;
     m_compression_level = user_config.compression_level;
-
-    /// TODO: add schema file size to m_stable_size???
-    // Copy schema file into archive
-    if (!m_schema_file_path.empty()) {
-        std::filesystem::path const archive_schema_filesystem_path = archive_path / cSchemaFileName;
-        try {
-            std::filesystem::path const schema_filesystem_path = m_schema_file_path;
-            std::filesystem::copy(schema_filesystem_path, archive_schema_filesystem_path);
-        } catch (FileWriter::OperationFailed& e) {
-            SPDLOG_CRITICAL(
-                    "Failed to copy schema file to archive: {}",
-                    archive_schema_filesystem_path.c_str()
-            );
-            throw;
-        }
-    }
 
     // Save metadata to disk
     auto metadata_file_path = archive_path / cMetadataFileName;
@@ -313,135 +295,6 @@ Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_unco
     m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
 
     update_segment_indices(logtype_id, var_ids);
-}
-
-auto Archive::add_token_to_dicts(std::string_view match_string, std::string_view match_name)
-        -> void {
-    if ("int" == match_name) {
-        encoded_variable_t encoded_var{};
-        if (false
-            == EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                    match_string,
-                    encoded_var
-            ))
-        {
-            variable_dictionary_id_t id{};
-            m_var_dict.add_entry(match_string, id);
-            m_var_ids.push_back(id);
-            encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-            m_logtype_dict_entry.add_dictionary_var();
-        } else {
-            m_logtype_dict_entry.add_int_var();
-        }
-        m_encoded_vars.push_back(encoded_var);
-        return;
-    }
-    if ("float" == match_name) {
-        encoded_variable_t encoded_var{};
-        if (false
-            == EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                    match_string,
-                    encoded_var
-            ))
-        {
-            variable_dictionary_id_t id{};
-            m_var_dict.add_entry(match_string, id);
-            m_var_ids.push_back(id);
-            encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-            m_logtype_dict_entry.add_dictionary_var();
-        } else {
-            m_logtype_dict_entry.add_float_var();
-        }
-        m_encoded_vars.push_back(encoded_var);
-        return;
-    }
-    variable_dictionary_id_t id{};
-    m_var_dict.add_entry(match_string, id);
-    m_var_ids.push_back(id);
-    m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
-    m_logtype_dict_entry.add_dictionary_var();
-}
-
-auto
-Archive::write_msg_using_schema(char* buf, size_t buffer_size, log_surgeon::LogEvent const& event)
-        -> void {
-    epochtime_t timestamp{0};
-    TimestampPattern const* timestamp_pattern{nullptr};
-    size_t leaf_id{0};
-    while (true) {
-        auto optional_leaf{event.get_leaf_match(leaf_id)};
-        if (false == optional_leaf.has_value()) {
-            break;
-        }
-        auto leaf{optional_leaf.value()};
-        if (false == leaf.get_fully_qualified_name().starts_with("header")) {
-            break;
-        }
-        if ("timestamp" == leaf.get_rule_name()) {
-            std::string timestamp_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
-            size_t start{};
-            size_t end{};
-            timestamp_pattern = TimestampPattern::search_known_ts_patterns(
-                    timestamp_string,
-                    timestamp,
-                    start,
-                    end
-            );
-            if (nullptr == timestamp_pattern) {
-                throw(std::runtime_error(
-                        "Schema contains a timestamp regex that matches " + timestamp_string
-                        + " which does not match any known timestamp pattern."
-                ));
-            }
-            if (m_old_ts_pattern != timestamp_pattern) {
-                change_ts_pattern(timestamp_pattern);
-                m_old_ts_pattern = const_cast<TimestampPattern*>(timestamp_pattern);
-            }
-            break;
-        }
-    }
-    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
-        split_file_and_archive(
-                m_archive_user_config,
-                m_path_for_compression,
-                m_group_id,
-                timestamp_pattern,
-                *this
-        );
-    } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
-        split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
-    }
-    m_encoded_vars.clear();
-    m_var_ids.clear();
-    m_logtype_dict_entry.clear();
-
-    size_t prev_pos{0};
-    leaf_id = 0;
-    while (true) {
-        auto optional_leaf{event.get_leaf_match(leaf_id)};
-        if (false == optional_leaf.has_value()) {
-            break;
-        }
-        auto leaf{optional_leaf.value()};
-        std::string_view static_text{buf + prev_pos, leaf.range.start - prev_pos};
-        std::string_view leaf_string{buf + leaf.range.start, leaf.range.end - leaf.range.start};
-
-        m_logtype_dict_entry.add_static_text(static_text);
-        add_token_to_dicts(leaf_string, leaf.get_rule_name());
-
-        prev_pos = leaf.range.end;
-        ++leaf_id;
-    }
-    std::string static_text{buf + prev_pos, buffer_size - prev_pos};
-    m_logtype_dict_entry.add_static_text(static_text);
-
-    // Timestamp is included in the uncompressed message size
-    if (false == m_logtype_dict_entry.get_value().empty()) {
-        logtype_dictionary_id_t logtype_id{};
-        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-        m_file->write_encoded_msg(timestamp, logtype_id, m_encoded_vars, m_var_ids, buffer_size);
-        update_segment_indices(logtype_id, m_var_ids);
-    }
 }
 
 template <typename encoded_variable_t>
