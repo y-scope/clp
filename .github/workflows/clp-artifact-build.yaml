@@ -74,6 +74,7 @@ jobs:
 
       # Other outputs
       clp_changed: "${{steps.filter.outputs.clp}}"
+      is_push_semver_tag: "${{steps.calc_workflow_triggers.outputs.is_push_semver_tag}}"
       yscope_clp_core_changed: "${{steps.filter.outputs.yscope-clp-core}}"
       integration_tests_changed: "${{steps.filter.outputs.integration-tests}}"
     steps:
@@ -346,8 +347,9 @@ jobs:
   ubuntu-jammy-aarch64-deps-image:
     name: "ubuntu-jammy-aarch64-deps-image"
     if: >-
-      needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'true'
-      && needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true'
+      (needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'true'
+      && needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true')
+      || needs.calc-build-triggers.outputs.is_push_semver_tag == 'true'
     needs: "calc-build-triggers"
     runs-on: "ubuntu-24.04-arm"
     steps:
