@@ -34,8 +34,6 @@ using clp_s::search::ast::OrExpr;
 namespace clp_s::search {
 bool Output::filter() {
     std::vector<int32_t> matched_schemas;
-    bool has_array = false;
-    bool has_array_search = false;
 
     if (auto const result{m_archive_reader->read_metadata()}; result.has_error()) {
         auto const error{result.error()};
@@ -47,19 +45,16 @@ bool Output::filter() {
         return false;
     }
 
-    for (auto schema_id : m_archive_reader->get_schema_ids()) {
+    auto const& schema_ids = m_archive_reader->get_schema_ids();
+    m_result_metrics.num_archive_schemas = schema_ids.size();
+    m_result_metrics.num_clpp_interpretations = m_match->get_num_clpp_interpretations();
+    for (auto schema_id : schema_ids) {
         m_result_metrics.num_archive_records
                 += m_archive_reader->get_num_messages_for_schema(schema_id);
         if (m_match->schema_matched(schema_id)) {
             matched_schemas.push_back(schema_id);
             m_result_metrics.num_archive_records_matching_schemas
                     += m_archive_reader->get_num_messages_for_schema(schema_id);
-            if (m_match->has_array(schema_id)) {
-                has_array = true;
-            }
-            if (m_match->has_array_search(schema_id)) {
-                has_array_search = true;
-            }
         }
     }
     m_result_metrics.num_matched_schemas = matched_schemas.size();
@@ -81,17 +76,6 @@ bool Output::filter() {
         return true;
     }
 
-    m_archive_reader->read_variable_dictionary();
-    m_archive_reader->read_log_type_dictionary();
-
-    if (has_array) {
-        if (has_array_search) {
-            m_archive_reader->read_array_dictionary();
-        } else {
-            m_archive_reader->read_array_dictionary(true);
-        }
-    }
-
     m_query_runner.global_init();
     m_archive_reader->open_packed_streams();
 
@@ -103,6 +87,9 @@ bool Output::filter() {
             continue;
         }
         scanned_any_ert = true;
+        ++m_result_metrics.num_schemas_scanned;
+        m_result_metrics.num_messages_evaluated
+                += m_archive_reader->get_num_messages_for_schema(schema_id);
 
         auto& reader = m_archive_reader->read_schema_table(
                 schema_id,
@@ -110,6 +97,11 @@ bool Output::filter() {
                 m_should_marshal_records
         );
         auto& filter = m_query_runner.prepare_filter(reader);
+        if (nullptr != dynamic_cast<ColumnScan*>(&filter)) {
+            ++m_result_metrics.num_column_scan_filters;
+        } else {
+            ++m_result_metrics.num_query_runner_filters;
+        }
 
         bool schema_has_match{false};
         if (m_output_handler->should_output_metadata()) {
@@ -119,12 +111,14 @@ bool Output::filter() {
             {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
+                m_result_metrics.num_bytes_output += message.size();
                 m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, filter)) {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
+                m_result_metrics.num_bytes_output += message.size();
                 m_output_handler->write(message);
             }
         }

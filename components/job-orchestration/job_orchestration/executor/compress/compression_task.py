@@ -256,12 +256,6 @@ def _make_clp_command_and_env(
         compression_cmd.append("--remove-path-prefix")
         compression_cmd.append(path_prefix_to_remove)
 
-    # Use schema file if it exists
-    schema_path: pathlib.Path = clp_home / "etc" / "clp-schema.txt"
-    if schema_path.exists():
-        compression_cmd.append("--schema-path")
-        compression_cmd.append(str(schema_path))
-
     # Set database connection parameters
     compression_cmd.extend(_get_db_connection_args_for_clp_cmd(clp_metadata_db_connection_config))
     compression_env_vars = dict(os.environ)

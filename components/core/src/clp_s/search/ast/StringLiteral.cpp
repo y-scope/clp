@@ -92,4 +92,8 @@ bool StringLiteral::as_null(FilterOperation op) {
 bool StringLiteral::as_any(FilterOperation op) {
     return (op == FilterOperation::EQ || op == FilterOperation::NEQ) && m_v == "*";
 }
+
+bool StringLiteral::has_wildcards() {
+    return has_unescaped_wildcards(m_v);
+}
 }  // namespace clp_s::search::ast

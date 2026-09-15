@@ -125,6 +125,12 @@ option(
     ON
 )
 
+option(
+    CLP_BUILD_CLPP_DECOMPOSITION
+    "Enable clp+ query decomposition (log-surgeon interpretation generation)."
+    OFF
+)
+
 # Validates that the `CLP_BUILD_` options required by `TARGET_CLP_BUILD_OPTION` are `ON`.
 #
 # @param {string} TARGET_CLP_BUILD_OPTION
@@ -305,6 +311,7 @@ endfunction()
 function(set_clp_s_clp_dependencies_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LOG_SURGEON
@@ -594,6 +601,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_CATCH2
         CLP_NEED_CURL
         CLP_NEED_DATE
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LIBLZMA

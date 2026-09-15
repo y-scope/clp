@@ -1,8 +1,14 @@
 #include "ColumnDescriptor.hpp"
 
 #include <memory>
+#include <string_view>
+#include <utility>
+
+#include <clp_s/search/ast/Literal.hpp>
 
 namespace clp_s::search::ast {
+ColumnDescriptor::id_t ColumnDescriptor::m_next_id{0};
+
 DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors) {
     DescriptorList list;
     for (std::string const& descriptor : descriptors) {
@@ -26,9 +32,11 @@ ColumnDescriptor::ColumnDescriptor(
         std::vector<std::string> const& tokens,
         std::string_view descriptor_namespace
 )
-        : m_namespace{descriptor_namespace} {
-    m_flags = cAllTypes;
-    m_descriptors = std::move(tokenize_descriptor(tokens));
+        : m_descriptors{tokenize_descriptor(tokens)},
+          m_namespace{descriptor_namespace},
+          m_flags(cAllTypes),
+          m_id{m_next_id} {
+    ++m_next_id;
     check_and_set_unresolved_descriptor_flag();
     if (is_unresolved_descriptor()) {
         simplify_descriptor_wildcards();
@@ -36,12 +44,14 @@ ColumnDescriptor::ColumnDescriptor(
 }
 
 ColumnDescriptor::ColumnDescriptor(
-        DescriptorList const& descriptors,
+        DescriptorList descriptors,
         std::string_view descriptor_namespace
 )
-        : m_namespace{descriptor_namespace} {
-    m_flags = cAllTypes;
-    m_descriptors = descriptors;
+        : m_descriptors{std::move(descriptors)},
+          m_namespace{descriptor_namespace},
+          m_flags(cAllTypes),
+          m_id{m_next_id} {
+    ++m_next_id;
     check_and_set_unresolved_descriptor_flag();
     if (is_unresolved_descriptor()) {
         simplify_descriptor_wildcards();
@@ -64,8 +74,15 @@ std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_descriptors(
     );
 }
 
-std::shared_ptr<ColumnDescriptor> ColumnDescriptor::copy() {
+auto ColumnDescriptor::copy() const -> std::shared_ptr<ColumnDescriptor> {
     return std::make_shared<ColumnDescriptor>(*this);
+}
+
+auto ColumnDescriptor::copy_with_new_id() const -> std::shared_ptr<ColumnDescriptor> {
+    auto c = copy();
+    c->m_id = m_next_id;
+    ++m_next_id;
+    return c;
 }
 
 void ColumnDescriptor::print() const {
@@ -104,7 +121,7 @@ void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {
 
 bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
     return m_descriptors == rhs.m_descriptors && m_unresolved_tokens == rhs.m_unresolved_tokens
-           && m_flags == rhs.m_flags && m_id == rhs.m_id
+           && m_flags == rhs.m_flags && m_schema_col_id == rhs.m_schema_col_id
            && m_unresolved_descriptors == rhs.m_unresolved_descriptors
            && m_pure_wildcard == rhs.m_pure_wildcard;
 }

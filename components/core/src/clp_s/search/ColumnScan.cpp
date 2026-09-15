@@ -434,6 +434,7 @@ auto ColumnScan::can_build_filter(
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
         case LiteralType::FloatT:
+            return false == filter->get_operand()->has_wildcards();
         case LiteralType::TimestampT:
             return true;
         case LiteralType::BooleanT:
@@ -451,6 +452,7 @@ auto ColumnScan::can_build_filter(
             // null checks are always turned into existence operators --
             // no need to evaluate here
         case LiteralType::ArrayT:
+        case LiteralType::ClppDecomposeT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
             return false;
@@ -646,6 +648,7 @@ auto ColumnScan::build_filter(
             // null checks are always turned into existence operators --
             // no need to evaluate here
         case LiteralType::ArrayT:
+        case LiteralType::ClppDecomposeT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
             return bitmap;

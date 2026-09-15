@@ -38,15 +38,20 @@ public:
         Database
     };
 
+    struct Options {
+        bool should_create_table{};
+        bool experimental{};
+    };
+
     // Constructors
     /**
      * @param optional_db_config
-     * @param should_create_table
+     * @param options
      * @throw OperationFailed if `optional_db_config` is invalid.
      */
-    IndexManager(
+    explicit IndexManager(
             std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config,
-            bool should_create_table = false
+            Options const& options
     );
 
     // Destructor
@@ -81,6 +86,7 @@ private:
     OutputType m_output_type{OutputType::Database};
     std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;
     bool m_should_create_table{false};
+    bool m_experimental{false};
     std::function<void(std::string&, NodeType)> m_field_update_callback;
 };
 }  // namespace clp_s::indexer
