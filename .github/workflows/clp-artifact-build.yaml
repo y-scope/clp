@@ -61,9 +61,7 @@ jobs:
         ${{steps.filter.outputs.musllinux_1_2_image == 'false'
         || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
-      ubuntu_jammy_publish_image: >-
-        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
-        || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
+      ubuntu_jammy_publish_image: "${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}"
       ubuntu_jammy_use_published_image: >-
         ${{steps.filter.outputs.ubuntu_jammy_image == 'false'
         || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
@@ -91,6 +89,11 @@ jobs:
         id: "calc_workflow_triggers"
         run: |-
           # Iteratively construct semver regex (taken from https://semver.org)
+          # NOTE: We don't support publishing container images with a semantic version that contains
+          # build metadata since Docker tags don't support `+` (thus, we omit build metadata from
+          # the regex). Although the `docker/metadata-action` action converts `+` to `-`, this
+          # could lead to two images with different prerelease and build metadata being tagged
+          # with the same tag.
           semver_core_id='(0|[1-9][0-9]*)'
           semver_core_regex="${semver_core_id}\\.${semver_core_id}\\.${semver_core_id}"
 
@@ -98,14 +101,9 @@ jobs:
           semver_prerelease_regex="${semver_prerelease_id_regex}"
           semver_prerelease_regex+="(\\.${semver_prerelease_id_regex})*"
 
-          semver_build_metadata_id_regex='[0-9a-zA-Z-]+'
-          semver_build_metadata_regex="${semver_build_metadata_id_regex}"
-          semver_build_metadata_regex+="(\.${semver_build_metadata_id_regex})*"
-
           semver_regex="^v"
           semver_regex+="${semver_core_regex}"
           semver_regex+="(-${semver_prerelease_regex})?"
-          semver_regex+="(\+${semver_build_metadata_regex})?"
           semver_regex+='$'
 
           is_push_semver_tag=false
