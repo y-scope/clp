@@ -45,6 +45,8 @@ runs:
         images: "${{inputs.image_registry}}/${{steps.sanitize-repo-name.outputs.repository}}\
           /${{inputs.image_name}}"
         tags: "${{inputs.docker_metadata_action_tags}}"
+        flavor: |
+          latest=false
 
     - name: "Create and push multi-arch manifest"
       shell: "bash"

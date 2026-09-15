@@ -81,6 +81,7 @@ runs:
           /${{steps.compute-meta.outputs.IMAGE_NAME}}"
         tags: "${{inputs.docker_metadata_action_tags}}"
         flavor: |
+          latest=false
           suffix=-${{inputs.arch}}
 
     - name: "Map arch to Docker platform"
