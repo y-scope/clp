@@ -527,8 +527,6 @@ set(SOURCE_FILES_unitTest
         src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
-        src/clp/SchemaSearcher.cpp
-        src/clp/SchemaSearcher.hpp
         src/clp/ir/constants.hpp
         src/clp/ir/EncodedTextAst.cpp
         src/clp/ir/EncodedTextAst.hpp
@@ -547,8 +545,6 @@ set(SOURCE_FILES_unitTest
         src/clp/LibarchiveFileReader.hpp
         src/clp/LibarchiveReader.cpp
         src/clp/LibarchiveReader.hpp
-        src/clp/LogSurgeonReader.cpp
-        src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
         src/clp/LogTypeDictionaryEntry.hpp
         src/clp/LogTypeDictionaryEntryReq.hpp
@@ -656,11 +652,6 @@ set(SOURCE_FILES_unitTest
         src/utils/profiling/test/test_ScopedProfiler.cpp
         src/utils/profiling/test/emitters.hpp
         tests/LogSuppressor.hpp
-        tests/MockLogTypeDictionary.hpp
-        tests/MockVariableDictionary.hpp
-        tests/SchemaSearcherTest.hpp
-        tests/search_test_utils.cpp
-        tests/search_test_utils.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedReader.cpp
@@ -679,10 +670,8 @@ set(SOURCE_FILES_unitTest
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
-        tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-regex_utils.cpp
-        tests/test-SchemaSearcher.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
         tests/test-StreamingCompression.cpp
