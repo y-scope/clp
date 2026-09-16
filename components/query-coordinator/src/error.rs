@@ -20,4 +20,10 @@ pub enum Error {
 
     #[error("number of query tasks {0} exceeds `i32::MAX`")]
     TooManyQueryTasks(usize),
+
+    #[error("failed to build the query task graph: {0}")]
+    TaskGraph(#[from] spider_core::task::Error),
+
+    #[error("failed to serialize a task input: {0}")]
+    TaskInputSerialization(#[from] rmp_serde::encode::Error),
 }
