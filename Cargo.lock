@@ -3278,9 +3278,11 @@ dependencies = [
  "async-trait",
  "clp-rust-utils",
  "non-empty-string",
+ "rmp-serde",
  "spider-client",
  "spider-core",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]
