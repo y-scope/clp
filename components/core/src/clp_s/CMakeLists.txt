@@ -162,7 +162,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 absl::flat_hash_map
                 absl::flat_hash_set
                 clp::string_utils
-                log_surgeon::log_surgeon
                 utils::profiling
                 ystdlib::containers
                 zstd::libzstd_static
