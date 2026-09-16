@@ -348,6 +348,11 @@ jobs:
 
   ubuntu-jammy-aarch64-deps-image:
     name: "ubuntu-jammy-aarch64-deps-image"
+
+    # NOTE: To save CI resources, compared to the `clp-core-dependencies-x86-ubuntu-jammy` container
+    # image, we only want the `-aarch64-` image to be built either when:
+    # - it'll be published, or
+    # - it'll be used in a subsequent job.
     if: >-
       needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'true'
       && (needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true'
