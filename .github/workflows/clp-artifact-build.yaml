@@ -1036,8 +1036,12 @@ jobs:
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
+
+    # NOTE: `!cancelled()` is necessary to ensure this job runs even when an ancestor job was
+    # skipped (e.g., the `ubuntu-jammy-<arch>-deps-image` jobs). However, we don't want to run when
+    # `package-image` was skipped, which is why we need `needs.package-image.result == 'success'`
     if: >-
-      needs.calc-build-triggers.outputs.package_publish_image == 'true'
+      needs.calc-build-triggers.outputs.package_publish_image == 'true' && !cancelled()
       && needs.package-image.result == 'success'
     needs:
       - "calc-build-triggers"
@@ -1129,8 +1133,13 @@ jobs:
 
   spider-worker-image-multiarch-manifest:
     name: "spider-worker-image-multiarch-manifest"
+
+    # NOTE: `!cancelled()` is necessary to ensure this job runs even when an ancestor job was
+    # skipped (e.g., the `ubuntu-jammy-<arch>-deps-image` jobs). However, we don't want to run when
+    # `spider-worker-image` was skipped, which is why we need
+    # `needs.spider-worker-image.result == 'success'`
     if: >-
-      needs.calc-build-triggers.outputs.spider_worker_publish_image == 'true'
+      needs.calc-build-triggers.outputs.spider_worker_publish_image == 'true' && !cancelled()
       && needs.spider-worker-image.result == 'success'
     needs:
       - "calc-build-triggers"
