@@ -33,6 +33,7 @@ public:
      * @param output_dir The output directory for generated KV-IR files.
      * @param compress_converted_file Whether the converted file should be compressed.
      * @return A void result on success, or an error code indicating the failure:
+     * - `std::errc::not_supported` if the buffer content cannot be handled.
      * - Forwards `LogSerializer::create()`'s return values.
      * - Forwards `refill_buffer()`'s return values.
      * - Forwards `LogSerializer::add_message()`'s return values.

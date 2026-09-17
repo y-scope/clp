@@ -32,7 +32,8 @@ constexpr std::string_view cDelimiters{R"(\ \t\r\n[(:)"};
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define DATE R"(\d{2,4}[ /-]?[ \d]{2}[ /-]?[ \d]{2})"
 #define MONTH \
-    R"((Jan(uary)?)|(Feb(ruary)?)|(Mar(ch)?)|(Apr(il)?)|(May)|(Jun(e)?)|(Jul(y)?)|(Aug(ust)?)|(Sep(tember)?)|(Oct(ober)?)|(Nov(ember)?)|(Dec(ember)?))"
+    R"((Jan(uary)?)|(Feb(ruary)?)|(Mar(ch)?)|(Apr(il)?)|(May)|(Jun(e)?))" \
+    R"(|(Jul(y)?)|(Aug(ust)?)|(Sep(tember)?)|(Oct(ober)?)|(Nov(ember)?)|(Dec(ember)?))"
 #define SEP R"([ T:-])"
 #define TIME R"([ \d]{2}:[ \d]{2}:[ \d]{2}([,\.:]\d{1,9})?)"
 #define OFFSET R"(([\+-]\d{2}(:?\d{2})?))"

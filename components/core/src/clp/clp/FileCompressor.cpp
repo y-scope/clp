@@ -28,7 +28,6 @@ using clp::ParsedMessage;
 using clp::streaming_archive::writer::split_archive;
 using clp::streaming_archive::writer::split_file;
 using clp::streaming_archive::writer::split_file_and_archive;
-using std::make_unique;
 using std::set;
 using std::string;
 using std::vector;
@@ -114,7 +113,7 @@ bool FileCompressor::compress_file(
 ) {
     PROFILE_SCOPE("compress.parse_log_file");
 
-    BufferedReader buffered_file_reader{make_unique<FileReader>(file_to_compress.get_path())};
+    BufferedReader buffered_file_reader{std::make_unique<FileReader>(file_to_compress.get_path())};
 
     // Check that file is UTF-8 encoded
     if (auto error_code = buffered_file_reader.try_refill_buffer_if_empty();

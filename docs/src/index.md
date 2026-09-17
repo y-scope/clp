@@ -65,10 +65,6 @@ features:
 - **IR Analytics Libraries**: we also provide a [Python library][clp-ffi-py] and a
   [Go library][clp-ffi-go] that can analyze compressed IR.
 
-- **[Log parser][log-surgeon]**: CLP also includes a custom pushdown-automata-based log parser that
-  is 3x faster than state-of-the-art regular expression engines like [RE2][re2]. The log parser is
-  available as a library that can be used by other applications.
-
 # Getting started
 
 Check out the relevant docs below, based on whether you'd like to use or develop CLP.
@@ -124,7 +120,6 @@ dev-docs/index
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [datasets]: user-docs/resources-datasets
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
-[log-surgeon]: https://github.com/y-scope/log-surgeon
 [yscope-log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [log4j1-appenders]: https://github.com/y-scope/log4j1-appenders
 [log4j2-appenders]: https://github.com/y-scope/log4j2-appenders

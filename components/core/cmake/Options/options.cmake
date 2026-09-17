@@ -223,7 +223,6 @@ function(set_clp_tests_dependencies)
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LIBLZMA
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_NLOHMANN_JSON
@@ -314,7 +313,6 @@ function(set_clp_s_clp_dependencies_dependencies)
         CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_SPDLOG
@@ -420,7 +418,6 @@ endfunction()
 function(set_clp_s_search_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_OPENTELEMETRY_CPP
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG

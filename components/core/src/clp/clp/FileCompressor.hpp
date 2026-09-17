@@ -56,7 +56,7 @@ private:
      * @param archive_writer
      * @param reader
      */
-    void parse_and_encode(
+    auto parse_and_encode(
             size_t target_data_size_of_dicts,
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
             size_t target_encoded_file_size,
@@ -64,7 +64,7 @@ private:
             group_id_t group_id,
             streaming_archive::writer::Archive& archive_writer,
             ReaderInterface& reader
-    );
+    ) -> void;
 
     /**
      * Tries to compress the given file as if it were a generic archive_writer

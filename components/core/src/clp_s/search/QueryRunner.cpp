@@ -983,21 +983,23 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
             std::string query_string;
             filter->get_operand()->as_clp_string(query_string, filter->get_operation());
 
-            if (false == m_string_query_map.contains(query_string)) {
-                // search on log type dictionary
-                clp::epochtime_t placeholder_timestamp{};
-                m_string_query_map.emplace(
-                        query_string,
-                        clp::GrepCore::process_raw_query(
-                                *m_archive_reader->get_log_type_dictionary(),
-                                *m_archive_reader->get_variable_dictionary(),
-                                query_string,
-                                placeholder_timestamp,
-                                placeholder_timestamp,
-                                m_ignore_case
-                        )
-                );
+            if (m_string_query_map.count(query_string)) {
+                return;
             }
+
+            // search on log type dictionary
+            clp::epochtime_t placeholder_timestamp{};
+            m_string_query_map.emplace(
+                    query_string,
+                    clp::GrepCore::process_raw_query(
+                            *m_archive_reader->get_log_type_dictionary(),
+                            *m_archive_reader->get_variable_dictionary(),
+                            query_string,
+                            placeholder_timestamp,
+                            placeholder_timestamp,
+                            m_ignore_case
+                    )
+            );
         }
 
         if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
