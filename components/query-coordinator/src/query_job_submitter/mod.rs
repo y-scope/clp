@@ -56,8 +56,8 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// * `resource_group_id` - The Spider resource group to register the job under.
     /// * `clp_s_query_option` - `clp-s` query options shared by every task in the job.
     /// * `output_handle` - The output handle selecting how the query outputs are returned.
-    /// * `archives_to_query` - The archives to query, each represents a query task paired with
-    ///   the task execution policy.
+    /// * `archives_to_query` - The archives to query, each represents a query task paired with the
+    ///   task execution policy.
     ///
     /// # Returns
     ///

@@ -97,7 +97,6 @@ impl PlanningOption {
     /// * Forwards [`deduplicate_requested_datasets`]'s return values on failure.
     /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
     /// * Forwards [`validate_existing_datasets`]'s return values on failure.
-    ///
     async fn resolve_datasets(
         &self,
         db_pool: &MySqlPool,
@@ -107,10 +106,8 @@ impl PlanningOption {
         let Some(requested_datasets) = &query_job_config.datasets else {
             return Ok(Vec::new());
         };
-        let requested_datasets = deduplicate_requested_datasets(
-            requested_datasets,
-            self.max_datasets_per_query,
-        )?;
+        let requested_datasets =
+            deduplicate_requested_datasets(requested_datasets, self.max_datasets_per_query)?;
 
         let datasets_table = db_config.datasets_table_name();
         let existing_datasets: HashSet<String> =
@@ -311,7 +308,7 @@ fn validate_existing_datasets(
         .iter()
         .map(NonEmptyString::as_str)
         .filter(|dataset| {
-            dataset.as_str() != CLP_DEFAULT_DATASET_NAME && !existing_datasets.contains(*dataset)
+            *dataset != CLP_DEFAULT_DATASET_NAME && !existing_datasets.contains(*dataset)
         })
         .collect();
     if !missing_datasets.is_empty() {
@@ -335,9 +332,3 @@ fn retention_cutoff_millisecs(
     const MILLISECS_PER_MIN: i64 = 60 * 1000;
     creation_time_millisecs - i64::from(archive_retention_period.get()) * MILLISECS_PER_MIN
 }
-
-/// Escapes a MySQL table identifier.
-///
-/// # Returns
-///
-/// The quoted identifier.

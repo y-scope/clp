@@ -282,6 +282,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::SqlxNoRowsAffected`] if the running query job row was not updated.
     /// * Forwards [`Self::update_job_status`]'s return values on failure.
     /// * Forwards [`QueryJobSubmitter::run_query_job_to_completion`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
@@ -349,6 +350,10 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
     /// Updates the query job status in the CLP database.
     ///
+    /// # Returns
+    ///
+    /// Whether the query job row was updated on success.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -372,7 +377,15 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     }
 }
 
-/// Executes an SQL update and reports whether any row was affected.
+/// Executes an SQL update.
+///
+/// # Returns
+///
+/// Whether the update affected at least one row on success.
+///
+/// # Errors
+///
+/// Returns an error if [`sqlx::query::Query::execute`] fails.
 async fn execute_update(
     query: sqlx::query::Query<'_, sqlx::MySql, sqlx::mysql::MySqlArguments>,
     db_pool: &MySqlPool,
