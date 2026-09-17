@@ -41,16 +41,14 @@ use tonic::transport::Endpoint;
 
 use crate::Error;
 use crate::job_handle::QueryJobHandle;
+use crate::job_handle::QueryJobHandleContext;
 use crate::job_handle::SpiderOption;
 
 /// Coordinator for fetching new query jobs and submitting them to Spider.
 pub struct Coordinator {
     resource_group_id: ResourceGroupId,
     spider_client: SpiderClient,
-    db_pool: sqlx::MySqlPool,
-    db_config: DatabaseConfig,
-    spider_option: Arc<SpiderOption>,
-    output_handle: OutputHandle,
+    job_handle_context: Arc<QueryJobHandleContext>,
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
@@ -119,19 +117,19 @@ impl Coordinator {
             tracing::error!(error = % e, "Failed to get or create resource group.");
         })?;
 
-        let spider_option = Arc::new(SpiderOption {
-            initial_poll_backoff: Duration::from_millis(
-                coordinator_config
-                    .result_polling
-                    .init_backoff_millisecs
-                    .get(),
-            ),
-            max_poll_backoff: Duration::from_millis(
-                coordinator_config
-                    .result_polling
-                    .max_backoff_millisecs
-                    .get(),
-            ),
+        let job_handle_context = Arc::new(QueryJobHandleContext {
+            db_pool,
+            db_config,
+            output_handle,
+            spider_option: SpiderOption {
+                // Use the initial polling delay as the fixed interval for query jobs.
+                poll_interval: Duration::from_millis(
+                    coordinator_config
+                        .result_polling
+                        .init_backoff_millisecs
+                        .get(),
+                ),
+            },
         });
 
         let cancellation_token = CancellationToken::new();
@@ -139,10 +137,7 @@ impl Coordinator {
         let coordinator = Self {
             resource_group_id,
             spider_client,
-            db_pool,
-            db_config,
-            spider_option,
-            output_handle,
+            job_handle_context,
             is_first_fetch: true,
             job_polling_interval: Duration::from_millis(
                 coordinator_config.job_polling_interval_millisecs.get(),
@@ -243,7 +238,7 @@ impl Coordinator {
             .bind(QueryJobStatus::Failed)
             .bind(status_msg)
             .bind(job_id)
-            .execute(&self.db_pool)
+            .execute(&self.job_handle_context.db_pool)
             .await
         {
             tracing::error!(
@@ -346,7 +341,7 @@ impl Coordinator {
             return Ok(());
         }
 
-        let mut tx = self.db_pool.begin().await?;
+        let mut tx = self.job_handle_context.db_pool.begin().await?;
         for chunk in job_ids.chunks(1000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
                 "UPDATE `{table}` SET `dispatch_time` = COALESCE(`dispatch_time`, \
@@ -384,14 +379,11 @@ impl Coordinator {
         search_job_config: SearchJobConfig,
     ) -> Result<QueryJobHandle<SpiderClient>, Error> {
         let result = QueryJobHandle::new(
-            self.db_pool.clone(),
-            self.db_config.clone(),
+            self.job_handle_context.clone(),
             job_id,
             self.spider_client.clone(),
             self.resource_group_id,
             search_job_config,
-            self.output_handle.clone(),
-            self.spider_option.clone(),
         );
 
         if let Err(e) = &result {
@@ -451,7 +443,7 @@ impl Coordinator {
             return sqlx::query_as::<_, PendingJobRowProjection>(FIRST_FETCH_QUERY)
                 .bind(i32::from(QueryJobType::SearchOrAggregation))
                 .bind(QueryJobStatus::Pending)
-                .fetch_all(&self.db_pool)
+                .fetch_all(&self.job_handle_context.db_pool)
                 .await
                 .map_err(Into::into);
         }
@@ -469,7 +461,7 @@ impl Coordinator {
                     i64::try_from(remaining)
                         .expect("limit is bounded by Semaphore::MAX_PERMITS, which fits in i64"),
                 )
-                .fetch_all(&self.db_pool)
+                .fetch_all(&self.job_handle_context.db_pool)
                 .await?;
             let exhausted = batch.len() < remaining;
             for row in batch {
@@ -522,7 +514,7 @@ impl Coordinator {
         for row in sqlx::query_as::<_, RunningJobRowProjection>(QUERY)
             .bind(i32::from(QueryJobType::SearchOrAggregation))
             .bind(QueryJobStatus::Running)
-            .fetch_all(&self.db_pool)
+            .fetch_all(&self.job_handle_context.db_pool)
             .await?
         {
             let search_job_config: SearchJobConfig = match rmp_serde::from_slice(
