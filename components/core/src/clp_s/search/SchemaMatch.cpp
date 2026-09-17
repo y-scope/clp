@@ -8,6 +8,7 @@
 #include <optional>
 #include <queue>
 #include <set>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -938,16 +939,16 @@ auto SchemaMatch::register_clpp_resolved_column(
 auto SchemaMatch::build_leaf_query_expr(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         SchemaNode::id_t root_node_id,
-        clpp::Interpretation const& interpretation,
+        std::span<clpp::LeafQuery const> leaf_queries,
         std::unordered_set<int32_t> const& matched_schema_ids
 ) -> std::optional<std::shared_ptr<ast::Expression>> {
-    if (interpretation.m_leaf_queries.empty()) {
+    if (leaf_queries.empty()) {
         auto col{column->copy_with_new_id()};
         register_clpp_resolved_column(col, root_node_id, matched_schema_ids);
         return FilterExpr::create(col, FilterOperation::EXISTS);
     }
     auto leaves_expr{ast::AndExpr::create()};
-    for (auto const& leaf : interpretation.m_leaf_queries) {
+    for (auto const& leaf : leaf_queries) {
         auto rule_names{clpp::split_qualified_name(leaf.m_qualified_name)};
         auto leaf_cols{resolve_leaf_rule_descriptors(column, root_node_id, rule_names)};
         if (false == leaf_cols.has_value()) {
@@ -957,16 +958,10 @@ auto SchemaMatch::build_leaf_query_expr(
         auto type_variants{ast::OrExpr::create()};
         for (auto& [new_col, node_id] : leaf_cols.value()) {
             register_clpp_resolved_column(new_col, node_id, matched_schema_ids);
-            if ("*" == leaf.m_query) {
-                type_variants->add_operand(
-                        FilterExpr::create(new_col, ast::FilterOperation::EXISTS)
-                );
-            } else {
-                auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
-                type_variants->add_operand(
-                        FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal)
-                );
-            }
+            auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
+            type_variants->add_operand(
+                    FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal)
+            );
         }
         leaves_expr->add_operand(type_variants);
     }
@@ -1017,11 +1012,9 @@ auto SchemaMatch::build_decomposed_query_filter(
                 interpretations.error().message()
         )};
     }
-    for (auto const& [schema_ids, interpretation] : interpretations.value()) {
+    for (auto const& [schema_ids, leaf_queries] : interpretations.value()) {
         ++m_num_clpp_interpretations;
-        if (auto leaves_expr{
-                    build_leaf_query_expr(column, root_node_id, interpretation, schema_ids)
-            };
+        if (auto leaves_expr{build_leaf_query_expr(column, root_node_id, leaf_queries, schema_ids)};
             leaves_expr.has_value())
         {
             results->add_operand(*leaves_expr);

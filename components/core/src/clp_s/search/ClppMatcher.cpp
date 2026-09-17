@@ -1,5 +1,6 @@
 #include "ClppMatcher.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -18,6 +19,18 @@
 #include <clpp/Interpretation.hpp>
 
 namespace clp_s::search {
+namespace {
+/**
+ * Removes the leaf queries whose match is `*`, since they don't constrain the leaf's value and so
+ * don't need to be represented as filter expressions downstream.
+ */
+auto erase_unconstrained_leaves(std::vector<clpp::LeafQuery>& leaf_queries) -> void {
+    std::erase_if(leaf_queries, [](clpp::LeafQuery const& leaf) -> bool {
+        return "*" == leaf.m_query;
+    });
+}
+}  // namespace
+
 ClppMatcher::ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive)
         : m_archive_reader{archive_reader},
           m_case_sensitive{case_sensitive} {
@@ -77,17 +90,34 @@ auto ClppMatcher::decompose_by_log_shapes(std::string_view query)
         }
                                                                  .build());
     }
-    auto interpretations_by_shape{clpp::decompose_by_log_shapes(*m_parser, query, log_shapes)};
+    auto interpretations_per_shape{clpp::decompose_by_log_shapes(*m_parser, query, log_shapes)};
     std::vector<InterpretationMatch> matches;
-    matches.reserve(interpretations_by_shape.size());
-    for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < interpretations_by_shape.size();
+    matches.reserve(interpretations_per_shape.size());
+    for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < interpretations_per_shape.size();
          ++log_shape_id)
     {
-        for (auto& interpretation : interpretations_by_shape.at(log_shape_id)) {
-            matches.push_back(
-                    {.schema_ids{m_schemas_by_log_shape.at(log_shape_id)},
-                     .interpretation{std::move(interpretation)}}
-            );
+        auto const& schema_ids{m_schemas_by_log_shape.at(log_shape_id)};
+        if (schema_ids.empty()) {
+            continue;
+        }
+        for (auto& leaf_queries : interpretations_per_shape.at(log_shape_id)) {
+            erase_unconstrained_leaves(leaf_queries);
+        }
+        // If any interpretation leaves no value constraints, the shape satisfies the query
+        // unconditionally, so every event in this shape's schemas matches and the other
+        // interpretations are redundant.
+        if (std::ranges::any_of(
+                    interpretations_per_shape.at(log_shape_id),
+                    [](std::vector<clpp::LeafQuery> const& leaf_queries) -> bool {
+                        return leaf_queries.empty();
+                    }
+            ))
+        {
+            matches.push_back({.schema_ids{schema_ids}, .leaf_queries{}});
+            continue;
+        }
+        for (auto& leaf_queries : interpretations_per_shape.at(log_shape_id)) {
+            matches.push_back({.schema_ids{schema_ids}, .leaf_queries{std::move(leaf_queries)}});
         }
     }
     return matches;
@@ -115,8 +145,10 @@ auto ClppMatcher::decompose_by_rule_name(std::string_view query, std::string_vie
         if (schema_ids.empty()) {
             continue;
         }
+        erase_unconstrained_leaves(interpretation.m_leaf_queries);
         matches.push_back(
-                {.schema_ids{std::move(schema_ids)}, .interpretation{std::move(interpretation)}}
+                {.schema_ids{std::move(schema_ids)},
+                 .leaf_queries{std::move(interpretation.m_leaf_queries)}}
         );
     }
     return matches;

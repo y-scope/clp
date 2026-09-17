@@ -24,12 +24,13 @@ class ClppMatcher {
 public:
     // Types
     /**
-     * An interpretation of a clpp query and the schema IDs containing a matching shape (log shape
-     * or parent rule shape).
+     * A matched interpretation of a clpp query, made of the schema IDs containing a matching shape
+     * (log shape or parent rule shape) and any leaf queries constraining it. If `leaf_queries` is
+     * empty then matching shapes satisfy the query without constraining any leaf values.
      */
     struct InterpretationMatch {
         std::unordered_set<int32_t> schema_ids;
-        clpp::Interpretation interpretation;
+        std::vector<clpp::LeafQuery> leaf_queries;
     };
 
     // Constructors

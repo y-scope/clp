@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -83,13 +84,13 @@ private:
      * Builds an expression from a single interpretation of a decomposed clpp query, and registers
      * leaf columns in m_descriptor_to_schema for the given schemas.
      *
-     * When m_leaf_queries is non-empty, returns an AndExpr of leaf equality/existence filters.
-     * When m_leaf_queries is empty (the match is purely on shape text), registers the column and
-     * returns an EXISTS filter.
+     * When `leaf_queries` is non-empty, returns an AndExpr of leaf equality filters (one per leaf
+     * query). When `leaf_queries` is empty (the shape text itself satisfies the query, so no leaf
+     * value is constrained), registers the column and returns an EXISTS filter.
      *
      * @param column The original column descriptor triggering clpp decomposition.
      * @param root_node_id The schema-tree node where decomposition is rooted.
-     * @param interpretation The single interpretation to build the expression from.
+     * @param leaf_queries The interpretation's leaf queries, constraining value matches.
      * @param matched_schema_ids Schemas to register the leaf columns against.
      * @return The expression, or std::nullopt if a leaf column cannot be resolved in the schema
      * tree.
@@ -97,7 +98,7 @@ private:
     auto build_leaf_query_expr(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             SchemaNode::id_t root_node_id,
-            clpp::Interpretation const& interpretation,
+            std::span<clpp::LeafQuery const> leaf_queries,
             std::unordered_set<int32_t> const& matched_schema_ids
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 

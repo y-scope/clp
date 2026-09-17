@@ -7,6 +7,10 @@
 #include <vector>
 
 #if CLP_BUILD_CLPP_DECOMPOSITION
+    #include <utility>
+
+    #include <clpp/TextShape.hpp>
+#else
     #include <system_error>
 
     #include <ystdlib/error_handling/Result.hpp>
@@ -26,6 +30,13 @@ namespace {
  */
 auto build_interpretation(std::vector<log_surgeon::SubQuery> const& sub_queries) -> Interpretation;
 
+/**
+ * Builds the leaf queries from log-surgeon sub-query segments, ignoring segments that don't carry a
+ * rule name (i.e. static text or wildcards).
+ */
+auto build_leaf_queries(std::vector<log_surgeon::SubQuery> const& sub_queries)
+        -> std::vector<LeafQuery>;
+
 auto build_interpretation(std::vector<log_surgeon::SubQuery> const& sub_queries) -> Interpretation {
     TextShape<std::string> shape_query;
     std::vector<LeafQuery> leaf_queries;
@@ -38,6 +49,17 @@ auto build_interpretation(std::vector<log_surgeon::SubQuery> const& sub_queries)
         }
     }
     return {std::move(shape_query), std::move(leaf_queries)};
+}
+
+auto build_leaf_queries(std::vector<log_surgeon::SubQuery> const& sub_queries)
+        -> std::vector<LeafQuery> {
+    std::vector<LeafQuery> leaf_queries;
+    for (auto const& sub_query : sub_queries) {
+        if (false == sub_query.qualified_name.empty()) {
+            leaf_queries.emplace_back(sub_query.qualified_name, sub_query.value);
+        }
+    }
+    return leaf_queries;
 }
 }  // namespace
 
@@ -55,29 +77,27 @@ auto decompose_by_rule_name(
     return interpretations;
 }
 
-// Leaf rule match segments surrounded by wildcard segments (e.g. `*(?<rule>*match)*`) must be
-// expanded to match any leaf match of that name in the log shape.
 auto decompose_by_log_shapes(
         log_surgeon::Parser& parser,
         std::string_view query,
         std::span<std::string_view const> log_shapes
-) -> std::vector<std::vector<Interpretation>> {
+) -> std::vector<std::vector<std::vector<LeafQuery>>> {
     std::vector<log_surgeon::CCharArray> ffi_shapes;
     ffi_shapes.reserve(log_shapes.size());
     for (auto const shape : log_shapes) {
         ffi_shapes.push_back(log_surgeon::CCharArray::from_string_view(shape));
     }
 
-    auto const sub_query_sets_per_shape{parser.search_by_log_shapes(query, ffi_shapes)};
-    std::vector<std::vector<Interpretation>> interpretations_per_shape;
-    interpretations_per_shape.reserve(sub_query_sets_per_shape.size());
-    for (auto const& sub_query_set : sub_query_sets_per_shape) {
-        std::vector<Interpretation> interpretations;
-        interpretations.reserve(sub_query_set.size());
-        for (auto const& sub_queries : sub_query_set) {
-            interpretations.emplace_back(build_interpretation(sub_queries));
+    auto const ls_interpretations_per_shape{parser.search_by_log_shapes(query, ffi_shapes)};
+    std::vector<std::vector<std::vector<LeafQuery>>> interpretations_per_shape;
+    interpretations_per_shape.reserve(ls_interpretations_per_shape.size());
+    for (auto const& sub_query_per_interpretation : ls_interpretations_per_shape) {
+        std::vector<std::vector<LeafQuery>> leaf_queries_per_interpretation;
+        leaf_queries_per_interpretation.reserve(sub_query_per_interpretation.size());
+        for (auto const& sub_queries : sub_query_per_interpretation) {
+            leaf_queries_per_interpretation.push_back(build_leaf_queries(sub_queries));
         }
-        interpretations_per_shape.push_back(std::move(interpretations));
+        interpretations_per_shape.push_back(std::move(leaf_queries_per_interpretation));
     }
     return interpretations_per_shape;
 }
@@ -101,7 +121,7 @@ auto decompose_by_rule_name(log_surgeon::Parser&, std::string_view, std::string_
 
 auto
 decompose_by_log_shapes(log_surgeon::Parser&, std::string_view, std::span<std::string_view const>)
-        -> std::vector<std::vector<Interpretation>> {
+        -> std::vector<std::vector<std::vector<LeafQuery>>> {
     throw std::system_error{
             ystdlib::error_handling::make_error_code(
                     clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported}
