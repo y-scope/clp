@@ -48,7 +48,7 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
-    search_job_config: SearchJobConfig,
+    query_job_config: SearchJobConfig,
     clp_s_query_option: ClpSQueryOption,
 }
 
@@ -67,18 +67,18 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
-        search_job_config: SearchJobConfig,
+        query_job_config: SearchJobConfig,
     ) -> Result<Self, Error> {
-        let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
+        let query_string = NonEmptyString::try_from(query_job_config.query_string.clone())
             .map_err(|_| {
                 Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
             })?;
         let clp_s_query_option = ClpSQueryOption {
             query_string,
-            max_num_results: NonZeroU32::new(search_job_config.max_num_results),
-            begin_timestamp_millisecs: search_job_config.begin_timestamp,
-            end_timestamp_millisecs: search_job_config.end_timestamp,
-            ignore_case: search_job_config.ignore_case,
+            max_num_results: NonZeroU32::new(query_job_config.max_num_results),
+            begin_timestamp_millisecs: query_job_config.begin_timestamp,
+            end_timestamp_millisecs: query_job_config.end_timestamp,
+            ignore_case: query_job_config.ignore_case,
         };
 
         Ok(Self {
@@ -86,7 +86,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             query_job_id,
             job_submitter,
             resource_group_id,
-            search_job_config,
+            query_job_config,
             clp_s_query_option,
         })
     }
@@ -138,8 +138,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`execute_update`]'s return values on failure for an empty plan.
     /// * Forwards [`Self::submit`]'s return values on failure.
     async fn plan_and_submit(&self) -> Result<Option<SpiderJobId>, Error> {
-        let archives_to_search = self.prepare_task_inputs().await?;
-        if archives_to_search.is_empty() {
+        let archives_to_query = self.prepare_task_inputs().await?;
+        if archives_to_query.is_empty() {
             let query = sqlx::query(formatcp!(
                 "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = '', \
                  `num_tasks` = 0, `start_time` = CURRENT_TIMESTAMP(3), `duration` = 0 WHERE `id` \
@@ -156,7 +156,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             }
             return Ok(None);
         }
-        self.submit(archives_to_search).await.map(Some)
+        self.submit(archives_to_query).await.map(Some)
     }
 
     /// Resumes a query job that was already submitted to Spider.
@@ -193,9 +193,9 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
     async fn submit(
         &self,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_query: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<SpiderJobId, Error> {
-        let num_tasks = archives_to_search.len();
+        let num_tasks = archives_to_query.len();
         let persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;
         let spider_job_id = self
@@ -205,7 +205,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 self.resource_group_id,
                 self.clp_s_query_option.clone(),
                 self.context.output_handle.clone(),
-                archives_to_search,
+                archives_to_query,
             )
             .await?;
 
@@ -239,7 +239,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 &self.context.db_pool,
                 &self.context.db_config,
                 self.query_job_id,
-                &self.search_job_config,
+                &self.query_job_config,
             )
             .await
     }

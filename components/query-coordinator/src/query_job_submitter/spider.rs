@@ -38,13 +38,13 @@ impl QueryJobSubmitter for SpiderClient {
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
         output_handle: OutputHandle,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_query: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error> {
         let (graph, inputs) = build_query_task_graph(
             query_job_id,
             &clp_s_query_option,
             &output_handle,
-            archives_to_search,
+            archives_to_query,
         )?;
         let spider_job_id = self.submit_job(resource_group_id, &graph, inputs).await?;
 
@@ -130,7 +130,7 @@ fn build_query_task_graph(
     query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
     output_handle: &OutputHandle,
-    archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+    archives_to_query: Vec<(ArchiveMetadata, ExecutionPolicy)>,
 ) -> Result<(TaskGraph, Vec<TaskInput>), Error> {
     // NOTE: Keep these names and the input order in sync with the TDL package definitions.
     const CLP_TDL_PACKAGE_NAME: &str = "clp";
@@ -139,7 +139,7 @@ fn build_query_task_graph(
     let mut graph = TaskGraph::new(None, None)?;
 
     let mut inputs = Vec::new();
-    for (archive, execution_policy) in archives_to_search {
+    for (archive, execution_policy) in archives_to_query {
         graph.insert_task(TaskDescriptor {
             tdl_context: TdlContext {
                 package: CLP_TDL_PACKAGE_NAME.to_owned(),

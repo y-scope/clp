@@ -56,7 +56,7 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// * `resource_group_id` - The Spider resource group to register the job under.
     /// * `clp_s_query_option` - `clp-s` query options shared by every task in the job.
     /// * `output_handle` - The output handle selecting how the query outputs are returned.
-    /// * `archives_to_search` - The archives to search, each represents a query task paired with
+    /// * `archives_to_query` - The archives to query, each represents a query task paired with
     ///   the task execution policy.
     ///
     /// # Returns
@@ -72,7 +72,7 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
         output_handle: OutputHandle,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_query: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error>;
 
     /// Idempotently starts `spider_job_id` and waits for it to reach a terminal state.

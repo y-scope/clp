@@ -49,12 +49,12 @@ impl PlanningOption {
         db_pool: &MySqlPool,
         db_config: &Database,
         query_job_id: QueryJobId,
-        search_job_config: &SearchJobConfig,
+        query_job_config: &SearchJobConfig,
     ) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        validate_timestamp_range(search_job_config)?;
+        validate_timestamp_range(query_job_config)?;
 
         let datasets = self
-            .resolve_datasets(db_pool, db_config, search_job_config)
+            .resolve_datasets(db_pool, db_config, query_job_config)
             .await?;
         if datasets.is_empty() {
             return Ok(Vec::new());
@@ -69,7 +69,7 @@ impl PlanningOption {
                 Self::fetch_archives(
                     db_pool,
                     db_config,
-                    search_job_config,
+                    query_job_config,
                     dataset,
                     archive_end_timestamp_lower_bound,
                 )
@@ -88,7 +88,7 @@ impl PlanningOption {
     ///
     /// # Returns
     ///
-    /// The requested datasets, or the default dataset when it exists, on success.
+    /// The requested datasets on success.
     ///
     /// # Errors
     ///
@@ -98,42 +98,29 @@ impl PlanningOption {
     /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
     /// * Forwards [`validate_existing_datasets`]'s return values on failure.
     ///
-    /// # Panics
-    ///
-    /// Panics if [`CLP_DEFAULT_DATASET_NAME`] is empty.
     async fn resolve_datasets(
         &self,
         db_pool: &MySqlPool,
         db_config: &Database,
-        search_job_config: &SearchJobConfig,
+        query_job_config: &SearchJobConfig,
     ) -> Result<Vec<NonEmptyString>, Error> {
-        let requested_datasets = match &search_job_config.datasets {
-            Some(datasets) => Some(deduplicate_requested_datasets(
-                datasets,
-                self.max_datasets_per_query,
-            )?),
-            None => None,
+        let Some(requested_datasets) = &query_job_config.datasets else {
+            return Ok(Vec::new());
         };
+        let requested_datasets = deduplicate_requested_datasets(
+            requested_datasets,
+            self.max_datasets_per_query,
+        )?;
 
-        let datasets_table = quote_identifier(&db_config.datasets_table_name());
+        let datasets_table = db_config.datasets_table_name();
         let existing_datasets: HashSet<String> =
-            sqlx::query_scalar(&format!("SELECT `name` FROM {datasets_table}"))
+            sqlx::query_scalar(&format!("SELECT `name` FROM `{datasets_table}`"))
                 .fetch_all(db_pool)
                 .await?
                 .into_iter()
                 .collect();
-        if let Some(datasets) = requested_datasets {
-            validate_existing_datasets(&datasets, &existing_datasets)?;
-            return Ok(datasets);
-        }
-        Ok(if existing_datasets.contains(CLP_DEFAULT_DATASET_NAME) {
-            vec![
-                NonEmptyString::new(CLP_DEFAULT_DATASET_NAME.to_owned())
-                    .expect("the default dataset name is nonempty"),
-            ]
-        } else {
-            Vec::new()
-        })
+        validate_existing_datasets(&requested_datasets, &existing_datasets)?;
+        Ok(requested_datasets)
     }
 
     /// Computes the archive retention cutoff relative to the query job's creation time.
@@ -182,21 +169,20 @@ impl PlanningOption {
     async fn fetch_archives(
         db_pool: &MySqlPool,
         db_config: &Database,
-        search_job_config: &SearchJobConfig,
+        query_job_config: &SearchJobConfig,
         dataset: &NonEmptyString,
         archive_end_timestamp_lower_bound: Option<i64>,
     ) -> Result<Vec<SelectedArchive>, Error> {
-        let archives_table =
-            quote_identifier(&db_config.archives_table_name(Some(dataset.as_str())));
+        let archives_table = db_config.archives_table_name(Some(dataset.as_str()));
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT `id`, `size`, `end_timestamp` FROM {archives_table} WHERE TRUE"
+            "SELECT `id`, `size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
         ));
-        if let Some(end_timestamp) = search_job_config.end_timestamp {
+        if let Some(end_timestamp) = query_job_config.end_timestamp {
             query_builder
                 .push(" AND `begin_timestamp` <= ")
                 .push_bind(end_timestamp);
         }
-        if let Some(begin_timestamp) = search_job_config.begin_timestamp {
+        if let Some(begin_timestamp) = query_job_config.begin_timestamp {
             query_builder
                 .push(" AND `end_timestamp` >= ")
                 .push_bind(begin_timestamp);
@@ -248,10 +234,10 @@ struct ArchiveRowProjection {
 /// Returns an error if:
 ///
 /// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
-fn validate_timestamp_range(search_job_config: &SearchJobConfig) -> Result<(), Error> {
+fn validate_timestamp_range(query_job_config: &SearchJobConfig) -> Result<(), Error> {
     if let (Some(begin_timestamp), Some(end_timestamp)) = (
-        search_job_config.begin_timestamp,
-        search_job_config.end_timestamp,
+        query_job_config.begin_timestamp,
+        query_job_config.end_timestamp,
     ) && begin_timestamp > end_timestamp
     {
         return Err(Error::InvalidQueryJobConfig(format!(
@@ -263,7 +249,7 @@ fn validate_timestamp_range(search_job_config: &SearchJobConfig) -> Result<(), E
 
 /// Orders selected archives by descending end timestamp, without a tie-breaker.
 fn sort_selected_archives(archives: &mut [SelectedArchive]) {
-    archives.sort_unstable_by_key(|archive| Reverse(archive.end_timestamp));
+    archives.sort_by_key(|archive| Reverse(archive.end_timestamp));
 }
 
 /// Validates and deduplicates an explicit dataset list in requested order.
@@ -324,7 +310,9 @@ fn validate_existing_datasets(
     let missing_datasets: Vec<&str> = datasets
         .iter()
         .map(NonEmptyString::as_str)
-        .filter(|dataset| !existing_datasets.contains(*dataset))
+        .filter(|dataset| {
+            dataset.as_str() != CLP_DEFAULT_DATASET_NAME && !existing_datasets.contains(*dataset)
+        })
         .collect();
     if !missing_datasets.is_empty() {
         return Err(Error::InvalidQueryJobConfig(format!(
@@ -353,6 +341,3 @@ fn retention_cutoff_millisecs(
 /// # Returns
 ///
 /// The quoted identifier.
-fn quote_identifier(identifier: &str) -> String {
-    format!("`{}`", identifier.replace('`', "``"))
-}
