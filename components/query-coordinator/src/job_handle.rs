@@ -113,7 +113,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             Ok(Some(spider_job_id)) => self.to_completion(spider_job_id).await,
             Ok(None) => Ok(()),
             Err(error) => {
-                if !matches!(error, Error::SpiderJobIdNotPersisted(_)) {
+                if !matches!(error, Error::SqlxNoRowsAffected(_)) {
                     self.report_failure(&error).await;
                 }
                 Err(error)
@@ -139,8 +139,15 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     async fn plan_and_submit(&self) -> Result<Option<SpiderJobId>, Error> {
         let archives_to_search = self.prepare_task_inputs().await?;
         if archives_to_search.is_empty() {
-            self.update_job_status(QueryJobStatus::Succeeded, None, QueryJobStatus::Pending)
-                .await?;
+            if !self
+                .update_job_status(QueryJobStatus::Pending, QueryJobStatus::Succeeded, None)
+                .await?
+            {
+                return Err(Error::SqlxNoRowsAffected(format!(
+                    "no pending query job row found for query job {}",
+                    self.query_job_id
+                )));
+            }
             return Ok(None);
         }
         self.submit(archives_to_search).await.map(Some)
@@ -227,7 +234,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::SpiderJobIdNotPersisted`] if no pending query job row was updated.
+    /// * [`Error::SqlxNoRowsAffected`] if no pending query job row was updated.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn persist_spider_job_id(
         &self,
@@ -238,18 +245,15 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, `num_tasks` = ?, \
              `start_time` = CURRENT_TIMESTAMP(3) WHERE `id` = ? AND `status` = ?"
         );
-        let result = sqlx::query(query)
+        let query = sqlx::query(query)
             .bind(spider_job_id.get())
             .bind(QueryJobStatus::Running)
             .bind(num_tasks)
             .bind(self.query_job_id)
-            .bind(QueryJobStatus::Pending)
-            .execute(&self.context.db_pool)
-            .await?;
-
-        if 1 != result.rows_affected() {
-            return Err(Error::SpiderJobIdNotPersisted(format!(
-                "no pending row found for query job {} (Spider job ID {})",
+            .bind(QueryJobStatus::Pending);
+        if !execute_update(query, &self.context.db_pool).await? {
+            return Err(Error::SqlxNoRowsAffected(format!(
+                "no pending query job row found for query job {} (Spider job ID {})",
                 self.query_job_id, spider_job_id
             )));
         }
@@ -292,8 +296,15 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 Some("The Spider query job was cancelled.".to_owned()),
             ),
         };
-        self.update_job_status(status, status_message, QueryJobStatus::Running)
-            .await?;
+        if !self
+            .update_job_status(QueryJobStatus::Running, status, status_message.as_deref())
+            .await?
+        {
+            return Err(Error::SqlxNoRowsAffected(format!(
+                "no running query job row found for query job {}",
+                self.query_job_id
+            )));
+        }
         Ok(())
     }
 
@@ -310,9 +321,9 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
         let _ = self
             .update_job_status(
-                QueryJobStatus::Failed,
-                Some(format!("Query job orchestration failed: {error}")),
                 QueryJobStatus::Pending,
+                QueryJobStatus::Failed,
+                Some(&format!("Query job orchestration failed: {error}")),
             )
             .await
             .inspect_err(|status_error| {
@@ -333,20 +344,27 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn update_job_status(
         &self,
-        new_status: QueryJobStatus,
-        status_message: Option<String>,
-        current_status: QueryJobStatus,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query(formatcp!(
-            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ? AND \
-             `status` = ?"
+        from: QueryJobStatus,
+        to: QueryJobStatus,
+        msg: Option<&str>,
+    ) -> Result<bool, sqlx::Error> {
+        let query = sqlx::query(formatcp!(
+            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ? \
+             AND `status` = ?"
         ))
-        .bind(new_status)
-        .bind(status_message.as_deref().unwrap_or_default())
+        .bind(to)
+        .bind(msg.unwrap_or_default())
         .bind(self.query_job_id)
-        .bind(current_status)
-        .execute(&self.context.db_pool)
-        .await?;
-        Ok(())
+        .bind(from);
+        execute_update(query, &self.context.db_pool).await
     }
+}
+
+/// Executes an SQL update and reports whether any row was affected.
+async fn execute_update(
+    query: sqlx::query::Query<'_, sqlx::MySql, sqlx::mysql::MySqlArguments>,
+    db_pool: &MySqlPool,
+) -> Result<bool, sqlx::Error> {
+    let result = query.execute(db_pool).await?;
+    Ok(result.rows_affected() > 0)
 }

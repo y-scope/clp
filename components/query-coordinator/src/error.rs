@@ -6,8 +6,8 @@ pub enum Error {
     #[error("invalid query job configuration: {0}")]
     InvalidQueryJobConfig(String),
 
-    #[error("failed to persist spider job id: {0}")]
-    SpiderJobIdNotPersisted(String),
+    #[error("failed to update SQL database: {0}")]
+    SqlxNoRowsAffected(String),
 
     #[error("spider request failure: {0}")]
     SpiderClient(#[from] spider_client::error::ClientError),
