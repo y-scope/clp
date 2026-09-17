@@ -29,21 +29,26 @@ pub struct SpiderOption {
     pub max_poll_backoff: Duration,
 }
 
+/// Resources shared by query job handles created by the coordinator.
+pub struct QueryJobHandleContext {
+    pub db_pool: MySqlPool,
+    pub db_config: Database,
+    pub output_handle: OutputHandle,
+    pub spider_option: SpiderOption,
+}
+
 /// Handles the asynchronous submission of a query job and the retrieval of its result.
 ///
 /// # Type Parameters
 ///
 /// * `SubmitterType` - The type of the job submitter for Spider job submission.
 pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
-    db_pool: MySqlPool,
-    _db_config: Database,
+    context: Arc<QueryJobHandleContext>,
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
     _search_job_config: SearchJobConfig,
     clp_s_query_option: ClpSQueryOption,
-    output_handle: OutputHandle,
-    spider_option: Arc<SpiderOption>,
 }
 
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
@@ -56,16 +61,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// # Errors
     ///
     /// Returns an error if the query string is empty.
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        db_pool: MySqlPool,
-        db_config: Database,
+        context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
         search_job_config: SearchJobConfig,
-        output_handle: OutputHandle,
-        spider_option: Arc<SpiderOption>,
     ) -> Result<Self, Error> {
         let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
             .map_err(|_| {
@@ -80,15 +81,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         };
 
         Ok(Self {
-            db_pool,
-            _db_config: db_config,
+            context,
             query_job_id,
             job_submitter,
             resource_group_id,
             _search_job_config: search_job_config,
             clp_s_query_option,
-            output_handle,
-            spider_option,
         })
     }
 
@@ -170,7 +168,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 self.query_job_id,
                 self.resource_group_id,
                 self.clp_s_query_option.clone(),
-                self.output_handle.clone(),
+                self.context.output_handle.clone(),
                 archives_to_search,
             )
             .await?;
@@ -223,7 +221,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .bind(num_tasks)
             .bind(self.query_job_id)
             .bind(QueryJobStatus::Pending)
-            .execute(&self.db_pool)
+            .execute(&self.context.db_pool)
             .await?;
 
         if 1 != result.rows_affected() {
@@ -248,8 +246,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .job_submitter
             .run_query_job_to_completion(
                 spider_job_id,
-                self.spider_option.initial_poll_backoff,
-                self.spider_option.max_poll_backoff,
+                self.context.spider_option.initial_poll_backoff,
+                self.context.spider_option.max_poll_backoff,
             )
             .await?;
 
@@ -330,7 +328,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .bind(status_message)
             .bind(self.query_job_id)
             .bind(expected_status);
-        query.execute(&self.db_pool).await?;
+        query.execute(&self.context.db_pool).await?;
         Ok(())
     }
 }
