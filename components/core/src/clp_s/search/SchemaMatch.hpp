@@ -103,6 +103,29 @@ private:
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 
     /**
+     * Builds the negation of a single interpretation of a decomposed clpp query, and registers
+     * leaf columns in m_descriptor_to_schema for the given schemas.
+     *
+     * An interpretation holds when every leaf query matches, so its negation holds when any leaf
+     * query fails to match. The expression is returned in De Morgan'd form (an OrExpr over leaves,
+     * each an AndExpr of inverted equality filters, one per schema-tree node the leaf resolves
+     * to), so inversion is carried only by leaf filters.
+     *
+     * @param column The original column descriptor triggering clpp decomposition.
+     * @param root_node_id The schema-tree node where decomposition is rooted.
+     * @param leaf_queries The interpretation's leaf queries; must be non-empty.
+     * @param matched_schema_ids Schemas to register the leaf columns against.
+     * @return The expression, or std::nullopt if a leaf column cannot be resolved in the schema
+     * tree.
+     */
+    auto build_negated_leaf_query_expr(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            SchemaNode::id_t root_node_id,
+            std::span<clpp::LeafQuery const> leaf_queries,
+            std::unordered_set<int32_t> const& matched_schema_ids
+    ) -> std::optional<std::shared_ptr<ast::Expression>>;
+
+    /**
      * Resolves a CLPP leaf's rule-name path against the schema tree and produces column
      * descriptors for each matching schema-tree node at the leaf position.
      * Computes the common prefix between the column's existing descriptor tokens and the
@@ -139,12 +162,19 @@ private:
             -> std::vector<SchemaNode::id_t>;
 
     /**
-     * Handles an EXISTS or shape() filter at a LogMessage or ParentRule node: finds the schemas
-     * whose shapes (log shape or `rule_name` parent rule shapes) satisfying `shape_query`, and
-     * returns an EXISTS filter over the resolved column descriptor.
+     * Handles an EXISTS/NEXISTS or shape() filter at a LogMessage or ParentRule node by resolving
+     * it to an EXISTS filter over the schemas the filter selects:
+     * - no `shape_query`: every schema containing the node.
+     * - `shape_query`, not inverted: the schemas whose shapes satisfy `shape_query`.
+     * - `shape_query`, inverted: the schemas containing the node whose shapes do not satisfy
+     *   `shape_query` (the returned filter is not inverted).
+     * @param column The column triggering clpp decomposition.
+     * @param root_node_id The schema-tree node where decomposition is rooted.
+     * @param rule_name The parent rule name, or empty for a LogMessage node.
      * @param shape_query A wildcard pattern, or std::nullopt to match every shape.
      * @param op The operation to apply to the resolved column.
-     * @return The filter expression, or nullptr if no schemas match.
+     * @param is_inverted Whether the original filter was negated.
+     * @return The filter expression, or nullptr if no schemas are selected.
      */
     auto build_shape_match_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
@@ -156,14 +186,18 @@ private:
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Handles a value filter at a LogMessage or ParentRule node by decomposing `query` and OR-ing
-     * together the leaf query expressions of every interpretation found to match a schema.
+     * Handles a non-inverted value filter at a LogMessage or ParentRule node by decomposing `query`
+     * and OR-ing together the leaf query expressions of every interpretation found to match a
+     * schema.
      *
      * Each interpretation's leaf columns are registered (via register_clpp_resolved_column) only
-     * for the schemas whose log shape matched that interpretation. intersect_schemas records those
-     * per-sub-expression schema sets, and split_expression_by_schema uses them so that each
-     * schema's query (m_schema_to_query) keeps only the interpretations relevant to it.
+     * for the schemas whose log shape matched that interpretation, so that later passes give each
+     * schema only the interpretations relevant to it.
+     * @param column The column triggering clpp decomposition.
+     * @param root_node_id The schema-tree node where decomposition is rooted.
      * @param rule_name The parent rule name, or empty for a LogMessage node.
+     * @param query The value to match against the node's decomposed shapes.
+     * @param is_inverted Whether the original filter was negated.
      * @return The filter expression, or nullptr if no interpretation matched.
      * @throw std::runtime_error if `ClppMatcher::decompose_query` returns an error.
      */
@@ -171,8 +205,46 @@ private:
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             SchemaNode::id_t root_node_id,
             std::string_view rule_name,
-            std::string_view query
+            std::string_view query,
+            bool is_inverted
     ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Builds the expression for a negated value filter at a LogMessage or ParentRule node.
+     *
+     * Schemas are grouped by their (matching) interpretations, and each group's operand registers
+     * its columns against only the schemas in that group. Each group becomes:
+     * - nothing, if an interpretation with no leaf constraints applies (the query always holds);
+     * - an EXISTS filter, if no interpretation applies (the query never holds);
+     * - an AndExpr of the applicable interpretations' negated leaf query expressions otherwise.
+     * Interpretations whose leaves cannot be resolved can never hold and are omitted.
+     * @param column The column triggering clpp decomposition.
+     * @param root_node_id The schema-tree node where decomposition is rooted.
+     * @param rule_name The parent rule name, or empty for a LogMessage node.
+     * @param interpretations The interpretations matching a schema.
+     * @return The filter expression, or nullptr if no schema can match.
+     */
+    auto build_negated_decomposed_query_filter(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            SchemaNode::id_t root_node_id,
+            std::string_view rule_name,
+            std::vector<ClppMatcher::InterpretationMatch> const& interpretations
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Adds an EXISTS filter on `column` to `parent_expr`, registering the column against
+     * `schema_ids`. Does nothing if `schema_ids` is empty.
+     * @param parent_expr The expression to add the operand to.
+     * @param column The column triggering clpp decomposition.
+     * @param root_node_id The schema-tree node the EXISTS filter applies to.
+     * @param schema_ids The schemas the filter selects.
+     */
+    auto add_exists_operand(
+            std::shared_ptr<ast::Expression> const& parent_expr,
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            SchemaNode::id_t root_node_id,
+            std::unordered_set<int32_t> const& schema_ids
+    ) -> void;
 
     /**
      * Resolves a clpp filter at a LogMessage or ParentRule node into an expression.

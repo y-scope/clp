@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -968,6 +969,33 @@ auto SchemaMatch::build_leaf_query_expr(
     return leaves_expr;
 }
 
+auto SchemaMatch::build_negated_leaf_query_expr(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::span<clpp::LeafQuery const> leaf_queries,
+        std::unordered_set<int32_t> const& matched_schema_ids
+) -> std::optional<std::shared_ptr<ast::Expression>> {
+    auto any_leaf_fails{ast::OrExpr::create()};
+    for (auto const& leaf : leaf_queries) {
+        auto rule_names{clpp::split_qualified_name(leaf.m_qualified_name)};
+        auto leaf_cols{resolve_leaf_rule_descriptors(column, root_node_id, rule_names)};
+        if (false == leaf_cols.has_value()) {
+            return std::nullopt;
+        }
+
+        auto no_type_variant_matches{ast::AndExpr::create()};
+        for (auto& [new_col, node_id] : leaf_cols.value()) {
+            register_clpp_resolved_column(new_col, node_id, matched_schema_ids);
+            auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
+            no_type_variant_matches->add_operand(
+                    FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal, true)
+            );
+        }
+        any_leaf_fails->add_operand(no_type_variant_matches);
+    }
+    return any_leaf_fails;
+}
+
 auto
 SchemaMatch::find_child_nodes_by_key_name(SchemaNode::id_t parent_id, std::string_view key_name)
         -> std::vector<SchemaNode::id_t> {
@@ -988,7 +1016,18 @@ auto SchemaMatch::build_shape_match_filter(
         FilterOperation op,
         bool is_inverted
 ) -> std::shared_ptr<ast::Expression> {
-    auto const matched_schema_ids{m_clpp_matcher.find_matching_schemas(rule_name, shape_query)};
+    auto matched_schema_ids{m_clpp_matcher.find_matching_schemas(rule_name, shape_query)};
+    if (is_inverted && shape_query.has_value()) {
+        auto const node_schema_ids{m_clpp_matcher.find_matching_schemas(rule_name, std::nullopt)};
+        std::unordered_set<int32_t> unmatched_schema_ids;
+        for (auto const schema_id : node_schema_ids) {
+            if (false == matched_schema_ids.contains(schema_id)) {
+                unmatched_schema_ids.emplace(schema_id);
+            }
+        }
+        matched_schema_ids = std::move(unmatched_schema_ids);
+        is_inverted = false;
+    }
     if (matched_schema_ids.empty()) {
         return nullptr;
     }
@@ -1001,9 +1040,9 @@ auto SchemaMatch::build_decomposed_query_filter(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         SchemaNode::id_t root_node_id,
         std::string_view rule_name,
-        std::string_view query
+        std::string_view query,
+        bool is_inverted
 ) -> std::shared_ptr<ast::Expression> {
-    auto results{ast::OrExpr::create()};
     auto interpretations{m_clpp_matcher.decompose_query(query, rule_name)};
     if (interpretations.has_error()) {
         throw std::runtime_error{fmt::format(
@@ -1012,14 +1051,102 @@ auto SchemaMatch::build_decomposed_query_filter(
                 interpretations.error().message()
         )};
     }
+    m_num_clpp_interpretations += interpretations.value().size();
+    if (is_inverted) {
+        return build_negated_decomposed_query_filter(
+                column,
+                root_node_id,
+                rule_name,
+                interpretations.value()
+        );
+    }
+    auto results{ast::OrExpr::create()};
     for (auto const& [schema_ids, leaf_queries] : interpretations.value()) {
-        ++m_num_clpp_interpretations;
         if (auto leaves_expr{build_leaf_query_expr(column, root_node_id, leaf_queries, schema_ids)};
             leaves_expr.has_value())
         {
             results->add_operand(*leaves_expr);
         }
     }
+    if (results->get_op_list().empty()) {
+        return nullptr;
+    }
+    return results;
+}
+
+auto SchemaMatch::add_exists_operand(
+        std::shared_ptr<ast::Expression> const& parent_expr,
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::unordered_set<int32_t> const& schema_ids
+) -> void {
+    if (schema_ids.empty()) {
+        return;
+    }
+    auto exists_column{column->copy_with_new_id()};
+    register_clpp_resolved_column(exists_column, root_node_id, schema_ids);
+    parent_expr->add_operand(FilterExpr::create(exists_column, FilterOperation::EXISTS));
+}
+
+auto SchemaMatch::build_negated_decomposed_query_filter(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::string_view rule_name,
+        std::vector<ClppMatcher::InterpretationMatch> const& interpretations
+) -> std::shared_ptr<ast::Expression> {
+    std::unordered_map<int32_t, std::vector<size_t>> applicable_interpretations_by_schema;
+    std::unordered_set<int32_t> unconditionally_matched_schema_ids;
+    for (size_t i{0}; i < interpretations.size(); ++i) {
+        auto const& [schema_ids, leaf_queries]{interpretations.at(i)};
+        if (leaf_queries.empty()) {
+            unconditionally_matched_schema_ids.insert(schema_ids.begin(), schema_ids.end());
+            continue;
+        }
+        for (auto const schema_id : schema_ids) {
+            applicable_interpretations_by_schema[schema_id].push_back(i);
+        }
+    }
+    for (auto const schema_id : unconditionally_matched_schema_ids) {
+        applicable_interpretations_by_schema.erase(schema_id);
+    }
+
+    std::unordered_set<int32_t> never_matched_schema_ids;
+    for (auto const schema_id : m_clpp_matcher.find_matching_schemas(rule_name, std::nullopt)) {
+        if (false == unconditionally_matched_schema_ids.contains(schema_id)
+            && false == applicable_interpretations_by_schema.contains(schema_id))
+        {
+            never_matched_schema_ids.emplace(schema_id);
+        }
+    }
+
+    auto results{ast::OrExpr::create()};
+    add_exists_operand(results, column, root_node_id, never_matched_schema_ids);
+
+    std::map<std::vector<size_t>, std::unordered_set<int32_t>> schema_ids_by_interpretation_group;
+    for (auto const& [schema_id, interpretation_indices] : applicable_interpretations_by_schema) {
+        schema_ids_by_interpretation_group[interpretation_indices].emplace(schema_id);
+    }
+    for (auto const& [interpretation_indices, schema_ids] : schema_ids_by_interpretation_group) {
+        auto no_interpretation_holds{ast::AndExpr::create()};
+        for (auto const i : interpretation_indices) {
+            if (auto negated_expr{build_negated_leaf_query_expr(
+                        column,
+                        root_node_id,
+                        interpretations.at(i).leaf_queries,
+                        schema_ids
+                )};
+                negated_expr.has_value())
+            {
+                no_interpretation_holds->add_operand(*negated_expr);
+            }
+        }
+        if (no_interpretation_holds->get_op_list().empty()) {
+            add_exists_operand(results, column, root_node_id, schema_ids);
+            continue;
+        }
+        results->add_operand(no_interpretation_holds);
+    }
+
     if (results->get_op_list().empty()) {
         return nullptr;
     }
@@ -1068,6 +1195,12 @@ auto SchemaMatch::build_clpp_query_filter(
     }
 
     m_clpp_decomposed_query = true;
-    return build_decomposed_query_filter(column, root_node_id, rule_name, query);
+    return build_decomposed_query_filter(
+            column,
+            root_node_id,
+            rule_name,
+            query,
+            filter.is_inverted()
+    );
 }
 }  // namespace clp_s::search

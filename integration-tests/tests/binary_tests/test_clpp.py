@@ -330,6 +330,76 @@ def test_clpp_search_no_match(
 
 
 @pytest.mark.clpp
+@pytest.mark.clpp_decomposition
+@_requires_decomposition
+def test_clpp_search_negated_full_message(
+    clp_core_path_config: ClpCorePathConfig,
+    clpp_archive: Path,
+) -> None:
+    """
+    Validates that a negated full message query excludes exactly the positive matches.
+
+    :param clp_core_path_config:
+    :param clpp_archive:
+    """
+    total_count = len(_search(clp_core_path_config, clpp_archive, "message: *"))
+    query = 'not message: "*Adjusted breaker*"'
+    excluded_message = "[inflight_requests] Adjusted breaker by [0] bytes, now [0]"
+
+    results = _search(clp_core_path_config, clpp_archive, query)
+    assert len(results) == total_count - 1, (
+        f"Query '{query}' expected {total_count - 1} results, got {len(results)}."
+    )
+    assert all(result["message"]["text"] != excluded_message for result in results), (
+        f"Query '{query}' returned the excluded message {excluded_message!r}."
+    )
+
+
+@pytest.mark.clpp
+@pytest.mark.clpp_decomposition
+@_requires_decomposition
+def test_clpp_search_negated_parent_rule(
+    clp_core_path_config: ClpCorePathConfig,
+    clpp_archive: Path,
+) -> None:
+    """
+    Validates that a negated parent rule query is scoped to the events having the rule.
+
+    :param clp_core_path_config:
+    :param clpp_archive:
+    """
+    with_rule_count = len(_search(clp_core_path_config, clpp_archive, "message.duration: *"))
+    query = 'not message.duration: "13.4s"'
+
+    results = _search(clp_core_path_config, clpp_archive, query)
+    assert len(results) == with_rule_count - 1, (
+        f"Query '{query}' expected {with_rule_count - 1} results, got {len(results)}."
+    )
+
+
+@pytest.mark.clpp
+@pytest.mark.clpp_decomposition
+@_requires_decomposition
+def test_clpp_search_negated_no_match(
+    clp_core_path_config: ClpCorePathConfig,
+    clpp_archive: Path,
+) -> None:
+    """
+    Validates that negating a query matching nothing returns every event having the column.
+
+    :param clp_core_path_config:
+    :param clpp_archive:
+    """
+    total_count = len(_search(clp_core_path_config, clpp_archive, "message: *"))
+    query = 'not message: "*ZZZ_NO_SUCH_TOKEN*"'
+
+    results = _search(clp_core_path_config, clpp_archive, query)
+    assert len(results) == total_count, (
+        f"Query '{query}' expected {total_count} results, got {len(results)}."
+    )
+
+
+@pytest.mark.clpp
 @pytest.mark.parametrize(
     ("projection", "expected_message"),
     [
