@@ -29,7 +29,7 @@ pub struct SpiderOption {
     pub max_poll_backoff: Duration,
 }
 
-/// Drives one already-planned query job through submission and terminal persistence.
+/// Handles the asynchronous submission of a query job and the retrieval of its result.
 ///
 /// # Type Parameters
 ///
