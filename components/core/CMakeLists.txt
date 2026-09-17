@@ -727,7 +727,6 @@ if(CLP_ENABLE_TESTS)
             ${CURL_LIBRARIES}
             date::date
             fmt::fmt
-            log_surgeon::log_surgeon
             LibArchive::LibArchive
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
