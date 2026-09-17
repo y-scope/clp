@@ -96,6 +96,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// as failed before returning the original error. After the job is durably running, monitoring
     /// and terminal-persistence failures leave it running so recovery can reattach to Spider.
     ///
+    /// If no task inputs are produced, the query job succeeds without submission to Spider.
+    ///
     /// If no matching row is found when persisting the Spider ID, the job may have been cancelled,
     /// deleted, or claimed by another coordinator job handler. Anyhow, this handle no longer owns
     /// it, so it skips trying to report a job failure.
@@ -104,13 +106,27 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
+    /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
+    /// * Forwards [`Self::update_job_status`]'s return values on failure.
     /// * Forwards [`Self::submit`]'s return values on failure.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     pub async fn run(self) -> Result<(), Error> {
         tracing::info!(query_job_id = % self.query_job_id, "Starting query job.");
 
-        match self.submit().await {
-            Ok(spider_job_id) => self.to_completion(spider_job_id).await,
+        let submission = async {
+            let archives_to_search = self.prepare_task_inputs().await?;
+            if archives_to_search.is_empty() {
+                self.update_job_status(QueryJobStatus::Succeeded, None, QueryJobStatus::Pending)
+                    .await?;
+                return Ok(None);
+            }
+            self.submit(archives_to_search).await.map(Some)
+        }
+        .await;
+
+        match submission {
+            Ok(Some(spider_job_id)) => self.to_completion(spider_job_id).await,
+            Ok(None) => Ok(()),
             Err(error) => {
                 if !matches!(error, Error::SpiderJobIdNotPersisted(_)) {
                     self.report_failure(&error).await;
@@ -149,17 +165,14 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::NoTaskInputs`] if no query task inputs are produced.
     /// * [`Error::TooManyQueryTasks`] if the number of query tasks exceeds `i32`'s range.
-    /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
     /// * Forwards [`QueryJobSubmitter::submit_query_job`]'s return values on failure.
     /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
-    async fn submit(&self) -> Result<SpiderJobId, Error> {
-        let archives_to_search = self.prepare_task_inputs().await?;
+    async fn submit(
+        &self,
+        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+    ) -> Result<SpiderJobId, Error> {
         let num_tasks = archives_to_search.len();
-        if num_tasks == 0 {
-            return Err(Error::NoTaskInputs);
-        }
         let persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;
         let spider_job_id = self
@@ -233,7 +246,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         Ok(())
     }
 
-    /// Waits for the associated Spider job to complete and finalizes the query job.
+    /// Starts the Spider job if needed, waits for completion, and finalizes the query job.
     ///
     /// # Errors
     ///

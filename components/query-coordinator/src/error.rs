@@ -9,9 +9,6 @@ pub enum Error {
     #[error("failed to persist spider job id: {0}")]
     SpiderJobIdNotPersisted(String),
 
-    #[error("no archives were partitioned into query task inputs")]
-    NoTaskInputs,
-
     #[error("spider request failure: {0}")]
     SpiderClient(#[from] spider_client::error::ClientError),
 
