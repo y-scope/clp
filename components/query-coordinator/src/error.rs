@@ -15,8 +15,8 @@ pub enum Error {
     #[error("invalid query job configuration: {0}")]
     InvalidQueryJobConfig(String),
 
-    #[error("query job {0} is no longer pending")]
-    JobNotPending(clp_rust_utils::job_config::QueryJobId),
+    #[error("failed to update SQL database: {0}")]
+    SqlxNoRowsAffected(String),
 
     #[error("spider request failure: {0}")]
     SpiderClient(#[from] spider_client::error::ClientError),
@@ -26,9 +26,6 @@ pub enum Error {
 
     #[error("number of query tasks {0} exceeds `i32::MAX`")]
     TooManyQueryTasks(usize),
-
-    #[error("no archives were selected for the query job")]
-    NoArchivesToSearch,
 
     #[error("failed to build the query task graph: {0}")]
     TaskGraph(#[from] spider_core::task::Error),
