@@ -292,7 +292,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 Some("The Spider query job was cancelled.".to_owned()),
             ),
         };
-        self.update_job_status(status, status_message.as_deref(), QueryJobStatus::Running)
+        self.update_job_status(status, status_message, QueryJobStatus::Running)
             .await?;
         Ok(())
     }
@@ -311,7 +311,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let _ = self
             .update_job_status(
                 QueryJobStatus::Failed,
-                Some(&format!("Query job orchestration failed: {error}")),
+                Some(format!("Query job orchestration failed: {error}")),
                 QueryJobStatus::Pending,
             )
             .await
@@ -324,10 +324,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             });
     }
 
-    /// Updates a query job only when it has the expected non-terminal status.
-    /// Leaves the status message unchanged when `status_message` is `None`.
-    /// A zero-row update is treated as success so an ineligible or missing job row is left
-    /// unchanged.
+    /// Updates the query job status in the CLP database.
     ///
     /// # Errors
     ///
@@ -336,22 +333,20 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn update_job_status(
         &self,
-        status: QueryJobStatus,
-        status_message: Option<&str>,
-        expected_status: QueryJobStatus,
+        new_status: QueryJobStatus,
+        status_message: Option<String>,
+        current_status: QueryJobStatus,
     ) -> Result<(), sqlx::Error> {
-        let query = formatcp!(
-            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = COALESCE(LEFT(?, \
-             512), `status_msg`), `duration` = CASE WHEN `start_time` IS NULL THEN 0 ELSE \
-             TIMESTAMPDIFF(MICROSECOND, `start_time`, CURRENT_TIMESTAMP(3)) / 1000000.0 END WHERE \
-             `id` = ? AND `status` = ?"
-        );
-        let query = sqlx::query(query)
-            .bind(status)
-            .bind(status_message)
-            .bind(self.query_job_id)
-            .bind(expected_status);
-        query.execute(&self.context.db_pool).await?;
+        sqlx::query(formatcp!(
+            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ? AND \
+             `status` = ?"
+        ))
+        .bind(new_status)
+        .bind(status_message.as_deref().unwrap_or_default())
+        .bind(self.query_job_id)
+        .bind(current_status)
+        .execute(&self.context.db_pool)
+        .await?;
         Ok(())
     }
 }
