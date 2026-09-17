@@ -260,6 +260,10 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 QueryJobStatus::Failed,
                 Some(format!("The Spider query job failed: {error_message}")),
             ),
+            QueryJobOutcome::Cancelled => (
+                QueryJobStatus::Cancelled,
+                Some("The Spider query job was cancelled.".to_owned()),
+            ),
         };
         self.update_job_status(status, status_message.as_deref(), QueryJobStatus::Running)
             .await?;

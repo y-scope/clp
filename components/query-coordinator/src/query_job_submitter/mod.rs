@@ -10,6 +10,8 @@ use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use non_empty_string::NonEmptyString;
+use serde::Deserialize;
+use serde::Serialize;
 use spider_core::task::ExecutionPolicy;
 use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
@@ -30,16 +32,16 @@ pub struct ArchiveMetadata {
 }
 
 /// The terminal outcome of a query job.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum QueryJobOutcome {
-    /// Every archive query completed successfully.
+    /// The job completed successfully.
     Succeeded,
 
-    /// At least one archive query failed.
-    Failed {
-        /// The error reported by Spider.
-        error_message: String,
-    },
+    /// The job failed with the given error.
+    Failed { error_message: String },
+
+    /// The job was cancelled before reaching completion.
+    Cancelled,
 }
 
 /// Drives CLP query jobs on a Spider (Huntsman) cluster.
