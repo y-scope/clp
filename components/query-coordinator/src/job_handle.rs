@@ -19,6 +19,7 @@ use spider_core::types::id::ResourceGroupId;
 use sqlx::MySqlPool;
 
 use crate::Error;
+use crate::plan::PlanningOption;
 use crate::query_job_submitter::ArchiveMetadata;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
@@ -32,6 +33,7 @@ pub struct SpiderOption {
 pub struct QueryJobHandleContext {
     pub db_pool: MySqlPool,
     pub db_config: Database,
+    pub planning_option: PlanningOption,
     pub output_handle: OutputHandle,
     pub spider_option: SpiderOption,
 }
@@ -46,7 +48,7 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
-    _search_job_config: SearchJobConfig,
+    search_job_config: SearchJobConfig,
     clp_s_query_option: ClpSQueryOption,
 }
 
@@ -84,7 +86,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             query_job_id,
             job_submitter,
             resource_group_id,
-            _search_job_config: search_job_config,
+            search_job_config,
             clp_s_query_option,
         })
     }
@@ -132,16 +134,20 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
-    /// * Forwards [`Self::update_job_status`]'s return values on failure when no archives are
-    ///   selected.
+    /// * Forwards the empty-plan status update's return values on failure.
     /// * Forwards [`Self::submit`]'s return values on failure.
     async fn plan_and_submit(&self) -> Result<Option<SpiderJobId>, Error> {
         let archives_to_search = self.prepare_task_inputs().await?;
         if archives_to_search.is_empty() {
-            if !self
-                .update_job_status(QueryJobStatus::Pending, QueryJobStatus::Succeeded, None)
-                .await?
-            {
+            let query = sqlx::query(formatcp!(
+                "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = '', \
+                 `num_tasks` = 0, `start_time` = CURRENT_TIMESTAMP(3), `duration` = 0 WHERE `id` \
+                 = ? AND `status` = ?"
+            ))
+            .bind(QueryJobStatus::Succeeded)
+            .bind(self.query_job_id)
+            .bind(QueryJobStatus::Pending);
+            if !execute_update(query, &self.context.db_pool).await? {
                 return Err(Error::SqlxNoRowsAffected(format!(
                     "no pending query job row found for query job {}",
                     self.query_job_id
@@ -222,9 +228,17 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// # Errors
     ///
-    /// Returns an error if archive input preparation fails.
+    /// Forwards [`PlanningOption::prepare_task_inputs`]'s return values on failure.
     async fn prepare_task_inputs(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        todo!("prepare query task inputs")
+        self.context
+            .planning_option
+            .prepare_task_inputs(
+                &self.context.db_pool,
+                &self.context.db_config,
+                self.query_job_id,
+                &self.search_job_config,
+            )
+            .await
     }
 
     /// Persists the Spider job ID and marks the query job as running.
