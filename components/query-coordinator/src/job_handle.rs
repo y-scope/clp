@@ -25,8 +25,7 @@ use crate::query_job_submitter::QueryJobSubmitter;
 
 /// Options for a query job running in Spider.
 pub struct SpiderOption {
-    pub initial_poll_backoff: Duration,
-    pub max_poll_backoff: Duration,
+    pub poll_interval: Duration,
 }
 
 /// Resources shared by query job handles created by the coordinator.
@@ -271,11 +270,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         let outcome = self
             .job_submitter
-            .run_query_job_to_completion(
-                spider_job_id,
-                self.context.spider_option.initial_poll_backoff,
-                self.context.spider_option.max_poll_backoff,
-            )
+            .run_query_job_to_completion(spider_job_id, self.context.spider_option.poll_interval)
             .await?;
 
         tracing::info!(

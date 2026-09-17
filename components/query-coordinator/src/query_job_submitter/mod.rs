@@ -80,8 +80,7 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// # Parameters
     ///
     /// * `spider_job_id` - The ID of the Spider job to start and monitor.
-    /// * `initial_poll_backoff` - The initial delay after a non-terminal job-state poll.
-    /// * `max_poll_backoff` - The maximum delay between job-state polls.
+    /// * `poll_interval` - The delay after each non-terminal job-state poll.
     ///
     /// # Returns
     ///
@@ -93,7 +92,6 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     async fn run_query_job_to_completion(
         &self,
         spider_job_id: JobId,
-        initial_poll_backoff: Duration,
-        max_poll_backoff: Duration,
+        poll_interval: Duration,
     ) -> Result<QueryJobOutcome, Error>;
 }

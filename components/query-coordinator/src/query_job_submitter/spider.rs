@@ -72,26 +72,19 @@ impl QueryJobSubmitter for SpiderClient {
     async fn run_query_job_to_completion(
         &self,
         spider_job_id: JobId,
-        initial_poll_backoff: Duration,
-        max_poll_backoff: Duration,
+        poll_interval: Duration,
     ) -> Result<QueryJobOutcome, Error> {
-        const POLL_BACKOFF_FACTOR: u32 = 2;
-
         match self.start_job(spider_job_id).await {
             Ok(_) | Err(ClientError::InvalidJobState(_)) => {}
             Err(error) => return Err(error.into()),
         }
 
-        let mut backoff = initial_poll_backoff.min(max_poll_backoff);
         let terminal_state = loop {
             let state = self.get_job_state(spider_job_id).await?;
             if state.is_terminal() {
                 break state;
             }
-            tokio::time::sleep(backoff).await;
-            backoff = backoff
-                .saturating_mul(POLL_BACKOFF_FACTOR)
-                .min(max_poll_backoff);
+            tokio::time::sleep(poll_interval).await;
         };
 
         Ok(match terminal_state {
