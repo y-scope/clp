@@ -98,6 +98,10 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// as failed before returning the original error. After the job is durably running, monitoring
     /// and terminal-persistence failures leave it running so recovery can reattach to Spider.
     ///
+    /// If no matching row is found when persisting the Spider ID, the job may have been cancelled,
+    /// deleted, or claimed by another coordinator job handler. Anyhow, this handle no longer owns
+    /// it, so it skips trying to report a job failure.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
