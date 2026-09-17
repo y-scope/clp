@@ -96,8 +96,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// as failed before returning the original error. After the job is durably running, monitoring
     /// and terminal-persistence failures leave it running so recovery can reattach to Spider.
     ///
-    /// If no task inputs are produced, the query job succeeds without submission to Spider.
-    ///
     /// If no matching row is found when persisting the Spider ID, the job may have been cancelled,
     /// deleted, or claimed by another coordinator job handler. Anyhow, this handle no longer owns
     /// it, so it skips trying to report a job failure.
@@ -106,25 +104,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
-    /// * Forwards [`Self::update_job_status`]'s return values on failure.
-    /// * Forwards [`Self::submit`]'s return values on failure.
+    /// * Forwards [`Self::plan_and_submit`]'s return values on failure.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     pub async fn run(self) -> Result<(), Error> {
         tracing::info!(query_job_id = % self.query_job_id, "Starting query job.");
 
-        let submission = async {
-            let archives_to_search = self.prepare_task_inputs().await?;
-            if archives_to_search.is_empty() {
-                self.update_job_status(QueryJobStatus::Succeeded, None, QueryJobStatus::Pending)
-                    .await?;
-                return Ok(None);
-            }
-            self.submit(archives_to_search).await.map(Some)
-        }
-        .await;
-
-        match submission {
+        match self.plan_and_submit().await {
             Ok(Some(spider_job_id)) => self.to_completion(spider_job_id).await,
             Ok(None) => Ok(()),
             Err(error) => {
@@ -134,6 +119,31 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 Err(error)
             }
         }
+    }
+
+    /// Plans the query inputs and submits the query job, or marks it as succeeded if no archives
+    /// are selected.
+    ///
+    /// # Returns
+    ///
+    /// On success, the submitted Spider job ID, or `None` if no archives are selected.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
+    /// * Forwards [`Self::update_job_status`]'s return values on failure when no archives are
+    ///   selected.
+    /// * Forwards [`Self::submit`]'s return values on failure.
+    async fn plan_and_submit(&self) -> Result<Option<SpiderJobId>, Error> {
+        let archives_to_search = self.prepare_task_inputs().await?;
+        if archives_to_search.is_empty() {
+            self.update_job_status(QueryJobStatus::Succeeded, None, QueryJobStatus::Pending)
+                .await?;
+            return Ok(None);
+        }
+        self.submit(archives_to_search).await.map(Some)
     }
 
     /// Resumes a query job that was already submitted to Spider.
