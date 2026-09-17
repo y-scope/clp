@@ -134,7 +134,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
-    /// * Forwards the empty-plan status update's return values on failure.
+    /// * [`Error::SqlxNoRowsAffected`] if no pending row is updated for an empty plan.
+    /// * Forwards [`execute_update`]'s return values on failure for an empty plan.
     /// * Forwards [`Self::submit`]'s return values on failure.
     async fn plan_and_submit(&self) -> Result<Option<SpiderJobId>, Error> {
         let archives_to_search = self.prepare_task_inputs().await?;
@@ -228,7 +229,9 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// # Errors
     ///
-    /// Forwards [`PlanningOption::prepare_task_inputs`]'s return values on failure.
+    /// Returns an error if:
+    ///
+    /// * Forwards [`PlanningOption::prepare_task_inputs`]'s return values on failure.
     async fn prepare_task_inputs(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
         self.context
             .planning_option

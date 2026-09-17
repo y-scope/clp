@@ -32,10 +32,18 @@ pub struct PlanningOption {
 impl PlanningOption {
     /// Selects archives for a query job, ordered by descending archive end timestamp.
     ///
+    /// # Returns
+    ///
+    /// The selected archives and their query-task execution policies on success.
+    ///
     /// # Errors
     ///
-    /// Returns [`Error::InvalidQueryJobConfig`] for invalid timestamps or datasets, and forwards
-    /// database errors from dataset validation, retention lookup, and archive selection.
+    /// Returns an error if:
+    ///
+    /// * Forwards [`validate_timestamp_range`]'s return values on failure.
+    /// * Forwards [`Self::resolve_datasets`]'s return values on failure.
+    /// * Forwards [`Self::fetch_archive_end_timestamp_lower_bound`]'s return values on failure.
+    /// * Forwards [`Self::fetch_archives`]'s return values on failure.
     pub async fn prepare_task_inputs(
         &self,
         db_pool: &MySqlPool,
@@ -48,6 +56,9 @@ impl PlanningOption {
         let datasets = self
             .resolve_datasets(db_pool, db_config, search_job_config)
             .await?;
+        if datasets.is_empty() {
+            return Ok(Vec::new());
+        }
         let archive_end_timestamp_lower_bound = self
             .fetch_archive_end_timestamp_lower_bound(db_pool, query_job_id)
             .await?;
@@ -73,20 +84,35 @@ impl PlanningOption {
             .collect())
     }
 
+    /// Resolves the datasets selected by a query job.
+    ///
+    /// # Returns
+    ///
+    /// The requested datasets, or the default dataset when it exists, on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`deduplicate_requested_datasets`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
+    /// * Forwards [`validate_existing_datasets`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`CLP_DEFAULT_DATASET_NAME`] is empty.
     async fn resolve_datasets(
         &self,
         db_pool: &MySqlPool,
         db_config: &Database,
         search_job_config: &SearchJobConfig,
     ) -> Result<Vec<NonEmptyString>, Error> {
-        let datasets = match &search_job_config.datasets {
-            Some(requested_datasets) => {
-                deduplicate_requested_datasets(requested_datasets, self.max_datasets_per_query)?
-            }
-            None => vec![
-                NonEmptyString::new(CLP_DEFAULT_DATASET_NAME.to_owned())
-                    .expect("the default dataset name is nonempty"),
-            ],
+        let requested_datasets = match &search_job_config.datasets {
+            Some(datasets) => Some(deduplicate_requested_datasets(
+                datasets,
+                self.max_datasets_per_query,
+            )?),
+            None => None,
         };
 
         let datasets_table = quote_identifier(&db_config.datasets_table_name());
@@ -96,10 +122,31 @@ impl PlanningOption {
                 .await?
                 .into_iter()
                 .collect();
-        validate_existing_datasets(&datasets, &existing_datasets)?;
-        Ok(datasets)
+        if let Some(datasets) = requested_datasets {
+            validate_existing_datasets(&datasets, &existing_datasets)?;
+            return Ok(datasets);
+        }
+        Ok(if existing_datasets.contains(CLP_DEFAULT_DATASET_NAME) {
+            vec![
+                NonEmptyString::new(CLP_DEFAULT_DATASET_NAME.to_owned())
+                    .expect("the default dataset name is nonempty"),
+            ]
+        } else {
+            Vec::new()
+        })
     }
 
+    /// Computes the archive retention cutoff relative to the query job's creation time.
+    ///
+    /// # Returns
+    ///
+    /// The cutoff in Unix epoch milliseconds, or `None` when retention is disabled, on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
     async fn fetch_archive_end_timestamp_lower_bound(
         &self,
         db_pool: &MySqlPool,
@@ -121,6 +168,17 @@ impl PlanningOption {
         )))
     }
 
+    /// Selects archives from one dataset that overlap the query's time range and retention window.
+    ///
+    /// # Returns
+    ///
+    /// The selected archives and their end timestamps on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_archives(
         db_pool: &MySqlPool,
         db_config: &Database,
@@ -173,6 +231,7 @@ struct SelectedArchive {
     end_timestamp: i64,
 }
 
+/// Columns projected from an archives table.
 #[derive(sqlx::FromRow)]
 struct ArchiveRowProjection {
     #[sqlx(try_from = "String")]
@@ -182,6 +241,13 @@ struct ArchiveRowProjection {
     end_timestamp: i64,
 }
 
+/// Validates the requested query time range.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
 fn validate_timestamp_range(search_job_config: &SearchJobConfig) -> Result<(), Error> {
     if let (Some(begin_timestamp), Some(end_timestamp)) = (
         search_job_config.begin_timestamp,
@@ -195,10 +261,23 @@ fn validate_timestamp_range(search_job_config: &SearchJobConfig) -> Result<(), E
     Ok(())
 }
 
+/// Orders selected archives by descending end timestamp, without a tie-breaker.
 fn sort_selected_archives(archives: &mut [SelectedArchive]) {
     archives.sort_unstable_by_key(|archive| Reverse(archive.end_timestamp));
 }
 
+/// Validates and deduplicates an explicit dataset list in requested order.
+///
+/// # Returns
+///
+/// The distinct requested datasets on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`Error::InvalidQueryJobConfig`] if the list or a name is empty, or the distinct dataset count
+///   exceeds the configured limit.
 fn deduplicate_requested_datasets(
     requested_datasets: &[String],
     max_datasets_per_query: Option<NonZeroUsize>,
@@ -231,6 +310,13 @@ fn deduplicate_requested_datasets(
     Ok(datasets)
 }
 
+/// Checks that every requested dataset exists in the metadata database.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`Error::InvalidQueryJobConfig`] if a requested dataset is unknown.
 fn validate_existing_datasets(
     datasets: &[NonEmptyString],
     existing_datasets: &HashSet<String>,
@@ -249,6 +335,11 @@ fn validate_existing_datasets(
     Ok(())
 }
 
+/// Calculates the earliest allowed archive end timestamp from the job's creation time.
+///
+/// # Returns
+///
+/// The retention cutoff in Unix epoch milliseconds.
 fn retention_cutoff_millisecs(
     creation_time_millisecs: i64,
     archive_retention_period: NonZeroU32,
@@ -257,6 +348,11 @@ fn retention_cutoff_millisecs(
     creation_time_millisecs - i64::from(archive_retention_period.get()) * MILLISECS_PER_MIN
 }
 
+/// Escapes a MySQL table identifier.
+///
+/// # Returns
+///
+/// The quoted identifier.
 fn quote_identifier(identifier: &str) -> String {
     format!("`{}`", identifier.replace('`', "``"))
 }
