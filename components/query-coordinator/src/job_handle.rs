@@ -107,16 +107,15 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     pub async fn run(self) -> Result<(), Error> {
         tracing::info!(query_job_id = % self.query_job_id, "Starting query job.");
 
-        let spider_job_id = match self.submit().await {
-            Ok(spider_job_id) => spider_job_id,
+        match self.submit().await {
+            Ok(spider_job_id) => self.to_completion(spider_job_id).await,
             Err(error) => {
                 if !matches!(error, Error::SpiderJobIdNotPersisted(_)) {
                     self.report_failure(&error).await;
                 }
-                return Err(error);
+                Err(error)
             }
-        };
-        self.to_completion(spider_job_id).await
+        }
     }
 
     /// Resumes a query job that was already submitted to Spider.
