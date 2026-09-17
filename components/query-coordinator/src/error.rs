@@ -6,8 +6,8 @@ pub enum Error {
     #[error("invalid query job configuration: {0}")]
     InvalidQueryJobConfig(String),
 
-    #[error("query job {0} is no longer pending")]
-    JobNotPending(clp_rust_utils::job_config::QueryJobId),
+    #[error("failed to persist spider job id: {0}")]
+    SpiderJobIdNotPersisted(String),
 
     #[error("no archives were partitioned into query task inputs")]
     NoTaskInputs,

@@ -110,7 +110,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let spider_job_id = match self.submit().await {
             Ok(spider_job_id) => spider_job_id,
             Err(error) => {
-                if !matches!(error, Error::JobNotPending(_)) {
+                if !matches!(error, Error::SpiderJobIdNotPersisted(_)) {
                     self.report_failure(&error).await;
                 }
                 return Err(error);
@@ -203,7 +203,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::JobNotPending`] if the query job is no longer pending.
+    /// * [`Error::SpiderJobIdNotPersisted`] if no pending query job row was updated.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn persist_spider_job_id(
         &self,
@@ -224,7 +224,10 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .await?;
 
         if 1 != result.rows_affected() {
-            return Err(Error::JobNotPending(self.query_job_id));
+            return Err(Error::SpiderJobIdNotPersisted(format!(
+                "no pending row found for query job {} (Spider job ID {})",
+                self.query_job_id, spider_job_id
+            )));
         }
         Ok(())
     }
