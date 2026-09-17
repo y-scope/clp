@@ -21,6 +21,7 @@ use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
 use clp_rust_utils::clp_config::package::config::QueryCoordinator as CoordinatorConfig;
+use clp_rust_utils::clp_config::package::config::ResultsCache as ResultsCacheConfig;
 use clp_rust_utils::clp_config::package::config::Spider as SpiderConfig;
 use clp_rust_utils::clp_config::package::config::SpiderResourceGroup;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
@@ -30,6 +31,7 @@ use clp_rust_utils::job_config::QueryJobType;
 use clp_rust_utils::job_config::SearchJobConfig;
 use clp_rust_utils::task_io::query::OutputHandle;
 use const_format::formatcp;
+use mongodb::options::ClientOptions;
 use spider_client::SpiderClient;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
@@ -48,6 +50,7 @@ use crate::job_handle::SpiderOption;
 pub struct Coordinator {
     resource_group_id: ResourceGroupId,
     spider_client: SpiderClient,
+    db_pool: sqlx::MySqlPool,
     job_handle_context: Arc<QueryJobHandleContext>,
     is_first_fetch: bool,
     job_polling_interval: Duration,
@@ -75,6 +78,7 @@ impl Coordinator {
     ///
     /// * [`Error::InvalidConfiguration`] if the query coordinator configuration is invalid.
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
+    /// * Forwards [`create_results_cache_database`]'s return values on failure.
     /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
     /// * Forwards [`get_or_create_resource_group_id`]'s return values on failure.
     /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
@@ -83,7 +87,7 @@ impl Coordinator {
         spider_config: &SpiderConfig,
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
-        output_handle: OutputHandle,
+        results_cache_config: &ResultsCacheConfig,
     ) -> Result<(Self, CancellationToken), Error> {
         let max_concurrent_jobs = coordinator_config.max_concurrent_jobs.get();
         if max_concurrent_jobs > Semaphore::MAX_PERMITS {
@@ -92,6 +96,16 @@ impl Coordinator {
                 Semaphore::MAX_PERMITS,
             )));
         }
+
+        let results_cache_uri = results_cache_config.uri();
+        let results_cache = create_results_cache_database(
+            results_cache_uri.as_str(),
+            &results_cache_config.db_name,
+        )
+        .await
+        .inspect_err(|e| {
+            tracing::error!(error = % e, "Failed to create the results cache client.");
+        })?;
 
         let spider_host = spider_config.host.as_str();
         let spider_port = spider_config.port;
@@ -118,9 +132,12 @@ impl Coordinator {
         })?;
 
         let job_handle_context = Arc::new(QueryJobHandleContext {
-            db_pool,
+            db_pool: db_pool.clone(),
             db_config,
-            output_handle,
+            results_cache,
+            output_handle: OutputHandle::ResultsCache {
+                uri: results_cache_uri,
+            },
             spider_option: SpiderOption {
                 // Use the initial polling delay as the fixed interval for query jobs.
                 poll_interval: Duration::from_millis(
@@ -137,6 +154,7 @@ impl Coordinator {
         let coordinator = Self {
             resource_group_id,
             spider_client,
+            db_pool,
             job_handle_context,
             is_first_fetch: true,
             job_polling_interval: Duration::from_millis(
@@ -238,7 +256,7 @@ impl Coordinator {
             .bind(QueryJobStatus::Failed)
             .bind(status_msg)
             .bind(job_id)
-            .execute(&self.job_handle_context.db_pool)
+            .execute(&self.db_pool)
             .await
         {
             tracing::error!(
@@ -341,7 +359,7 @@ impl Coordinator {
             return Ok(());
         }
 
-        let mut tx = self.job_handle_context.db_pool.begin().await?;
+        let mut tx = self.db_pool.begin().await?;
         for chunk in job_ids.chunks(1000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
                 "UPDATE `{table}` SET `dispatch_time` = COALESCE(`dispatch_time`, \
@@ -443,7 +461,7 @@ impl Coordinator {
             return sqlx::query_as::<_, PendingJobRowProjection>(FIRST_FETCH_QUERY)
                 .bind(i32::from(QueryJobType::SearchOrAggregation))
                 .bind(QueryJobStatus::Pending)
-                .fetch_all(&self.job_handle_context.db_pool)
+                .fetch_all(&self.db_pool)
                 .await
                 .map_err(Into::into);
         }
@@ -461,7 +479,7 @@ impl Coordinator {
                     i64::try_from(remaining)
                         .expect("limit is bounded by Semaphore::MAX_PERMITS, which fits in i64"),
                 )
-                .fetch_all(&self.job_handle_context.db_pool)
+                .fetch_all(&self.db_pool)
                 .await?;
             let exhausted = batch.len() < remaining;
             for row in batch {
@@ -514,7 +532,7 @@ impl Coordinator {
         for row in sqlx::query_as::<_, RunningJobRowProjection>(QUERY)
             .bind(i32::from(QueryJobType::SearchOrAggregation))
             .bind(QueryJobStatus::Running)
-            .fetch_all(&self.job_handle_context.db_pool)
+            .fetch_all(&self.db_pool)
             .await?
         {
             let search_job_config: SearchJobConfig = match rmp_serde::from_slice(
@@ -636,4 +654,18 @@ async fn get_or_create_resource_group_id(
         })?;
 
     Ok(resource_group_id)
+}
+
+/// Creates a client for the results cache database at `uri`.
+///
+/// # Errors
+///
+/// Forwards errors from MongoDB client-option parsing and client construction.
+async fn create_results_cache_database(
+    uri: &str,
+    db_name: &str,
+) -> Result<mongodb::Database, Error> {
+    let mut client_options = ClientOptions::parse(uri).await?;
+    client_options.direct_connection = Some(true);
+    Ok(mongodb::Client::with_options(client_options)?.database(db_name))
 }

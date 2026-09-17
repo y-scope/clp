@@ -18,6 +18,9 @@ pub enum Error {
     #[error("failed to update SQL database: {0}")]
     SqlxNoRowsAffected(String),
 
+    #[error("mongodb error: {0}")]
+    Mongo(#[from] mongodb::error::Error),
+
     #[error("spider request failure: {0}")]
     SpiderClient(#[from] spider_client::error::ClientError),
 

@@ -32,6 +32,7 @@ pub struct SpiderOption {
 pub struct QueryJobHandleContext {
     pub db_pool: MySqlPool,
     pub db_config: Database,
+    pub results_cache: mongodb::Database,
     pub output_handle: OutputHandle,
     pub spider_option: SpiderOption,
 }

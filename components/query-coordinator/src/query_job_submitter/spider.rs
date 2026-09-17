@@ -109,7 +109,7 @@ impl QueryJobSubmitter for SpiderClient {
     }
 }
 
-/// Builds independent archive-search tasks and their positionally ordered external inputs.
+/// Builds independent query tasks and their positionally ordered external inputs.
 ///
 /// # Returns
 ///
