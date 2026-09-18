@@ -148,14 +148,6 @@ if(BUILD_TESTING AND CLP_BUILD_TESTING)
     set(CLP_ENABLE_TESTS ON)
 endif()
 
-# Always enable profiling if building tests.
-set(CLP_ENABLE_PROFILING_EFFECTIVE "${CLP_ENABLE_PROFILING}")
-if(CLP_ENABLE_TESTS AND CLP_ENABLE_PROFILING LESS "1")
-    set(CLP_ENABLE_PROFILING_EFFECTIVE "1")
-endif()
-
-add_definitions(-DCLP_ENABLE_PROFILING=${CLP_ENABLE_PROFILING_EFFECTIVE})
-
 if(CLP_NEED_ABSL)
     find_package(absl REQUIRED)
     if (absl_FOUND)
@@ -663,6 +655,7 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
+        src/clpp/test/test_TextShape.cpp
         src/utils/profiling/test/test_Profiler.cpp
         src/utils/profiling/test/test_Reporter.cpp
         src/utils/profiling/test/test_ScopedProfiler.cpp
@@ -706,6 +699,7 @@ if(CLP_ENABLE_TESTS)
             INTERFACE
             clp::regex_utils
             clp::string_utils
+            clpp::core
             clp_s::archive_reader
             clp_s::archive_writer
             clp_s::ffi::sfa
