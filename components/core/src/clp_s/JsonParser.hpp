@@ -238,7 +238,7 @@ private:
      * - Forwards `m_archive_writer->update_log_shape_dict`'s return values on failure.
      * - Forwards `m_archive_writer->update_parent_rule_shapes`'s return values on failure.
      */
-    auto parse_str_field(
+    auto parse_log_message(
             SchemaNode::id_t parent_node_id,
             std::string_view field_key,
             std::string_view field_value

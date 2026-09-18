@@ -135,13 +135,14 @@ private:
 };
 
 /**
- * An open `ParentRule` unordered object scope during `parse_str_field`. `match` identifies the
- * scope within a `parse_str_field` call. `schema_start` is the scopes starting position in the
- * schema and used when closing the unordered object.
+ * Tracks an open `ParentRule` unordered object scope during parsing.
+ * @var match Uniquely identifies the scope within a parsed log message.
+ * @var scope_start_schema_idx The starting index of the scope in the schema entry vector.
+ * @var tree_node_id The schema node to be used by children of the parent rule.
  */
 struct ParentScope {
     log_surgeon::Match const* match;
-    size_t schema_start;
+    size_t scope_start_schema_idx;
     SchemaNode::id_t tree_node_id;
 };
 
@@ -205,7 +206,7 @@ auto update_open_parent_scopes(
         ++common_parents;
     }
     while (open_scopes.size() > common_parents) {
-        schema.end_unordered_object(open_scopes.back().schema_start);
+        schema.end_unordered_object(open_scopes.back().scope_start_schema_idx);
         open_scopes.pop_back();
     }
     for (size_t i{parent_matches.size()}; i > common_parents;) {
@@ -221,7 +222,7 @@ auto update_open_parent_scopes(
         )};
         auto const schema_start{schema.start_unordered_object(NodeType::ParentRule, node_id)};
         open_scopes.push_back(
-                {.match = parent, .schema_start = schema_start, .tree_node_id = node_id}
+                {.match = parent, .scope_start_schema_idx = schema_start, .tree_node_id = node_id}
         );
     }
     return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
@@ -407,11 +408,11 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (m_archive_options.experimental) {
-                    if (auto const result{parse_str_field(node_id_stack.top(), cur_key, value)};
+                    if (auto const result{parse_log_message(node_id_stack.top(), cur_key, value)};
                         result.has_error())
                     {
                         throw(std::runtime_error(
-                                "parse_str_field failed with: " + result.error().message()
+                                "parse_log_message failed with: " + result.error().message()
                         ));
                     }
                     break;
@@ -523,11 +524,11 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (m_archive_options.experimental) {
-                    if (auto const result{parse_str_field(parent_node_id, "", value)};
+                    if (auto const result{parse_log_message(parent_node_id, "", value)};
                         result.has_error())
                     {
                         throw(std::runtime_error(
-                                "parse_str_field failed with: " + result.error().message()
+                                "parse_log_message failed with: " + result.error().message()
                         ));
                     }
                     break;
@@ -725,11 +726,13 @@ void JsonParser::parse_line(
                 std::string_view value = line.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     if (m_archive_options.experimental) {
-                        if (auto const result{parse_str_field(node_id_stack.top(), cur_key, value)};
+                        if (auto const result{
+                                    parse_log_message(node_id_stack.top(), cur_key, value)
+                            };
                             result.has_error())
                         {
                             throw(std::runtime_error(
-                                    "parse_str_field failed with: " + result.error().message()
+                                    "parse_log_message failed with: " + result.error().message()
                             ));
                         }
                     } else {
@@ -1561,7 +1564,7 @@ void JsonParser::split_archive() {
     m_archive_writer->open(m_archive_options);
 }
 
-auto JsonParser::parse_str_field(
+auto JsonParser::parse_log_message(
         SchemaNode::id_t parent_node_id,
         std::string_view field_key,
         std::string_view field_value
@@ -1596,7 +1599,7 @@ auto JsonParser::parse_str_field(
                 log_msg_node_id,
                 *m_archive_writer
         )};
-        SchemaNode::id_t node_id{0};
+        SchemaNode::id_t node_id{-1};
         switch (static_cast<clpp::EncodingType>(match.encoding_idx)) {
             case clpp::EncodingType::None:
                 break;
@@ -1631,7 +1634,7 @@ auto JsonParser::parse_str_field(
                 break;
             }
         }
-        if (0 == node_id) {
+        if (-1 == node_id) {
             node_id = m_archive_writer->add_node(parent_node_id, NodeType::VarString, rule_name);
             m_current_parsed_message.add_unordered_value(lexeme);
         }
@@ -1646,7 +1649,7 @@ auto JsonParser::parse_str_field(
     log_shape.escape_and_append(field_value.substr(log_msg_pos));
 
     while (false == open_scopes.empty()) {
-        m_current_schema.end_unordered_object(open_scopes.back().schema_start);
+        m_current_schema.end_unordered_object(open_scopes.back().scope_start_schema_idx);
         open_scopes.pop_back();
     }
 
