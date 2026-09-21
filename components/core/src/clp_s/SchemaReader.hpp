@@ -180,6 +180,7 @@ public:
         m_local_id_to_global_id.clear();
         m_global_id_to_local_id.clear();
         m_global_id_to_unordered_object.clear();
+        m_log_message_column_starts.clear();
         m_local_schema_tree.clear();
         m_json_serializer.clear();
         m_reconstruction_targets.clear();
@@ -225,6 +226,33 @@ public:
             SchemaView sub_schema,
             std::optional<clpp::log_shape_id_t> log_shape_id
     );
+
+    /**
+     * Records the index into the column readers of the first column of a `LogMessage` object.
+     * Unlike `mark_unordered_object`, this is recorded whether or not records are marshalled, since
+     * search needs it to resolve clpp leaf filters pinned to a leaf placeholder position.
+     * @param log_message_node_id The `LogMessage` root node ID.
+     * @param column_reader_start The index of the object's first column reader.
+     */
+    auto
+    set_log_message_column_start(SchemaNode::id_t log_message_node_id, size_t column_reader_start)
+            -> void {
+        m_log_message_column_starts.emplace(log_message_node_id, column_reader_start);
+    }
+
+    /**
+     * @param log_message_node_id The `LogMessage` root node ID.
+     * @return The index of the object's first column reader, or std::nullopt if the schema has no
+     * such object.
+     */
+    [[nodiscard]] auto get_log_message_column_start(SchemaNode::id_t log_message_node_id) const
+            -> std::optional<size_t> {
+        auto const it{m_log_message_column_starts.find(log_message_node_id)};
+        if (m_log_message_column_starts.end() == it) {
+            return std::nullopt;
+        }
+        return it->second;
+    }
 
     /**
      * Loads the encoded messages from a shared buffer starting at a given offset
@@ -657,6 +685,8 @@ private:
 
     // Keyed by the object root's schema-tree node ID.
     std::map<int32_t, MarkedUnorderedObject> m_global_id_to_unordered_object;
+    // Keyed by the `LogMessage` root's schema-tree node ID.
+    std::unordered_map<SchemaNode::id_t, size_t> m_log_message_column_starts;
     std::vector<CompiledShape> m_reconstruction_targets;
     LogShapeDictionaryReader const* m_log_shape_dict;
     clpp::ParentRuleShapesArray const* m_parent_rule_shapes;

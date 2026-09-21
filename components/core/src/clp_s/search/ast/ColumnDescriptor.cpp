@@ -103,6 +103,9 @@ void ColumnDescriptor::print() const {
     if (m_subtree_type.has_value()) {
         os << "subtree_type=\"" << m_subtree_type.value() << "\", ";
     }
+    if (m_leaf_position.has_value()) {
+        os << "leaf_position=" << m_leaf_position.value() << ", ";
+    }
     os << "namespace=\"" << m_namespace << "\", tokens=[";
     for (auto it = m_descriptors.begin(); it != m_descriptors.end();) {
         os << "\"" << (*it).get_token() << "\"";
@@ -123,7 +126,7 @@ bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
     return m_descriptors == rhs.m_descriptors && m_unresolved_tokens == rhs.m_unresolved_tokens
            && m_flags == rhs.m_flags && m_schema_col_id == rhs.m_schema_col_id
            && m_unresolved_descriptors == rhs.m_unresolved_descriptors
-           && m_pure_wildcard == rhs.m_pure_wildcard;
+           && m_pure_wildcard == rhs.m_pure_wildcard && m_leaf_position == rhs.m_leaf_position;
 }
 
 void ColumnDescriptor::simplify_descriptor_wildcards() {

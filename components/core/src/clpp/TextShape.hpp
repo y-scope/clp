@@ -13,7 +13,6 @@
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
 #include <clpp/ParentRuleShapes.hpp>
 
@@ -151,6 +150,33 @@ public:
             pos = close + 1;
         }
         return result;
+    }
+
+    /**
+     * Counts the leaf placeholders that open before `shape_pos`.
+     *
+     * Used to translate a parent rule shape's start position within this shape into the position of
+     * its first leaf placeholder among all of this shape's placeholders.
+     *
+     * @param shape_pos A position into the escaped shape text.
+     * @return The number of placeholders whose opening delimiter precedes `shape_pos`.
+     */
+    [[nodiscard]] auto count_placeholders_before(size_t shape_pos) const -> size_t {
+        auto const shape{view()};
+        size_t count{0};
+        for (size_t pos{0}; pos < shape.size();) {
+            auto const open{find_placeholder_opening(pos)};
+            if (std::string_view::npos == open || open >= shape_pos) {
+                break;
+            }
+            auto const close{shape.find('%', open + 1)};
+            if (std::string_view::npos == close) {
+                break;
+            }
+            ++count;
+            pos = close + 1;
+        }
+        return count;
     }
 
     /**

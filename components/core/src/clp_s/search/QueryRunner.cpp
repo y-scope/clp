@@ -126,6 +126,7 @@ void QueryRunner::clear_readers() {
     m_timestamp_readers.clear();
     m_deprecated_datestring_reader = nullptr;
     m_basic_readers.clear();
+    m_positional_readers = {};
 }
 
 void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_reader) {
@@ -168,6 +169,64 @@ void QueryRunner::init(SchemaReader* reader, std::vector<BaseColumnReader*> cons
         auto column_id = column_reader->get_id();
         initialize_reader(column_id, column_reader);
     }
+
+    populate_positional_readers(m_expr, column_readers);
+}
+
+auto QueryRunner::populate_positional_readers(
+        std::shared_ptr<Expression> const& expr,
+        std::vector<BaseColumnReader*> const& column_readers
+) -> void {
+    if (expr->has_only_expression_operands()) {
+        for (auto const& op : expr->get_op_list()) {
+            populate_positional_readers(std::static_pointer_cast<Expression>(op), column_readers);
+        }
+        return;
+    }
+    auto filter{std::dynamic_pointer_cast<FilterExpr>(expr)};
+    if (nullptr == filter || false == filter->get_column()->get_leaf_position().has_value()) {
+        return;
+    }
+    auto* const reader{find_positional_reader(*filter->get_column(), column_readers)};
+    if (nullptr == reader) {
+        return;
+    }
+    if (auto* const var_reader{dynamic_cast<VariableStringColumnReader*>(reader)};
+        nullptr != var_reader)
+    {
+        m_positional_readers.var_string[filter.get()].push_back(var_reader);
+    } else {
+        m_positional_readers.basic[filter.get()].push_back(reader);
+    }
+}
+
+auto QueryRunner::find_positional_reader(
+        ast::ColumnDescriptor const& column,
+        std::vector<BaseColumnReader*> const& column_readers
+) const -> BaseColumnReader* {
+    auto const leaf_position{column.get_leaf_position()};
+    if (false == leaf_position.has_value()) {
+        return nullptr;
+    }
+    auto const column_id{column.get_column_id()};
+    auto const log_message_node_id{m_schema_tree->find_matching_subtree_root_in_subtree(
+            -1,
+            column_id,
+            NodeType::LogMessage
+    )};
+    if (-1 == log_message_node_id) {
+        return nullptr;
+    }
+    auto const column_start{m_reader->get_log_message_column_start(log_message_node_id)};
+    if (false == column_start.has_value()) {
+        return nullptr;
+    }
+    auto const reader_idx{column_start.value() + leaf_position.value()};
+    if (reader_idx >= column_readers.size() || column_readers.at(reader_idx)->get_id() != column_id)
+    {
+        return nullptr;
+    }
+    return column_readers.at(reader_idx);
 }
 
 auto QueryRunner::prepare_filter(SchemaReader& reader) -> FilterClass& {
@@ -184,6 +243,7 @@ auto QueryRunner::prepare_filter(SchemaReader& reader) -> FilterClass& {
             m_clp_string_readers,
             m_var_string_readers,
             m_timestamp_readers,
+            m_positional_readers,
             m_deprecated_datestring_reader,
             m_expr_clp_query,
             m_expr_var_match_map,
@@ -349,13 +409,13 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
         bool ret = false;
         switch (SchemaNode::node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
             case LiteralType::IntegerT:
-                ret = evaluate_int_filter(op, column_id, literal);
+                ret = evaluate_int_filter(op, m_basic_readers[column_id], literal);
                 break;
             case LiteralType::FloatT:
-                ret = evaluate_float_filter(op, column_id, literal);
+                ret = evaluate_float_filter(op, m_basic_readers[column_id], literal);
                 break;
             case LiteralType::BooleanT:
-                ret = evaluate_bool_filter(op, column_id, literal);
+                ret = evaluate_bool_filter(op, m_basic_readers[column_id], literal);
                 break;
             case LiteralType::ArrayT:
                 ret = evaluate_wildcard_array_filter(
@@ -380,13 +440,20 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
     auto* column = expr->get_column().get();
     int32_t column_id = column->get_column_id();
     auto literal = expr->get_operand();
+    bool const is_positional{column->get_leaf_position().has_value()};
+    auto& basic_readers{
+            is_positional ? m_positional_readers.basic[expr] : m_basic_readers[column_id]
+    };
+    auto& var_string_readers{
+            is_positional ? m_positional_readers.var_string[expr] : m_var_string_readers[column_id]
+    };
     clp::Query* q = nullptr;
     std::unordered_set<int64_t>* matching_vars = nullptr;
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
-            return evaluate_int_filter(expr->get_operation(), column_id, literal);
+            return evaluate_int_filter(expr->get_operation(), basic_readers, literal);
         case LiteralType::FloatT:
-            return evaluate_float_filter(expr->get_operation(), column_id, literal);
+            return evaluate_float_filter(expr->get_operation(), basic_readers, literal);
         case LiteralType::ClpStringT:
             q = m_expr_clp_query.at(expr);
             return evaluate_clp_string_filter(
@@ -398,11 +465,11 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
             matching_vars = m_expr_var_match_map.at(expr);
             return evaluate_var_string_filter(
                     expr->get_operation(),
-                    m_var_string_readers[column_id],
+                    var_string_readers,
                     matching_vars
             );
         case LiteralType::BooleanT:
-            return evaluate_bool_filter(expr->get_operation(), column_id, literal);
+            return evaluate_bool_filter(expr->get_operation(), basic_readers, literal);
         case LiteralType::ArrayT:
             return evaluate_array_filter(
                     expr->get_operation(),
@@ -436,7 +503,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
 
 bool QueryRunner::evaluate_int_filter(
         FilterOperation op,
-        int32_t column_id,
+        std::vector<BaseColumnReader*> const& readers,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -445,15 +512,10 @@ bool QueryRunner::evaluate_int_filter(
 
     int64_t op_value;
     if (false == operand->as_int(op_value, op)) {
-        return evaluate_numeric_wildcard_filter<int64_t>(
-                op,
-                operand,
-                m_basic_readers[column_id],
-                m_cur_message
-        );
+        return evaluate_numeric_wildcard_filter<int64_t>(op, operand, readers, m_cur_message);
     }
 
-    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+    for (BaseColumnReader* reader : readers) {
         int64_t value = std::get<int64_t>(reader->extract_value(m_cur_message));
         if (evaluate_int_filter_core(op, value, op_value)) {
             return true;
@@ -483,7 +545,7 @@ bool QueryRunner::evaluate_int_filter_core(FilterOperation op, int64_t value, in
 
 bool QueryRunner::evaluate_float_filter(
         FilterOperation op,
-        int32_t column_id,
+        std::vector<BaseColumnReader*> const& readers,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -491,12 +553,7 @@ bool QueryRunner::evaluate_float_filter(
     }
 
     if (operand->has_wildcards()) {
-        return evaluate_numeric_wildcard_filter<double>(
-                op,
-                operand,
-                m_basic_readers[column_id],
-                m_cur_message
-        );
+        return evaluate_numeric_wildcard_filter<double>(op, operand, readers, m_cur_message);
     }
 
     double op_value;
@@ -504,7 +561,7 @@ bool QueryRunner::evaluate_float_filter(
         return false;
     }
 
-    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+    for (BaseColumnReader* reader : readers) {
         double value = std::get<double>(reader->extract_value(m_cur_message));
         if (evaluate_float_filter_core(op, value, op_value)) {
             return true;
@@ -932,7 +989,7 @@ bool QueryRunner::evaluate_wildcard_array_filter(
 
 bool QueryRunner::evaluate_bool_filter(
         FilterOperation op,
-        int32_t column_id,
+        std::vector<BaseColumnReader*> const& readers,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -945,7 +1002,7 @@ bool QueryRunner::evaluate_bool_filter(
     }
 
     bool rvalue = false;
-    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+    for (BaseColumnReader* reader : readers) {
         bool value = std::get<uint8_t>(reader->extract_value(m_cur_message));
         switch (op) {
             case FilterOperation::EQ:

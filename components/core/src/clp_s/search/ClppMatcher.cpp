@@ -1,7 +1,9 @@
 #include "ClppMatcher.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -13,7 +15,6 @@
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include <clp/string_utils/string_utils.hpp>
 #include <clp_s/ArchiveReader.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
@@ -59,12 +60,15 @@ auto ClppMatcher::find_matching_schemas(
         std::string_view rule_name,
         std::optional<std::string_view> shape_query
 ) const -> std::unordered_set<int32_t> {
-    if (shape_query.has_value()) {
-        return schemas_for_matching_shapes(rule_name, [&](std::string_view shape) -> bool {
-            return clp::string_utils::wildcard_match_unsafe(shape, *shape_query, m_case_sensitive);
-        });
-    }
-    return schemas_for_matching_shapes(rule_name, [](std::string_view) -> bool { return true; });
+    std::unordered_set<int32_t> schema_ids;
+    for_each_matching_occurrence(
+            rule_name,
+            shape_query,
+            [&](std::unordered_set<int32_t> const& occurrence_schema_ids, size_t) -> void {
+                schema_ids.insert(occurrence_schema_ids.begin(), occurrence_schema_ids.end());
+            }
+    );
+    return schema_ids;
 }
 
 auto ClppMatcher::decompose_query(std::string_view query, std::string_view rule_name)
@@ -73,6 +77,15 @@ auto ClppMatcher::decompose_query(std::string_view query, std::string_view rule_
         return decompose_by_log_shapes(query);
     }
     return decompose_by_rule_name(query, rule_name);
+}
+
+auto ClppMatcher::ensure_parser() -> ystdlib::error_handling::Result<void> {
+    if (nullptr != m_parser) {
+        return ystdlib::error_handling::success();
+    }
+    auto const spec{YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec())};
+    m_parser = std::make_unique<log_surgeon::Parser>(log_surgeon::ParsingSpecBuilder{spec}.build());
+    return ystdlib::error_handling::success();
 }
 
 auto ClppMatcher::decompose_by_log_shapes(std::string_view query)
@@ -84,12 +97,7 @@ auto ClppMatcher::decompose_by_log_shapes(std::string_view query)
         log_shapes.emplace_back(log_shape.get_value());
     }
 
-    if (nullptr == m_parser) {
-        m_parser = std::make_unique<log_surgeon::Parser>(log_surgeon::ParsingSpecBuilder{
-                YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec())
-        }
-                                                                 .build());
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
     auto interpretations_per_shape{clpp::decompose_by_log_shapes(*m_parser, query, log_shapes)};
     std::vector<InterpretationMatch> matches;
     matches.reserve(interpretations_per_shape.size());
@@ -125,51 +133,33 @@ auto ClppMatcher::decompose_by_log_shapes(std::string_view query)
 
 auto ClppMatcher::decompose_by_rule_name(std::string_view query, std::string_view rule_name)
         -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
-    if (nullptr == m_parser) {
-        m_parser = std::make_unique<log_surgeon::Parser>(log_surgeon::ParsingSpecBuilder{
-                YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec())
-        }
-                                                                 .build());
-    }
+    YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
     auto interpretations{clpp::decompose_by_rule_name(*m_parser, query, rule_name)};
     std::vector<InterpretationMatch> matches;
     matches.reserve(interpretations.size());
     for (auto& interpretation : interpretations) {
-        auto schema_ids{schemas_for_matching_shapes(rule_name, [&](std::string_view shape) -> bool {
-            return clp::string_utils::wildcard_match_unsafe(
-                    shape,
-                    interpretation.m_shape_query.view(),
-                    m_case_sensitive
-            );
-        })};
-        if (schema_ids.empty()) {
-            continue;
-        }
         erase_unconstrained_leaves(interpretation.m_leaf_queries);
-        matches.push_back(
-                {.schema_ids{std::move(schema_ids)},
-                 .leaf_queries{std::move(interpretation.m_leaf_queries)}}
+        std::map<size_t, std::unordered_set<int32_t>> schema_ids_by_leaf_position;
+        for_each_matching_occurrence(
+                rule_name,
+                interpretation.m_shape_query.view(),
+                [&](std::unordered_set<int32_t> const& schema_ids, size_t leaf_position) -> void {
+                    // Unconstrained interpretations are satisfied by any matching occurrence, so
+                    // their schemas are collected under a single position.
+                    auto const key{interpretation.m_leaf_queries.empty() ? 0 : leaf_position};
+                    schema_ids_by_leaf_position[key].insert(schema_ids.begin(), schema_ids.end());
+                }
         );
+        for (auto& [leaf_position, schema_ids] : schema_ids_by_leaf_position) {
+            auto leaf_queries{interpretation.m_leaf_queries};
+            for (auto& leaf : leaf_queries) {
+                leaf.m_leaf_position += leaf_position;
+            }
+            matches.push_back(
+                    {.schema_ids{std::move(schema_ids)}, .leaf_queries{std::move(leaf_queries)}}
+            );
+        }
     }
     return matches;
-}
-
-auto ClppMatcher::get_shapes(clpp::log_shape_id_t log_shape_id, std::string_view rule_name) const
-        -> std::vector<std::string_view> {
-    std::string_view const log_shape{
-            m_archive_reader->get_log_shape_dictionary()->get_entries().at(log_shape_id).get_value()
-    };
-    if (rule_name.empty()) {
-        return {log_shape};
-    }
-    std::vector<std::string_view> shapes;
-    for (auto const& parent_match :
-         m_archive_reader->get_parent_rule_shapes().at(log_shape_id).get())
-    {
-        if (rule_name == parent_match.m_name) {
-            shapes.emplace_back(log_shape.substr(parent_match.m_start, parent_match.m_size));
-        }
-    }
-    return shapes;
 }
 }  // namespace clp_s::search

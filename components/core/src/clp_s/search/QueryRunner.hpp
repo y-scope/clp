@@ -147,6 +147,7 @@ private:
     std::unordered_map<int32_t, TimestampColumnReader*> m_timestamp_readers;
     DeprecatedDateStringColumnReader* m_deprecated_datestring_reader{nullptr};
     std::unordered_map<int32_t, std::vector<BaseColumnReader*>> m_basic_readers;
+    ColumnScan::PositionalReaderMaps m_positional_readers;
     std::unordered_map<int32_t, std::string> m_extracted_unstructured_arrays;
     uint64_t m_cur_message{0};
     EvaluatedValue m_expression_value{EvaluatedValue::Unknown};
@@ -202,13 +203,13 @@ private:
     /**
      * Evaluates a int filter expression
      * @param op
-     * @param column_id
+     * @param readers
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_int_filter(
             ast::FilterOperation op,
-            int32_t column_id,
+            std::vector<BaseColumnReader*> const& readers,
             std::shared_ptr<ast::Literal> const& operand
     ) -> bool;
 
@@ -225,13 +226,13 @@ private:
     /**
      * Evaluates a float filter expression
      * @param op
-     * @param column_id
+     * @param readers
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_float_filter(
             ast::FilterOperation op,
-            int32_t column_id,
+            std::vector<BaseColumnReader*> const& readers,
             std::shared_ptr<ast::Literal> const& operand
     ) -> bool;
 
@@ -405,13 +406,13 @@ private:
     /**
      * Evaluates a bool filter expression
      * @param op
-     * @param column_id
+     * @param readers
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_bool_filter(
             ast::FilterOperation op,
-            int32_t column_id,
+            std::vector<BaseColumnReader*> const& readers,
             std::shared_ptr<ast::Literal> const& operand
     ) -> bool;
 
@@ -425,6 +426,33 @@ private:
      * Populates the set of internal columns that get ignored during dynamic wildcard expansion.
      */
     void populate_internal_columns();
+
+    /**
+     * Resolves the reader for every clpp leaf filter in `expr` that is pinned to a leaf placeholder
+     * position, using the current ERT's column readers. A filter whose position doesn't resolve to
+     * a reader for its column gets no entry and evaluates to false.
+     * @param expr
+     * @param column_readers The current ERT's column readers, in schema order.
+     */
+    auto populate_positional_readers(
+            std::shared_ptr<ast::Expression> const& expr,
+            std::vector<BaseColumnReader*> const& column_readers
+    ) -> void;
+
+    /**
+     * Resolves the column reader for a clpp leaf filter column pinned to a leaf placeholder
+     * position. The reader for leaf position `leaf_position` of a LogMessage is the reader at
+     * `log_message_column_start + leaf_position`, which holds because readers are appended in the
+     * document order of the leaf placeholders.
+     * @param column A column with a leaf position.
+     * @param column_readers The current ERT's column readers, in schema order.
+     * @return The reader, or nullptr if the position doesn't resolve to a reader for `column`'s
+     * node in the current ERT.
+     */
+    [[nodiscard]] auto find_positional_reader(
+            ast::ColumnDescriptor const& column,
+            std::vector<BaseColumnReader*> const& column_readers
+    ) const -> BaseColumnReader*;
 
     /**
      * Constant propagates an expression

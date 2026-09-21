@@ -699,7 +699,6 @@ if(CLP_ENABLE_TESTS)
             INTERFACE
             clp::regex_utils
             clp::string_utils
-            clpp::core
             clp_s::archive_reader
             clp_s::archive_writer
             clp_s::ffi::sfa
@@ -711,6 +710,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::search::sql
             clp_s::timestamp_parser
             clp_s::timestamp_pattern
+            clpp::core
             utils::profiling
             )
 

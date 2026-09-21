@@ -467,6 +467,9 @@ auto ArchiveReader::append_unordered_reader_columns(
         bool should_marshal_records
 ) -> void {
     size_t const object_begin_pos{reader.get_column_size()};
+    if (NodeType::LogMessage == m_schema_tree->get_node(mst_subtree_root_node_id).get_type()) {
+        reader.set_log_message_column_start(mst_subtree_root_node_id, object_begin_pos);
+    }
     sub_schema.visit_entries(
             [&](SchemaNode::id_t node_id) -> bool {
                 switch (m_schema_tree->get_node(node_id).get_type()) {

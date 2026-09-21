@@ -71,8 +71,7 @@ public:
     void add_searched_column_to_schema(int32_t schema, int32_t column);
 
     /**
-     * @return The total number of clpp interpretations created during schema matching. Every
-     * interpretation returned by a decomposition is counted once.
+     * @return The total number of clpp interpretation matches created during schema matching.
      */
     [[nodiscard]] auto get_num_clpp_interpretations() const -> uint64_t {
         return m_num_clpp_interpretations;
@@ -221,7 +220,7 @@ private:
      * @param column The column triggering clpp decomposition.
      * @param root_node_id The schema-tree node where decomposition is rooted.
      * @param rule_name The parent rule name, or empty for a LogMessage node.
-     * @param interpretations The interpretations matching a schema.
+     * @param interpretations The interpretation matches applicable to a schema.
      * @return The filter expression, or nullptr if no schema can match.
      */
     auto build_negated_decomposed_query_filter(

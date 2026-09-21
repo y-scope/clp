@@ -400,6 +400,80 @@ def test_clpp_search_negated_no_match(
 
 
 @pytest.mark.clpp
+@pytest.mark.clpp_decomposition
+@_requires_decomposition
+@pytest.mark.parametrize(
+    ("query", "scope_query", "matches"),
+    [
+        pytest.param(
+            'message: "*estimate: 9*"',
+            "message: *",
+            True,
+            id="log_message_same_occurrence",
+        ),
+        pytest.param(
+            'message: "*limit: 9*"',
+            "message: *",
+            False,
+            id="log_message_crossed_occurrences",
+        ),
+        pytest.param(
+            'message: "*estimate: 3*"',
+            "message: *",
+            False,
+            id="log_message_crossed_reversed",
+        ),
+        pytest.param(
+            'message.key_value: "estimate: 9*"',
+            "message.key_value: *",
+            True,
+            id="parent_rule_same_occurrence",
+        ),
+        pytest.param(
+            'message.key_value: "limit: 9*"',
+            "message.key_value: *",
+            False,
+            id="parent_rule_crossed_occurrences",
+        ),
+    ],
+)
+def test_clpp_search_occurrence_precision(
+    clp_core_path_config: ClpCorePathConfig,
+    clpp_archive: Path,
+    query: str,
+    scope_query: str,
+    matches: bool,
+) -> None:
+    """
+    Validates that a decomposed query constrains the leaves of a single occurrence of a repeated
+    parent rule rather than any occurrence, for both the query and its negation.
+
+    :param clp_core_path_config:
+    :param clpp_archive:
+    :param query:
+    :param scope_query: The query whose results scope the negation (i.e. the events the column
+        belongs to).
+    :param matches: Whether `query` should match the `_InflightMatch` event.
+    """
+    expected_count = 1 if matches else 0
+    results = _search(clp_core_path_config, clpp_archive, query)
+    assert len(results) == expected_count, (
+        f"Query '{query}' expected {expected_count} results, got {len(results)}."
+    )
+    assert all(result["message"]["text"] == _InflightMatch.text for result in results), (
+        f"Query '{query}' returned a non-matching message: {results}."
+    )
+
+    total_count = len(_search(clp_core_path_config, clpp_archive, scope_query))
+    negated_query = f"not {query}"
+    negated_results = _search(clp_core_path_config, clpp_archive, negated_query)
+    assert len(negated_results) == total_count - expected_count, (
+        f"Query '{negated_query}' expected {total_count - expected_count} results,"
+        f" got {len(negated_results)}."
+    )
+
+
+@pytest.mark.clpp
 @pytest.mark.parametrize(
     ("projection", "expected_message"),
     [

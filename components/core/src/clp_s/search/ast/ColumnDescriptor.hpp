@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 #define CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -314,6 +315,20 @@ public:
         m_subtree_type = std::move(subtree_type);
     }
 
+    /**
+     * @return The LogMessage-relative leaf placeholder position this column is pinned to by clpp
+     * decomposition, or std::nullopt if the column matches any occurrence of its node.
+     */
+    [[nodiscard]] auto get_leaf_position() const -> std::optional<size_t> {
+        return m_leaf_position;
+    }
+
+    /**
+     * Pins this column to a single leaf placeholder of the enclosing LogMessage.
+     * @param position The LogMessage-relative leaf placeholder position.
+     */
+    auto set_leaf_position(size_t position) -> void { m_leaf_position = position; }
+
 private:
     // Static data members
     static id_t m_next_id;
@@ -328,8 +343,8 @@ private:
     bool m_pure_wildcard{false};  // true if column is single wildcard
     std::optional<std::string> m_subtree_type;  // optional subtree type to resolve against
 
-    // true if resolved by CLPP decomposition
     bool m_is_clpp_resolved{false};
+    std::optional<size_t> m_leaf_position;
     uint64_t m_id;
 
     // Constructors

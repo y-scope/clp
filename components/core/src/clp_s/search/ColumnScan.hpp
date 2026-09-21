@@ -27,12 +27,23 @@ public:
     using VarMatchMap = std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*>;
 
     /**
+     * Column readers pinned to a clpp leaf placeholder position, keyed by the filter expression. A
+     * LogMessage or ParentRule can only contain integer, float, and variable string leaves. A
+     * vector is used to match the filter evaluation API, but can only have one reader.
+     */
+    struct PositionalReaderMaps {
+        std::unordered_map<ast::FilterExpr*, std::vector<BaseColumnReader*>> basic;
+        std::unordered_map<ast::FilterExpr*, std::vector<VariableStringColumnReader*>> var_string;
+    };
+
+    /**
      * Attempts to build a column scan for the given expression over the given ERT.
      * @param expression
      * @param basic_readers A map of relevant primitive type readers for the given ERT.
      * @param clp_string_readers A map of relevant clp string readers for the given ERT.
      * @param var_string_readers A map of relevant variable string readers for the given ERT.
      * @param timestamp_readers A map of relevant timestamp readers for the given ERT.
+     * @param positional_readers Readers pinned to a clpp leaf placeholder position.
      * @param deprecated_datestring_reader The deprecated date-string reader for the given ERT, or
      * nullptr if the ERT has none.
      * @param clp_queries A map of precomputed clp string searches.
@@ -47,6 +58,7 @@ public:
             ClpStringReaderMap const& clp_string_readers,
             VarStringReaderMap const& var_string_readers,
             TimestampReaderMap const& timestamp_readers,
+            PositionalReaderMaps const& positional_readers,
             DeprecatedDateStringColumnReader* deprecated_datestring_reader,
             ClpQueryMap const& clp_queries,
             VarMatchMap const& var_matches,
@@ -77,6 +89,7 @@ private:
             ClpStringReaderMap const& clp_string_readers,
             VarStringReaderMap const& var_string_readers,
             TimestampReaderMap const& timestamp_readers,
+            PositionalReaderMaps const& positional_readers,
             DeprecatedDateStringColumnReader* deprecated_datestring_reader,
             ClpQueryMap const& clp_queries,
             VarMatchMap const& var_matches,
@@ -125,6 +138,7 @@ private:
      * @param clp_string_readers
      * @param var_string_readers
      * @param timestamp_readers
+     * @param positional_readers
      * @param deprecated_datestring_reader
      * @param clp_queries
      * @param var_matches
@@ -136,6 +150,7 @@ private:
             ClpStringReaderMap const& clp_string_readers,
             VarStringReaderMap const& var_string_readers,
             TimestampReaderMap const& timestamp_readers,
+            PositionalReaderMaps const& positional_readers,
             DeprecatedDateStringColumnReader* deprecated_datestring_reader,
             ClpQueryMap const& clp_queries,
             VarMatchMap const& var_matches
@@ -150,6 +165,7 @@ private:
      * @param clp_string_readers
      * @param var_string_readers
      * @param timestamp_readers
+     * @param positional_readers
      * @param deprecated_datestring_reader
      * @param clp_queries
      * @param var_matches
@@ -161,6 +177,7 @@ private:
             ClpStringReaderMap const& clp_string_readers,
             VarStringReaderMap const& var_string_readers,
             TimestampReaderMap const& timestamp_readers,
+            PositionalReaderMaps const& positional_readers,
             DeprecatedDateStringColumnReader* deprecated_datestring_reader,
             ClpQueryMap const& clp_queries,
             VarMatchMap const& var_matches

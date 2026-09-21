@@ -1,6 +1,7 @@
 #ifndef CLPP_INTERPRETATION_HPP
 #define CLPP_INTERPRETATION_HPP
 
+#include <cstddef>
 #include <span>
 #include <string>
 #include <string_view>
@@ -13,18 +14,25 @@
 
 namespace clpp {
 /**
- * A query for a single leaf rule match, split into the leaf's qualified rule name and the query
- * string for the leaf's value.
+ * A query for a single leaf rule match, split into the leaf's qualified rule name, the query
+ * string for the leaf's value, and the leaf's position.
+ *
+ * `m_leaf_position` is the index of the leaf's placeholder among the leaf placeholders of the shape
+ * the query was decomposed against, so the i-th leaf query of an interpretation constrains the i-th
+ * leaf placeholder. `decompose_by_rule_name` yields positions relative to the parent rule's shape;
+ * `decompose_by_log_shapes` yields positions relative to the log shape.
  */
 struct LeafQuery {
     // Constructors
-    LeafQuery(std::string_view qualified_name, std::string_view match)
+    LeafQuery(std::string_view qualified_name, std::string_view match, size_t leaf_position)
             : m_qualified_name(qualified_name),
-              m_query(match) {}
+              m_query(match),
+              m_leaf_position(leaf_position) {}
 
     // Data members
     std::string m_qualified_name;
     std::string m_query;
+    size_t m_leaf_position;
 };
 
 /**

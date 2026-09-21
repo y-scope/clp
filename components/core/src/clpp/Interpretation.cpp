@@ -44,7 +44,8 @@ auto build_interpretation(std::vector<log_surgeon::SubQuery> const& sub_queries)
         if (sub_query.qualified_name.empty()) {
             shape_query.escape_and_append(sub_query.value);
         } else {
-            leaf_queries.emplace_back(sub_query.qualified_name, sub_query.value);
+            leaf_queries
+                    .emplace_back(sub_query.qualified_name, sub_query.value, leaf_queries.size());
             shape_query.append_placeholder(sub_query.qualified_name);
         }
     }
@@ -56,7 +57,8 @@ auto build_leaf_queries(std::vector<log_surgeon::SubQuery> const& sub_queries)
     std::vector<LeafQuery> leaf_queries;
     for (auto const& sub_query : sub_queries) {
         if (false == sub_query.qualified_name.empty()) {
-            leaf_queries.emplace_back(sub_query.qualified_name, sub_query.value);
+            leaf_queries
+                    .emplace_back(sub_query.qualified_name, sub_query.value, leaf_queries.size());
         }
     }
     return leaf_queries;

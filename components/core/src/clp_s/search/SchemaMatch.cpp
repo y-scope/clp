@@ -958,6 +958,7 @@ auto SchemaMatch::build_leaf_query_expr(
 
         auto type_variants{ast::OrExpr::create()};
         for (auto& [new_col, node_id] : leaf_cols.value()) {
+            new_col->set_leaf_position(leaf.m_leaf_position);
             register_clpp_resolved_column(new_col, node_id, matched_schema_ids);
             auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
             type_variants->add_operand(
@@ -985,6 +986,7 @@ auto SchemaMatch::build_negated_leaf_query_expr(
 
         auto no_type_variant_matches{ast::AndExpr::create()};
         for (auto& [new_col, node_id] : leaf_cols.value()) {
+            new_col->set_leaf_position(leaf.m_leaf_position);
             register_clpp_resolved_column(new_col, node_id, matched_schema_ids);
             auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
             no_type_variant_matches->add_operand(
