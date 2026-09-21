@@ -3,4 +3,5 @@ rustflags = [
     "-Dclippy::all",
     "-Dclippy::nursery",
     "-Dclippy::pedantic",
+    "-Aclippy::empty_enums",
 ]

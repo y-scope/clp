@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG SPIDER_WORKER_IMAGE=ghcr.io/y-scope/spider/worker:main
+ARG SPIDER_WORKER_IMAGE=ghcr.io/y-scope/spider/worker:v0.1.0-rc.1-huntsman
 FROM ${SPIDER_WORKER_IMAGE}
 
 ARG SPIDER_TDL_PACKAGE_DIR=/opt/spider/packages

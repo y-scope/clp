@@ -41,7 +41,8 @@ The CLP Helm chart will then automatically deploy the following components:
 
   :::{note}
   In the current release, `compression-coordinator` supports only compression jobs that use certain
-  CLP package configurations. See "Using compression-coordinator" for the current limitations.
+  CLP package configurations. Other notable limitations are listed
+  [here][using-compression-coordinator-limitations].
   :::
 
 #### Set up
@@ -150,6 +151,15 @@ The following settings are commonly adjusted when deploying Spider with CLP.
 Enables Spider and deploys its related CLP components.
 :::
 
+:::{confval} spider.spiderConfig.database
+:type: `map`
+:default: The default configuration for Spider subchart's bundled database
+
+Configures the database that Spider uses for metadata storage. By default, the Spider subchart
+deploys a bundled database and connects to it. To use an external database instead, see
+[Using an external database with Spider][external-db-spider].
+:::
+
 :::{confval} spider.spiderConfig.worker.replicas
 :type: `int`
 :default: 4
@@ -213,5 +223,7 @@ Consider:
   large ready-task buffer.
 :::
 
+[external-db-spider]: guides-external-database.md#using-an-external-database-with-spider
 [k8s-deployment]: guides-k8s-deployment.md
 [spider]: https://github.com/y-scope/spider
+[using-compression-coordinator-limitations]: guides-using-compression-coordinator.md#limitations

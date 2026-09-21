@@ -3,6 +3,7 @@ name: "clp-core-build-macos"
 on:
   pull_request:
     paths: &monitored_paths
+      - ".github/actions/deps-cache-key/**"
       - ".github/workflows/clp-core-build-macos.yaml"
       - ".gitmodules"
       - "components/core/cmake/**"
@@ -68,8 +69,65 @@ jobs:
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
-      - run: "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
+      # The macOS toolchain comes from the runner image and Homebrew, so hash what is installed
+      # rather than the install script. Must run after `install-all.sh`.
+      - id: "toolchain"
+        name: "Capture the macOS toolchain identity"
+        run: |
+          hash=$(
+            {
+              sw_vers
+              clang --version
+              xcodebuild -version 2>/dev/null || true
+              cmake --version
+              task --version
+              brew list --versions
+            } | shasum -a 256 | cut -d " " -f 1
+          )
+          echo "hash=${hash}" >> "$GITHUB_OUTPUT"
+          echo "macOS toolchain hash: ${hash}"
         shell: "bash"
+
+      - id: "deps_cache_key"
+        uses: "./.github/actions/deps-cache-key"
+        with:
+          os_name: "${{matrix.os}}"
+          arch: "${{runner.arch}}"
+          env_hash: "${{steps.toolchain.outputs.hash}}"
+
+      - name: "Restore deps:core cache"
+        id: "deps_cache_restore"
+        uses: "actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
+        with:
+          path: &deps_cache_paths |-
+            build/deps/cpp
+            .task
+          key: "${{steps.deps_cache_key.outputs.key}}"
+
+      - id: "deps_core"
+        run: "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
+        shell: "bash"
+
+      # `mongocxx` clones `mongo-c-driver` to build it. It needs the checked-out source, but not
+      # the `.git` directory the clone brings with it -- dropping that before the save takes
+      # ~200MB off the cache entry.
+      - name: "Drop mongo-c-driver's .git directory before caching"
+        if: &deps_cache_save_condition >-
+          !cancelled()
+          && false == matrix.use_shared_libs
+          && 'success' == steps.deps_core.outcome
+          && 'true' != steps.deps_cache_restore.outputs.cache-hit
+          && 'pull_request' != github.event_name
+          && 'refs/heads/main' == github.ref
+        run: "rm -rf build/deps/cpp/mongocxx-build/_deps/mongo-c-driver-src/.git"
+        shell: "bash"
+
+      - name: "Update deps:core cache"
+        if: *deps_cache_save_condition
+        uses: "actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
+        with:
+          path: *deps_cache_paths
+          key: "${{steps.deps_cache_key.outputs.key}}"
 
       - name: "Build CLP-core and run unit tests"
         shell: "bash"

@@ -371,7 +371,7 @@ def _create_timestamp_index(results_cache_uri: str, job_id: str) -> None:
     :param job_id: ID of the search job whose results collection should be indexed.
     """
     try:
-        with pymongo.MongoClient(results_cache_uri) as mongo_client:
+        with pymongo.MongoClient(results_cache_uri, directConnection=True) as mongo_client:
             collection = mongo_client.get_default_database()[job_id]
             collection.create_index(
                 [("timestamp", pymongo.DESCENDING), ("_id", pymongo.ASCENDING)],
