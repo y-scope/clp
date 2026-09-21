@@ -341,7 +341,7 @@ private:
     [[nodiscard]] std::pair<size_t, size_t> store_tables();
 
     /**
-     * Compresses, stores, and clear the log shape statistics. The stats are not cleared if the
+     * Compresses, stores, and clears the log shape statistics. The stats are not cleared if the
      * result is an error.
      * @return A result containing the compressed size in bytes or an error code indicating the
      * failure:
@@ -350,8 +350,8 @@ private:
     [[nodiscard]] auto close_log_shape_stats() -> ystdlib::error_handling::Result<size_t>;
 
     /**
-     * Compresses, stores, and clear the parent rule shapes. The stats are not cleared if the result
-     * is an error.
+     * Compresses, stores, and clears the parent rule shapes. The stats are not cleared if the
+     * result is an error.
      * @return A result containing the compressed size in bytes or an error code indicating the
      * failure:
      * - clpp::ClppErrorCodeEnum::Unsupported if not using CLP+.
