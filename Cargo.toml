@@ -59,6 +59,6 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt", "jso
 url = "2.5.8"
 utoipa = "5.5.0"
 utoipa-axum = "0.2.0"
-uuid = { version = "1.24.0", features = ["v4"] }
+uuid = { version = "1.26.1", features = ["v4", "serde"] }
 yaml_serde = "0.10.4"
 zstd = "0.13.3"
