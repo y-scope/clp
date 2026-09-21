@@ -36,54 +36,55 @@ shown below.
 }%%
 flowchart LR
     %% CLP-artifact-dependency container build jobs
-    filter-relevant-changes --> centos-stream-9-deps-image
-    filter-relevant-changes --> manylinux_2_28-deps-image
-    filter-relevant-changes --> musllinux_1_2-deps-image
-    filter-relevant-changes --> ubuntu-jammy-aarch64-deps-image
-    filter-relevant-changes --> ubuntu-jammy-x86_64-deps-image
+    calc-build-triggers --> centos-stream-9-deps-image
+    calc-build-triggers --> manylinux_2_28-deps-image
+    calc-build-triggers --> musllinux_1_2-deps-image
+    calc-build-triggers --> ubuntu-jammy-aarch64-deps-image
+    calc-build-triggers --> ubuntu-jammy-x86_64-deps-image
     manylinux_2_28-deps-image --> manylinux_2_28-deps-image-merge
     musllinux_1_2-deps-image --> musllinux_1_2-deps-image-merge
 
     %% CLP-core build jobs
-    filter-relevant-changes --> centos-stream-9-binaries
+    calc-build-triggers --> centos-stream-9-binaries
     centos-stream-9-deps-image --> centos-stream-9-binaries
-    filter-relevant-changes --> manylinux_2_28-x86_64-binaries
+    calc-build-triggers --> manylinux_2_28-x86_64-binaries
     manylinux_2_28-deps-image --> manylinux_2_28-x86_64-binaries
     manylinux_2_28-deps-image-merge --> manylinux_2_28-x86_64-binaries
-    filter-relevant-changes --> musllinux_1_2-x86_64-binaries
+    calc-build-triggers --> musllinux_1_2-x86_64-binaries
     musllinux_1_2-deps-image --> musllinux_1_2-x86_64-binaries
     musllinux_1_2-deps-image-merge --> musllinux_1_2-x86_64-binaries
-    filter-relevant-changes --> ubuntu-jammy-binaries
+    calc-build-triggers --> ubuntu-jammy-binaries
     ubuntu-jammy-x86_64-deps-image --> ubuntu-jammy-binaries
 
     %% CLP-core binaries container build jobs
     ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
 
     %% CLP-core Python-wheel build jobs
-    filter-relevant-changes --> manylinux_2_28-x86_64-python-wheels
+    calc-build-triggers --> manylinux_2_28-x86_64-python-wheels
     manylinux_2_28-deps-image --> manylinux_2_28-x86_64-python-wheels
     manylinux_2_28-deps-image-merge --> manylinux_2_28-x86_64-python-wheels
 
     %% CLP-package container build jobs
-    filter-relevant-changes --> package-image
+    calc-build-triggers --> package-image
     ubuntu-jammy-aarch64-deps-image --> package-image
     ubuntu-jammy-x86_64-deps-image --> package-image
     package-image --> package-image-multiarch-manifest
 
     %% Spider-worker container build jobs
-    filter-relevant-changes --> spider-worker-image
+    calc-build-triggers --> spider-worker-image
     ubuntu-jammy-x86_64-deps-image --> spider-worker-image
 
     %% Lint & test jobs
-    filter-relevant-changes --> ubuntu-jammy-lint
+    calc-build-triggers --> ubuntu-jammy-lint
     ubuntu-jammy-x86_64-deps-image --> ubuntu-jammy-lint
     ubuntu-jammy-binaries --> ubuntu-jammy-integration-tests-core
 :::
 
 Arrows between jobs indicate a dependency. The jobs are as follows:
 
-* `filter-relevant-changes`: Filters the changes in the pull request or commit to determine which of
-  the following jobs should run.
+* `calc-build-triggers`: Analyzes the changes in the pull request or commit to determine which of
+  the following jobs should run, which container images should be published, and which of the
+  following jobs should use a published image.
 * `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
   build CLP-core in a CentOS Stream 9 x86 environment.
 * `manylinux_2_28-deps-image`: A matrix job that builds, for each of amd64 and arm64 natively on
@@ -119,7 +120,8 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
 * `package-image`: Builds the CLP package container image.
 * `package-image-multiarch-manifest`: When run on `main`, merges the per-arch tags produced by
   `package-image` into a single multi-arch manifest.
-* `spider-worker-image`: Builds a container image containing CLP-core and `clp-tdl-package`.
+* `spider-worker-image`: Builds a container image containing certain binaries from CLP-core
+  (`clp-s`, `indexer`, and `log-converter`) and `clp-tdl-package`.
 
 When the PR or commit doesn't change any of the files that affect CLP's dependencies (or the
 dependency container images), then the dependency container images won't be rebuilt; instead the
@@ -167,8 +169,9 @@ OpenAPI docs.
 This workflow runs all JavaScript, Python, and YAML linting checks on the codebase.
 
 :::{note}
-C++, Rust, and Helm linting checks are run in the `clp-artifact-build`, `clp-rust-checks`, and
-`clp-package-helm` workflows, respectively.
+Further linting checks on the codebase are run as appropriate in other workflows: C++ linting in
+`clp-artifact-build` and `clp-core-build-macos`, Rust linting in `clp-rust-checks`, and Helm linting
+in `clp-package-helm`.
 :::
 
 ## clp-package-helm
@@ -176,8 +179,8 @@ C++, Rust, and Helm linting checks are run in the `clp-artifact-build`, `clp-rus
 This workflow contains two jobs for linting, building, and publishing the Helm chart:
 
 * `lint` runs Helm linting checks on the chart.
-* `publish` builds the chart; then on pushes to `main` and semantic-version branches, the job
-  publishes the built chart to the `gh-pages` branch.
+* `publish` builds the chart and publishes it to the `gh-pages` branch; `publish` runs only on
+  pushes to `main` and semantic-version branches.
 
 ## clp-pr-title-checks
 
@@ -185,8 +188,7 @@ This workflow validates pull request titles against the Conventional Commits spe
 
 ## clp-rust-checks
 
-This workflow validates Rust's lock files, runs all Rust linting checks, and runs all Rust unit
-tests.
+This workflow validates Rust's lock files, runs all Rust linting checks, and runs all Rust tests.
 
 ## clp-s-generated-code-checks
 
