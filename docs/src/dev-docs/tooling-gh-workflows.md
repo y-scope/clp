@@ -72,7 +72,9 @@ flowchart LR
 
     %% Spider-worker container build jobs
     calc-build-triggers --> spider-worker-image
+    ubuntu-jammy-aarch64-deps-image --> spider-worker-image
     ubuntu-jammy-x86_64-deps-image --> spider-worker-image
+    spider-worker-image --> spider-worker-image-multiarch-manifest
 
     %% Lint & test jobs
     calc-build-triggers --> ubuntu-jammy-lint
@@ -122,6 +124,8 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   `package-image` into a single multi-arch manifest.
 * `spider-worker-image`: Builds a container image containing certain binaries from CLP-core
   (`clp-s`, `indexer`, and `log-converter`) and `clp-tdl-package`.
+* `spider-worker-image-multiarch-manifest`: When the image is being published, merges the per-arch
+  tags produced by `spider-worker-image` into a single multi-arch manifest.
 
 When the PR or commit doesn't change any of the files that affect CLP's dependencies (or the
 dependency container images), then the dependency container images won't be rebuilt; instead the
@@ -153,7 +157,7 @@ details, see [GitHub-hosted runners][gh-hosted-runners].
 
 ## clp-core-build-macos
 
-This workflow builds CLP-core on macOS and runs its unit tests.
+This workflow builds CLP-core on macOS, runs its unit tests, and runs C++ linting checks.
 
 ## clp-docs
 
@@ -198,5 +202,10 @@ committed parsers.
 ## clp-uv-checks
 
 This workflow checks whether each UV Python project's lockfile matches the project metadata.
+
+## clp-webui-generated-code-checks
+
+This workflow generates the webui's API client schema and validates that it doesn't differ from the
+committed schema.
 
 [gh-hosted-runners]: https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners
