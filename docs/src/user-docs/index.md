@@ -167,6 +167,20 @@ A flavor of CLP for unstructured (e.g., free-text) logs.
 :::
 ::::
 
+We're also developing an experimental flavor that parses unstructured logs into structured,
+queryable fields.
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: core-clpp/index
+CLP+ (experimental)
+^^^
+An experimental flavor of CLP that parses unstructured logs into queryable fields.
+:::
+::::
+
 The guide below explains how to use a container to try either flavor.
 
 ::::{grid} 1 1 2 2
@@ -291,6 +305,7 @@ guides-using-spider-scheduler
 
 core-clp-s
 core-unstructured/index
+core-clpp/index
 core-container
 :::
 
