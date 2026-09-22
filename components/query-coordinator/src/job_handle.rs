@@ -334,8 +334,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
         let update_error;
         let status_error = if matches!(error, Error::QueryJobMetadataCorrupted(_)) {
-            // The job's metadata already changed or disappeared, so there's no row left to mark as
-            // failed.
+            // Skips updating the metadata row since it already cannot be found
             Some(error)
         } else {
             let status_message = format!("Query job failed: {error}");
