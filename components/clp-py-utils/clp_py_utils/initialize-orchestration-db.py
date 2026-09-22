@@ -142,6 +142,7 @@ def main(argv):
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_config` MEDIUMBLOB NOT NULL,
                     `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+                    `dispatch_time` DATETIME NULL DEFAULT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
