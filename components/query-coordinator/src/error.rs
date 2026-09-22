@@ -8,9 +8,7 @@ pub enum Error {
     #[error("invalid query job configuration: {0}")]
     InvalidQueryJobConfig(String),
 
-    #[error(
-        "metadata corrupted for query job {0}: its status changed or its row no longer exists"
-    )]
+    #[error("metadata corrupted for query job {0}: its status changed or its row no longer exists")]
     QueryJobMetadataCorrupted(QueryJobId),
 
     #[error("spider request failure: {0}")]
