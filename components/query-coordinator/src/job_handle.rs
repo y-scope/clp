@@ -131,7 +131,11 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let archives_to_search = self.plan().await?;
         if archives_to_search.is_empty() {
             return self
-                .update_job_status(Some(QueryJobStatus::Pending), QueryJobStatus::Succeeded, None)
+                .update_job_status(
+                    Some(QueryJobStatus::Pending),
+                    QueryJobStatus::Succeeded,
+                    None,
+                )
                 .await;
         }
 
@@ -304,8 +308,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 Some("The Spider job was cancelled.".to_owned()),
             ),
         };
-        self.update_job_status(Some(QueryJobStatus::Running), status, status_message.as_deref())
-            .await
+        self.update_job_status(
+            Some(QueryJobStatus::Running),
+            status,
+            status_message.as_deref(),
+        )
+        .await
     }
 
     /// Reports a query job failure.
