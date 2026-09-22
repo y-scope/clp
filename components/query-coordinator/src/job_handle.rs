@@ -297,7 +297,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             QueryJobOutcome::Succeeded => (QueryJobStatus::Succeeded, None),
             QueryJobOutcome::Failed { error_message } => (
                 QueryJobStatus::Failed,
-                Some(format!("The Spider query job failed: {error_message}")),
+                Some(format!("The Spider job failed: {error_message}")),
             ),
             QueryJobOutcome::Cancelled => (
                 QueryJobStatus::Cancelled,
