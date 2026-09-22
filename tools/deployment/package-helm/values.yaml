@@ -9,7 +9,7 @@ image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "Always"
-    tag: "main"
+    tag: "0.14.0"
   mariadb:
     repository: "mariadb"
     pullPolicy: "Always"
@@ -392,7 +392,7 @@ spider:
   image:
     worker:
       repository: "ghcr.io/y-scope/clp/clp-spider-worker"
-      tag: "main"
+      tag: "0.14.0"
   spiderConfig:
     # List of third-party services bundled (deployed) as part of the Spider subchart.
     # Remove a service from this list to use an external instance instead, and configure its
