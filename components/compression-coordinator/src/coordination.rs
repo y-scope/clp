@@ -33,6 +33,7 @@ use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
+use spider_core::types::resource_group::ExternalResourceGroupCredentials;
 use tokio::select;
 use tokio::sync::Semaphore;
 use tokio::time::Instant;
@@ -604,13 +605,16 @@ async fn get_or_create_resource_group_id(
         return Ok(ResourceGroupId::from(spider_rg_id));
     }
 
-    // NOTE: For now, Spider does not enforce resource group credential validation. The password is
-    // hardcoded to be the same as the username.
+    let password = std::env::var("CLP_SPIDER_RESOURCE_GROUP_PASSWORD").map_err(|e| {
+        Error::InvalidConfiguration(format!(
+            "failed to read the resource group password from `CLP_SPIDER_RESOURCE_GROUP_PASSWORD`: {e}"
+        ))
+    })?;
     let resource_group_id = spider_client
-        .add_resource_group(
+        .add_resource_group(ExternalResourceGroupCredentials::new(
             resource_group.to_owned(),
-            resource_group.as_bytes().to_vec(),
-        )
+            password.into_bytes(),
+        ))
         .await?;
 
     sqlx::query(INSERT_QUERY)
