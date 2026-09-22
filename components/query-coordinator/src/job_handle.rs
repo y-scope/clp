@@ -89,67 +89,57 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         })
     }
 
-    /// Submits the prepared graph and drives the query job to a terminal state.
+    /// Plans, submits, and drives the query job to a terminal state.
     ///
-    /// On a submission failure, this method makes a best-effort attempt to mark the CLP query job
-    /// as failed before returning the original error. After the job is durably running, monitoring
-    /// and terminal-persistence failures leave it running so recovery can reattach to Spider.
+    /// On an orchestration failure, this method makes a best-effort attempt to mark the CLP query
+    /// job as failed before returning the original error.
     ///
-    /// If no matching row is found when persisting the Spider ID, the job may have been cancelled,
-    /// deleted, or claimed by another coordinator job handler. Anyhow, this handle no longer owns
-    /// it, so it skips trying to report a job failure.
+    /// If an expected query job row is not found, the job may have changed status or been deleted.
+    /// This handle no longer assumes responsibility for it and skips the failure update.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::plan_and_submit`]'s return values on failure.
-    /// * Forwards [`Self::to_completion`]'s return values on failure.
+    /// * Forwards [`Self::run_job`]'s return values on failure.
     pub async fn run(self) -> Result<(), Error> {
         tracing::info!(query_job_id = % self.query_job_id, "Starting query job.");
 
-        match self.plan_and_submit().await {
-            Ok(Some(spider_job_id)) => self.to_completion(spider_job_id).await,
-            Ok(None) => Ok(()),
-            Err(error) => {
-                if !matches!(error, Error::SqlxNoRowsAffected(_)) {
-                    self.report_failure(&error).await;
-                }
-                Err(error)
-            }
+        let result = self.run_job().await;
+        if let Err(error) = &result {
+            self.report_failure(error).await;
         }
+        result
     }
 
-    /// Plans the query inputs and submits the query job, or marks it as succeeded if no archives
-    /// are selected.
-    ///
-    /// # Returns
-    ///
-    /// On success, the submitted Spider job ID, or `None` if no archives are selected.
+    /// Plans, submits, and waits for a new query job, or succeeds if no archives are selected.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
-    /// * Forwards [`Self::update_job_status`]'s return values on failure when no archives are
-    ///   selected.
+    /// * Forwards [`Self::plan`]'s return values on failure.
+    /// * [`Error::ExpectedJobRowNotFound`] if no pending row is updated for an empty plan.
+    /// * Forwards [`Self::update_job_status`]'s return values on failure for an empty plan.
     /// * Forwards [`Self::submit`]'s return values on failure.
-    async fn plan_and_submit(&self) -> Result<Option<SpiderJobId>, Error> {
-        let archives_to_search = self.prepare_task_inputs().await?;
+    /// * Forwards [`Self::to_completion`]'s return values on failure.
+    async fn run_job(&self) -> Result<(), Error> {
+        let archives_to_search = self.plan().await?;
         if archives_to_search.is_empty() {
             if !self
                 .update_job_status(QueryJobStatus::Pending, QueryJobStatus::Succeeded, None)
                 .await?
             {
-                return Err(Error::SqlxNoRowsAffected(format!(
-                    "no pending query job row found for query job {}",
+                return Err(Error::ExpectedJobRowNotFound(format!(
+                    "query job {} with Pending status",
                     self.query_job_id
                 )));
             }
-            return Ok(None);
+            return Ok(());
         }
-        self.submit(archives_to_search).await.map(Some)
+
+        let spider_job_id = self.submit(archives_to_search).await?;
+        self.to_completion(spider_job_id).await
     }
 
     /// Resumes a query job that was already submitted to Spider.
@@ -168,7 +158,11 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             "Recovering query job.",
         );
 
-        self.to_completion(spider_job_id).await
+        let result = self.to_completion(spider_job_id).await;
+        if let Err(error) = &result {
+            self.report_failure(error).await;
+        }
+        result
     }
 
     /// Submits the query job to Spider and persists its running state.
@@ -223,7 +217,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// # Errors
     ///
     /// Returns an error if archive input preparation fails.
-    async fn prepare_task_inputs(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
+    async fn plan(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
         todo!("prepare query task inputs")
     }
 
@@ -233,7 +227,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::SqlxNoRowsAffected`] if no pending query job row was updated.
+    /// * [`Error::ExpectedJobRowNotFound`] if no pending query job row was updated.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn persist_spider_job_id(
         &self,
@@ -251,8 +245,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .bind(self.query_job_id)
             .bind(QueryJobStatus::Pending);
         if !execute_update(query, &self.context.db_pool).await? {
-            return Err(Error::SqlxNoRowsAffected(format!(
-                "no pending query job row found for query job {} (Spider job ID {})",
+            return Err(Error::ExpectedJobRowNotFound(format!(
+                "query job {} with Pending status (Spider job ID {})",
                 self.query_job_id, spider_job_id
             )));
         }
@@ -265,6 +259,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::ExpectedJobRowNotFound`] if no running query job row was updated.
     /// * Forwards [`Self::update_job_status`]'s return values on failure.
     /// * Forwards [`QueryJobSubmitter::run_query_job_to_completion`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
@@ -295,8 +290,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .update_job_status(QueryJobStatus::Running, status, status_message.as_deref())
             .await?
         {
-            return Err(Error::SqlxNoRowsAffected(format!(
-                "no running query job row found for query job {}",
+            return Err(Error::ExpectedJobRowNotFound(format!(
+                "query job {} with Running status",
                 self.query_job_id
             )));
         }
@@ -305,29 +300,50 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
     /// Reports a query job orchestration failure.
     ///
-    /// Logs the original error and makes a best-effort attempt to mark the query job as failed. If
-    /// terminal-status persistence fails, the status-update error is logged and otherwise ignored.
+    /// Logs the original error and makes a best-effort attempt to mark a pending or running query
+    /// job as failed. If the expected row is no longer found, no failure update is attempted.
+    /// Persistence errors and status changes during the update are logged and otherwise ignored.
     async fn report_failure(&self, error: &Error) {
+        if matches!(error, Error::ExpectedJobRowNotFound(_)) {
+            tracing::warn!(
+                query_job_id = % self.query_job_id,
+                error = % error,
+                "Expected query job row was not found; no longer handling the job.",
+            );
+            return;
+        }
+
         tracing::error!(
             query_job_id = % self.query_job_id,
             error = % error,
             "Query job orchestration failed.",
         );
 
-        let _ = self
-            .update_job_status(
-                QueryJobStatus::Pending,
-                QueryJobStatus::Failed,
-                Some(&format!("Query job orchestration failed: {error}")),
-            )
-            .await
-            .inspect_err(|status_error| {
+        let query = sqlx::query(formatcp!(
+            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ? \
+             AND `status` IN (?, ?)"
+        ))
+        .bind(QueryJobStatus::Failed)
+        .bind(format!("Query job orchestration failed: {error}"))
+        .bind(self.query_job_id)
+        .bind(QueryJobStatus::Pending)
+        .bind(QueryJobStatus::Running);
+        match execute_update(query, &self.context.db_pool).await {
+            Ok(true) => {}
+            Ok(false) => {
+                tracing::warn!(
+                    query_job_id = % self.query_job_id,
+                    "No pending or running query job row was found while reporting failure.",
+                );
+            }
+            Err(status_error) => {
                 tracing::error!(
                     query_job_id = % self.query_job_id,
                     error = % status_error,
                     "Failed to persist the query job failure.",
                 );
-            });
+            }
+        }
     }
 
     /// Updates the query job status in the CLP database.
