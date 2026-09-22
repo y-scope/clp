@@ -374,7 +374,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::QueryJobMetadataCorrupted`] if no query job row matches the ID and `from` status.
+    /// * [`Error::QueryJobMetadataCorrupted`] if no matching query job row can be found.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn update_job_status(
         &self,
