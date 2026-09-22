@@ -119,7 +119,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::plan`]'s return values on failure.
-    /// * [`Error::ExpectedJobRowNotFound`] if no pending row is updated for an empty plan.
+    /// * [`Error::QueryJobMetadataCorrupted`] if no pending row is updated for an empty plan.
     /// * Forwards [`Self::update_job_status`]'s return values on failure for an empty plan.
     /// * Forwards [`Self::submit`]'s return values on failure.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
@@ -130,10 +130,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 .update_job_status(QueryJobStatus::Pending, QueryJobStatus::Succeeded, None)
                 .await?
             {
-                return Err(Error::ExpectedJobRowNotFound(format!(
-                    "query job {} with Pending status",
-                    self.query_job_id
-                )));
+                return Err(Error::QueryJobMetadataCorrupted(self.query_job_id));
             }
             return Ok(());
         }
@@ -227,7 +224,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::ExpectedJobRowNotFound`] if no pending query job row was updated.
+    /// * [`Error::QueryJobMetadataCorrupted`] if no pending query job row was updated.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn persist_spider_job_id(
         &self,
@@ -245,10 +242,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .bind(self.query_job_id)
             .bind(QueryJobStatus::Pending);
         if !execute_update(query, &self.context.db_pool).await? {
-            return Err(Error::ExpectedJobRowNotFound(format!(
-                "query job {} with Pending status (Spider job ID {})",
-                self.query_job_id, spider_job_id
-            )));
+            return Err(Error::QueryJobMetadataCorrupted(self.query_job_id));
         }
         Ok(())
     }
@@ -259,7 +253,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::ExpectedJobRowNotFound`] if no running query job row was updated.
+    /// * [`Error::QueryJobMetadataCorrupted`] if no running query job row was updated.
     /// * Forwards [`Self::update_job_status`]'s return values on failure.
     /// * Forwards [`QueryJobSubmitter::run_query_job_to_completion`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
@@ -290,10 +284,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .update_job_status(QueryJobStatus::Running, status, status_message.as_deref())
             .await?
         {
-            return Err(Error::ExpectedJobRowNotFound(format!(
-                "query job {} with Running status",
-                self.query_job_id
-            )));
+            return Err(Error::QueryJobMetadataCorrupted(self.query_job_id));
         }
         Ok(())
     }
@@ -304,11 +295,11 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// job as failed. If the expected row is no longer found, no failure update is attempted.
     /// Persistence errors and status changes during the update are logged and otherwise ignored.
     async fn report_failure(&self, error: &Error) {
-        if matches!(error, Error::ExpectedJobRowNotFound(_)) {
+        if matches!(error, Error::QueryJobMetadataCorrupted(_)) {
             tracing::warn!(
                 query_job_id = % self.query_job_id,
                 error = % error,
-                "Expected query job row was not found; no longer handling the job.",
+                "Query job metadata changed or disappeared; no longer handling the job.",
             );
             return;
         }
