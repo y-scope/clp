@@ -29,10 +29,9 @@ pub struct SpiderOption {
 }
 
 /// Resources shared by query job handles created by the coordinator.
-pub struct QueryJobHandleContext {
+pub struct QueryCoordinatorContext {
     pub db_pool: MySqlPool,
     pub db_config: Database,
-    pub output_handle: OutputHandle,
     pub spider_option: SpiderOption,
 }
 
@@ -42,12 +41,13 @@ pub struct QueryJobHandleContext {
 ///
 /// * `SubmitterType` - The type of the job submitter for Spider job submission.
 pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
-    context: Arc<QueryJobHandleContext>,
+    context: Arc<QueryCoordinatorContext>,
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
     _search_job_config: SearchJobConfig,
     clp_s_query_option: ClpSQueryOption,
+    output_handle: OutputHandle,
 }
 
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
@@ -61,11 +61,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if the query string is empty.
     pub fn new(
-        context: Arc<QueryJobHandleContext>,
+        context: Arc<QueryCoordinatorContext>,
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
         search_job_config: SearchJobConfig,
+        output_handle: OutputHandle,
     ) -> Result<Self, Error> {
         let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
             .map_err(|_| {
@@ -86,6 +87,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             resource_group_id,
             _search_job_config: search_job_config,
             clp_s_query_option,
+            output_handle,
         })
     }
 
@@ -188,7 +190,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 self.query_job_id,
                 self.resource_group_id,
                 self.clp_s_query_option.clone(),
-                self.context.output_handle.clone(),
+                self.output_handle.clone(),
                 archives_to_search,
             )
             .await?;
