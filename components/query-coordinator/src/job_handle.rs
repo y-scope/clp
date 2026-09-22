@@ -301,7 +301,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             ),
             QueryJobOutcome::Cancelled => (
                 QueryJobStatus::Cancelled,
-                Some("The Spider query job was cancelled.".to_owned()),
+                Some("The Spider job was cancelled.".to_owned()),
             ),
         };
         self.update_job_status(Some(QueryJobStatus::Running), status, status_message.as_deref())
