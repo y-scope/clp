@@ -106,8 +106,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::QueryJobMetadataCorrupted`] if the query job's status changed or its row no
-    ///   longer exists. The handle relinquishes responsibility and skips the failure update.
     /// * Forwards [`Self::run_job`]'s return values on failure.
     pub async fn run(self) -> Result<(), Error> {
         tracing::info!(query_job_id = % self.query_job_id, "Starting query job.");
@@ -154,8 +152,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::QueryJobMetadataCorrupted`] if the query job's status changed or its row no
-    ///   longer exists. The handle relinquishes responsibility and skips the failure update.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     pub async fn recover(self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         tracing::info!(
