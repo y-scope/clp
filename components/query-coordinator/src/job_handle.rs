@@ -29,7 +29,7 @@ pub struct SpiderOption {
 }
 
 /// Resources shared by query job handles created by the coordinator.
-pub struct QueryCoordinatorContext {
+pub struct QueryJobHandleContext {
     pub db_pool: MySqlPool,
     pub db_config: Database,
     pub spider_option: SpiderOption,
@@ -41,7 +41,7 @@ pub struct QueryCoordinatorContext {
 ///
 /// * `SubmitterType` - The type of the job submitter for Spider job submission.
 pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
-    context: Arc<QueryCoordinatorContext>,
+    context: Arc<QueryJobHandleContext>,
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
@@ -64,7 +64,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// * [`Error::InvalidQueryJobConfig`] if the query string is empty.
     pub fn new(
-        context: Arc<QueryCoordinatorContext>,
+        context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
