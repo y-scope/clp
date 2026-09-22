@@ -162,7 +162,7 @@ auto SchemaTree::store(std::string const& archives_dir, int compression_level) -
 auto SchemaTree::build_ls_rule_name(int32_t node_id) const -> std::string {
     std::vector<std::string_view> names;
     auto cur_id{node_id};
-    while (-1 != cur_id) {
+    while (constants::cRootNodeId != cur_id) {
         auto const& node = get_node(cur_id);
         if (NodeType::LogMessage == node.get_type()) {
             break;

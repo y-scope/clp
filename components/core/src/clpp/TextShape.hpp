@@ -86,10 +86,10 @@ public:
             if ('%' == literal_segment.at(i) && i + 1 < literal_segment.size()
                 && '%' == literal_segment.at(i + 1))
             {
-                result += '%';
+                result.push_back('%');
                 i += 2;
             } else {
-                result += literal_segment.at(i);
+                result.push_back(literal_segment.at(i));
                 ++i;
             }
         }
