@@ -63,12 +63,8 @@ impl QueryJobSubmitter for SpiderClient {
     /// Returns an error if:
     ///
     /// * Forwards [`SpiderClient::start_job`]'s return values on failure, except
-    ///   [`ClientError::InvalidJobState`].
+    ///   [`ClientError::InvalidJobState`], which indicates the job has already been started.
     /// * Forwards [`SpiderClient::get_job_state`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if Spider returns a terminal state without a corresponding [`QueryJobOutcome`].
     async fn run_query_job_to_completion(
         &self,
         spider_job_id: JobId,
