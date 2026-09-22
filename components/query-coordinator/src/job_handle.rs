@@ -131,7 +131,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let archives_to_search = self.plan().await?;
         if archives_to_search.is_empty() {
             return self
-                .update_job_status(QueryJobStatus::Pending, QueryJobStatus::Succeeded, None)
+                .update_job_status(Some(QueryJobStatus::Pending), QueryJobStatus::Succeeded, None)
                 .await;
         }
 
@@ -304,74 +304,63 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 Some("The Spider query job was cancelled.".to_owned()),
             ),
         };
-        self.update_job_status(QueryJobStatus::Running, status, status_message.as_deref())
+        self.update_job_status(Some(QueryJobStatus::Running), status, status_message.as_deref())
             .await
     }
 
     /// Reports a query job failure.
     ///
-    /// This method logs the original error and attempts to mark a pending or running query job as
+    /// This method logs the original error and attempts to mark the query job as
     /// [`QueryJobStatus::Failed`] in the CLP database. The stored status message includes the
     /// original error message.
     ///
-    /// If the query job's metadata changed or disappeared, no failure update is attempted. If
-    /// updating the job status otherwise fails, the status-update error is logged for observability
-    /// and ignored.
+    /// If updating the job status fails, the status-update error is logged for observability and
+    /// otherwise ignored. No update is attempted if the original error already indicates corrupted
+    /// metadata.
     async fn report_failure(&self, error: &Error) {
-        if matches!(error, Error::QueryJobMetadataCorrupted(_)) {
-            tracing::warn!(
-                query_job_id = % self.query_job_id,
-                error = % error,
-                "Query job metadata changed or disappeared; no longer handling the job.",
-            );
-            return;
-        }
-
         tracing::error!(
             query_job_id = % self.query_job_id,
             error = % error,
-            "Query job orchestration failed.",
+            "Query job failed.",
         );
 
-        let query = sqlx::query(formatcp!(
-            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ? \
-             AND `status` IN (?, ?)"
-        ))
-        .bind(QueryJobStatus::Failed)
-        .bind(format!("Query job orchestration failed: {error}"))
-        .bind(self.query_job_id)
-        .bind(QueryJobStatus::Pending)
-        .bind(QueryJobStatus::Running);
-        let result = query
-            .execute(&self.context.db_pool)
-            .await
-            .map_err(Error::from)
-            .and_then(|result| {
-                if 0 == result.rows_affected() {
-                    return Err(Error::QueryJobMetadataCorrupted(self.query_job_id));
-                }
-                Ok(())
-            });
-        match result {
-            Ok(()) => {}
-            Err(status_error @ Error::QueryJobMetadataCorrupted(_)) => {
+        let update_error;
+        let status_error = if matches!(error, Error::QueryJobMetadataCorrupted(_)) {
+            // The job's metadata already changed or disappeared, so there's no row left to mark as
+            // failed.
+            Some(error)
+        } else {
+            let status_message = format!("Query job failed: {error}");
+            update_error = self
+                .update_job_status(None, QueryJobStatus::Failed, Some(&status_message))
+                .await
+                .err();
+            update_error.as_ref()
+        };
+
+        match status_error {
+            None => {}
+            Some(status_error @ Error::QueryJobMetadataCorrupted(_)) => {
                 tracing::warn!(
                     query_job_id = % self.query_job_id,
                     error = % status_error,
-                    "No pending or running query job row was found while reporting failure.",
+                    "Query job metadata corrupted; skipping update.",
                 );
             }
-            Err(status_error) => {
+            Some(status_error) => {
                 tracing::error!(
                     query_job_id = % self.query_job_id,
                     error = % status_error,
-                    "Failed to persist the query job failure.",
+                    "Failed to update job status on a job failure.",
                 );
             }
         }
     }
 
     /// Updates the query job status in the CLP database.
+    ///
+    /// If `from` is `Some`, only a row whose current status matches it is updated; otherwise the
+    /// row is updated regardless of its current status.
     ///
     /// # Errors
     ///
@@ -381,18 +370,28 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     async fn update_job_status(
         &self,
-        from: QueryJobStatus,
+        from: Option<QueryJobStatus>,
         to: QueryJobStatus,
         msg: Option<&str>,
     ) -> Result<(), Error> {
-        let query = sqlx::query(formatcp!(
-            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ? \
-             AND `status` = ?"
-        ))
+        const UPDATE_QUERY: &str = formatcp!(
+            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ?"
+        );
+        const UPDATE_QUERY_WITH_FROM_STATUS: &str = formatcp!("{UPDATE_QUERY} AND `status` = ?");
+
+        let query = sqlx::query(if from.is_some() {
+            UPDATE_QUERY_WITH_FROM_STATUS
+        } else {
+            UPDATE_QUERY
+        })
         .bind(to)
         .bind(msg.unwrap_or_default())
-        .bind(self.query_job_id)
-        .bind(from);
+        .bind(self.query_job_id);
+        let query = match from {
+            Some(from) => query.bind(from),
+            None => query,
+        };
+
         let result = query.execute(&self.context.db_pool).await?;
         if 0 == result.rows_affected() {
             return Err(Error::QueryJobMetadataCorrupted(self.query_job_id));
