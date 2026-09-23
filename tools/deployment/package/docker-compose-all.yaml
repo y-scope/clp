@@ -90,6 +90,7 @@ services:
         target: "/var/log/mysql"
     healthcheck:
       <<: *healthcheck_defaults
+      # Run a query since `mysqladmin ping` succeeds even if authentication fails.
       test: [
         "CMD",
         "mysql",
