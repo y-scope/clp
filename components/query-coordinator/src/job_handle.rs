@@ -72,12 +72,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
-<<<<<<< HEAD
-        query_job_config: SearchJobConfig,
-=======
         search_job_config: SearchJobConfig,
         output_handle: OutputHandle,
->>>>>>> query-coordinator/job-handle
     ) -> Result<Self, Error> {
         let query_string = NonEmptyString::try_from(query_job_config.query_string.clone())
             .map_err(|_| {
