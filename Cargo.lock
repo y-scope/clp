@@ -3272,6 +3272,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "query-coordinator"
+version = "0.13.1-dev"
+dependencies = [
+ "async-trait",
+ "clp-rust-utils",
+ "const_format",
+ "mongodb",
+ "non-empty-string",
+ "rmp-serde",
+ "serde",
+ "spider-client",
+ "spider-core",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tonic",
+ "tracing",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"

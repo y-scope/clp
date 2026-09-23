@@ -1,0 +1,21 @@
+[package]
+name = "query-coordinator"
+version = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+async-trait = { workspace = true }
+clp-rust-utils = { workspace = true }
+const_format = { workspace = true }
+mongodb = { workspace = true }
+non-empty-string = { workspace = true }
+rmp-serde = { workspace = true }
+serde = { workspace = true }
+spider-client = { workspace = true }
+spider-core = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
