@@ -38,13 +38,13 @@ impl QueryJobSubmitter for SpiderClient {
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
         output_handle: OutputHandle,
-        archives_to_query: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error> {
         let (graph, inputs) = build_query_task_graph(
             query_job_id,
             &clp_s_query_option,
             &output_handle,
-            archives_to_query,
+            archives_to_search,
         )?;
         let spider_job_id = self.submit_job(resource_group_id, &graph, inputs).await?;
 
@@ -63,12 +63,8 @@ impl QueryJobSubmitter for SpiderClient {
     /// Returns an error if:
     ///
     /// * Forwards [`SpiderClient::start_job`]'s return values on failure, except
-    ///   [`ClientError::InvalidJobState`].
+    ///   [`ClientError::InvalidJobState`], which indicates the job has already been started.
     /// * Forwards [`SpiderClient::get_job_state`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if Spider returns a terminal state without a corresponding [`QueryJobOutcome`].
     async fn run_query_job_to_completion(
         &self,
         spider_job_id: JobId,
@@ -130,7 +126,7 @@ fn build_query_task_graph(
     query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
     output_handle: &OutputHandle,
-    archives_to_query: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+    archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
 ) -> Result<(TaskGraph, Vec<TaskInput>), Error> {
     // NOTE: Keep these names and the input order in sync with the TDL package definitions.
     const CLP_TDL_PACKAGE_NAME: &str = "clp";
@@ -139,7 +135,7 @@ fn build_query_task_graph(
     let mut graph = TaskGraph::new(None, None)?;
 
     let mut inputs = Vec::new();
-    for (archive, execution_policy) in archives_to_query {
+    for (archive, execution_policy) in archives_to_search {
         graph.insert_task(TaskDescriptor {
             tdl_context: TdlContext {
                 package: CLP_TDL_PACKAGE_NAME.to_owned(),

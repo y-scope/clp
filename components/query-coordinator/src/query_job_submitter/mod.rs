@@ -18,7 +18,7 @@ use spider_core::types::id::ResourceGroupId;
 
 use crate::Error;
 
-/// Identifies an archive handled by query tasks.
+/// Metadata for an archive handled by query tasks.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ArchiveMetadata {
     /// The archive's ID.
@@ -47,7 +47,7 @@ pub enum QueryJobOutcome {
 /// Drives CLP query jobs on a Spider (Huntsman) cluster.
 #[async_trait]
 pub trait QueryJobSubmitter: Clone + Send + Sync {
-    /// Builds the query task graph for the given archives and registers it with Spider, without
+    /// Builds the query task graph for `archives_to_search` and registers it with Spider, without
     /// starting it.
     ///
     /// # Parameters
@@ -56,8 +56,8 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// * `resource_group_id` - The Spider resource group to register the job under.
     /// * `clp_s_query_option` - `clp-s` query options shared by every task in the job.
     /// * `output_handle` - The output handle selecting how the query outputs are returned.
-    /// * `archives_to_query` - The archives to query, each represents a query task paired with the
-    ///   task execution policy.
+    /// * `archives_to_search` - The archives to search, each represents a query task paired with
+    ///   its execution policy.
     ///
     /// # Returns
     ///
@@ -72,19 +72,23 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
         output_handle: OutputHandle,
-        archives_to_query: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error>;
 
-    /// Idempotently starts `spider_job_id` and waits for it to reach a terminal state.
+    /// Idempotently starts the job identified by `spider_job_id` (only if it hasn't already been
+    /// started) and waits until it reaches a terminal state.
+    ///
+    /// Safe to call regardless of whether the job is not-yet-started, already running, or already
+    /// terminal.
     ///
     /// # Parameters
     ///
-    /// * `spider_job_id` - The ID of the Spider job to start and monitor.
+    /// * `spider_job_id` - The job to start (if needed) and wait on.
     /// * `poll_interval` - The delay after each non-terminal job-state poll.
     ///
     /// # Returns
     ///
-    /// The terminal query job outcome on success.
+    /// The job's terminal outcome on success.
     ///
     /// # Errors
     ///
