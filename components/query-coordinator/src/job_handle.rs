@@ -16,7 +16,9 @@ use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
+use sqlx::MySql;
 use sqlx::MySqlPool;
+use sqlx::Transaction;
 
 use crate::Error;
 use crate::plan::PlanningOption;
@@ -104,7 +106,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// This method prepares the query tasks' inputs, submits the job, persists the Spider job ID it
     /// was assigned, and then waits for the job to reach a terminal state. On failure, it attempts
-    /// to mark the query job as [`QueryJobStatus::Failed`] before the error is returned.
+    /// to persist a terminal status for the query job before the error is returned.
     ///
     /// If no archives are selected, it marks the query job as succeeded without submitting it.
     ///
@@ -112,48 +114,34 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::run_job`]'s return values on failure.
+    /// * Forwards [`Self::plan`]'s return values on failure.
+    /// * Forwards [`Self::terminate`]'s return values on failure for an empty plan.
+    /// * Forwards [`Self::submit`]'s return values on failure.
+    /// * Forwards [`Self::to_completion`]'s return values on failure.
     pub async fn run(self) -> Result<(), Error> {
         tracing::info!(query_job_id = % self.query_job_id, "Starting query job.");
 
-        let result = self.run_job().await;
+        let result = async {
+            let archives_to_search = self.plan().await?;
+            if archives_to_search.is_empty() {
+                return self.terminate(QueryJobOutcome::Succeeded).await;
+            }
+
+            let spider_job_id = self.submit(archives_to_search).await?;
+            self.to_completion(spider_job_id).await
+        }
+        .await;
         if let Err(error) = &result {
-            self.report_failure(error).await;
+            self.finalize_on_error(error).await;
         }
         result
-    }
-
-    /// Submits the query job to Spider and waits for it to reach a terminal state.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Self::plan`]'s return values on failure.
-    /// * Forwards [`Self::update_job_status`]'s return values on failure for an empty plan.
-    /// * Forwards [`Self::submit`]'s return values on failure.
-    /// * Forwards [`Self::to_completion`]'s return values on failure.
-    async fn run_job(&self) -> Result<(), Error> {
-        let archives_to_search = self.plan().await?;
-        if archives_to_search.is_empty() {
-            return self
-                .update_job_status(
-                    Some(QueryJobStatus::Pending),
-                    QueryJobStatus::Succeeded,
-                    None,
-                )
-                .await;
-        }
-
-        let spider_job_id = self.submit(archives_to_search).await?;
-        self.to_completion(spider_job_id).await
     }
 
     /// Resumes a query job that was already submitted to Spider.
     ///
     /// This method skips submission and waits for the Spider job identified by `spider_job_id` to
-    /// reach a terminal state. On failure, it attempts to mark the query job as
-    /// [`QueryJobStatus::Failed`] before the error is returned.
+    /// reach a terminal state. On failure, it attempts to persist a terminal status for the query
+    /// job before the error is returned.
     ///
     /// NOTE: It's the caller's responsibility to ensure that the given Spider job ID is associated
     /// with the query job.
@@ -172,7 +160,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
         let result = self.to_completion(spider_job_id).await;
         if let Err(error) = &result {
-            self.report_failure(error).await;
+            self.finalize_on_error(error).await;
         }
         result
     }
@@ -189,7 +177,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// * [`Error::TooManyQueryTasks`] if the number of query tasks exceeds `i32`'s range.
     /// * Forwards [`QueryJobSubmitter::submit_query_job`]'s return values on failure.
-    /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
+    /// * Forwards [`Self::start`]'s return values on failure.
     async fn submit(
         &self,
         archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
@@ -215,8 +203,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             "Query job submitted.",
         );
 
-        self.persist_spider_job_id(spider_job_id, persisted_num_tasks)
-            .await?;
+        self.start(spider_job_id, persisted_num_tasks).await?;
         Ok(spider_job_id)
     }
 
@@ -252,7 +239,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Persists the Spider job ID and marks the query job as running.
     ///
     /// This method associates the given Spider job ID with the query job in the CLP database and
-    /// updates the query job status to [`QueryJobStatus::Running`].
+    /// updates the query job status from [`QueryJobStatus::Pending`] to
+    /// [`QueryJobStatus::Running`], in a transaction that locks the query job's row.
     ///
     /// This method also ensures that the job has a valid `dispatch_time`, which the coordinator
     /// uses to mark jobs as dispatched. A coordinator restart may occur before the marker is
@@ -264,28 +252,41 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::QueryJobMetadataCorrupted`] if no pending query job row was updated.
+    /// * [`Error::QueryJobCancelled`] if the query job is in [`QueryJobStatus::Cancelling`].
+    /// * [`Error::InvalidQueryJobStatusTransition`] if the query job is in any other status than
+    ///   [`QueryJobStatus::Pending`].
+    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`Self::lock_and_get_status`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-    async fn persist_spider_job_id(
-        &self,
-        spider_job_id: SpiderJobId,
-        num_tasks: i32,
-    ) -> Result<(), Error> {
-        let query = formatcp!(
+    /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
+    async fn start(&self, spider_job_id: SpiderJobId, num_tasks: i32) -> Result<(), Error> {
+        const UPDATE_QUERY: &str = formatcp!(
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, `num_tasks` = ?, \
              `start_time` = CURRENT_TIMESTAMP(3), `dispatch_time` = COALESCE(`dispatch_time`, \
-             CURRENT_TIMESTAMP()) WHERE `id` = ? AND `status` = ?"
+             CURRENT_TIMESTAMP()) WHERE `id` = ?"
         );
-        let query = sqlx::query(query)
+
+        let mut tx = self.context.db_pool.begin().await?;
+        match self.lock_and_get_status(&mut tx).await? {
+            QueryJobStatus::Pending => {}
+            QueryJobStatus::Cancelling => return Err(Error::QueryJobCancelled),
+            from => {
+                return Err(Error::InvalidQueryJobStatusTransition {
+                    from,
+                    to: QueryJobStatus::Running,
+                });
+            }
+        }
+
+        sqlx::query(UPDATE_QUERY)
             .bind(spider_job_id.get())
             .bind(QueryJobStatus::Running)
             .bind(num_tasks)
             .bind(self.query_job_id)
-            .bind(QueryJobStatus::Pending);
-        let result = query.execute(&self.context.db_pool).await?;
-        if 0 == result.rows_affected() {
-            return Err(Error::QueryJobMetadataCorrupted(self.query_job_id));
-        }
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+
         Ok(())
     }
 
@@ -299,7 +300,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Returns an error if:
     ///
     /// * Forwards [`QueryJobSubmitter::run_query_job_to_completion`]'s return values on failure.
-    /// * Forwards [`Self::update_job_status`]'s return values on failure.
+    /// * Forwards [`Self::terminate`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         let outcome = self
             .job_submitter
@@ -313,112 +314,155 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             "Query job reached a terminal Spider state.",
         );
 
-        let (status, status_message) = match outcome {
-            QueryJobOutcome::Succeeded => (QueryJobStatus::Succeeded, None),
-            QueryJobOutcome::Failed { error_message } => (
-                QueryJobStatus::Failed,
-                Some(format!("The Spider job failed: {error_message}")),
-            ),
-            QueryJobOutcome::Cancelled => (
-                QueryJobStatus::Cancelled,
-                Some("The Spider job was cancelled.".to_owned()),
-            ),
-        };
-        self.update_job_status(
-            Some(QueryJobStatus::Running),
-            status,
-            status_message.as_deref(),
-        )
-        .await
+        self.terminate(outcome).await
     }
 
-    /// Reports a query job failure.
+    /// Finalizes the query job after the handle failed to drive it to completion.
     ///
-    /// This method logs the original error and attempts to mark the query job as
-    /// [`QueryJobStatus::Failed`] in the CLP database. The stored status message includes the
-    /// original error message.
+    /// This method logs `error` as a job-handle failure and then attempts to terminate the query
+    /// job with the terminal status implied by `error`. Nothing is persisted if `error` shows that
+    /// the job's row is gone or that the job already reached a terminal status through another
+    /// path.
     ///
-    /// If updating the job status fails, the status-update error is logged for observability and
-    /// otherwise ignored. No update is attempted if the original error already indicates corrupted
-    /// metadata.
-    async fn report_failure(&self, error: &Error) {
+    /// A failed attempt is logged and otherwise ignored, so that it can't re-enter this path.
+    async fn finalize_on_error(&self, error: &Error) {
         tracing::error!(
             query_job_id = % self.query_job_id,
             error = % error,
             "Query job failed.",
         );
 
-        let update_error;
-        let status_error = if matches!(error, Error::QueryJobMetadataCorrupted(_)) {
-            // Skips updating the metadata row since it already cannot be found
-            Some(error)
-        } else {
-            let status_message = format!("Query job failed: {error}");
-            update_error = self
-                .update_job_status(None, QueryJobStatus::Failed, Some(&status_message))
-                .await
-                .err();
-            update_error.as_ref()
+        let outcome = match error {
+            Error::QueryJobMetadataCorrupted(_) => return,
+            Error::InvalidQueryJobStatusTransition { from, .. } if from.is_terminal() => return,
+            Error::QueryJobCancelled => QueryJobOutcome::Cancelled,
+            error => QueryJobOutcome::Failed {
+                error_message: format!("Query job failed: {error}"),
+            },
         };
 
-        match status_error {
-            None => {}
-            Some(status_error @ Error::QueryJobMetadataCorrupted(_)) => {
+        let Err(terminate_error) = self.terminate(outcome).await else {
+            return;
+        };
+        match terminate_error {
+            Error::InvalidQueryJobStatusTransition { from, .. } if from.is_terminal() => {
                 tracing::warn!(
                     query_job_id = % self.query_job_id,
-                    error = % status_error,
-                    "Query job metadata corrupted; skipping update.",
+                    from = ? from,
+                    "Query job already reached a terminal status; skipping the status update.",
                 );
             }
-            Some(status_error) => {
+            terminate_error => {
                 tracing::error!(
                     query_job_id = % self.query_job_id,
-                    error = % status_error,
+                    error = % terminate_error,
                     "Failed to update job status on a job failure.",
                 );
             }
         }
     }
 
-    /// Updates the query job status in the CLP database.
+    /// Terminates the query job with the given outcome in the CLP database.
     ///
-    /// If `from` is `Some`, only a row whose current status matches it is updated; otherwise the
-    /// row is updated regardless of its current status.
+    /// This method runs in a transaction that locks the query job's row, and resolves the status to
+    /// persist from the locked status as follows:
+    ///
+    /// * [`QueryJobOutcome::Succeeded`] is permitted from [`QueryJobStatus::Pending`] and
+    ///   [`QueryJobStatus::Running`]. From [`QueryJobStatus::Cancelling`], the job is terminated as
+    ///   [`QueryJobStatus::Cancelled`] instead, since a cancellation wins over a success.
+    /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::Cancelling`].
+    /// * [`QueryJobOutcome::Failed`] is permitted from any non-terminal status, since a failure
+    ///   wins over both a success and a cancellation.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::QueryJobMetadataCorrupted`] if no matching query job row can be found.
+    /// * [`Error::InvalidQueryJobStatusTransition`] if the query job's current status doesn't
+    ///   permit a transition to `outcome`'s status.
+    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`Self::lock_and_get_status`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-    async fn update_job_status(
-        &self,
-        from: Option<QueryJobStatus>,
-        to: QueryJobStatus,
-        msg: Option<&str>,
-    ) -> Result<(), Error> {
+    /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
+    async fn terminate(&self, outcome: QueryJobOutcome) -> Result<(), Error> {
         const UPDATE_QUERY: &str = formatcp!(
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` = ?"
         );
-        const UPDATE_QUERY_WITH_FROM_STATUS: &str = formatcp!("{UPDATE_QUERY} AND `status` = ?");
+        const CANCELLED_AFTER_COMPLETION_MESSAGE: &str =
+            "The query job completed, but it had already been requested to be cancelled.";
+        const CANCELLED_MESSAGE: &str = "The query job was cancelled.";
 
-        let query = sqlx::query(if from.is_some() {
-            UPDATE_QUERY_WITH_FROM_STATUS
-        } else {
-            UPDATE_QUERY
-        })
-        .bind(to)
-        .bind(msg.unwrap_or_default())
-        .bind(self.query_job_id);
-        let query = match from {
-            Some(from) => query.bind(from),
-            None => query,
+        let mut tx = self.context.db_pool.begin().await?;
+        let current_status = self.lock_and_get_status(&mut tx).await?;
+
+        let to = QueryJobStatus::from(&outcome);
+        let (status_to_persist, status_message) = match (outcome, current_status) {
+            (QueryJobOutcome::Succeeded, QueryJobStatus::Pending | QueryJobStatus::Running) => {
+                (to, None)
+            }
+            (QueryJobOutcome::Cancelled, QueryJobStatus::Cancelling) => {
+                (to, Some(CANCELLED_MESSAGE.to_owned()))
+            }
+            (QueryJobOutcome::Succeeded, QueryJobStatus::Cancelling) => {
+                tracing::info!(
+                    query_job_id = % self.query_job_id,
+                    "{CANCELLED_AFTER_COMPLETION_MESSAGE}",
+                );
+                (
+                    QueryJobStatus::Cancelled,
+                    Some(CANCELLED_AFTER_COMPLETION_MESSAGE.to_owned()),
+                )
+            }
+            (QueryJobOutcome::Failed { error_message }, from) if !from.is_terminal() => {
+                (to, Some(error_message))
+            }
+            (_, from) => return Err(Error::InvalidQueryJobStatusTransition { from, to }),
         };
 
-        let result = query.execute(&self.context.db_pool).await?;
-        if 0 == result.rows_affected() {
-            return Err(Error::QueryJobMetadataCorrupted(self.query_job_id));
-        }
+        sqlx::query(UPDATE_QUERY)
+            .bind(status_to_persist)
+            .bind(status_message.unwrap_or_default())
+            .bind(self.query_job_id)
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+
         Ok(())
+    }
+
+    /// Reads the query job's current status, locking its row until `tx` ends.
+    ///
+    /// # Returns
+    ///
+    /// The query job's current status on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::QueryJobMetadataCorrupted`] if the query job's row no longer exists.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
+    async fn lock_and_get_status(
+        &self,
+        tx: &mut Transaction<'_, MySql>,
+    ) -> Result<QueryJobStatus, Error> {
+        const SELECT_QUERY: &str =
+            formatcp!("SELECT `status` FROM `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = ? FOR UPDATE");
+
+        sqlx::query_scalar::<_, QueryJobStatus>(SELECT_QUERY)
+            .bind(self.query_job_id)
+            .fetch_optional(&mut **tx)
+            .await?
+            .ok_or(Error::QueryJobMetadataCorrupted(self.query_job_id))
+    }
+}
+
+impl From<&QueryJobOutcome> for QueryJobStatus {
+    fn from(outcome: &QueryJobOutcome) -> Self {
+        match outcome {
+            QueryJobOutcome::Succeeded => Self::Succeeded,
+            QueryJobOutcome::Failed { .. } => Self::Failed,
+            QueryJobOutcome::Cancelled => Self::Cancelled,
+        }
     }
 }

@@ -67,6 +67,20 @@ pub enum QueryJobStatus {
     Killed = 6,
 }
 
+impl QueryJobStatus {
+    /// # Returns
+    ///
+    /// Whether the status is terminal, i.e., whether the job has finished and its status will no
+    /// longer change.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(
+            self,
+            Self::Succeeded | Self::Failed | Self::Cancelled | Self::Killed
+        )
+    }
+}
+
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
 #[derive(Clone, Debug, Deserialize, Eq, IntoPrimitive, PartialEq, Serialize, TryFromPrimitive)]
 #[repr(i32)]
