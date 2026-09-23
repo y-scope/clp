@@ -1,6 +1,7 @@
 #include "QueryRunner.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -12,6 +13,7 @@
 #include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
 
+#include <clp_s/ColumnReader.hpp>
 #include <clp_s/Schema.hpp>
 
 #include "../../clp/Defs.h"
@@ -510,9 +512,13 @@ bool QueryRunner::evaluate_int_filter(
         return true;
     }
 
+    if (operand->has_wildcards()) {
+        return evaluate_numeric_wildcard_filter<int64_t>(op, operand, readers, m_cur_message);
+    }
+
     int64_t op_value;
     if (false == operand->as_int(op_value, op)) {
-        return evaluate_numeric_wildcard_filter<int64_t>(op, operand, readers, m_cur_message);
+        return false;
     }
 
     for (BaseColumnReader* reader : readers) {
