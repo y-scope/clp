@@ -1,6 +1,7 @@
 //! The crate-level error type for the query coordinator.
 
 use clp_rust_utils::job_config::QueryJobId;
+use clp_rust_utils::job_config::QueryJobStatus;
 
 /// Errors returned by the query coordinator.
 #[derive(Debug, thiserror::Error)]
@@ -8,7 +9,16 @@ pub enum Error {
     #[error("invalid query job configuration: {0}")]
     InvalidQueryJobConfig(String),
 
-    #[error("metadata corrupted for query job {0}: its status changed or its row no longer exists")]
+    #[error("invalid query job status transition from {from:?} to {to:?}")]
+    InvalidQueryJobStatusTransition {
+        from: QueryJobStatus,
+        to: QueryJobStatus,
+    },
+
+    #[error("the query job has already been cancelled")]
+    QueryJobCancelled,
+
+    #[error("metadata corrupted for query job {0}: its row no longer exists")]
     QueryJobMetadataCorrupted(QueryJobId),
 
     #[error("spider request failure: {0}")]
