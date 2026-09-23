@@ -64,17 +64,18 @@ spec:
               readOnly: true
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
-            exec: &database-health-check
-              command: [
-                "mysqladmin", "ping",
-                "--host=127.0.0.1",
-                "--port=3306",
-                "--user=$(MYSQL_USER)",
-                "--password=$(MYSQL_PASSWORD)"
-              ]
+            exec:
+              command:
+                - "/bin/sh"
+                - "-c"
+                - |
+                  mysql --host=127.0.0.1 --port=3306 \
+                    --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" \
+                    --database="$MYSQL_DATABASE" --execute="SELECT 1"
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
-            exec: *database-health-check
+            exec:
+              command: ["mysqladmin", "ping", "--host=127.0.0.1", "--port=3306"]
       volumes:
         - name: "config"
           configMap:
