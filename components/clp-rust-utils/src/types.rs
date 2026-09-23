@@ -18,9 +18,9 @@ pub struct ArchiveId {
     value: uuid::Uuid,
 }
 
-impl ArchiveId {
-    /// Factory function.
-    ///
+impl TryFrom<&str> for ArchiveId {
+    type Error = ParseArchiveIdError;
+
     /// Creates an archive ID from a UUID string accepted by [`uuid::Uuid::parse_str`].
     ///
     /// # Returns
@@ -32,7 +32,7 @@ impl ArchiveId {
     /// Returns an error if:
     ///
     /// * [`ParseArchiveIdError`] if `value` is not a valid UUID.
-    pub fn parse_str(value: &str) -> Result<Self, ParseArchiveIdError> {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         let id = uuid::Uuid::parse_str(value).map_err(|source| ParseArchiveIdError {
             value: value.to_owned(),
             source,
@@ -66,7 +66,7 @@ impl sqlx::Encode<'_, MySql> for ArchiveId {
 impl<'decode> sqlx::Decode<'decode, MySql> for ArchiveId {
     fn decode(value: MySqlValueRef<'decode>) -> Result<Self, BoxDynError> {
         let value = <&str as sqlx::Decode<MySql>>::decode(value)?;
-        Self::parse_str(value).map_err(Into::into)
+        Self::try_from(value).map_err(Into::into)
     }
 }
 
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn archive_id_encodes_as_mysql_text() {
         const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
-        let id = ArchiveId::parse_str(ARCHIVE_ID).expect("valid UUID should parse");
+        let id = ArchiveId::try_from(ARCHIVE_ID).expect("valid UUID should parse");
         let mut buffer = Vec::new();
         let is_null = <ArchiveId as sqlx::Encode<sqlx::MySql>>::encode_by_ref(&id, &mut buffer)
             .expect("archive ID should encode");
@@ -146,7 +146,7 @@ mod tests {
             format!("urn:uuid:{ARCHIVE_ID}"),
         ] {
             assert_eq!(
-                ArchiveId::parse_str(&value)
+                ArchiveId::try_from(value.as_str())
                     .expect("valid UUID should parse")
                     .to_string(),
                 ARCHIVE_ID
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn parse_archive_id_rejects_invalid_uuids() {
         for value in ["", "not-a-uuid", "018e90e5-8b2a-4a61-a2fc-cac799936cag"] {
-            let error = ArchiveId::parse_str(value).expect_err("invalid UUID should be rejected");
+            let error = ArchiveId::try_from(value).expect_err("invalid UUID should be rejected");
             assert_eq!(error.value, value);
             assert!(
                 error.to_string().contains(&format!("{value:?}")),

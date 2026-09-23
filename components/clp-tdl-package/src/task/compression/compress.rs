@@ -989,7 +989,7 @@ mod tests {
         assert_eq!(
             parse_archive_stats(line).expect("valid archive stats line"),
             ArchiveMetadata {
-                id: ArchiveId::parse_str(ARCHIVE_ID).expect("valid archive UUID"),
+                id: ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
                 begin_timestamp: 10,
                 end_timestamp: 20,
                 size: 40,
@@ -1138,7 +1138,7 @@ mod tests {
             create_archive_s3_key(
                 &archive_output,
                 None,
-                &ArchiveId::parse_str(ARCHIVE_ID).expect("valid archive UUID")
+                &ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID")
             ),
             format!("LIB1/default/{ARCHIVE_ID}")
         );
