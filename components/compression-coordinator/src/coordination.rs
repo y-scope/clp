@@ -605,9 +605,10 @@ async fn get_or_create_resource_group_id(
         return Ok(ResourceGroupId::from(spider_rg_id));
     }
 
-    let password = std::env::var("CLP_SPIDER_RESOURCE_GROUP_PASSWORD").map_err(|e| {
+    const PASSWORD_ENV_VAR: &str = "CLP_SPIDER_RESOURCE_GROUP_PASSWORD";
+    let password = std::env::var(PASSWORD_ENV_VAR).map_err(|e| {
         Error::InvalidConfiguration(format!(
-            "failed to read the resource group password from `CLP_SPIDER_RESOURCE_GROUP_PASSWORD`: {e}"
+            "failed to read the resource group password from `{PASSWORD_ENV_VAR}`: {e}"
         ))
     })?;
     let resource_group_id = spider_client
