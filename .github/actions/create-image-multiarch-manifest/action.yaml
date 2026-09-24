@@ -1,0 +1,62 @@
+name: "create-image-multiarch-manifest"
+description: "Creates and pushes a multi-architecture container image manifest."
+
+inputs:
+  # Registry properties
+  image_registry:
+    default: "ghcr.io"
+    description: "Container image registry"
+    required: false
+  image_registry_password:
+    default: ""
+    description: "Container image registry password"
+    required: false
+  image_registry_username:
+    default: "${{github.actor}}"
+    description: "Container image registry username"
+    required: false
+
+  # Image properties
+  docker_metadata_action_tags:
+    description: "`tags` input for docker/metadata-action"
+    required: true
+  image_name:
+    description: "Container image name"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      with:
+        registry: "${{inputs.image_registry}}"
+        username: "${{inputs.image_registry_username}}"
+        password: "${{inputs.image_registry_password}}"
+
+    - id: "sanitize-repo-name"
+      shell: "bash"
+      run: >-
+        echo "repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')"
+        >> "$GITHUB_OUTPUT"
+
+    - id: "extract-image-tags"
+      uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
+      with:
+        images: "${{inputs.image_registry}}/${{steps.sanitize-repo-name.outputs.repository}}\
+          /${{inputs.image_name}}"
+        tags: "${{inputs.docker_metadata_action_tags}}"
+        flavor: |
+          latest=false
+
+    - name: "Create and push multi-arch manifest"
+      shell: "bash"
+      run: |-
+        while IFS= read -r tag; do
+          if [[ -z "$tag" ]]; then
+            # Skip empty tags
+            continue
+          fi
+
+          docker manifest create "$tag" "${tag}-amd64" "${tag}-arm64"
+          docker manifest push "$tag"
+        done <<< "${{steps.extract-image-tags.outputs.tags}}"
