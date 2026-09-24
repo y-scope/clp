@@ -207,12 +207,13 @@ mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
 
    ```yaml
    # Remove "database" and "results_cache" from this list to use external instances.
-   bundled:
-     # - "database"
-     - "queue"
-     - "redis"
-     # - "results_cache"
-     - "otel_collector"
+   bundled: [
+     # "database",
+     "queue",
+     "redis",
+     # "results_cache",
+     "otel_collector",
+   ]
    ```
 
 2. Configure the connection details for your external databases in `etc/clp-config.yaml`:
@@ -252,13 +253,14 @@ initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
    ```yaml
    clpConfig:
      # Remove "database" and "results_cache" from this list to use external instances.
-     bundled:
-       # - "database"
-       - "queue"
-       - "redis"
-       # - "results_cache"
-       - "otel_collector"
-       - "presto"
+     bundled: [
+       # "database",
+       "queue",
+       "redis",
+       # "results_cache",
+       "otel_collector",
+       "presto",
+     ]
    ```
 
 2. Configure the connection details for your external databases in the values file:
