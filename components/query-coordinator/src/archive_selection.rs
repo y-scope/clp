@@ -20,7 +20,7 @@ use crate::Error;
 use crate::query_job_submitter::ArchiveMetadata;
 
 /// Options for selecting archives and setting their query-task execution policy.
-pub struct PlanningOption {
+pub struct ArchiveSelectionOptions {
     /// Archive retention in minutes, if configured.
     pub archive_retention_period: Option<NonZeroU32>,
     /// Maximum number of distinct datasets in an explicit query dataset list.
@@ -29,7 +29,7 @@ pub struct PlanningOption {
     pub query_task_execution_policy: ExecutionPolicy,
 }
 
-impl PlanningOption {
+impl ArchiveSelectionOptions {
     /// Selects archives for a query job, ordered by descending archive end timestamp.
     ///
     /// # Returns

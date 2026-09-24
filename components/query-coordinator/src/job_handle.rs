@@ -21,7 +21,7 @@ use sqlx::MySqlPool;
 use sqlx::Transaction;
 
 use crate::Error;
-use crate::plan::PlanningOption;
+use crate::archive_selection::ArchiveSelectionOptions;
 use crate::query_job_submitter::ArchiveMetadata;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
@@ -35,7 +35,7 @@ pub struct SpiderOption {
 pub struct QueryJobHandleContext {
     pub db_pool: MySqlPool,
     pub db_config: Database,
-    pub planning_option: PlanningOption,
+    pub archive_selection_options: ArchiveSelectionOptions,
     pub spider_option: SpiderOption,
 }
 
@@ -219,10 +219,10 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`PlanningOption::prepare_task_inputs`]'s return values on failure.
+    /// * Forwards [`ArchiveSelectionOptions::prepare_task_inputs`]'s return values on failure.
     async fn plan(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
         self.context
-            .planning_option
+            .archive_selection_options
             .prepare_task_inputs(
                 &self.context.db_pool,
                 &self.context.db_config,
