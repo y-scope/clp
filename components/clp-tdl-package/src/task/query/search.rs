@@ -113,7 +113,7 @@ enum ArchiveSelector {
 ///
 /// # Returns
 ///
-/// A tuple containing:
+/// A tuple on success, containing:
 ///
 /// * The archive selector.
 /// * The credential env vars clp-s should run with, which are empty for filesystem-backed archive
