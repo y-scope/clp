@@ -2,6 +2,8 @@
 
 mod spider;
 
+use std::time::Duration;
+
 use async_trait::async_trait;
 use clp_rust_utils::job_config::ArchiveId;
 use clp_rust_utils::job_config::QueryJobId;
@@ -13,7 +15,6 @@ use serde::Serialize;
 use spider_core::task::ExecutionPolicy;
 use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
-use std::time::Duration;
 
 use crate::Error;
 
