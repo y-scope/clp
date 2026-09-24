@@ -462,3 +462,10 @@ spider:
           config:
             active_job_queue_capacity: null
             active_job_list_capacity: 16
+            dispatch_queue_capacity: 32
+            ready_task_capacity: 1048576
+            commit_ready_task_capacity: 256
+            cleanup_ready_task_capacity: 256
+            storage_poll_timeout_ms: 10
+            tick_interval_ms: 5
+            finalizing_job_expiration_timeout_sec: 300
