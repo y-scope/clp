@@ -440,13 +440,8 @@ spider:
         - name: "staged-archives"
           emptyDir: {}
       service_account_name: "{{ include \"clp.fullname\" . }}-service-account"
-      # Worker pools. Per our sizing guideline the pools are `search` 4 / `general` 2 /
-      # `compression` 2; `search` isn't configured yet because search doesn't run on Spider. The
-      # `general` pool is general-purpose (`resource_group: null`, so it runs any task, including
-      # resource-group tasks); `compression` is dedicated to the compression coordinator's resource
-      # group and runs only that group's tasks. A dedicated pool's `external_id` must match
-      # `clpConfig.compression_coordinator.resource_group.name`, and its `password.secretKeyRef` the
-      # Secret rendered from `credentials.spiderResourceGroups`.
+      # Pool sizing guideline: search 50% / general 25% / compression 25%. `search` isn't on Spider
+      # yet (coming soon); only `general` and `compression` are configured.
       pools:
         - name: "general"
           replicas: 2
@@ -460,19 +455,10 @@ spider:
                 name: "{{ include \"clp.fullname\" . }}-spider-resource-groups"
                 key: "compression"
 
-    # Resource-group-aware scheduler, required for a dedicated pool to receive tasks. Drop this
-    # override once the Spider chart defaults its scheduler to `resource_group_round_robin`.
     scheduler:
       runtime:
         scheduler:
           policy: "resource_group_round_robin"
           config:
-            active_job_queue_capacity: null   # round_robin-only key; unset for the RG policy
+            active_job_queue_capacity: null
             active_job_list_capacity: 16
-            cleanup_ready_task_capacity: 256
-            commit_ready_task_capacity: 256
-            dispatch_queue_capacity: 16
-            finalizing_job_expiration_timeout_sec: 300
-            ready_task_capacity: 1048576
-            storage_poll_timeout_ms: 10
-            tick_interval_ms: 5
