@@ -571,6 +571,7 @@ async fn get_or_create_resource_group_id(
     db_pool: &sqlx::MySqlPool,
 ) -> Result<ResourceGroupId, Error> {
     const SPIDER_RESOURCE_GROUP_TABLE_NAME: &str = "spider_resource_groups";
+    const PASSWORD_ENV_VAR: &str = "CLP_SPIDER_RESOURCE_GROUP_PASSWORD";
 
     const CREATE_TABLE_QUERY: &str = formatcp!(
         "CREATE TABLE IF NOT EXISTS `{table}` (
@@ -605,7 +606,6 @@ async fn get_or_create_resource_group_id(
         return Ok(ResourceGroupId::from(spider_rg_id));
     }
 
-    const PASSWORD_ENV_VAR: &str = "CLP_SPIDER_RESOURCE_GROUP_PASSWORD";
     let password = std::env::var(PASSWORD_ENV_VAR).map_err(|e| {
         Error::InvalidConfiguration(format!(
             "failed to read the resource group password from `{PASSWORD_ENV_VAR}`: {e}"
