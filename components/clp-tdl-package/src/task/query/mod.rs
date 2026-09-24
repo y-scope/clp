@@ -16,7 +16,7 @@ pub(crate) fn clp_s_search_task(
     query_job_id: QueryJobId,
     clp_s_query_option: ClpSQueryOption,
     dataset: Option<NonEmptyString>,
-    archive_id: NonEmptyString,
+    archive_id: ArchiveId,
     output_handle: OutputHandle,
 ) -> Result<(), TdlError> {
     search::search(
