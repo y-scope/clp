@@ -2,7 +2,7 @@
 #define CLP_VERSION_HPP
 
 namespace clp {
-constexpr char cVersion[] = "0.13.1-dev";
+constexpr char cVersion[] = "0.14.0";
 }  // namespace clp
 
 #endif  // CLP_VERSION_HPP

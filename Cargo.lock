@@ -97,7 +97,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "api-server"
-version = "0.13.1-dev"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -955,7 +955,7 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
 name = "clp-rust-utils"
-version = "0.13.1-dev"
+version = "0.14.0"
 dependencies = [
  "aws-config",
  "aws-sdk-s3",
@@ -984,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "clp-tdl-package"
-version = "0.13.1-dev"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "aws-config",
@@ -1036,7 +1036,7 @@ dependencies = [
 
 [[package]]
 name = "compression-coordinator"
-version = "0.13.1-dev"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2530,7 +2530,7 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "log-ingestor"
-version = "0.13.1-dev"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "async-trait",
