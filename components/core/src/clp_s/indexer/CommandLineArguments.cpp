@@ -18,7 +18,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
     // Define general options
     po::options_description general_options("General Options");
-    general_options.add_options()("help,h", "Print help");
+    general_options.add_options()("help,h", "Print help")(
+            "experimental",
+            po::bool_switch(&m_experimental),
+            "Enable the use of experimental features."
+    );
 
     // Define output options
     po::options_description output_options("Output Options");

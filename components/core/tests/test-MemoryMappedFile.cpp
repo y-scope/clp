@@ -56,9 +56,7 @@ TEST_CASE("memory_mapped_file_view_basic", "[ReadOnlyMemoryMappedFile]") {
 }
 
 TEST_CASE("memory_mapped_file_view_empty", "[ReadOnlyMemoryMappedFile]") {
-    auto const test_input_path{
-            get_test_dir() / std::filesystem::path{"test_schema_files"} / "empty_schema.txt"
-    };
+    auto const test_input_path{get_test_dir() / "test_log_files" / "empty.txt"};
 
     auto result{clp::ReadOnlyMemoryMappedFile::create(test_input_path.string())};
     REQUIRE_FALSE(result.has_error());

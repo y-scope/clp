@@ -102,6 +102,31 @@ public:
     std::vector<RangeIndexEntry> const& get_range_index() const { return m_range_index; }
 
     /**
+     * @param section The section name to check.
+     * @return true if the section exists in the archive.
+     */
+    [[nodiscard]] auto has_section(std::string_view section) const -> bool;
+
+    /**
+     * @param section
+     * @return The names of the sections stored before `section`, in on-disk order. Returns an
+     * empty vector for a multi-file archive, where every section has its own reader and can be
+     * read in any order.
+     */
+    [[nodiscard]] auto get_sections_before(std::string_view section) const
+            -> std::vector<std::string_view>;
+
+    /**
+     * @return Whether this archive is a single-file archive.
+     */
+    [[nodiscard]] auto is_single_file_archive() const -> bool { return m_single_file_archive; }
+
+    /**
+     * @return true if the archive info packet set the experimental bool.
+     */
+    [[nodiscard]] auto experimental() const -> bool { return m_archive_info.experimental; }
+
+    /**
      * @param log_event_idx
      * @return The file-level metadata associated with the record at `log_event_idx`.
      * @throws OperationFailed when `log_event_idx` cannot be mapped to any metadata.

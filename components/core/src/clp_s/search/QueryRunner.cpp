@@ -1,11 +1,18 @@
 #include "QueryRunner.hpp"
 
+#include <array>
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
+#include <fmt/compile.h>
+#include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
+
+#include <clp_s/Schema.hpp>
 
 #include "../../clp/Defs.h"
 #include "../../clp/GrepCore.hpp"
@@ -39,6 +46,57 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
+namespace {
+/**
+ * Wildcard fallback for numeric columns. Converts each value to string via `fmt::format_to_n` and
+ * matches against the query pattern. Uses `fmt::format("{:.17g}", value)` for doubles to avoid both
+ * rounding false negatives and trailing-zero false positives.
+ */
+template <typename T>
+auto evaluate_numeric_wildcard_filter(
+        ast::FilterOperation op,
+        std::shared_ptr<ast::Literal> const& operand,
+        std::vector<BaseColumnReader*> const& readers,
+        uint64_t cur_message
+) -> bool;
+
+template <typename T>
+auto evaluate_numeric_wildcard_filter(
+        ast::FilterOperation op,
+        std::shared_ptr<ast::Literal> const& operand,
+        std::vector<BaseColumnReader*> const& readers,
+        uint64_t cur_message
+) -> bool {
+    std::string query_string;
+    if (false == operand->as_var_string(query_string, op)) {
+        return false;
+    }
+    for (BaseColumnReader* reader : readers) {
+        auto const value{std::get<T>(reader->extract_value(cur_message))};
+
+        constexpr size_t cNumericConversionBufferSize{64};
+        std::array<char, cNumericConversionBufferSize> buf{};
+        auto result = [&]() -> auto {
+            if constexpr (std::is_floating_point_v<T>) {
+                return fmt::format_to_n(buf.begin(), buf.size(), FMT_COMPILE("{:.17g}"), value);
+            }
+            return fmt::format_to_n(buf.begin(), buf.size(), FMT_COMPILE("{}"), value);
+        }();
+
+        if (result.size > buf.size()) {
+            continue;
+        }
+
+        std::string_view const value_sv{buf.data(), result.size};
+        bool const matched{clp::string_utils::wildcard_match_unsafe(value_sv, query_string, false)};
+        if ((ast::FilterOperation::EQ == op) == matched) {
+            return true;
+        }
+    }
+    return false;
+}
+}  // namespace
+
 void QueryRunner::global_init() {
     populate_internal_columns();
     populate_string_queries(m_expr);
@@ -68,12 +126,13 @@ void QueryRunner::clear_readers() {
     m_timestamp_readers.clear();
     m_deprecated_datestring_reader = nullptr;
     m_basic_readers.clear();
+    m_positional_readers = {};
 }
 
 void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_reader) {
     if ((0
          != (m_wildcard_type_mask
-             & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
+             & SchemaNode::node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
         || m_match->schema_searches_against_column(m_schema, column_id))
     {
         if (auto* const clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
@@ -110,6 +169,64 @@ void QueryRunner::init(SchemaReader* reader, std::vector<BaseColumnReader*> cons
         auto column_id = column_reader->get_id();
         initialize_reader(column_id, column_reader);
     }
+
+    populate_positional_readers(m_expr, column_readers);
+}
+
+auto QueryRunner::populate_positional_readers(
+        std::shared_ptr<Expression> const& expr,
+        std::vector<BaseColumnReader*> const& column_readers
+) -> void {
+    if (expr->has_only_expression_operands()) {
+        for (auto const& op : expr->get_op_list()) {
+            populate_positional_readers(std::static_pointer_cast<Expression>(op), column_readers);
+        }
+        return;
+    }
+    auto filter{std::dynamic_pointer_cast<FilterExpr>(expr)};
+    if (nullptr == filter || false == filter->get_column()->get_leaf_position().has_value()) {
+        return;
+    }
+    auto* const reader{find_positional_reader(*filter->get_column(), column_readers)};
+    if (nullptr == reader) {
+        return;
+    }
+    if (auto* const var_reader{dynamic_cast<VariableStringColumnReader*>(reader)};
+        nullptr != var_reader)
+    {
+        m_positional_readers.var_string[filter.get()].push_back(var_reader);
+    } else {
+        m_positional_readers.basic[filter.get()].push_back(reader);
+    }
+}
+
+auto QueryRunner::find_positional_reader(
+        ast::ColumnDescriptor const& column,
+        std::vector<BaseColumnReader*> const& column_readers
+) const -> BaseColumnReader* {
+    auto const leaf_position{column.get_leaf_position()};
+    if (false == leaf_position.has_value()) {
+        return nullptr;
+    }
+    auto const column_id{column.get_column_id()};
+    auto const log_message_node_id{m_schema_tree->find_matching_subtree_root_in_subtree(
+            -1,
+            column_id,
+            NodeType::LogMessage
+    )};
+    if (-1 == log_message_node_id) {
+        return nullptr;
+    }
+    auto const column_start{m_reader->get_log_message_column_start(log_message_node_id)};
+    if (false == column_start.has_value()) {
+        return nullptr;
+    }
+    auto const reader_idx{column_start.value() + leaf_position.value()};
+    if (reader_idx >= column_readers.size() || column_readers.at(reader_idx)->get_id() != column_id)
+    {
+        return nullptr;
+    }
+    return column_readers.at(reader_idx);
 }
 
 auto QueryRunner::prepare_filter(SchemaReader& reader) -> FilterClass& {
@@ -126,6 +243,7 @@ auto QueryRunner::prepare_filter(SchemaReader& reader) -> FilterClass& {
             m_clp_string_readers,
             m_var_string_readers,
             m_timestamp_readers,
+            m_positional_readers,
             m_deprecated_datestring_reader,
             m_expr_clp_query,
             m_expr_var_match_map,
@@ -289,15 +407,15 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
             continue;
         }
         bool ret = false;
-        switch (node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
+        switch (SchemaNode::node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
             case LiteralType::IntegerT:
-                ret = evaluate_int_filter(op, column_id, literal);
+                ret = evaluate_int_filter(op, m_basic_readers[column_id], literal);
                 break;
             case LiteralType::FloatT:
-                ret = evaluate_float_filter(op, column_id, literal);
+                ret = evaluate_float_filter(op, m_basic_readers[column_id], literal);
                 break;
             case LiteralType::BooleanT:
-                ret = evaluate_bool_filter(op, column_id, literal);
+                ret = evaluate_bool_filter(op, m_basic_readers[column_id], literal);
                 break;
             case LiteralType::ArrayT:
                 ret = evaluate_wildcard_array_filter(
@@ -322,13 +440,20 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
     auto* column = expr->get_column().get();
     int32_t column_id = column->get_column_id();
     auto literal = expr->get_operand();
+    bool const is_positional{column->get_leaf_position().has_value()};
+    auto& basic_readers{
+            is_positional ? m_positional_readers.basic[expr] : m_basic_readers[column_id]
+    };
+    auto& var_string_readers{
+            is_positional ? m_positional_readers.var_string[expr] : m_var_string_readers[column_id]
+    };
     clp::Query* q = nullptr;
     std::unordered_set<int64_t>* matching_vars = nullptr;
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
-            return evaluate_int_filter(expr->get_operation(), column_id, literal);
+            return evaluate_int_filter(expr->get_operation(), basic_readers, literal);
         case LiteralType::FloatT:
-            return evaluate_float_filter(expr->get_operation(), column_id, literal);
+            return evaluate_float_filter(expr->get_operation(), basic_readers, literal);
         case LiteralType::ClpStringT:
             q = m_expr_clp_query.at(expr);
             return evaluate_clp_string_filter(
@@ -340,11 +465,11 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
             matching_vars = m_expr_var_match_map.at(expr);
             return evaluate_var_string_filter(
                     expr->get_operation(),
-                    m_var_string_readers[column_id],
+                    var_string_readers,
                     matching_vars
             );
         case LiteralType::BooleanT:
-            return evaluate_bool_filter(expr->get_operation(), column_id, literal);
+            return evaluate_bool_filter(expr->get_operation(), basic_readers, literal);
         case LiteralType::ArrayT:
             return evaluate_array_filter(
                     expr->get_operation(),
@@ -378,11 +503,15 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
 
 bool QueryRunner::evaluate_int_filter(
         FilterOperation op,
-        int32_t column_id,
+        std::vector<BaseColumnReader*> const& readers,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
         return true;
+    }
+
+    if (operand->has_wildcards()) {
+        return evaluate_numeric_wildcard_filter<int64_t>(op, operand, readers, m_cur_message);
     }
 
     int64_t op_value;
@@ -390,7 +519,7 @@ bool QueryRunner::evaluate_int_filter(
         return false;
     }
 
-    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+    for (BaseColumnReader* reader : readers) {
         int64_t value = std::get<int64_t>(reader->extract_value(m_cur_message));
         if (evaluate_int_filter_core(op, value, op_value)) {
             return true;
@@ -420,11 +549,15 @@ bool QueryRunner::evaluate_int_filter_core(FilterOperation op, int64_t value, in
 
 bool QueryRunner::evaluate_float_filter(
         FilterOperation op,
-        int32_t column_id,
+        std::vector<BaseColumnReader*> const& readers,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
         return true;
+    }
+
+    if (operand->has_wildcards()) {
+        return evaluate_numeric_wildcard_filter<double>(op, operand, readers, m_cur_message);
     }
 
     double op_value;
@@ -432,7 +565,7 @@ bool QueryRunner::evaluate_float_filter(
         return false;
     }
 
-    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+    for (BaseColumnReader* reader : readers) {
         double value = std::get<double>(reader->extract_value(m_cur_message));
         if (evaluate_float_filter_core(op, value, op_value)) {
             return true;
@@ -860,7 +993,7 @@ bool QueryRunner::evaluate_wildcard_array_filter(
 
 bool QueryRunner::evaluate_bool_filter(
         FilterOperation op,
-        int32_t column_id,
+        std::vector<BaseColumnReader*> const& readers,
         std::shared_ptr<Literal> const& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -873,7 +1006,7 @@ bool QueryRunner::evaluate_bool_filter(
     }
 
     bool rvalue = false;
-    for (BaseColumnReader* reader : m_basic_readers[column_id]) {
+    for (BaseColumnReader* reader : readers) {
         bool value = std::get<uint8_t>(reader->extract_value(m_cur_message));
         switch (op) {
             case FilterOperation::EQ:
@@ -906,7 +1039,8 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
         && !(filter->get_operation() == FilterOperation::EXISTS
              || filter->get_operation() == FilterOperation::NEXISTS))
     {
-        if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
+        if (false == m_experimental && filter->get_column()->matches_type(LiteralType::ClpStringT))
+        {
             std::string query_string;
             filter->get_operand()->as_clp_string(query_string, filter->get_operation());
 
@@ -916,18 +1050,15 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
 
             // search on log type dictionary
             clp::epochtime_t placeholder_timestamp{};
-            log_surgeon::lexers::ByteLexer placeholder_lexer;
             m_string_query_map.emplace(
                     query_string,
                     clp::GrepCore::process_raw_query(
-                            *m_log_dict,
-                            *m_var_dict,
+                            *m_archive_reader->get_log_type_dictionary(),
+                            *m_archive_reader->get_variable_dictionary(),
                             query_string,
                             placeholder_timestamp,
                             placeholder_timestamp,
-                            m_ignore_case,
-                            placeholder_lexer,
-                            true
+                            m_ignore_case
                     )
             );
         }
@@ -935,30 +1066,31 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
         if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
             std::string query_string;
             filter->get_operand()->as_var_string(query_string, filter->get_operation());
-            if (m_string_var_match_map.count(query_string)) {
-                return;
-            }
+            if (false == m_string_var_match_map.contains(query_string)) {
+                auto const var_dict{m_archive_reader->get_variable_dictionary()};
+                std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
+                if (false == ast::has_unescaped_wildcards(query_string)) {
+                    auto const unescaped_query_string{
+                            clp::string_utils::unescape_string(query_string)
+                    };
+                    auto const entries = var_dict->get_entry_matching_value(
+                            unescaped_query_string,
+                            m_ignore_case
+                    );
 
-            std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
-            if (false == ast::has_unescaped_wildcards(query_string)) {
-                auto const unescaped_query_string{clp::string_utils::unescape_string(query_string)};
-                auto const entries = m_var_dict->get_entry_matching_value(
-                        unescaped_query_string,
-                        m_ignore_case
-                );
-
-                for (auto const& entry : entries) {
-                    matching_vars.insert(entry->get_id());
-                }
-            } else {
-                std::unordered_set<VariableDictionaryEntry const*> matching_entries;
-                m_var_dict->get_entries_matching_wildcard_string(
-                        query_string,
-                        m_ignore_case,
-                        matching_entries
-                );
-                for (auto const& entry : matching_entries) {
-                    matching_vars.emplace(entry->get_id());
+                    for (auto const& entry : entries) {
+                        matching_vars.insert(entry->get_id());
+                    }
+                } else {
+                    std::unordered_set<VariableDictionaryEntry const*> matching_entries;
+                    var_dict->get_entries_matching_wildcard_string(
+                            query_string,
+                            m_ignore_case,
+                            matching_entries
+                    );
+                    for (auto const& entry : matching_entries) {
+                        matching_vars.emplace(entry->get_id());
+                    }
                 }
             }
         }
@@ -990,16 +1122,13 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
         }
         m_wildcard_columns.push_back(col);
         literal_type_bitmask_t matching_types{0};
-        for (int32_t node : (*m_schemas)[m_schema]) {
-            if (Schema::schema_entry_is_unordered_object(node)) {
-                continue;
-            }
-            if (0 != m_metadata_columns.count(node)) {
-                continue;
+        (*m_schemas)[m_schema].get_view().for_each_node_id([&](SchemaNode::id_t node) -> void {
+            if (m_metadata_columns.contains(node)) {
+                return;
             }
             auto tree_node_type = m_schema_tree->get_node(node).get_type();
-            if (col->matches_type(node_to_literal_type(tree_node_type))) {
-                auto literal_type = node_to_literal_type(tree_node_type);
+            if (col->matches_type(SchemaNode::node_to_literal_type(tree_node_type))) {
+                auto literal_type = SchemaNode::node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
                 if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
                     && NodeType::DeprecatedDateString != tree_node_type)
@@ -1007,7 +1136,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
                     m_wildcard_to_searched_basic_columns[col].insert(node);
                 }
             }
-        }
+        });
         col->set_matching_types(matching_types);
     }
 }
@@ -1118,12 +1247,16 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 return EvaluatedValue::False;
             }
             if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
-                auto& query_processing_result = m_string_query_map.at(filter_string);
-                if (query_processing_result.has_value()) {
-                    m_expr_clp_query[expr.get()] = &(query_processing_result.value());
-                    matches_clp_string = true;
-                } else {
+                if (m_experimental) {
                     m_expr_clp_query[expr.get()] = nullptr;
+                } else {
+                    auto& query_processing_result = m_string_query_map.at(filter_string);
+                    if (query_processing_result.has_value()) {
+                        m_expr_clp_query[expr.get()] = &(query_processing_result.value());
+                        matches_clp_string = true;
+                    } else {
+                        m_expr_clp_query[expr.get()] = nullptr;
+                    }
                 }
                 has_clp_string = wildcard->matches_type(LiteralType::ClpStringT);
             }
@@ -1165,7 +1298,9 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 return EvaluatedValue::False;
             }
             return EvaluatedValue::Unknown;
-        } else if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
+        } else if (false == m_experimental
+                   && filter->get_column()->matches_type(LiteralType::ClpStringT))
+        {
             std::string filter_string;
             filter->get_operand()->as_clp_string(filter_string, filter->get_operation());
 

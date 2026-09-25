@@ -1,23 +1,43 @@
 #include "SchemaMatch.hpp"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <optional>
 #include <queue>
+#include <set>
+#include <span>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 #include <tuple>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
-#include "../archive_constants.hpp"
-#include "../SchemaTree.hpp"
-#include "ast/AndExpr.hpp"
-#include "ast/ColumnDescriptor.hpp"
-#include "ast/ConstantProp.hpp"
-#include "ast/EmptyExpr.hpp"
-#include "ast/Expression.hpp"
-#include "ast/FilterExpr.hpp"
-#include "ast/FilterOperation.hpp"
-#include "ast/Literal.hpp"
-#include "ast/OrExpr.hpp"
-#include "ast/OrOfAndForm.hpp"
+#include <fmt/format.h>
+
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReader.hpp>
+#include <clp_s/Schema.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/search/ast/AndExpr.hpp>
+#include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/search/ast/ConstantProp.hpp>
+#include <clp_s/search/ast/EmptyExpr.hpp>
+#include <clp_s/search/ast/Expression.hpp>
+#include <clp_s/search/ast/FilterExpr.hpp>
+#include <clp_s/search/ast/FilterOperation.hpp>
+#include <clp_s/search/ast/Literal.hpp>
+#include <clp_s/search/ast/OrExpr.hpp>
+#include <clp_s/search/ast/OrOfAndForm.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
+#include <clp_s/search/ast/StringLiteral.hpp>
+#include <clpp/Defs.hpp>
+#include <clpp/Interpretation.hpp>
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::ColumnDescriptor;
@@ -40,11 +60,13 @@ namespace {
  * @param subtree_type
  * @return the corresponding `NodeType` or `NodeType::Unknown` if the subtree type is unknown.
  */
+auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
+
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     if (constants::cMetadataSubtreeType == subtree_type) {
         return NodeType::Metadata;
     }
-    if (constants::cObjectSubtreeType == subtree_type) {
+    if (constants::cObjectSubtreeType == subtree_type || clpp::cShapeFunction == subtree_type) {
         return NodeType::Object;
     }
     return NodeType::Unknown;
@@ -53,12 +75,11 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
 
 // TODO: write proper iterators on the AST to make this code less awful.
 // In particular schema intersection needs AST iterators and a proper refactor
-SchemaMatch::SchemaMatch(
-        std::shared_ptr<SchemaTree> tree,
-        std::shared_ptr<ReaderUtils::SchemaMap> schemas
-)
-        : m_tree(std::move(tree)),
-          m_schemas(std::move(schemas)) {}
+SchemaMatch::SchemaMatch(std::shared_ptr<ArchiveReader> archive_reader, bool case_sensitive)
+        : m_archive_reader(std::move(archive_reader)),
+          m_tree(m_archive_reader->get_schema_tree()),
+          m_schemas(m_archive_reader->get_schema_map()),
+          m_clpp_matcher(m_archive_reader.get(), case_sensitive) {}
 
 std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) {
     ConstantProp propagate_empty;
@@ -70,11 +91,10 @@ std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) 
 
     // if we had ambiguous column descriptors containing regex which were
     // resolved we need to restandardize the expression
-    if (false == m_unresolved_descriptor_to_descriptor.empty()) {
+    if (false == m_unresolved_descriptor_to_descriptor.empty() || m_clpp_decomposed_query) {
         m_column_to_descriptor.clear();
         m_unresolved_descriptor_to_descriptor.clear();
 
-        // restandardize the form, and rerun column mapping
         OrOfAndForm standard_form;
         expr = standard_form.run(expr);
         expr = populate_column_mapping(expr);
@@ -91,6 +111,10 @@ std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) 
 
     split_expression_by_schema(expr, m_schema_to_query, m_matched_schema_ids);
 
+    for (auto const schema_id : m_matched_schema_ids) {
+        read_dictionaries_for_schema((*m_schemas)[schema_id].get_view());
+    }
+
     return expr;
 }
 
@@ -106,17 +130,39 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
         } else if (auto const column{std::dynamic_pointer_cast<ast::ColumnDescriptor>(*it)};
                    nullptr != column)
         {
-            if (false == populate_column_mapping(column)) {
+            m_clpp_node_matched = false;
+            auto [mapped_succesfully, new_and_expr]{populate_column_mapping(column, cur)};
+            if (false == mapped_succesfully) {
+                if (column->get_subtree_type().has_value()
+                    && clpp::cShapeFunction == column->get_subtree_type().value()
+                    && false == m_clpp_node_matched)
+                {
+                    throw std::runtime_error{fmt::format(
+                            "{}(<col>) can only be applied to LogMessage or ParentRule columns; no "
+                            "LogMessage or ParentRule nodes match column \"{}\".",
+                            clpp::cShapeFunction,
+                            ast::column_descriptor_to_string(*column)
+                    )};
+                }
                 // no matching columns -- replace this expression with empty;
                 return EmptyExpr::create();
-            } else if (column->is_unresolved_descriptor() && false == column->is_pure_wildcard()) {
+            }
+
+            if (new_and_expr != cur) {
+                return new_and_expr;
+            }
+
+            if (column->is_unresolved_descriptor() && false == column->is_pure_wildcard()) {
                 auto possibilities = OrExpr::create();
 
                 // TODO: will have to decide how we wan't to handle multi-column expressions
                 // with unresolved descriptors
-                for (auto const node_id : m_unresolved_descriptor_to_descriptor.at(column.get())) {
-                    auto const* node = &m_tree->get_node(node_id);
-                    auto literal_type = node_to_literal_type(node->get_type());
+                for (auto const node_id :
+                     m_unresolved_descriptor_to_descriptor.at(column->get_id()))
+                {
+                    auto const* node{&m_tree->get_node(node_id)};
+                    auto const matched_node_type{node->get_type()};
+                    auto literal_type{SchemaNode::node_to_literal_type(matched_node_type)};
                     DescriptorList descriptors;
                     // FIXME: this needs to be adjusted to handle more than JUST object subtrees
                     // TODO: consider whether fully resolving descriptors in this way is actually
@@ -150,8 +196,36 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
                             column->get_namespace()
                     );
                     resolved_column->set_matching_type(literal_type);
-                    *it = resolved_column;
-                    cur->copy_append(possibilities.get());
+                    resolved_column->set_subtree_type(column->get_subtree_type());
+
+                    auto const& filter{dynamic_cast<FilterExpr const&>(*cur.get())};
+                    if (NodeType::LogMessage == matched_node_type
+                        || NodeType::ParentRule == matched_node_type)
+                    {
+                        if (auto result{build_clpp_query_filter(resolved_column, node_id, filter)};
+                            nullptr != result)
+                        {
+                            possibilities->add_operand(result);
+                        }
+                    } else if (FilterOperation::EXISTS == filter.get_operation()
+                               || FilterOperation::NEXISTS == filter.get_operation())
+                    {
+                        auto resolved_filter{FilterExpr::create(
+                                resolved_column,
+                                filter.get_operation(),
+                                filter.is_inverted()
+                        )};
+                        possibilities->add_operand(resolved_filter);
+                    } else {
+                        auto operand{filter.get_operand()};
+                        auto resolved_filter{FilterExpr::create(
+                                resolved_column,
+                                filter.get_operation(),
+                                operand,
+                                filter.is_inverted()
+                        )};
+                        possibilities->add_operand(resolved_filter);
+                    }
                 }
                 return possibilities;
             }
@@ -160,14 +234,17 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
     return cur;
 }
 
-bool SchemaMatch::populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor> const& column) {
+auto SchemaMatch::populate_column_mapping(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        std::shared_ptr<ast::Expression> const& expr
+) -> std::tuple<bool, std::shared_ptr<ast::Expression>> {
     bool matched = false;
     // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
     // namespaces.
     // TODO: consider removing this imprecise loop when we resolve issue #907.
     if (column->is_pure_wildcard()) {
         for (auto const& node : m_tree->get_nodes()) {
-            if (column->matches_type(node_to_literal_type(node.get_type()))) {
+            if (column->matches_type(SchemaNode::node_to_literal_type(node.get_type()))) {
                 // column_to_descriptor_[node->get_id()].insert(column);
                 //  At least some node matches; break
                 //  Don't use column_to_descriptor_ for pure wildcard columns anyway, so
@@ -177,13 +254,19 @@ bool SchemaMatch::populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor>
             }
         }
 
-        return matched;
+        return {matched, expr};
     }
 
-    auto resolve_against_subtree = [&](SchemaNode const& root_node) -> void {
-        for (int32_t child_node_id : root_node.get_children_ids()) {
-            matched |= populate_column_mapping(column, child_node_id);
+    auto resolve_against_subtree =
+            [&](SchemaNode const& root_node) -> std::tuple<bool, std::shared_ptr<ast::Expression>> {
+        for (auto const child_node_id : root_node.get_children_ids()) {
+            auto [child_matched, new_expr]{populate_column_mapping(column, child_node_id, expr)};
+            matched |= child_matched;
+            if (new_expr != expr) {
+                return {matched, std::move(new_expr)};
+            }
         }
+        return {matched, expr};
     };
 
     if (auto const& subtree_type{column->get_subtree_type()}; subtree_type.has_value()) {
@@ -194,7 +277,10 @@ bool SchemaMatch::populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor>
             -1 != subtree_root_node_id)
         {
             auto const& root_node = m_tree->get_node(subtree_root_node_id);
-            resolve_against_subtree(root_node);
+            auto [_, new_expr] = resolve_against_subtree(root_node);
+            if (new_expr != expr) {
+                return {matched, std::move(new_expr)};
+            }
         }
     } else {
         // Resolve against every subtree that has matching namespaces except for the
@@ -204,17 +290,21 @@ bool SchemaMatch::populate_column_mapping(std::shared_ptr<ast::ColumnDescriptor>
                 && namespace_type_pair.first == column->get_namespace())
             {
                 auto const& root_node = m_tree->get_node(subtree_root_node_id);
-                resolve_against_subtree(root_node);
+                auto [_, new_expr] = resolve_against_subtree(root_node);
+                if (new_expr != expr) {
+                    return {matched, std::move(new_expr)};
+                }
             }
         }
     }
-    return matched;
+    return {matched, expr};
 }
 
-bool SchemaMatch::populate_column_mapping(
+auto SchemaMatch::populate_column_mapping(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
-        int32_t node_id
-) {
+        int32_t node_id,
+        std::shared_ptr<ast::Expression> const& expr
+) -> std::tuple<bool, std::shared_ptr<ast::Expression>> {
     /**
      * This function is the core of Column Resolution. The general idea is to walk down different
      * branches of the mst while advancing an iterator over the column descriptor in step.
@@ -236,6 +326,10 @@ bool SchemaMatch::populate_column_mapping(
     }
     int32_t prev_level = 0;
     bool matched = false;
+    bool const is_shape_query{
+            column->get_subtree_type().has_value()
+            && clpp::cShapeFunction == column->get_subtree_type().value()
+    };
     while (false == work_list.empty()) {
         auto& cur = work_list.top();
         auto [cur_depth, cur_it, cur_node_id] = cur;
@@ -297,64 +391,90 @@ bool SchemaMatch::populate_column_mapping(
             matched = true;
             continue;
         } else if ((next_at_descriptor_list_end
-                    && column->matches_type(node_to_literal_type(cur_node.get_type()))))
+                    && column->matches_type(SchemaNode::node_to_literal_type(cur_node.get_type()))))
         {
+            bool const is_clpp_node{
+                    NodeType::LogMessage == cur_node.get_type()
+                    || NodeType::ParentRule == cur_node.get_type()
+            };
+            if (is_shape_query && false == is_clpp_node) {
+                continue;
+            }
+            m_clpp_node_matched |= is_clpp_node;
             if (false == column->is_unresolved_descriptor()) {
+                if (is_clpp_node) {
+                    if (column->is_clpp_resolved()) {
+                        matched = true;
+                        continue;
+                    }
+                    if (auto result{build_clpp_query_filter(
+                                column,
+                                cur_node_id,
+                                dynamic_cast<FilterExpr const&>(*expr.get())
+                        )};
+                        nullptr != result)
+                    {
+                        return std::make_tuple(true, std::move(result));
+                    }
+                    continue;
+                }
+                if (column->is_clpp_resolved()) {
+                    matched = true;
+                    continue;
+                }
                 auto [descriptors_it, _] = m_column_to_descriptor.try_emplace(cur_node_id);
                 descriptors_it->second.emplace(column);
             } else {
                 auto [node_ids_it, _]
-                        = m_unresolved_descriptor_to_descriptor.try_emplace(column.get());
+                        = m_unresolved_descriptor_to_descriptor.try_emplace(column->get_id());
                 node_ids_it->second.emplace(cur_node_id);
             }
             matched = true;
-            continue;
+            if (false == (wildcard_descriptor && is_clpp_node)) {
+                continue;
+            }
         }
 
         // Allow matching a wildcard zero times
         if (false == next_at_descriptor_list_end && next_it->wildcard()) {
-            work_list.emplace(std::make_tuple(cur_depth, next_it, cur_node_id));
+            work_list.emplace(cur_depth, next_it, cur_node_id);
         }
 
         // Push nodes to the work list
         for (int32_t child_node_id : cur_node.get_children_ids()) {
             if (is_key_name_empty) {
                 // Don't advance the iterator when accepting an empty key
-                work_list.emplace(std::make_tuple(cur_depth + 1, cur_it, child_node_id));
+                work_list.emplace(cur_depth + 1, cur_it, child_node_id);
             } else {
-                work_list.emplace(std::make_tuple(cur_depth + 1, next_it, child_node_id));
+                work_list.emplace(cur_depth + 1, next_it, child_node_id);
                 if (wildcard_descriptor) {
                     // Allow matching a wildcard token multiple times
-                    work_list.emplace(std::make_tuple(cur_depth + 1, cur_it, child_node_id));
+                    work_list.emplace(cur_depth + 1, cur_it, child_node_id);
                 }
             }
         }
     }
-    return matched;
+    return {matched, expr};
 }
 
 void SchemaMatch::populate_schema_mapping() {
     // TODO: consider refactoring this to take advantage of the ordered region of the schema
     for (auto& it : *m_schemas) {
         int32_t schema_id = it.first;
-        for (int32_t column_id : it.second) {
-            if (Schema::schema_entry_is_unordered_object(column_id)) {
-                continue;
-            }
-            if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
-                m_array_schema_ids.insert(schema_id);
-            }
-            if (false == m_column_to_descriptor.count(column_id)) {
-                continue;
+        it.second.get_view().for_each_node_id([&](SchemaNode::id_t column_id) -> void {
+            if (false == m_column_to_descriptor.contains(column_id)) {
+                return;
             }
             for (auto const& descriptor : m_column_to_descriptor.at(column_id)) {
-                if (false == descriptor->is_pure_wildcard()) {
-                    auto [schema_to_column_id_it, _]
-                            = m_descriptor_to_schema.try_emplace(descriptor.get());
-                    schema_to_column_id_it->second.emplace(schema_id, column_id);
+                if (descriptor->is_clpp_resolved() || descriptor->is_pure_wildcard()) {
+                    continue;
                 }
+
+                auto [schema_to_column_id_it, _]
+                        = m_descriptor_to_schema.try_emplace(descriptor->get_id());
+                schema_to_column_id_it->second.emplace(schema_id, column_id);
             }
-        }
+        });
     }
 }
 
@@ -372,20 +492,12 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
             m_expression_to_schemas[cur.get()].insert(schema_id);
         }
 
-        for (auto column : columns) {
+        for (auto* column : columns) {
             if (column->is_pure_wildcard()) {
                 continue;
             }
 
-            literal_type_bitmask_t types = 0;
-            for (int32_t schema : common_schema) {
-                if (m_descriptor_to_schema[column].count(schema)) {
-                    types |= node_to_literal_type(
-                            m_tree->get_node(m_descriptor_to_schema[column][schema]).get_type()
-                    );
-                }
-            }
-            column->set_matching_types(types);
+            column->set_matching_types(compute_candidate_types(*column, common_schema));
         }
 
         for (int32_t schema : common_schema) {
@@ -394,7 +506,66 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
             for (auto column : columns) {
                 if (false == column->is_pure_wildcard()) {
                     m_schema_to_searched_columns[schema].insert(
-                            get_column_id_for_descriptor(column, schema)
+                            get_column_id_for_descriptor(column->get_id(), schema)
+                    );
+                }
+            }
+        }
+    } else if (auto or_expr{std::dynamic_pointer_cast<OrExpr>(cur)}) {
+        for (auto it{or_expr->op_begin()}; it != or_expr->op_end(); ++it) {
+            auto sub_expr{std::static_pointer_cast<Expression>(*it)};
+            auto new_expr{intersect_schemas(sub_expr)};
+            if (new_expr != sub_expr) {
+                *it = new_expr;
+            }
+        }
+
+        std::set<int32_t> or_schemas;
+        std::set<ColumnDescriptor*> or_columns;
+        for (auto const& op : or_expr->get_op_list()) {
+            auto sub_expr{std::dynamic_pointer_cast<Expression>(op)};
+            if (nullptr == sub_expr) {
+                continue;
+            }
+            if (auto it{m_expression_to_schemas.find(sub_expr.get())};
+                m_expression_to_schemas.end() != it)
+            {
+                for (int32_t schema_id : it->second) {
+                    or_schemas.insert(schema_id);
+                }
+            }
+            if (auto filter{std::dynamic_pointer_cast<FilterExpr>(op)}) {
+                auto* col{filter->get_column().get()};
+                if (false == col->is_pure_wildcard()) {
+                    or_columns.insert(col);
+                }
+            }
+        }
+
+        if (or_schemas.empty()) {
+            return EmptyExpr::create(cur->get_parent());
+        }
+
+        for (int32_t schema_id : or_schemas) {
+            m_expression_to_schemas[cur.get()].insert(schema_id);
+        }
+
+        for (auto* column : or_columns) {
+            if (column->is_pure_wildcard()) {
+                continue;
+            }
+            column->set_matching_types(compute_candidate_types(*column, or_schemas));
+        }
+
+        for (int32_t schema : or_schemas) {
+            m_matched_schema_ids.insert(schema);
+            for (auto column : or_columns) {
+                if (false == column->is_pure_wildcard()
+                    && m_descriptor_to_schema.contains(column->get_id())
+                    && m_descriptor_to_schema.at(column->get_id()).contains(schema))
+                {
+                    m_schema_to_searched_columns[schema].insert(
+                            get_column_id_for_descriptor(column->get_id(), schema)
                     );
                 }
             }
@@ -412,19 +583,59 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
     return cur;
 }
 
-bool SchemaMatch::intersect_and_sub_expr(
+auto SchemaMatch::intersect_and_sub_expr(
         std::shared_ptr<Expression> const& cur,
         std::set<int32_t>& common_schema,
         std::set<ColumnDescriptor*>& columns,
         bool first
-) {
+) -> bool {
     // Note: EmptyExpr are already constant propogated out of the ands, so don't
     // need to check for them here
     for (auto it = cur->op_begin(); it != cur->op_end(); it++) {
         if (auto sub_expr = std::dynamic_pointer_cast<Expression>(*it)) {
-            first &= intersect_and_sub_expr(sub_expr, common_schema, columns, first);
-            if (false == first && common_schema.empty()) {
-                break;
+            if (auto or_expr{std::dynamic_pointer_cast<OrExpr>(sub_expr)}) {
+                std::set<int32_t> or_schemas;
+                for (auto const& or_op : or_expr->get_op_list()) {
+                    if (auto or_filter{std::dynamic_pointer_cast<FilterExpr>(or_op)}) {
+                        auto* or_col{or_filter->get_column().get()};
+                        if (or_col->is_pure_wildcard()) {
+                            for (auto const& schema_it : *m_schemas) {
+                                or_schemas.insert(schema_it.first);
+                            }
+                        } else if (m_descriptor_to_schema.contains(or_col->get_id())) {
+                            auto const& col_schemas{m_descriptor_to_schema.at(or_col->get_id())};
+                            for (auto const& [schema_id, _] : col_schemas) {
+                                or_schemas.insert(schema_id);
+                            }
+                        }
+                        if (FilterOperation::EXISTS != or_filter->get_operation()
+                            && FilterOperation::NEXISTS != or_filter->get_operation())
+                        {
+                            columns.insert(or_col);
+                        }
+                    }
+                }
+
+                if (first) {
+                    common_schema = or_schemas;
+                } else {
+                    std::set<int32_t> intersection;
+                    for (int32_t schema : common_schema) {
+                        if (or_schemas.contains(schema)) {
+                            intersection.insert(schema);
+                        }
+                    }
+                    common_schema = intersection;
+                }
+                first = false;
+                if (common_schema.empty()) {
+                    break;
+                }
+            } else {
+                first &= intersect_and_sub_expr(sub_expr, common_schema, columns, first);
+                if (false == first && common_schema.empty()) {
+                    break;
+                }
             }
         } else if (auto column = std::dynamic_pointer_cast<ColumnDescriptor>(*it)) {
             FilterOperation op = std::static_pointer_cast<FilterExpr>(cur)->get_operation();
@@ -444,20 +655,23 @@ bool SchemaMatch::intersect_and_sub_expr(
                 }
                 return false;
             } else if (first && op != FilterOperation::NEXISTS) {
-                for (auto schema_it : m_descriptor_to_schema[column.get()]) {
-                    common_schema.insert(schema_it.first);
+                for (auto const& [schema_id, column_id] :
+                     m_descriptor_to_schema.at(column->get_id()))
+                {
+                    common_schema.insert(schema_id);
                 }
                 return false;
             } else if (first /*&& op == FilterOperation::NEXISTS */) {
+                auto const& cur_schemas{m_descriptor_to_schema.at(column->get_id())};
                 for (auto& schema : *m_schemas) {
-                    if (0 == m_descriptor_to_schema[column.get()].count(schema.first)) {
+                    if (0 == cur_schemas.count(schema.first)) {
                         common_schema.insert(schema.first);
                     }
                 }
                 return false;
             } else if (op == FilterOperation::NEXISTS) {
                 std::set<int32_t> intersection;
-                auto const& cur_schemas = m_descriptor_to_schema[column.get()];
+                auto const& cur_schemas{m_descriptor_to_schema.at(column->get_id())};
                 for (int32_t schema : common_schema) {
                     if (0 == cur_schemas.count(schema)) {
                         intersection.insert(schema);
@@ -466,7 +680,7 @@ bool SchemaMatch::intersect_and_sub_expr(
                 common_schema = intersection;
             } else {
                 std::set<int32_t> intersection;
-                auto const& cur_schemas = m_descriptor_to_schema[column.get()];
+                auto const& cur_schemas{m_descriptor_to_schema.at(column->get_id())};
                 for (int32_t schema : common_schema) {
                     if (cur_schemas.count(schema)) {
                         intersection.insert(schema);
@@ -479,6 +693,28 @@ bool SchemaMatch::intersect_and_sub_expr(
     return first;
 }
 
+auto SchemaMatch::compute_candidate_types(
+        ast::ColumnDescriptor const& column,
+        std::set<int32_t> const& schemas
+) const -> ast::literal_type_bitmask_t {
+    auto const& schema_mappings{m_descriptor_to_schema.at(column.get_id())};
+    ast::literal_type_bitmask_t types{0};
+    if (column.is_clpp_resolved()) {
+        for (auto const& [schema_id, node_id] : schema_mappings) {
+            types |= SchemaNode::node_to_literal_type(m_tree->get_node(node_id).get_type());
+        }
+        return types;
+    }
+    for (auto const schema : schemas) {
+        if (schema_mappings.contains(schema)) {
+            types |= SchemaNode::node_to_literal_type(
+                    m_tree->get_node(schema_mappings.at(schema)).get_type()
+            );
+        }
+    }
+    return types;
+}
+
 void SchemaMatch::split_expression_by_schema(
         std::shared_ptr<Expression> const& expr,
         std::map<int32_t, std::shared_ptr<Expression>>& queries,
@@ -488,11 +724,13 @@ void SchemaMatch::split_expression_by_schema(
         for (int32_t schema_id : relevant_schemas) {
             auto new_filter = filter->copy();
             auto descriptor = std::static_pointer_cast<FilterExpr>(new_filter)->get_column().get();
-            auto old_descriptor = filter->get_column().get();
+            auto old_descriptor_id{filter->get_column()->get_id()};
 
             if (false == descriptor->is_pure_wildcard()) {
-                descriptor->set_column_id(get_column_id_for_descriptor(old_descriptor, schema_id));
-                auto literal_type = get_literal_type_for_column(old_descriptor, schema_id);
+                descriptor->set_column_id(
+                        get_column_id_for_descriptor(old_descriptor_id, schema_id)
+                );
+                auto literal_type = get_literal_type_for_column(old_descriptor_id, schema_id);
                 if (literal_type == LiteralType::ArrayT) {
                     m_array_search_schema_ids.insert(schema_id);
                 }
@@ -501,14 +739,14 @@ void SchemaMatch::split_expression_by_schema(
                         && descriptor->matches_type(LiteralType::ArrayT)
                         && 0 == m_array_search_schema_ids.count(schema_id)))
             {
-                for (auto column_id : (*m_schemas)[schema_id]) {
-                    if (Schema::schema_entry_is_unordered_object(column_id)) {
-                        continue;
-                    }
-                    if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
-                        m_array_search_schema_ids.insert(schema_id);
-                        break;
-                    }
+                if ((*m_schemas)[schema_id].get_view().any_node_id(
+                            [&](SchemaNode::id_t column_id) -> bool {
+                                return NodeType::UnstructuredArray
+                                       == m_tree->get_node(column_id).get_type();
+                            }
+                    ))
+                {
+                    m_array_search_schema_ids.insert(schema_id);
                 }
             }
             queries[schema_id] = new_filter;
@@ -568,8 +806,8 @@ void SchemaMatch::split_expression_by_schema(
     }
 }
 
-int32_t SchemaMatch::get_column_id_for_descriptor(ColumnDescriptor* column, int32_t schema) {
-    return m_descriptor_to_schema[column][schema];
+int32_t SchemaMatch::get_column_id_for_descriptor(ColumnDescriptor::id_t col_id, int32_t schema) {
+    return m_descriptor_to_schema.at(col_id).at(schema);
 }
 
 bool SchemaMatch::schema_matched(int32_t schema_id) {
@@ -584,21 +822,387 @@ void SchemaMatch::add_searched_column_to_schema(int32_t schema, int32_t column) 
     m_schema_to_searched_columns[schema].insert(column);
 }
 
-bool SchemaMatch::has_array(int32_t schema_id) {
-    return m_array_schema_ids.count(schema_id);
+auto SchemaMatch::read_dictionaries_for_schema(SchemaView const& schema) -> void {
+    schema.visit_entries(
+            [&](SchemaNode::id_t column_id) -> bool {
+                switch (m_tree->get_node(column_id).get_type()) {
+                    case NodeType::DictionaryFloat:
+                    case NodeType::VarString:
+                        m_archive_reader->get_variable_dictionary();
+                        break;
+                    case NodeType::ClpString:
+                        m_archive_reader->get_variable_dictionary();
+                        m_archive_reader->get_log_type_dictionary();
+                        break;
+                    case NodeType::UnstructuredArray:
+                        m_archive_reader->get_variable_dictionary();
+                        m_archive_reader->get_array_dictionary();
+                        break;
+                    default:
+                        break;
+                }
+                return false;
+            },
+            [&](UnorderedObject const& obj) -> bool {
+                if (NodeType::LogMessage == obj.type) {
+                    m_archive_reader->get_log_shape_dictionary();
+                } else if (NodeType::ParentRule == obj.type) {
+                    m_archive_reader->get_parent_rule_shapes();
+                }
+                read_dictionaries_for_schema(obj.sub_schema);
+                return false;
+            }
+    );
 }
 
-bool SchemaMatch::has_array_search(int32_t schema_id) {
-    return m_array_search_schema_ids.count(schema_id);
-}
-
-LiteralType SchemaMatch::get_literal_type_for_column(ColumnDescriptor* column, int32_t schema) {
-    return node_to_literal_type(
-            m_tree->get_node(get_column_id_for_descriptor(column, schema)).get_type()
+LiteralType
+SchemaMatch::get_literal_type_for_column(ColumnDescriptor::id_t col_id, int32_t schema) {
+    return SchemaNode::node_to_literal_type(
+            m_tree->get_node(get_column_id_for_descriptor(col_id, schema)).get_type()
     );
 }
 
 std::shared_ptr<Expression> SchemaMatch::get_query_for_schema(int32_t schema) {
     return m_schema_to_query.at(schema);
+}
+
+auto SchemaMatch::resolve_leaf_rule_descriptors(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::vector<std::string_view> const& rule_names
+) -> std::
+        optional<std::vector<std::pair<std::shared_ptr<ast::ColumnDescriptor>, SchemaNode::id_t>>> {
+    std::vector<std::string_view> parent_names;
+    auto cur_id{root_node_id};
+    while (true) {
+        auto const& node{m_tree->get_node(cur_id)};
+        if (NodeType::LogMessage == node.get_type()) {
+            break;
+        }
+        parent_names.emplace_back(node.get_key_name());
+        cur_id = node.get_parent_id();
+    }
+    std::reverse(parent_names.begin(), parent_names.end());
+
+    size_t seg_idx{0};
+    for (size_t path_idx{0}; path_idx < parent_names.size() && seg_idx < rule_names.size();
+         ++path_idx)
+    {
+        if (parent_names[path_idx] == rule_names.at(seg_idx)) {
+            ++seg_idx;
+        } else {
+            break;
+        }
+    }
+
+    auto base_col{column->copy_with_new_id()};
+    auto& base_descriptors{base_col->get_descriptor_list()};
+    std::vector<SchemaNode::id_t> cur_node_ids{root_node_id};
+    for (; seg_idx < rule_names.size(); ++seg_idx) {
+        auto const token{rule_names.at(seg_idx)};
+        base_descriptors.emplace_back(DescriptorToken::create_descriptor_from_literal_token(token));
+
+        std::vector<SchemaNode::id_t> next_node_ids;
+        for (auto const node_id : cur_node_ids) {
+            auto child_ids{find_child_nodes_by_key_name(node_id, token)};
+            next_node_ids.insert(next_node_ids.end(), child_ids.begin(), child_ids.end());
+        }
+        if (next_node_ids.empty()) {
+            return std::nullopt;
+        }
+        cur_node_ids = std::move(next_node_ids);
+    }
+
+    std::vector<std::pair<std::shared_ptr<ast::ColumnDescriptor>, SchemaNode::id_t>> results;
+    results.reserve(cur_node_ids.size());
+    for (auto const node_id : cur_node_ids) {
+        auto col{base_col->copy_with_new_id()};
+        col->set_matching_types(
+                SchemaNode::node_to_literal_type(m_tree->get_node(node_id).get_type())
+        );
+        results.emplace_back(std::move(col), node_id);
+    }
+    return results;
+}
+
+auto SchemaMatch::register_clpp_resolved_column(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t node_id,
+        std::unordered_set<int32_t> const& matched_schema_ids
+) -> void {
+    column->set_clpp_resolved(true);
+    auto& mappings{m_descriptor_to_schema[column->get_id()]};
+    for (int32_t const schema_id : matched_schema_ids) {
+        mappings.emplace(schema_id, node_id);
+    }
+}
+
+auto SchemaMatch::build_leaf_query_expr(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::span<clpp::LeafQuery const> leaf_queries,
+        std::unordered_set<int32_t> const& matched_schema_ids
+) -> std::optional<std::shared_ptr<ast::Expression>> {
+    if (leaf_queries.empty()) {
+        auto col{column->copy_with_new_id()};
+        register_clpp_resolved_column(col, root_node_id, matched_schema_ids);
+        return FilterExpr::create(col, FilterOperation::EXISTS);
+    }
+    auto leaves_expr{ast::AndExpr::create()};
+    for (auto const& leaf : leaf_queries) {
+        auto rule_names{clpp::split_qualified_name(leaf.m_qualified_name)};
+        auto leaf_cols{resolve_leaf_rule_descriptors(column, root_node_id, rule_names)};
+        if (false == leaf_cols.has_value()) {
+            return std::nullopt;
+        }
+
+        auto type_variants{ast::OrExpr::create()};
+        for (auto& [new_col, node_id] : leaf_cols.value()) {
+            new_col->set_leaf_position(leaf.m_leaf_position);
+            register_clpp_resolved_column(new_col, node_id, matched_schema_ids);
+            auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
+            type_variants->add_operand(
+                    FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal)
+            );
+        }
+        leaves_expr->add_operand(type_variants);
+    }
+    return leaves_expr;
+}
+
+auto SchemaMatch::build_negated_leaf_query_expr(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::span<clpp::LeafQuery const> leaf_queries,
+        std::unordered_set<int32_t> const& matched_schema_ids
+) -> std::optional<std::shared_ptr<ast::Expression>> {
+    auto any_leaf_fails{ast::OrExpr::create()};
+    for (auto const& leaf : leaf_queries) {
+        auto rule_names{clpp::split_qualified_name(leaf.m_qualified_name)};
+        auto leaf_cols{resolve_leaf_rule_descriptors(column, root_node_id, rule_names)};
+        if (false == leaf_cols.has_value()) {
+            return std::nullopt;
+        }
+
+        auto no_type_variant_matches{ast::AndExpr::create()};
+        for (auto& [new_col, node_id] : leaf_cols.value()) {
+            new_col->set_leaf_position(leaf.m_leaf_position);
+            register_clpp_resolved_column(new_col, node_id, matched_schema_ids);
+            auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
+            no_type_variant_matches->add_operand(
+                    FilterExpr::create(new_col, ast::FilterOperation::EQ, leaf_literal, true)
+            );
+        }
+        any_leaf_fails->add_operand(no_type_variant_matches);
+    }
+    return any_leaf_fails;
+}
+
+auto
+SchemaMatch::find_child_nodes_by_key_name(SchemaNode::id_t parent_id, std::string_view key_name)
+        -> std::vector<SchemaNode::id_t> {
+    std::vector<SchemaNode::id_t> result;
+    for (auto child_id : m_tree->get_node(parent_id).get_children_ids()) {
+        if (m_tree->get_node(child_id).get_key_name() == key_name) {
+            result.push_back(child_id);
+        }
+    }
+    return result;
+}
+
+auto SchemaMatch::build_shape_match_filter(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::string_view rule_name,
+        std::optional<std::string_view> shape_query,
+        FilterOperation op,
+        bool is_inverted
+) -> std::shared_ptr<ast::Expression> {
+    auto matched_schema_ids{m_clpp_matcher.find_matching_schemas(rule_name, shape_query)};
+    if (is_inverted && shape_query.has_value()) {
+        auto const node_schema_ids{m_clpp_matcher.find_matching_schemas(rule_name, std::nullopt)};
+        std::unordered_set<int32_t> unmatched_schema_ids;
+        for (auto const schema_id : node_schema_ids) {
+            if (false == matched_schema_ids.contains(schema_id)) {
+                unmatched_schema_ids.emplace(schema_id);
+            }
+        }
+        matched_schema_ids = std::move(unmatched_schema_ids);
+        is_inverted = false;
+    }
+    if (matched_schema_ids.empty()) {
+        return nullptr;
+    }
+    auto clpp_column{column->copy_with_new_id()};
+    register_clpp_resolved_column(clpp_column, root_node_id, matched_schema_ids);
+    return FilterExpr::create(clpp_column, op, is_inverted);
+}
+
+auto SchemaMatch::build_decomposed_query_filter(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::string_view rule_name,
+        std::string_view query,
+        bool is_inverted
+) -> std::shared_ptr<ast::Expression> {
+    auto interpretations{m_clpp_matcher.decompose_query(query, rule_name)};
+    if (interpretations.has_error()) {
+        throw std::runtime_error{fmt::format(
+                "Failed to decompose query - ({}) {}",
+                interpretations.error().category().name(),
+                interpretations.error().message()
+        )};
+    }
+    m_num_clpp_interpretations += interpretations.value().size();
+    if (is_inverted) {
+        return build_negated_decomposed_query_filter(
+                column,
+                root_node_id,
+                rule_name,
+                interpretations.value()
+        );
+    }
+    auto results{ast::OrExpr::create()};
+    for (auto const& [schema_ids, leaf_queries] : interpretations.value()) {
+        if (auto leaves_expr{build_leaf_query_expr(column, root_node_id, leaf_queries, schema_ids)};
+            leaves_expr.has_value())
+        {
+            results->add_operand(*leaves_expr);
+        }
+    }
+    if (results->get_op_list().empty()) {
+        return nullptr;
+    }
+    return results;
+}
+
+auto SchemaMatch::add_exists_operand(
+        std::shared_ptr<ast::Expression> const& parent_expr,
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::unordered_set<int32_t> const& schema_ids
+) -> void {
+    if (schema_ids.empty()) {
+        return;
+    }
+    auto exists_column{column->copy_with_new_id()};
+    register_clpp_resolved_column(exists_column, root_node_id, schema_ids);
+    parent_expr->add_operand(FilterExpr::create(exists_column, FilterOperation::EXISTS));
+}
+
+auto SchemaMatch::build_negated_decomposed_query_filter(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        std::string_view rule_name,
+        std::vector<ClppMatcher::InterpretationMatch> const& interpretations
+) -> std::shared_ptr<ast::Expression> {
+    std::unordered_map<int32_t, std::vector<size_t>> applicable_interpretations_by_schema;
+    std::unordered_set<int32_t> unconditionally_matched_schema_ids;
+    for (size_t i{0}; i < interpretations.size(); ++i) {
+        auto const& [schema_ids, leaf_queries]{interpretations.at(i)};
+        if (leaf_queries.empty()) {
+            unconditionally_matched_schema_ids.insert(schema_ids.begin(), schema_ids.end());
+            continue;
+        }
+        for (auto const schema_id : schema_ids) {
+            applicable_interpretations_by_schema[schema_id].push_back(i);
+        }
+    }
+    for (auto const schema_id : unconditionally_matched_schema_ids) {
+        applicable_interpretations_by_schema.erase(schema_id);
+    }
+
+    std::unordered_set<int32_t> never_matched_schema_ids;
+    for (auto const schema_id : m_clpp_matcher.find_matching_schemas(rule_name, std::nullopt)) {
+        if (false == unconditionally_matched_schema_ids.contains(schema_id)
+            && false == applicable_interpretations_by_schema.contains(schema_id))
+        {
+            never_matched_schema_ids.emplace(schema_id);
+        }
+    }
+
+    auto results{ast::OrExpr::create()};
+    add_exists_operand(results, column, root_node_id, never_matched_schema_ids);
+
+    std::map<std::vector<size_t>, std::unordered_set<int32_t>> schema_ids_by_interpretation_group;
+    for (auto const& [schema_id, interpretation_indices] : applicable_interpretations_by_schema) {
+        schema_ids_by_interpretation_group[interpretation_indices].emplace(schema_id);
+    }
+    for (auto const& [interpretation_indices, schema_ids] : schema_ids_by_interpretation_group) {
+        auto no_interpretation_holds{ast::AndExpr::create()};
+        for (auto const i : interpretation_indices) {
+            if (auto negated_expr{build_negated_leaf_query_expr(
+                        column,
+                        root_node_id,
+                        interpretations.at(i).leaf_queries,
+                        schema_ids
+                )};
+                negated_expr.has_value())
+            {
+                no_interpretation_holds->add_operand(*negated_expr);
+            }
+        }
+        if (no_interpretation_holds->get_op_list().empty()) {
+            add_exists_operand(results, column, root_node_id, schema_ids);
+            continue;
+        }
+        results->add_operand(no_interpretation_holds);
+    }
+
+    if (results->get_op_list().empty()) {
+        return nullptr;
+    }
+    return results;
+}
+
+auto SchemaMatch::build_clpp_query_filter(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        SchemaNode::id_t root_node_id,
+        ast::FilterExpr const& filter
+) -> std::shared_ptr<ast::Expression> {
+    auto const rule_name{m_tree->build_ls_rule_name(root_node_id)};
+
+    auto const op{filter.get_operation()};
+    if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
+        return build_shape_match_filter(
+                column,
+                root_node_id,
+                rule_name,
+                std::nullopt,
+                op,
+                filter.is_inverted()
+        );
+    }
+
+    auto const operand{filter.get_operand()};
+    if (nullptr == operand) {
+        return nullptr;
+    }
+    std::string query;
+    if (false == operand->as_var_string(query, op)) {
+        return nullptr;
+    }
+
+    if (column->get_subtree_type().has_value()
+        && clpp::cShapeFunction == column->get_subtree_type().value())
+    {
+        return build_shape_match_filter(
+                column,
+                root_node_id,
+                rule_name,
+                query,
+                FilterOperation::EXISTS,
+                filter.is_inverted()
+        );
+    }
+
+    m_clpp_decomposed_query = true;
+    return build_decomposed_query_filter(
+            column,
+            root_node_id,
+            rule_name,
+            query,
+            filter.is_inverted()
+    );
 }
 }  // namespace clp_s::search

@@ -8,6 +8,8 @@ set(
         AddTimestampConditions.hpp
         ColumnScan.cpp
         ColumnScan.hpp
+        ClppMatcher.cpp
+        ClppMatcher.hpp
         EvaluateRangeIndexFilters.cpp
         EvaluateRangeIndexFilters.hpp
         EvaluateTimestampIndex.cpp
@@ -41,7 +43,7 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 absl::flat_hash_map
                 clp_s::archive_reader
                 clp_s::search::ast
-                log_surgeon::log_surgeon
+                log-surgeon::log-surgeon
                 simdjson::simdjson
                 utils::profiling
                 PRIVATE
@@ -50,6 +52,7 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 clp_s::io
                 opentelemetry-cpp::api
                 opentelemetry-cpp::otlp_http_exporter
+                opentelemetry-cpp::ostream_span_exporter
                 opentelemetry-cpp::resources
                 opentelemetry-cpp::trace
                 spdlog::spdlog

@@ -38,6 +38,8 @@ public:
 
     bool should_create_table() const { return m_should_create_table; }
 
+    bool experimental() const { return m_experimental; }
+
 private:
     // Methods
     void print_basic_usage() const;
@@ -49,6 +51,7 @@ private:
 
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
     bool m_should_create_table{false};
+    bool m_experimental{false};
 };
 }  // namespace clp_s::indexer
 

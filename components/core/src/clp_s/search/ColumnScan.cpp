@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -53,10 +54,19 @@ template <typename T>
 auto invert(ColumnScan::Bitmap& bitmap) -> void;
 
 /**
+ * @param reader_map
+ * @param key
+ * @return The readers stored under `key` in `reader_map`, or an empty vector if there are none.
+ */
+template <typename Key, typename Reader>
+[[nodiscard]] auto
+find_readers(std::unordered_map<Key, std::vector<Reader*>> const& reader_map, Key key)
+        -> std::vector<Reader*> const&;
+
+/**
  * Builds a bitmap for a filter over a basic typed column.
  * @param num_messages Number of messages represented by the bitmap.
- * @param reader_map Column readers keyed by column ID.
- * @param column_id ID of the column to scan.
+ * @param readers Column readers to scan.
  * @param operation Filter operation to apply.
  * @param operand Operand from the filter expression.
  * @return A bitmap indexed by message number, with nonzero entries for matching messages.
@@ -64,8 +74,7 @@ auto invert(ColumnScan::Bitmap& bitmap) -> void;
 template <typename T>
 [[nodiscard]] auto build_basic_filter(
         uint64_t num_messages,
-        ColumnScan::BasicReaderMap const& reader_map,
-        int32_t column_id,
+        std::vector<BaseColumnReader*> const& readers,
         FilterOperation operation,
         T operand
 ) -> ColumnScan::Bitmap;
@@ -101,16 +110,14 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
 /**
  * Builds a bitmap for a filter over a variable string column.
  * @param num_messages Number of messages represented by the bitmap.
- * @param reader_map Column readers keyed by column ID.
- * @param column_id ID of the column to scan.
+ * @param readers Column readers to scan.
  * @param operation Equality operation to apply.
  * @param matching_vars Set of variable IDs that match the filter.
  * @return A bitmap indexed by message number, with nonzero entries for matching messages.
  */
 [[nodiscard]] auto build_var_string_filter(
         uint64_t num_messages,
-        ColumnScan::VarStringReaderMap const& reader_map,
-        int32_t column_id,
+        std::vector<VariableStringColumnReader*> const& readers,
         FilterOperation operation,
         std::unordered_set<int64_t> const& matching_vars
 ) -> ColumnScan::Bitmap;
@@ -182,17 +189,12 @@ auto invert(ColumnScan::Bitmap& bitmap) -> void {
 template <typename T>
 [[nodiscard]] auto build_basic_filter(
         uint64_t num_messages,
-        ColumnScan::BasicReaderMap const& reader_map,
-        int32_t column_id,
+        std::vector<BaseColumnReader*> const& readers,
         FilterOperation operation,
         T operand
 ) -> ColumnScan::Bitmap {
     ColumnScan::Bitmap bitmap(num_messages, 0);
-    auto const readers = reader_map.find(column_id);
-    if (reader_map.end() == readers) {
-        return bitmap;
-    }
-    for (auto* reader : readers->second) {
+    for (auto* reader : readers) {
         for (uint64_t message_index{0}; message_index < num_messages; ++message_index) {
             auto const value = std::get<T>(reader->extract_value(message_index));
             bitmap[message_index] |= compare(operation, value, operand) ? 1 : 0;
@@ -266,17 +268,12 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
 
 [[nodiscard]] auto build_var_string_filter(
         uint64_t num_messages,
-        ColumnScan::VarStringReaderMap const& reader_map,
-        int32_t column_id,
+        std::vector<VariableStringColumnReader*> const& readers,
         FilterOperation operation,
         std::unordered_set<int64_t> const& matching_vars
 ) -> ColumnScan::Bitmap {
     ColumnScan::Bitmap bitmap(num_messages, 0);
-    auto const readers = reader_map.find(column_id);
-    if (reader_map.end() == readers) {
-        return bitmap;
-    }
-    for (auto* reader : readers->second) {
+    for (auto* reader : readers) {
         for (uint64_t message_index{0}; message_index < num_messages; ++message_index) {
             auto const matched = matching_vars.contains(
                     static_cast<int64_t>(reader->get_variable_id(message_index))
@@ -320,6 +317,15 @@ clp_string_matches(ClpStringColumnReader* reader, clp::Query const& query, uint6
     }
     return bitmap;
 }
+
+template <typename Key, typename Reader>
+[[nodiscard]] auto
+find_readers(std::unordered_map<Key, std::vector<Reader*>> const& reader_map, Key key)
+        -> std::vector<Reader*> const& {
+    static std::vector<Reader*> const cEmptyReaders;
+    auto const it{reader_map.find(key)};
+    return reader_map.end() == it ? cEmptyReaders : it->second;
+}
 }  // namespace
 
 auto ColumnScan::try_create(
@@ -328,6 +334,7 @@ auto ColumnScan::try_create(
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
         TimestampReaderMap const& timestamp_readers,
+        PositionalReaderMaps const& positional_readers,
         DeprecatedDateStringColumnReader* deprecated_datestring_reader,
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches,
@@ -343,6 +350,7 @@ auto ColumnScan::try_create(
             clp_string_readers,
             var_string_readers,
             timestamp_readers,
+            positional_readers,
             deprecated_datestring_reader,
             clp_queries,
             var_matches,
@@ -360,6 +368,7 @@ ColumnScan::ColumnScan(
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
         TimestampReaderMap const& timestamp_readers,
+        PositionalReaderMaps const& positional_readers,
         DeprecatedDateStringColumnReader* deprecated_datestring_reader,
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches,
@@ -372,6 +381,7 @@ ColumnScan::ColumnScan(
                   clp_string_readers,
                   var_string_readers,
                   timestamp_readers,
+                  positional_readers,
                   deprecated_datestring_reader,
                   clp_queries,
                   var_matches
@@ -434,6 +444,7 @@ auto ColumnScan::can_build_filter(
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
         case LiteralType::FloatT:
+            return false == filter->get_operand()->has_wildcards();
         case LiteralType::TimestampT:
             return true;
         case LiteralType::BooleanT:
@@ -451,6 +462,7 @@ auto ColumnScan::can_build_filter(
             // null checks are always turned into existence operators --
             // no need to evaluate here
         case LiteralType::ArrayT:
+        case LiteralType::ClppDecomposeT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
             return false;
@@ -466,6 +478,7 @@ auto ColumnScan::build_node(
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
         TimestampReaderMap const& timestamp_readers,
+        PositionalReaderMaps const& positional_readers,
         DeprecatedDateStringColumnReader* deprecated_datestring_reader,
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches
@@ -481,6 +494,7 @@ auto ColumnScan::build_node(
                     clp_string_readers,
                     var_string_readers,
                     timestamp_readers,
+                    positional_readers,
                     deprecated_datestring_reader,
                     clp_queries,
                     var_matches
@@ -504,6 +518,7 @@ auto ColumnScan::build_node(
                     clp_string_readers,
                     var_string_readers,
                     timestamp_readers,
+                    positional_readers,
                     deprecated_datestring_reader,
                     clp_queries,
                     var_matches
@@ -524,6 +539,7 @@ auto ColumnScan::build_node(
                 clp_string_readers,
                 var_string_readers,
                 timestamp_readers,
+                positional_readers,
                 deprecated_datestring_reader,
                 clp_queries,
                 var_matches
@@ -544,6 +560,7 @@ auto ColumnScan::build_filter(
         ClpStringReaderMap const& clp_string_readers,
         VarStringReaderMap const& var_string_readers,
         TimestampReaderMap const& timestamp_readers,
+        PositionalReaderMaps const& positional_readers,
         DeprecatedDateStringColumnReader* deprecated_datestring_reader,
         ClpQueryMap const& clp_queries,
         VarMatchMap const& var_matches
@@ -558,6 +575,15 @@ auto ColumnScan::build_filter(
 
     auto const column_id = column->get_column_id();
     auto const& operand = filter->get_operand();
+    bool const is_positional{column->get_leaf_position().has_value()};
+    auto const& basic{
+            is_positional ? find_readers(positional_readers.basic, filter)
+                          : find_readers(basic_readers, column_id)
+    };
+    auto const& var_string{
+            is_positional ? find_readers(positional_readers.var_string, filter)
+                          : find_readers(var_string_readers, column_id)
+    };
 
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT: {
@@ -565,26 +591,14 @@ auto ColumnScan::build_filter(
             if (false == operand->as_int(operand_value, operation)) {
                 return bitmap;
             }
-            return build_basic_filter(
-                    m_num_messages,
-                    basic_readers,
-                    column_id,
-                    operation,
-                    operand_value
-            );
+            return build_basic_filter(m_num_messages, basic, operation, operand_value);
         }
         case LiteralType::FloatT: {
             double operand_value{};
             if (false == operand->as_float(operand_value, operation)) {
                 return bitmap;
             }
-            return build_basic_filter(
-                    m_num_messages,
-                    basic_readers,
-                    column_id,
-                    operation,
-                    operand_value
-            );
+            return build_basic_filter(m_num_messages, basic, operation, operand_value);
         }
         case LiteralType::BooleanT: {
             bool operand_value{};
@@ -593,8 +607,7 @@ auto ColumnScan::build_filter(
             }
             return build_basic_filter(
                     m_num_messages,
-                    basic_readers,
-                    column_id,
+                    basic,
                     operation,
                     static_cast<uint8_t>(operand_value)
             );
@@ -611,13 +624,7 @@ auto ColumnScan::build_filter(
         }
         case LiteralType::VarStringT: {
             auto const* matching_vars = var_matches.at(filter);
-            return build_var_string_filter(
-                    m_num_messages,
-                    var_string_readers,
-                    column_id,
-                    operation,
-                    *matching_vars
-            );
+            return build_var_string_filter(m_num_messages, var_string, operation, *matching_vars);
         }
         case LiteralType::TimestampT: {
             int64_t operand_value{};
@@ -646,6 +653,7 @@ auto ColumnScan::build_filter(
             // null checks are always turned into existence operators --
             // no need to evaluate here
         case LiteralType::ArrayT:
+        case LiteralType::ClppDecomposeT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
             return bitmap;

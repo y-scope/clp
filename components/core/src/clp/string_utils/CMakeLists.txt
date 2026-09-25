@@ -9,6 +9,11 @@ if(CLP_BUILD_CLP_STRING_UTILS)
                 ${STRING_UTILS_HEADER_LIST}
         )
         add_library(clp::string_utils ALIAS string_utils)
-        target_include_directories(string_utils PUBLIC ../)
         target_compile_features(string_utils PRIVATE cxx_std_20)
+        target_include_directories(string_utils PUBLIC ../)
+        target_link_libraries(
+                string_utils
+                PUBLIC
+                FastFloat::fast_float
+        )
 endif()

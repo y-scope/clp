@@ -1,5 +1,5 @@
 #include <any>
-#include <iostream>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -8,17 +8,22 @@
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
+#include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/search/ast/Expression.hpp>
+#include <clp_s/search/ast/FunctionCall.hpp>
+#include <clp_s/search/ast/Integral.hpp>
+#include <clp_s/search/ast/Literal.hpp>
+#include <clp_s/search/ast/Value.hpp>
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
+#include <clpp/Defs.hpp>
 
 #include "../../archive_constants.hpp"
 #include "../antlr_common/ErrorListener.hpp"
 #include "../ast/AndExpr.hpp"
 #include "../ast/BooleanLiteral.hpp"
 #include "../ast/ColumnDescriptor.hpp"
-#include "../ast/EmptyExpr.hpp"
 #include "../ast/FilterExpr.hpp"
 #include "../ast/FilterOperation.hpp"
-#include "../ast/Integral.hpp"
 #include "../ast/NullLiteral.hpp"
 #include "../ast/OrExpr.hpp"
 #include "../ast/SearchUtils.hpp"
@@ -35,7 +40,6 @@ using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::BooleanLiteral;
 using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::DescriptorList;
-using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
@@ -52,6 +56,69 @@ using generated::KqlLexer;
 using generated::KqlParser;
 
 namespace {
+/**
+ * Extracts a ColumnDescriptor from a parsed KQL value, handling FunctionCall unwrapping.
+ *
+ * For filter functions, sets the subtree_type on the extracted column.
+ *
+ * @param parsed The result of visiting a column context (either ColumnDescriptor or FunctionCall).
+ * @return The extracted ColumnDescriptor, or nullptr if the value is invalid.
+ */
+auto extract_column_from_parsed_value(std::any const& parsed) -> std::shared_ptr<ColumnDescriptor>;
+
+/**
+ * Tokenizes a column name string into a ColumnDescriptor.
+ *
+ * @param column_text The raw column text (possibly quoted).
+ * @return A ColumnDescriptor on success, nullptr on failure.
+ */
+auto parse_column_literal(std::string const& column_text) -> std::shared_ptr<ColumnDescriptor>;
+
+auto extract_column_from_parsed_value(std::any const& parsed) -> std::shared_ptr<ColumnDescriptor> {
+    if (auto const* value{std::any_cast<std::shared_ptr<ast::Value>>(&parsed)}) {
+        if (auto func_call{std::dynamic_pointer_cast<ast::FunctionCall>(*value)}) {
+            auto const& function_name{func_call->get_function_name()};
+            auto const& args{func_call->get_args()};
+            if (args.size() != 1) {
+                SPDLOG_ERROR("Function '{}' requires exactly one column argument", function_name);
+                return nullptr;
+            }
+            auto column{std::dynamic_pointer_cast<ColumnDescriptor>(args.at(0))};
+            if (!column) {
+                SPDLOG_ERROR("Function '{}' argument must be a column", function_name);
+                return nullptr;
+            }
+            if (function_name == clpp::cShapeFunction) {
+                column->set_subtree_type(std::string{clpp::cShapeFunction});
+            } else {
+                SPDLOG_ERROR("Function '{}' is not supported in filter expressions", function_name);
+                return nullptr;
+            }
+            return column;
+        }
+        if (auto column{std::dynamic_pointer_cast<ColumnDescriptor>(*value)}) {
+            return column;
+        }
+    }
+    return std::any_cast<std::shared_ptr<ColumnDescriptor>>(parsed);
+}
+
+auto parse_column_literal(std::string const& column_text) -> std::shared_ptr<ColumnDescriptor> {
+    std::vector<std::string> descriptor_tokens;
+    std::string descriptor_namespace;
+    if (false
+        == clp_s::search::ast::tokenize_column_descriptor(
+                column_text,
+                descriptor_tokens,
+                descriptor_namespace
+        ))
+    {
+        SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column_text);
+        return nullptr;
+    }
+    return ColumnDescriptor::create_from_escaped_tokens(descriptor_tokens, descriptor_namespace);
+}
+
 class ParseTreeVisitor : public KqlBaseVisitor {
 private:
     static void prepend_column(
@@ -187,25 +254,50 @@ public:
     }
 
     std::any visitColumn(KqlParser::ColumnContext* ctx) override {
-        std::string column{unquote_string(ctx->literal()->getText())};
-
-        std::vector<std::string> descriptor_tokens;
-        std::string descriptor_namespace;
-        if (false
-            == clp_s::search::ast::tokenize_column_descriptor(
-                    column,
-                    descriptor_tokens,
-                    descriptor_namespace
-            ))
-        {
-            SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
+        if (nullptr != ctx->function_call()) {
+            return ctx->function_call()->accept(this);
+        }
+        auto column{parse_column_literal(unquote_string(ctx->literal()->getText()))};
+        if (nullptr == column) {
             return std::any{};
         }
+        return column;
+    }
 
-        return ColumnDescriptor::create_from_escaped_tokens(
-                descriptor_tokens,
-                descriptor_namespace
-        );
+    std::any visitColumn_literal(KqlParser::Column_literalContext* ctx) override {
+        auto column{parse_column_literal(unquote_string(ctx->literal()->getText()))};
+        if (nullptr == column) {
+            return std::any{};
+        }
+        return column;
+    }
+
+    std::any visitFunction_call(KqlParser::Function_callContext* ctx) override {
+        auto const function_name{ctx->func->getText()};
+        if (clpp::cShapeFunction != function_name && clpp::cDecomposeFunction != function_name) {
+            throw std::runtime_error{fmt::format("Unknown function in query: '{}'", function_name)};
+        }
+
+        std::any column_any{ctx->column_literal()->accept(this)};
+        if (false == column_any.has_value()) {
+            SPDLOG_ERROR("Failed to parse column argument for function '{}'", function_name);
+            return std::any{};
+        }
+        auto column{std::any_cast<std::shared_ptr<ColumnDescriptor>>(column_any)};
+        return std::any{std::static_pointer_cast<clp_s::search::ast::Value>(
+                clp_s::search::ast::FunctionCall::create(std::string{function_name}, column)
+        )};
+    }
+
+    std::any visitProjection_column(KqlParser::Projection_columnContext* ctx) override {
+        if (nullptr != ctx->function_call()) {
+            return ctx->function_call()->accept(this);
+        }
+        auto column{parse_column_literal(unquote_string(ctx->literal()->getText()))};
+        if (nullptr == column) {
+            return std::any{};
+        }
+        return std::any{std::static_pointer_cast<clp_s::search::ast::Value>(column)};
     }
 
     std::any visitNestedQuery(KqlParser::NestedQueryContext* ctx) override {
@@ -237,8 +329,13 @@ public:
         return ctx->q->accept(this);
     }
 
-    std::any visitColumn_value_expression(KqlParser::Column_value_expressionContext* ctx) override {
-        auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
+    auto visitColumn_value_expression(KqlParser::Column_value_expressionContext* ctx)
+            -> std::any override {
+        auto parsed = ctx->col->accept(this);
+        auto descriptor{extract_column_from_parsed_value(parsed)};
+        if (!descriptor) {
+            return std::any{};
+        }
 
         if (nullptr != ctx->lit) {
             auto lit{std::any_cast<std::shared_ptr<Literal>>(ctx->lit->accept(this))};
@@ -258,8 +355,13 @@ public:
         }
     }
 
-    std::any visitColumn_range_expression(KqlParser::Column_range_expressionContext* ctx) override {
-        auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
+    auto visitColumn_range_expression(KqlParser::Column_range_expressionContext* ctx)
+            -> std::any override {
+        auto parsed = ctx->col->accept(this);
+        auto descriptor{extract_column_from_parsed_value(parsed)};
+        if (!descriptor) {
+            return std::any{};
+        }
         std::shared_ptr<Literal> lit;
         if (ctx->lit) {
             lit = std::any_cast<std::shared_ptr<Literal>>(ctx->lit->accept(this));
@@ -356,6 +458,41 @@ std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
     try {
         return std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
     } catch (std::exception& e) {
+        return {};
+    }
+}
+
+auto parse_projection_column(std::string_view column_str)
+        -> std::shared_ptr<clp_s::search::ast::Value> {
+    ErrorListener lexer_error_listener;
+    ErrorListener parser_error_listener;
+
+    ANTLRInputStream input(std::string{column_str});
+    KqlLexer lexer(&input);
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(&lexer_error_listener);
+    CommonTokenStream tokens(&lexer);
+    KqlParser parser(&tokens);
+    parser.removeErrorListeners();
+    parser.addErrorListener(&parser_error_listener);
+    KqlParser::Projection_columnContext* tree{parser.projection_column()};
+
+    if (lexer_error_listener.error()) {
+        SPDLOG_ERROR("Lexer error: {}", lexer_error_listener.message());
+        return {};
+    }
+    if (parser_error_listener.error()) {
+        SPDLOG_ERROR("Parser error: {}", parser_error_listener.message());
+        return {};
+    }
+
+    ParseTreeVisitor visitor;
+    try {
+        return std::any_cast<std::shared_ptr<clp_s::search::ast::Value>>(
+                visitor.visitProjection_column(tree)
+        );
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("parse_projection_column exception: {}", e.what());
         return {};
     }
 }

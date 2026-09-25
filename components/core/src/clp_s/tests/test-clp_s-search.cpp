@@ -52,11 +52,16 @@ auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
         -> std::filesystem::path;
 auto get_test_input_local_path(std::string_view test_input_path) -> std::string;
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression>;
-void
-search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results);
+void search(
+        std::string const& query,
+        bool ignore_case,
+        bool experimental,
+        std::vector<int64_t> const& expected_results
+);
 void search(
         std::shared_ptr<clp_s::search::ast::Expression> expr,
         bool ignore_case,
+        bool experimental,
         std::vector<int64_t> const& expected_results
 );
 void validate_results(
@@ -129,16 +134,21 @@ void validate_results(
     REQUIRE(results.size() == expected_results.size());
 }
 
-void
-search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results) {
+void search(
+        std::string const& query,
+        bool ignore_case,
+        bool experimental,
+        std::vector<int64_t> const& expected_results
+) {
     auto query_stream = std::istringstream{query};
     auto expr = clp_s::search::kql::parse_kql_expression(query_stream);
-    search(expr, ignore_case, expected_results);
+    search(expr, ignore_case, experimental, expected_results);
 }
 
 void search(
         std::shared_ptr<clp_s::search::ast::Expression> expr,
         bool ignore_case,
+        bool experimental,
         std::vector<int64_t> const& expected_results
 ) {
     REQUIRE(nullptr != expr);
@@ -163,7 +173,10 @@ void search(
                 .source{clp_s::InputSource::Filesystem},
                 .path{entry.path().string()}
         };
-        archive_reader->open(archive_path, clp_s::NetworkAuthOption{});
+        archive_reader->open(
+                archive_path,
+                clp_s::ArchiveReader::Options{.m_experimental = experimental}
+        );
 
         auto archive_expr = expr->copy();
 
@@ -179,10 +192,8 @@ void search(
         clp_s::search::EvaluateTimestampIndex timestamp_index_pass(timestamp_dict);
         REQUIRE(clp_s::EvaluatedValue::False != timestamp_index_pass.run(archive_expr));
 
-        auto match_pass = std::make_shared<clp_s::search::SchemaMatch>(
-                archive_reader->get_schema_tree(),
-                archive_reader->get_schema_map()
-        );
+        auto match_pass
+                = std::make_shared<clp_s::search::SchemaMatch>(archive_reader, !ignore_case);
         archive_expr = match_pass->run(archive_expr);
         REQUIRE(nullptr != archive_expr);
 
@@ -249,12 +260,45 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, expected_results));
+        REQUIRE_NOTHROW(search(query, false, false, expected_results));
     }
 
     std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
     REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
-    REQUIRE_NOTHROW(search(expr, false, {0}));
+    REQUIRE_NOTHROW(search(expr, false, false, {0}));
+}
+
+TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
+            {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
+            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
+            {R"aa(arr.b > 1000)aa", {7, 8}},
+            {R"aa(var_string: *)aa", {9}},
+            {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
+            {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}},
+            {R"aa(msg > "foo")aa", {}}
+    };
+    auto const single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchInputFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false,
+                    get_heuristic_parsing_spec_path()
+            )
+    );
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        CAPTURE(single_file_archive);
+        REQUIRE_NOTHROW(search(query, false, true, expected_results));
+    }
 }
 
 TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
@@ -286,12 +330,12 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, expected_results));
+        REQUIRE_NOTHROW(search(query, false, false, expected_results));
     }
 
     std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
     REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
-    REQUIRE_NOTHROW(search(expr, false, {0}));
+    REQUIRE_NOTHROW(search(expr, false, false, {0}));
 }
 
 TEST_CASE("clp-s-search-float-timestamp", "[clp-s][search]") {
@@ -321,7 +365,7 @@ TEST_CASE("clp-s-search-float-timestamp", "[clp-s][search]") {
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, expected_results));
+        REQUIRE_NOTHROW(search(query, false, false, expected_results));
     }
 }
 
@@ -352,6 +396,6 @@ TEST_CASE("clp-s-search-epoch-timestamp", "[clp-s][search]") {
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, expected_results));
+        REQUIRE_NOTHROW(search(query, false, false, expected_results));
     }
 }

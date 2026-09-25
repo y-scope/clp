@@ -54,8 +54,8 @@ void kqlParserInitialize() {
   auto staticData = std::make_unique<KqlParserStaticData>(
     std::vector<std::string>{
       "start", "query", "expression", "column_range_expression", "column_value_expression", 
-      "column", "value_expression", "list_of_values", "timestamp_expression", 
-      "literal"
+      "function_call", "column", "column_literal", "projection_column", 
+      "value_expression", "list_of_values", "timestamp_expression", "literal"
     },
     std::vector<std::string>{
       "", "':'", "'{'", "'}'", "'('", "')'", "'timestamp('", "','"
@@ -66,32 +66,38 @@ void kqlParserInitialize() {
     }
   );
   static const int32_t serializedATNSegment[] = {
-  	4,1,14,92,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,
-  	7,7,2,8,7,8,2,9,7,9,1,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-  	1,1,1,1,1,1,1,1,1,3,1,38,8,1,1,1,1,1,1,1,5,1,43,8,1,10,1,12,1,46,9,1,
-  	1,2,1,2,1,2,3,2,51,8,2,1,3,1,3,1,3,1,3,3,3,57,8,3,1,4,1,4,1,4,1,4,1,4,
-  	3,4,64,8,4,1,5,1,5,1,6,1,6,1,7,1,7,3,7,72,8,7,1,7,5,7,75,8,7,10,7,12,
-  	7,78,9,7,1,7,1,7,1,8,1,8,1,8,1,8,3,8,86,8,8,1,8,1,8,1,9,1,9,1,9,0,1,2,
-  	10,0,2,4,6,8,10,12,14,16,18,0,3,1,0,8,9,1,0,8,10,1,0,11,12,93,0,20,1,
-  	0,0,0,2,37,1,0,0,0,4,50,1,0,0,0,6,52,1,0,0,0,8,58,1,0,0,0,10,65,1,0,0,
-  	0,12,67,1,0,0,0,14,69,1,0,0,0,16,81,1,0,0,0,18,89,1,0,0,0,20,21,3,2,1,
-  	0,21,22,5,0,0,1,22,1,1,0,0,0,23,24,6,1,-1,0,24,25,3,10,5,0,25,26,5,1,
-  	0,0,26,27,5,2,0,0,27,28,3,2,1,0,28,29,5,3,0,0,29,38,1,0,0,0,30,31,5,4,
-  	0,0,31,32,3,2,1,0,32,33,5,5,0,0,33,38,1,0,0,0,34,35,5,10,0,0,35,38,3,
-  	2,1,3,36,38,3,4,2,0,37,23,1,0,0,0,37,30,1,0,0,0,37,34,1,0,0,0,37,36,1,
-  	0,0,0,38,44,1,0,0,0,39,40,10,2,0,0,40,41,7,0,0,0,41,43,3,2,1,3,42,39,
-  	1,0,0,0,43,46,1,0,0,0,44,42,1,0,0,0,44,45,1,0,0,0,45,3,1,0,0,0,46,44,
-  	1,0,0,0,47,51,3,6,3,0,48,51,3,8,4,0,49,51,3,12,6,0,50,47,1,0,0,0,50,48,
-  	1,0,0,0,50,49,1,0,0,0,51,5,1,0,0,0,52,53,3,10,5,0,53,56,5,13,0,0,54,57,
-  	3,16,8,0,55,57,3,18,9,0,56,54,1,0,0,0,56,55,1,0,0,0,57,7,1,0,0,0,58,59,
-  	3,10,5,0,59,63,5,1,0,0,60,64,3,14,7,0,61,64,3,16,8,0,62,64,3,18,9,0,63,
-  	60,1,0,0,0,63,61,1,0,0,0,63,62,1,0,0,0,64,9,1,0,0,0,65,66,3,18,9,0,66,
-  	11,1,0,0,0,67,68,3,18,9,0,68,13,1,0,0,0,69,71,5,4,0,0,70,72,7,1,0,0,71,
-  	70,1,0,0,0,71,72,1,0,0,0,72,76,1,0,0,0,73,75,3,18,9,0,74,73,1,0,0,0,75,
-  	78,1,0,0,0,76,74,1,0,0,0,76,77,1,0,0,0,77,79,1,0,0,0,78,76,1,0,0,0,79,
-  	80,5,5,0,0,80,15,1,0,0,0,81,82,5,6,0,0,82,85,5,11,0,0,83,84,5,7,0,0,84,
-  	86,5,11,0,0,85,83,1,0,0,0,85,86,1,0,0,0,86,87,1,0,0,0,87,88,5,5,0,0,88,
-  	17,1,0,0,0,89,90,7,2,0,0,90,19,1,0,0,0,8,37,44,50,56,63,71,76,85
+  	4,1,14,111,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,
+  	7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,1,0,1,0,1,0,1,1,1,
+  	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,44,8,1,1,1,1,1,
+  	1,1,5,1,49,8,1,10,1,12,1,52,9,1,1,2,1,2,1,2,3,2,57,8,2,1,3,1,3,1,3,1,
+  	3,3,3,63,8,3,1,4,1,4,1,4,1,4,1,4,3,4,70,8,4,1,5,1,5,1,5,1,5,1,5,1,6,1,
+  	6,3,6,79,8,6,1,7,1,7,1,8,1,8,3,8,85,8,8,1,9,1,9,1,10,1,10,3,10,91,8,10,
+  	1,10,5,10,94,8,10,10,10,12,10,97,9,10,1,10,1,10,1,11,1,11,1,11,1,11,3,
+  	11,105,8,11,1,11,1,11,1,12,1,12,1,12,0,1,2,13,0,2,4,6,8,10,12,14,16,18,
+  	20,22,24,0,3,1,0,8,9,1,0,8,10,1,0,11,12,111,0,26,1,0,0,0,2,43,1,0,0,0,
+  	4,56,1,0,0,0,6,58,1,0,0,0,8,64,1,0,0,0,10,71,1,0,0,0,12,78,1,0,0,0,14,
+  	80,1,0,0,0,16,84,1,0,0,0,18,86,1,0,0,0,20,88,1,0,0,0,22,100,1,0,0,0,24,
+  	108,1,0,0,0,26,27,3,2,1,0,27,28,5,0,0,1,28,1,1,0,0,0,29,30,6,1,-1,0,30,
+  	31,3,12,6,0,31,32,5,1,0,0,32,33,5,2,0,0,33,34,3,2,1,0,34,35,5,3,0,0,35,
+  	44,1,0,0,0,36,37,5,4,0,0,37,38,3,2,1,0,38,39,5,5,0,0,39,44,1,0,0,0,40,
+  	41,5,10,0,0,41,44,3,2,1,3,42,44,3,4,2,0,43,29,1,0,0,0,43,36,1,0,0,0,43,
+  	40,1,0,0,0,43,42,1,0,0,0,44,50,1,0,0,0,45,46,10,2,0,0,46,47,7,0,0,0,47,
+  	49,3,2,1,3,48,45,1,0,0,0,49,52,1,0,0,0,50,48,1,0,0,0,50,51,1,0,0,0,51,
+  	3,1,0,0,0,52,50,1,0,0,0,53,57,3,6,3,0,54,57,3,8,4,0,55,57,3,18,9,0,56,
+  	53,1,0,0,0,56,54,1,0,0,0,56,55,1,0,0,0,57,5,1,0,0,0,58,59,3,12,6,0,59,
+  	62,5,13,0,0,60,63,3,22,11,0,61,63,3,24,12,0,62,60,1,0,0,0,62,61,1,0,0,
+  	0,63,7,1,0,0,0,64,65,3,12,6,0,65,69,5,1,0,0,66,70,3,20,10,0,67,70,3,22,
+  	11,0,68,70,3,24,12,0,69,66,1,0,0,0,69,67,1,0,0,0,69,68,1,0,0,0,70,9,1,
+  	0,0,0,71,72,5,12,0,0,72,73,5,4,0,0,73,74,3,14,7,0,74,75,5,5,0,0,75,11,
+  	1,0,0,0,76,79,3,10,5,0,77,79,3,24,12,0,78,76,1,0,0,0,78,77,1,0,0,0,79,
+  	13,1,0,0,0,80,81,3,24,12,0,81,15,1,0,0,0,82,85,3,10,5,0,83,85,3,24,12,
+  	0,84,82,1,0,0,0,84,83,1,0,0,0,85,17,1,0,0,0,86,87,3,24,12,0,87,19,1,0,
+  	0,0,88,90,5,4,0,0,89,91,7,1,0,0,90,89,1,0,0,0,90,91,1,0,0,0,91,95,1,0,
+  	0,0,92,94,3,24,12,0,93,92,1,0,0,0,94,97,1,0,0,0,95,93,1,0,0,0,95,96,1,
+  	0,0,0,96,98,1,0,0,0,97,95,1,0,0,0,98,99,5,5,0,0,99,21,1,0,0,0,100,101,
+  	5,6,0,0,101,104,5,11,0,0,102,103,5,7,0,0,103,105,5,11,0,0,104,102,1,0,
+  	0,0,104,105,1,0,0,0,105,106,1,0,0,0,106,107,5,5,0,0,107,23,1,0,0,0,108,
+  	109,7,2,0,0,109,25,1,0,0,0,10,43,50,56,62,69,78,84,90,95,104
   };
   staticData->serializedATN = antlr4::atn::SerializedATNView(serializedATNSegment, sizeof(serializedATNSegment) / sizeof(serializedATNSegment[0]));
 
@@ -180,9 +186,9 @@ KqlParser::StartContext* KqlParser::start() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(20);
+    setState(26);
     query(0);
-    setState(21);
+    setState(27);
     match(KqlParser::EOF);
    
   }
@@ -331,7 +337,7 @@ KqlParser::QueryContext* KqlParser::query(int precedence) {
   try {
     size_t alt;
     enterOuterAlt(_localctx, 1);
-    setState(37);
+    setState(43);
     _errHandler->sync(this);
     switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 0, _ctx)) {
     case 1: {
@@ -339,15 +345,15 @@ KqlParser::QueryContext* KqlParser::query(int precedence) {
       _ctx = _localctx;
       previousContext = _localctx;
 
-      setState(24);
+      setState(30);
       antlrcpp::downCast<NestedQueryContext *>(_localctx)->col = column();
-      setState(25);
+      setState(31);
       match(KqlParser::T__0);
-      setState(26);
+      setState(32);
       match(KqlParser::T__1);
-      setState(27);
+      setState(33);
       antlrcpp::downCast<NestedQueryContext *>(_localctx)->q = query(0);
-      setState(28);
+      setState(34);
       match(KqlParser::T__2);
       break;
     }
@@ -356,11 +362,11 @@ KqlParser::QueryContext* KqlParser::query(int precedence) {
       _localctx = _tracker.createInstance<SubQueryContext>(_localctx);
       _ctx = _localctx;
       previousContext = _localctx;
-      setState(30);
+      setState(36);
       match(KqlParser::T__3);
-      setState(31);
+      setState(37);
       antlrcpp::downCast<SubQueryContext *>(_localctx)->q = query(0);
-      setState(32);
+      setState(38);
       match(KqlParser::T__4);
       break;
     }
@@ -369,9 +375,9 @@ KqlParser::QueryContext* KqlParser::query(int precedence) {
       _localctx = _tracker.createInstance<NotQueryContext>(_localctx);
       _ctx = _localctx;
       previousContext = _localctx;
-      setState(34);
+      setState(40);
       match(KqlParser::NOT);
-      setState(35);
+      setState(41);
       antlrcpp::downCast<NotQueryContext *>(_localctx)->q = query(3);
       break;
     }
@@ -380,7 +386,7 @@ KqlParser::QueryContext* KqlParser::query(int precedence) {
       _localctx = _tracker.createInstance<ExprContext>(_localctx);
       _ctx = _localctx;
       previousContext = _localctx;
-      setState(36);
+      setState(42);
       expression();
       break;
     }
@@ -389,7 +395,7 @@ KqlParser::QueryContext* KqlParser::query(int precedence) {
       break;
     }
     _ctx->stop = _input->LT(-1);
-    setState(44);
+    setState(50);
     _errHandler->sync(this);
     alt = getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 1, _ctx);
     while (alt != 2 && alt != atn::ATN::INVALID_ALT_NUMBER) {
@@ -401,10 +407,10 @@ KqlParser::QueryContext* KqlParser::query(int precedence) {
         _localctx = newContext;
         newContext->lhs = previousContext;
         pushNewRecursionContext(newContext, startState, RuleQuery);
-        setState(39);
+        setState(45);
 
         if (!(precpred(_ctx, 2))) throw FailedPredicateException(this, "precpred(_ctx, 2)");
-        setState(40);
+        setState(46);
         antlrcpp::downCast<OrAndQueryContext *>(_localctx)->op = _input->LT(1);
         _la = _input->LA(1);
         if (!(_la == KqlParser::AND
@@ -416,10 +422,10 @@ KqlParser::QueryContext* KqlParser::query(int precedence) {
           _errHandler->reportMatch(this);
           consume();
         }
-        setState(41);
+        setState(47);
         antlrcpp::downCast<OrAndQueryContext *>(_localctx)->rhs = query(3); 
       }
-      setState(46);
+      setState(52);
       _errHandler->sync(this);
       alt = getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 1, _ctx);
     }
@@ -475,26 +481,26 @@ KqlParser::ExpressionContext* KqlParser::expression() {
     exitRule();
   });
   try {
-    setState(50);
+    setState(56);
     _errHandler->sync(this);
     switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 2, _ctx)) {
     case 1: {
       enterOuterAlt(_localctx, 1);
-      setState(47);
+      setState(53);
       column_range_expression();
       break;
     }
 
     case 2: {
       enterOuterAlt(_localctx, 2);
-      setState(48);
+      setState(54);
       column_value_expression();
       break;
     }
 
     case 3: {
       enterOuterAlt(_localctx, 3);
-      setState(49);
+      setState(55);
       value_expression();
       break;
     }
@@ -561,22 +567,22 @@ KqlParser::Column_range_expressionContext* KqlParser::column_range_expression() 
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(52);
+    setState(58);
     antlrcpp::downCast<Column_range_expressionContext *>(_localctx)->col = column();
-    setState(53);
+    setState(59);
     match(KqlParser::RANGE_OPERATOR);
-    setState(56);
+    setState(62);
     _errHandler->sync(this);
     switch (_input->LA(1)) {
       case KqlParser::T__5: {
-        setState(54);
+        setState(60);
         antlrcpp::downCast<Column_range_expressionContext *>(_localctx)->timestamp = timestamp_expression();
         break;
       }
 
       case KqlParser::QUOTED_STRING:
       case KqlParser::UNQUOTED_LITERAL: {
-        setState(55);
+        setState(61);
         antlrcpp::downCast<Column_range_expressionContext *>(_localctx)->lit = literal();
         break;
       }
@@ -643,28 +649,28 @@ KqlParser::Column_value_expressionContext* KqlParser::column_value_expression() 
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(58);
+    setState(64);
     antlrcpp::downCast<Column_value_expressionContext *>(_localctx)->col = column();
-    setState(59);
+    setState(65);
     match(KqlParser::T__0);
-    setState(63);
+    setState(69);
     _errHandler->sync(this);
     switch (_input->LA(1)) {
       case KqlParser::T__3: {
-        setState(60);
+        setState(66);
         antlrcpp::downCast<Column_value_expressionContext *>(_localctx)->list = list_of_values();
         break;
       }
 
       case KqlParser::T__5: {
-        setState(61);
+        setState(67);
         antlrcpp::downCast<Column_value_expressionContext *>(_localctx)->timestamp = timestamp_expression();
         break;
       }
 
       case KqlParser::QUOTED_STRING:
       case KqlParser::UNQUOTED_LITERAL: {
-        setState(62);
+        setState(68);
         antlrcpp::downCast<Column_value_expressionContext *>(_localctx)->lit = literal();
         break;
       }
@@ -683,10 +689,73 @@ KqlParser::Column_value_expressionContext* KqlParser::column_value_expression() 
   return _localctx;
 }
 
+//----------------- Function_callContext ------------------------------------------------------------------
+
+KqlParser::Function_callContext::Function_callContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+KqlParser::Column_literalContext* KqlParser::Function_callContext::column_literal() {
+  return getRuleContext<KqlParser::Column_literalContext>(0);
+}
+
+tree::TerminalNode* KqlParser::Function_callContext::UNQUOTED_LITERAL() {
+  return getToken(KqlParser::UNQUOTED_LITERAL, 0);
+}
+
+
+size_t KqlParser::Function_callContext::getRuleIndex() const {
+  return KqlParser::RuleFunction_call;
+}
+
+
+std::any KqlParser::Function_callContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<KqlVisitor*>(visitor))
+    return parserVisitor->visitFunction_call(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+KqlParser::Function_callContext* KqlParser::function_call() {
+  Function_callContext *_localctx = _tracker.createInstance<Function_callContext>(_ctx, getState());
+  enterRule(_localctx, 10, KqlParser::RuleFunction_call);
+
+#if __cplusplus > 201703L
+  auto onExit = finally([=, this] {
+#else
+  auto onExit = finally([=] {
+#endif
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(71);
+    antlrcpp::downCast<Function_callContext *>(_localctx)->func = match(KqlParser::UNQUOTED_LITERAL);
+    setState(72);
+    match(KqlParser::T__3);
+    setState(73);
+    column_literal();
+    setState(74);
+    match(KqlParser::T__4);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
 //----------------- ColumnContext ------------------------------------------------------------------
 
 KqlParser::ColumnContext::ColumnContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
+}
+
+KqlParser::Function_callContext* KqlParser::ColumnContext::function_call() {
+  return getRuleContext<KqlParser::Function_callContext>(0);
 }
 
 KqlParser::LiteralContext* KqlParser::ColumnContext::literal() {
@@ -708,7 +777,73 @@ std::any KqlParser::ColumnContext::accept(tree::ParseTreeVisitor *visitor) {
 
 KqlParser::ColumnContext* KqlParser::column() {
   ColumnContext *_localctx = _tracker.createInstance<ColumnContext>(_ctx, getState());
-  enterRule(_localctx, 10, KqlParser::RuleColumn);
+  enterRule(_localctx, 12, KqlParser::RuleColumn);
+
+#if __cplusplus > 201703L
+  auto onExit = finally([=, this] {
+#else
+  auto onExit = finally([=] {
+#endif
+    exitRule();
+  });
+  try {
+    setState(78);
+    _errHandler->sync(this);
+    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 5, _ctx)) {
+    case 1: {
+      enterOuterAlt(_localctx, 1);
+      setState(76);
+      function_call();
+      break;
+    }
+
+    case 2: {
+      enterOuterAlt(_localctx, 2);
+      setState(77);
+      literal();
+      break;
+    }
+
+    default:
+      break;
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Column_literalContext ------------------------------------------------------------------
+
+KqlParser::Column_literalContext::Column_literalContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+KqlParser::LiteralContext* KqlParser::Column_literalContext::literal() {
+  return getRuleContext<KqlParser::LiteralContext>(0);
+}
+
+
+size_t KqlParser::Column_literalContext::getRuleIndex() const {
+  return KqlParser::RuleColumn_literal;
+}
+
+
+std::any KqlParser::Column_literalContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<KqlVisitor*>(visitor))
+    return parserVisitor->visitColumn_literal(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+KqlParser::Column_literalContext* KqlParser::column_literal() {
+  Column_literalContext *_localctx = _tracker.createInstance<Column_literalContext>(_ctx, getState());
+  enterRule(_localctx, 14, KqlParser::RuleColumn_literal);
 
 #if __cplusplus > 201703L
   auto onExit = finally([=, this] {
@@ -719,8 +854,78 @@ KqlParser::ColumnContext* KqlParser::column() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(65);
+    setState(80);
     literal();
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Projection_columnContext ------------------------------------------------------------------
+
+KqlParser::Projection_columnContext::Projection_columnContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+KqlParser::Function_callContext* KqlParser::Projection_columnContext::function_call() {
+  return getRuleContext<KqlParser::Function_callContext>(0);
+}
+
+KqlParser::LiteralContext* KqlParser::Projection_columnContext::literal() {
+  return getRuleContext<KqlParser::LiteralContext>(0);
+}
+
+
+size_t KqlParser::Projection_columnContext::getRuleIndex() const {
+  return KqlParser::RuleProjection_column;
+}
+
+
+std::any KqlParser::Projection_columnContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<KqlVisitor*>(visitor))
+    return parserVisitor->visitProjection_column(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+KqlParser::Projection_columnContext* KqlParser::projection_column() {
+  Projection_columnContext *_localctx = _tracker.createInstance<Projection_columnContext>(_ctx, getState());
+  enterRule(_localctx, 16, KqlParser::RuleProjection_column);
+
+#if __cplusplus > 201703L
+  auto onExit = finally([=, this] {
+#else
+  auto onExit = finally([=] {
+#endif
+    exitRule();
+  });
+  try {
+    setState(84);
+    _errHandler->sync(this);
+    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 6, _ctx)) {
+    case 1: {
+      enterOuterAlt(_localctx, 1);
+      setState(82);
+      function_call();
+      break;
+    }
+
+    case 2: {
+      enterOuterAlt(_localctx, 2);
+      setState(83);
+      literal();
+      break;
+    }
+
+    default:
+      break;
+    }
    
   }
   catch (RecognitionException &e) {
@@ -757,7 +962,7 @@ std::any KqlParser::Value_expressionContext::accept(tree::ParseTreeVisitor *visi
 
 KqlParser::Value_expressionContext* KqlParser::value_expression() {
   Value_expressionContext *_localctx = _tracker.createInstance<Value_expressionContext>(_ctx, getState());
-  enterRule(_localctx, 12, KqlParser::RuleValue_expression);
+  enterRule(_localctx, 18, KqlParser::RuleValue_expression);
 
 #if __cplusplus > 201703L
   auto onExit = finally([=, this] {
@@ -768,7 +973,7 @@ KqlParser::Value_expressionContext* KqlParser::value_expression() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(67);
+    setState(86);
     literal();
    
   }
@@ -822,7 +1027,7 @@ std::any KqlParser::List_of_valuesContext::accept(tree::ParseTreeVisitor *visito
 
 KqlParser::List_of_valuesContext* KqlParser::list_of_values() {
   List_of_valuesContext *_localctx = _tracker.createInstance<List_of_valuesContext>(_ctx, getState());
-  enterRule(_localctx, 14, KqlParser::RuleList_of_values);
+  enterRule(_localctx, 20, KqlParser::RuleList_of_values);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -834,15 +1039,15 @@ KqlParser::List_of_valuesContext* KqlParser::list_of_values() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(69);
+    setState(88);
     match(KqlParser::T__3);
-    setState(71);
+    setState(90);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if ((((_la & ~ 0x3fULL) == 0) &&
       ((1ULL << _la) & 1792) != 0)) {
-      setState(70);
+      setState(89);
       antlrcpp::downCast<List_of_valuesContext *>(_localctx)->condition = _input->LT(1);
       _la = _input->LA(1);
       if (!((((_la & ~ 0x3fULL) == 0) &&
@@ -854,20 +1059,20 @@ KqlParser::List_of_valuesContext* KqlParser::list_of_values() {
         consume();
       }
     }
-    setState(76);
+    setState(95);
     _errHandler->sync(this);
     _la = _input->LA(1);
     while (_la == KqlParser::QUOTED_STRING
 
     || _la == KqlParser::UNQUOTED_LITERAL) {
-      setState(73);
+      setState(92);
       antlrcpp::downCast<List_of_valuesContext *>(_localctx)->literalContext = literal();
       antlrcpp::downCast<List_of_valuesContext *>(_localctx)->literals.push_back(antlrcpp::downCast<List_of_valuesContext *>(_localctx)->literalContext);
-      setState(78);
+      setState(97);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
-    setState(79);
+    setState(98);
     match(KqlParser::T__4);
    
   }
@@ -909,7 +1114,7 @@ std::any KqlParser::Timestamp_expressionContext::accept(tree::ParseTreeVisitor *
 
 KqlParser::Timestamp_expressionContext* KqlParser::timestamp_expression() {
   Timestamp_expressionContext *_localctx = _tracker.createInstance<Timestamp_expressionContext>(_ctx, getState());
-  enterRule(_localctx, 16, KqlParser::RuleTimestamp_expression);
+  enterRule(_localctx, 22, KqlParser::RuleTimestamp_expression);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -921,21 +1126,21 @@ KqlParser::Timestamp_expressionContext* KqlParser::timestamp_expression() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(81);
+    setState(100);
     match(KqlParser::T__5);
-    setState(82);
+    setState(101);
     antlrcpp::downCast<Timestamp_expressionContext *>(_localctx)->timestamp = match(KqlParser::QUOTED_STRING);
-    setState(85);
+    setState(104);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if (_la == KqlParser::T__6) {
-      setState(83);
+      setState(102);
       match(KqlParser::T__6);
-      setState(84);
+      setState(103);
       antlrcpp::downCast<Timestamp_expressionContext *>(_localctx)->pattern = match(KqlParser::QUOTED_STRING);
     }
-    setState(87);
+    setState(106);
     match(KqlParser::T__4);
    
   }
@@ -977,7 +1182,7 @@ std::any KqlParser::LiteralContext::accept(tree::ParseTreeVisitor *visitor) {
 
 KqlParser::LiteralContext* KqlParser::literal() {
   LiteralContext *_localctx = _tracker.createInstance<LiteralContext>(_ctx, getState());
-  enterRule(_localctx, 18, KqlParser::RuleLiteral);
+  enterRule(_localctx, 24, KqlParser::RuleLiteral);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -989,7 +1194,7 @@ KqlParser::LiteralContext* KqlParser::literal() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(89);
+    setState(108);
     _la = _input->LA(1);
     if (!(_la == KqlParser::QUOTED_STRING
 
