@@ -1,7 +1,6 @@
 #include "QueryRunner.hpp"
 
 #include <array>
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -13,7 +12,6 @@
 #include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
 
-#include <clp_s/ColumnReader.hpp>
 #include <clp_s/Schema.hpp>
 
 #include "../../clp/Defs.h"

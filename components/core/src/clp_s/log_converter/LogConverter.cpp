@@ -70,7 +70,7 @@ constexpr std::array cHeaderRulePatterns{
 #undef SUFFIX
 }  // namespace
 
-auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
+auto LogConverter::create(size_t max_buffer_size, size_t initial_buffer_size) -> LogConverter {
     log_surgeon::ParsingSpecBuilder builder;
     builder.set_delimiters(cDelimiters);
     for (auto const& header_pattern : cHeaderRulePatterns) {
@@ -78,7 +78,7 @@ auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
             throw std::runtime_error("failed to add header rule parsing spec");
         }
     }
-    return LogConverter(max_buffer_size, builder.build());
+    return LogConverter(max_buffer_size, initial_buffer_size, builder.build());
 }
 
 auto LogConverter::convert_file(
@@ -95,18 +95,18 @@ auto LogConverter::convert_file(
             LogSerializer::create(output_dir, path.path, compress_converted_file)
     )};
 
-    size_t prev_event_end{0};
     bool reached_end_of_stream{false};
     while (false == reached_end_of_stream) {
         auto const num_bytes_read{YSTDLIB_ERROR_HANDLING_TRYX(refill_buffer(reader))};
         reached_end_of_stream = 0ULL == num_bytes_read;
         m_parser.reset();
 
+        size_t num_bytes_consumed{0};
         std::string_view const buf{m_buffer.data(), m_num_bytes_buffered};
         while (m_parser_offset < m_num_bytes_buffered) {
             auto event{m_parser.next_event(buf, &m_parser_offset)};
             if (false == event.has_value()) {
-                SPDLOG_ERROR("failed to parse buffer contents: '{}'", buf);
+                SPDLOG_ERROR("parsing failed for '{}'", buf.substr(m_parser_offset));
                 return std::errc::not_supported;
             }
 
@@ -114,20 +114,28 @@ auto LogConverter::convert_file(
             // event is truncated. Until log-surgeon has an API that handles reads we need to fill
             // the buffer and try again.
             if (false == reached_end_of_stream && m_parser_offset == m_num_bytes_buffered) {
-                m_parser_offset = prev_event_end;
+                m_parser_offset = num_bytes_consumed;
                 break;
             }
-            prev_event_end += event->get_message().size();
+
+            // `log_surgeon::Parser::reset()` leaves an empty pending header, which causes the first
+            // `next_event()` call after a refill to return an empty event. The consumed header is
+            // re-emitted as part of the following event, so it can be skipped.
+            auto const message{event->get_message()};
+            if (message.empty()) {
+                continue;
+            }
+            num_bytes_consumed += message.size();
 
             auto const match{event->get_leaf_match(0)};
             if (false == match.has_value()) {
-                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(buf.substr(0, m_parser_offset)));
+                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
             } else if ("timestamp" == match->get_rule_name()
                        && match->get_fully_qualified_name().starts_with("header"))
             {
                 YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(
                         match->get_lexeme(),
-                        buf.substr(match->range.end, m_parser_offset - match->range.end)
+                        message.substr(match->range.end)
                 ));
             } else {
                 SPDLOG_ERROR(

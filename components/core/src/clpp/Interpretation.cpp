@@ -41,12 +41,11 @@ auto build_interpretation(std::vector<log_surgeon::SubQuery> const& sub_queries)
     TextShape<std::string> shape_query;
     std::vector<LeafQuery> leaf_queries;
     for (auto const& sub_query : sub_queries) {
-        if (sub_query.qualified_name.empty()) {
+        if (sub_query.name.empty()) {
             shape_query.escape_and_append(sub_query.value);
         } else {
-            leaf_queries
-                    .emplace_back(sub_query.qualified_name, sub_query.value, leaf_queries.size());
-            shape_query.append_placeholder(sub_query.qualified_name);
+            leaf_queries.emplace_back(sub_query.name, sub_query.value, leaf_queries.size());
+            shape_query.append_placeholder(sub_query.name);
         }
     }
     return {std::move(shape_query), std::move(leaf_queries)};
@@ -56,9 +55,8 @@ auto build_leaf_queries(std::vector<log_surgeon::SubQuery> const& sub_queries)
         -> std::vector<LeafQuery> {
     std::vector<LeafQuery> leaf_queries;
     for (auto const& sub_query : sub_queries) {
-        if (false == sub_query.qualified_name.empty()) {
-            leaf_queries
-                    .emplace_back(sub_query.qualified_name, sub_query.value, leaf_queries.size());
+        if (false == sub_query.name.empty()) {
+            leaf_queries.emplace_back(sub_query.name, sub_query.value, leaf_queries.size());
         }
     }
     return leaf_queries;
