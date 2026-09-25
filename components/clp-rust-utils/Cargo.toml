@@ -17,7 +17,6 @@ regex = { workspace = true }
 rmp-serde = { workspace = true }
 secrecy = { workspace = true }
 serde = { workspace = true }
-yaml_serde = { workspace = true }
 sqlx = { workspace = true }
 strum = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
@@ -25,6 +24,8 @@ tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
 utoipa = { workspace = true }
+uuid = { workspace = true }
+yaml_serde = { workspace = true }
 zstd = { workspace = true }
 
 [dev-dependencies]
