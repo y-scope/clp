@@ -812,9 +812,6 @@ mod tests {
     use std::path::PathBuf;
 
     use clp_rust_utils::clp_config::AwsAuthentication;
-    use clp_rust_utils::clp_config::S3Config;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutput;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
     use clp_rust_utils::clp_config::package::config::ClpDbNames;
     use clp_rust_utils::clp_config::package::config::Database;
     use clp_rust_utils::task_io::compression::ArchiveMetadata;
