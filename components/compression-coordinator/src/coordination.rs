@@ -34,6 +34,7 @@ use spider_core::task::TimeoutPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
 use spider_core::types::resource_group::ExternalResourceGroupCredentials;
+use spider_core::types::resource_group::RESOURCE_GROUP_PASSWORD_ENV;
 use tokio::select;
 use tokio::sync::Semaphore;
 use tokio::time::Instant;
@@ -605,10 +606,9 @@ async fn get_or_create_resource_group_id(
         return Ok(ResourceGroupId::from(spider_rg_id));
     }
 
-    let password = std::env::var("CLP_SPIDER_RESOURCE_GROUP_PASSWORD").map_err(|e| {
+    let password = std::env::var(RESOURCE_GROUP_PASSWORD_ENV).map_err(|e| {
         Error::InvalidConfiguration(format!(
-            "failed to read the resource group password from \
-             `CLP_SPIDER_RESOURCE_GROUP_PASSWORD`: {e}"
+            "failed to read the resource group password from `{RESOURCE_GROUP_PASSWORD_ENV}`: {e}"
         ))
     })?;
     let resource_group_id = spider_client

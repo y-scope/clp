@@ -51,7 +51,7 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
-            - name: "CLP_SPIDER_RESOURCE_GROUP_PASSWORD"
+            - name: "SPIDER_RESOURCE_GROUP_PASSWORD"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-spider-resource-groups

@@ -203,7 +203,7 @@ clpConfig:
     logging_level: "INFO"
     max_concurrent_jobs: 1000
     resource_group:
-      name: "compression-worker"
+      name: "compression"
     result_polling:
       init_backoff_millisecs: 100
       max_backoff_millisecs: 1000
@@ -382,7 +382,7 @@ credentials:
     password: "pass"
 
   spiderResourceGroups:
-    compression: "compress-pass"
+    compression: "compression-pass"
 
 serviceAccount:
   annotations:
