@@ -130,7 +130,8 @@ pub(super) fn compress(
                 bucket: bucket.clone(),
                 key: config
                     .archive_output
-                    .dataset_archive_object_key(dataset.as_deref(), &archive.id),
+                    .dataset_archive_object_key(dataset.as_deref(), &archive.id)
+                    .into_inner(),
                 indexer_bin: indexer_bin.clone(),
                 database: config.database.clone(),
                 dataset: dataset.clone(),

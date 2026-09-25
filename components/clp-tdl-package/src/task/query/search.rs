@@ -123,7 +123,6 @@ enum ArchiveSelector {
 ///
 /// Returns an error if:
 ///
-/// * The archive's object key is empty.
 /// * Forwards [`generate_s3_url`]'s return values on failure.
 /// * Forwards [`s3_credential_env`]'s return values on failure.
 fn resolve_archive_input(
@@ -149,8 +148,6 @@ fn resolve_archive_input(
     let object_key = config
         .archive_output
         .dataset_archive_object_key(Some(dataset), &archive_id);
-    let object_key = NonEmptyString::try_from(object_key)
-        .map_err(|_| anyhow::anyhow!("archive object key must not be empty"))?;
     let url = generate_s3_url(
         s3_config.endpoint_url.as_ref().map(NonEmptyString::as_str),
         s3_config.region_code.as_ref().map(NonEmptyString::as_str),
