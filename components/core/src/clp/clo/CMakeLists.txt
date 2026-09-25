@@ -44,8 +44,6 @@ set(
         ../Grep.hpp
         ../GrepCore.cpp
         ../GrepCore.hpp
-        ../SchemaSearcher.cpp
-        ../SchemaSearcher.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
@@ -55,8 +53,6 @@ set(
         ../ir/parsing.hpp
         ../ir/parsing.inc
         ../ir/types.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryEntryReq.hpp
@@ -180,7 +176,6 @@ if(CLP_BUILD_EXECUTABLES)
                 Boost::filesystem Boost::program_options
                 date::date
                 fmt::fmt
-                log_surgeon::log_surgeon
                 ${MONGOCXX_TARGET}
                 msgpack-cxx
                 nlohmann_json::nlohmann_json

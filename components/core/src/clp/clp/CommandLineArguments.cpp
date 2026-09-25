@@ -355,13 +355,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     "progress",
                     po::bool_switch(&m_show_progress),
                     "Show progress during compression"
-            )(
-                    "schema-path",
-                    po::value<string>(&m_schema_file_path)
-                            ->value_name("FILE")
-                            ->default_value(m_schema_file_path),
-                    "Path to a schema file. If not specified, heuristics are used to determine "
-                    "dictionary variables. See README-Schema.md for details."
             );
 
             po::options_description all_compression_options;
@@ -429,18 +422,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 throw invalid_argument(R"(sort-input-files must be either "true" or "false")");
             }
             m_sort_input_files = "true" == sort_input_files_str;
-
-            if (false == m_schema_file_path.empty()) {
-                if (false == boost::filesystem::exists(m_schema_file_path)) {
-                    throw invalid_argument("Specified schema file does not exist.");
-                }
-                if (false == boost::filesystem::is_regular_file(m_schema_file_path)) {
-                    throw invalid_argument(
-                            "Specified schema file '" + m_schema_file_path
-                            + "' is not a regular file."
-                    );
-                }
-            }
         }
 
         // Validate an output directory was specified
