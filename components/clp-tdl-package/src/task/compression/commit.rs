@@ -159,7 +159,7 @@ async fn insert_archives(
         ));
         builder.push_values(archives, |mut row, archive| {
             // NOTE: clp-s does not set `creator_id` or `creation_ix`.
-            row.push_bind(&archive.id)
+            row.push_bind(archive.id)
                 .push_bind(archive.begin_timestamp)
                 .push_bind(archive.end_timestamp)
                 .push_bind(archive.uncompressed_size)
