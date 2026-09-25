@@ -49,12 +49,12 @@ impl ArchiveSelectionOptions {
         db_pool: &MySqlPool,
         db_config: &Database,
         query_job_id: QueryJobId,
-        query_job_config: &SearchJobConfig,
+        search_job_config: &SearchJobConfig,
     ) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        validate_timestamp_range(query_job_config)?;
+        validate_timestamp_range(search_job_config)?;
 
         let datasets = self
-            .resolve_datasets(db_pool, db_config, query_job_config)
+            .resolve_datasets(db_pool, db_config, search_job_config)
             .await?;
         if datasets.is_empty() {
             return Ok(Vec::new());
@@ -69,7 +69,7 @@ impl ArchiveSelectionOptions {
                 Self::fetch_archives(
                     db_pool,
                     db_config,
-                    query_job_config,
+                    search_job_config,
                     dataset,
                     archive_end_timestamp_lower_bound,
                 )
@@ -101,9 +101,9 @@ impl ArchiveSelectionOptions {
         &self,
         db_pool: &MySqlPool,
         db_config: &Database,
-        query_job_config: &SearchJobConfig,
+        search_job_config: &SearchJobConfig,
     ) -> Result<Vec<NonEmptyString>, Error> {
-        let Some(requested_datasets) = &query_job_config.datasets else {
+        let Some(requested_datasets) = &search_job_config.datasets else {
             return Ok(Vec::new());
         };
         let requested_datasets =
@@ -166,7 +166,7 @@ impl ArchiveSelectionOptions {
     async fn fetch_archives(
         db_pool: &MySqlPool,
         db_config: &Database,
-        query_job_config: &SearchJobConfig,
+        search_job_config: &SearchJobConfig,
         dataset: &NonEmptyString,
         archive_end_timestamp_lower_bound: Option<i64>,
     ) -> Result<Vec<SelectedArchive>, Error> {
@@ -174,12 +174,12 @@ impl ArchiveSelectionOptions {
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
             "SELECT `id`, `size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
         ));
-        if let Some(end_timestamp) = query_job_config.end_timestamp {
+        if let Some(end_timestamp) = search_job_config.end_timestamp {
             query_builder
                 .push(" AND `begin_timestamp` <= ")
                 .push_bind(end_timestamp);
         }
-        if let Some(begin_timestamp) = query_job_config.begin_timestamp {
+        if let Some(begin_timestamp) = search_job_config.begin_timestamp {
             query_builder
                 .push(" AND `end_timestamp` >= ")
                 .push_bind(begin_timestamp);
@@ -231,10 +231,10 @@ struct ArchiveRowProjection {
 /// Returns an error if:
 ///
 /// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
-fn validate_timestamp_range(query_job_config: &SearchJobConfig) -> Result<(), Error> {
+fn validate_timestamp_range(search_job_config: &SearchJobConfig) -> Result<(), Error> {
     if let (Some(begin_timestamp), Some(end_timestamp)) = (
-        query_job_config.begin_timestamp,
-        query_job_config.end_timestamp,
+        search_job_config.begin_timestamp,
+        search_job_config.end_timestamp,
     ) && begin_timestamp > end_timestamp
     {
         return Err(Error::InvalidQueryJobConfig(format!(

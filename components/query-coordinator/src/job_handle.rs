@@ -49,7 +49,7 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
-    query_job_config: SearchJobConfig,
+    search_job_config: SearchJobConfig,
     clp_s_query_option: ClpSQueryOption,
     output_handle: OutputHandle,
 }
@@ -75,16 +75,16 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         search_job_config: SearchJobConfig,
         output_handle: OutputHandle,
     ) -> Result<Self, Error> {
-        let query_string = NonEmptyString::try_from(query_job_config.query_string.clone())
+        let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
             .map_err(|_| {
                 Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
             })?;
         let clp_s_query_option = ClpSQueryOption {
             query_string,
-            max_num_results: NonZeroU32::new(query_job_config.max_num_results),
-            begin_timestamp_millisecs: query_job_config.begin_timestamp,
-            end_timestamp_millisecs: query_job_config.end_timestamp,
-            ignore_case: query_job_config.ignore_case,
+            max_num_results: NonZeroU32::new(search_job_config.max_num_results),
+            begin_timestamp_millisecs: search_job_config.begin_timestamp,
+            end_timestamp_millisecs: search_job_config.end_timestamp,
+            ignore_case: search_job_config.ignore_case,
         };
 
         Ok(Self {
@@ -92,7 +92,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             query_job_id,
             job_submitter,
             resource_group_id,
-            query_job_config,
+            search_job_config,
             clp_s_query_option,
             output_handle,
         })
@@ -227,7 +227,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 &self.context.db_pool,
                 &self.context.db_config,
                 self.query_job_id,
-                &self.query_job_config,
+                &self.search_job_config,
             )
             .await
     }
