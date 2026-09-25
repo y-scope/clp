@@ -199,7 +199,7 @@ impl ArchiveSelectionOptions {
             .map(|row| SelectedArchive {
                 metadata: ArchiveMetadata {
                     id: row.id,
-                    dataset: dataset.clone(),
+                    dataset: Some(dataset.clone()),
                     size: row.size,
                 },
                 end_timestamp: row.end_timestamp,
