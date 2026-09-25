@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_OUTPUT_HPP
 #define CLP_S_SEARCH_OUTPUT_HPP
 
+#include <cstddef>
 #include <map>
 #include <set>
 #include <stack>
@@ -9,6 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <clp_s/search/SearchTelemetry.hpp>
 
@@ -33,8 +35,15 @@ public:
            std::shared_ptr<ast::Expression> const& expr,
            std::shared_ptr<ArchiveReader> const& archive_reader,
            std::unique_ptr<OutputHandler> output_handler,
-           bool ignore_case)
-            : m_query_runner(match, expr, archive_reader, ignore_case),
+           bool ignore_case,
+           std::vector<std::pair<size_t, size_t>> log_event_idx_ranges = {})
+            : m_query_runner(
+                      match,
+                      expr,
+                      archive_reader,
+                      ignore_case,
+                      std::move(log_event_idx_ranges)
+              ),
               m_archive_reader(archive_reader),
               m_expr(expr),
               m_match(match),
