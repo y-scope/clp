@@ -51,6 +51,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
+            - name: "SPIDER_EXTERNAL_RESOURCE_GROUP_ID"
+              value: "compression"
             - name: "SPIDER_RESOURCE_GROUP_PASSWORD"
               valueFrom:
                 secretKeyRef:

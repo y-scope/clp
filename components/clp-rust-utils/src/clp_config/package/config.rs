@@ -481,7 +481,6 @@ impl Default for Telemetry {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct CompressionCoordinator {
-    pub resource_group: SpiderResourceGroup,
     pub job_polling_interval_millisecs: NonZeroU64,
     pub max_concurrent_jobs: NonZeroUsize,
     pub result_polling: PollingBackoff,
@@ -496,10 +495,6 @@ pub struct CompressionCoordinator {
 impl Default for CompressionCoordinator {
     fn default() -> Self {
         Self {
-            resource_group: SpiderResourceGroup {
-                name: NonEmptyString::new("compression-coordinator".to_owned())
-                    .expect("default resource group name should not be empty"),
-            },
             job_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default jobs poll delay should not be zero"),
             max_concurrent_jobs: NonZeroUsize::new(1000)
@@ -529,12 +524,6 @@ impl Default for CompressionCoordinator {
 pub struct Spider {
     pub host: NonEmptyString,
     pub port: u16,
-}
-
-/// Spider resource group configuration.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-pub struct SpiderResourceGroup {
-    pub name: NonEmptyString,
 }
 
 /// Polling backoff configuration.
