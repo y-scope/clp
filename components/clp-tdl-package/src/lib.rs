@@ -1,4 +1,4 @@
-//! Spider TDL task package `clp`: the CLP compression tasks the Spider task executor loads.
+//! Spider TDL package `clp`, providing CLP compression and query tasks for Spider task executors.
 
 pub mod common;
 mod task;
@@ -28,5 +28,9 @@ fn package_init() -> Result<(), TdlError> {
 spider_tdl::register_tdl_package! {
     package_name: "clp",
     init: package_init,
-    tasks: [task::compression::s3_compress_task, task::compression::commit_task],
+    tasks: [
+        task::compression::s3_compress_task,
+        task::compression::commit_task,
+        task::query::clp_s_search_task,
+    ],
 }
