@@ -10,6 +10,7 @@ use serde::Deserialize;
 use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
 use crate::dataset::resolve_dataset_name;
+use crate::types::non_empty_string::ExpectedNonEmpty;
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -388,12 +389,21 @@ impl ArchiveOutput {
     ///
     /// The dataset's archive storage directory joined with `archive_id`, where a `None` dataset
     /// resolves to `default`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the derived object key is empty. This should never happen since the key always
+    /// contains at least the `/` separator.
     #[must_use]
-    pub fn dataset_archive_object_key(&self, dataset: Option<&str>, archive_id: &str) -> String {
-        format!(
+    pub fn dataset_archive_object_key(
+        &self,
+        dataset: Option<&str>,
+        archive_id: &str,
+    ) -> NonEmptyString {
+        NonEmptyString::from_string(format!(
             "{}/{archive_id}",
             self.dataset_archive_storage_directory(dataset)
-        )
+        ))
     }
 }
 
@@ -736,11 +746,15 @@ mod tests {
         };
 
         assert_eq!(
-            archive_output.dataset_archive_object_key(None, "abc"),
+            archive_output
+                .dataset_archive_object_key(None, "abc")
+                .as_str(),
             "LIB1/default/abc"
         );
         assert_eq!(
-            archive_output.dataset_archive_object_key(Some("mydataset"), "abc"),
+            archive_output
+                .dataset_archive_object_key(Some("mydataset"), "abc")
+                .as_str(),
             "LIB1/mydataset/abc"
         );
     }
