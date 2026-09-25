@@ -17,6 +17,7 @@ use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
+use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
@@ -44,7 +45,7 @@ pub(super) fn search(
     config: &SpiderTaskExecutorConfig,
     query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
-    archive_id: String,
+    archive_id: ArchiveId,
     dataset: Option<&str>,
     output_handle: &OutputHandle,
 ) -> anyhow::Result<()> {
@@ -103,7 +104,10 @@ pub(super) fn search(
 /// Selector for clp-s to address the archive to search.
 enum ArchiveSelector {
     /// A local dataset archives directory plus the `--archive-id` selecting one archive in it.
-    Directory { path: PathBuf, archive_id: String },
+    Directory {
+        path: PathBuf,
+        archive_id: ArchiveId,
+    },
 
     /// The URL of an S3-hosted archive, read with `--auth s3`.
     ObjectUrl(String),
@@ -130,7 +134,7 @@ fn resolve_archive_input(
     clp_home: &Path,
     config: &SpiderTaskExecutorConfig,
     dataset: &str,
-    archive_id: String,
+    archive_id: ArchiveId,
 ) -> anyhow::Result<(ArchiveSelector, Vec<(&'static str, String)>)> {
     let s3_config = match &config.archive_output.storage {
         ArchiveOutputStorage::Fs { .. } => {
@@ -179,7 +183,7 @@ fn build_clp_s_search_args_for_result_cache(
         ArchiveSelector::Directory { path, archive_id } => {
             args.push(path.as_os_str().to_os_string());
             args.push(OsString::from("--archive-id"));
-            args.push(OsString::from(archive_id));
+            args.push(OsString::from(archive_id.to_string()));
         }
         ArchiveSelector::ObjectUrl(url) => {
             args.push(OsString::from(url));
@@ -302,6 +306,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::task_io::query::ClpSQueryOption;
     use clp_rust_utils::task_io::query::OutputHandle;
+    use clp_rust_utils::types::ArchiveId;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
     use spider_core::types::id::JobId;
@@ -313,6 +318,8 @@ mod tests {
     use super::build_clp_s_search_args_for_result_cache;
     use super::resolve_archive_input;
     use super::search;
+
+    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
     /// # Returns
     ///
@@ -342,11 +349,11 @@ mod tests {
 
     /// # Returns
     ///
-    /// An [`ArchiveSelector`] addressing `archive-id` under `/archives/ds1`.
+    /// An [`ArchiveSelector`] addressing [`ARCHIVE_ID`] under `/archives/ds1`.
     fn directory_selector() -> ArchiveSelector {
         ArchiveSelector::Directory {
             path: PathBuf::from("/archives/ds1"),
-            archive_id: "archive-id".to_string(),
+            archive_id: ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
         }
     }
 
@@ -423,7 +430,7 @@ mod tests {
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
                 OsString::from("--archive-id"),
-                OsString::from("archive-id"),
+                OsString::from(ARCHIVE_ID),
                 OsString::from("level: \"ERROR\""),
                 OsString::from("--tge"),
                 OsString::from("1310138944000"),
@@ -465,7 +472,7 @@ mod tests {
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
                 OsString::from("--archive-id"),
-                OsString::from("archive-id"),
+                OsString::from(ARCHIVE_ID),
                 OsString::from("level: \"ERROR\""),
                 OsString::from("--tge"),
                 OsString::from("1310138944000"),
@@ -497,7 +504,7 @@ mod tests {
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
                 OsString::from("--archive-id"),
-                OsString::from("archive-id"),
+                OsString::from(ARCHIVE_ID),
                 OsString::from("level: \"ERROR\""),
                 OsString::from("results-cache"),
                 OsString::from("--uri"),
@@ -512,11 +519,11 @@ mod tests {
 
     #[test]
     fn build_clp_s_search_args_for_result_cache_s3_uses_object_url_and_no_archive_id() {
+        let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
+
         assert_eq!(
             build_clp_s_search_args_for_result_cache(
-                &ArchiveSelector::ObjectUrl(
-                    "https://bucket.s3.amazonaws.com/LIB1/ds1/archive-id".to_string()
-                ),
+                &ArchiveSelector::ObjectUrl(url.clone()),
                 &unbounded_query_option(),
                 "mongodb://results-cache:27017/clp-query-results",
                 42,
@@ -524,7 +531,7 @@ mod tests {
             ),
             vec![
                 OsString::from("s"),
-                OsString::from("https://bucket.s3.amazonaws.com/LIB1/ds1/archive-id"),
+                OsString::from(url),
                 OsString::from("--auth"),
                 OsString::from("s3"),
                 OsString::from("level: \"ERROR\""),
@@ -560,14 +567,17 @@ mod tests {
             Path::new("/clp"),
             &config,
             "ds1",
-            "archive-id".to_string(),
+            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
         )?;
 
         let ArchiveSelector::Directory { path, archive_id } = selector else {
             panic!("expected a directory selector");
         };
         assert_eq!(path, PathBuf::from("/clp/var/data/archives/ds1"));
-        assert_eq!(archive_id, "archive-id");
+        assert_eq!(
+            archive_id,
+            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID")
+        );
         assert_eq!(credential_env, &[]);
 
         Ok(())
@@ -583,13 +593,16 @@ mod tests {
             Path::new("/clp"),
             &config,
             "ds1",
-            "archive-id".to_string(),
+            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
         )?;
 
         let ArchiveSelector::ObjectUrl(url) = selector else {
             panic!("expected an object-URL selector");
         };
-        assert_eq!(url, "https://bucket.s3.amazonaws.com/LIB1/ds1/archive-id");
+        assert_eq!(
+            url,
+            format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}")
+        );
         assert_eq!(
             credential_env,
             vec![
@@ -613,7 +626,7 @@ mod tests {
             Path::new("/clp"),
             &config,
             "ds1",
-            "archive-id".to_string(),
+            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
         )?;
         let args = build_clp_s_search_args_for_result_cache(
             &selector,
@@ -642,13 +655,16 @@ mod tests {
             Path::new("/clp"),
             &config,
             "ds1",
-            "archive-id".to_string(),
+            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
         )?;
 
         let ArchiveSelector::ObjectUrl(url) = selector else {
             panic!("expected an object-URL selector");
         };
-        assert_eq!(url, "http://minio:9000/bucket/LIB1/ds1/archive-id");
+        assert_eq!(
+            url,
+            format!("http://minio:9000/bucket/LIB1/ds1/{ARCHIVE_ID}")
+        );
 
         Ok(())
     }
@@ -667,7 +683,7 @@ mod tests {
             &config,
             42,
             &unbounded_query_option(),
-            "archive-id".to_string(),
+            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
             None,
             &OutputHandle::File,
         )
@@ -686,7 +702,7 @@ mod tests {
             &config,
             42,
             &unbounded_query_option(),
-            "archive-id".to_string(),
+            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
             None,
             &OutputHandle::ResultsCache {
                 uri: NonEmptyString::from_static_str(
