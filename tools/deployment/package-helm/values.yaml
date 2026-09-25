@@ -449,7 +449,7 @@ spider:
         - name: "compression"
           replicas: 2
           resource_group:
-            external_id: "compression-worker"
+            external_id: "compression"
             password:
               secretKeyRef:
                 name: "{{ include \"clp.fullname\" . }}-spider-resource-groups"
