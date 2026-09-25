@@ -1,6 +1,7 @@
 #ifndef CLP_S_LOG_CONVERTER_LOGCONVERTER_HPP
 #define CLP_S_LOG_CONVERTER_LOGCONVERTER_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <string_view>
 #include <utility>
@@ -18,12 +19,18 @@ namespace clp_s::log_converter {
  */
 class LogConverter {
 public:
+    // Static constants
+    static constexpr size_t cDefaultBufferSize{64ULL * 1024ULL};  // 64 KiB
+
     // Factory methods
     /**
      * @param max_buffer_size The maximum size of the internal log-text buffer.
+     * @param initial_buffer_size The initial size of the internal log-text buffer. The buffer grows
+     * on demand, up to `max_buffer_size`.
      * @return The newly created `LogConverter`.
      */
-    static auto create(size_t max_buffer_size) -> LogConverter;
+    static auto create(size_t max_buffer_size, size_t initial_buffer_size = cDefaultBufferSize)
+            -> LogConverter;
 
     // Methods
     /**
@@ -46,13 +53,14 @@ public:
     ) -> ystdlib::error_handling::Result<void>;
 
 private:
-    // Static constants
-    static constexpr size_t cDefaultBufferSize{64ULL * 1024ULL};  // 64 KiB
-
     // Constructors
-    explicit LogConverter(size_t max_buffer_size, log_surgeon::Parser parser)
+    explicit LogConverter(
+            size_t max_buffer_size,
+            size_t initial_buffer_size,
+            log_surgeon::Parser parser
+    )
             : m_parser{std::move(parser)},
-              m_buffer(max_buffer_size < cDefaultBufferSize ? max_buffer_size : cDefaultBufferSize),
+              m_buffer(std::min(max_buffer_size, initial_buffer_size)),
               m_max_buffer_size{max_buffer_size} {}
 
     // Methods

@@ -695,6 +695,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::ffi::sfa
             clp_s::filter
             clp_s::json_constructor
+            clp_s::log_converter
             clp_s::search
             clp_s::search::ast
             clp_s::search::kql
@@ -723,6 +724,7 @@ if(CLP_ENABLE_TESTS)
             Boost::url
             Catch2::Catch2WithMain
             clp::unit_test_runtime
+            clp_s::log_converter::unit_test_sources
             clp_s::unit_test_sources
             ${CURL_LIBRARIES}
             date::date
