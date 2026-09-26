@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from typing_extensions import Self
 
 from tests.conftest import get_test_log_dir
+from tests.utils.timestamps import TimestampFormat  # noqa: TC001
 from tests.utils.utils import validate_dir_exists, validate_file_exists
 
 DEFAULT_CMD_TIMEOUT_SECONDS = 120.0
@@ -85,11 +86,11 @@ class SampleDatasetMetadata(BaseModel):
     dataset_name: str
     unstructured: bool
     timestamp_key: str | None
+    timestamp_format: TimestampFormat | None
     begin_ts: int
     end_ts: int
     logs_subdir: str
     file_names: list[str]
-    single_match_wildcard_query: str
 
 
 @dataclass
