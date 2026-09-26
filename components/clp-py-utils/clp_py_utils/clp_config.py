@@ -50,6 +50,9 @@ SPIDER_COMPONENT_NAME = "spider"
 SPIDER_STORAGE_COMPONENT_NAME = "spider-storage"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
+# Credentials file keys
+RESOURCE_GROUP_PASSWORD_KEY = "spider_resource_groups"
+
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
 
@@ -883,7 +886,7 @@ class CompressionCoordinator(BaseModel):
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
             self.resource_group_password = get_config_value(
-                config, f"{COMPRESSION_COORDINATOR_COMPONENT_NAME}.resource_group_password"
+                config, f"{RESOURCE_GROUP_PASSWORD_KEY}.compression"
             )
         except KeyError as ex:
             raise ValueError(
