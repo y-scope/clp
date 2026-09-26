@@ -4,8 +4,12 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+# shellcheck source=components/core/tools/scripts/lib_install/ca-trust-pkg-opts.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../ca-trust-pkg-opts.sh"
+
+apt-get "${CLP_APT_CA_OPTS[@]}" update
+DEBIAN_FRONTEND=noninteractive apt-get "${CLP_APT_CA_OPTS[@]}" \
+    install --no-install-recommends -y \
     ca-certificates \
     checkinstall \
     curl \

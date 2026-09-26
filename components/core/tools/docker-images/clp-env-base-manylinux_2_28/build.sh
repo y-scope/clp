@@ -39,10 +39,9 @@ case "${platform}" in
         ;;
 esac
 
-# Corporate proxy support — see corporate-proxy-host.sh for details.
-source "${script_dir}/../../scripts/corporate-proxy-host.sh"
-prepare_ca_cert_for_build "$component_root"
-trap 'cleanup_ca_cert "$component_root"' EXIT
+# shellcheck source=components/core/tools/scripts/docker-image-build.sh
+source "${script_dir}/../../scripts/docker-image-build.sh"
+parse_build_args "$@"
 
 build_cmd=(
     docker buildx build
@@ -57,5 +56,5 @@ build_cmd=(
 #   HTTP_PROXY / HTTPS_PROXY / NO_PROXY / ALL_PROXY — Forwarded into the build container
 #   DNF_MIRROR_BASE_URL — Override AlmaLinux mirrors (organization-internal or regional)
 #   DOCKER_NETWORK      — Override Docker network mode (auto: host for localhost proxies)
-#   DOCKER_PULL=true    — Force pull the latest base image from the registry
-finalize_build build_cmd "$script_dir" DNF_MIRROR_BASE_URL
+#   DOCKER_PULL=false   — Skip pulling the latest base image from the registry
+run_image_build build_cmd "$script_dir" DNF_MIRROR_BASE_URL
