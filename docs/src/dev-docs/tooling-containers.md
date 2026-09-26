@@ -73,24 +73,6 @@ other distros using musl 1.2, including:
   `clp-core-dependencies-x86-musllinux_1_2:dev` for amd64 and
   `clp-core-dependencies-aarch64-musllinux_1_2:dev` for arm64.
 
-## clp-core-dependencies-x86-centos-stream-9
-
-An image containing the dependencies necessary to build CLP core in a CentOS Stream 9 x86
-environment.
-
-* [GitHub Packages page][core-deps-centos-stream-9]
-* Pull command:
-
-  ```bash
-  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos-stream-9:main
-  ```
-
-* Path:
-
-  ```text
-  components/core/tools/docker-images/clp-env-base-centos-stream-9
-  ```
-
 ## clp-core-dependencies-x86-ubuntu-jammy
 
 An image containing the dependencies necessary to build CLP core in an Ubuntu Jammy x86
@@ -214,7 +196,7 @@ Each distro supports an environment variable to override the default package mir
 
 | Variable              | Distro                                      | Example                                  |
 |-----------------------|---------------------------------------------|------------------------------------------|
-| `DNF_MIRROR_BASE_URL` | manylinux_2_28 (AlmaLinux), centos-stream-9 | `https://internal.example.com/almalinux` |
+| `DNF_MIRROR_BASE_URL` | manylinux_2_28 (AlmaLinux) | `https://internal.example.com/almalinux` |
 | `APK_MIRROR_URL`      | musllinux_1_2 (Alpine)                      | `https://internal.example.com/alpine`    |
 | `APT_MIRROR_URL`      | ubuntu-jammy                                | `https://internal.example.com/ubuntu`    |
 
@@ -225,7 +207,6 @@ Each distro supports an environment variable to override the default package mir
 | `DOCKER_PULL`    | `true`  | Pull the latest base image before building. Set to `false` for offline builds. |
 | `DOCKER_NETWORK` | (auto)  | Override Docker's network mode (e.g., `host`, `bridge`).                       |
 
-[core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-manylinux_2_28]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-manylinux_2_28
 [core-deps-musllinux_1_2]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-musllinux_1_2
 [core-deps-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
