@@ -13,6 +13,11 @@ set(
         FilterReader.hpp
         HashAlgorithm.cpp
         HashAlgorithm.hpp
+        IndexBuilder.hpp
+        IndexBuilderSpecification.hpp
+        IndexDefs.hpp
+        IndexRunner.hpp
+        PackedFilterSpecification.hpp
         XxHash.cpp
         XxHash.hpp
 )
@@ -29,6 +34,7 @@ if(CLP_BUILD_CLP_S_FILTER)
                 clp_s_filter
                 PUBLIC
                 clp_s::clp_dependencies
+                nlohmann_json::nlohmann_json
                 ystdlib::containers
                 ystdlib::error_handling
                 PRIVATE
