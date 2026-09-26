@@ -83,8 +83,6 @@ data:
         .Values.clpConfig.compression_coordinator.job_polling_interval_millisecs | int }}
       max_concurrent_jobs: {{
         .Values.clpConfig.compression_coordinator.max_concurrent_jobs | int }}
-      resource_group:
-        name: {{ .Values.clpConfig.compression_coordinator.resource_group.name | quote }}
       result_polling:
         init_backoff_millisecs: {{
           .Values.clpConfig.compression_coordinator.result_polling.init_backoff_millisecs | int }}

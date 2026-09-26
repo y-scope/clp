@@ -51,6 +51,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
+            - name: "SPIDER_EXTERNAL_RESOURCE_GROUP_ID"
+              value: "compression"
+            - name: "SPIDER_RESOURCE_GROUP_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-spider-resource-groups
+                  key: "compression"
             - name: "OTEL_SERVICE_NAME"
               value: "compression-coordinator"
             - name: "RUST_LOG"

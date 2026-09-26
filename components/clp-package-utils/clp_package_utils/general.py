@@ -30,6 +30,7 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
+    RESOURCE_GROUP_PASSWORD_KEY,
     RESULTS_CACHE_COMPONENT_NAME,
     SPIDER_COMPONENT_NAME,
     StorageType,
@@ -520,6 +521,7 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
         },
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
+        RESOURCE_GROUP_PASSWORD_KEY: {"compression": secrets.token_urlsafe(16)},
     }
 
     with open(credentials_file_path, "w") as f:
@@ -542,6 +544,13 @@ def validate_credentials_file_path(
             raise ValueError(f"Credentials file path '{credentials_file_path}' does not exist.")
     elif not resolved_credentials_file_path.is_file():
         raise ValueError(f"Credentials file path '{credentials_file_path}' is not a file.")
+
+
+def validate_and_load_compression_coordinator_credentials_file(
+    clp_config: ClpConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
+    validate_credentials_file_path(clp_config, clp_home, generate_default_file)
+    clp_config.compression_coordinator.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_db_credentials_file(

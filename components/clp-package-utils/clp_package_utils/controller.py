@@ -647,6 +647,11 @@ class BaseController(ABC):
             "CLP_COMPRESSION_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
         }
 
+        # Credentials
+        env_vars |= {
+            "CLP_SPIDER_RESOURCE_GROUP_PASSWORD": coordinator_config.resource_group_password,
+        }
+
         return env_vars
 
     def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:

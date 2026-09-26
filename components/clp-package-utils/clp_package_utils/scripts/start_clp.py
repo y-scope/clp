@@ -6,7 +6,11 @@ import pathlib
 import sys
 
 import click
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, ClpConfig
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    ClpConfig,
+    CompressionOrchestration,
+)
 from clp_py_utils.core import resolve_host_path_in_container
 from clp_py_utils.telemetry_config import is_telemetry_disabled_by_env
 
@@ -16,6 +20,7 @@ from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
     set_yaml_key,
+    validate_and_load_compression_coordinator_credentials_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
@@ -94,6 +99,8 @@ def main(
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
         if clp_config.redis is not None:
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
+        if CompressionOrchestration.SPIDER == clp_config.package.scheduler:
+            validate_and_load_compression_coordinator_credentials_file(clp_config, clp_home, True)
         clp_config.validate_logs_input_config(True)
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
