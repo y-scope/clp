@@ -1,9 +1,9 @@
 //! The query tasks: the `#[task]` wrappers Spider invokes and their implementations.
 
-use clp_rust_utils::job_config::ArchiveId;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
+use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
