@@ -131,10 +131,10 @@ private:
  *
  * Metadata for each node type:
  * - LogMessage:
- *  - root MST node ID
+ *  - MPT root node ID
  *  - log shape ID
  * - ParentRule:
- *  - root MST node ID
+ *  - MPT root node ID
  */
 struct UnorderedObject {
     // Static methods

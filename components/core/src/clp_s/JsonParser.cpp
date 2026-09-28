@@ -137,12 +137,12 @@ private:
 /**
  * Tracks an open `ParentRule` unordered object scope during parsing.
  * @var match Uniquely identifies the scope within a parsed log message.
- * @var scope_start_schema_idx The starting index of the scope in the schema entry vector.
+ * @var scope_schema_idx The starting index of the scope in the schema entry vector.
  * @var tree_node_id The schema node to be used by children of the parent rule.
  */
 struct ParentScope {
     log_surgeon::Match const* match;
-    size_t scope_start_schema_idx;
+    size_t scope_schema_idx;
     SchemaNode::id_t tree_node_id;
 };
 
@@ -206,7 +206,7 @@ auto update_open_parent_scopes(
         ++common_parents;
     }
     while (open_scopes.size() > common_parents) {
-        schema.end_unordered_object(open_scopes.back().scope_start_schema_idx);
+        schema.end_unordered_object(open_scopes.back().scope_schema_idx);
         open_scopes.pop_back();
     }
     for (size_t i{parent_matches.size()}; i > common_parents;) {
@@ -222,7 +222,7 @@ auto update_open_parent_scopes(
         )};
         auto const schema_start{schema.start_unordered_object(NodeType::ParentRule, node_id)};
         open_scopes.push_back(
-                {.match = parent, .scope_start_schema_idx = schema_start, .tree_node_id = node_id}
+                {.match = parent, .scope_schema_idx = schema_start, .tree_node_id = node_id}
         );
     }
     return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
@@ -1649,7 +1649,7 @@ auto JsonParser::parse_log_message(
     log_shape.escape_and_append(field_value.substr(log_msg_pos));
 
     while (false == open_scopes.empty()) {
-        m_current_schema.end_unordered_object(open_scopes.back().scope_start_schema_idx);
+        m_current_schema.end_unordered_object(open_scopes.back().scope_schema_idx);
         open_scopes.pop_back();
     }
 

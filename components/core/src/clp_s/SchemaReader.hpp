@@ -518,14 +518,15 @@ private:
      * or empty to reconstruct the full LogMessage shape.
      * @param start_column_reader_idx Index in `m_columns`.
      * @param sub_schema The sub-schema to iterate for column values.
-     * @return The fully-compiled shape.
+     * @return A result containing the fully-compiled shape or an error code indicating the failure:
+     * - Forwards `segments` return values.
      */
     [[nodiscard]] auto compile_shape(
             clpp::log_shape_id_t log_shape_id,
             std::string_view parent_rule_column_name,
             size_t start_column_reader_idx,
             SchemaView sub_schema
-    ) -> CompiledShape;
+    ) -> ystdlib::error_handling::Result<CompiledShape>;
 
     /**
      * Visits every `ParentRule` unordered object contained in `schema`, recursing into nested

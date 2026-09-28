@@ -1075,12 +1075,12 @@ auto SchemaReader::emit_parent_rule_arrays(
             if (emit_text) {
                 m_json_serializer.add_special_key("text");
                 m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-                m_reconstruction_targets.push_back(compile_shape(
+                m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(
                         log_shape_id,
                         parent_rule_column_name,
                         occurrence.start_column_reader_idx,
                         occurrence.sub_schema
-                ));
+                )));
             }
 
             if (parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)) {
@@ -1198,7 +1198,9 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     if (m_extract_mode) {
         m_json_serializer.add_special_key(key_name);
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.push_back(compile_shape(log_shape_id, "", column_start, schema));
+        m_reconstruction_targets.push_back(
+                YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(log_shape_id, "", column_start, schema))
+        );
         auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
                 schema,
                 log_msg_node_id,
@@ -1215,7 +1217,9 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     if (emit_text) {
         m_json_serializer.add_special_key("text");
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.push_back(compile_shape(log_shape_id, "", column_start, schema));
+        m_reconstruction_targets.push_back(
+                YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(log_shape_id, "", column_start, schema))
+        );
     }
 
     if (has_shape) {
@@ -1241,7 +1245,7 @@ auto SchemaReader::compile_shape(
         std::string_view parent_rule_column_name,
         size_t start_column_reader_idx,
         SchemaView sub_schema
-) -> CompiledShape {
+) -> ystdlib::error_handling::Result<CompiledShape> {
     CompiledShape compiled_shape;
 
     std::string_view shape_to_scan;
@@ -1273,7 +1277,7 @@ auto SchemaReader::compile_shape(
     std::unordered_map<std::string, size_t> name_to_next_reader_idx;
 
     clpp::TextShape<std::string_view> const log_shape{shape_to_scan};
-    for (auto const& seg : log_shape.segments()) {
+    for (auto const& seg : YSTDLIB_ERROR_HANDLING_TRYX(log_shape.segments())) {
         switch (seg.type) {
             case clpp::TextShape<std::string_view>::Segment::Type::Literal: {
                 auto const unescaped{

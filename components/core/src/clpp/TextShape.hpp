@@ -122,9 +122,11 @@ public:
     /**
      * Splits the shape into its segments.
      *
-     * @return The shape's `Segment`s in document order.
+     * @return A result containing the shape's `Segment`s in document order or an error code
+     * indicating the failure:
+     * - ClppErrorCodeEnum::Corrupt if there is an unmatched placeholder delimiter.
      */
-    [[nodiscard]] auto segments() const -> std::vector<Segment> {
+    [[nodiscard]] auto segments() const -> ystdlib::error_handling::Result<std::vector<Segment>> {
         std::vector<Segment> result;
         auto const shape{view()};
         for (size_t pos{0}; pos < shape.size();) {
@@ -140,8 +142,7 @@ public:
             // column name cannot contain a delimiter.
             auto const close{shape.find('%', open + 1)};
             if (std::string_view::npos == close) {
-                result.emplace_back(Segment::Type::Literal, shape.substr(open));
-                return result;
+                return ClppErrorCode{ClppErrorCodeEnum::Corrupt};
             }
             result.emplace_back(
                     Segment::Type::Placeholder,
@@ -193,13 +194,14 @@ public:
      * @param event The log event containing all matches and the message text.
      * @return A result containing the parent rule shapes or an error code indicating the failure:
      * - ClppErrorCodeEnum::Corrupt if there is a mismatch between segments and leaf matches.
+     * - Forwards `segments` return values.
      */
     [[nodiscard]] auto build_parent_rule_shapes(log_surgeon::LogEvent const& event) const
             -> ystdlib::error_handling::Result<ParentRuleShapes> {
         std::vector<std::pair<size_t, size_t>> message_to_shape_positions;
         size_t shape_pos{0};
         size_t leaf_match_idx{0};
-        for (auto const& segment : segments()) {
+        for (auto const& segment : YSTDLIB_ERROR_HANDLING_TRYX(segments())) {
             switch (segment.type) {
                 case Segment::Type::Literal:
                     shape_pos += segment.text.size();
