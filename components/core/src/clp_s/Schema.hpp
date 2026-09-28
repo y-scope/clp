@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include <clp_s/SchemaTree.hpp>
@@ -75,10 +76,16 @@ public:
             -> bool;
 
     /**
-     * Scans the entries for a `LogMessage` unordered object and reads its log shape ID.
-     * @return The log shape ID, or std::nullopt if this view contains no `LogMessage` object.
+     * Collects every `LogMessage` unordered object in this view, recursing into other unordered
+     * objects (e.g. nested objects and structured arrays) but not into `LogMessage` sub-schemas.
+     *
+     * A schema may contain several sibling `LogMessage` objects when a log event has multiple
+     * unstructured text fields.
+     * @return A pair of the `LogMessage` MPT root node ID and its log shape ID for each LogMessage
+     * object, in document order.
      */
-    [[nodiscard]] auto find_log_shape_id() const -> std::optional<clpp::log_shape_id_t>;
+    [[nodiscard]] auto find_log_messages() const
+            -> std::vector<std::pair<SchemaNode::id_t, clpp::log_shape_id_t>>;
 
 private:
     // Static constants
@@ -188,19 +195,24 @@ SchemaView::visit_entries(NodeVisitor const& visit_node, ObjectVisitor const& vi
     return false;
 }
 
-inline auto SchemaView::find_log_shape_id() const -> std::optional<clpp::log_shape_id_t> {
-    std::optional<clpp::log_shape_id_t> log_shape_id;
+inline auto SchemaView::find_log_messages() const
+        -> std::vector<std::pair<SchemaNode::id_t, clpp::log_shape_id_t>> {
+    std::vector<std::pair<SchemaNode::id_t, clpp::log_shape_id_t>> msgs;
     visit_entries(
             [](SchemaNode::id_t) -> bool { return false; },
             [&](UnorderedObject const& obj) -> bool {
-                if (obj.log_shape_id.has_value()) {
-                    log_shape_id = obj.log_shape_id;
-                    return true;
+                if (NodeType::LogMessage == obj.type) {
+                    if (obj.root_node_id.has_value() && obj.log_shape_id.has_value()) {
+                        msgs.emplace_back(obj.root_node_id.value(), obj.log_shape_id.value());
+                    }
+                    return false;
                 }
+                auto const nested_msgs{obj.sub_schema.find_log_messages()};
+                msgs.insert(msgs.end(), nested_msgs.begin(), nested_msgs.end());
                 return false;
             }
     );
-    return log_shape_id;
+    return msgs;
 }
 
 inline auto SchemaView::decode_unordered_object(size_t i) const -> std::optional<UnorderedObject> {

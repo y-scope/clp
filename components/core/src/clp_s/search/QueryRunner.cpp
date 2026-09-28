@@ -210,7 +210,7 @@ auto QueryRunner::find_positional_reader(
     }
     auto const column_id{column.get_column_id()};
     auto const log_message_node_id{m_schema_tree->find_matching_subtree_root_in_subtree(
-            -1,
+            constants::cRootNodeId,
             column_id,
             NodeType::LogMessage
     )};

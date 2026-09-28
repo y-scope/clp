@@ -13,6 +13,7 @@
 
 #include <clp/string_utils/string_utils.hpp>
 #include <clp_s/ArchiveReader.hpp>
+#include <clp_s/SchemaTree.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 #include <clpp/TextShape.hpp>
@@ -37,7 +38,7 @@ public:
 
     // Constructors
     /**
-     * Builds the log shape to schemas index using `archive_reader` to enable clpp querying.
+     * Builds an index from each log shape ID to its `LogMessage`s to enable clpp querying.
      * If the archive is not experimental construction is skipped and the object is invalid.
      * @param archive_reader
      * @param case_sensitive Whether matching is case sensitive.
@@ -48,19 +49,23 @@ public:
     // Methods
     /**
      * Finds the schemas whose log shapes (or parent rule shapes of `rule_name`) satisfy
-     * `shape_query`.
+     * `shape_query`, considering only shapes of the `LogMessage` node `log_message_node_id`.
+     * @param log_message_node_id The `LogMessage` node to search within.
      * @param rule_name A parent rule name, or empty to query the entire log shape.
      * @param shape_query A wildcard pattern, or std::nullopt to match every shape.
      * @return The matching schema IDs.
      */
     [[nodiscard]] auto find_matching_schemas(
+            SchemaNode::id_t log_message_node_id,
             std::string_view rule_name,
             std::optional<std::string_view> shape_query
     ) const -> std::unordered_set<int32_t>;
 
     /**
      * Decomposes `query` against the parent rule `rule_name`, or against every log shape if
-     * `rule_name` is empty, then returns the possible interpretations.
+     * `rule_name` is empty, then returns the possible interpretations. Only shapes of the
+     * `LogMessage` node `log_message_node_id` are considered.
+     * @param log_message_node_id The `LogMessage` node to search within.
      * @param query
      * @param rule_name A qualified parent rule name, or empty to decompose against every log shape.
      * @return The interpretation matches (empty if no interpretation matched a shape), or an error
@@ -68,11 +73,37 @@ public:
      * - Forwards `decompose_by_log_shapes`'s return values.
      * - Forwards `decompose_by_rule_name`'s return values.
      */
-    [[nodiscard]] auto decompose_query(std::string_view query, std::string_view rule_name)
-            -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
+    [[nodiscard]] auto decompose_query(
+            SchemaNode::id_t log_message_node_id,
+            std::string_view query,
+            std::string_view rule_name
+    ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
 
 private:
+    // Types
+    /**
+     * A reference to a `LogMessage` occurrence within a schema, identified by the schema ID and the
+     * `LogMessage` node's MST node ID. A schema can contain several sibling `LogMessage` nodes when
+     * a log event has multiple unstructured text fields, so the schema ID alone does not
+     * disambiguate which field a to use.
+     */
+    struct LogMessageRef {
+        int32_t schema_id;
+        SchemaNode::id_t log_message_node_id;
+    };
+
     // Methods
+    /**
+     * Collects the schema IDs whose `LogMessage` node `log_message_node_id` has log shape ID
+     * `log_shape_id`.
+     * @param log_shape_id
+     * @param log_message_node_id
+     * @return The matching schema IDs.
+     */
+    [[nodiscard]] auto
+    get_schema_ids(clpp::log_shape_id_t log_shape_id, SchemaNode::id_t log_message_node_id) const
+            -> std::unordered_set<int32_t>;
+
     /**
      * Builds the log-surgeon parser from the archive's parsing spec if it hasn't been built yet.
      * @return A void result on success, or an error code indicating the failure:
@@ -82,25 +113,32 @@ private:
 
     /**
      * Decomposes `query` against the log shapes returning interpretations that matched a log shape.
+     * @param log_message_node_id The `LogMessage` node to search within.
      * @return The interpretation matches, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
      */
-    [[nodiscard]] auto decompose_by_log_shapes(std::string_view query)
+    [[nodiscard]] auto
+    decompose_by_log_shapes(SchemaNode::id_t log_message_node_id, std::string_view query)
             -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
 
     /**
      * Decomposes `query` against the parent rule `rule_name`, then matches each interpretation's
      * shape query against each occurrence of `rule_name` in relevant log shapes.
+     * @param log_message_node_id The `LogMessage` node to search within.
      * @return The interpretation matches, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
      */
-    [[nodiscard]] auto decompose_by_rule_name(std::string_view query, std::string_view rule_name)
-            -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
+    [[nodiscard]] auto decompose_by_rule_name(
+            SchemaNode::id_t log_message_node_id,
+            std::string_view query,
+            std::string_view rule_name
+    ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
 
     /**
      * Invokes `on_match` for every occurrence of `rule_name` (or every whole log shape if
      * `rule_name` is empty) whose shape satisfies `shape_query`, walking occurrences in document
-     * order.
+     * order. Only shapes of the `LogMessage` node `log_message_node_id` are considered.
+     * @param log_message_node_id The `LogMessage` node to search within.
      * @param rule_name A parent rule name, or empty to match the entire log shape.
      * @param shape_query A wildcard pattern, or std::nullopt to match every shape.
      * @param on_match Invoked as `on_match(schema_ids, leaf_position)` with the schema IDs of the
@@ -110,6 +148,7 @@ private:
      */
     template <typename OnMatch>
     auto for_each_matching_occurrence(
+            SchemaNode::id_t log_message_node_id,
             std::string_view rule_name,
             std::optional<std::string_view> shape_query,
             OnMatch const& on_match
@@ -118,12 +157,13 @@ private:
     // Data members
     ArchiveReader* m_archive_reader;
     bool m_case_sensitive{false};
-    std::vector<std::unordered_set<int32_t>> m_schemas_by_log_shape;
+    std::vector<std::vector<LogMessageRef>> m_log_messages_per_log_shape;
     std::unique_ptr<log_surgeon::Parser> m_parser;
 };
 
 template <typename OnMatch>
 auto ClppMatcher::for_each_matching_occurrence(
+        SchemaNode::id_t log_message_node_id,
         std::string_view rule_name,
         std::optional<std::string_view> shape_query,
         OnMatch const& on_match
@@ -136,7 +176,7 @@ auto ClppMatcher::for_each_matching_occurrence(
     for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < log_shape_entries.size();
          ++log_shape_id)
     {
-        auto const& schema_ids{m_schemas_by_log_shape.at(log_shape_id)};
+        auto const schema_ids{get_schema_ids(log_shape_id, log_message_node_id)};
         if (schema_ids.empty()) {
             continue;
         }

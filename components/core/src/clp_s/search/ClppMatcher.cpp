@@ -16,6 +16,7 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveReader.hpp>
+#include <clp_s/SchemaTree.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 
@@ -43,25 +44,48 @@ ClppMatcher::ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive)
         throw std::runtime_error{"ClppMatcher got a null log shape dictionary"};
     }
 
-    m_schemas_by_log_shape.resize(log_shape_dict->get_entries().size());
+    m_log_messages_per_log_shape.resize(log_shape_dict->get_entries().size());
     for (auto const& [schema_id, schema] : *m_archive_reader->get_schema_map()) {
-        if (auto const log_shape_id{schema.get_view().find_log_shape_id()}) {
-            if (*log_shape_id >= m_schemas_by_log_shape.size()) {
+        for (auto const& [log_message_node_id, log_shape_id] :
+             schema.get_view().find_log_messages())
+        {
+            if (log_shape_id >= m_log_messages_per_log_shape.size()) {
                 throw std::runtime_error{
                         "ClppMatcher found a schema referencing an unknown log shape ID"
                 };
             }
-            m_schemas_by_log_shape.at(*log_shape_id).emplace(schema_id);
+            m_log_messages_per_log_shape.at(log_shape_id)
+                    .push_back(
+                            LogMessageRef{
+                                    .schema_id = schema_id,
+                                    .log_message_node_id = log_message_node_id
+                            }
+                    );
         }
     }
 }
 
+auto ClppMatcher::get_schema_ids(
+        clpp::log_shape_id_t log_shape_id,
+        SchemaNode::id_t log_message_node_id
+) const -> std::unordered_set<int32_t> {
+    std::unordered_set<int32_t> schema_ids;
+    for (auto const& log_message_node : m_log_messages_per_log_shape.at(log_shape_id)) {
+        if (log_message_node.log_message_node_id == log_message_node_id) {
+            schema_ids.emplace(log_message_node.schema_id);
+        }
+    }
+    return schema_ids;
+}
+
 auto ClppMatcher::find_matching_schemas(
+        SchemaNode::id_t log_message_node_id,
         std::string_view rule_name,
         std::optional<std::string_view> shape_query
 ) const -> std::unordered_set<int32_t> {
     std::unordered_set<int32_t> schema_ids;
     for_each_matching_occurrence(
+            log_message_node_id,
             rule_name,
             shape_query,
             [&](std::unordered_set<int32_t> const& occurrence_schema_ids, size_t) -> void {
@@ -71,12 +95,15 @@ auto ClppMatcher::find_matching_schemas(
     return schema_ids;
 }
 
-auto ClppMatcher::decompose_query(std::string_view query, std::string_view rule_name)
-        -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
+auto ClppMatcher::decompose_query(
+        SchemaNode::id_t log_message_node_id,
+        std::string_view query,
+        std::string_view rule_name
+) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
     if (rule_name.empty()) {
-        return decompose_by_log_shapes(query);
+        return decompose_by_log_shapes(log_message_node_id, query);
     }
-    return decompose_by_rule_name(query, rule_name);
+    return decompose_by_rule_name(log_message_node_id, query, rule_name);
 }
 
 auto ClppMatcher::ensure_parser() -> ystdlib::error_handling::Result<void> {
@@ -88,7 +115,8 @@ auto ClppMatcher::ensure_parser() -> ystdlib::error_handling::Result<void> {
     return ystdlib::error_handling::success();
 }
 
-auto ClppMatcher::decompose_by_log_shapes(std::string_view query)
+auto
+ClppMatcher::decompose_by_log_shapes(SchemaNode::id_t log_message_node_id, std::string_view query)
         -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
     std::vector<std::string_view> log_shapes;
     auto const& entries{m_archive_reader->get_log_shape_dictionary()->get_entries()};
@@ -104,7 +132,7 @@ auto ClppMatcher::decompose_by_log_shapes(std::string_view query)
     for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < interpretations_per_shape.size();
          ++log_shape_id)
     {
-        auto const& schema_ids{m_schemas_by_log_shape.at(log_shape_id)};
+        auto const schema_ids{get_schema_ids(log_shape_id, log_message_node_id)};
         if (schema_ids.empty()) {
             continue;
         }
@@ -131,8 +159,11 @@ auto ClppMatcher::decompose_by_log_shapes(std::string_view query)
     return matches;
 }
 
-auto ClppMatcher::decompose_by_rule_name(std::string_view query, std::string_view rule_name)
-        -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
+auto ClppMatcher::decompose_by_rule_name(
+        SchemaNode::id_t log_message_node_id,
+        std::string_view query,
+        std::string_view rule_name
+) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
     YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
     auto interpretations{clpp::decompose_by_rule_name(*m_parser, query, rule_name)};
     std::vector<InterpretationMatch> matches;
@@ -141,6 +172,7 @@ auto ClppMatcher::decompose_by_rule_name(std::string_view query, std::string_vie
         erase_unconstrained_leaves(interpretation.m_leaf_queries);
         std::map<size_t, std::unordered_set<int32_t>> schema_ids_by_leaf_position;
         for_each_matching_occurrence(
+                log_message_node_id,
                 rule_name,
                 interpretation.m_shape_query.view(),
                 [&](std::unordered_set<int32_t> const& schema_ids, size_t leaf_position) -> void {
