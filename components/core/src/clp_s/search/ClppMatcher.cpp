@@ -107,11 +107,13 @@ auto ClppMatcher::decompose_query(
 }
 
 auto ClppMatcher::ensure_parser() -> ystdlib::error_handling::Result<void> {
-    if (nullptr != m_parser) {
+    if (nullptr != m_parsing_spec) {
         return ystdlib::error_handling::success();
     }
     auto const spec{YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec())};
-    m_parser = std::make_unique<log_surgeon::Parser>(log_surgeon::ParsingSpecBuilder{spec}.build());
+    m_parsing_spec = std::make_unique<log_surgeon::ParsingSpec>(
+            log_surgeon::ParsingSpecBuilder{spec}.build()
+    );
     return ystdlib::error_handling::success();
 }
 
@@ -126,7 +128,9 @@ ClppMatcher::decompose_by_log_shapes(SchemaNode::id_t log_message_node_id, std::
     }
 
     YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
-    auto interpretations_per_shape{clpp::decompose_by_log_shapes(*m_parser, query, log_shapes)};
+    auto interpretations_per_shape{
+            clpp::decompose_by_log_shapes(*m_parsing_spec, query, log_shapes)
+    };
     std::vector<InterpretationMatch> matches;
     matches.reserve(interpretations_per_shape.size());
     for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < interpretations_per_shape.size();
@@ -165,7 +169,7 @@ auto ClppMatcher::decompose_by_rule_name(
         std::string_view rule_name
 ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
     YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
-    auto interpretations{clpp::decompose_by_rule_name(*m_parser, query, rule_name)};
+    auto interpretations{clpp::decompose_by_rule_name(*m_parsing_spec, query, rule_name)};
     std::vector<InterpretationMatch> matches;
     matches.reserve(interpretations.size());
     for (auto& interpretation : interpretations) {

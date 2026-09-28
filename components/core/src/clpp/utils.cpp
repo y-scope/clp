@@ -55,6 +55,6 @@ auto build_parser(clp::ReaderInterface& reader)
         }
     }
 
-    return std::make_pair(builder.build(), std::move(spec_str));
+    return std::make_pair(builder.build().create_parser(), std::move(spec_str));
 }
 }  // namespace clpp

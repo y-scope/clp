@@ -158,7 +158,7 @@ private:
     ArchiveReader* m_archive_reader;
     bool m_case_sensitive{false};
     std::vector<std::vector<LogMessageRef>> m_log_messages_per_log_shape;
-    std::unique_ptr<log_surgeon::Parser> m_parser;
+    std::unique_ptr<log_surgeon::ParsingSpec> m_parsing_spec;
 };
 
 template <typename OnMatch>

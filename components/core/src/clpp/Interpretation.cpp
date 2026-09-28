@@ -64,11 +64,11 @@ auto build_leaf_queries(std::vector<log_surgeon::SubQuery> const& sub_queries)
 }  // namespace
 
 auto decompose_by_rule_name(
-        log_surgeon::Parser& parser,
+        log_surgeon::ParsingSpec& parsing_spec,
         std::string_view query,
         std::string_view rule_name
 ) -> std::vector<Interpretation> {
-    auto const sub_query_sets{parser.search_by_name(query, rule_name)};
+    auto const sub_query_sets{parsing_spec.search_by_name(query, rule_name)};
     std::vector<Interpretation> interpretations;
     interpretations.reserve(sub_query_sets.size());
     for (auto const& sub_queries : sub_query_sets) {
@@ -78,7 +78,7 @@ auto decompose_by_rule_name(
 }
 
 auto decompose_by_log_shapes(
-        log_surgeon::Parser& parser,
+        log_surgeon::ParsingSpec& parsing_spec,
         std::string_view query,
         std::span<std::string_view const> log_shapes
 ) -> std::vector<std::vector<std::vector<LeafQuery>>> {
@@ -88,7 +88,7 @@ auto decompose_by_log_shapes(
         ffi_shapes.push_back(log_surgeon::CCharArray::from_string_view(shape));
     }
 
-    auto const ls_interpretations_per_shape{parser.search_by_log_shapes(query, ffi_shapes)};
+    auto const ls_interpretations_per_shape{parsing_spec.search_by_log_shapes(query, ffi_shapes)};
     std::vector<std::vector<std::vector<LeafQuery>>> interpretations_per_shape;
     interpretations_per_shape.reserve(ls_interpretations_per_shape.size());
     for (auto const& sub_query_per_interpretation : ls_interpretations_per_shape) {
