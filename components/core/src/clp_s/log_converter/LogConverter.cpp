@@ -78,7 +78,7 @@ auto LogConverter::create(size_t max_buffer_size, size_t initial_buffer_size) ->
             throw std::runtime_error("failed to add header rule parsing spec");
         }
     }
-    return LogConverter(max_buffer_size, initial_buffer_size, builder.build());
+    return LogConverter(max_buffer_size, initial_buffer_size, builder.build().create_parser());
 }
 
 auto LogConverter::convert_file(
