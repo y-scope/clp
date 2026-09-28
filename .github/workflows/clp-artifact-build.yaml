@@ -120,7 +120,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: "Filter relevant changes"
-        uses: "dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36"
+        uses: "dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d"
         id: "filter"
         with:
           # Consider changes between the current commit and `main`
@@ -778,7 +778,7 @@ jobs:
         shell: "bash"
 
       - if: "matrix.upload_binaries == true"
-        uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+        uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "${{steps.copy_binaries.outputs.output_dir}}"
@@ -802,7 +802,7 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+      - uses: "actions/download-artifact@ad191675b41f6a5b46da9a048cb6893812da158b"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
@@ -830,7 +830,7 @@ jobs:
         shell: "bash"
 
       - id: "core_image_meta"
-        uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
+        uses: "docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302"
         with:
           images: >-
             ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-core-x86-${{env.OS_NAME}}
@@ -839,7 +839,7 @@ jobs:
       # Only publish the image if this workflow was triggered by a push to `main`.
       # NOTE: We run the rest of the job to test that the binaries were uploaded correctly.
       - if: "github.event_name == 'push' && github.ref == 'refs/heads/main'"
-        uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
+        uses: "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc"
         with:
           context: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           file: "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/Dockerfile"
@@ -935,7 +935,7 @@ jobs:
           submodules: "recursive"
 
       - name: "Download the binaries artifact"
-        uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+        uses: "actions/download-artifact@ad191675b41f6a5b46da9a048cb6893812da158b"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "${{env.BUILD_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"

@@ -72,7 +72,7 @@ runs:
       shell: "bash"
 
     - if: "inputs.use_published_image == 'false'"
-      uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+      uses: "actions/download-artifact@ad191675b41f6a5b46da9a048cb6893812da158b"
       with:
         name: "${{steps.get_image_props.outputs.artifact_name}}"
         path: "${{runner.temp}}"
