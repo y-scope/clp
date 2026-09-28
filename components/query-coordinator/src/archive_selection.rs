@@ -82,13 +82,13 @@ pub async fn prepare_search_task_inputs(
             .await?,
         );
     }
-    sort_selected_archives(&mut selected_archives);
+    selected_archives.sort_by_key(|archive| Reverse(archive.end_timestamp));
 
     Ok(selected_archives
         .into_iter()
         .map(|archive| {
             (
-                archive.metadata,
+                archive,
                 archive_selection_options
                     .query_task_execution_policy
                     .clone(),
@@ -169,7 +169,7 @@ async fn fetch_archive_end_timestamp_lower_bound(
 ///
 /// # Returns
 ///
-/// The selected archives and their end timestamps on success.
+/// The selected archives on success.
 ///
 /// # Errors
 ///
@@ -182,7 +182,7 @@ async fn fetch_archives(
     search_job_config: &SearchJobConfig,
     dataset: &NonEmptyString,
     archive_end_timestamp_lower_bound: Option<i64>,
-) -> Result<Vec<SelectedArchive>, Error> {
+) -> Result<Vec<ArchiveMetadata>, Error> {
     let archives_table = db_config.archives_table_name(Some(dataset.as_str()));
     let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
         "SELECT `id`, `size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
@@ -209,24 +209,19 @@ async fn fetch_archives(
         .fetch_all(db_pool)
         .await?
         .into_iter()
-        .map(|row| SelectedArchive {
-            metadata: ArchiveMetadata {
-                id: row.id,
-                dataset: Some(dataset.clone()),
-                size: row.size,
-            },
+        .map(|row| ArchiveMetadata {
+            id: row.id,
+            dataset: Some(dataset.clone()),
+            size: row.size,
             end_timestamp: row.end_timestamp,
         })
         .collect())
 }
 
-/// An archive and the timestamp used to order it among all selected datasets.
-struct SelectedArchive {
-    metadata: ArchiveMetadata,
-    end_timestamp: i64,
-}
-
 /// Columns projected from an archives table.
+///
+/// [`ArchiveMetadata`] can't be decoded directly from a row since the dataset is encoded in the
+/// archives table's name rather than stored in a column.
 #[derive(sqlx::FromRow)]
 struct ArchiveRowProjection {
     id: ArchiveId,
@@ -253,11 +248,6 @@ fn validate_timestamp_range(search_job_config: &SearchJobConfig) -> Result<(), E
         )));
     }
     Ok(())
-}
-
-/// Orders selected archives by descending end timestamp, without a tie-breaker.
-fn sort_selected_archives(archives: &mut [SelectedArchive]) {
-    archives.sort_by_key(|archive| Reverse(archive.end_timestamp));
 }
 
 /// Validates and deduplicates an explicit dataset list in requested order.
