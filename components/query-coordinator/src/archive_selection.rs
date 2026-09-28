@@ -7,10 +7,10 @@ use std::num::NonZeroUsize;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::CLP_DEFAULT_DATASET_NAME;
-use clp_rust_utils::job_config::ArchiveId;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::SearchJobConfig;
+use clp_rust_utils::types::ArchiveId;
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
@@ -229,7 +229,6 @@ struct SelectedArchive {
 /// Columns projected from an archives table.
 #[derive(sqlx::FromRow)]
 struct ArchiveRowProjection {
-    #[sqlx(try_from = "String")]
     id: ArchiveId,
     #[sqlx(try_from = "i64")]
     size: u64,
