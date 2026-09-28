@@ -30,10 +30,10 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: "docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069"
+    - uses: "docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069"  # v4.4.1
 
     - if: "inputs.push_deps_image == 'true'"
-      uses: "docker/login-action@dbcb813823bdd20940b903addbd779551569679f"
+      uses: "docker/login-action@dbcb813823bdd20940b903addbd779551569679f"  # v4.6.0
       with:
         registry: "ghcr.io"
         username: "${{github.actor}}"
@@ -72,7 +72,7 @@ runs:
         fi
 
     - id: "deps_image_meta"
-      uses: "docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302"
+      uses: "docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302"  # v6.2.0
       with:
         images: "${{steps.get_image_props.outputs.qualified_image_name}}"
         tags: |
@@ -100,7 +100,7 @@ runs:
           exit 1
         fi
 
-    - uses: "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc"
+    - uses: "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc"  # v7.4.0
       with:
         context: "${{inputs.docker_context}}"
         file: "${{inputs.docker_file}}"
@@ -112,7 +112,7 @@ runs:
         provenance: false
 
     - if: "inputs.push_deps_image == 'false'"
-      uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+      uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
       with:
         name: "${{steps.get_image_props.outputs.qualified_image_name}}"
         path: "${{steps.get_image_props.outputs.image_path}}"

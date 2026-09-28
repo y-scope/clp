@@ -40,7 +40,7 @@ runs:
         >> "$GITHUB_OUTPUT"
 
     - id: "extract-image-tags"
-      uses: "docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302"
+      uses: "docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302"  # v6.2.0
       with:
         images: "${{inputs.image_registry}}/${{steps.sanitize-repo-name.outputs.repository}}\
           /${{inputs.image_name}}"
