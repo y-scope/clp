@@ -32,6 +32,7 @@ def kill_hanging_jobs(sql_adapter: SqlAdapter, scheduler_type: str) -> list[int]
         tasks_table_name = COMPRESSION_TASKS_TABLE_NAME
         task_status_running = CompressionTaskStatus.RUNNING
         task_status_killed = CompressionTaskStatus.KILLED
+        scheduler_owned_job_predicate = "AND spider_id IS NULL"
     elif SchedulerType.QUERY == scheduler_type:
         jobs_table_name = QUERY_JOBS_TABLE_NAME
         job_status_running = QueryJobStatus.RUNNING
@@ -39,6 +40,7 @@ def kill_hanging_jobs(sql_adapter: SqlAdapter, scheduler_type: str) -> list[int]
         tasks_table_name = QUERY_TASKS_TABLE_NAME
         task_status_running = QueryTaskStatus.RUNNING
         task_status_killed = QueryTaskStatus.KILLED
+        scheduler_owned_job_predicate = ""
     else:
         raise ValueError(f"Unexpected scheduler type {scheduler_type}")
 
@@ -51,6 +53,7 @@ def kill_hanging_jobs(sql_adapter: SqlAdapter, scheduler_type: str) -> list[int]
             SELECT id
             FROM {jobs_table_name}
             WHERE status={job_status_running}
+            {scheduler_owned_job_predicate}
             """
         )
         hanging_job_ids = [row["id"] for row in db_cursor.fetchall()]

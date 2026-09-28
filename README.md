@@ -115,6 +115,5 @@ If you would like a feature or want to report a bug, please file an issue and we
 [log4j1-appenders]: https://github.com/y-scope/log4j1-appenders
 [log4j2-appenders]: https://github.com/y-scope/log4j2-appenders
 [logback-appenders]: https://github.com/y-scope/logback-appenders
-[re2]: https://github.com/google/re2
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
 [yscope-community-zulip]: https://yscope-clp.zulipchat.com
