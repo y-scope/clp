@@ -22,6 +22,7 @@ use sqlx::Transaction;
 
 use crate::Error;
 use crate::archive_selection::ArchiveSelectionOptions;
+use crate::archive_selection::prepare_search_task_inputs;
 use crate::query_job_submitter::ArchiveMetadata;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
@@ -219,17 +220,16 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`ArchiveSelectionOptions::prepare_task_inputs`]'s return values on failure.
+    /// * Forwards [`prepare_search_task_inputs`]'s return values on failure.
     async fn plan(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        self.context
-            .archive_selection_options
-            .prepare_task_inputs(
-                &self.context.db_pool,
-                &self.context.db_config,
-                self.query_job_id,
-                &self.search_job_config,
-            )
-            .await
+        prepare_search_task_inputs(
+            &self.context.db_pool,
+            &self.context.db_config,
+            self.query_job_id,
+            &self.search_job_config,
+            &self.context.archive_selection_options,
+        )
+        .await
     }
 
     /// Persists the Spider job ID and marks the query job as running.

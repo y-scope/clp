@@ -29,183 +29,195 @@ pub struct ArchiveSelectionOptions {
     pub query_task_execution_policy: ExecutionPolicy,
 }
 
-impl ArchiveSelectionOptions {
-    /// Selects archives for a query job, ordered by descending archive end timestamp.
-    ///
-    /// # Returns
-    ///
-    /// The selected archives and their query-task execution policies on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`validate_timestamp_range`]'s return values on failure.
-    /// * Forwards [`Self::resolve_datasets`]'s return values on failure.
-    /// * Forwards [`Self::fetch_archive_end_timestamp_lower_bound`]'s return values on failure.
-    /// * Forwards [`Self::fetch_archives`]'s return values on failure.
-    pub async fn prepare_task_inputs(
-        &self,
-        db_pool: &MySqlPool,
-        db_config: &Database,
-        query_job_id: QueryJobId,
-        search_job_config: &SearchJobConfig,
-    ) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        validate_timestamp_range(search_job_config)?;
+/// Selects archives for a query job, ordered by descending archive end timestamp.
+///
+/// # Returns
+///
+/// The selected archives and their query-task execution policies on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`validate_timestamp_range`]'s return values on failure.
+/// * Forwards [`resolve_datasets`]'s return values on failure.
+/// * Forwards [`fetch_archive_end_timestamp_lower_bound`]'s return values on failure.
+/// * Forwards [`fetch_archives`]'s return values on failure.
+pub async fn prepare_search_task_inputs(
+    db_pool: &MySqlPool,
+    db_config: &Database,
+    query_job_id: QueryJobId,
+    search_job_config: &SearchJobConfig,
+    archive_selection_options: &ArchiveSelectionOptions,
+) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
+    validate_timestamp_range(search_job_config)?;
 
-        let datasets = self
-            .resolve_datasets(db_pool, db_config, search_job_config)
-            .await?;
-        if datasets.is_empty() {
-            return Ok(Vec::new());
-        }
-        let archive_end_timestamp_lower_bound = self
-            .fetch_archive_end_timestamp_lower_bound(db_pool, query_job_id)
-            .await?;
-
-        let mut selected_archives = Vec::new();
-        for dataset in &datasets {
-            selected_archives.extend(
-                Self::fetch_archives(
-                    db_pool,
-                    db_config,
-                    search_job_config,
-                    dataset,
-                    archive_end_timestamp_lower_bound,
-                )
-                .await?,
-            );
-        }
-        sort_selected_archives(&mut selected_archives);
-
-        Ok(selected_archives
-            .into_iter()
-            .map(|archive| (archive.metadata, self.query_task_execution_policy.clone()))
-            .collect())
+    let datasets = resolve_datasets(
+        db_pool,
+        db_config,
+        search_job_config,
+        archive_selection_options.max_datasets_per_query,
+    )
+    .await?;
+    if datasets.is_empty() {
+        return Ok(Vec::new());
     }
+    let archive_end_timestamp_lower_bound = fetch_archive_end_timestamp_lower_bound(
+        db_pool,
+        query_job_id,
+        archive_selection_options.archive_retention_period,
+    )
+    .await?;
 
-    /// Resolves the datasets selected by a query job.
-    ///
-    /// # Returns
-    ///
-    /// The requested datasets on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`deduplicate_requested_datasets`]'s return values on failure.
-    /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
-    /// * Forwards [`validate_existing_datasets`]'s return values on failure.
-    async fn resolve_datasets(
-        &self,
-        db_pool: &MySqlPool,
-        db_config: &Database,
-        search_job_config: &SearchJobConfig,
-    ) -> Result<Vec<NonEmptyString>, Error> {
-        let Some(requested_datasets) = &search_job_config.datasets else {
-            return Ok(Vec::new());
-        };
-        let requested_datasets =
-            deduplicate_requested_datasets(requested_datasets, self.max_datasets_per_query)?;
-
-        let datasets_table = db_config.datasets_table_name();
-        let existing_datasets: HashSet<String> =
-            sqlx::query_scalar(&format!("SELECT `name` FROM `{datasets_table}`"))
-                .fetch_all(db_pool)
-                .await?
-                .into_iter()
-                .collect();
-        validate_existing_datasets(&requested_datasets, &existing_datasets)?;
-        Ok(requested_datasets)
+    let mut selected_archives = Vec::new();
+    for dataset in &datasets {
+        selected_archives.extend(
+            fetch_archives(
+                db_pool,
+                db_config,
+                search_job_config,
+                dataset,
+                archive_end_timestamp_lower_bound,
+            )
+            .await?,
+        );
     }
+    sort_selected_archives(&mut selected_archives);
 
-    /// Computes the archive retention cutoff relative to the query job's creation time.
-    ///
-    /// # Returns
-    ///
-    /// The cutoff in Unix epoch milliseconds, or `None` when retention is disabled, on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
-    async fn fetch_archive_end_timestamp_lower_bound(
-        &self,
-        db_pool: &MySqlPool,
-        query_job_id: QueryJobId,
-    ) -> Result<Option<i64>, Error> {
-        let Some(archive_retention_period) = self.archive_retention_period else {
-            return Ok(None);
-        };
-        let creation_time_millisecs: i64 = sqlx::query_scalar(formatcp!(
-            "SELECT CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 AS SIGNED) FROM \
-             `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = ?"
-        ))
-        .bind(query_job_id)
-        .fetch_one(db_pool)
-        .await?;
-        Ok(Some(retention_cutoff_millisecs(
-            creation_time_millisecs,
-            archive_retention_period,
-        )))
-    }
+    Ok(selected_archives
+        .into_iter()
+        .map(|archive| {
+            (
+                archive.metadata,
+                archive_selection_options
+                    .query_task_execution_policy
+                    .clone(),
+            )
+        })
+        .collect())
+}
 
-    /// Selects archives from one dataset that overlap the query's time range and retention window.
-    ///
-    /// # Returns
-    ///
-    /// The selected archives and their end timestamps on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_archives(
-        db_pool: &MySqlPool,
-        db_config: &Database,
-        search_job_config: &SearchJobConfig,
-        dataset: &NonEmptyString,
-        archive_end_timestamp_lower_bound: Option<i64>,
-    ) -> Result<Vec<SelectedArchive>, Error> {
-        let archives_table = db_config.archives_table_name(Some(dataset.as_str()));
-        let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT `id`, `size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
-        ));
-        if let Some(end_timestamp) = search_job_config.end_timestamp {
-            query_builder
-                .push(" AND `begin_timestamp` <= ")
-                .push_bind(end_timestamp);
-        }
-        if let Some(begin_timestamp) = search_job_config.begin_timestamp {
-            query_builder
-                .push(" AND `end_timestamp` >= ")
-                .push_bind(begin_timestamp);
-        }
-        if let Some(lower_bound) = archive_end_timestamp_lower_bound {
-            query_builder
-                .push(" AND (`end_timestamp` >= ")
-                .push_bind(lower_bound)
-                .push(" OR `end_timestamp` = 0)");
-        }
+/// Resolves the datasets selected by a query job.
+///
+/// # Returns
+///
+/// The requested datasets on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`deduplicate_requested_datasets`]'s return values on failure.
+/// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
+/// * Forwards [`validate_existing_datasets`]'s return values on failure.
+async fn resolve_datasets(
+    db_pool: &MySqlPool,
+    db_config: &Database,
+    search_job_config: &SearchJobConfig,
+    max_datasets_per_query: Option<NonZeroUsize>,
+) -> Result<Vec<NonEmptyString>, Error> {
+    let Some(requested_datasets) = &search_job_config.datasets else {
+        return Ok(Vec::new());
+    };
+    let requested_datasets =
+        deduplicate_requested_datasets(requested_datasets, max_datasets_per_query)?;
 
-        Ok(query_builder
-            .build_query_as::<ArchiveRowProjection>()
+    let datasets_table = db_config.datasets_table_name();
+    let existing_datasets: HashSet<String> =
+        sqlx::query_scalar(&format!("SELECT `name` FROM `{datasets_table}`"))
             .fetch_all(db_pool)
             .await?
             .into_iter()
-            .map(|row| SelectedArchive {
-                metadata: ArchiveMetadata {
-                    id: row.id,
-                    dataset: Some(dataset.clone()),
-                    size: row.size,
-                },
-                end_timestamp: row.end_timestamp,
-            })
-            .collect())
+            .collect();
+    validate_existing_datasets(&requested_datasets, &existing_datasets)?;
+    Ok(requested_datasets)
+}
+
+/// Computes the archive retention cutoff relative to the query job's creation time.
+///
+/// # Returns
+///
+/// The cutoff in Unix epoch milliseconds, or `None` when retention is disabled, on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
+async fn fetch_archive_end_timestamp_lower_bound(
+    db_pool: &MySqlPool,
+    query_job_id: QueryJobId,
+    archive_retention_period: Option<NonZeroU32>,
+) -> Result<Option<i64>, Error> {
+    let Some(archive_retention_period) = archive_retention_period else {
+        return Ok(None);
+    };
+    let creation_time_millisecs: i64 = sqlx::query_scalar(formatcp!(
+        "SELECT CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 AS SIGNED) FROM \
+         `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = ?"
+    ))
+    .bind(query_job_id)
+    .fetch_one(db_pool)
+    .await?;
+    Ok(Some(retention_cutoff_millisecs(
+        creation_time_millisecs,
+        archive_retention_period,
+    )))
+}
+
+/// Selects archives from one dataset that overlap the query's time range and retention window.
+///
+/// # Returns
+///
+/// The selected archives and their end timestamps on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
+async fn fetch_archives(
+    db_pool: &MySqlPool,
+    db_config: &Database,
+    search_job_config: &SearchJobConfig,
+    dataset: &NonEmptyString,
+    archive_end_timestamp_lower_bound: Option<i64>,
+) -> Result<Vec<SelectedArchive>, Error> {
+    let archives_table = db_config.archives_table_name(Some(dataset.as_str()));
+    let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
+        "SELECT `id`, `size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
+    ));
+    if let Some(end_timestamp) = search_job_config.end_timestamp {
+        query_builder
+            .push(" AND `begin_timestamp` <= ")
+            .push_bind(end_timestamp);
     }
+    if let Some(begin_timestamp) = search_job_config.begin_timestamp {
+        query_builder
+            .push(" AND `end_timestamp` >= ")
+            .push_bind(begin_timestamp);
+    }
+    if let Some(lower_bound) = archive_end_timestamp_lower_bound {
+        query_builder
+            .push(" AND (`end_timestamp` >= ")
+            .push_bind(lower_bound)
+            .push(" OR `end_timestamp` = 0)");
+    }
+
+    Ok(query_builder
+        .build_query_as::<ArchiveRowProjection>()
+        .fetch_all(db_pool)
+        .await?
+        .into_iter()
+        .map(|row| SelectedArchive {
+            metadata: ArchiveMetadata {
+                id: row.id,
+                dataset: Some(dataset.clone()),
+                size: row.size,
+            },
+            end_timestamp: row.end_timestamp,
+        })
+        .collect())
 }
 
 /// An archive and the timestamp used to order it among all selected datasets.
