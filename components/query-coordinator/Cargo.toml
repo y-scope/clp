@@ -7,6 +7,8 @@ edition = { workspace = true }
 async-trait = { workspace = true }
 clp-rust-utils = { workspace = true }
 non-empty-string = { workspace = true }
+rmp-serde = { workspace = true }
 spider-client = { workspace = true }
 spider-core = { workspace = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
