@@ -111,6 +111,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             search_job_config.datasets.as_deref(),
             context.archive_selection_options.max_datasets_per_query,
         )?;
+
         let archive_end_ts_lower_bound_millisecs = context
             .archive_selection_options
             .archive_retention_period_millisecs

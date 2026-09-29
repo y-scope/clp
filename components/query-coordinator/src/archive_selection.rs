@@ -4,7 +4,6 @@ use std::cmp::Reverse;
 use std::collections::HashSet;
 
 use clp_rust_utils::clp_config::package::config::Database;
-use clp_rust_utils::dataset::CLP_DEFAULT_DATASET_NAME;
 use clp_rust_utils::job_config::SearchJobConfig;
 use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
@@ -64,32 +63,31 @@ pub(crate) async fn prepare_search_task_inputs(
 ///
 /// Returns an error if:
 ///
-/// * [`Error::InvalidQueryJobConfig`] if a requested dataset is unknown.
-/// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
+/// * [`Error::InvalidQueryJobConfig`] if any requested dataset doesn't exist.
+/// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
 async fn validate_datasets_exist(
     db_pool: &MySqlPool,
     db_config: &Database,
     datasets: &HashSet<NonEmptyString>,
 ) -> Result<(), Error> {
     let datasets_table = db_config.datasets_table_name();
-    let existing_datasets: HashSet<String> =
-        sqlx::query_scalar(&format!("SELECT `name` FROM `{datasets_table}`"))
-            .fetch_all(db_pool)
-            .await?
-            .into_iter()
-            .collect();
+    let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
+        "SELECT COUNT(*) FROM `{datasets_table}` WHERE `name` IN ("
+    ));
+    let mut separated_datasets = query_builder.separated(", ");
+    for dataset in datasets {
+        separated_datasets.push_bind(dataset.as_str());
+    }
+    query_builder.push(")");
 
-    let missing_datasets: Vec<&str> = datasets
-        .iter()
-        .map(NonEmptyString::as_str)
-        .filter(|dataset| {
-            *dataset != CLP_DEFAULT_DATASET_NAME && !existing_datasets.contains(*dataset)
-        })
-        .collect();
-    if !missing_datasets.is_empty() {
-        return Err(Error::InvalidQueryJobConfig(format!(
-            "datasets {missing_datasets:?} don't exist"
-        )));
+    let num_existing_datasets: i64 = query_builder
+        .build_query_scalar()
+        .fetch_one(db_pool)
+        .await?;
+    if usize::try_from(num_existing_datasets).ok() != Some(datasets.len()) {
+        return Err(Error::InvalidQueryJobConfig(
+            "one or more requested datasets don't exist".to_owned(),
+        ));
     }
 
     Ok(())
