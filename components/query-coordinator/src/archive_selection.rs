@@ -7,11 +7,8 @@ use std::num::NonZeroUsize;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::CLP_DEFAULT_DATASET_NAME;
-use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
-use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::SearchJobConfig;
 use clp_rust_utils::types::ArchiveId;
-use const_format::formatcp;
 use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
 use sqlx::MySqlPool;
@@ -29,7 +26,8 @@ pub struct ArchiveSelectionOptions {
     pub query_task_execution_policy: ExecutionPolicy,
 }
 
-/// Selects archives for a query job, ordered by descending archive end timestamp.
+/// Selects archives for a query job, ordered by descending archive end timestamp. The search is
+/// bounded by the global archive retention period relative to the query job's creation timestamp.
 ///
 /// # Returns
 ///
@@ -41,14 +39,13 @@ pub struct ArchiveSelectionOptions {
 ///
 /// * Forwards [`validate_timestamp_range`]'s return values on failure.
 /// * Forwards [`resolve_datasets`]'s return values on failure.
-/// * Forwards [`fetch_archive_end_timestamp_lower_bound`]'s return values on failure.
 /// * Forwards [`fetch_archives`]'s return values on failure.
 pub async fn prepare_search_task_inputs(
     db_pool: &MySqlPool,
     db_config: &Database,
-    query_job_id: QueryJobId,
     search_job_config: &SearchJobConfig,
     archive_selection_options: &ArchiveSelectionOptions,
+    job_creation_timestamp_millisecs: i64,
 ) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
     validate_timestamp_range(search_job_config)?;
 
@@ -62,12 +59,9 @@ pub async fn prepare_search_task_inputs(
     if datasets.is_empty() {
         return Ok(Vec::new());
     }
-    let archive_end_timestamp_lower_bound = fetch_archive_end_timestamp_lower_bound(
-        db_pool,
-        query_job_id,
-        archive_selection_options.archive_retention_period,
-    )
-    .await?;
+    let archive_end_timestamp_lower_bound = archive_selection_options
+        .archive_retention_period
+        .map(|period| retention_cutoff_millisecs(period, job_creation_timestamp_millisecs));
 
     let mut selected_archives = Vec::new();
     for dataset in &datasets {
@@ -131,38 +125,6 @@ async fn resolve_datasets(
             .collect();
     validate_existing_datasets(&requested_datasets, &existing_datasets)?;
     Ok(requested_datasets)
-}
-
-/// Computes the archive retention cutoff relative to the query job's creation time.
-///
-/// # Returns
-///
-/// The cutoff in Unix epoch milliseconds, or `None` when retention is disabled, on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
-async fn fetch_archive_end_timestamp_lower_bound(
-    db_pool: &MySqlPool,
-    query_job_id: QueryJobId,
-    archive_retention_period: Option<NonZeroU32>,
-) -> Result<Option<i64>, Error> {
-    let Some(archive_retention_period) = archive_retention_period else {
-        return Ok(None);
-    };
-    let creation_time_millisecs: i64 = sqlx::query_scalar(formatcp!(
-        "SELECT CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 AS SIGNED) FROM \
-         `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = ?"
-    ))
-    .bind(query_job_id)
-    .fetch_one(db_pool)
-    .await?;
-    Ok(Some(retention_cutoff_millisecs(
-        creation_time_millisecs,
-        archive_retention_period,
-    )))
 }
 
 /// Selects archives from one dataset that overlap the query's time range and retention window.
@@ -327,9 +289,9 @@ fn validate_existing_datasets(
 ///
 /// The retention cutoff in Unix epoch milliseconds.
 fn retention_cutoff_millisecs(
-    creation_time_millisecs: i64,
     archive_retention_period: NonZeroU32,
+    job_creation_timestamp_millisecs: i64,
 ) -> i64 {
     const MILLISECS_PER_MIN: i64 = 60 * 1000;
-    creation_time_millisecs - i64::from(archive_retention_period.get()) * MILLISECS_PER_MIN
+    job_creation_timestamp_millisecs - i64::from(archive_retention_period.get()) * MILLISECS_PER_MIN
 }

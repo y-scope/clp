@@ -53,6 +53,7 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     search_job_config: SearchJobConfig,
     clp_s_query_option: ClpSQueryOption,
     output_handle: OutputHandle,
+    job_creation_timestamp_millisecs: i64,
 }
 
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
@@ -75,6 +76,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         resource_group_id: ResourceGroupId,
         search_job_config: SearchJobConfig,
         output_handle: OutputHandle,
+        job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
         let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
             .map_err(|_| {
@@ -96,6 +98,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             search_job_config,
             clp_s_query_option,
             output_handle,
+            job_creation_timestamp_millisecs,
         })
     }
 
@@ -225,9 +228,9 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         prepare_search_task_inputs(
             &self.context.db_pool,
             &self.context.db_config,
-            self.query_job_id,
             &self.search_job_config,
             &self.context.archive_selection_options,
+            self.job_creation_timestamp_millisecs,
         )
         .await
     }
