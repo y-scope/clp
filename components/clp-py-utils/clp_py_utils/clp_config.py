@@ -148,6 +148,7 @@ CompressionOrchestrationStr = Annotated[CompressionOrchestration, StrEnumSeriali
 
 class SpiderSchedulerPolicy(SnakeCaseStrEnum):
     ROUND_ROBIN = auto()
+    RESOURCE_GROUP_ROUND_ROBIN = auto()
 
 
 SpiderSchedulerPolicyStr = Annotated[SpiderSchedulerPolicy, StrEnumSerializer]
@@ -810,8 +811,23 @@ class SpiderRoundRobin(BaseModel):
     tick_interval_ms: PositiveInt | None = None
 
 
+class SpiderResourceGroupRoundRobin(BaseModel):
+    """Tuning for Spider's `resource_group_round_robin` scheduler policy."""
+
+    active_job_list_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    dispatch_queue_capacity: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
+    ready_task_capacity: PositiveInt | None = None
+    storage_poll_timeout_ms: PositiveInt | None = None
+    tick_interval_ms: PositiveInt | None = None
+
+
 class SpiderScheduler(BaseModel):
-    DEFAULT_POLICY: ClassVar[SpiderSchedulerPolicy] = SpiderSchedulerPolicy.ROUND_ROBIN
+    DEFAULT_POLICY: ClassVar[SpiderSchedulerPolicy] = (
+        SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN
+    )
 
     log_level: LoggingLevelRust | None = None
     policy: SpiderSchedulerPolicyStr | None = None
@@ -819,6 +835,7 @@ class SpiderScheduler(BaseModel):
     stop_timeout_sec: PositiveInt | None = None
     em_registry: SpiderEmRegistry = SpiderEmRegistry()
     round_robin: SpiderRoundRobin = SpiderRoundRobin()
+    resource_group_round_robin: SpiderResourceGroupRoundRobin = SpiderResourceGroupRoundRobin()
 
 
 class SpiderLiveness(BaseModel):
@@ -827,12 +844,18 @@ class SpiderLiveness(BaseModel):
 
 
 class SpiderWorker(BaseModel):
-    replicas: PositiveInt | None = None
+    replicas: PositiveInt = 2
     log_level: LoggingLevelRust | None = None
     connection_pool_size: PositiveInt | None = None
     scheduler_poll_wait_ms: PositiveInt | None = None
     max_log_line_bytes: PositiveInt | None = None
     liveness: SpiderLiveness = SpiderLiveness()
+
+
+class SpiderCompressionWorker(BaseModel):
+    """Spider workers dedicated to the compression coordinator's resource group."""
+
+    replicas: NonNegativeInt = 2
 
 
 class Spider(BaseModel):
@@ -844,10 +867,11 @@ class Spider(BaseModel):
     storage: SpiderStorage = SpiderStorage()
     scheduler: SpiderScheduler = SpiderScheduler()
     worker: SpiderWorker = SpiderWorker()
+    compression_worker: SpiderCompressionWorker = SpiderCompressionWorker()
 
     def dump_to_primitive_dict(self):
         """:return: A dictionary representation of this model, excluding Spider's own settings."""
-        return self.model_dump(exclude={"storage", "scheduler", "worker"})
+        return self.model_dump(exclude={"storage", "scheduler", "worker", "compression_worker"})
 
     def transform_for_container(self):
         self.host = SPIDER_STORAGE_COMPONENT_NAME

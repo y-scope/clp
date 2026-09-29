@@ -621,6 +621,13 @@ class BaseController(ABC):
             ),
         }
 
+        # Compression worker config
+        env_vars |= {
+            "CLP_SPIDER_COMPRESSION_WORKER_REPLICAS": str(
+                spider_config.compression_worker.replicas
+            ),
+        }
+
         return env_vars
 
     def _set_up_env_for_compression_coordinator(self) -> EnvVarsDict:
@@ -1543,10 +1550,52 @@ def _get_spider_round_robin_scheduler_env_vars(scheduler: SpiderScheduler) -> En
     )
 
 
+def _get_spider_resource_group_round_robin_scheduler_env_vars(
+    scheduler: SpiderScheduler,
+) -> EnvVarsDict:
+    """
+    :param scheduler:
+    :return: Dictionary of environment variables necessary to tune the resource-group round-robin
+        policy.
+    """
+    rg_round_robin = scheduler.resource_group_round_robin
+    return EnvVarsDict(
+        {
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_ACTIVE_JOB_LIST_CAPACITY": _str_or_none(
+                rg_round_robin.active_job_list_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.cleanup_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.commit_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
+                rg_round_robin.dispatch_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": (
+                _str_or_none(rg_round_robin.finalizing_job_expiration_timeout_sec)
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
+                rg_round_robin.storage_poll_timeout_ms
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
+                rg_round_robin.tick_interval_ms
+            ),
+        }
+    )
+
+
 _SPIDER_SCHEDULER_POLICY_ENV_GETTERS: dict[
     SpiderSchedulerPolicy, Callable[[SpiderScheduler], EnvVarsDict]
 ] = {
     SpiderSchedulerPolicy.ROUND_ROBIN: _get_spider_round_robin_scheduler_env_vars,
+    SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN: (
+        _get_spider_resource_group_round_robin_scheduler_env_vars
+    ),
 }
 
 

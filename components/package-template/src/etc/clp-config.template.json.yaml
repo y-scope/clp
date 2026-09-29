@@ -68,10 +68,12 @@ telemetry:
 ##    log_level: "INFO"
 ##  scheduler:
 ##    log_level: "INFO"
-##    policy: "round_robin"
+##    policy: "resource_group_round_robin"
 ##  worker:
-##    replicas: 4
+##    replicas: 2
 ##    log_level: "INFO"
+##  compression_worker:
+##    replicas: 2
 #
 #compression_coordinator: null
 ##  logging_level: "INFO"
