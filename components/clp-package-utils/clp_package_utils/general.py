@@ -21,6 +21,7 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     ClpConfig,
+    COMPRESSION_RESOURCE_GROUP_NAME,
     CONTAINER_AWS_CONFIG_DIRECTORY,
     CONTAINER_CLP_HOME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -30,9 +31,9 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
-    RESOURCE_GROUP_PASSWORD_KEY,
     RESULTS_CACHE_COMPONENT_NAME,
     SPIDER_COMPONENT_NAME,
+    SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
@@ -521,7 +522,9 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
         },
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
-        RESOURCE_GROUP_PASSWORD_KEY: {"compression": secrets.token_urlsafe(16)},
+        SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME: {
+            COMPRESSION_RESOURCE_GROUP_NAME: secrets.token_urlsafe(16)
+        },
     }
 
     with open(credentials_file_path, "w") as f:

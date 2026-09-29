@@ -50,8 +50,9 @@ SPIDER_COMPONENT_NAME = "spider"
 SPIDER_STORAGE_COMPONENT_NAME = "spider-storage"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
-# Credentials file keys
-RESOURCE_GROUP_PASSWORD_KEY = "spider_resource_groups"
+# Spider resource groups
+SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME = "spider_resource_groups"
+COMPRESSION_RESOURCE_GROUP_NAME = "compression"
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -881,17 +882,9 @@ class CompressionCoordinator(BaseModel):
         return self.model_dump(exclude={"resource_group_password"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
-        config = read_yaml_config_file(credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
-        try:
-            self.resource_group_password = get_config_value(
-                config, f"{RESOURCE_GROUP_PASSWORD_KEY}.compression"
-            )
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
-            )
+        self.resource_group_password = _load_spider_resource_group_password(
+            credentials_file_path, COMPRESSION_RESOURCE_GROUP_NAME
+        )
 
 
 class Presto(BaseModel):
@@ -903,6 +896,26 @@ class Presto(BaseModel):
     def transform_for_container(self):
         self.host = PRESTO_COORDINATOR_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
+
+
+def _load_spider_resource_group_password(
+    credentials_file_path: pathlib.Path, resource_group_name: str
+) -> str:
+    """
+    :param credentials_file_path:
+    :param resource_group_name:
+    :return: The password of the given Spider resource group from the credentials file.
+    :raise ValueError: if the credentials file is empty or doesn't contain the password.
+    """
+    config = read_yaml_config_file(credentials_file_path)
+    if config is None:
+        raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+    try:
+        return get_config_value(
+            config, f"{SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME}.{resource_group_name}"
+        )
+    except KeyError as ex:
+        raise ValueError(f"Credentials file '{credentials_file_path}' does not contain key '{ex}'.")
 
 
 def _get_env_var(name: str) -> str:
