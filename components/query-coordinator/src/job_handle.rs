@@ -68,7 +68,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::InvalidQueryJobConfig`] if the query string is empty.
+    /// * [`Error::InvalidQueryJobConfig`] if the query string is empty, or the begin timestamp
+    ///   exceeds the end timestamp.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -82,6 +83,17 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .map_err(|_| {
                 Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
             })?;
+
+        if let (Some(begin_timestamp), Some(end_timestamp)) = (
+            search_job_config.begin_timestamp,
+            search_job_config.end_timestamp,
+        ) && begin_timestamp > end_timestamp
+        {
+            return Err(Error::InvalidQueryJobConfig(format!(
+                "begin timestamp {begin_timestamp} is greater than end timestamp {end_timestamp}"
+            )));
+        }
+
         let clp_s_query_option = ClpSQueryOption {
             query_string,
             max_num_results: NonZeroU32::new(search_job_config.max_num_results),

@@ -37,7 +37,6 @@ pub struct ArchiveSelectionOptions {
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`validate_timestamp_range`]'s return values on failure.
 /// * Forwards [`resolve_datasets`]'s return values on failure.
 /// * Forwards [`fetch_archives`]'s return values on failure.
 pub async fn prepare_search_task_inputs(
@@ -47,8 +46,6 @@ pub async fn prepare_search_task_inputs(
     archive_selection_options: &ArchiveSelectionOptions,
     job_creation_timestamp_millisecs: i64,
 ) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-    validate_timestamp_range(search_job_config)?;
-
     let datasets = resolve_datasets(
         db_pool,
         db_config,
@@ -190,26 +187,6 @@ struct ArchiveRowProjection {
     #[sqlx(try_from = "i64")]
     size: u64,
     end_timestamp: i64,
-}
-
-/// Validates the requested query time range.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
-fn validate_timestamp_range(search_job_config: &SearchJobConfig) -> Result<(), Error> {
-    if let (Some(begin_timestamp), Some(end_timestamp)) = (
-        search_job_config.begin_timestamp,
-        search_job_config.end_timestamp,
-    ) && begin_timestamp > end_timestamp
-    {
-        return Err(Error::InvalidQueryJobConfig(format!(
-            "begin timestamp {begin_timestamp} is greater than end timestamp {end_timestamp}"
-        )));
-    }
-    Ok(())
 }
 
 /// Validates and deduplicates an explicit dataset list in requested order.
