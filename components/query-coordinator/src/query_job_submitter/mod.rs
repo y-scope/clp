@@ -1,4 +1,4 @@
-//! The query job submission interface.
+//! The query-job submission interface.
 
 mod spider;
 
