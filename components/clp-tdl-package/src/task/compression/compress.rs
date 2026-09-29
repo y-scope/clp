@@ -12,7 +12,6 @@ use std::process::Stdio;
 use anyhow::Context;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::S3Config;
-use clp_rust_utils::clp_config::package::config::ArchiveOutput;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
@@ -23,6 +22,7 @@ use clp_rust_utils::task_io::compression::ArchiveMetadata;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::CompressionTaskOutput;
 use clp_rust_utils::task_io::compression::S3InputSource;
+use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
@@ -123,18 +123,21 @@ pub(super) fn compress(
 
     let archive_dir_clone = archive_dir.clone();
     let archive_callback = |archive: ArchiveMetadata| {
-        let archive_staging_path = archive_dir_clone.join(&archive.id);
+        let archive_staging_path = archive_dir_clone.join(archive.id.to_string());
         tmp_file_deleter.add(archive_staging_path.clone());
         finishers.spawn_on(
             ArchiveFinisher {
                 client: client.clone(),
                 bucket: bucket.clone(),
-                key: create_archive_s3_key(&config.archive_output, dataset.as_deref(), &archive.id),
+                key: config
+                    .archive_output
+                    .dataset_archive_object_key(dataset.as_deref(), &archive.id)
+                    .into_inner(),
                 indexer_bin: indexer_bin.clone(),
                 database: config.database.clone(),
                 dataset: dataset.clone(),
                 local_path: archive_staging_path,
-                archive_id: archive.id.clone(),
+                archive_id: archive.id,
             }
             .finish(),
             &runtime,
@@ -233,7 +236,7 @@ struct ArchiveFinisher {
     database: Database,
     dataset: Option<String>,
     local_path: PathBuf,
-    archive_id: String,
+    archive_id: ArchiveId,
 }
 
 impl ArchiveFinisher {
@@ -536,23 +539,6 @@ fn extract_s3_output_config(config: &SpiderTaskExecutorConfig) -> anyhow::Result
     }
 }
 
-/// Builds the S3 object key for an archive by appending `archive_id` to
-/// [`ArchiveOutput::dataset_archive_storage_directory`].
-///
-/// # Returns
-///
-/// The archive's S3 object key.
-fn create_archive_s3_key(
-    archive_output: &ArchiveOutput,
-    dataset: Option<&str>,
-    archive_id: &str,
-) -> String {
-    format!(
-        "{}/{archive_id}",
-        archive_output.dataset_archive_storage_directory(dataset)
-    )
-}
-
 /// Uploads a local file to S3 through `PutObject`.
 ///
 /// # Errors
@@ -822,14 +808,13 @@ fn kill_clp_s_and_read_stderr(
 
 #[cfg(test)]
 mod tests {
+    //! Tests for compression arguments, archive statistics, and storage keys.
+
     use std::ffi::OsString;
     use std::path::Path;
     use std::path::PathBuf;
 
     use clp_rust_utils::clp_config::AwsAuthentication;
-    use clp_rust_utils::clp_config::S3Config;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutput;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
     use clp_rust_utils::clp_config::package::config::ClpDbNames;
     use clp_rust_utils::clp_config::package::config::Database;
     use clp_rust_utils::task_io::compression::ArchiveMetadata;
@@ -837,12 +822,12 @@ mod tests {
     use clp_rust_utils::task_io::compression::S3InputSource;
     use non_empty_string::NonEmptyString;
 
+    use super::ArchiveId;
     use super::ClpSInput;
     use super::build_clp_s_args;
     use super::build_indexer_args;
     use super::build_log_converter_args;
     use super::build_s3_logs_list;
-    use super::create_archive_s3_key;
     use super::parse_archive_stats;
 
     #[test]
@@ -869,15 +854,21 @@ mod tests {
 
     #[test]
     fn parse_archive_stats_ignores_extra_keys() {
-        let line = concat!(
-            r#"{"id":"abc","begin_timestamp":10,"end_timestamp":20,"#,
-            r#""uncompressed_size":100,"size":40,"is_split":false,"range_index":{}}"#,
-        );
+        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+        let line = r#"{
+            "id": "018e90e5-8b2a-4a61-a2fc-cac799936caf",
+            "begin_timestamp": 10,
+            "end_timestamp": 20,
+            "uncompressed_size": 100,
+            "size": 40,
+            "is_split": false,
+            "range_index": {}
+        }"#;
 
         assert_eq!(
             parse_archive_stats(line).expect("valid archive stats line"),
             ArchiveMetadata {
-                id: "abc".to_string(),
+                id: ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
                 begin_timestamp: 10,
                 end_timestamp: 20,
                 size: 40,
@@ -1000,30 +991,6 @@ mod tests {
                 OsString::from("--auth"),
                 OsString::from("s3"),
             ]
-        );
-    }
-
-    #[test]
-    fn archive_s3_key_joins_prefix_dataset_and_id() {
-        let archive_output = ArchiveOutput {
-            storage: ArchiveOutputStorage::S3 {
-                staging_directory: "var/data/staged-archives".to_owned(),
-                s3_config: S3Config {
-                    bucket: NonEmptyString::try_from("bucket".to_string())
-                        .expect("bucket is non-empty"),
-                    region_code: None,
-                    key_prefix: NonEmptyString::try_from("LIB1/".to_string())
-                        .expect("key prefix is non-empty"),
-                    endpoint_url: None,
-                    aws_authentication: AwsAuthentication::Default,
-                },
-            },
-            ..ArchiveOutput::default()
-        };
-
-        assert_eq!(
-            create_archive_s3_key(&archive_output, None, "abc"),
-            "LIB1/default/abc"
         );
     }
 
