@@ -242,13 +242,6 @@ private:
 
     void print_search_usage() const;
 
-    /**
-     * Validate the use of experimental features. Requires the program options to have been parsed.
-     * @throws std::invalid_argument if any experimental feature is used without setting the
-     * experimetnal flag.
-     */
-    auto validate_experimental() const -> void;
-
     // Variables
     std::string m_program_name;
     Command m_command;
