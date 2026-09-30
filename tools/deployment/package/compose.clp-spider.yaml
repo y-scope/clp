@@ -22,8 +22,6 @@ services:
 
   spider-worker-compression:
     <<: *clp_spider_worker_defaults
-    # Relative paths in this file resolve against Spider's Compose directory, since it's the first
-    # file in the `include` entry.
     extends:
       file: "compose.yaml"
       service: "spider-worker-dedicated"
