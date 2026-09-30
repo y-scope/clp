@@ -24,7 +24,7 @@ use crate::query_job_submitter::ArchiveMetadata;
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`validate_datasets_exist`]'s return values on failure.
+/// * Forwards [`ensure_all_queried_datasets_exist`]'s return values on failure.
 /// * Forwards [`fetch_archives`]'s return values on failure.
 pub(crate) async fn prepare_search_task_inputs(
     db_pool: &MySqlPool,
@@ -34,7 +34,7 @@ pub(crate) async fn prepare_search_task_inputs(
     archive_end_ts_lower_bound_millisecs: Option<i64>,
     query_task_execution_policy: &ExecutionPolicy,
 ) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-    validate_datasets_exist(db_pool, db_config, datasets).await?;
+    ensure_all_queried_datasets_exist(db_pool, db_config, datasets).await?;
 
     let mut selected_archives = Vec::new();
     for dataset in datasets {
@@ -65,7 +65,7 @@ pub(crate) async fn prepare_search_task_inputs(
 ///
 /// * [`Error::InvalidQueryJobConfig`] if any requested dataset doesn't exist.
 /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
-async fn validate_datasets_exist(
+async fn ensure_all_queried_datasets_exist(
     db_pool: &MySqlPool,
     db_config: &Database,
     datasets: &HashSet<NonEmptyString>,
