@@ -47,6 +47,19 @@ pub enum QueryJobOutcome {
     Cancelled,
 }
 
+/// The terminal outcome of a query job.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum QueryJobOutcome {
+    /// The job completed successfully.
+    Succeeded,
+
+    /// The job failed with the given error.
+    Failed { error_message: String },
+
+    /// The job was cancelled before reaching completion.
+    Cancelled,
+}
+
 /// Drives CLP query jobs on a Spider (Huntsman) cluster.
 #[async_trait]
 pub trait QueryJobSubmitter: Clone + Send + Sync {

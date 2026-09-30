@@ -134,7 +134,7 @@ def main(argv):
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `type` INT NOT NULL,
                     `status` INT NOT NULL DEFAULT '{QueryJobStatus.PENDING}',
-                    `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
+                    `status_msg` TEXT NULL DEFAULT NULL,
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
