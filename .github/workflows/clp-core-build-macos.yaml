@@ -63,6 +63,17 @@ jobs:
             brew uninstall --force cmake
           fi
 
+      # Temporary workaround for #2544. The macOS runner image installs a leftover `openssl@1.1` and
+      # hand-links it at `$(brew --prefix)/bin/openssl`, bypassing Homebrew. Since Homebrew doesn't
+      # own that link, `brew unlink openssl@1.1` skips it, and any formula upgrade that bumps
+      # `openssl@3` then fails to relink `bin/openssl` and aborts the whole installation.
+      - name: "Remove the runner image's stale openssl@1.1 symlink"
+        run: |
+          openssl_link="$(brew --prefix)/bin/openssl"
+          case "$(readlink "$openssl_link" 2>/dev/null)" in
+              */openssl@1.1/*) rm -f "$openssl_link" ;;
+          esac
+
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
