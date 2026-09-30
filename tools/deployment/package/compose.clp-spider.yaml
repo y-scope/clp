@@ -1,4 +1,12 @@
 services:
+  spider-scheduler:
+    image: >-
+      ${SPIDER_SCHEDULER_IMAGE_REF:-ghcr.io/y-scope/spider/scheduler:sha-f3a97c2}
+
+  spider-storage:
+    image: >-
+      ${SPIDER_STORAGE_IMAGE_REF:-ghcr.io/y-scope/spider/storage:sha-f3a97c2}
+
   spider-worker:
     image: >-
       ${CLP_SPIDER_WORKER_CONTAINER_IMAGE_REF:-ghcr.io/y-scope/clp/clp-spider-worker:main}

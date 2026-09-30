@@ -391,6 +391,11 @@ serviceAccount:
 spider:
   enabled: false
   image:
+    # Temporary pin: upcoming Spider `main` changes may break, and its next release is a while away.
+    scheduler:
+      tag: "sha-f3a97c2"
+    storage:
+      tag: "sha-f3a97c2"
     worker:
       repository: "ghcr.io/y-scope/clp/clp-spider-worker"
       tag: "main"
