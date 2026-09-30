@@ -876,6 +876,7 @@ class CompressionCoordinator(BaseModel):
     termination_timeout_secs: PositiveInt = 30
     commit_task_soft_timeout_secs: PositiveInt = 45
     commit_task_hard_timeout_secs: PositiveInt = 60
+    # This field is loaded at runtime through `load_credentials_from_file`.
     resource_group_password: str | None = None
 
     def dump_to_primitive_dict(self):
