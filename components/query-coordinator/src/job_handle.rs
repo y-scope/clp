@@ -460,7 +460,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
         sqlx::query(UPDATE_QUERY)
             .bind(status_to_persist)
-            .bind(status_message.unwrap_or_default())
+            .bind(status_message)
             .bind(self.query_job_id)
             .execute(&mut *tx)
             .await?;
