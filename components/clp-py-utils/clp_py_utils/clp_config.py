@@ -843,19 +843,29 @@ class SpiderLiveness(BaseModel):
     storage_heartbeat_interval_sec: PositiveInt | None = None
 
 
+class SpiderWorkerPool(BaseModel):
+    """A pool of Spider workers."""
+
+    replicas: NonNegativeInt = 2
+
+
+class SpiderWorkerPools(BaseModel):
+    """
+    Spider worker pools. `general` runs any resource group's tasks; each other pool is dedicated
+    to the resource group of the same name.
+    """
+
+    general: SpiderWorkerPool = SpiderWorkerPool()
+    compression: SpiderWorkerPool = SpiderWorkerPool()
+
+
 class SpiderWorker(BaseModel):
-    replicas: PositiveInt = 2
+    pools: SpiderWorkerPools = SpiderWorkerPools()
     log_level: LoggingLevelRust | None = None
     connection_pool_size: PositiveInt | None = None
     scheduler_poll_wait_ms: PositiveInt | None = None
     max_log_line_bytes: PositiveInt | None = None
     liveness: SpiderLiveness = SpiderLiveness()
-
-
-class SpiderCompressionWorker(BaseModel):
-    """Spider workers dedicated to the compression coordinator's resource group."""
-
-    replicas: NonNegativeInt = 2
 
 
 class Spider(BaseModel):
@@ -867,11 +877,10 @@ class Spider(BaseModel):
     storage: SpiderStorage = SpiderStorage()
     scheduler: SpiderScheduler = SpiderScheduler()
     worker: SpiderWorker = SpiderWorker()
-    compression_worker: SpiderCompressionWorker = SpiderCompressionWorker()
 
     def dump_to_primitive_dict(self):
         """:return: A dictionary representation of this model, excluding Spider's own settings."""
-        return self.model_dump(exclude={"storage", "scheduler", "worker", "compression_worker"})
+        return self.model_dump(exclude={"storage", "scheduler", "worker"})
 
     def transform_for_container(self):
         self.host = SPIDER_STORAGE_COMPONENT_NAME

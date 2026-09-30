@@ -608,7 +608,8 @@ class BaseController(ABC):
 
         # Worker config
         env_vars |= {
-            "SPIDER_WORKER_REPLICAS": _str_or_none(worker.replicas),
+            "SPIDER_WORKER_REPLICAS": str(worker.pools.general.replicas),
+            "CLP_SPIDER_COMPRESSION_WORKER_REPLICAS": str(worker.pools.compression.replicas),
             "SPIDER_WORKER_LOG_LEVEL": worker.log_level,
             "SPIDER_WORKER_CONNECTION_POOL_SIZE": _str_or_none(worker.connection_pool_size),
             "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _str_or_none(worker.scheduler_poll_wait_ms),
@@ -618,13 +619,6 @@ class BaseController(ABC):
             ),
             "SPIDER_WORKER_LIVENESS_STORAGE_HEARTBEAT_INTERVAL_SEC": _str_or_none(
                 worker.liveness.storage_heartbeat_interval_sec
-            ),
-        }
-
-        # Compression worker config
-        env_vars |= {
-            "CLP_SPIDER_COMPRESSION_WORKER_REPLICAS": str(
-                spider_config.compression_worker.replicas
             ),
         }
 
