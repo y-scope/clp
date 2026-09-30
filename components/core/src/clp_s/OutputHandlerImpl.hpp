@@ -18,6 +18,7 @@
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <mongocxx/options/insert.hpp>
 
 #include <clp_s/AggregationSink.hpp>
 #include <clp_s/aggregators.hpp>
@@ -200,8 +201,16 @@ public:
     void write(std::string_view message) override { write(message, 0, {}, 0); }
 
 private:
+    /**
+     * Inserts the pending results as an unordered batch. Duplicate-key errors are treated as
+     * success so that retries converge on the complete result set.
+     * @return Whether insertion succeeded or produced only duplicate-key errors.
+     */
+    [[nodiscard]] auto insert_results() -> bool;
+
     mongocxx::client m_client;
     mongocxx::collection m_collection;
+    mongocxx::options::insert m_insert_options;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
     uint64_t m_max_num_results;
