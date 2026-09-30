@@ -82,7 +82,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * [`Error::InvalidQueryJobConfig`] if:
     ///   * The query string is empty.
     ///   * The begin timestamp exceeds the end timestamp.
-    /// * Forwards [`preprocess_datasets`]'s return values on failure.
+    /// * Forwards [`deduplicate_and_validate_requested_datasets`]'s return values on failure.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -107,7 +107,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             )));
         }
 
-        let datasets = preprocess_datasets(
+        let datasets = deduplicate_and_validate_requested_datasets(
             search_job_config.datasets.as_deref(),
             context.archive_selection_options.max_datasets_per_query,
         )?;
@@ -521,7 +521,7 @@ impl From<&QueryJobOutcome> for QueryJobStatus {
 ///   * `requested_datasets` is empty.
 ///   * A dataset name doesn't match [`VALID_DATASET_NAME_REGEX`].
 ///   * The number of distinct datasets exceeds `max_datasets_per_query`.
-fn preprocess_datasets(
+fn deduplicate_and_validate_requested_datasets(
     requested_datasets: Option<&[String]>,
     max_datasets_per_query: Option<NonZeroUsize>,
 ) -> Result<HashSet<NonEmptyString>, Error> {
