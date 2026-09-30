@@ -860,9 +860,6 @@ class SpiderWorkerPools(BaseModel):
 
 
 class SpiderWorker(BaseModel):
-    # Rejects keys that no longer exist, e.g. `replicas` (moved to `pools.general.replicas`).
-    model_config = ConfigDict(extra="forbid")
-
     pools: SpiderWorkerPools = SpiderWorkerPools()
     log_level: LoggingLevelRust | None = None
     connection_pool_size: PositiveInt | None = None
