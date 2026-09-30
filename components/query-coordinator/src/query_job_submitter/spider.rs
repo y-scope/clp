@@ -1,10 +1,14 @@
 //! [`QueryJobSubmitter`] implementation for [`spider_client::SpiderClient`].
 
+use std::time::Duration;
+
 use async_trait::async_trait;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use spider_client::SpiderClient;
+use spider_client::error::ClientError;
+use spider_core::job::JobState;
 use spider_core::task::DataTypeDescriptor;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TaskDescriptor;
@@ -17,6 +21,7 @@ use spider_core::types::io::TaskInput;
 
 use crate::Error;
 use crate::query_job_submitter::ArchiveMetadata;
+use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
 
 #[async_trait]
@@ -51,6 +56,52 @@ impl QueryJobSubmitter for SpiderClient {
         );
 
         Ok(spider_job_id)
+    }
+
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`SpiderClient::start_job`]'s return values on failure, except
+    ///   [`ClientError::InvalidJobState`], which indicates the job has already been started.
+    /// * Forwards [`SpiderClient::get_job_state`]'s return values on failure.
+    async fn run_query_job_to_completion(
+        &self,
+        spider_job_id: JobId,
+        poll_interval: Duration,
+    ) -> Result<QueryJobOutcome, Error> {
+        match self.start_job(spider_job_id).await {
+            Ok(_) | Err(ClientError::InvalidJobState(_)) => {}
+            Err(error) => return Err(error.into()),
+        }
+
+        let terminal_state = loop {
+            let state = self.get_job_state(spider_job_id).await?;
+            if state.is_terminal() {
+                break state;
+            }
+            tokio::time::sleep(poll_interval).await;
+        };
+
+        Ok(match terminal_state {
+            JobState::Succeeded => QueryJobOutcome::Succeeded,
+            JobState::Failed => {
+                let error_message = match self.get_job_error(spider_job_id).await {
+                    Ok(error_message) => error_message,
+                    Err(error) => {
+                        tracing::warn!(
+                            spider_job_id = % spider_job_id,
+                            error = % error,
+                            "Failed to fetch the Spider job error.",
+                        );
+                        format!("<failed to fetch job error: {error}>")
+                    }
+                };
+                QueryJobOutcome::Failed { error_message }
+            }
+            JobState::Cancelled => QueryJobOutcome::Cancelled,
+            _ => unreachable!("a terminal Spider state must have a terminal outcome"),
+        })
     }
 }
 
