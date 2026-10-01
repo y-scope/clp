@@ -41,7 +41,7 @@ inline constexpr std::array cEncodingPatterns{
         EncodingPattern{
                 .type = EncodingType::Float,
                 .name = "float",
-                .pattern = R"(-?\d+((\.\d+)|((\.\d+)?[eE]-?\d+))"
+                .pattern = R"(-?\d+((\.\d+)|((\.\d+)?[eE]-?\d+)))"
         },
         EncodingPattern{.type = EncodingType::Int, .name = "int", .pattern = R"(-?\d+)"},
 };
