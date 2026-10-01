@@ -13,6 +13,14 @@ using log_shape_id_t = uint32_t;
 inline constexpr log_shape_id_t cMaxLogShapeId{std::numeric_limits<log_shape_id_t>::max()};
 
 /**
+ * The size type for all log or parent rule shape sizes, positions, and counts serialized to a clpp
+ * archive. This helps easily keep the archive format stable across platforms (with different
+ * `size_t` values), while still being large enough to have no practical issues.
+ */
+using shape_size_t = uint32_t;
+inline constexpr shape_size_t cMaxShapeSize{std::numeric_limits<shape_size_t>::max()};
+
+/**
  * Matches the value of log-surgeon's `Match::encoding_idx` which is assigned in insertion order.
  * uint16_t is used to match log-surgeon's type.
  */

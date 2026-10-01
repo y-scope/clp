@@ -1659,9 +1659,7 @@ auto JsonParser::parse_log_message(
 
     if (new_log_shape) {
         auto parent_shapes{YSTDLIB_ERROR_HANDLING_TRYX(log_shape.build_parent_rule_shapes(*event))};
-        YSTDLIB_ERROR_HANDLING_TRYV(
-                m_archive_writer->update_parent_rule_shapes(log_shape_id, parent_shapes)
-        );
+        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_parent_rule_shapes(parent_shapes));
     }
 
     m_current_schema.end_log_message(log_msg_obj, log_shape_id);

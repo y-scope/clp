@@ -26,15 +26,15 @@ public:
      */
     struct ParentRuleShape {
         // Constructors
-        ParentRuleShape(std::string_view name, size_t start, size_t size)
+        ParentRuleShape(std::string_view name, shape_size_t start, shape_size_t size)
                 : m_name(name),
                   m_start(start),
                   m_size(size) {}
 
         // Data members
         std::string m_name;
-        size_t m_start;
-        size_t m_size;
+        shape_size_t m_start;
+        shape_size_t m_size;
     };
 
     // Methods
@@ -44,12 +44,21 @@ public:
     [[nodiscard]] static auto decompress(clp_s::ZstdDecompressor& decompressor)
             -> ystdlib::error_handling::Result<ParentRuleShapes>;
 
-    template <typename... Args>
-    auto emplace_parent_rule_shape(Args&&... args) -> ParentRuleShape& {
-        return m_parent_rule_shapes.emplace_back(std::forward<Args>(args)...);
-    }
+    /**
+     * Appends a parent rule shape, enforcing that the start position (within the log shape), size,
+     * and name length fit in `shape_size_t`.
+     *
+     * @param name The qualified name of the parent rule.
+     * @param start The shape's start position within the log shape.
+     * @param size The shape's size.
+     * @return A reference to the inserted shape.
+     * @throws std::system_error (`ClppErrorCodeEnum::OutOfBounds`) if any value or the container
+     * size exceeds `clpp::cMaxShapeSize`.
+     */
+    auto emplace_parent_rule_shape(std::string_view name, size_t start, size_t size)
+            -> ParentRuleShape&;
 
-    auto at(size_t i) -> ParentRuleShape& { return m_parent_rule_shapes.at(i); }
+    auto at(shape_size_t i) -> ParentRuleShape& { return m_parent_rule_shapes.at(i); }
 
     [[nodiscard]] auto get() const -> std::vector<ParentRuleShape> const& {
         return m_parent_rule_shapes;

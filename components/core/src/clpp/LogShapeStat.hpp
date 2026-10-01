@@ -1,7 +1,7 @@
 #ifndef CLPP_LOGSHAPESTAT_HPP
 #define CLPP_LOGSHAPESTAT_HPP
 
-#include <cstddef>
+#include <cstdint>
 
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -23,13 +23,13 @@ public:
     [[nodiscard]] static auto decompress(clp_s::ZstdDecompressor& decompressor)
             -> ystdlib::error_handling::Result<LogShapeStat>;
 
-    [[nodiscard]] auto get_count() const -> size_t { return m_count; }
+    [[nodiscard]] auto get_count() const -> uint32_t { return m_count; }
 
     auto increment_count() -> void { ++m_count; }
 
 private:
     // Data members
-    size_t m_count{};
+    uint32_t m_count{};
 };
 
 using LogShapeStatArray = Array<LogShapeStat, clpp::log_shape_id_t>;

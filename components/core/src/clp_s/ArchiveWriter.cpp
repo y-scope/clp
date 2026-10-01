@@ -535,14 +535,13 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-auto
-ArchiveWriter::update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
+auto ArchiveWriter::update_parent_rule_shapes(clpp::ParentRuleShapes& shapes)
         -> ystdlib::error_handling::Result<void> {
     if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
 
-    m_clpp->parent_rule_shapes.at_or_create(id, shapes);
+    m_clpp->parent_rule_shapes.emplace_back(shapes);
     return ystdlib::error_handling::success();
 }
 
@@ -558,7 +557,10 @@ auto ArchiveWriter::update_log_shape_dict(clpp::TextShape<std::string> const& lo
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
     auto const id{static_cast<clpp::log_shape_id_t>(dict_id)};
-    m_clpp->log_shape_stats.at_or_create(id).increment_count();
+    if (new_entry) {
+        m_clpp->log_shape_stats.emplace_back();
+    }
+    m_clpp->log_shape_stats.at(id).increment_count();
     return {id, new_entry};
 }
 

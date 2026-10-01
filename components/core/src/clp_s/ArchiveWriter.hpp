@@ -316,7 +316,7 @@ public:
     auto update_log_shape_dict(clpp::TextShape<std::string> const& log_shape)
             -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>>;
 
-    auto update_parent_rule_shapes(clpp::log_shape_id_t id, clpp::ParentRuleShapes& shapes)
+    auto update_parent_rule_shapes(clpp::ParentRuleShapes& shapes)
             -> ystdlib::error_handling::Result<void>;
 
 private:
