@@ -29,6 +29,9 @@ pub struct ArchiveMetadata {
 
     /// The archive's compressed size in bytes.
     pub size: u64,
+
+    /// The archive's end timestamp in Unix epoch milliseconds.
+    pub end_timestamp: i64,
 }
 
 /// The terminal outcome of a query job.
