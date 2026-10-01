@@ -90,13 +90,15 @@ services:
         target: "/var/log/mysql"
     healthcheck:
       <<: *healthcheck_defaults
+      # Run a query since `mysqladmin ping` succeeds even if authentication fails.
       test: [
         "CMD",
-        "mysqladmin", "ping",
-        "--silent",
+        "mysql",
         "-h", "127.0.0.1",
         "-u", "${CLP_DB_USER:-clp-user}",
-        "--password=${CLP_DB_PASS:?Please set a value.}"
+        "--password=${CLP_DB_PASS:?Please set a value.}",
+        "-D", "${CLP_DB_NAME:-clp-db}",
+        "-e", "SELECT 1"
       ]
 
   db-table-creator:
