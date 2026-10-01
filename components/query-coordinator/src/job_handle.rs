@@ -46,7 +46,6 @@ pub struct ArchiveSelectionOptions {
 pub struct QueryJobHandleContext {
     pub db_pool: MySqlPool,
     pub db_config: Database,
-    pub results_cache: mongodb::Database,
     pub archive_selection_options: ArchiveSelectionOptions,
     pub spider_option: SpiderOption,
 }

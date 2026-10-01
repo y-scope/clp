@@ -21,9 +21,6 @@ pub enum Error {
         to: QueryJobStatus,
     },
 
-    #[error("mongodb error: {0}")]
-    Mongo(#[from] mongodb::error::Error),
-
     #[error("the query job has already been cancelled")]
     QueryJobCancelled,
 
