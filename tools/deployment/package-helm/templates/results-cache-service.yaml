@@ -12,6 +12,10 @@ spec:
   {{- else }}
   clusterIP: "None"
   {{- end }}
+  # Publish the pod's address before it is Ready so this Service's DNS name resolves during init:
+  # otherwise the `results-cache-init` sidecar can't advertise a resolvable member host (the name
+  # resolves only once the pod is Ready, which itself waits for that sidecar) -- a deadlock.
+  publishNotReadyAddresses: true
   selector:
     {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "results-cache"

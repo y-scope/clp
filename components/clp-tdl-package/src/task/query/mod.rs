@@ -3,6 +3,7 @@
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
+use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
@@ -16,7 +17,7 @@ pub(crate) fn clp_s_search_task(
     query_job_id: QueryJobId,
     clp_s_query_option: ClpSQueryOption,
     dataset: Option<NonEmptyString>,
-    archive_id: NonEmptyString,
+    archive_id: ArchiveId,
     output_handle: OutputHandle,
 ) -> Result<(), TdlError> {
     search::search(
@@ -24,7 +25,7 @@ pub(crate) fn clp_s_search_task(
         crate::common::spider_task_executor_config(),
         query_job_id,
         &clp_s_query_option,
-        archive_id.into_inner(),
+        archive_id,
         dataset.as_ref().map(NonEmptyString::as_str),
         &output_handle,
     )

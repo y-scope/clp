@@ -1,4 +1,3 @@
-use non_empty_string::NonEmptyString;
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
 use serde::Deserialize;
@@ -7,8 +6,6 @@ use strum::EnumString;
 use utoipa::ToSchema;
 
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
-
-pub type ArchiveId = NonEmptyString;
 
 pub type QueryJobId = i32;
 
@@ -65,6 +62,20 @@ pub enum QueryJobStatus {
     Cancelling = 4,
     Cancelled = 5,
     Killed = 6,
+}
+
+impl QueryJobStatus {
+    /// # Returns
+    ///
+    /// Whether the status is terminal, i.e., whether the job has finished and its status will no
+    /// longer change.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(
+            self,
+            Self::Succeeded | Self::Failed | Self::Cancelled | Self::Killed
+        )
+    }
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.

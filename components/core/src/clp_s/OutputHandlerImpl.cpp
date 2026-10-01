@@ -9,11 +9,13 @@
 #include <bsoncxx/builder/basic/kvp.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <mongocxx/exception/bulk_write_exception.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/MongoDBUtils.hpp>
 #include <clp_s/ResultsCacheUtils.hpp>
 
 #include "../clp/networking/socket_utils.hpp"
@@ -83,6 +85,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
           m_max_num_results{max_num_results},
           m_dataset{dataset} {
     m_collection = connect_to_results_cache(uri, collection, m_client);
+    m_insert_options.ordered(false);
     m_results.reserve(m_batch_size);
 }
 
@@ -97,6 +100,21 @@ ErrorCode ResultsCacheOutputHandler::finish() {
                     std::move(
                             bsoncxx::builder::basic::make_document(
                                     bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cId,
+                                            bsoncxx::builder::basic::make_document(
+                                                    bsoncxx::builder::basic::kvp(
+                                                            constants::results_cache::search::
+                                                                    cArchiveId,
+                                                            std::move(result.archive_id)
+                                                    ),
+                                                    bsoncxx::builder::basic::kvp(
+                                                            constants::results_cache::search::
+                                                                    cLogEventIdx,
+                                                            result.log_event_idx
+                                                    )
+                                            )
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
                                             constants::results_cache::search::cOrigFilePath,
                                             std::move(result.original_path)
                                     ),
@@ -109,38 +127,27 @@ ErrorCode ResultsCacheOutputHandler::finish() {
                                             result.timestamp
                                     ),
                                     bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cArchiveId,
-                                            std::move(result.archive_id)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cLogEventIx,
-                                            result.log_event_idx
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
                                             std::string{constants::results_cache::search::cDataset},
                                             std::move(result.dataset)
                                     )
                             )
                     )
             );
-            count++;
-
-            if (count == m_batch_size) {
-                m_collection.insert_many(m_results);
-                m_results.clear();
-                count = 0;
-            }
         } catch (mongocxx::exception const& e) {
+            SPDLOG_ERROR("Failed to build search result - {}", e.what());
             return ErrorCode::ErrorCodeFailureDbBulkWrite;
+        }
+
+        count++;
+        if (count == m_batch_size) {
+            if (false == insert_results()) {
+                return ErrorCode::ErrorCodeFailureDbBulkWrite;
+            }
+            count = 0;
         }
     }
 
-    try {
-        if (false == m_results.empty()) {
-            m_collection.insert_many(m_results);
-            m_results.clear();
-        }
-    } catch (mongocxx::exception const& e) {
+    if (false == m_results.empty() && false == insert_results()) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
     return ErrorCode::ErrorCodeSuccess;
@@ -176,6 +183,22 @@ void ResultsCacheOutputHandler::write(
                 )
         );
     }
+}
+
+auto ResultsCacheOutputHandler::insert_results() -> bool {
+    try {
+        m_collection.insert_many(m_results, m_insert_options);
+    } catch (mongocxx::bulk_write_exception const& exception) {
+        if (false == contains_only_duplicate_key_write_errors(exception, m_results.size())) {
+            SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+            return false;
+        }
+    } catch (mongocxx::exception const& exception) {
+        SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+        return false;
+    }
+    m_results.clear();
+    return true;
 }
 
 CountReducerOutputHandler::CountReducerOutputHandler(int reducer_socket_fd)

@@ -65,12 +65,16 @@ jobs:
       ubuntu_jammy_use_published_image: >-
         ${{steps.filter.outputs.ubuntu_jammy_image == 'false'
         || steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'}}
-      package_publish_image: "${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}"
+      package_publish_image: >-
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
+        || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
       spider_worker_publish_image: >-
-        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main}}
+        ${{steps.calc_workflow_triggers.outputs.is_push_or_run_on_main == 'true'
+        || steps.calc_workflow_triggers.outputs.is_push_semver_tag == 'true'}}
 
       # Other outputs
       clp_changed: "${{steps.filter.outputs.clp}}"
+      is_push_semver_tag: "${{steps.calc_workflow_triggers.outputs.is_push_semver_tag}}"
       yscope_clp_core_changed: "${{steps.filter.outputs.yscope-clp-core}}"
       integration_tests_changed: "${{steps.filter.outputs.integration-tests}}"
     steps:
@@ -84,9 +88,36 @@ jobs:
 
       - name: "Calculate workflow triggers"
         id: "calc_workflow_triggers"
-        run: >-
-          echo "is_push_or_run_on_main=${{github.event_name != 'pull_request'
-          && github.ref == 'refs/heads/main'}}" >> "$GITHUB_OUTPUT"
+        run: |-
+          # Iteratively construct semver regex (taken from https://semver.org)
+          # NOTE: We don't support publishing container images with a semantic version that contains
+          # build metadata since Docker tags don't support `+` (thus, we omit build metadata from
+          # the regex). Although the `docker/metadata-action` action converts `+` to `-`, this
+          # could lead to two images with different prerelease and build metadata being tagged
+          # with the same tag.
+          semver_core_id='(0|[1-9][0-9]*)'
+          semver_core_regex="${semver_core_id}\\.${semver_core_id}\\.${semver_core_id}"
+
+          semver_prerelease_id_regex='(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)'
+          semver_prerelease_regex="${semver_prerelease_id_regex}"
+          semver_prerelease_regex+="(\\.${semver_prerelease_id_regex})*"
+
+          semver_regex="^v"
+          semver_regex+="${semver_core_regex}"
+          semver_regex+="(-${semver_prerelease_regex})?"
+          semver_regex+='$'
+
+          is_push_semver_tag=false
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF_TYPE" == "tag"
+            && "$GITHUB_REF_NAME" =~ $semver_regex ]]; then
+            is_push_semver_tag=true
+          fi
+
+          {
+            echo "is_push_or_run_on_main=${{github.event_name != 'pull_request'
+            && github.ref == 'refs/heads/main'}}"
+            echo "is_push_semver_tag=$is_push_semver_tag"
+          } >> "$GITHUB_OUTPUT"
 
       - name: "Filter relevant changes"
         uses: "dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36"
@@ -220,28 +251,18 @@ jobs:
       - "manylinux_2_28-deps-image"
     runs-on: *runner
     steps:
-      - name: "Login to Image Registry"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          persist-credentials: "false"
+          submodules: "recursive"
 
-      - name: "Sanitize Repository Name"
-        id: "sanitization"
-        shell: "bash"
-        run: |
-          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
-            >> "$GITHUB_OUTPUT"
-
-      - name: "Create and Push Multi-arch Manifest"
-        shell: "bash"
-        run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/${{env.DEPS_IMAGE_NAME_PREFIX}}manylinux_2_28"
-          docker manifest create "${image_base}:main" \
-            "${image_base}:main-amd64" \
-            "${image_base}:main-arm64"
-          docker manifest push "${image_base}:main"
+      - uses: "./.github/actions/create-image-multiarch-manifest"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}manylinux_2_28"
+          image_registry: "ghcr.io"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry_username: "${{github.actor}}"
+          docker_metadata_action_tags: "type=raw,value=main"
 
   musllinux_1_2-deps-image-merge:
     name: "musllinux_1_2-deps-image-merge"
@@ -253,28 +274,18 @@ jobs:
       - "musllinux_1_2-deps-image"
     runs-on: *runner
     steps:
-      - name: "Login to Image Registry"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          persist-credentials: "false"
+          submodules: "recursive"
 
-      - name: "Sanitize Repository Name"
-        id: "sanitization"
-        shell: "bash"
-        run: |
-          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
-            >> "$GITHUB_OUTPUT"
-
-      - name: "Create and Push Multi-arch Manifest"
-        shell: "bash"
-        run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/${{env.DEPS_IMAGE_NAME_PREFIX}}musllinux_1_2"
-          docker manifest create "${image_base}:main" \
-            "${image_base}:main-amd64" \
-            "${image_base}:main-arm64"
-          docker manifest push "${image_base}:main"
+      - uses: "./.github/actions/create-image-multiarch-manifest"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}musllinux_1_2"
+          image_registry: "ghcr.io"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry_username: "${{github.actor}}"
+          docker_metadata_action_tags: "type=raw,value=main"
 
   musllinux_1_2-deps-image:
     name: "musllinux_1_2-${{matrix.arch}}-deps-image"
@@ -337,9 +348,15 @@ jobs:
 
   ubuntu-jammy-aarch64-deps-image:
     name: "ubuntu-jammy-aarch64-deps-image"
+
+    # NOTE: To save CI resources, compared to the `clp-core-dependencies-x86-ubuntu-jammy` container
+    # image, we only want the `-aarch64-` image to be built either when:
+    # - it'll be published, or
+    # - it'll be used in a subsequent job.
     if: >-
       needs.calc-build-triggers.outputs.ubuntu_jammy_image_changed == 'true'
-      && needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true'
+      && (needs.calc-build-triggers.outputs.ubuntu_jammy_publish_image == 'true'
+      || needs.calc-build-triggers.outputs.is_push_semver_tag == 'true')
     needs: "calc-build-triggers"
     runs-on: "ubuntu-24.04-arm"
     steps:
@@ -1014,6 +1031,11 @@ jobs:
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           arch: "${{matrix.arch}}"
+          docker_metadata_action_tags: &docker_metadata_action_tags |-
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=schedule
           dockerfile_path: "./tools/docker-images/clp-package/Dockerfile"
           image_name: "clp-package"
           platform_version_codename: "jammy"
@@ -1021,42 +1043,30 @@ jobs:
 
   package-image-multiarch-manifest:
     name: "package-image-multiarch-manifest"
+
+    # NOTE: `!cancelled()` is necessary to ensure this job runs even when an ancestor job was
+    # skipped (e.g., the `ubuntu-jammy-<arch>-deps-image` jobs). However, we don't want to run when
+    # `package-image` was skipped, which is why we need `needs.package-image.result == 'success'`
     if: >-
-      needs.calc-build-triggers.outputs.package_publish_image == 'true'
+      needs.calc-build-triggers.outputs.package_publish_image == 'true' && !cancelled()
       && needs.package-image.result == 'success'
     needs:
       - "calc-build-triggers"
       - "package-image"
     runs-on: *runner
     steps:
-      - name: "Login to Image Registry"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          persist-credentials: "false"
+          submodules: "recursive"
 
-      - name: "Sanitize Repository Name"
-        id: "sanitization"
-        shell: "bash"
-        run: |
-          echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
-            >> "$GITHUB_OUTPUT"
-
-      - name: "Create and Push Multi-arch Manifest"
-        shell: "bash"
-        run: |
-          image_base="ghcr.io/${{steps.sanitization.outputs.REPOSITORY}}/clp-package"
-          tags=("${{github.ref_name}}")
-          if [ "${{github.event_name}}" = "schedule" ]; then
-            tags+=("nightly")
-          fi
-          for tag in "${tags[@]}"; do
-            docker manifest create "${image_base}:${tag}" \
-              "${image_base}:${tag}-amd64" \
-              "${image_base}:${tag}-arm64"
-            docker manifest push "${image_base}:${tag}"
-          done
+      - uses: "./.github/actions/create-image-multiarch-manifest"
+        with:
+          image_name: "clp-package"
+          image_registry: "ghcr.io"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry_username: "${{github.actor}}"
+          docker_metadata_action_tags: *docker_metadata_action_tags
 
   spider-worker-image:
     name: "spider-worker-image-${{matrix.arch}}"
@@ -1122,6 +1132,7 @@ jobs:
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           arch: "${{matrix.arch}}"
+          docker_metadata_action_tags: *docker_metadata_action_tags
           dockerfile_path: "./tools/docker-images/clp-spider-worker/Dockerfile"
           image_name: "clp-spider-worker"
           platform_version_codename: "jammy"
@@ -1130,41 +1141,28 @@ jobs:
 
   spider-worker-image-multiarch-manifest:
     name: "spider-worker-image-multiarch-manifest"
+
+    # NOTE: `!cancelled()` is necessary to ensure this job runs even when an ancestor job was
+    # skipped (e.g., the `ubuntu-jammy-<arch>-deps-image` jobs). However, we don't want to run when
+    # `spider-worker-image` was skipped, which is why we need
+    # `needs.spider-worker-image.result == 'success'`
     if: >-
-      needs.calc-build-triggers.outputs.spider_worker_publish_image == 'true'
+      needs.calc-build-triggers.outputs.spider_worker_publish_image == 'true' && !cancelled()
       && needs.spider-worker-image.result == 'success'
     needs:
       - "calc-build-triggers"
       - "spider-worker-image"
     runs-on: *runner
     steps:
-      - name: "Login to Image Registry"
-        uses: "docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121"  # v4.1.0
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
-          registry: "ghcr.io"
-          username: "${{github.actor}}"
-          password: "${{secrets.GITHUB_TOKEN}}"
+          persist-credentials: "false"
+          submodules: "recursive"
 
-      - name: "Sanitize the repo's name"
-        id: "sanitize_repo_name"
-        run: |-
-          # Docker doesn't support repository names with uppercase characters, so we convert to
-          # lowercase here.
-          lowercase_repo=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
-          echo "repository=${lowercase_repo}" >> "$GITHUB_OUTPUT"
-        shell: "bash"
-
-      - name: "Create and Push Multi-arch Manifest"
-        shell: "bash"
-        run: |
-          image_base="ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-spider-worker"
-          tags=("${{github.ref_name}}")
-          if [ "${{github.event_name}}" = "schedule" ]; then
-            tags+=("nightly")
-          fi
-          for tag in "${tags[@]}"; do
-            docker manifest create "${image_base}:${tag}" \
-              "${image_base}:${tag}-amd64" \
-              "${image_base}:${tag}-arm64"
-            docker manifest push "${image_base}:${tag}"
-          done
+      - uses: "./.github/actions/create-image-multiarch-manifest"
+        with:
+          image_name: "clp-spider-worker"
+          image_registry: "ghcr.io"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          image_registry_username: "${{github.actor}}"
+          docker_metadata_action_tags: *docker_metadata_action_tags

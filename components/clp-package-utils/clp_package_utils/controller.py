@@ -10,6 +10,7 @@ import subprocess
 import time
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any
 
 from clp_py_utils.clp_config import (
@@ -26,9 +27,11 @@ from clp_py_utils.clp_config import (
     ClpConfig,
     ClpDbNameType,
     ClpDbUserType,
+    COMPRESSION_COORDINATOR_COMPONENT_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    CompressionOrchestration,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
@@ -44,6 +47,9 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_COMPONENT_NAME,
+    SpiderScheduler,
+    SpiderSchedulerPolicy,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -70,6 +76,7 @@ from clp_package_utils.general import (
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
+    validate_spider_config,
     validate_webui_config,
 )
 
@@ -519,6 +526,125 @@ class BaseController(ABC):
             "CLP_QUERY_SCHEDULER_METRIC_EXPORT_INTERVAL": str(
                 self._clp_config.query_scheduler.telemetry_update_interval_ms
             ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_spider(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for Spider's components.
+
+        :return: Dictionary of environment variables necessary to launch the components.
+        """
+        component_name = SPIDER_COMPONENT_NAME
+        spider_config = self._clp_config.spider
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or spider_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        validate_spider_config(self._clp_config)
+
+        storage = spider_config.storage
+        scheduler = spider_config.scheduler
+        worker = spider_config.worker
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "SPIDER_STORAGE_PUBLISHED_IP": _get_ip_from_hostname(spider_config.host),
+            "SPIDER_STORAGE_PUBLISHED_PORT": str(spider_config.port),
+        }
+
+        # Storage config
+        env_vars |= {
+            "SPIDER_STORAGE_LOG_LEVEL": storage.log_level,
+            "SPIDER_STORAGE_DB_MAX_CONNECTIONS": _str_or_none(storage.db_max_connections),
+            "SPIDER_STORAGE_INBOUND_QUEUE_CLEANUP_CAPACITY": _str_or_none(
+                storage.inbound_queue.cleanup_capacity
+            ),
+            "SPIDER_STORAGE_INBOUND_QUEUE_COMMIT_CAPACITY": _str_or_none(
+                storage.inbound_queue.commit_capacity
+            ),
+            "SPIDER_STORAGE_INBOUND_QUEUE_TASK_CAPACITY": _str_or_none(
+                storage.inbound_queue.task_capacity
+            ),
+            "SPIDER_STORAGE_JOB_CACHE_GC_INTERVAL_SEC": _str_or_none(
+                storage.job_cache_gc.gc_interval_sec
+            ),
+            "SPIDER_STORAGE_JOB_CACHE_TERMINATED_JOB_RETENTION_SEC": _str_or_none(
+                storage.job_cache_gc.terminated_job_retention_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_EXECUTION_MANAGER_STALE_CUTOFF_SEC": _str_or_none(
+                storage.task_instance_pool.execution_manager_stale_cutoff_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_GC_INTERVAL_SEC": _str_or_none(
+                storage.task_instance_pool.gc_interval_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_MESSAGE_CHANNEL_CAPACITY": _str_or_none(
+                storage.task_instance_pool.message_channel_capacity
+            ),
+        }
+
+        # Scheduler config
+        env_vars |= {
+            "SPIDER_SCHEDULER_LOG_LEVEL": scheduler.log_level,
+            "SPIDER_SCHEDULER_POLICY": scheduler.policy,
+            "SPIDER_SCHEDULER_CONNECTION_POOL_SIZE": _str_or_none(scheduler.connection_pool_size),
+            "SPIDER_SCHEDULER_STOP_TIMEOUT_SEC": _str_or_none(scheduler.stop_timeout_sec),
+            "SPIDER_SCHEDULER_EM_REGISTRY_DEAD_EM_CUTOFF_SEC": _str_or_none(
+                scheduler.em_registry.dead_em_cutoff_sec
+            ),
+            "SPIDER_SCHEDULER_EM_REGISTRY_LIVENESS_TRACKING_INTERVAL_MS": _str_or_none(
+                scheduler.em_registry.liveness_tracking_interval_ms
+            ),
+        }
+        env_vars |= _get_spider_scheduler_policy_env_vars(scheduler)
+
+        # Worker config
+        env_vars |= {
+            "SPIDER_WORKER_REPLICAS": _str_or_none(worker.replicas),
+            "SPIDER_WORKER_LOG_LEVEL": worker.log_level,
+            "SPIDER_WORKER_CONNECTION_POOL_SIZE": _str_or_none(worker.connection_pool_size),
+            "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _str_or_none(worker.scheduler_poll_wait_ms),
+            "SPIDER_WORKER_MAX_LOG_LINE_BYTES": _str_or_none(worker.max_log_line_bytes),
+            "SPIDER_WORKER_LIVENESS_SCHEDULER_HEARTBEAT_INTERVAL_SEC": _str_or_none(
+                worker.liveness.scheduler_heartbeat_interval_sec
+            ),
+            "SPIDER_WORKER_LIVENESS_STORAGE_HEARTBEAT_INTERVAL_SEC": _str_or_none(
+                worker.liveness.storage_heartbeat_interval_sec
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_compression_coordinator(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the compression coordinator component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = COMPRESSION_COORDINATOR_COMPONENT_NAME
+        coordinator_config = self._clp_config.compression_coordinator
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Runtime config
+        env_vars |= {
+            "CLP_COMPRESSION_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
         }
 
         return env_vars
@@ -1097,6 +1223,7 @@ class DockerComposeController(BaseController):
         # Restart Policy
         env_vars |= {
             "CLP_RESTART_POLICY": self._restart_policy,
+            "SPIDER_RESTART_POLICY": self._restart_policy,
         }
 
         # Credentials
@@ -1132,9 +1259,8 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_telemetry()
 
         # Paths
-        aws_config_dir = self._clp_config.aws_config_directory
         env_vars |= {
-            "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
+            "CLP_AWS_CONFIG_DIR_HOST": _str_or_none(self._clp_config.aws_config_directory),
             "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
             "CLP_TMP_DIR_HOST": str(self._clp_config.tmp_directory),
@@ -1171,6 +1297,8 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_otel_collector()
         env_vars |= self._set_up_env_for_compression_scheduler()
+        env_vars |= self._set_up_env_for_compression_coordinator()
+        env_vars |= self._set_up_env_for_spider()
         env_vars |= self._set_up_env_for_query_scheduler()
         env_vars |= self._set_up_env_for_compression_worker(num_workers)
         env_vars |= self._set_up_env_for_query_worker(num_workers)
@@ -1202,7 +1330,7 @@ class DockerComposeController(BaseController):
         logger.info("Starting CLP using Docker Compose...")
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
-        cmd += ["--file", "docker-compose.yaml"]
+        cmd += ["--file", self._get_docker_file_name()]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
@@ -1239,11 +1367,28 @@ class DockerComposeController(BaseController):
             logger.info("Stopping all CLP containers using Docker Compose...")
 
         subprocess.run(
-            ["docker", "compose", "--project-name", self._project_name, "down"],
+            [
+                "docker",
+                "compose",
+                "--project-name",
+                self._project_name,
+                "--file",
+                self._get_docker_file_name(),
+                "down",
+                "--remove-orphans",
+            ],
             cwd=self._clp_home,
             check=True,
         )
         logger.info("Stopped CLP.")
+
+    def _get_docker_file_name(self) -> str:
+        """
+        :return: The Docker Compose file name to use based on the config.
+        """
+        if CompressionOrchestration.SPIDER == self._clp_config.package.scheduler:
+            return "docker-compose-spider.yaml"
+        return "docker-compose.yaml"
 
     @staticmethod
     def _get_num_workers() -> int:
@@ -1360,6 +1505,73 @@ def _chown_recursively(
     """
     chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
+
+
+def _get_spider_round_robin_scheduler_env_vars(scheduler: SpiderScheduler) -> EnvVarsDict:
+    """
+    :param scheduler:
+    :return: Dictionary of environment variables necessary to tune the round-robin policy.
+    """
+    round_robin = scheduler.round_robin
+    return EnvVarsDict(
+        {
+            "SPIDER_SCHEDULER_ROUND_ROBIN_ACTIVE_JOB_QUEUE_CAPACITY": _str_or_none(
+                round_robin.active_job_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.cleanup_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.commit_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
+                round_robin.dispatch_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": _str_or_none(
+                round_robin.finalizing_job_expiration_timeout_sec
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
+                round_robin.storage_poll_timeout_ms
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
+                round_robin.tick_interval_ms
+            ),
+        }
+    )
+
+
+_SPIDER_SCHEDULER_POLICY_ENV_GETTERS: dict[
+    SpiderSchedulerPolicy, Callable[[SpiderScheduler], EnvVarsDict]
+] = {
+    SpiderSchedulerPolicy.ROUND_ROBIN: _get_spider_round_robin_scheduler_env_vars,
+}
+
+
+def _get_spider_scheduler_policy_env_vars(scheduler: SpiderScheduler) -> EnvVarsDict:
+    """
+    :param scheduler:
+    :return: Dictionary of environment variables necessary to tune the policy selected by
+        `scheduler.policy`, or by `SpiderScheduler.DEFAULT_POLICY` if it's unset.
+    :raise NotImplementedError: If no getter is registered for the selected policy.
+    """
+    policy = SpiderScheduler.DEFAULT_POLICY if scheduler.policy is None else scheduler.policy
+    get_env = _SPIDER_SCHEDULER_POLICY_ENV_GETTERS.get(policy)
+    if get_env is None:
+        msg = f"No environment getter is registered for Spider scheduler policy `{policy}`."
+        raise NotImplementedError(msg)
+
+    return get_env(scheduler)
+
+
+def _str_or_none(value: int | pathlib.Path | None) -> str | None:
+    """
+    :param value:
+    :return: `value` as a string, or None if `value` is None.
+    """
+    return None if value is None else str(value)
 
 
 def _get_ip_from_hostname(hostname: str) -> str:

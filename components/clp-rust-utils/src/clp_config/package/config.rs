@@ -10,6 +10,7 @@ use serde::Deserialize;
 use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
 use crate::dataset::resolve_dataset_name;
+use crate::types::ArchiveId;
 use crate::types::non_empty_string::ExpectedNonEmpty;
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
@@ -400,12 +401,21 @@ impl ArchiveOutput {
     ///
     /// The dataset's archive storage directory joined with `archive_id`, where a `None` dataset
     /// resolves to `default`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the derived object key is empty. This should never happen since the key always
+    /// contains at least the `/` separator.
     #[must_use]
-    pub fn dataset_archive_object_key(&self, dataset: Option<&str>, archive_id: &str) -> String {
-        format!(
+    pub fn dataset_archive_object_key(
+        &self,
+        dataset: Option<&str>,
+        archive_id: &ArchiveId,
+    ) -> NonEmptyString {
+        NonEmptyString::from_string(format!(
             "{}/{archive_id}",
             self.dataset_archive_storage_directory(dataset)
-        )
+        ))
     }
 }
 
@@ -762,8 +772,12 @@ mod tests {
 
         use crate::clp_config::AwsAuthentication;
         use crate::clp_config::S3Config;
+        use crate::types::ArchiveId;
         use crate::types::non_empty_string::ExpectedNonEmpty;
 
+        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+
+        let archive_id = ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID");
         let archive_output = ArchiveOutput {
             storage: ArchiveOutputStorage::S3 {
                 staging_directory: "var/data/staged-archives".to_owned(),
@@ -779,12 +793,16 @@ mod tests {
         };
 
         assert_eq!(
-            archive_output.dataset_archive_object_key(None, "abc"),
-            "LIB1/default/abc"
+            archive_output
+                .dataset_archive_object_key(None, &archive_id)
+                .as_str(),
+            format!("LIB1/default/{ARCHIVE_ID}")
         );
         assert_eq!(
-            archive_output.dataset_archive_object_key(Some("mydataset"), "abc"),
-            "LIB1/mydataset/abc"
+            archive_output
+                .dataset_archive_object_key(Some("mydataset"), &archive_id)
+                .as_str(),
+            format!("LIB1/mydataset/{ARCHIVE_ID}")
         );
     }
 

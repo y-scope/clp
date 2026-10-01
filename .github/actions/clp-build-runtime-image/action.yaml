@@ -21,6 +21,9 @@ inputs:
     description: "Target architecture (amd64 or arm64)"
     default: "amd64"
     required: false
+  docker_metadata_action_tags:
+    description: "`tags` input for docker/metadata-action"
+    required: true
   dockerfile_path:
     description: "Path to the Dockerfile"
     required: true
@@ -76,7 +79,9 @@ runs:
       with:
         images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
           /${{steps.compute-meta.outputs.IMAGE_NAME}}"
+        tags: "${{inputs.docker_metadata_action_tags}}"
         flavor: |
+          latest=false
           suffix=-${{inputs.arch}}
 
     - name: "Map arch to Docker platform"
