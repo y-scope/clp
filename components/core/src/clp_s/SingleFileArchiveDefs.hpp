@@ -12,6 +12,12 @@
 
 namespace clp_s {
 /**
+ * A packed archive version, composed of a major (8 bits), minor (8 bits), and patch (16 bits)
+ * version. Use `make_archive_version` to construct, `decompose_archive_version` to unpack.
+ */
+using ArchiveVersion = uint32_t;
+
+/**
  * @param major_version
  * @param minor_version
  * @param patch_version
@@ -19,7 +25,7 @@ namespace clp_s {
  */
 constexpr auto
 make_archive_version(uint8_t major_version, uint8_t minor_version, uint16_t patch_version)
-        -> uint32_t {
+        -> ArchiveVersion {
     constexpr uint32_t cMajorVersionOffset{24U};
     constexpr uint32_t cMinorVersionOffset{16U};
     return (static_cast<uint32_t>(major_version) << cMajorVersionOffset)
@@ -31,7 +37,7 @@ make_archive_version(uint8_t major_version, uint8_t minor_version, uint16_t patc
  * @param archive_version
  * @return A tuple containing the major, minor, and patch version for an archive.
  */
-constexpr auto decompose_archive_version(uint32_t archive_version)
+constexpr auto decompose_archive_version(ArchiveVersion archive_version)
         -> std::tuple<uint8_t, uint8_t, uint16_t> {
     constexpr uint32_t cMajorVersionOffset{24U};
     constexpr uint32_t cMinorVersionOffset{16U};
@@ -43,14 +49,15 @@ constexpr auto decompose_archive_version(uint32_t archive_version)
 
 // define the version
 constexpr uint8_t cArchiveMajorVersion = 0;
-constexpr uint8_t cArchiveMinorVersion = 5;
+constexpr uint8_t cArchiveMinorVersion = 6;
 constexpr uint16_t cArchivePatchVersion = 1;
-constexpr uint32_t cArchiveVersion{
+constexpr ArchiveVersion cArchiveVersion{
         make_archive_version(cArchiveMajorVersion, cArchiveMinorVersion, cArchivePatchVersion)
 };
 
 // Format version markers for backwards compatibility.
-constexpr uint32_t cDeprecatedDateStringFormatVersionMarker{make_archive_version(0, 5, 0)};
+constexpr ArchiveVersion cDeprecatedDateStringFormat{make_archive_version(0, 5, 0)};
+constexpr ArchiveVersion cMptNodeCount{make_archive_version(0, 6, 0)};
 
 // define the magic number
 constexpr std::array<uint8_t, 4> cStructuredSFAMagicNumber{0xFD, 0x2F, 0xC5, 0x30};
@@ -59,7 +66,7 @@ struct ArchiveHeader {
     ArchiveHeader() = default;
 
     ArchiveHeader(
-            uint32_t version,
+            ArchiveVersion version,
             uint64_t uncompressed_size,
             uint64_t compressed_size,
             uint32_t metadata_section_size,
@@ -82,11 +89,16 @@ struct ArchiveHeader {
      * format.
      */
     [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
-        return version < cDeprecatedDateStringFormatVersionMarker;
+        return version < cDeprecatedDateStringFormat;
     }
 
+    /**
+     * @return Whether this archive contains the MPT node `count` field.
+     */
+    [[nodiscard]] auto mpt_has_node_count() const -> bool { return version >= cMptNodeCount; }
+
     uint8_t magic_number[4]{};
-    uint32_t version{};
+    ArchiveVersion version{};
     uint64_t uncompressed_size{};
     uint64_t compressed_size{};
     uint64_t reserved_padding[4]{};

@@ -55,13 +55,16 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        uint32_t count{0};
-        error_code = schema_tree_decompressor.try_read_numeric_value(count);
-        if (ErrorCodeSuccess != error_code) {
-            throw OperationFailed(error_code, __FILENAME__, __LINE__);
+        if (adaptor.get_header().mpt_has_node_count()) {
+            uint32_t count{0};
+            error_code = schema_tree_decompressor.try_read_numeric_value(count);
+            if (ErrorCodeSuccess != error_code) {
+                throw OperationFailed(error_code, __FILENAME__, __LINE__);
+            }
+            tree->add_node(parent_id, static_cast<NodeType>(node_type), key, count);
+        } else {
+            tree->add_node(parent_id, static_cast<NodeType>(node_type), key);
         }
-
-        tree->add_node(parent_id, static_cast<NodeType>(node_type), key, count);
     }
 
     schema_tree_decompressor.close();
