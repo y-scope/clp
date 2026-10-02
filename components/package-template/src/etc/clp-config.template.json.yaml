@@ -75,8 +75,6 @@ telemetry:
 #
 #compression_coordinator: null
 ##  logging_level: "INFO"
-##  resource_group:
-##    name: "compression-coordinator"
 ##  job_polling_interval_millisecs: 100
 ##  max_concurrent_jobs: 1000
 ##  result_polling:
