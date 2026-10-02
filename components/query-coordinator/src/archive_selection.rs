@@ -20,8 +20,10 @@ use crate::query_job_submitter::DatasetArchivesToSearch;
 ///
 /// # Returns
 ///
-/// The selected archives, each paired with its dataset and the [`ExecutionPolicy`] for the query
-/// task that searches it, ordered by descending end timestamp across all datasets, on success.
+/// The selected archives grouped by dataset, each paired with the [`ExecutionPolicy`] for the query
+/// task that searches it, on success. Each dataset's archives are ordered by descending end
+/// timestamp, and datasets are ordered by their newest archive. Datasets without selected archives
+/// are omitted.
 ///
 /// # Errors
 ///
@@ -36,10 +38,10 @@ pub(crate) async fn prepare_search_task_inputs(
     datasets: &HashSet<NonEmptyString>,
     archive_end_ts_lower_bound_millisecs: Option<i64>,
     query_task_max_retry: u32,
-) -> Result<Vec<(NonEmptyString, ArchiveMetadata, ExecutionPolicy)>, Error> {
+) -> Result<Vec<DatasetArchivesToSearch>, Error> {
     ensure_all_queried_datasets_exist(db_pool, db_config, datasets).await?;
 
-    let mut selected_archives = Vec::new();
+    let mut archives_to_search = Vec::new();
     for dataset in datasets {
         let archives = fetch_archives(
             db_pool,
@@ -49,41 +51,31 @@ pub(crate) async fn prepare_search_task_inputs(
             archive_end_ts_lower_bound_millisecs,
         )
         .await?;
-        selected_archives.extend(archives.into_iter().map(|archive| {
-            let execution_policy =
-                compute_query_task_execution_policy(archive.size, query_task_max_retry);
-            (dataset.clone(), archive, execution_policy)
-        }));
-    }
-    selected_archives.sort_by_key(|(_, archive, _)| Reverse(archive.end_timestamp));
-
-    Ok(selected_archives)
-}
-
-/// Groups archives by dataset.
-///
-/// # Returns
-///
-/// The archives grouped by dataset, with each group's archives in their input order. Groups are
-/// ordered by the position of each dataset's first archive in the input.
-pub(crate) fn group_archives_by_dataset(
-    archives: Vec<(NonEmptyString, ArchiveMetadata, ExecutionPolicy)>,
-) -> Vec<DatasetArchivesToSearch> {
-    let mut archives_to_search: Vec<DatasetArchivesToSearch> = Vec::new();
-    for (dataset, archive, execution_policy) in archives {
-        if let Some(dataset_archives) = archives_to_search
-            .iter_mut()
-            .find(|dataset_archives| dataset_archives.dataset == dataset)
-        {
-            dataset_archives.archives.push((archive, execution_policy));
-        } else {
-            archives_to_search.push(DatasetArchivesToSearch {
-                dataset,
-                archives: vec![(archive, execution_policy)],
-            });
+        if archives.is_empty() {
+            continue;
         }
+        archives_to_search.push(DatasetArchivesToSearch {
+            dataset: dataset.clone(),
+            archives: archives
+                .into_iter()
+                .map(|archive| {
+                    let execution_policy =
+                        compute_query_task_execution_policy(archive.size, query_task_max_retry);
+                    (archive, execution_policy)
+                })
+                .collect(),
+        });
     }
-    archives_to_search
+    archives_to_search.sort_by_key(|dataset_archives| {
+        Reverse(
+            dataset_archives
+                .archives
+                .first()
+                .map(|(archive, _)| archive.end_timestamp),
+        )
+    });
+
+    Ok(archives_to_search)
 }
 
 /// Checks that every requested dataset exists in the metadata database.
@@ -126,7 +118,7 @@ async fn ensure_all_queried_datasets_exist(
 ///
 /// # Returns
 ///
-/// The selected archives on success.
+/// The selected archives, ordered by descending end timestamp, on success.
 ///
 /// # Errors
 ///
@@ -160,6 +152,7 @@ async fn fetch_archives(
             .push_bind(lower_bound)
             .push(" OR `end_timestamp` = 0)");
     }
+    query_builder.push(" ORDER BY `end_timestamp` DESC");
 
     Ok(query_builder
         .build_query_as::<ArchiveMetadata>()

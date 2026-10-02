@@ -24,7 +24,6 @@ use sqlx::MySqlPool;
 use sqlx::Transaction;
 
 use crate::Error;
-use crate::archive_selection::group_archives_by_dataset;
 use crate::archive_selection::prepare_search_task_inputs;
 use crate::query_job_submitter::DatasetArchivesToSearch;
 use crate::query_job_submitter::QueryJobOutcome;
@@ -259,7 +258,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// * Forwards [`prepare_search_task_inputs`]'s return values on failure.
     async fn plan(&self) -> Result<Vec<DatasetArchivesToSearch>, Error> {
-        let selected_archives = prepare_search_task_inputs(
+        prepare_search_task_inputs(
             &self.context.db_pool,
             &self.context.db_config,
             &self.search_job_config,
@@ -267,8 +266,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             self.archive_end_ts_lower_bound_millisecs,
             self.context.spider_option.query_task_max_retry,
         )
-        .await?;
-        Ok(group_archives_by_dataset(selected_archives))
+        .await
     }
 
     /// Persists the Spider job ID and marks the query job as running.
