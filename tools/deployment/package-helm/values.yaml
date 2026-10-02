@@ -446,9 +446,6 @@ spider:
         - name: "staged-archives"
           emptyDir: {}
       service_account_name: "{{ include \"clp.fullname\" . }}-service-account"
-      # Pool sizing guideline: search 50% / general 25% / compression 25%.
-      # TODO: `search` isn't on Spider yet (coming soon); only `general` and `compression` are
-      # configured.
       pools:
         - name: "general"
           replicas: 2
