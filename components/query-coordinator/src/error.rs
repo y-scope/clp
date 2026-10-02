@@ -31,7 +31,7 @@ pub enum Error {
     TaskGraph(#[from] spider_core::task::Error),
 
     #[error("failed to serialize a task input: {0}")]
-    TaskInputSerialization(#[from] rmp_serde::encode::Error),
+    TaskInputSerialization(#[from] spider_core::types::io::TaskGraphInputError),
 
     #[error("number of query tasks {0} exceeds `i32::MAX`")]
     TooManyQueryTasks(usize),

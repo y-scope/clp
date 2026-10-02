@@ -393,9 +393,9 @@ spider:
   image:
     # Temporary pin: upcoming Spider `main` changes may break, and its next release is a while away.
     scheduler:
-      tag: "sha-f3a97c2"
+      tag: "sha-86cfba7"
     storage:
-      tag: "sha-f3a97c2"
+      tag: "sha-86cfba7"
     worker:
       repository: "ghcr.io/y-scope/clp/clp-spider-worker"
       tag: "main"
