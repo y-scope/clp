@@ -8,7 +8,8 @@ vars:
   G_SPIDER_COMPOSE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/spider-compose.md5"
   G_SPIDER_COMPOSE_TASKFILE: "{{.ROOT_DIR}}/taskfiles/deployment/compose.yaml"
 
-  G_SPIDER_COMPOSE_IMAGE_REF: "ghcr.io/y-scope/spider/compose:v0.1.0-rc.1-huntsman"
+  G_SPIDER_COMPOSE_IMAGE_REF: >-
+    ghcr.io/y-scope/spider/compose@sha256:bda7336d0ea11ad26cd9ae03f6685add5451bf78509d3fdd13adc5becb8c5799
 
 tasks:
   download-spider:

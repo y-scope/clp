@@ -50,6 +50,10 @@ SPIDER_COMPONENT_NAME = "spider"
 SPIDER_STORAGE_COMPONENT_NAME = "spider-storage"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
+# Spider resource groups
+SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME = "spider_resource_groups"
+COMPRESSION_RESOURCE_GROUP_NAME = "compression"
+
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
 
@@ -854,10 +858,6 @@ class Spider(BaseModel):
         self.port = self.DEFAULT_PORT
 
 
-class SpiderResourceGroup(BaseModel):
-    name: NonEmptyStr
-
-
 class PollingBackoff(BaseModel):
     init_backoff_millisecs: PositiveInt
     max_backoff_millisecs: PositiveInt
@@ -865,7 +865,6 @@ class PollingBackoff(BaseModel):
 
 class CompressionCoordinator(BaseModel):
     logging_level: LoggingLevelRust = "INFO"
-    resource_group: SpiderResourceGroup = SpiderResourceGroup(name="compression-coordinator")
     job_polling_interval_millisecs: PositiveInt = 100
     max_concurrent_jobs: PositiveInt = 1000
     result_polling: PollingBackoff = PollingBackoff(
@@ -877,6 +876,16 @@ class CompressionCoordinator(BaseModel):
     termination_timeout_secs: PositiveInt = 30
     commit_task_soft_timeout_secs: PositiveInt = 45
     commit_task_hard_timeout_secs: PositiveInt = 60
+    # This field is loaded at runtime through `load_credentials_from_file`.
+    resource_group_password: str | None = None
+
+    def dump_to_primitive_dict(self):
+        return self.model_dump(exclude={"resource_group_password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        self.resource_group_password = _load_spider_resource_group_password(
+            credentials_file_path, COMPRESSION_RESOURCE_GROUP_NAME
+        )
 
 
 class Presto(BaseModel):
@@ -888,6 +897,26 @@ class Presto(BaseModel):
     def transform_for_container(self):
         self.host = PRESTO_COORDINATOR_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
+
+
+def _load_spider_resource_group_password(
+    credentials_file_path: pathlib.Path, resource_group_name: str
+) -> str:
+    """
+    :param credentials_file_path:
+    :param resource_group_name:
+    :return: The password of the given Spider resource group from the credentials file.
+    :raise ValueError: if the credentials file is empty or doesn't contain the password.
+    """
+    config = read_yaml_config_file(credentials_file_path)
+    if config is None:
+        raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+    try:
+        return get_config_value(
+            config, f"{SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME}.{resource_group_name}"
+        )
+    except KeyError as ex:
+        raise ValueError(f"Credentials file '{credentials_file_path}' does not contain key '{ex}'.")
 
 
 def _get_env_var(name: str) -> str:
@@ -1108,7 +1137,13 @@ class ClpConfig(BaseModel):
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = {"database", "queue", "redis", "spider"}
+        custom_serialized_fields = {
+            "compression_coordinator",
+            "database",
+            "queue",
+            "redis",
+            "spider",
+        }
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             value = getattr(self, key)
