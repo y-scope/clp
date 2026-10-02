@@ -1,5 +1,7 @@
 //! [`QueryJobSubmitter`] implementation for [`spider_client::SpiderClient`].
 
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -141,6 +143,7 @@ fn build_query_task_graph(
     let query_job_id_input = inputs.create_shared_input_payload(&query_job_id)?;
     let query_option_input = inputs.create_shared_input_payload(clp_s_query_option)?;
     let output_handle_input = inputs.create_shared_input_payload(output_handle)?;
+    let mut dataset_inputs = HashMap::new();
     for (archive, execution_policy) in archives_to_search {
         graph.insert_task(TaskDescriptor {
             tdl_context: TdlContext {
@@ -164,7 +167,14 @@ fn build_query_task_graph(
         })?;
         inputs.append_shared_task_input(query_job_id_input)?;
         inputs.append_shared_task_input(query_option_input)?;
-        inputs.append_task_input(&archive.dataset)?;
+        let dataset_input = match dataset_inputs.entry(archive.dataset) {
+            Entry::Occupied(entry) => *entry.get(),
+            Entry::Vacant(entry) => {
+                let input = inputs.create_shared_input_payload(entry.key())?;
+                *entry.insert(input)
+            }
+        };
+        inputs.append_shared_task_input(dataset_input)?;
         inputs.append_task_input(&archive.id)?;
         inputs.append_shared_task_input(output_handle_input)?;
     }
