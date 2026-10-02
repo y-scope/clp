@@ -17,7 +17,6 @@ use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
-use spider_core::task::ExecutionPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
 use sqlx::MySql;
@@ -33,14 +32,14 @@ use crate::query_job_submitter::QueryJobSubmitter;
 
 /// Options for a query job running in Spider.
 pub struct SpiderOption {
+    pub query_task_max_retry: u32,
     pub poll_interval: Duration,
 }
 
-/// Options for selecting archives and setting their query-task execution policy.
+/// Options for selecting archives to search.
 pub struct ArchiveSelectionOptions {
     pub archive_retention_period_millisecs: Option<NonZeroU64>,
     pub max_datasets_per_query: Option<NonZeroUsize>,
-    pub query_task_execution_policy: ExecutionPolicy,
 }
 
 /// Resources shared by query job handles created by the coordinator.
@@ -251,8 +250,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// # Returns
     ///
-    /// The archives to search grouped by dataset, each paired with the [`ExecutionPolicy`] for the
-    /// query task that searches it, on success.
+    /// The archives to search grouped by dataset, each paired with the
+    /// [`spider_core::task::ExecutionPolicy`] for the query task that searches it, on success.
     ///
     /// # Errors
     ///
@@ -266,10 +265,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             &self.search_job_config,
             &self.datasets,
             self.archive_end_ts_lower_bound_millisecs,
-            &self
-                .context
-                .archive_selection_options
-                .query_task_execution_policy,
+            self.context.spider_option.query_task_max_retry,
         )
         .await?;
         Ok(group_archives_by_dataset(selected_archives))

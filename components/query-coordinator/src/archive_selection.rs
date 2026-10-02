@@ -7,6 +7,7 @@ use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::job_config::SearchJobConfig;
 use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
+use spider_core::task::TimeoutPolicy;
 use sqlx::MySqlPool;
 
 use crate::Error;
@@ -19,8 +20,8 @@ use crate::query_job_submitter::DatasetArchivesToSearch;
 ///
 /// # Returns
 ///
-/// The selected archives, each paired with its dataset and `query_task_execution_policy`, ordered
-/// by descending end timestamp across all datasets, on success.
+/// The selected archives, each paired with its dataset and the [`ExecutionPolicy`] for the query
+/// task that searches it, ordered by descending end timestamp across all datasets, on success.
 ///
 /// # Errors
 ///
@@ -34,7 +35,7 @@ pub(crate) async fn prepare_search_task_inputs(
     search_job_config: &SearchJobConfig,
     datasets: &HashSet<NonEmptyString>,
     archive_end_ts_lower_bound_millisecs: Option<i64>,
-    query_task_execution_policy: &ExecutionPolicy,
+    query_task_max_retry: u32,
 ) -> Result<Vec<(NonEmptyString, ArchiveMetadata, ExecutionPolicy)>, Error> {
     ensure_all_queried_datasets_exist(db_pool, db_config, datasets).await?;
 
@@ -49,11 +50,9 @@ pub(crate) async fn prepare_search_task_inputs(
         )
         .await?;
         selected_archives.extend(archives.into_iter().map(|archive| {
-            (
-                dataset.clone(),
-                archive,
-                query_task_execution_policy.clone(),
-            )
+            let execution_policy =
+                compute_query_task_execution_policy(archive.size, query_task_max_retry);
+            (dataset.clone(), archive, execution_policy)
         }));
     }
     selected_archives.sort_by_key(|(_, archive, _)| Reverse(archive.end_timestamp));
@@ -166,4 +165,35 @@ async fn fetch_archives(
         .build_query_as::<ArchiveMetadata>()
         .fetch_all(db_pool)
         .await?)
+}
+
+/// Computes the execution policy for a query task that searches an archive of the given size.
+///
+/// # Returns
+///
+/// The [`ExecutionPolicy`], with timeouts scaled to `archive_size` and bounded to the range Spider
+/// accepts.
+fn compute_query_task_execution_policy(archive_size: u64, max_num_retry: u32) -> ExecutionPolicy {
+    // NOTE: Keep these bounds in sync with the ones Spider enforces in `TimeoutPolicy::validate`.
+    const SPIDER_MIN_TIMEOUT_MS: u64 = 100;
+    const SPIDER_MAX_TIMEOUT_MS: u64 = 24 * 60 * 60 * 1000;
+
+    const SOFT_TIMEOUT_MS_PER_MIB: u64 = 10;
+    const HARD_TIMEOUT_MS_PER_MIB: u64 = 2000;
+    const NUM_BYTES_PER_MIB: u64 = 1024 * 1024;
+
+    let hard_timeout_ms = (archive_size.saturating_mul(HARD_TIMEOUT_MS_PER_MIB)
+        / NUM_BYTES_PER_MIB)
+        .clamp(SPIDER_MIN_TIMEOUT_MS + 1, SPIDER_MAX_TIMEOUT_MS);
+    let soft_timeout_ms = (archive_size.saturating_mul(SOFT_TIMEOUT_MS_PER_MIB)
+        / NUM_BYTES_PER_MIB)
+        .clamp(SPIDER_MIN_TIMEOUT_MS, hard_timeout_ms - 1);
+    ExecutionPolicy {
+        max_num_retry,
+        timeout_policy: TimeoutPolicy {
+            soft_timeout_ms,
+            hard_timeout_ms,
+        },
+        ..ExecutionPolicy::default()
+    }
 }
