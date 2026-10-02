@@ -33,7 +33,8 @@ impl S3CompressionJobSubmitter for SpiderClient {
     /// * Forwards [`TaskGraph::new`]'s return values on failure.
     /// * Forwards [`ValueTypeDescriptor::struct_from_name`]'s return values on failure.
     /// * Forwards [`TaskGraph::insert_task`]'s return values on failure.
-    /// * Forwards [`TaskGraphInputBuilder::create_shared_input_payload`]'s return values on failure.
+    /// * Forwards [`TaskGraphInputBuilder::create_shared_input_payload`]'s return values on
+    ///   failure.
     /// * Forwards [`TaskGraphInputBuilder::append_shared_task_input`]'s return values on failure.
     /// * Forwards [`TaskGraphInputBuilder::append_task_input`]'s return values on failure.
     /// * Forwards [`SpiderClient::submit_job`]'s return values on failure.
