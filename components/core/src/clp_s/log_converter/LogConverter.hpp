@@ -1,15 +1,17 @@
 #ifndef CLP_S_LOG_CONVERTER_LOGCONVERTER_HPP
 #define CLP_S_LOG_CONVERTER_LOGCONVERTER_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <string_view>
+#include <utility>
 
-#include <log_surgeon/BufferParser.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/containers/Array.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "../../clp/ReaderInterface.hpp"
-#include "../InputConfig.hpp"
+#include <clp/ReaderInterface.hpp>
+#include <clp_s/InputConfig.hpp>
 
 namespace clp_s::log_converter {
 /**
@@ -17,12 +19,18 @@ namespace clp_s::log_converter {
  */
 class LogConverter {
 public:
-    // Factory function
+    // Static constants
+    static constexpr size_t cDefaultBufferSize{64ULL * 1024ULL};  // 64 KiB
+
+    // Factory methods
     /**
      * @param max_buffer_size The maximum size of the internal log-text buffer.
+     * @param initial_buffer_size The initial size of the internal log-text buffer. The buffer grows
+     * on demand, up to `max_buffer_size`.
      * @return The newly created `LogConverter`.
      */
-    static auto create(size_t max_buffer_size) -> LogConverter;
+    static auto create(size_t max_buffer_size, size_t initial_buffer_size = cDefaultBufferSize)
+            -> LogConverter;
 
     // Methods
     /**
@@ -32,7 +40,7 @@ public:
      * @param output_dir The output directory for generated KV-IR files.
      * @param compress_converted_file Whether the converted file should be compressed.
      * @return A void result on success, or an error code indicating the failure:
-     * - std::errc::no_message if `log_surgeon::BufferParser::parse_next_event` returns an error.
+     * - `std::errc::not_supported` if the buffer content cannot be handled.
      * - Forwards `LogSerializer::create()`'s return values.
      * - Forwards `refill_buffer()`'s return values.
      * - Forwards `LogSerializer::add_message()`'s return values.
@@ -45,13 +53,14 @@ public:
     ) -> ystdlib::error_handling::Result<void>;
 
 private:
-    // Constants
-    static constexpr size_t cDefaultBufferSize{64ULL * 1024ULL};  // 64 KiB
-
     // Constructors
-    explicit LogConverter(size_t max_buffer_size, log_surgeon::BufferParser buffer_parser)
-            : m_parser{std::move(buffer_parser)},
-              m_buffer(max_buffer_size < cDefaultBufferSize ? max_buffer_size : cDefaultBufferSize),
+    explicit LogConverter(
+            size_t max_buffer_size,
+            size_t initial_buffer_size,
+            log_surgeon::Parser parser
+    )
+            : m_parser{std::move(parser)},
+              m_buffer(std::min(max_buffer_size, initial_buffer_size)),
               m_max_buffer_size{max_buffer_size} {}
 
     // Methods
@@ -79,7 +88,8 @@ private:
      */
     [[nodiscard]] auto grow_buffer_if_full() -> ystdlib::error_handling::Result<void>;
 
-    log_surgeon::BufferParser m_parser;
+    // Data members
+    log_surgeon::Parser m_parser;
     ystdlib::containers::Array<char> m_buffer;
     size_t m_num_bytes_buffered{};
     size_t m_parser_offset{};

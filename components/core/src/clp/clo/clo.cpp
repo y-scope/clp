@@ -42,7 +42,6 @@ using clp::ErrorCode_Success;
 using clp::Grep;
 using clp::GrepCore;
 using clp::ir::cIrFileExtension;
-using clp::load_lexer_from_file;
 using clp::logtype_dictionary_id_t;
 using clp::Query;
 using clp::segment_id_t;
@@ -484,15 +483,6 @@ static bool search_archive(
         return false;
     }
 
-    // Load lexers from schema file if it exists
-    auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-    log_surgeon::lexers::ByteLexer lexer;
-    bool use_heuristic = true;
-    if (std::filesystem::exists(schema_file_path)) {
-        use_heuristic = false;
-        load_lexer_from_file(schema_file_path.string(), lexer);
-    }
-
     Archive archive_reader;
     archive_reader.open(archive_path.string());
     archive_reader.refresh_dictionaries();
@@ -510,9 +500,7 @@ static bool search_archive(
             wildcard_search_string,
             search_begin_ts,
             search_end_ts,
-            command_line_args.ignore_case(),
-            lexer,
-            use_heuristic
+            command_line_args.ignore_case()
     );
     if (false == query_processing_result.has_value()) {
         return true;
