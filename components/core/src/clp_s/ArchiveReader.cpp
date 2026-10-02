@@ -449,8 +449,8 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
 auto
 ArchiveReader::resolve_unordered_object_root(UnorderedObject const& obj, int32_t search_root_id)
         -> int32_t {
-    if (obj.root_node_id.has_value()) {
-        return obj.root_node_id.value();
+    if (obj.node_id.has_value()) {
+        return obj.node_id.value();
     }
     return m_schema_tree->find_matching_subtree_root_in_subtree(
             search_root_id,
@@ -461,14 +461,14 @@ ArchiveReader::resolve_unordered_object_root(UnorderedObject const& obj, int32_t
 
 auto ArchiveReader::append_unordered_reader_columns(
         SchemaReader& reader,
-        SchemaNode::id_t mst_subtree_root_node_id,
+        SchemaNode::id_t subtree_root_id,
         SchemaView sub_schema,
         std::optional<clpp::log_shape_id_t> log_shape_id,
         bool should_marshal_records
 ) -> void {
     size_t const object_begin_pos{reader.get_column_size()};
-    if (NodeType::LogMessage == m_schema_tree->get_node(mst_subtree_root_node_id).get_type()) {
-        reader.set_log_message_column_start(mst_subtree_root_node_id, object_begin_pos);
+    if (NodeType::LogMessage == m_schema_tree->get_node(subtree_root_id).get_type()) {
+        reader.set_log_message_column_start(subtree_root_id, object_begin_pos);
     }
     sub_schema.visit_entries(
             [&](SchemaNode::id_t node_id) -> bool {
@@ -538,7 +538,7 @@ auto ArchiveReader::append_unordered_reader_columns(
             [&](UnorderedObject const& obj) -> bool {
                 append_unordered_reader_columns(
                         reader,
-                        resolve_unordered_object_root(obj, mst_subtree_root_node_id),
+                        resolve_unordered_object_root(obj, subtree_root_id),
                         obj.sub_schema,
                         obj.log_shape_id,
                         should_marshal_records
@@ -548,12 +548,7 @@ auto ArchiveReader::append_unordered_reader_columns(
     );
 
     if (should_marshal_records) {
-        reader.mark_unordered_object(
-                object_begin_pos,
-                mst_subtree_root_node_id,
-                sub_schema,
-                log_shape_id
-        );
+        reader.mark_unordered_object(object_begin_pos, subtree_root_id, sub_schema, log_shape_id);
     }
 }
 
@@ -595,7 +590,7 @@ void ArchiveReader::initialize_schema_reader(
 
     schema.get_unordered_schema_view().visit_entries(
             [&](SchemaNode::id_t node_id) -> bool {
-                // A lone MST node ID entry in the unordered region is only allowed when the ID is
+                // A lone MPT node ID entry in the unordered region is only allowed when the ID is
                 // the root of the unordered object, so we can pass it directly to
                 // append_unordered_reader_columns with an empty sub-schema.
                 append_unordered_reader_columns(

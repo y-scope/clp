@@ -1018,13 +1018,13 @@ auto SchemaMatch::build_shape_match_filter(
         FilterOperation op,
         bool is_inverted
 ) -> std::shared_ptr<ast::Expression> {
-    auto const log_message_node_id{find_enclosing_log_message_node_id(decomposition_root)};
+    auto const log_message_id{find_enclosing_log_message_node_id(decomposition_root)};
     auto matched_schema_ids{
-            m_clpp_matcher.find_matching_schemas(log_message_node_id, rule_name, shape_query)
+            m_clpp_matcher.find_matching_schemas(log_message_id, rule_name, shape_query)
     };
     if (is_inverted && shape_query.has_value()) {
         auto const node_schema_ids{
-                m_clpp_matcher.find_matching_schemas(log_message_node_id, rule_name, std::nullopt)
+                m_clpp_matcher.find_matching_schemas(log_message_id, rule_name, std::nullopt)
         };
         std::unordered_set<int32_t> unmatched_schema_ids;
         for (auto const schema_id : node_schema_ids) {

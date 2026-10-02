@@ -211,43 +211,42 @@ public:
      *
      * Objects rooted at a `ParentRule` node are not stored in the map and must be reached by
      * walking the schema.
-     * Multiple `ParentRule` objects (of the same parent rule) will share the same MST node ID if
+     * Multiple `ParentRule` objects (of the same parent rule) will share the same MPT node ID if
      * they are directly under the same parent. This means it is not possible to store each match in
      * the map as they have the same key.
      *
      * @param column_reader_start
-     * @param mst_subtree_root
+     * @param subtree_root
      * @param sub_schema The object's sub-schema.
      * @param log_shape_id The object's log shape ID (present for `LogMessage` objects).
      */
-    void mark_unordered_object(
+    auto mark_unordered_object(
             size_t column_reader_start,
-            int32_t mst_subtree_root,
+            SchemaNode::id_t subtree_root,
             SchemaView sub_schema,
             std::optional<clpp::log_shape_id_t> log_shape_id
-    );
+    ) -> void;
 
     /**
      * Records the index into the column readers of the first column of a `LogMessage` object.
      * Unlike `mark_unordered_object`, this is recorded whether or not records are marshalled, since
      * search needs it to resolve clpp leaf filters pinned to a leaf placeholder position.
-     * @param log_message_node_id The `LogMessage` root node ID.
+     * @param log_message_id The `LogMessage` root node ID.
      * @param column_reader_start The index of the object's first column reader.
      */
-    auto
-    set_log_message_column_start(SchemaNode::id_t log_message_node_id, size_t column_reader_start)
+    auto set_log_message_column_start(SchemaNode::id_t log_message_id, size_t column_reader_start)
             -> void {
-        m_log_message_column_starts.emplace(log_message_node_id, column_reader_start);
+        m_log_message_column_starts.emplace(log_message_id, column_reader_start);
     }
 
     /**
-     * @param log_message_node_id The `LogMessage` root node ID.
+     * @param log_message_id The `LogMessage` root node ID.
      * @return The index of the object's first column reader, or std::nullopt if the schema has no
      * such object.
      */
-    [[nodiscard]] auto get_log_message_column_start(SchemaNode::id_t log_message_node_id) const
+    [[nodiscard]] auto get_log_message_column_start(SchemaNode::id_t log_message_id) const
             -> std::optional<size_t> {
-        auto const it{m_log_message_column_starts.find(log_message_node_id)};
+        auto const it{m_log_message_column_starts.find(log_message_id)};
         if (m_log_message_column_starts.end() == it) {
             return std::nullopt;
         }
@@ -460,13 +459,13 @@ private:
 
     /**
      * Generates a JSON template for a LogMessage.
-     * @param log_msg_node_id The LogMessage node ID.
+     * @param log_msg_id The LogMessage node ID.
      * @return A result containing the index of the next reader in m_columns after those consumed by
      * this object, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
      * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
      */
-    auto generate_log_message_template(SchemaNode::id_t log_msg_node_id)
+    auto generate_log_message_template(SchemaNode::id_t log_msg_id)
             -> ystdlib::error_handling::Result<size_t>;
 
     /**
@@ -530,8 +529,8 @@ private:
 
     /**
      * Visits every `ParentRule` unordered object contained in `schema`, recursing into nested
-     * objects, and invokes `visit` with the ParentRule's MST node ID and its sub-schema (excluding
-     * the leading `root_node_id` metadata entry).
+     * objects, and invokes `visit` with the ParentRule's MPT node ID and its sub-schema (excluding
+     * the leading `node_id` metadata entry).
      *
      * @param schema
      * @param visit Invoked for each `ParentRule` scope, in depth-first schema order.
@@ -545,7 +544,7 @@ private:
                     if (NodeType::ParentRule != obj.type) {
                         return false;
                     }
-                    visit(obj.root_node_id.value(), obj.sub_schema);
+                    visit(obj.node_id.value(), obj.sub_schema);
                     for_each_parent_rule_scope(obj.sub_schema, visit);
                     return false;
                 }

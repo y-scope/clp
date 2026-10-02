@@ -127,15 +127,14 @@ private:
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 
     /**
-     * Resolves a CLPP leaf's rule-name path against the schema tree and produces column
-     * descriptors for each matching schema-tree node at the leaf position.
-     * Computes the common prefix between the column's existing descriptor tokens and the
-     * rule names, then resolves the remaining (non-overlapping) segments through the schema
-     * tree. The returned ColumnDescriptor is a clp-s field path: the unresolved rule-name
-     * segments are appended to the input column's descriptor tokens, so the result is a
-     * column descriptor rather than a rule name.
+     * Resolves a CLPP leaf's rule-name path against the MPT and produces column descriptors for
+     * each matching MPT node at the leaf position.
      *
-     * A rule name may resolve to several nodes because schema nodes are keyed by both name and
+     * Computes the common prefix between the column's existing descriptor tokens and the rule
+     * names, then resolves the remaining (non-overlapping) segments through the MPT. The returned
+     * ColumnDescriptor is a clp-s field path: the unresolved rule-name segments are appended to the
+     * input column's descriptor tokens, so the result is a column descriptor rather than a rule
+     * name. A rule name may resolve to several nodes because MPT nodes are keyed by both name and
      * type, so one pair is returned per matching node.
      *
      * @param column The original column descriptor triggering clpp decomposition.
@@ -143,7 +142,7 @@ private:
      * decomposition is rooted.
      * @param rule_names The split rule names from the log-surgeon qualified name.
      * @return A vector of (column, node_id) pairs, or std::nullopt if any rule name cannot be
-     * resolved in the schema tree.
+     * resolved in the MPT.
      */
     auto resolve_leaf_rule_descriptors(
             std::shared_ptr<ast::ColumnDescriptor> const& column,

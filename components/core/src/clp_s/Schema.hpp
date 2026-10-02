@@ -18,9 +18,9 @@ struct UnorderedObject;
 /**
  * A read-only view over a sequence of schema entries.
  *
- * Each top-level entry is either an MST node ID or the delimiter of an unordered object.
+ * Each top-level entry is either an MPT node ID or the delimiter of an unordered object.
  * `visit_entries` iterates these entries and decodes unordered objects into `UnorderedObject`s.
- * `any_node_id` and `for_each_node_id` visit every MST node ID, recursing into unordered-object
+ * `any_node_id` and `for_each_node_id` visit every MPT node ID, recursing into unordered-object
  * sub-schemas.
  */
 class SchemaView {
@@ -40,7 +40,7 @@ public:
 
     // Methods
     /**
-     * Invokes `predicate` on every MST node ID in this view, recursing into unordered object
+     * Invokes `predicate` on every MPT node ID in this view, recursing into unordered object
      * sub-schemas, until the predicate returns true.
      * @param predicate A callable accepting a `SchemaNode::id_t` and returning a bool.
      * @return true if the predicate returned true for any node ID, false otherwise.
@@ -49,7 +49,7 @@ public:
     [[nodiscard]] auto any_node_id(Predicate const& predicate) const -> bool;
 
     /**
-     * Invokes `callback` on every MST node ID in this view, recursing into unordered-object
+     * Invokes `callback` on every MPT node ID in this view, recursing into unordered-object
      * sub-schemas.
      * @param callback A callable accepting a single `SchemaNode::id_t`.
      */
@@ -64,10 +64,10 @@ public:
     /**
      * Visits each entry of this view, stopping early if a visitor returns true.
      *
-     * Plain MST node IDs are passed to `visit_node`. Delimiter entries are decoded into
+     * Plain MPT node IDs are passed to `visit_node`. Delimiter entries are decoded into
      * `UnorderedObject`s and passed to `visit_object`, which is responsible for recursing into
      * the sub-schema if desired.
-     * @param visit_node Invoked with each plain MST node ID.
+     * @param visit_node Invoked with each plain MPT node ID.
      * @param visit_object Invoked with each decoded unordered object.
      * @return true if any visitor returned true, false otherwise.
      */
@@ -81,7 +81,7 @@ public:
      *
      * A schema may contain several sibling `LogMessage` objects when a log event has multiple
      * unstructured text fields.
-     * @return A pair of the `LogMessage` MPT root node ID and its log shape ID for each LogMessage
+     * @return A pair of the `LogMessage` node ID and its log shape ID for each LogMessage
      * object, in document order.
      */
     [[nodiscard]] auto find_log_messages() const
@@ -138,10 +138,10 @@ private:
  *
  * Metadata for each node type:
  * - LogMessage:
- *  - MPT root node ID
+ *  - enclosing LogMessage node's MPT node ID
  *  - log shape ID
  * - ParentRule:
- *  - MPT root node ID
+ *  - enclosing ParentRule node's MPT node ID
  */
 struct UnorderedObject {
     // Static methods
@@ -163,7 +163,7 @@ struct UnorderedObject {
     NodeType type;
     // Total number of entries (metadata + sub-schema) this object occupies after its delimiter.
     size_t length;
-    std::optional<SchemaNode::id_t> root_node_id;
+    std::optional<SchemaNode::id_t> node_id;
     std::optional<clpp::log_shape_id_t> log_shape_id;
     // The object's schema entries, excluding metadata entries.
     SchemaView sub_schema;
@@ -202,8 +202,8 @@ inline auto SchemaView::find_log_messages() const
             [](SchemaNode::id_t) -> bool { return false; },
             [&](UnorderedObject const& obj) -> bool {
                 if (NodeType::LogMessage == obj.type) {
-                    if (obj.root_node_id.has_value() && obj.log_shape_id.has_value()) {
-                        msgs.emplace_back(obj.root_node_id.value(), obj.log_shape_id.value());
+                    if (obj.node_id.has_value() && obj.log_shape_id.has_value()) {
+                        msgs.emplace_back(obj.node_id.value(), obj.log_shape_id.value());
                     }
                     return false;
                 }
@@ -224,12 +224,12 @@ inline auto SchemaView::decode_unordered_object(size_t i) const -> std::optional
     auto const length{static_cast<size_t>(get_unordered_object_length(entry))};
     auto const content{m_schema.subspan(i + 1, length)};
     auto const num_metadata_entries{UnorderedObject::get_num_metadata_entries(type)};
-    std::optional<SchemaNode::id_t> root_node_id;
+    std::optional<SchemaNode::id_t> node_id;
     std::optional<clpp::log_shape_id_t> log_shape_id;
     if (content.size() >= num_metadata_entries) {
         auto const metadata{content.first(num_metadata_entries)};
         if (false == metadata.empty()) {
-            root_node_id = metadata[0];
+            node_id = metadata[0];
         }
         if (metadata.size() >= 2) {
             log_shape_id = static_cast<clpp::log_shape_id_t>(metadata[1]);
@@ -238,7 +238,7 @@ inline auto SchemaView::decode_unordered_object(size_t i) const -> std::optional
     return UnorderedObject{
             .type = type,
             .length = length,
-            .root_node_id = root_node_id,
+            .node_id = node_id,
             .log_shape_id = log_shape_id,
             .sub_schema
             = SchemaView{content.subspan(std::min(num_metadata_entries, content.size()))}
@@ -266,12 +266,12 @@ public:
     /**
      * Inserts a node into the ordered region of the schema.
      */
-    auto insert_ordered(SchemaNode::id_t mst_node_id) -> void;
+    auto insert_ordered(SchemaNode::id_t node_id) -> void;
 
     /**
      * Inserts a node into the unordered region of the schema.
      */
-    auto insert_unordered(SchemaNode::id_t mst_node_id) -> void;
+    auto insert_unordered(SchemaNode::id_t node_id) -> void;
 
     /**
      * Inserts another schema into the unordered region of the schema, maintaining that Schema's
@@ -372,7 +372,7 @@ public:
     }
 
     /**
-     * Starts an unordered object of a given NodeType, storing the root MST node ID as the first
+     * Starts an unordered object of a given NodeType, storing the MPT node ID as the first
      * entry.
      *
      * Unordered objects must be closed by calling the `end_unordered_object` method with the start
@@ -380,24 +380,25 @@ public:
      * @param object_type
      * @return the start position of the unordered object
      */
-    [[nodiscard]] auto start_unordered_object(NodeType object_type, SchemaNode::id_t root_node_id)
+    [[nodiscard]] auto start_unordered_object(NodeType object_type, SchemaNode::id_t node_id)
             -> size_t {
         insert_unordered(SchemaView::encode_node_type(object_type));
         auto const start_position{m_schema.size()};
-        insert_unordered(root_node_id);
+        insert_unordered(node_id);
         return start_position;
     }
 
     /**
-     * Starts a `NodeType::LogMessage` unordered object, storing the root MST node ID and a reserved
-     * log shape ID (to be filled in by `end_log_message`) as its metadata entries.
+     * Starts a `NodeType::LogMessage` unordered object, storing the MPT node ID of the `LogMessage`
+     * node and a reserved log shape ID (to be filled in by `end_log_message`) as its metadata
+     * entries.
      *
      * The log shape ID must be filled in by calling `end_log_message`.
-     * @param root_node_id The MST node ID of the `LogMessage` node.
+     * @param node_id The MPT node ID of the `LogMessage` node.
      * @return The start position of the unordered object content.
      */
-    [[nodiscard]] auto start_log_message(SchemaNode::id_t root_node_id) -> size_t {
-        auto const start_position{start_unordered_object(NodeType::LogMessage, root_node_id)};
+    [[nodiscard]] auto start_log_message(SchemaNode::id_t node_id) -> size_t {
+        auto const start_position{start_unordered_object(NodeType::LogMessage, node_id)};
         insert_unordered(0);
         return start_position;
     }

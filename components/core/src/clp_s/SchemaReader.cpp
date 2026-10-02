@@ -36,7 +36,7 @@ namespace {
  * column-consuming (leaf rule) nodes in the given sub-schema.
  *
  * @param sub_schema The sub-schema to scan.
- * @param tree The global schema tree.
+ * @param tree
  * @param start_column_reader_idx The starting index in `m_columns` for the first column in the
  * sub-schema.
  * @return A map from column name to reader indices, and the next reader index after the last
@@ -52,7 +52,7 @@ namespace {
  * Counts the number of column-consuming entries in a sub-schema, including entries within
  * nested unordered-object scopes.
  * @param schema The sub-schema to scan.
- * @param tree The schema tree (used to resolve node types for non-delimiter entries).
+ * @param tree The MPT (used to resolve node types for non-delimiter entries).
  * @return The number of column-consuming entries.
  */
 [[nodiscard]] auto count_column_consuming_entries(SchemaView schema, SchemaTree const& tree)
@@ -461,17 +461,17 @@ void SchemaReader::generate_local_tree(int32_t global_id) {
     } while (false == global_id_stack.empty());
 }
 
-void SchemaReader::mark_unordered_object(
+auto SchemaReader::mark_unordered_object(
         size_t column_reader_start,
-        int32_t mst_subtree_root,
+        SchemaNode::id_t subtree_root,
         SchemaView sub_schema,
         std::optional<clpp::log_shape_id_t> log_shape_id
-) {
-    if (NodeType::ParentRule == m_global_schema_tree->get_node(mst_subtree_root).get_type()) {
+) -> void {
+    if (NodeType::ParentRule == m_global_schema_tree->get_node(subtree_root).get_type()) {
         return;
     }
     m_global_id_to_unordered_object.emplace(
-            mst_subtree_root,
+            subtree_root,
             MarkedUnorderedObject{
                     .column_reader_start = column_reader_start,
                     .sub_schema = sub_schema,
@@ -488,8 +488,8 @@ auto SchemaReader::get_first_column_in_span(SchemaView sub_schema) -> SchemaNode
                 return true;
             },
             [&](UnorderedObject const& obj) -> bool {
-                if (obj.root_node_id.has_value()) {
-                    first_column_id = obj.root_node_id.value();
+                if (obj.node_id.has_value()) {
+                    first_column_id = obj.node_id.value();
                     return true;
                 }
                 auto const id{get_first_column_in_span(obj.sub_schema)};
@@ -1010,7 +1010,7 @@ auto SchemaReader::collect_scope_entries(
             },
             [&](UnorderedObject const& obj) -> bool {
                 if (NodeType::ParentRule == obj.type) {
-                    auto const parent_rule_id{obj.root_node_id.value()};
+                    auto const parent_rule_id{obj.node_id.value()};
                     auto const [it, inserted]{
                             scope.parent_rule_occurrences.try_emplace(parent_rule_id)
                     };
@@ -1170,9 +1170,9 @@ auto SchemaReader::emit_grouped_leaf_entries(std::vector<DecompositionTarget>& e
     return ystdlib::error_handling::success();
 }
 
-auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_id)
+auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_id)
         -> ystdlib::error_handling::Result<size_t> {
-    auto log_msg_it{m_global_id_to_unordered_object.find(log_msg_node_id)};
+    auto log_msg_it{m_global_id_to_unordered_object.find(log_msg_id)};
     if (m_global_id_to_unordered_object.end() == log_msg_it) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
@@ -1184,14 +1184,13 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
     auto const column_start{record.column_reader_start};
     auto const schema{record.sub_schema};
 
-    auto const key_name{m_global_schema_tree->get_node(log_msg_node_id).get_key_name()};
+    auto const key_name{m_global_schema_tree->get_node(log_msg_id).get_key_name()};
 
     auto combined_mask{
-            m_projection ? m_projection->get_node_mask(log_msg_node_id)
-                         : search::Projection::NodeMask{}
+            m_projection ? m_projection->get_node_mask(log_msg_id) : search::Projection::NodeMask{}
     };
 
-    bool const emit_text{m_projection && m_projection->should_emit_value(log_msg_node_id)};
+    bool const emit_text{m_projection && m_projection->should_emit_value(log_msg_id)};
     bool const has_shape{combined_mask.has(search::Projection::NodeMask::Mode::Shape)};
     bool const has_decompose{combined_mask.has(search::Projection::NodeMask::Mode::Decompose)};
 
@@ -1201,13 +1200,9 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
         m_reconstruction_targets.push_back(
                 YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(log_shape_id, "", column_start, schema))
         );
-        auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
-                schema,
-                log_msg_node_id,
-                column_start,
-                log_shape_id,
-                has_decompose
-        ))};
+        auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(
+                emit_decomposed_scope(schema, log_msg_id, column_start, log_shape_id, has_decompose)
+        )};
         return column_idx;
     }
 
@@ -1228,13 +1223,9 @@ auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_node_i
         }
     }
 
-    auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
-            schema,
-            log_msg_node_id,
-            column_start,
-            log_shape_id,
-            has_decompose
-    ))};
+    auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(
+            emit_decomposed_scope(schema, log_msg_id, column_start, log_shape_id, has_decompose)
+    )};
 
     m_json_serializer.add_op(JsonSerializer::Op::EndObject);
     return column_idx;

@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
 
+#include <clp_s/archive_constants.hpp>
 #include <clp_s/Schema.hpp>
 
 #include "../../clp/Defs.h"
@@ -209,15 +210,15 @@ auto QueryRunner::find_positional_reader(
         return nullptr;
     }
     auto const column_id{column.get_column_id()};
-    auto const log_message_node_id{m_schema_tree->find_matching_subtree_root_in_subtree(
+    auto const log_message_id{m_schema_tree->find_matching_subtree_root_in_subtree(
             constants::cRootNodeId,
             column_id,
             NodeType::LogMessage
     )};
-    if (-1 == log_message_node_id) {
+    if (constants::cRootNodeId == log_message_id) {
         return nullptr;
     }
-    auto const column_start{m_reader->get_log_message_column_start(log_message_node_id)};
+    auto const column_start{m_reader->get_log_message_column_start(log_message_id)};
     if (false == column_start.has_value()) {
         return nullptr;
     }

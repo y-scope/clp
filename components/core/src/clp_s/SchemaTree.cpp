@@ -69,7 +69,7 @@ auto SchemaTree::add_node(SchemaNode::id_t parent_node_id, NodeType type, std::s
     return node_id;
 }
 
-// `Schema` uses the top bits of each entry to differentiate between MST node (`SchemaNode`) and
+// `Schema` uses the top bits of each entry to differentiate between MPT node (`SchemaNode`) and
 // unordered delimiter entries. Therefore, `SchemaNode::id_t` must not exceed `Schema::cMaxNodeId`.
 auto SchemaTree::add_node(
         SchemaNode::id_t parent_node_id,

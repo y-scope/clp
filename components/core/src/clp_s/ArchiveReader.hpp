@@ -300,14 +300,14 @@ private:
     /**
      * Appends columns for the sub-schema of an unordered object.
      * @param reader
-     * @param mst_subtree_root_node_id
+     * @param subtree_root_id
      * @param sub_schema
      * @param log_shape_id The log shape ID if sub_schema is a `LogMessage` object.
      * @param should_marshal_records
      */
     auto append_unordered_reader_columns(
             SchemaReader& reader,
-            SchemaNode::id_t mst_subtree_root_node_id,
+            SchemaNode::id_t subtree_root_id,
             SchemaView sub_schema,
             std::optional<clpp::log_shape_id_t> log_shape_id,
             bool should_marshal_records
