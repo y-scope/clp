@@ -71,7 +71,7 @@ jobs:
         run: |
           openssl_link="$(brew --prefix)/bin/openssl"
           case "$(readlink "$openssl_link" 2>/dev/null)" in
-              */openssl@1.1/*) rm -f "$openssl_link" ;;
+            */openssl@1.1/*) rm -f "$openssl_link" ;;
           esac
 
       - name: "Install dependencies"
