@@ -557,7 +557,6 @@ impl Default for QueryCoordinator {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct CompressionCoordinator {
-    pub resource_group: SpiderResourceGroup,
     pub job_polling_interval_millisecs: NonZeroU64,
     pub max_concurrent_jobs: NonZeroUsize,
     pub result_polling: PollingBackoff,
@@ -572,10 +571,6 @@ pub struct CompressionCoordinator {
 impl Default for CompressionCoordinator {
     fn default() -> Self {
         Self {
-            resource_group: SpiderResourceGroup {
-                name: NonEmptyString::new("compression-coordinator".to_owned())
-                    .expect("default resource group name should not be empty"),
-            },
             job_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default jobs poll delay should not be zero"),
             max_concurrent_jobs: NonZeroUsize::new(1000)
@@ -605,12 +600,6 @@ impl Default for CompressionCoordinator {
 pub struct Spider {
     pub host: NonEmptyString,
     pub port: u16,
-}
-
-/// Spider resource group configuration.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-pub struct SpiderResourceGroup {
-    pub name: NonEmptyString,
 }
 
 /// Polling backoff configuration.
@@ -786,7 +775,7 @@ mod tests {
 
         const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
-        let archive_id = ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID");
+        let archive_id = ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID");
         let archive_output = ArchiveOutput {
             storage: ArchiveOutputStorage::S3 {
                 staging_directory: "var/data/staged-archives".to_owned(),

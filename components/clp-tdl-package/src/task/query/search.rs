@@ -353,7 +353,7 @@ mod tests {
     fn directory_selector() -> ArchiveSelector {
         ArchiveSelector::Directory {
             path: PathBuf::from("/archives/ds1"),
-            archive_id: ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
+            archive_id: ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         }
     }
 
@@ -567,7 +567,7 @@ mod tests {
             Path::new("/clp"),
             &config,
             "ds1",
-            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
         let ArchiveSelector::Directory { path, archive_id } = selector else {
@@ -576,7 +576,7 @@ mod tests {
         assert_eq!(path, PathBuf::from("/clp/var/data/archives/ds1"));
         assert_eq!(
             archive_id,
-            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID")
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID")
         );
         assert_eq!(credential_env, &[]);
 
@@ -593,7 +593,7 @@ mod tests {
             Path::new("/clp"),
             &config,
             "ds1",
-            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
         let ArchiveSelector::ObjectUrl(url) = selector else {
@@ -626,7 +626,7 @@ mod tests {
             Path::new("/clp"),
             &config,
             "ds1",
-            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
         let args = build_clp_s_search_args_for_result_cache(
             &selector,
@@ -655,7 +655,7 @@ mod tests {
             Path::new("/clp"),
             &config,
             "ds1",
-            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
         let ArchiveSelector::ObjectUrl(url) = selector else {
@@ -683,7 +683,7 @@ mod tests {
             &config,
             42,
             &unbounded_query_option(),
-            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
             None,
             &OutputHandle::File,
         )
@@ -702,7 +702,7 @@ mod tests {
             &config,
             42,
             &unbounded_query_option(),
-            ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
             None,
             &OutputHandle::ResultsCache {
                 uri: NonEmptyString::from_static_str(

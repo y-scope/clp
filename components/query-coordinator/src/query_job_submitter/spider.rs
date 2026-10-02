@@ -17,7 +17,8 @@ use spider_core::task::TdlContext;
 use spider_core::task::ValueTypeDescriptor;
 use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
-use spider_core::types::io::TaskInput;
+use spider_core::types::io::TaskGraphInput;
+use spider_core::types::io::TaskGraphInputBuilder;
 
 use crate::Error;
 use crate::query_job_submitter::ArchiveMetadata;
@@ -46,7 +47,7 @@ impl QueryJobSubmitter for SpiderClient {
             &output_handle,
             archives_to_search,
         )?;
-        let spider_job_id = self.submit_job(resource_group_id, &graph, inputs).await?;
+        let spider_job_id = self.submit_job(resource_group_id, &graph, &inputs).await?;
 
         tracing::info!(
             query_job_id = % query_job_id,
@@ -112,7 +113,7 @@ impl QueryJobSubmitter for SpiderClient {
 /// A tuple on success, containing:
 ///
 /// * The constructed task graph.
-/// * The positionally ordered external inputs.
+/// * The structured form of the task graph's input.
 ///
 /// # Errors
 ///
@@ -121,20 +122,25 @@ impl QueryJobSubmitter for SpiderClient {
 /// * Forwards [`TaskGraph::new`]'s return values on failure.
 /// * Forwards [`ValueTypeDescriptor::struct_from_name`]'s return values on failure.
 /// * Forwards [`TaskGraph::insert_task`]'s return values on failure.
-/// * Forwards [`rmp_serde::to_vec`]'s return values on failure.
+/// * Forwards [`TaskGraphInputBuilder::create_shared_input_payload`]'s return values on failure.
+/// * Forwards [`TaskGraphInputBuilder::append_shared_task_input`]'s return values on failure.
+/// * Forwards [`TaskGraphInputBuilder::append_task_input`]'s return values on failure.
 fn build_query_task_graph(
     query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
     output_handle: &OutputHandle,
     archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
-) -> Result<(TaskGraph, Vec<TaskInput>), Error> {
+) -> Result<(TaskGraph, TaskGraphInput), Error> {
     // NOTE: Keep these names and the input order in sync with the TDL package definitions.
     const CLP_TDL_PACKAGE_NAME: &str = "clp";
     const QUERY_TASK_FUNC: &str = "query::clp_s_search";
 
     let mut graph = TaskGraph::new(None, None)?;
 
-    let mut inputs = Vec::new();
+    let mut inputs = TaskGraphInputBuilder::new();
+    let query_job_id_input = inputs.create_shared_input_payload(&query_job_id)?;
+    let query_option_input = inputs.create_shared_input_payload(clp_s_query_option)?;
+    let output_handle_input = inputs.create_shared_input_payload(output_handle)?;
     for (archive, execution_policy) in archives_to_search {
         graph.insert_task(TaskDescriptor {
             tdl_context: TdlContext {
@@ -156,16 +162,12 @@ fn build_query_task_graph(
             outputs: vec![],
             input_sources: None,
         })?;
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(&query_job_id)?));
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(
-            clp_s_query_option,
-        )?));
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(
-            &archive.dataset,
-        )?));
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(&archive.id)?));
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(output_handle)?));
+        inputs.append_shared_task_input(query_job_id_input)?;
+        inputs.append_shared_task_input(query_option_input)?;
+        inputs.append_task_input(&archive.dataset)?;
+        inputs.append_task_input(&archive.id)?;
+        inputs.append_shared_task_input(output_handle_input)?;
     }
 
-    Ok((graph, inputs))
+    Ok((graph, inputs.build()))
 }

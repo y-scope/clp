@@ -2,6 +2,7 @@
 
 use clp_rust_utils::job_config::ingestion::JobId as IngestionJobId;
 use clp_rust_utils::s3::S3ObjectMetadataId;
+use spider_core::types::resource_group::ExternalResourceGroupCredentialsError;
 
 /// Errors returned by the compression coordinator.
 #[derive(Debug, thiserror::Error)]
@@ -48,6 +49,9 @@ pub enum Error {
     #[error("no S3 objects were partitioned into compression task inputs")]
     NoTaskInputs,
 
+    #[error("failed to load the resource group credentials: {0}")]
+    ResourceGroupCredentials(#[from] ExternalResourceGroupCredentialsError),
+
     #[error("S3 bucket mismatch: expected `{0}`, but got `{1}`")]
     S3BucketMismatch(String, String),
 
@@ -69,7 +73,7 @@ pub enum Error {
 
     /// Failed to msgpack-serialize a task input.
     #[error("failed to serialize a task input: {0}")]
-    TaskInputSerialization(#[from] rmp_serde::encode::Error),
+    TaskInputSerialization(#[from] spider_core::types::io::TaskGraphInputError),
 
     #[error("number of compression tasks {0} exceeds `i32::MAX`")]
     TooManyCompressionTasks(usize),
