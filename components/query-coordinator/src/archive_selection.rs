@@ -5,20 +5,22 @@ use std::collections::HashSet;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::job_config::SearchJobConfig;
-use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
 use sqlx::MySqlPool;
 
 use crate::Error;
 use crate::query_job_submitter::ArchiveMetadata;
+use crate::query_job_submitter::DatasetArchivesToSearch;
 
-/// Selects archives for a query job, ordered by descending archive end timestamp. If
-/// `archive_end_ts_lower_bound_millisecs` is set, archives that end before it are excluded.
+/// Selects the archives to search for a query job.
+///
+/// If `archive_end_ts_lower_bound_millisecs` is set, archives that end before it are excluded.
 ///
 /// # Returns
 ///
-/// The selected archives, each paired with `query_task_execution_policy`, on success.
+/// The selected archives, each paired with its dataset and `query_task_execution_policy`, ordered
+/// by descending end timestamp across all datasets, on success.
 ///
 /// # Errors
 ///
@@ -33,28 +35,56 @@ pub(crate) async fn prepare_search_task_inputs(
     datasets: &HashSet<NonEmptyString>,
     archive_end_ts_lower_bound_millisecs: Option<i64>,
     query_task_execution_policy: &ExecutionPolicy,
-) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
+) -> Result<Vec<(NonEmptyString, ArchiveMetadata, ExecutionPolicy)>, Error> {
     ensure_all_queried_datasets_exist(db_pool, db_config, datasets).await?;
 
     let mut selected_archives = Vec::new();
     for dataset in datasets {
-        selected_archives.extend(
-            fetch_archives(
-                db_pool,
-                db_config,
-                search_job_config,
-                dataset,
-                archive_end_ts_lower_bound_millisecs,
+        let archives = fetch_archives(
+            db_pool,
+            db_config,
+            search_job_config,
+            dataset.as_str(),
+            archive_end_ts_lower_bound_millisecs,
+        )
+        .await?;
+        selected_archives.extend(archives.into_iter().map(|archive| {
+            (
+                dataset.clone(),
+                archive,
+                query_task_execution_policy.clone(),
             )
-            .await?,
-        );
+        }));
     }
-    selected_archives.sort_by_key(|archive| Reverse(archive.end_timestamp));
+    selected_archives.sort_by_key(|(_, archive, _)| Reverse(archive.end_timestamp));
 
-    Ok(selected_archives
-        .into_iter()
-        .map(|archive| (archive, query_task_execution_policy.clone()))
-        .collect())
+    Ok(selected_archives)
+}
+
+/// Groups archives by dataset.
+///
+/// # Returns
+///
+/// The archives grouped by dataset, with each group's archives in their input order. Groups are
+/// ordered by the position of each dataset's first archive in the input.
+pub(crate) fn group_archives_by_dataset(
+    archives: Vec<(NonEmptyString, ArchiveMetadata, ExecutionPolicy)>,
+) -> Vec<DatasetArchivesToSearch> {
+    let mut archives_to_search: Vec<DatasetArchivesToSearch> = Vec::new();
+    for (dataset, archive, execution_policy) in archives {
+        if let Some(dataset_archives) = archives_to_search
+            .iter_mut()
+            .find(|dataset_archives| dataset_archives.dataset == dataset)
+        {
+            dataset_archives.archives.push((archive, execution_policy));
+        } else {
+            archives_to_search.push(DatasetArchivesToSearch {
+                dataset,
+                archives: vec![(archive, execution_policy)],
+            });
+        }
+    }
+    archives_to_search
 }
 
 /// Checks that every requested dataset exists in the metadata database.
@@ -108,10 +138,10 @@ async fn fetch_archives(
     db_pool: &MySqlPool,
     db_config: &Database,
     search_job_config: &SearchJobConfig,
-    dataset: &NonEmptyString,
+    dataset: &str,
     archive_end_ts_lower_bound_millisecs: Option<i64>,
 ) -> Result<Vec<ArchiveMetadata>, Error> {
-    let archives_table = db_config.archives_table_name(Some(dataset.as_str()));
+    let archives_table = db_config.archives_table_name(Some(dataset));
     let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
         "SELECT `id`, `size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
     ));
@@ -133,27 +163,7 @@ async fn fetch_archives(
     }
 
     Ok(query_builder
-        .build_query_as::<ArchiveRowProjection>()
+        .build_query_as::<ArchiveMetadata>()
         .fetch_all(db_pool)
-        .await?
-        .into_iter()
-        .map(|row| ArchiveMetadata {
-            id: row.id,
-            dataset: Some(dataset.clone()),
-            size: row.size,
-            end_timestamp: row.end_timestamp,
-        })
-        .collect())
-}
-
-/// Columns projected from an archives table.
-///
-/// [`ArchiveMetadata`] can't be decoded directly from a row since the dataset is encoded in the
-/// archives table's name rather than stored in a column.
-#[derive(sqlx::FromRow)]
-struct ArchiveRowProjection {
-    id: ArchiveId,
-    #[sqlx(try_from = "i64")]
-    size: u64,
-    end_timestamp: i64,
+        .await?)
 }

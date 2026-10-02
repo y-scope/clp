@@ -25,8 +25,9 @@ use sqlx::MySqlPool;
 use sqlx::Transaction;
 
 use crate::Error;
+use crate::archive_selection::group_archives_by_dataset;
 use crate::archive_selection::prepare_search_task_inputs;
-use crate::query_job_submitter::ArchiveMetadata;
+use crate::query_job_submitter::DatasetArchivesToSearch;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
 
@@ -216,9 +217,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`Self::start`]'s return values on failure.
     async fn submit(
         &self,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_search: Vec<DatasetArchivesToSearch>,
     ) -> Result<SpiderJobId, Error> {
-        let num_tasks = archives_to_search.len();
+        let num_tasks = archives_to_search
+            .iter()
+            .map(|dataset_archives| dataset_archives.archives.len())
+            .sum();
         let persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;
         let spider_job_id = self
@@ -245,23 +249,18 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
     /// Prepares the task inputs for the query job.
     ///
-    /// This method retrieves archive metadata from the CLP database, selects the archives matching
-    /// the query, and attaches the configured execution policy to each task.
-    ///
     /// # Returns
     ///
-    /// A vector of tuples on success, where each tuple contains:
-    ///
-    /// * The [`ArchiveMetadata`] identifying the archive searched by a single query task.
-    /// * The [`ExecutionPolicy`] for that task.
+    /// The archives to search grouped by dataset, each paired with the [`ExecutionPolicy`] for the
+    /// query task that searches it, on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`prepare_search_task_inputs`]'s return values on failure.
-    async fn plan(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        prepare_search_task_inputs(
+    async fn plan(&self) -> Result<Vec<DatasetArchivesToSearch>, Error> {
+        let selected_archives = prepare_search_task_inputs(
             &self.context.db_pool,
             &self.context.db_config,
             &self.search_job_config,
@@ -272,7 +271,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 .archive_selection_options
                 .query_task_execution_policy,
         )
-        .await
+        .await?;
+        Ok(group_archives_by_dataset(selected_archives))
     }
 
     /// Persists the Spider job ID and marks the query job as running.
