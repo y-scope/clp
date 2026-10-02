@@ -18,17 +18,28 @@ use spider_core::types::id::ResourceGroupId;
 
 use crate::Error;
 
-/// Metadata for an archive handled by query tasks.
-#[derive(Clone, Debug, Eq, PartialEq)]
+/// Metadata for an archive searched by a query task.
+#[derive(Clone, Debug, Eq, PartialEq, sqlx::FromRow)]
 pub struct ArchiveMetadata {
     /// The archive's ID.
     pub id: ArchiveId,
 
-    /// The archive's dataset, or `None` for the default dataset.
-    pub dataset: Option<NonEmptyString>,
-
     /// The archive's compressed size in bytes.
+    #[sqlx(try_from = "i64")]
     pub size: u64,
+
+    /// The archive's end timestamp in Unix epoch milliseconds.
+    pub end_timestamp: i64,
+}
+
+/// The archives to search in one dataset.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DatasetArchivesToSearch {
+    /// The dataset containing the archives.
+    pub dataset: NonEmptyString,
+
+    /// The archives to search, each searched by a query task with the paired execution policy.
+    pub archives: Vec<(ArchiveMetadata, ExecutionPolicy)>,
 }
 
 /// The terminal outcome of a query job.
@@ -56,8 +67,7 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     /// * `resource_group_id` - The Spider resource group to register the job under.
     /// * `clp_s_query_option` - `clp-s` query options shared by every task in the job.
     /// * `output_handle` - The output handle selecting how the query outputs are returned.
-    /// * `archives_to_search` - The archives to search, each represents a query task paired with
-    ///   its execution policy.
+    /// * `archives_to_search` - The archives to search, grouped by dataset.
     ///
     /// # Returns
     ///
@@ -72,7 +82,7 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
         output_handle: OutputHandle,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_search: Vec<DatasetArchivesToSearch>,
     ) -> Result<JobId, Error>;
 
     /// Idempotently starts the job identified by `spider_job_id` (only if it hasn't already been

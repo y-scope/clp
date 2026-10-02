@@ -1,10 +1,14 @@
 //! Handle for driving a single query job to completion.
 
+use std::collections::HashSet;
 use std::num::NonZeroU32;
+use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
+use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -13,7 +17,6 @@ use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
-use spider_core::task::ExecutionPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
 use sqlx::MySql;
@@ -21,19 +24,28 @@ use sqlx::MySqlPool;
 use sqlx::Transaction;
 
 use crate::Error;
-use crate::query_job_submitter::ArchiveMetadata;
+use crate::archive_selection::prepare_search_task_inputs;
+use crate::query_job_submitter::DatasetArchivesToSearch;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
 
 /// Options for a query job running in Spider.
 pub struct SpiderOption {
+    pub query_task_max_retry: u32,
     pub poll_interval: Duration,
+}
+
+/// Options for selecting archives to search.
+pub struct ArchiveSelectionOptions {
+    pub archive_retention_period_millisecs: Option<NonZeroU64>,
+    pub max_datasets_per_query: Option<NonZeroUsize>,
 }
 
 /// Resources shared by query job handles created by the coordinator.
 pub struct QueryJobHandleContext {
     pub db_pool: MySqlPool,
     pub db_config: Database,
+    pub archive_selection_options: ArchiveSelectionOptions,
     pub spider_option: SpiderOption,
 }
 
@@ -47,9 +59,11 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
-    _search_job_config: SearchJobConfig,
+    search_job_config: SearchJobConfig,
     clp_s_query_option: ClpSQueryOption,
     output_handle: OutputHandle,
+    datasets: HashSet<NonEmptyString>,
+    archive_end_ts_lower_bound_millisecs: Option<i64>,
 }
 
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
@@ -64,7 +78,10 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::InvalidQueryJobConfig`] if the query string is empty.
+    /// * [`Error::InvalidQueryJobConfig`] if:
+    ///   * The query string is empty.
+    ///   * The begin timestamp exceeds the end timestamp.
+    /// * Forwards [`deduplicate_and_validate_requested_datasets`]'s return values on failure.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -72,11 +89,33 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         resource_group_id: ResourceGroupId,
         search_job_config: SearchJobConfig,
         output_handle: OutputHandle,
+        job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
         let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
             .map_err(|_| {
                 Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
             })?;
+
+        if let (Some(begin_timestamp), Some(end_timestamp)) = (
+            search_job_config.begin_timestamp,
+            search_job_config.end_timestamp,
+        ) && begin_timestamp > end_timestamp
+        {
+            return Err(Error::InvalidQueryJobConfig(format!(
+                "begin timestamp {begin_timestamp} is greater than end timestamp {end_timestamp}"
+            )));
+        }
+
+        let datasets = deduplicate_and_validate_requested_datasets(
+            search_job_config.datasets.as_deref(),
+            context.archive_selection_options.max_datasets_per_query,
+        )?;
+
+        let archive_end_ts_lower_bound_millisecs = context
+            .archive_selection_options
+            .archive_retention_period_millisecs
+            .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
+
         let clp_s_query_option = ClpSQueryOption {
             query_string,
             max_num_results: NonZeroU32::new(search_job_config.max_num_results),
@@ -90,9 +129,11 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             query_job_id,
             job_submitter,
             resource_group_id,
-            _search_job_config: search_job_config,
+            search_job_config,
             clp_s_query_option,
             output_handle,
+            datasets,
+            archive_end_ts_lower_bound_millisecs,
         })
     }
 
@@ -174,9 +215,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * Forwards [`Self::start`]'s return values on failure.
     async fn submit(
         &self,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_search: Vec<DatasetArchivesToSearch>,
     ) -> Result<SpiderJobId, Error> {
-        let num_tasks = archives_to_search.len();
+        let num_tasks = archives_to_search
+            .iter()
+            .map(|dataset_archives| dataset_archives.archives.len())
+            .sum();
         let persisted_num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyQueryTasks(num_tasks))?;
         let spider_job_id = self
@@ -203,21 +247,26 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
     /// Prepares the task inputs for the query job.
     ///
-    /// This method retrieves archive metadata from the CLP database, selects the archives matching
-    /// the query, and attaches the configured execution policy to each task.
-    ///
     /// # Returns
     ///
-    /// A vector of tuples on success, where each tuple contains:
-    ///
-    /// * The [`ArchiveMetadata`] identifying the archive searched by a single query task.
-    /// * The [`ExecutionPolicy`] for that task.
+    /// The archives to search grouped by dataset, each paired with the
+    /// [`spider_core::task::ExecutionPolicy`] for the query task that searches it, on success.
     ///
     /// # Errors
     ///
-    /// Returns an error if archive input preparation fails.
-    async fn plan(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
-        todo!("prepare query task inputs")
+    /// Returns an error if:
+    ///
+    /// * Forwards [`prepare_search_task_inputs`]'s return values on failure.
+    async fn plan(&self) -> Result<Vec<DatasetArchivesToSearch>, Error> {
+        prepare_search_task_inputs(
+            &self.context.db_pool,
+            &self.context.db_config,
+            &self.search_job_config,
+            &self.datasets,
+            self.archive_end_ts_lower_bound_millisecs,
+            self.context.spider_option.query_task_max_retry,
+        )
+        .await
     }
 
     /// Persists the Spider job ID and marks the query job as running.
@@ -449,4 +498,60 @@ impl From<&QueryJobOutcome> for QueryJobStatus {
             QueryJobOutcome::Cancelled => Self::Cancelled,
         }
     }
+}
+
+/// Validates and deduplicates the datasets requested by a query job.
+///
+/// # Returns
+///
+/// The distinct requested datasets on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`Error::InvalidQueryJobConfig`] if:
+///   * `requested_datasets` is `None`, since clp-text queries aren't supported.
+///   * `requested_datasets` is empty.
+///   * A dataset name doesn't match [`VALID_DATASET_NAME_REGEX`].
+///   * The number of distinct datasets exceeds `max_datasets_per_query`.
+fn deduplicate_and_validate_requested_datasets(
+    requested_datasets: Option<&[String]>,
+    max_datasets_per_query: Option<NonZeroUsize>,
+) -> Result<HashSet<NonEmptyString>, Error> {
+    let Some(requested_datasets) = requested_datasets else {
+        return Err(Error::InvalidQueryJobConfig(
+            "clp-text queries are not supported".to_owned(),
+        ));
+    };
+
+    if requested_datasets.is_empty() {
+        return Err(Error::InvalidQueryJobConfig(
+            "the datasets list must not be empty".to_owned(),
+        ));
+    }
+
+    let datasets = requested_datasets
+        .iter()
+        .map(|dataset| {
+            NonEmptyString::new(dataset.clone())
+                .ok()
+                .filter(|name| VALID_DATASET_NAME_REGEX.is_match(name.as_str()))
+                .ok_or_else(|| {
+                    Error::InvalidQueryJobConfig(format!("invalid dataset name `{dataset}`"))
+                })
+        })
+        .collect::<Result<HashSet<_>, _>>()?;
+
+    if let Some(max_datasets_per_query) = max_datasets_per_query
+        && datasets.len() > max_datasets_per_query.get()
+    {
+        return Err(Error::InvalidQueryJobConfig(format!(
+            "the number of requested datasets ({}) exceeds `max_datasets_per_query` \
+             ({max_datasets_per_query})",
+            datasets.len()
+        )));
+    }
+
+    Ok(datasets)
 }

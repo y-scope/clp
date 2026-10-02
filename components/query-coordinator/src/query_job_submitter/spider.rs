@@ -10,7 +10,6 @@ use spider_client::SpiderClient;
 use spider_client::error::ClientError;
 use spider_core::job::JobState;
 use spider_core::task::DataTypeDescriptor;
-use spider_core::task::ExecutionPolicy;
 use spider_core::task::TaskDescriptor;
 use spider_core::task::TaskGraph;
 use spider_core::task::TdlContext;
@@ -20,7 +19,7 @@ use spider_core::types::id::ResourceGroupId;
 use spider_core::types::io::TaskInput;
 
 use crate::Error;
-use crate::query_job_submitter::ArchiveMetadata;
+use crate::query_job_submitter::DatasetArchivesToSearch;
 use crate::query_job_submitter::QueryJobOutcome;
 use crate::query_job_submitter::QueryJobSubmitter;
 
@@ -38,7 +37,7 @@ impl QueryJobSubmitter for SpiderClient {
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
         output_handle: OutputHandle,
-        archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        archives_to_search: Vec<DatasetArchivesToSearch>,
     ) -> Result<JobId, Error> {
         let (graph, inputs) = build_query_task_graph(
             query_job_id,
@@ -119,14 +118,14 @@ impl QueryJobSubmitter for SpiderClient {
 /// Returns an error if:
 ///
 /// * Forwards [`TaskGraph::new`]'s return values on failure.
+/// * Forwards [`rmp_serde::to_vec`]'s return values on failure.
 /// * Forwards [`ValueTypeDescriptor::struct_from_name`]'s return values on failure.
 /// * Forwards [`TaskGraph::insert_task`]'s return values on failure.
-/// * Forwards [`rmp_serde::to_vec`]'s return values on failure.
 fn build_query_task_graph(
     query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
     output_handle: &OutputHandle,
-    archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+    archives_to_search: Vec<DatasetArchivesToSearch>,
 ) -> Result<(TaskGraph, Vec<TaskInput>), Error> {
     // NOTE: Keep these names and the input order in sync with the TDL package definitions.
     const CLP_TDL_PACKAGE_NAME: &str = "clp";
@@ -134,37 +133,47 @@ fn build_query_task_graph(
 
     let mut graph = TaskGraph::new(None, None)?;
 
+    let serialized_query_job_id = rmp_serde::to_vec(&query_job_id)?;
+    let serialized_clp_s_query_option = rmp_serde::to_vec(clp_s_query_option)?;
+    let serialized_output_handle = rmp_serde::to_vec(output_handle)?;
+
     let mut inputs = Vec::new();
-    for (archive, execution_policy) in archives_to_search {
-        graph.insert_task(TaskDescriptor {
-            tdl_context: TdlContext {
-                package: CLP_TDL_PACKAGE_NAME.to_owned(),
-                task_func: QUERY_TASK_FUNC.to_owned(),
-            },
-            execution_policy: Some(execution_policy),
-            inputs: vec![
-                DataTypeDescriptor::Value(ValueTypeDescriptor::int32()),
-                DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                    "ClpSQueryOption",
-                )?),
-                DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                    "Option<NonEmptyString>",
-                )?),
-                DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("NonEmptyString")?),
-                DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("OutputHandle")?),
-            ],
-            outputs: vec![],
-            input_sources: None,
-        })?;
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(&query_job_id)?));
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(
-            clp_s_query_option,
-        )?));
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(
-            &archive.dataset,
-        )?));
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(&archive.id)?));
-        inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(output_handle)?));
+    for DatasetArchivesToSearch { dataset, archives } in archives_to_search {
+        // The task takes the dataset as an `Option<NonEmptyString>`.
+        let serialized_dataset = rmp_serde::to_vec(&Some(dataset))?;
+        for (archive, execution_policy) in archives {
+            graph.insert_task(TaskDescriptor {
+                tdl_context: TdlContext {
+                    package: CLP_TDL_PACKAGE_NAME.to_owned(),
+                    task_func: QUERY_TASK_FUNC.to_owned(),
+                },
+                execution_policy: Some(execution_policy),
+                inputs: vec![
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::int32()),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
+                        "ClpSQueryOption",
+                    )?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
+                        "Option<NonEmptyString>",
+                    )?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
+                        "NonEmptyString",
+                    )?),
+                    DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
+                        "OutputHandle",
+                    )?),
+                ],
+                outputs: vec![],
+                input_sources: None,
+            })?;
+            inputs.push(TaskInput::ValuePayload(serialized_query_job_id.clone()));
+            inputs.push(TaskInput::ValuePayload(
+                serialized_clp_s_query_option.clone(),
+            ));
+            inputs.push(TaskInput::ValuePayload(serialized_dataset.clone()));
+            inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(&archive.id)?));
+            inputs.push(TaskInput::ValuePayload(serialized_output_handle.clone()));
+        }
     }
 
     Ok((graph, inputs))
