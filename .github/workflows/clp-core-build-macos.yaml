@@ -57,6 +57,14 @@ jobs:
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
 
+      # Work around y-scope/clp#2544.
+      - name: "Remove the runner image's stale openssl@1.1 symlink"
+        run: |
+          openssl_link="$(brew --prefix)/bin/openssl"
+          case "$(readlink "$openssl_link" 2>/dev/null)" in
+            */openssl@1.1/*) rm -f "$openssl_link" ;;
+          esac
+
       - name: "Remove preinstalled programs which will conflict with the pipx-installed packages"
         run: |
           if brew list --formula cmake >/dev/null 2>&1; then
