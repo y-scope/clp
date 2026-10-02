@@ -724,7 +724,7 @@ mod tests {
 
         const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
-        let archive_id = ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID");
+        let archive_id = ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID");
         let archive_output = ArchiveOutput {
             storage: ArchiveOutputStorage::S3 {
                 staging_directory: "var/data/staged-archives".to_owned(),
