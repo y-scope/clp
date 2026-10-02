@@ -152,6 +152,7 @@ CompressionOrchestrationStr = Annotated[CompressionOrchestration, StrEnumSeriali
 
 class SpiderSchedulerPolicy(SnakeCaseStrEnum):
     ROUND_ROBIN = auto()
+    RESOURCE_GROUP_ROUND_ROBIN = auto()
 
 
 SpiderSchedulerPolicyStr = Annotated[SpiderSchedulerPolicy, StrEnumSerializer]
@@ -814,8 +815,23 @@ class SpiderRoundRobin(BaseModel):
     tick_interval_ms: PositiveInt | None = None
 
 
+class SpiderResourceGroupRoundRobin(BaseModel):
+    """Tuning for Spider's `resource_group_round_robin` scheduler policy."""
+
+    active_job_list_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    dispatch_queue_capacity: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
+    ready_task_capacity: PositiveInt | None = None
+    storage_poll_timeout_ms: PositiveInt | None = None
+    tick_interval_ms: PositiveInt | None = None
+
+
 class SpiderScheduler(BaseModel):
-    DEFAULT_POLICY: ClassVar[SpiderSchedulerPolicy] = SpiderSchedulerPolicy.ROUND_ROBIN
+    DEFAULT_POLICY: ClassVar[SpiderSchedulerPolicy] = (
+        SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN
+    )
 
     log_level: LoggingLevelRust | None = None
     policy: SpiderSchedulerPolicyStr | None = None
@@ -823,6 +839,7 @@ class SpiderScheduler(BaseModel):
     stop_timeout_sec: PositiveInt | None = None
     em_registry: SpiderEmRegistry = SpiderEmRegistry()
     round_robin: SpiderRoundRobin = SpiderRoundRobin()
+    resource_group_round_robin: SpiderResourceGroupRoundRobin = SpiderResourceGroupRoundRobin()
 
 
 class SpiderLiveness(BaseModel):
@@ -830,8 +847,24 @@ class SpiderLiveness(BaseModel):
     storage_heartbeat_interval_sec: PositiveInt | None = None
 
 
+class SpiderWorkerPool(BaseModel):
+    """A pool of Spider workers."""
+
+    replicas: NonNegativeInt = 2
+
+
+class SpiderWorkerPools(BaseModel):
+    """
+    Spider worker pools. `general` runs any resource group's tasks; each other pool is dedicated
+    to the resource group of the same name.
+    """
+
+    general: SpiderWorkerPool = SpiderWorkerPool()
+    compression: SpiderWorkerPool = SpiderWorkerPool()
+
+
 class SpiderWorker(BaseModel):
-    replicas: PositiveInt | None = None
+    pools: SpiderWorkerPools = SpiderWorkerPools()
     log_level: LoggingLevelRust | None = None
     connection_pool_size: PositiveInt | None = None
     scheduler_poll_wait_ms: PositiveInt | None = None

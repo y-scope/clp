@@ -1,3 +1,19 @@
+x-clp-spider-worker-defaults: &clp_spider_worker_defaults
+  image: >-
+    ${CLP_SPIDER_WORKER_CONTAINER_IMAGE_REF:-ghcr.io/y-scope/clp/clp-spider-worker:main}
+  user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
+  volumes:
+    - type: "bind"
+      source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yaml"
+      target: "/etc/clp-config.yaml"
+      read_only: true
+    - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
+
+x-clp-spider-worker-env-defaults: &clp_spider_worker_env_defaults
+  CLP_CONFIG_PATH: "/etc/clp-config.yaml"
+  CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+  CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
+
 services:
   spider-scheduler:
     image: >-
@@ -8,16 +24,22 @@ services:
       ${SPIDER_STORAGE_IMAGE_REF:-ghcr.io/y-scope/spider/storage:sha-f3a97c2}
 
   spider-worker:
-    image: >-
-      ${CLP_SPIDER_WORKER_CONTAINER_IMAGE_REF:-ghcr.io/y-scope/clp/clp-spider-worker:main}
-    user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
+    <<: *clp_spider_worker_defaults
     environment:
-      CLP_CONFIG_PATH: "/etc/clp-config.yaml"
-      CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
-      CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
-    volumes:
-      - type: "bind"
-        source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yaml"
-        target: "/etc/clp-config.yaml"
-        read_only: true
-      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
+      <<: *clp_spider_worker_env_defaults
+
+  spider-worker-compression:
+    <<: *clp_spider_worker_defaults
+    extends:
+      file: "compose.yaml"
+      service: "spider-worker-dedicated"
+    environment:
+      <<: *clp_spider_worker_env_defaults
+      SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "compression"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "${CLP_SPIDER_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
+    # The worker can only register after the coordinator creates the resource group.
+    depends_on:
+      compression-coordinator:
+        condition: "service_started"
+    deploy:
+      replicas: "${CLP_SPIDER_COMPRESSION_WORKER_REPLICAS:-2}"
