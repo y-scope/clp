@@ -108,9 +108,8 @@ impl Coordinator {
             .inspect_err(|e| {
                 tracing::error!(error = % e, "Failed to connect to Spider.");
             })?;
-        let credentials = ExternalResourceGroupCredentials::from_env()?;
         let resource_group_id = spider_client
-            .add_or_verify_resource_group(credentials)
+            .add_or_verify_resource_group(ExternalResourceGroupCredentials::from_env()?)
             .await
             .inspect_err(|e| {
                 tracing::error!(error = % e, "Failed to add or verify resource group.");

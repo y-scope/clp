@@ -113,7 +113,7 @@ impl QueryJobSubmitter for SpiderClient {
 /// A tuple on success, containing:
 ///
 /// * The constructed task graph.
-/// * The positionally ordered external inputs.
+/// * The structured form of the task graph's input.
 ///
 /// # Errors
 ///
