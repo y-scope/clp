@@ -132,7 +132,6 @@ auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::optional<std::string
     }
 
     static constexpr std::string_view cDebianCaBundlePath{"/etc/ssl/certs/ca-certificates.crt"};
-    static constexpr std::string_view cCentOsCaBundlePath{"/etc/pki/tls/certs/ca-bundle.crt"};
 
     // Read-only operation. No multithreaded context.
     // NOLINTNEXTLINE(concurrency-mt-unsafe)
@@ -146,9 +145,6 @@ auto CurlDownloadHandler::get_host_ca_bundle_path() -> std::optional<std::string
     }
     if (std::filesystem::exists(cDebianCaBundlePath)) {
         return std::string{cDebianCaBundlePath};
-    }
-    if (std::filesystem::exists(cCentOsCaBundlePath)) {
-        return std::string{cCentOsCaBundlePath};
     }
     return std::nullopt;
 }

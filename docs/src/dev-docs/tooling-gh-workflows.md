@@ -29,15 +29,12 @@ shown below.
   }
 }%%
 flowchart LR
-    calc-build-triggers --> centos-stream-9-deps-image
     calc-build-triggers --> manylinux_2_28-deps-image
     calc-build-triggers --> musllinux_1_2-deps-image
     calc-build-triggers --> ubuntu-jammy-deps-image
-    calc-build-triggers --> centos-stream-9-binaries
     calc-build-triggers --> manylinux_2_28-x86_64-binaries
     calc-build-triggers --> musllinux_1_2-x86_64-binaries
     calc-build-triggers --> ubuntu-jammy-binaries
-    centos-stream-9-deps-image --> centos-stream-9-binaries
     manylinux_2_28-deps-image --> manylinux_2_28-deps-image-merge
     manylinux_2_28-deps-image --> manylinux_2_28-x86_64-binaries
     manylinux_2_28-deps-image-merge --> manylinux_2_28-x86_64-binaries
@@ -55,8 +52,6 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
 * `calc-build-triggers`: Analyzes the changes in the pull request or commit to determine which of
   the following jobs should run, which container images should be published, and which of the
   following jobs should use a published image.
-* `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
-  build CLP-core in a CentOS Stream 9 x86 environment.
 * `manylinux_2_28-deps-image`: A matrix job that builds, for each of amd64 and arm64 natively on
   its matching runner, a container image containing the dependencies necessary to build CLP-core
   in a manylinux_2_28 environment. On push to `main`, each arch is published under an
@@ -71,8 +66,6 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   `musllinux_1_2-deps-image` into a single multi-arch `:main` manifest.
 * `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build
   CLP-core in an Ubuntu Jammy x86 environment.
-* `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
-  and runs core's unit tests.
 * `manylinux_2_28-x86_64-binaries`: Builds the CLP-core binaries in the built manylinux_2_28
   container and runs core's unit tests.
 * `musllinux_1_2-x86_64-binaries`: Builds the CLP-core binaries in the built musllinux_1_2 container
