@@ -547,8 +547,6 @@ bool search(CommandLineArguments& command_line_args) {
             return false;
         }
 
-        // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
         // Perform search
         if (!search(search_strings, command_line_args, archive_reader, num_matches)) {
             return false;

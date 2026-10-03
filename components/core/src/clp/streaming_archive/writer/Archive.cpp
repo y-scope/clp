@@ -4,8 +4,8 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -13,10 +13,6 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/LogParser.hpp>
-#include <log_surgeon/Token.hpp>
 #include <nlohmann/json.hpp>
 
 #include <clp/Defs.h>
@@ -123,22 +119,6 @@ void Archive::open(UserConfig const& user_config) {
     m_target_segment_uncompressed_size = user_config.target_segment_uncompressed_size;
     m_next_segment_id = 0;
     m_compression_level = user_config.compression_level;
-
-    /// TODO: add schema file size to m_stable_size???
-    // Copy schema file into archive
-    if (!m_schema_file_path.empty()) {
-        std::filesystem::path const archive_schema_filesystem_path = archive_path / cSchemaFileName;
-        try {
-            std::filesystem::path const schema_filesystem_path = m_schema_file_path;
-            std::filesystem::copy(schema_filesystem_path, archive_schema_filesystem_path);
-        } catch (FileWriter::OperationFailed& e) {
-            SPDLOG_CRITICAL(
-                    "Failed to copy schema file to archive: {}",
-                    archive_schema_filesystem_path.c_str()
-            );
-            throw;
-        }
-    }
 
     // Save metadata to disk
     auto metadata_file_path = archive_path / cMetadataFileName;
@@ -315,204 +295,6 @@ Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_unco
     m_file->write_encoded_msg(timestamp, logtype_id, encoded_vars, var_ids, num_uncompressed_bytes);
 
     update_segment_indices(logtype_id, var_ids);
-}
-
-auto Archive::add_token_to_dicts(log_surgeon::LogEventView const& event, log_surgeon::Token token)
-        -> void {
-    auto const* type_ids{token.get_type_ids()};
-    if (nullptr == type_ids || type_ids->empty()) {
-        throw std::runtime_error("Token has no type IDs: " + token.to_string());
-    }
-    auto const token_type{type_ids->at(0)};
-    switch (token_type) {
-        case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
-        case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
-            m_logtype_dict_entry.add_static_text(token.to_string_view());
-            break;
-        }
-        case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
-            encoded_variable_t encoded_var{};
-            if (false
-                == EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                        token.to_string_view(),
-                        encoded_var
-                ))
-            {
-                variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string_view(), id);
-                m_var_ids.push_back(id);
-                encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                m_logtype_dict_entry.add_dictionary_var();
-            } else {
-                m_logtype_dict_entry.add_int_var();
-            }
-            m_encoded_vars.push_back(encoded_var);
-            break;
-        }
-        case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
-            encoded_variable_t encoded_var{};
-            if (false
-                == EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                        token.to_string_view(),
-                        encoded_var
-                ))
-            {
-                variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string_view(), id);
-                m_var_ids.push_back(id);
-                encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                m_logtype_dict_entry.add_dictionary_var();
-            } else {
-                m_logtype_dict_entry.add_float_var();
-            }
-            m_encoded_vars.push_back(encoded_var);
-            break;
-        }
-        default: {
-            // If there are no capture groups the entire variable token is stored as a variable.
-            // If the variable token contains capture groups, we break the token up by storing
-            // each capture as a variable and any substrings surrounding the capture as part of
-            // the logtype. Capture repetition currently does not work so we explicitly only
-            // store the first capture.
-
-            auto const& lexer{event.get_log_parser().m_lexer};
-            auto captures{lexer.get_captures_from_rule_id(token_type)};
-            if (false == captures.has_value()) {
-                variable_dictionary_id_t id{};
-                m_var_dict.add_entry(token.to_string_view(), id);
-                m_var_ids.push_back(id);
-                m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
-                m_logtype_dict_entry.add_dictionary_var();
-                break;
-            }
-
-            if (captures.value().empty()) {
-                SPDLOG_ERROR(
-                        "Capture group list empty for token {}. Storing token as static text.",
-                        event.get_log_parser().get_id_symbol(token_type)
-                );
-                m_logtype_dict_entry.add_static_text(token.to_string_view());
-                break;
-            }
-
-            auto capture_pos_result{event.get_capture_position(token, captures.value().at(0))};
-            if (capture_pos_result.has_error()) {
-                SPDLOG_ERROR(
-                        "Capture group match not found for token {} ({} {}). Storing token as "
-                        "static text.",
-                        event.get_log_parser().get_id_symbol(token_type),
-                        capture_pos_result.error().category().name(),
-                        capture_pos_result.error().message()
-                );
-                m_logtype_dict_entry.add_static_text(token.to_string_view());
-                break;
-            }
-            auto const [capture_start_pos, capture_end_pos]{capture_pos_result.value()};
-
-            auto const before_capture{
-                    token.get_sub_token(token.get_start_pos(), capture_start_pos).to_string_view()
-            };
-            m_logtype_dict_entry.add_static_text(before_capture);
-
-            variable_dictionary_id_t id{};
-            m_var_dict.add_entry(
-                    token.get_sub_token(capture_start_pos, capture_end_pos).to_string_view(),
-                    id
-            );
-            m_var_ids.push_back(id);
-            m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
-            m_logtype_dict_entry.add_dictionary_var();
-
-            auto const after_capture{
-                    token.get_sub_token(capture_end_pos, token.get_end_pos()).to_string_view()
-            };
-            m_logtype_dict_entry.add_static_text(after_capture);
-            break;
-        }
-    }
-}
-
-auto Archive::write_msg_using_schema(log_surgeon::LogEventView const& event) -> void {
-    epochtime_t timestamp{0};
-    TimestampPattern const* timestamp_pattern{nullptr};
-    auto const& log_buf{event.get_log_output_buffer()};
-    if (log_buf->has_header()) {
-        size_t start{};
-        size_t end{};
-        timestamp_pattern = TimestampPattern::search_known_ts_patterns(
-                log_buf->get_mutable_token(0).to_string(),
-                timestamp,
-                start,
-                end
-        );
-        if (nullptr == timestamp_pattern) {
-            throw(std::runtime_error(
-                    "Schema contains a timestamp regex that matches "
-                    + log_buf->get_mutable_token(0).to_string()
-                    + " which does not match any known timestamp pattern."
-            ));
-        }
-        if (m_old_ts_pattern != timestamp_pattern) {
-            change_ts_pattern(timestamp_pattern);
-            m_old_ts_pattern = const_cast<TimestampPattern*>(timestamp_pattern);
-        }
-    }
-    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
-        split_file_and_archive(
-                m_archive_user_config,
-                m_path_for_compression,
-                m_group_id,
-                timestamp_pattern,
-                *this
-        );
-    } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
-        split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
-    }
-    m_encoded_vars.clear();
-    m_var_ids.clear();
-    m_logtype_dict_entry.clear();
-
-    size_t num_uncompressed_bytes{0};
-    // Timestamp is included in the uncompressed message size
-    auto start_pos{log_buf->get_token(0).get_start_pos()};
-    if (timestamp_pattern == nullptr) {
-        start_pos = log_buf->get_token(1).get_start_pos();
-    }
-    auto const end_pos{log_buf->get_token(log_buf->pos() - 1).get_end_pos()};
-    if (start_pos <= end_pos) {
-        num_uncompressed_bytes = end_pos - start_pos;
-    } else {
-        num_uncompressed_bytes = log_buf->get_token(0).get_buffer_size() - start_pos + end_pos;
-    }
-    for (auto token_idx{1}; token_idx < log_buf->pos(); token_idx++) {
-        auto token{log_buf->get_token(token_idx)};
-        auto const* type_ids{token.get_type_ids()};
-        if (nullptr == type_ids || type_ids->empty()) {
-            throw std::runtime_error("Token has no type IDs: " + token.to_string());
-        }
-        auto const token_type{type_ids->at(0)};
-        if (log_buf->has_delimiters() && (timestamp_pattern != nullptr || token_idx > 1)
-            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
-            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
-        {
-            m_logtype_dict_entry.add_static_text(token.get_delimiter());
-            token.increment_start_pos();
-        }
-        add_token_to_dicts(event, token);
-    }
-    if (false == m_logtype_dict_entry.get_value().empty()) {
-        logtype_dictionary_id_t logtype_id{};
-        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-        m_file->write_encoded_msg(
-                timestamp,
-                logtype_id,
-                m_encoded_vars,
-                m_var_ids,
-                num_uncompressed_bytes
-        );
-
-        update_segment_indices(logtype_id, m_var_ids);
-    }
 }
 
 template <typename encoded_variable_t>

@@ -9,10 +9,7 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
-namespace clp_s {
-// Forward include
-class ArchiveReader;
-}  // namespace clp_s
+#include <clp_s/ArchiveReader.hpp>
 
 namespace clp_s::ffi::sfa {
 /**
@@ -54,26 +51,30 @@ public:
      * Creates an SFA reader from a filesystem archive path.
      *
      * @param archive_path Path to the single-file archive.
+     * @param options Options controlling how the archive is read.
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      * - `SfaErrorCodeEnum::NoMemory` if archive initialization fails due to OOM issues.
      * - Forwards `ClpArchiveReader::precompute_archive_metadata`'s return values on failure.
      */
-    [[nodiscard]] static auto create(std::string_view archive_path)
+    [[nodiscard]] static auto
+    create(std::string_view archive_path, clp_s::ArchiveReader::Options const& options)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     /**
      * Creates an SFA reader from in memory archive bytes, taking ownership of the buffer.
      *
      * @param archive_data Bytes of a single-file archive.
+     * @param options Options controlling how the archive is read.
      * @return A result containing the newly constructed `ClpArchiveReader` on success, or an
      * error code indicating the failure:
      * - `SfaErrorCodeEnum::IoFailure` if archive open/initialization fails.
      * - `SfaErrorCodeEnum::NoMemory` if allocating/copying archive bytes fails.
      * - Forwards `ClpArchiveReader::precompute_archive_metadata`'s return values on failure.
      */
-    [[nodiscard]] static auto create(std::vector<char>&& archive_data)
+    [[nodiscard]] static auto
+    create(std::vector<char>&& archive_data, clp_s::ArchiveReader::Options const& options)
             -> ystdlib::error_handling::Result<ClpArchiveReader>;
 
     // Destructor

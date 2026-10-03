@@ -4,9 +4,7 @@
 /**
  * TODO Technically, the methods in this file are more general than for their use in generating
  * CLP's IR. However, introducing a parsing namespace in the root source directory would be
- * confusing since we also have the compressor_frontend namespace. Once most of
- * compressor_frontend is moved into https://github.com/y-scope/log-surgeon, we should reconsider
- * the placement of the methods in this file.
+ * confusing since we also have the compressor_frontend namespace.
  */
 
 #include <string_view>

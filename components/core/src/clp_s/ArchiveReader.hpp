@@ -4,9 +4,10 @@
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <span>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -19,10 +20,15 @@
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/PackedStreamReader.hpp>
 #include <clp_s/ReaderUtils.hpp>
+#include <clp_s/Schema.hpp>
 #include <clp_s/SchemaReader.hpp>
+#include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/Projection.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryReader.hpp>
+#include <clpp/Defs.hpp>
+#include <clpp/LogShapeStat.hpp>
+#include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
 class ArchiveReader {
@@ -34,24 +40,32 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    struct Options {
+        NetworkAuthOption m_network_auth{};
+        bool m_experimental{false};
+        bool m_extract_mode{false};
+    };
+
     // Constructor
     ArchiveReader() : m_is_open(false) {}
 
     /**
      * Opens an archive for reading.
      * @param archive_path
-     * @param network_auth
+     * @param options
      */
-    void open(Path const& archive_path, NetworkAuthOption const& network_auth);
+    void open(Path const& archive_path, Options const& options);
 
     /**
      * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
-     * @param single_file_archive_reader The already opened archive reader
-     * @param archive_id The unique name or identifier for the archive
+     * @param single_file_archive_reader The already opened archive reader.
+     * @param archive_id The unique name or identifier for the archive.
+     * @param options Options controlling how the archive is read.
      */
     auto open(
             std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
-            std::string_view archive_id
+            std::string_view archive_id,
+            Options const& options
     ) -> void;
 
     /**
@@ -66,34 +80,26 @@ public:
     void open_packed_streams();
 
     /**
-     * Reads the variable dictionary from the archive.
-     * @param lazy
-     * @return the variable dictionary reader
+     * For single-file archives, reads the sections stored before `section` if they haven't already
+     * been read. For multi-file archives, this function is a no-op as it is possible to read
+     * sections out of order.
+     *
+     * @param section
+     * @throws OperationFailed(ErrorCodeFailure) if metadata reading fails.
+     * @throw Propagates exceptions from the `get_` function of each archive section.
      */
-    std::shared_ptr<VariableDictionaryReader> read_variable_dictionary(bool lazy = false) {
-        m_var_dict->read_entries(lazy);
-        return m_var_dict;
-    }
+    auto ensure_section_readable(std::string_view section) -> void;
 
     /**
-     * Reads the log type dictionary from the archive.
-     * @param lazy
-     * @return the log type dictionary reader
+     * Reads the log type statistics from the archive.
+     * @return
      */
-    std::shared_ptr<LogTypeDictionaryReader> read_log_type_dictionary(bool lazy = false) {
-        m_log_dict->read_entries(lazy);
-        return m_log_dict;
-    }
+    auto read_log_shape_stats() -> ystdlib::error_handling::Result<clpp::LogShapeStatArray>;
 
     /**
-     * Reads the array dictionary from the archive.
-     * @param lazy
-     * @return the array dictionary reader
+     * Reads the parsing specification from the archive.
      */
-    std::shared_ptr<LogTypeDictionaryReader> read_array_dictionary(bool lazy = false) {
-        m_array_dict->read_entries(lazy);
-        return m_array_dict;
-    }
+    auto read_parsing_spec() -> ystdlib::error_handling::Result<std::string>;
 
     /**
      * Reads the metadata from the archive.
@@ -127,11 +133,27 @@ public:
 
     std::string_view get_archive_id() { return m_archive_id; }
 
-    std::shared_ptr<VariableDictionaryReader> get_variable_dictionary() { return m_var_dict; }
+    /**
+     * @return The variable dictionary, reading it from the archive if it hasn't been read yet.
+     */
+    auto get_variable_dictionary() -> std::shared_ptr<VariableDictionaryReader>;
 
-    std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary() { return m_log_dict; }
+    /**
+     * @return The log type dictionary, reading it from the archive if it hasn't been read yet.
+     * Always null for an experimental archive, which stores log shapes instead.
+     */
+    auto get_log_type_dictionary() -> std::shared_ptr<LogTypeDictionaryReader>;
 
-    std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
+    /**
+     * @return The array dictionary, reading it from the archive if it hasn't been read yet.
+     */
+    auto get_array_dictionary() -> std::shared_ptr<LogTypeDictionaryReader>;
+
+    /**
+     * @return The log shape dictionary, reading it from the archive if it hasn't been read yet, or
+     * null if the archive isn't experimental.
+     */
+    auto get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictionaryReader>;
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
         return m_archive_reader_adaptor->get_timestamp_dictionary();
@@ -148,6 +170,10 @@ public:
     [[nodiscard]] auto get_header() const -> ArchiveHeader const& {
         return m_archive_reader_adaptor->get_header();
     }
+
+    auto get_log_shape_stats() -> clpp::LogShapeStatArray const&;
+
+    auto get_parent_rule_shapes() -> clpp::ParentRuleShapesArray const&;
 
     /**
      * Writes decoded messages to a file.
@@ -179,6 +205,10 @@ public:
         m_projection = projection;
     }
 
+    [[nodiscard]] auto get_projection() const -> std::shared_ptr<search::Projection> {
+        return m_projection;
+    }
+
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
@@ -202,7 +232,17 @@ public:
         return m_archive_reader_adaptor->get_metadata_for_log_event(log_event_idx);
     }
 
+    [[nodiscard]] auto experimental() const -> bool { return m_clpp.has_value(); }
+
 private:
+    // Types
+    struct Clpp {
+        std::shared_ptr<LogShapeDictionaryReader> log_shape_dict;
+        std::optional<clpp::LogShapeStatArray> log_shape_stats;
+        std::optional<clpp::ParentRuleShapesArray> parent_rule_shapes;
+    };
+
+    // Methods
     /**
      * Reads archive metadata and prepares the archive reader for subsequent archive reads.
      */
@@ -245,18 +285,33 @@ private:
     BaseColumnReader* append_reader_column(SchemaReader& reader, int32_t column_id);
 
     /**
-     * Appends columns for the entire schema of an unordered object.
+     * Resolves the schema-tree node ID of an unordered object. Returns the root node ID stored in
+     * the object's metadata entries if present or finds the matching subtree root of the object's
+     * type in `search_root_id`'s subtree.
+     * @param obj
+     * @param search_root_id The node ID whose subtree is searched for the object's matching subtree
+     * root.
+     * @return The resolved schema-tree node ID.
+     */
+    [[nodiscard]] auto
+    resolve_unordered_object_root(UnorderedObject const& obj, int32_t search_root_id)
+            -> SchemaNode::id_t;
+
+    /**
+     * Appends columns for the sub-schema of an unordered object.
      * @param reader
      * @param mst_subtree_root_node_id
-     * @param schema_ids
+     * @param sub_schema
+     * @param log_shape_id The log shape ID if sub_schema is a `LogMessage` object.
      * @param should_marshal_records
      */
-    void append_unordered_reader_columns(
+    auto append_unordered_reader_columns(
             SchemaReader& reader,
-            int32_t mst_subtree_root_node_id,
-            std::span<int32_t> schema_ids,
+            SchemaNode::id_t mst_subtree_root_node_id,
+            SchemaView sub_schema,
+            std::optional<clpp::log_shape_id_t> log_shape_id,
             bool should_marshal_records
-    );
+    ) -> void;
 
     /**
      * Reads a table with given ID from the packed stream reader. If read_stream is called
@@ -271,19 +326,29 @@ private:
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
 
+    /**
+     * Reads the log type metadata from the archive.
+     * @return The read log type metadata array, or an error code indicating the failure:
+     * - Forwards `Array::decompress`'s return values on failure.
+     * @throws
+     */
+    auto read_parent_rule_shapes() -> ystdlib::error_handling::Result<clpp::ParentRuleShapesArray>;
+
+    // Data members
     bool m_is_open;
     std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
     std::shared_ptr<ArchiveReaderAdaptor> m_archive_reader_adaptor;
+    std::unordered_set<std::string_view> m_read_sections;
 
     std::shared_ptr<SchemaTree> m_schema_tree;
     std::shared_ptr<ReaderUtils::SchemaMap> m_schema_map;
     std::vector<int32_t> m_schema_ids;
     std::map<int32_t, SchemaReader::SchemaMetadata> m_id_to_schema_metadata;
     std::shared_ptr<search::Projection> m_projection{
-            std::make_shared<search::Projection>(search::ProjectionMode::ReturnAllColumns)
+            std::make_shared<search::Projection>(search::Projection::Mode::ReturnAllColumns)
     };
 
     PackedStreamReader m_stream_reader;
@@ -293,6 +358,9 @@ private:
     size_t m_stream_buffer_size{0ULL};
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
+
+    std::optional<Clpp> m_clpp;
+    Options m_options;
 };
 }  // namespace clp_s
 

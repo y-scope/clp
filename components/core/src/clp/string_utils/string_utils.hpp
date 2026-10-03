@@ -173,6 +173,15 @@ auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
 
     return result.ptr == raw_end && std::errc{} == result.ec;
 }
+
+/**
+ * Converts a string to a double-precision floating-point value if possible.
+ *
+ * @param raw The string to convert.
+ * @param converted Output parameter for the converted value.
+ * @return true if the entire string was successfully converted, false otherwise.
+ */
+[[nodiscard]] auto convert_string_to_double(std::string_view raw, double& converted) -> bool;
 }  // namespace clp::string_utils
 
 #endif  // CLP_STRING_UTILS_STRING_UTILS_HPP
