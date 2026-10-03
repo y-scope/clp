@@ -73,7 +73,7 @@ pub enum Error {
 
     /// Failed to msgpack-serialize a task input.
     #[error("failed to serialize a task input: {0}")]
-    TaskInputSerialization(#[from] rmp_serde::encode::Error),
+    TaskInputSerialization(#[from] spider_core::types::io::TaskGraphInputError),
 
     #[error("number of compression tasks {0} exceeds `i32::MAX`")]
     TooManyCompressionTasks(usize),
