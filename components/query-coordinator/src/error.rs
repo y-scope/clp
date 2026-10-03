@@ -6,6 +6,12 @@ use clp_rust_utils::job_config::QueryJobStatus;
 /// Errors returned by the query coordinator.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("invalid coordinator configuration: {0}")]
+    InvalidConfiguration(String),
+
+    #[error("invalid Spider endpoint: {0}")]
+    InvalidEndpoint(String),
+
     #[error("invalid query job configuration: {0}")]
     InvalidQueryJobConfig(String),
 
@@ -20,6 +26,9 @@ pub enum Error {
 
     #[error("metadata corrupted for query job {0}: its row no longer exists")]
     QueryJobMetadataCorrupted(QueryJobId),
+
+    #[error("semaphore error: {0}")]
+    Semaphore(String),
 
     #[error("spider request failure: {0}")]
     SpiderClient(#[from] spider_client::error::ClientError),
