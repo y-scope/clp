@@ -28,6 +28,7 @@
 #include "../src/clp_s/search/ast/NarrowTypes.hpp"
 #include "../src/clp_s/search/ast/OrExpr.hpp"
 #include "../src/clp_s/search/ast/OrOfAndForm.hpp"
+#include "../src/clp_s/search/ast/SearchUtils.hpp"
 #include "../src/clp_s/search/EvaluateRangeIndexFilters.hpp"
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
@@ -192,7 +193,8 @@ void search(
                 archive_expr,
                 archive_reader,
                 std::move(output_handler),
-                ignore_case
+                ignore_case,
+                metadata_filter_pass.get_log_event_idx_ranges()
         );
         output_pass.filter();
         archive_reader->close();
@@ -255,6 +257,33 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
     std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
     REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
     REQUIRE_NOTHROW(search(expr, false, {0}));
+}
+
+TEST_CASE("clp-s-search-range-index-log-event-idx-ranges", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<std::pair<size_t, size_t>>>> queries_and_ranges{
+            {R"aa(idx: 0)aa", {}},
+            {R"aa($_filename: a AND idx: 0)aa", {{0, 10}}},
+            {R"aa($_filename: a OR $_filename: c)aa", {{0, 10}, {20, 30}}},
+            {R"aa(($_filename: a OR $_filename: b) AND idx: 0)aa", {{0, 10}, {10, 20}}},
+            {R"aa(idx: 0 AND ($_filename: a OR $_filename: c))aa", {{0, 10}, {20, 30}}},
+            {R"aa($_filename: a AND $_filename: b)aa", {}},
+            {R"aa($_filename: a OR idx: 0)aa", {{0, 10}, {10, 20}, {20, 30}}}
+    };
+    std::vector<clp_s::RangeIndexEntry> range_index;
+    range_index.emplace_back(0, 10, nlohmann::json::parse(R"({"_filename": "a"})"));
+    range_index.emplace_back(10, 20, nlohmann::json::parse(R"({"_filename": "b"})"));
+    range_index.emplace_back(20, 30, nlohmann::json::parse(R"({"_filename": "c"})"));
+
+    for (auto const& [query, expected_ranges] : queries_and_ranges) {
+        CAPTURE(query);
+        auto query_stream = std::istringstream{query};
+        auto expr = clp_s::search::ast::preprocess_query(
+                clp_s::search::kql::parse_kql_expression(query_stream)
+        );
+        clp_s::search::EvaluateRangeIndexFilters metadata_filter_pass{range_index, true};
+        std::ignore = metadata_filter_pass.run(expr);
+        REQUIRE(metadata_filter_pass.get_log_event_idx_ranges() == expected_ranges);
+    }
 }
 
 TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {

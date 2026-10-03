@@ -394,7 +394,8 @@ bool search_archive(
             expr,
             archive_reader,
             std::move(output_handler),
-            command_line_arguments.get_ignore_case()
+            command_line_arguments.get_ignore_case(),
+            metadata_filter_pass.get_log_event_idx_ranges()
     );
     auto const success{output.filter()};
     if (nullptr != telemetry_span) {
