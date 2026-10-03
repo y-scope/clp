@@ -18,6 +18,9 @@
 #if CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE
     #include <archive.h>
     #include <archive_entry.h>
+
+    #include "../clp/LibarchiveFileReader.hpp"
+    #include "../clp/LibarchiveReader.hpp"
 #endif
 
 #include <simdjson.h>
@@ -27,8 +30,6 @@
 #include "../clp/ErrorCode.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
-#include "../clp/LibarchiveFileReader.hpp"
-#include "../clp/LibarchiveReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "../clp/streaming_compression/Decompressor.hpp"
