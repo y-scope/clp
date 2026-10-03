@@ -17,8 +17,10 @@ dnf install -y \
     make \
     mariadb-connector-c-devel \
     openssl-devel \
+    python3-devel \
     python3-pip \
-    unzip
+    unzip \
+    zlib-devel
 
 if ! command -v pipx >/dev/null 2>&1; then
     python3 -m pip install pipx
