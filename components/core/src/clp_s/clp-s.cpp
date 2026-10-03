@@ -9,6 +9,7 @@
 #include <string_view>
 #include <system_error>
 #include <utility>
+#include <vector>
 
 #include <fmt/format.h>
 #include <mongocxx/instance.hpp>
@@ -34,6 +35,7 @@
 
 #include <clp/type_utils.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/search/ast/FilterExpr.hpp>
 #include <clp_s/search/ast/FunctionCall.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
 #include <clp_s/search/TelemetryContext.hpp>
@@ -96,6 +98,26 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int;
 
 /**
+ * Parses each projection column.
+ * @param columns The raw projection column strings.
+ * @return The parsed projection columns, or std::nullopt if any column fails to parse.
+ */
+auto parse_projection_columns(std::vector<std::string> const& columns)
+        -> std::optional<std::vector<std::shared_ptr<ast::Value>>>;
+
+/**
+ * Finds the first `--experimental`-only function used by a search, either as a filter in `expr` or
+ * as a projection column. Used to reject searches on inputs that don't support these functions.
+ * @param expr The parsed search query.
+ * @param projection_columns The parsed projection columns.
+ * @return The name of the first function found, or std::nullopt if none found.
+ */
+auto find_experimental_function(
+        std::shared_ptr<ast::Expression> const& expr,
+        std::vector<std::shared_ptr<ast::Value>> const& projection_columns
+) -> std::optional<std::string_view>;
+
+/**
  * For each archive, output archive-wide statistics as a JSON object.
  * @param archive_reader
  * @param output_handler
@@ -106,7 +128,8 @@ auto output_archive_stats(
 ) -> void;
 
 /**
- * For each archive, output statistics of each log-shape as JSON objects.
+ * For each archive, output statistics of each log-shape as JSON objects. For archives not
+ * compressed with `--experimental`, each log type is reported as a shape without a `count`.
  * @param archive_reader
  * @param output_handler
  */
@@ -116,7 +139,8 @@ auto output_log_shape_stats(
 ) -> void;
 
 /**
- * For each archive, output the schema tree as a JSON object.
+ * For each archive, output the schema tree as a JSON object. Node counts are only included for
+ * archives that store them (archive version >= 0.6.0).
  * @param archive_reader
  * @param output_handler
  */
@@ -131,6 +155,7 @@ auto output_schema_tree_stats(
  * @param command_line_arguments
  * @param archive_reader
  * @param expr A copy of the search AST which may be modified.
+ * @param projection_columns The parsed projection columns, shared across archives.
  * @param telemetry_span The span to record search telemetry onto, or null if telemetry is disabled.
  * @return Whether the search succeeded.
  */
@@ -138,6 +163,7 @@ bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
         std::shared_ptr<ast::Expression> expr,
+        std::vector<std::shared_ptr<ast::Value>> const& projection_columns,
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 );
 
@@ -292,7 +318,8 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
         return -1;
     }
     if (false == cli_args.experimental().has_value()) {
-        throw std::invalid_argument(fmt::format("--experimental must be set to run {}", query));
+        SPDLOG_ERROR("--experimental must be set to run {}", query);
+        return 1;
     }
     auto archive_reader{std::make_shared<clp_s::ArchiveReader>()};
     for (auto const& input_path : cli_args.get_input_paths()) {
@@ -327,6 +354,53 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
         archive_reader->close();
     }
     return 0;
+}
+
+auto parse_projection_columns(std::vector<std::string> const& columns)
+        -> std::optional<std::vector<std::shared_ptr<ast::Value>>> {
+    std::vector<std::shared_ptr<ast::Value>> parsed_columns;
+    for (auto const& column : columns) {
+        auto parsed{kql::parse_projection_column(column)};
+        if (nullptr == parsed) {
+            SPDLOG_ERROR("Can not parse projection column: \"{}\"", column);
+            return std::nullopt;
+        }
+        parsed_columns.emplace_back(std::move(parsed));
+    }
+    return parsed_columns;
+}
+
+auto find_experimental_function(
+        std::shared_ptr<ast::Expression> const& expr,
+        std::vector<std::shared_ptr<ast::Value>> const& projection_columns
+) -> std::optional<std::string_view> {
+    std::vector<std::shared_ptr<ast::Expression>> work_list{expr};
+    while (false == work_list.empty()) {
+        auto const cur_expr{work_list.back()};
+        work_list.pop_back();
+        if (auto const filter{std::dynamic_pointer_cast<ast::FilterExpr>(cur_expr)};
+            nullptr != filter)
+        {
+            auto const& subtree_type{filter->get_column()->get_subtree_type()};
+            if (subtree_type.has_value() && clpp::cShapeFunction == subtree_type.value()) {
+                return clpp::cShapeFunction;
+            }
+        }
+        for (auto it{cur_expr->op_begin()}; it != cur_expr->op_end(); ++it) {
+            if (auto const child{std::dynamic_pointer_cast<ast::Expression>(*it)}; nullptr != child)
+            {
+                work_list.emplace_back(child);
+            }
+        }
+    }
+    for (auto const& column : projection_columns) {
+        if (auto const func_call{std::dynamic_pointer_cast<ast::FunctionCall>(column)};
+            nullptr != func_call)
+        {
+            return func_call->get_function_name();
+        }
+    }
+    return std::nullopt;
 }
 
 auto output_archive_stats(
@@ -376,7 +450,6 @@ auto output_log_shape_stats(
             nlohmann::json json_entry{
                     {"archive_id", archive_id},
                     {"id", entry.get_id()},
-                    {"count", nullptr},
                     {"shape", entry.get_value()}
             };
             output_handler.write(json_entry.dump());
@@ -389,6 +462,7 @@ auto output_schema_tree_stats(
         clp_s::ArchiveReader& archive_reader,
         clp_s::search::OutputHandler& output_handler
 ) -> void {
+    auto const has_node_count{archive_reader.get_header().mpt_has_node_count()};
     nlohmann::json::array_t nodes;
     for (auto const& node : archive_reader.get_schema_tree()->get_nodes()) {
         if (0 > node.get_id()) {
@@ -399,9 +473,11 @@ auto output_schema_tree_stats(
                 {"parent_id", node.get_parent_id()},
                 {"key", std::string{node.get_key_name()}},
                 {"type", static_cast<int>(node.get_type())},
-                {"count", node.get_count()},
                 {"children", node.get_children_ids()},
         });
+        if (has_node_count) {
+            nodes.back().emplace("count", node.get_count());
+        }
     }
     nlohmann::json entry{
             {"archive_id", std::string{archive_reader.get_archive_id()}},
@@ -415,6 +491,7 @@ bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
         std::shared_ptr<ast::Expression> expr,
+        std::vector<std::shared_ptr<ast::Value>> const& projection_columns,
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 ) {
     PROFILE_SCOPE("search_archive");
@@ -526,7 +603,13 @@ bool search_archive(
             archive_reader,
             !command_line_arguments.get_ignore_case()
     );
-    if (expr = match_pass->run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+    try {
+        expr = match_pass->run(expr);
+    } catch (std::exception const& e) {
+        record_error_and_log("schema matching failed", e.what());
+        return false;
+    }
+    if (std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         record_early_termination(cTerminationStageSchemaMatching);
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
@@ -534,28 +617,18 @@ bool search_archive(
 
     // Populate projection
     auto projection = std::make_shared<Projection>(
-            command_line_arguments.get_projection_columns().empty()
-                    ? Projection::Mode::ReturnAllColumns
-                    : Projection::Mode::ReturnSelectedColumns
+            projection_columns.empty() ? Projection::Mode::ReturnAllColumns
+                                       : Projection::Mode::ReturnSelectedColumns
     );
     try {
-        for (auto const& column : command_line_arguments.get_projection_columns()) {
-            auto parsed{kql::parse_projection_column(column)};
-            if (nullptr == parsed) {
-                record_error_and_log(
-                        "parsing projection column failed",
-                        fmt::format("Can not parse projection column: \"{}\"", column)
-                );
-                return false;
-            }
+        for (auto const& parsed : projection_columns) {
             if (auto func_call{std::dynamic_pointer_cast<ast::FunctionCall>(parsed)}) {
                 projection->add_column(func_call);
-            } else if (auto col_desc{std::dynamic_pointer_cast<ast::ColumnDescriptor>(parsed)}) {
-                projection->add_column(col_desc, Projection::NodeMask::Mode::Value);
             } else {
-                throw std::runtime_error{
-                        fmt::format("Unexpected projection column type for: \"{}\"", column)
-                };
+                projection->add_column(
+                        std::static_pointer_cast<ast::ColumnDescriptor>(parsed),
+                        Projection::NodeMask::Mode::Value
+                );
             }
         }
         projection->resolve_columns(*archive_reader->get_schema_tree());
@@ -675,7 +748,6 @@ int main(int argc, char const* argv[]) {
         if (nullptr == expr) {
             return 1;
         }
-
         if (std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
             return 1;
@@ -697,9 +769,25 @@ int main(int argc, char const* argv[]) {
             }
         }
 
+        auto const projection_columns
+                = parse_projection_columns(command_line_arguments.get_projection_columns());
+        if (false == projection_columns.has_value()) {
+            return 1;
+        }
+        auto const experimental_function{
+                find_experimental_function(expr, projection_columns.value())
+        };
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         for (auto const& input_path : command_line_arguments.get_input_paths()) {
             if (std::string::npos != input_path.path.find(clp::ir::cIrFileExtension)) {
+                if (experimental_function.has_value()) {
+                    SPDLOG_ERROR(
+                            "{}() is unsupported for KV-IR stream {}",
+                            experimental_function.value(),
+                            input_path.path
+                    );
+                    return 1;
+                }
                 auto const result{clp_s::search_kv_ir_stream(
                         input_path,
                         command_line_arguments,
@@ -779,11 +867,25 @@ int main(int argc, char const* argv[]) {
                 }
                 return 1;
             }
+            if (experimental_function.has_value() && false == archive_reader->experimental()) {
+                SPDLOG_ERROR(
+                        "{}() requires an archive compressed with --experimental: {}",
+                        experimental_function.value(),
+                        archive_reader->get_archive_id()
+                );
+                if (nullptr != telemetry_span) {
+                    telemetry_span->set_error(
+                            "experimental function used with non-experimental archive"
+                    );
+                }
+                return 1;
+            }
             if (false
                 == search_archive(
                         command_line_arguments,
                         archive_reader,
                         expr->copy(),
+                        projection_columns.value(),
                         telemetry_span
                 ))
             {

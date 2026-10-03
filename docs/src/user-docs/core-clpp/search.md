@@ -60,6 +60,9 @@ ParentRule nodes match column "message.block_id.gen_stamp".
 
 `shape()` may be used both as a filter and as a [projection](#projections).
 
+`shape()` and `decompose()` require `--experimental` and an archive compressed with
+`--experimental`; using them on any other archive or on a KV-IR stream is an error.
+
 ## Wildcards in column names
 
 A `*` in place of a column name matches every column at that position, and the query is the union of
@@ -177,7 +180,7 @@ Projection applies to search only. `clp-s x` always extracts the original log me
 
 ## Archive statistics
 
-Three queries report archive metadata instead of log events. All require `--experimental` but work
+Three queries report archive metadata instead of log events. All require `--experimental` and work
 on both CLP+ and regular `clp-s` archives. Each output line carries an `archive_id` so results from
 multiple archives can be told apart.
 
@@ -204,5 +207,11 @@ multiple archives can be told apart.
 
 :::{note}
 For regular `clp-s` archives, `num_log_shapes` counts log types, and `stats.log_shapes` reports each
-log type with a `count` of `null`.
+log type without a `count` (shape counts are only stored in archives compressed with
+`--experimental`).
+:::
+
+:::{note}
+`stats.schema_tree` omits the node `count` field for archives older than version 0.6.0, which don't
+store node counts.
 :::
