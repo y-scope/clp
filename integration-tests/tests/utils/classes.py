@@ -164,6 +164,9 @@ class ExternalAction:
     #: Command to pass to `subprocess.run()`.
     cmd: list[str]
 
+    #: Timeout length to pass to `subprocess.run()`.
+    timeout_seconds: float = DEFAULT_CMD_TIMEOUT_SECONDS
+
     #: The completed process returned from `subprocess.run()`.
     completed_proc: subprocess.CompletedProcess[str] = field(init=False)
 
@@ -191,7 +194,7 @@ class ExternalAction:
         """
         Passes `self.cmd` to `subprocess.run()` with preset parameters:
             capture_output=True:                    Output will be logged and analysed later.
-            timeout=DEFAULT_CMD_TIMEOUT_SECONDS:
+            timeout=self.timeout_seconds:
             check=False:                            Error will be handled during verification.
             text=True:                              Output should be str for analysis purposes.
 
@@ -207,12 +210,12 @@ class ExternalAction:
             return subprocess.run(
                 self.cmd,
                 capture_output=True,
-                timeout=DEFAULT_CMD_TIMEOUT_SECONDS,
+                timeout=self.timeout_seconds,
                 check=False,
                 text=True,
             )
         except subprocess.TimeoutExpired:
-            err_msg = f"Subprocess '{exe_name}' timed out after {DEFAULT_CMD_TIMEOUT_SECONDS}s."
+            err_msg = f"Subprocess '{exe_name}' timed out after {self.timeout_seconds}s."
             logger.exception(err_msg)
             pytest.fail(err_msg)
         except OSError as e:
@@ -333,14 +336,22 @@ class ClpAction(ExternalAction):
     args: CmdArgs | None = None
 
     @classmethod
-    def from_cmd(cls, cmd: list[str]) -> Self:
-        """:return: A `ClpAction` for the given raw `cmd`, with no associated `args`."""
-        return cls(cmd=cmd)
+    def from_cmd(cls, cmd: list[str], timeout_seconds: float = DEFAULT_CMD_TIMEOUT_SECONDS) -> Self:
+        """
+        :param cmd:
+        :param timeout_seconds:
+        :return: A `ClpAction` for the given raw `cmd`, with no associated `args`.
+        """
+        return cls(cmd=cmd, timeout_seconds=timeout_seconds)
 
     @classmethod
-    def from_args(cls, args: CmdArgs) -> Self:
-        """:return: A `ClpAction` whose `cmd` is derived from `args.to_cmd()`."""
-        return cls(cmd=args.to_cmd(), args=args)
+    def from_args(cls, args: CmdArgs, timeout_seconds: float = DEFAULT_CMD_TIMEOUT_SECONDS) -> Self:
+        """
+        :param args:
+        :param timeout_seconds:
+        :return: A `ClpAction` whose `cmd` is derived from `args.to_cmd()`.
+        """
+        return cls(cmd=args.to_cmd(), args=args, timeout_seconds=timeout_seconds)
 
     def __post_init__(self) -> None:
         """
