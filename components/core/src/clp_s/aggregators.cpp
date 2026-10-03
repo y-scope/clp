@@ -126,6 +126,35 @@ auto CountByTimeAggregator::get_results() const -> std::vector<AggregationResult
     return results;
 }
 
+GroupByCountAggregator::GroupByCountAggregator(string_view field)
+        : m_field{field},
+          m_field_path{tokenize_aggregation_field(field)} {}
+
+auto GroupByCountAggregator::add_record(string_view message, epochtime_t) -> void {
+    nlohmann::json doc;
+    auto const* const value{find_field_value(message, m_field_path, doc)};
+    if (nullptr == value) {
+        return;
+    }
+    auto aggregation_value{to_aggregation_value(*value)};
+    if (aggregation_value.has_value()) {
+        m_counts[std::move(aggregation_value.value())] += 1;
+    }
+}
+
+auto GroupByCountAggregator::get_results() const -> std::vector<AggregationResult> {
+    std::vector<AggregationResult> results;
+    results.reserve(m_counts.size());
+    for (auto const& [value, count] : m_counts) {
+        AggregationResult result;
+        result.emplace_back(constants::results_cache::search::cField, m_field);
+        result.emplace_back(constants::results_cache::search::cValue, value);
+        result.emplace_back(constants::results_cache::search::cCount, count);
+        results.push_back(std::move(result));
+    }
+    return results;
+}
+
 MinMaxAggregator::MinMaxAggregator(bool find_max, string_view field)
         : m_find_max{find_max},
           m_field{field},
