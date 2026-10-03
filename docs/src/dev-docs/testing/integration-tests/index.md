@@ -3,6 +3,8 @@
 The `integration-tests` directory contains a Python project that provides end-to-end tests for
 CLP via the `pytest` framework.
 
+---
+
 ## Running tests
 
 To run all integration tests:
@@ -11,13 +13,31 @@ To run all integration tests:
 task tests:integration
 ```
 
+### Testing the CLP package
+
+To test the CLP package:
+
+```shell
+task tests:integration:package
+```
+
+This command will build the package from your local code as well. For the complete package testing
+guide, visit [Testing the CLP package](./package.md).
+
+### Testing the CLP binaries
+
 To test the core CLP binaries:
 
 ```shell
 task tests:integration:core
 ```
 
-### Using `pytest` markers
+This command will build the binaries from your local code as well. For the complete binary testing
+guide, visit [Testing the CLP binaries](./binary.md).
+
+---
+
+## Using `pytest` markers
 
 To run more specific sets of tests, you can use `pytest` directly with `pytest` markers.
 
@@ -40,9 +60,9 @@ To run tests related to a specific marker (e.g., `clp_s`):
 uv run pytest -m clp_s
 ```
 
-### Specifying custom CLP binary paths
+:::{toctree}
+:hidden:
 
-You can override the default binary paths by setting the following environment variables:
-
-* **`CLP_CORE_BINS_DIR`**: Directory containing the CLP core binaries to test.
-* **`CLP_PACKAGE_DIR`**: Directory of the CLP package to test.
+package
+binary
+:::

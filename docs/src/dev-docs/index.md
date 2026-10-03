@@ -63,7 +63,7 @@ building-package
 
 testing/index
 testing/unit-tests
-testing/integration-tests
+testing/integration-tests/index
 :::
 
 :::{toctree}
