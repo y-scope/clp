@@ -446,3 +446,15 @@ spider:
         - name: "staged-archives"
           emptyDir: {}
       service_account_name: "{{ include \"clp.fullname\" . }}-service-account"
+      pools:
+        - name: "general"
+          replicas: 2
+          resource_group: null
+        - name: "compression"
+          replicas: 2
+          resource_group:
+            external_id: "compression"
+            password:
+              secretKeyRef:
+                name: "{{ include \"clp.fullname\" . }}-spider-resource-groups"
+                key: "compression"
