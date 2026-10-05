@@ -21,9 +21,11 @@
 //! job of any job sitting in CANCELLING, and a restart sweep that drives CANCELLING jobs to
 //! CANCELLED.
 
+use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::time::Duration;
 
+use clp_rust_utils::clp_config::package::config::ArchiveOutput as ArchiveOutputConfig;
 use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
 use clp_rust_utils::clp_config::package::config::QueryCoordinator as CoordinatorConfig;
 use clp_rust_utils::clp_config::package::config::ResultsCache as ResultsCacheConfig;
@@ -46,9 +48,13 @@ use tokio_util::sync::CancellationToken;
 use tonic::transport::Endpoint;
 
 use crate::Error;
+use crate::job_handle::ArchiveSelectionOptions;
 use crate::job_handle::QueryJobHandle;
 use crate::job_handle::QueryJobHandleContext;
 use crate::job_handle::SpiderOption;
+
+const MILLISECS_PER_MINUTE: NonZeroU64 =
+    NonZeroU64::new(60_000).expect("constant should not be zero");
 
 /// Coordinator for fetching new query jobs and submitting them to Spider.
 pub struct Coordinator {
@@ -91,6 +97,7 @@ impl Coordinator {
         coordinator_config: &CoordinatorConfig,
         spider_config: &SpiderConfig,
         results_cache_config: &ResultsCacheConfig,
+        archive_output_config: &ArchiveOutputConfig,
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
     ) -> Result<(Self, CancellationToken), Error> {
@@ -126,10 +133,17 @@ impl Coordinator {
         let job_handle_context = Arc::new(QueryJobHandleContext {
             db_pool: db_pool.clone(),
             db_config,
+            archive_selection_options: ArchiveSelectionOptions {
+                archive_retention_period_millisecs: archive_output_config
+                    .retention_period
+                    .map(|period| period.saturating_mul(MILLISECS_PER_MINUTE)),
+                max_datasets_per_query: coordinator_config.max_datasets_per_query,
+            },
             spider_option: SpiderOption {
                 poll_interval: Duration::from_millis(
                     coordinator_config.result_polling_interval_millisecs.get(),
                 ),
+                query_task_max_retry: coordinator_config.query_task_max_retry,
             },
         });
 
@@ -173,6 +187,7 @@ impl Coordinator {
             id: job_id,
             spider_job_id,
             search_job_config,
+            job_creation_timestamp_millisecs,
         } in self.fetch_submitted_running_jobs().await?
         {
             tracing::info!(
@@ -187,6 +202,7 @@ impl Coordinator {
                 self.resource_group_id,
                 search_job_config,
                 self.output_handle.clone(),
+                job_creation_timestamp_millisecs,
             )
             .inspect_err(|e| {
                 tracing::error!(
@@ -341,6 +357,7 @@ impl Coordinator {
                 self.resource_group_id,
                 search_job_config,
                 self.output_handle.clone(),
+                job_row.job_creation_timestamp_millisecs,
             ) {
                 Ok(job_handle) => job_handle,
                 Err(e) => {
@@ -436,13 +453,15 @@ impl Coordinator {
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_new_job_rows(&mut self) -> Result<Vec<PendingJobRowProjection>, Error> {
         const FIRST_FETCH_QUERY: &str = formatcp!(
-            "SELECT `id`, `job_config` FROM `{table}` WHERE `type` = ? AND `status` = ? AND \
-             `dispatch_time` IS NOT NULL ORDER BY `id` ASC;",
+            "SELECT `id`, `job_config`, CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 AS SIGNED) AS \
+             `job_creation_timestamp_millisecs` FROM `{table}` WHERE `type` = ? AND `status` = ? \
+             AND `dispatch_time` IS NOT NULL ORDER BY `id` ASC;",
             table = QUERY_JOBS_TABLE_NAME,
         );
         const SUBSEQUENT_FETCH_QUERY: &str = formatcp!(
-            "SELECT `id`, `job_config` FROM `{table}` WHERE `type` = ? AND `status` = ? AND \
-             `dispatch_time` IS NULL ORDER BY `id` ASC LIMIT ?;",
+            "SELECT `id`, `job_config`, CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 AS SIGNED) AS \
+             `job_creation_timestamp_millisecs` FROM `{table}` WHERE `type` = ? AND `status` = ? \
+             AND `dispatch_time` IS NULL ORDER BY `id` ASC LIMIT ?;",
             table = QUERY_JOBS_TABLE_NAME,
         );
 
@@ -483,7 +502,8 @@ impl Coordinator {
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_submitted_running_jobs(&self) -> Result<Vec<SubmittedJob>, Error> {
         const QUERY: &str = formatcp!(
-            "SELECT `id`, `spider_id`, `job_config` FROM `{table}` WHERE `type` = ? AND \
+            "SELECT `id`, `spider_id`, `job_config`, CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 \
+             AS SIGNED) AS `job_creation_timestamp_millisecs` FROM `{table}` WHERE `type` = ? AND \
              `status` = ? AND `spider_id` IS NOT NULL;",
             table = QUERY_JOBS_TABLE_NAME,
         );
@@ -526,6 +546,7 @@ impl Coordinator {
                 id: row.id,
                 spider_job_id: row.spider_job_id,
                 search_job_config,
+                job_creation_timestamp_millisecs: row.job_creation_timestamp_millisecs,
             });
         }
 
@@ -538,6 +559,7 @@ struct SubmittedJob {
     id: QueryJobId,
     spider_job_id: SpiderJobId,
     search_job_config: SearchJobConfig,
+    job_creation_timestamp_millisecs: i64,
 }
 
 /// A projection of the columns read from a [`QueryJobStatus::Pending`] query job row.
@@ -546,6 +568,7 @@ struct PendingJobRowProjection {
     id: QueryJobId,
     #[sqlx(rename = "job_config")]
     serialized_search_job_config: Vec<u8>,
+    job_creation_timestamp_millisecs: i64,
 }
 
 /// A projection of the columns read from a [`QueryJobStatus::Running`] query job row.
@@ -556,4 +579,5 @@ struct RunningJobRowProjection {
     spider_job_id: SpiderJobId,
     #[sqlx(rename = "job_config")]
     serialized_search_job_config: Vec<u8>,
+    job_creation_timestamp_millisecs: i64,
 }

@@ -374,6 +374,7 @@ pub struct ArchiveOutput {
     pub target_encoded_file_size: u64,
     pub target_segment_size: u64,
     pub compression_level: u8,
+    pub retention_period: Option<NonZeroU64>,
 }
 
 impl ArchiveOutput {
@@ -428,6 +429,7 @@ impl Default for ArchiveOutput {
             target_encoded_file_size: 256 * 1024 * 1024,
             target_segment_size: 256 * 1024 * 1024,
             compression_level: 3,
+            retention_period: None,
         }
     }
 }
@@ -519,6 +521,8 @@ impl Default for Telemetry {
 pub struct QueryCoordinator {
     pub job_polling_interval_millisecs: NonZeroU64,
     pub max_concurrent_jobs: NonZeroUsize,
+    pub max_datasets_per_query: Option<NonZeroUsize>,
+    pub query_task_max_retry: u32,
     pub result_polling_interval_millisecs: NonZeroU64,
 }
 
@@ -529,6 +533,8 @@ impl Default for QueryCoordinator {
                 .expect("default jobs poll delay should not be zero"),
             max_concurrent_jobs: NonZeroUsize::new(1000)
                 .expect("default maximum number of concurrent jobs should not be zero"),
+            max_datasets_per_query: NonZeroUsize::new(10),
+            query_task_max_retry: 1,
             result_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default result polling interval should not be zero"),
         }
