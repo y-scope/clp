@@ -278,6 +278,34 @@ private:
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
+     * Builds a column descriptor that fully resolves `node_id` from the root of the object subtree
+     * of `column`'s namespace, typed as `node_id`'s literal type and inheriting `column`'s subtree
+     * type.
+     * @param column The (unresolved) column the node was matched from.
+     * @param node_id A node within the object subtree of `column`'s namespace.
+     * @return The resolved column descriptor.
+     */
+    [[nodiscard]] auto
+    build_resolved_column(ast::ColumnDescriptor const& column, SchemaNode::id_t node_id) const
+            -> std::shared_ptr<ast::ColumnDescriptor>;
+
+    /**
+     * Builds `filter` against the single node `node_id`. LogMessage and ParentRule nodes are
+     * resolved through `build_clpp_query_filter`; any other node becomes a copy of `filter` on the
+     * resolved column.
+     * @param column The (unresolved) column the node was matched from.
+     * @param node_id The matched node.
+     * @param filter The filter to resolve.
+     * @return The resolved expression, or nullptr if no schema can match (see
+     * `build_clpp_query_filter`).
+     */
+    auto build_resolved_node_filter(
+            ast::ColumnDescriptor const& column,
+            SchemaNode::id_t node_id,
+            ast::FilterExpr const& filter
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
      * Resolves the nearest enclosing `LogMessage` node of `node_id`. If `node_id` is a
      * `LogMessage`, it resolves to itself.  Because log events contain only sibling (never nested)
      * `LogMessage`s, every rule/`LogMessage` node has exactly one such enclosing node, whose ID

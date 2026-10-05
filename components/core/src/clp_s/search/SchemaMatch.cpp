@@ -62,6 +62,12 @@ namespace {
  */
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
 
+/**
+ * @param column The column descriptor to inspect.
+ * @return true if `column` is the argument of a shape() function, false otherwise.
+ */
+[[nodiscard]] auto is_shape_column(ast::ColumnDescriptor const& column) -> bool;
+
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     if (constants::cMetadataSubtreeType == subtree_type) {
         return NodeType::Metadata;
@@ -70,6 +76,11 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
         return NodeType::Object;
     }
     return NodeType::Unknown;
+}
+
+auto is_shape_column(ast::ColumnDescriptor const& column) -> bool {
+    auto const& subtree_type{column.get_subtree_type()};
+    return subtree_type.has_value() && clpp::cShapeFunction == subtree_type.value();
 }
 }  // namespace
 
@@ -133,10 +144,7 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
             m_clpp_node_matched = false;
             auto [mapped_succesfully, new_and_expr]{populate_column_mapping(column, cur)};
             if (false == mapped_succesfully) {
-                if (column->get_subtree_type().has_value()
-                    && clpp::cShapeFunction == column->get_subtree_type().value()
-                    && false == m_clpp_node_matched)
-                {
+                if (is_shape_column(*column) && false == m_clpp_node_matched) {
                     throw std::runtime_error{fmt::format(
                             "{}(<col>) can only be applied to LogMessage or ParentRule columns; no "
                             "LogMessage or ParentRule nodes match column \"{}\".",
@@ -155,75 +163,15 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
             if (column->is_unresolved_descriptor() && false == column->is_pure_wildcard()) {
                 auto possibilities = OrExpr::create();
 
+                auto const& filter{dynamic_cast<FilterExpr const&>(*cur)};
                 // TODO: will have to decide how we wan't to handle multi-column expressions
                 // with unresolved descriptors
                 for (auto const node_id :
                      m_unresolved_descriptor_to_descriptor.at(column->get_id()))
                 {
-                    auto const* node{&m_tree->get_node(node_id)};
-                    auto const matched_node_type{node->get_type()};
-                    auto literal_type{SchemaNode::node_to_literal_type(matched_node_type)};
-                    DescriptorList descriptors;
-                    // FIXME: this needs to be adjusted to handle more than JUST object subtrees
-                    // TODO: consider whether fully resolving descriptors in this way is actually
-                    // necessary. In principal the set of matching nodes is all that is really
-                    // required (and has already been determined) so the main utility of the
-                    // following code is for debugging and simply adds overhead in non-debugging
-                    // execution. It should be possible to both get rid of this code (only using it
-                    // for debugging) and change how this pass works to only run column resolution a
-                    // single time. Specifically there doesn't seem to be anything stopping us from
-                    // just doing `resolved_column->set_column_id(node_id)` and skipping populating
-                    // the descriptors/re-resolving the columns after normalization. Actually in
-                    // some contrived circumstances involving objects in arrays while the array
-                    // structurization feature is enabled it seems like the current flow where we
-                    // re-run column resolution after this can make these columns again match
-                    // multiple nodes.
-                    while (node->get_id()
-                           != m_tree->get_object_subtree_node_id_for_namespace(
-                                   column->get_namespace()
-                           ))
+                    if (auto resolved_filter{build_resolved_node_filter(*column, node_id, filter)};
+                        nullptr != resolved_filter)
                     {
-                        descriptors.emplace_back(
-                                DescriptorToken::create_descriptor_from_literal_token(
-                                        node->get_key_name()
-                                )
-                        );
-                        node = &m_tree->get_node(node->get_parent_id());
-                    }
-                    std::reverse(descriptors.begin(), descriptors.end());
-                    auto resolved_column = ColumnDescriptor::create_from_descriptors(
-                            descriptors,
-                            column->get_namespace()
-                    );
-                    resolved_column->set_matching_type(literal_type);
-                    resolved_column->set_subtree_type(column->get_subtree_type());
-
-                    auto const& filter{dynamic_cast<FilterExpr const&>(*cur.get())};
-                    if (NodeType::LogMessage == matched_node_type
-                        || NodeType::ParentRule == matched_node_type)
-                    {
-                        if (auto result{build_clpp_query_filter(resolved_column, node_id, filter)};
-                            nullptr != result)
-                        {
-                            possibilities->add_operand(result);
-                        }
-                    } else if (FilterOperation::EXISTS == filter.get_operation()
-                               || FilterOperation::NEXISTS == filter.get_operation())
-                    {
-                        auto resolved_filter{FilterExpr::create(
-                                resolved_column,
-                                filter.get_operation(),
-                                filter.is_inverted()
-                        )};
-                        possibilities->add_operand(resolved_filter);
-                    } else {
-                        auto operand{filter.get_operand()};
-                        auto resolved_filter{FilterExpr::create(
-                                resolved_column,
-                                filter.get_operation(),
-                                operand,
-                                filter.is_inverted()
-                        )};
                         possibilities->add_operand(resolved_filter);
                     }
                 }
@@ -326,10 +274,7 @@ auto SchemaMatch::populate_column_mapping(
     }
     int32_t prev_level = 0;
     bool matched = false;
-    bool const is_shape_query{
-            column->get_subtree_type().has_value()
-            && clpp::cShapeFunction == column->get_subtree_type().value()
-    };
+    bool const is_shape_query{is_shape_column(*column)};
     while (false == work_list.empty()) {
         auto& cur = work_list.top();
         auto [cur_depth, cur_it, cur_node_id] = cur;
@@ -1208,9 +1153,7 @@ auto SchemaMatch::build_clpp_query_filter(
         return nullptr;
     }
 
-    if (column->get_subtree_type().has_value()
-        && clpp::cShapeFunction == column->get_subtree_type().value())
-    {
+    if (is_shape_column(*column)) {
         return build_shape_match_filter(
                 column,
                 decomposition_root,
@@ -1229,5 +1172,62 @@ auto SchemaMatch::build_clpp_query_filter(
             query,
             filter.is_inverted()
     );
+}
+
+auto SchemaMatch::build_resolved_column(
+        ast::ColumnDescriptor const& column,
+        SchemaNode::id_t node_id
+) const -> std::shared_ptr<ast::ColumnDescriptor> {
+    auto const* node{&m_tree->get_node(node_id)};
+    auto const literal_type{SchemaNode::node_to_literal_type(node->get_type())};
+    // FIXME: this needs to be adjusted to handle more than JUST object subtrees
+    // TODO: consider whether fully resolving descriptors in this way is actually
+    // necessary. In principal the set of matching nodes is all that is really
+    // required (and has already been determined) so the main utility of the
+    // following code is for debugging and simply adds overhead in non-debugging
+    // execution. It should be possible to both get rid of this code (only using it
+    // for debugging) and change how this pass works to only run column resolution a
+    // single time. Specifically there doesn't seem to be anything stopping us from
+    // just doing `resolved_column->set_column_id(node_id)` and skipping populating
+    // the descriptors/re-resolving the columns after normalization. Actually in
+    // some contrived circumstances involving objects in arrays while the array
+    // structurization feature is enabled it seems like the current flow where we
+    // re-run column resolution after this can make these columns again match
+    // multiple nodes.
+    auto const subtree_root_node_id{
+            m_tree->get_object_subtree_node_id_for_namespace(column.get_namespace())
+    };
+    DescriptorList descriptors;
+    while (node->get_id() != subtree_root_node_id) {
+        descriptors.emplace_back(
+                DescriptorToken::create_descriptor_from_literal_token(node->get_key_name())
+        );
+        node = &m_tree->get_node(node->get_parent_id());
+    }
+    std::reverse(descriptors.begin(), descriptors.end());
+    auto resolved_column{
+            ColumnDescriptor::create_from_descriptors(descriptors, column.get_namespace())
+    };
+    resolved_column->set_matching_type(literal_type);
+    resolved_column->set_subtree_type(column.get_subtree_type());
+    return resolved_column;
+}
+
+auto SchemaMatch::build_resolved_node_filter(
+        ast::ColumnDescriptor const& column,
+        SchemaNode::id_t node_id,
+        ast::FilterExpr const& filter
+) -> std::shared_ptr<ast::Expression> {
+    auto resolved_column{build_resolved_column(column, node_id)};
+    auto const node_type{m_tree->get_node(node_id).get_type()};
+    if (NodeType::LogMessage == node_type || NodeType::ParentRule == node_type) {
+        return build_clpp_query_filter(resolved_column, node_id, filter);
+    }
+    auto const op{filter.get_operation()};
+    if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
+        return FilterExpr::create(resolved_column, op, filter.is_inverted());
+    }
+    auto operand{filter.get_operand()};
+    return FilterExpr::create(resolved_column, op, operand, filter.is_inverted());
 }
 }  // namespace clp_s::search
