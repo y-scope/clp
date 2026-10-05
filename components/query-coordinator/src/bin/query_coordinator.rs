@@ -19,19 +19,6 @@ struct Cli {
     config: PathBuf,
 }
 
-/// Runs the query coordinator with the configuration file given on the command line until it
-/// returns or a shutdown signal arrives.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`anyhow::Error`] if the query coordinator or Spider configuration is missing.
-/// * Forwards [`yaml::from_path`]'s return values on failure.
-/// * Forwards [`read_database_credentials`]'s return values on failure.
-/// * Forwards [`create_clp_db_mysql_pool`]'s return values on failure.
-/// * Forwards [`Coordinator::new`]'s return values on failure.
-/// * Forwards [`run_until_shutdown`]'s return values on failure.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
