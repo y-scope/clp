@@ -893,11 +893,11 @@ class CompressionCoordinator(BaseModel):
 class QueryCoordinator(BaseModel):
     logging_level: LoggingLevelRust = "INFO"
     database_connection_pool_size: PositiveInt = 10
-    job_polling_interval_millisecs: PositiveInt = 100
+    job_polling_interval_millisecs: PositiveInt = 50
     max_concurrent_jobs: PositiveInt = 1000
     max_datasets_per_query: PositiveInt | None = 10
     query_task_max_retry: NonNegativeInt = 1
-    result_polling_interval_millisecs: PositiveInt = 100
+    result_polling_interval_millisecs: PositiveInt = 20
     termination_timeout_secs: PositiveInt = 30
     # This field is loaded at runtime through `load_credentials_from_file`.
     resource_group_password: str | None = None
