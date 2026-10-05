@@ -71,6 +71,10 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Factory function.
     ///
+    /// Only plain search jobs whose results are returned through the results cache can be driven
+    /// by this handle; any other job config is rejected so that the caller can fail the job
+    /// instead of leaving it unhandled.
+    ///
     /// # Returns
     ///
     /// A newly created [`QueryJobHandle`] for the given query job, with the `clp-s`
@@ -81,6 +85,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// Returns an error if:
     ///
     /// * [`Error::InvalidQueryJobConfig`] if:
+    ///   * The job carries an aggregation config.
+    ///   * The job asks for its results to be written to files.
     ///   * The query string is empty.
     ///   * The begin timestamp exceeds the end timestamp.
     pub fn new(
@@ -92,6 +98,20 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         output_handle: OutputHandle,
         job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
+        if search_job_config.aggregation_config.is_some() {
+            return Err(Error::InvalidQueryJobConfig(
+                "aggregation jobs are not supported".to_owned(),
+            ));
+        }
+
+        if search_job_config.write_to_file {
+            return Err(Error::InvalidQueryJobConfig(
+                "writing query results to files is not supported; resubmit the query with its \
+                 results buffered in the results cache"
+                    .to_owned(),
+            ));
+        }
+
         let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
             .map_err(|_| {
                 Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
