@@ -285,7 +285,15 @@ pub struct ResultsCache {
 }
 
 impl ResultsCache {
-    /// Returns the MongoDB URI for the results cache database.
+    /// Builds the MongoDB URI for the results cache database.
+    ///
+    /// # Returns
+    ///
+    /// The MongoDB URI addressing the results cache database.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the formatted URI is empty, which it never is.
     #[must_use]
     pub fn uri(&self) -> NonEmptyString {
         NonEmptyString::from_string(format!(

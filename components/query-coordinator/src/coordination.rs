@@ -53,9 +53,6 @@ use crate::job_handle::QueryJobHandle;
 use crate::job_handle::QueryJobHandleContext;
 use crate::job_handle::SpiderOption;
 
-const MILLISECS_PER_MINUTE: NonZeroU64 =
-    NonZeroU64::new(60_000).expect("constant should not be zero");
-
 /// Coordinator for fetching new query jobs and submitting them to Spider.
 pub struct Coordinator {
     resource_group_id: ResourceGroupId,
@@ -66,7 +63,7 @@ pub struct Coordinator {
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
-    job_handler_sem: Arc<Semaphore>,
+    job_handler_permits: Arc<Semaphore>,
 }
 
 impl Coordinator {
@@ -162,7 +159,7 @@ impl Coordinator {
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
             cancellation_token: cancellation_token.clone(),
-            job_handler_sem: Arc::new(Semaphore::new(max_concurrent_jobs)),
+            job_handler_permits: Arc::new(Semaphore::new(max_concurrent_jobs)),
         };
 
         coordinator.recover_submitted_jobs().await?;
@@ -317,10 +314,13 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::Semaphore`] if acquiring a job handler permit from `job_handler_sem` fails.
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `job_handler_permits` has been closed, which the coordinator never does.
     async fn schedule_new_jobs(&mut self) -> Result<Vec<QueryJobId>, Error> {
-        if self.job_handler_sem.available_permits() == 0 {
+        if self.job_handler_permits.available_permits() == 0 {
             return Ok(Vec::new());
         }
 
@@ -375,13 +375,11 @@ impl Coordinator {
             };
 
             let permit = self
-                .job_handler_sem
+                .job_handler_permits
                 .clone()
                 .acquire_owned()
                 .await
-                .map_err(|e| {
-                    Error::Semaphore(format!("failed to acquire a job handler permit: {e}"))
-                })?;
+                .expect("the job handler semaphore is never closed");
 
             tokio::spawn(async move {
                 let _permit = permit;
@@ -474,7 +472,7 @@ impl Coordinator {
                 .bind(QueryJobType::SearchOrAggregation)
                 .bind(QueryJobStatus::Pending)
                 .bind(
-                    i64::try_from(self.job_handler_sem.available_permits())
+                    i64::try_from(self.job_handler_permits.available_permits())
                         .expect("limit is bounded by Semaphore::MAX_PERMITS, which fits in i64"),
                 )
         };
@@ -544,6 +542,9 @@ impl Coordinator {
         Ok(recovery_context)
     }
 }
+
+const MILLISECS_PER_MINUTE: NonZeroU64 =
+    NonZeroU64::new(60_000).expect("constant should not be zero");
 
 /// A query job that was submitted to Spider by a previous coordinator instance.
 struct SubmittedJob {

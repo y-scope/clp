@@ -40,7 +40,12 @@ pub struct SpiderOption {
 
 /// Options for selecting the archives to search.
 pub struct ArchiveSelectionOptions {
+    /// The archive retention period, or `None` if archives are retained indefinitely. Archives
+    /// that ended earlier than this period before a job's creation are excluded from that job.
     pub archive_retention_period_millisecs: Option<NonZeroU64>,
+
+    /// The maximum number of distinct datasets a single query job may search, or `None` to accept
+    /// any number of them.
     pub max_datasets_per_query: Option<NonZeroUsize>,
 }
 
@@ -65,7 +70,7 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     search_job_config: SearchJobConfig,
     clp_s_query_option: ClpSQueryOption,
     output_handle: OutputHandle,
-    archive_end_ts_lower_bound_millisecs: Option<i64>,
+    archive_end_timestamp_lower_bound_millisecs: Option<i64>,
 }
 
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
@@ -127,7 +132,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             )));
         }
 
-        let archive_end_ts_lower_bound_millisecs = context
+        let archive_end_timestamp_lower_bound_millisecs = context
             .archive_selection_options
             .archive_retention_period_millisecs
             .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
@@ -148,7 +153,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             search_job_config,
             clp_s_query_option,
             output_handle,
-            archive_end_ts_lower_bound_millisecs,
+            archive_end_timestamp_lower_bound_millisecs,
         })
     }
 
@@ -275,7 +280,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         ArchiveSelector {
             context: &self.context,
             search_job_config: &self.search_job_config,
-            archive_end_ts_lower_bound_millisecs: self.archive_end_ts_lower_bound_millisecs,
+            archive_end_timestamp_lower_bound_millisecs: self
+                .archive_end_timestamp_lower_bound_millisecs,
         }
         .select()
         .await
@@ -521,7 +527,7 @@ impl From<&QueryJobOutcome> for QueryJobStatus {
 struct ArchiveSelector<'job_handle_lifetime> {
     context: &'job_handle_lifetime QueryJobHandleContext,
     search_job_config: &'job_handle_lifetime SearchJobConfig,
-    archive_end_ts_lower_bound_millisecs: Option<i64>,
+    archive_end_timestamp_lower_bound_millisecs: Option<i64>,
 }
 
 impl ArchiveSelector<'_> {
@@ -700,7 +706,7 @@ impl ArchiveSelector<'_> {
                 .push(" AND `end_timestamp` >= ")
                 .push_bind(begin_timestamp);
         }
-        if let Some(lower_bound) = self.archive_end_ts_lower_bound_millisecs {
+        if let Some(lower_bound) = self.archive_end_timestamp_lower_bound_millisecs {
             query_builder
                 .push(" AND (`end_timestamp` >= ")
                 .push_bind(lower_bound)

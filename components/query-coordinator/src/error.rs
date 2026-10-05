@@ -31,9 +31,6 @@ pub enum Error {
     #[error("failed to load the resource group credentials: {0}")]
     ResourceGroupCredentials(#[from] ExternalResourceGroupCredentialsError),
 
-    #[error("semaphore error: {0}")]
-    Semaphore(String),
-
     #[error("spider request failure: {0}")]
     SpiderClient(#[from] spider_client::error::ClientError),
 

@@ -155,7 +155,6 @@ async fn run_until_shutdown(
         join_result = &mut coordinator_handle => Some(join_result),
     };
 
-    // Request a graceful stop. A no-op if the coordinator has already returned.
     cancellation_token.cancel();
 
     let join_result = if let Some(join_result) = early_exit_result {
