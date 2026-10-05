@@ -77,8 +77,6 @@ public:
     static auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType;
 
     // Constructors
-    SchemaNode() : m_parent_id(-1), m_id(-1), m_type(NodeType::Integer) {}
-
     SchemaNode(
             id_t parent_id,
             id_t id,
@@ -124,14 +122,14 @@ public:
 
 private:
     // Data members
-    id_t m_parent_id;
-    id_t m_id;
+    id_t m_parent_id{-1};
+    id_t m_id{-1};
     std::vector<id_t> m_children_ids;
     // We use a unique_ptr so that references to this key name are stable after this SchemaNode is
     // move constructed.
     // TODO clpp: see if possible to remove the need to reference key name.
     std::unique_ptr<std::string const> m_key_name;
-    NodeType m_type;
+    NodeType m_type{NodeType::Unknown};
     uint32_t m_count{0};
     int32_t m_depth{0};
 };
