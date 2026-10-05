@@ -517,7 +517,6 @@ impl Default for Telemetry {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct QueryCoordinator {
-    pub resource_group: SpiderResourceGroup,
     pub job_polling_interval_millisecs: NonZeroU64,
     pub max_concurrent_jobs: NonZeroUsize,
     pub result_polling_interval_millisecs: NonZeroU64,
@@ -530,10 +529,6 @@ pub struct QueryCoordinator {
 impl Default for QueryCoordinator {
     fn default() -> Self {
         Self {
-            resource_group: SpiderResourceGroup {
-                name: NonEmptyString::new("query-coordinator".to_owned())
-                    .expect("default resource group name should not be empty"),
-            },
             job_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default jobs poll delay should not be zero"),
             max_concurrent_jobs: NonZeroUsize::new(1000)

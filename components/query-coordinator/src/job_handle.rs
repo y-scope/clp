@@ -72,8 +72,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// # Returns
     ///
-    /// A newly created [`QueryJobHandle`] for the given query job, with the `clp-s`
-    /// query options derived from `search_job_config`.
+    /// A newly created [`QueryJobHandle`] for the given query job, with the `clp-s` query options
+    /// derived from `search_job_config`.
     ///
     /// # Errors
     ///
