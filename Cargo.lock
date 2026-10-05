@@ -1045,7 +1045,6 @@ dependencies = [
  "clp-rust-utils",
  "const_format",
  "non-empty-string",
- "rmp-serde",
  "secrecy",
  "serde",
  "spider-client",
@@ -1520,7 +1519,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2161,7 +2160,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.3",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -3280,7 +3279,6 @@ dependencies = [
  "clp-rust-utils",
  "const_format",
  "non-empty-string",
- "rmp-serde",
  "serde",
  "spider-client",
  "spider-core",
@@ -3575,7 +3573,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4004,8 +4002,8 @@ dependencies = [
 
 [[package]]
 name = "spider-client"
-version = "0.1.0-rc.1"
-source = "git+https://github.com/y-scope/spider.git?tag=v0.1.0-rc.1-huntsman#403e683ca18a2f7a6b8f2f6da9c291f0170cb896"
+version = "0.1.0-dev"
+source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
 dependencies = [
  "spider-core",
  "spider-proto-rust",
@@ -4017,12 +4015,13 @@ dependencies = [
 
 [[package]]
 name = "spider-core"
-version = "0.1.0-rc.1"
-source = "git+https://github.com/y-scope/spider.git?tag=v0.1.0-rc.1-huntsman#403e683ca18a2f7a6b8f2f6da9c291f0170cb896"
+version = "0.1.0-dev"
+source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
 dependencies = [
  "non-empty-string",
  "rand 0.9.5",
  "rmp-serde",
+ "secrecy",
  "semver",
  "serde",
  "serde_json",
@@ -4036,8 +4035,8 @@ dependencies = [
 
 [[package]]
 name = "spider-derive"
-version = "0.1.0-rc.1"
-source = "git+https://github.com/y-scope/spider.git?tag=v0.1.0-rc.1-huntsman#403e683ca18a2f7a6b8f2f6da9c291f0170cb896"
+version = "0.1.0-dev"
+source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4046,8 +4045,8 @@ dependencies = [
 
 [[package]]
 name = "spider-proto-rust"
-version = "0.1.0-rc.1"
-source = "git+https://github.com/y-scope/spider.git?tag=v0.1.0-rc.1-huntsman#403e683ca18a2f7a6b8f2f6da9c291f0170cb896"
+version = "0.1.0-dev"
+source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
 dependencies = [
  "prost",
  "spider-core",
@@ -4061,8 +4060,8 @@ dependencies = [
 
 [[package]]
 name = "spider-tdl"
-version = "0.1.0-rc.1"
-source = "git+https://github.com/y-scope/spider.git?tag=v0.1.0-rc.1-huntsman#403e683ca18a2f7a6b8f2f6da9c291f0170cb896"
+version = "0.1.0-dev"
+source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
 dependencies = [
  "const-str",
  "rmp-serde",
@@ -4074,8 +4073,8 @@ dependencies = [
 
 [[package]]
 name = "spider-tdl-derive"
-version = "0.1.0-rc.1"
-source = "git+https://github.com/y-scope/spider.git?tag=v0.1.0-rc.1-huntsman#403e683ca18a2f7a6b8f2f6da9c291f0170cb896"
+version = "0.1.0-dev"
+source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4084,8 +4083,8 @@ dependencies = [
 
 [[package]]
 name = "spider-utils"
-version = "0.1.0-rc.1"
-source = "git+https://github.com/y-scope/spider.git?tag=v0.1.0-rc.1-huntsman#403e683ca18a2f7a6b8f2f6da9c291f0170cb896"
+version = "0.1.0-dev"
+source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
 dependencies = [
  "non-empty-string",
  "rand 0.9.5",
@@ -4474,7 +4473,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5261,7 +5260,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

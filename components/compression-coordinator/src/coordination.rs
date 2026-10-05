@@ -22,7 +22,6 @@ use std::time::Duration;
 use clp_rust_utils::clp_config::package::config::CompressionCoordinator as CoordinatorConfig;
 use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
 use clp_rust_utils::clp_config::package::config::Spider as SpiderConfig;
-use clp_rust_utils::clp_config::package::config::SpiderResourceGroup;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -33,6 +32,7 @@ use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
+use spider_core::types::resource_group::ExternalResourceGroupCredentials;
 use tokio::select;
 use tokio::sync::Semaphore;
 use tokio::time::Instant;
@@ -77,7 +77,8 @@ impl Coordinator {
     /// * [`Error::InvalidConfiguration`] if the compression coordinator configuration is invalid.
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
     /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
-    /// * Forwards [`get_or_create_resource_group_id`]'s return values on failure.
+    /// * Forwards [`ExternalResourceGroupCredentials::from_env`]'s return values on failure.
+    /// * Forwards [`SpiderClient::add_or_verify_resource_group`]'s return values on failure.
     /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
     pub async fn new(
         coordinator_config: &CoordinatorConfig,
@@ -107,15 +108,12 @@ impl Coordinator {
             .inspect_err(|e| {
                 tracing::error!(error = % e, "Failed to connect to Spider.");
             })?;
-        let resource_group_id = get_or_create_resource_group_id(
-            &coordinator_config.resource_group,
-            &spider_client,
-            &db_pool,
-        )
-        .await
-        .inspect_err(|e| {
-            tracing::error!(error = % e, "Failed to get or create resource group.");
-        })?;
+        let resource_group_id = spider_client
+            .add_or_verify_resource_group(ExternalResourceGroupCredentials::from_env()?)
+            .await
+            .inspect_err(|e| {
+                tracing::error!(error = % e, "Failed to add or verify resource group.");
+            })?;
 
         let spider_option = Arc::new(SpiderOption {
             compression_task_max_retry: coordinator_config.compression_task_max_retry,
@@ -553,78 +551,4 @@ struct RunningJobRowProjection {
     spider_job_id: SpiderJobId,
     #[sqlx(rename = "clp_config")]
     serialized_clp_io_config: Vec<u8>,
-}
-
-/// Retrieves the Spider resource group ID for the configured resource group, registering it if it
-/// does not yet exist.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-/// * Forwards [`SpiderClient::add_resource_group`]'s return values on failure.
-async fn get_or_create_resource_group_id(
-    resource_group_config: &SpiderResourceGroup,
-    spider_client: &SpiderClient,
-    db_pool: &sqlx::MySqlPool,
-) -> Result<ResourceGroupId, Error> {
-    const SPIDER_RESOURCE_GROUP_TABLE_NAME: &str = "spider_resource_groups";
-
-    const CREATE_TABLE_QUERY: &str = formatcp!(
-        "CREATE TABLE IF NOT EXISTS `{table}` (
-            `rg_name` VARCHAR(255) NOT NULL,
-            `rg_id` BIGINT UNSIGNED NOT NULL,
-            PRIMARY KEY (`rg_name`) USING BTREE
-        ) ROW_FORMAT=DYNAMIC",
-        table = SPIDER_RESOURCE_GROUP_TABLE_NAME,
-    );
-    const SELECT_QUERY: &str = formatcp!(
-        "SELECT `rg_id` FROM `{table}` WHERE `rg_name` = ?;",
-        table = SPIDER_RESOURCE_GROUP_TABLE_NAME,
-    );
-    const INSERT_QUERY: &str = formatcp!(
-        "INSERT INTO `{table}` (`rg_name`, `rg_id`) VALUES (?, ?);",
-        table = SPIDER_RESOURCE_GROUP_TABLE_NAME,
-    );
-
-    sqlx::query(CREATE_TABLE_QUERY).execute(db_pool).await?;
-
-    let resource_group = resource_group_config.name.as_str();
-    let existing_rg_id: Option<u64> = sqlx::query_scalar(SELECT_QUERY)
-        .bind(resource_group)
-        .fetch_optional(db_pool)
-        .await?;
-    if let Some(spider_rg_id) = existing_rg_id {
-        tracing::info!(
-            resource_group = % resource_group,
-            spider_rg_id = % spider_rg_id,
-            "Resource group already registered. Returning Spider resource group ID."
-        );
-        return Ok(ResourceGroupId::from(spider_rg_id));
-    }
-
-    // NOTE: For now, Spider does not enforce resource group credential validation. The password is
-    // hardcoded to be the same as the username.
-    let resource_group_id = spider_client
-        .add_resource_group(
-            resource_group.to_owned(),
-            resource_group.as_bytes().to_vec(),
-        )
-        .await?;
-
-    sqlx::query(INSERT_QUERY)
-        .bind(resource_group)
-        .bind(resource_group_id.get())
-        .execute(db_pool)
-        .await
-        .inspect_err(|e| {
-            tracing::error!(
-                error = % e,
-                "Failed to insert resource group into database. This might be a race condition. \
-                 Restart the service to retry."
-            );
-        })?;
-
-    Ok(resource_group_id)
 }

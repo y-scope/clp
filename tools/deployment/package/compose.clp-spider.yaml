@@ -15,6 +15,14 @@ x-clp-spider-worker-env-defaults: &clp_spider_worker_env_defaults
   CLP_DB_USER: "${CLP_DB_USER:-clp-user}"
 
 services:
+  spider-scheduler:
+    image: >-
+      ${SPIDER_SCHEDULER_IMAGE_REF:-ghcr.io/y-scope/spider/scheduler:sha-86cfba7}
+
+  spider-storage:
+    image: >-
+      ${SPIDER_STORAGE_IMAGE_REF:-ghcr.io/y-scope/spider/storage:sha-86cfba7}
+
   spider-worker:
     <<: *clp_spider_worker_defaults
     environment:
