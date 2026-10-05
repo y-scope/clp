@@ -7,6 +7,7 @@
 
 #include <fmt/format.h>
 
+#include <clp_s/archive_constants.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
@@ -43,7 +44,7 @@ auto Projection::add_column(std::shared_ptr<ast::FunctionCall> function_call) ->
     }
 
     auto column{std::dynamic_pointer_cast<ast::ColumnDescriptor>(args.at(0))};
-    if (!column) {
+    if (nullptr == column) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
@@ -60,16 +61,16 @@ auto Projection::add_column(std::shared_ptr<ast::FunctionCall> function_call) ->
 }
 
 auto Projection::is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) const -> bool {
-    auto it = m_node_projections.find(node_id);
-    if (it == m_node_projections.end()) {
+    auto it{m_node_projections.find(node_id)};
+    if (m_node_projections.end() == it) {
         return false;
     }
     return it->second.has(mode);
 }
 
 auto Projection::get_node_mask(SchemaNode::id_t node_id) const -> NodeMask {
-    auto it = m_node_projections.find(node_id);
-    if (it == m_node_projections.end()) {
+    auto it{m_node_projections.find(node_id)};
+    if (m_node_projections.end() == it) {
         return {};
     }
     return it->second;
@@ -86,7 +87,8 @@ auto Projection::has_projected_descendant(SchemaNode::id_t node_id) const -> boo
 }
 
 auto Projection::add_projection(SchemaNode::id_t node_id, NodeMask::Mode mode) -> void {
-    m_node_projections[node_id].set(mode);
+    auto [it, _]{m_node_projections.try_emplace(node_id)};
+    it->second.set(mode);
 }
 
 auto Projection::collect_structural_projections(
@@ -139,7 +141,8 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
     }
     for (auto node_id : m_matching_nodes) {
         for (auto cur_id{tree.get_node(node_id).get_parent_id()};
-             -1 != cur_id && NodeType::LogMessage != tree.get_node(cur_id).get_type();
+             constants::cRootNodeId != cur_id
+             && NodeType::LogMessage != tree.get_node(cur_id).get_type();
              cur_id = tree.get_node(cur_id).get_parent_id())
         {
             if (NodeType::ParentRule == tree.get_node(cur_id).get_type()) {

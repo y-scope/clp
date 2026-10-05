@@ -84,16 +84,17 @@ auto extract_column_from_parsed_value(std::any const& parsed) -> std::shared_ptr
                 return nullptr;
             }
             auto column{std::dynamic_pointer_cast<ColumnDescriptor>(args.at(0))};
-            if (!column) {
+            if (nullptr == column) {
                 SPDLOG_ERROR("Function '{}' argument must be a column", function_name);
                 return nullptr;
             }
-            if (function_name == clpp::cShapeFunction) {
-                column->set_subtree_type(std::string{clpp::cShapeFunction});
-            } else {
+
+            if (clpp::cShapeFunction != function_name) {
                 SPDLOG_ERROR("Function '{}' is not supported in filter expressions", function_name);
                 return nullptr;
             }
+
+            column->set_subtree_type(function_name);
             return column;
         }
         if (auto column{std::dynamic_pointer_cast<ColumnDescriptor>(*value)}) {
@@ -333,7 +334,7 @@ public:
             -> std::any override {
         auto parsed = ctx->col->accept(this);
         auto descriptor{extract_column_from_parsed_value(parsed)};
-        if (!descriptor) {
+        if (nullptr == descriptor) {
             return std::any{};
         }
 
@@ -359,7 +360,7 @@ public:
             -> std::any override {
         auto parsed = ctx->col->accept(this);
         auto descriptor{extract_column_from_parsed_value(parsed)};
-        if (!descriptor) {
+        if (nullptr == descriptor) {
             return std::any{};
         }
         std::shared_ptr<Literal> lit;

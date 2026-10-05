@@ -378,10 +378,10 @@ private:
      * A leaf column targeted for decomposed output.
      */
     struct DecompositionTarget {
-        SchemaNode::id_t node_id;
-        size_t reader_idx;
+        SchemaNode::id_t node_id{-1};
+        size_t reader_idx{};
         std::string_view name;
-        NodeType type;
+        NodeType type{NodeType::Unknown};
     };
 
     /**
