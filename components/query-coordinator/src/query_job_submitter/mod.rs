@@ -27,8 +27,8 @@ pub struct ArchiveMetadata {
     /// The archive's dataset, or `None` for the default dataset.
     pub dataset: Option<NonEmptyString>,
 
-    /// The archive's compressed size in bytes.
-    pub size: u64,
+    /// The archive's uncompressed size in bytes.
+    pub uncompressed_size: u64,
 
     /// The archive's end timestamp in Unix epoch milliseconds.
     pub end_timestamp: i64,
