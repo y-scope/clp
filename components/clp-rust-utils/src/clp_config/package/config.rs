@@ -35,6 +35,7 @@ pub struct Config {
     pub telemetry: Telemetry,
     pub spider: Option<Spider>,
     pub compression_coordinator: Option<CompressionCoordinator>,
+    pub query_coordinator: Option<QueryCoordinator>,
 }
 
 impl Default for Config {
@@ -54,6 +55,7 @@ impl Default for Config {
             telemetry: Telemetry::default(),
             spider: None,
             compression_coordinator: None,
+            query_coordinator: None,
         }
     }
 }
@@ -519,16 +521,20 @@ impl Default for Telemetry {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct QueryCoordinator {
+    pub database_connection_pool_size: NonZeroU32,
     pub job_polling_interval_millisecs: NonZeroU64,
     pub max_concurrent_jobs: NonZeroUsize,
     pub max_datasets_per_query: Option<NonZeroUsize>,
     pub query_task_max_retry: u32,
     pub result_polling_interval_millisecs: NonZeroU64,
+    pub termination_timeout_secs: NonZeroU64,
 }
 
 impl Default for QueryCoordinator {
     fn default() -> Self {
         Self {
+            database_connection_pool_size: NonZeroU32::new(10)
+                .expect("default database connection pool size should not be zero"),
             job_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default jobs poll delay should not be zero"),
             max_concurrent_jobs: NonZeroUsize::new(1000)
@@ -537,6 +543,8 @@ impl Default for QueryCoordinator {
             query_task_max_retry: 1,
             result_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default result polling interval should not be zero"),
+            termination_timeout_secs: NonZeroU64::new(30)
+                .expect("default termination timeout should not be zero"),
         }
     }
 }
