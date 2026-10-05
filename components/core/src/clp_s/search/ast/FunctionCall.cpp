@@ -55,7 +55,7 @@ auto FunctionCall::print() const -> void {
     out << "FunctionCall(" << m_function_name << ", [";
     bool first{true};
     for (auto it = op_begin(); it != op_end(); ++it) {
-        if (!first) {
+        if (false == first) {
             out << ", ";
         }
         first = false;

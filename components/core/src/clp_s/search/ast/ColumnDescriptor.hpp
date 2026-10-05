@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <clp_s/ErrorCode.hpp>
+#include <clp_s/search/ast/Literal.hpp>
 #include <clp_s/TraceableException.hpp>
 
 #include "Literal.hpp"
@@ -337,7 +338,7 @@ private:
     DescriptorList m_descriptors;  // list of descriptors describing the column
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
     std::string m_namespace;
-    literal_type_bitmask_t m_flags;  // set of types this column can match
+    literal_type_bitmask_t m_flags{cAllTypes};  // set of types this column can match
     int32_t m_schema_col_id{-1};  // unambiguous CLJ column id this column represents. May be unset.
     bool m_unresolved_descriptors{false};  // true if contains wildcards
     bool m_pure_wildcard{false};  // true if column is single wildcard
@@ -345,7 +346,7 @@ private:
 
     bool m_is_clpp_resolved{false};
     std::optional<size_t> m_leaf_position;
-    uint64_t m_id;
+    uint64_t m_id{};
 
     // Constructors
     explicit ColumnDescriptor(std::vector<std::string> const&, std::string_view);
