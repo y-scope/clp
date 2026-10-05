@@ -102,7 +102,9 @@ std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) 
 
     // if we had ambiguous column descriptors containing regex which were
     // resolved we need to restandardize the expression
-    if (false == m_unresolved_descriptor_to_descriptor.empty() || m_clpp_decomposed_query) {
+    if (false == m_unresolved_descriptor_to_descriptor.empty() || m_clpp_decomposed_query
+        || m_pure_wildcard_expanded)
+    {
         m_column_to_descriptor.clear();
         m_unresolved_descriptor_to_descriptor.clear();
 
@@ -191,6 +193,13 @@ auto SchemaMatch::populate_column_mapping(
     // namespaces.
     // TODO: consider removing this imprecise loop when we resolve issue #907.
     if (column->is_pure_wildcard()) {
+        if (should_expand_pure_wildcard(*column, *expr)) {
+            auto expanded{expand_pure_wildcard_over_clpp_nodes(column, expr)};
+            if (nullptr == expanded) {
+                return {false, expr};
+            }
+            return {true, std::move(expanded)};
+        }
         for (auto const& node : m_tree->get_nodes()) {
             if (column->matches_type(SchemaNode::node_to_literal_type(node.get_type()))) {
                 // column_to_descriptor_[node->get_id()].insert(column);
@@ -202,6 +211,15 @@ auto SchemaMatch::populate_column_mapping(
             }
         }
 
+        // A negated wildcard matching no node type at all is vacuously true.
+        if (false == matched) {
+            auto const& filter{dynamic_cast<FilterExpr const&>(*expr)};
+            if (filter.is_inverted()) {
+                auto vacuously_true{EmptyExpr::create(expr->get_parent())};
+                vacuously_true->invert();
+                return {true, std::static_pointer_cast<ast::Expression>(vacuously_true)};
+            }
+        }
         return {matched, expr};
     }
 
@@ -1229,5 +1247,197 @@ auto SchemaMatch::build_resolved_node_filter(
     }
     auto operand{filter.get_operand()};
     return FilterExpr::create(resolved_column, op, operand, filter.is_inverted());
+}
+
+auto SchemaMatch::collect_clpp_node_ids(ast::ColumnDescriptor const& column) const
+        -> std::vector<SchemaNode::id_t> {
+    std::vector<SchemaNode::id_t> clpp_node_ids;
+    auto const subtree_root_node_id{
+            m_tree->get_object_subtree_node_id_for_namespace(column.get_namespace())
+    };
+    if (-1 == subtree_root_node_id) {
+        return clpp_node_ids;
+    }
+    std::vector<SchemaNode::id_t> work_list{subtree_root_node_id};
+    while (false == work_list.empty()) {
+        auto const node_id{work_list.back()};
+        work_list.pop_back();
+        auto const& node{m_tree->get_node(node_id)};
+        if (NodeType::LogMessage == node.get_type() || NodeType::ParentRule == node.get_type()) {
+            clpp_node_ids.push_back(node_id);
+        }
+        for (auto const child_id : node.get_children_ids()) {
+            work_list.push_back(child_id);
+        }
+    }
+    std::sort(clpp_node_ids.begin(), clpp_node_ids.end());
+    return clpp_node_ids;
+}
+
+auto SchemaMatch::build_residual_wildcard_filter(
+        ast::ColumnDescriptor const& column,
+        ast::FilterExpr const& filter
+) -> std::shared_ptr<ast::Expression> {
+    if (is_shape_column(column)) {
+        return nullptr;
+    }
+    auto residual_column{column.copy()};
+    residual_column->remove_matching_type(LiteralType::ClppDecomposeT);
+    if (0 == residual_column->get_matching_types()) {
+        return nullptr;
+    }
+    auto operand{filter.get_operand()};
+    if (nullptr == operand) {
+        return FilterExpr::create(residual_column, filter.get_operation(), filter.is_inverted());
+    }
+    return FilterExpr::create(
+            residual_column,
+            filter.get_operation(),
+            operand,
+            filter.is_inverted()
+    );
+}
+
+auto SchemaMatch::should_expand_pure_wildcard(
+        ast::ColumnDescriptor& column,
+        ast::Expression const& expr
+) -> bool {
+    // Expansion strips `ClppDecomposeT` off the residual column, so a column still carrying it
+    // here has not been expanded yet.
+    if (false == column.matches_type(LiteralType::ClppDecomposeT)) {
+        return false;
+    }
+    auto const& filter{dynamic_cast<FilterExpr const&>(expr)};
+    auto const op{filter.get_operation()};
+    if (FilterOperation::NEXISTS == op) {
+        return false;
+    }
+    // The per-node negation reparses the operand as a VarString, which only some operations
+    // support.
+    if (filter.is_inverted()) {
+        std::string query;
+        auto const operand{filter.get_operand()};
+        if (FilterOperation::EXISTS == op || nullptr == operand
+            || false == operand->as_var_string(query, op))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+auto SchemaMatch::expand_pure_wildcard_over_clpp_nodes(
+        std::shared_ptr<ast::ColumnDescriptor> const& column,
+        std::shared_ptr<ast::Expression> const& expr
+) -> std::shared_ptr<ast::Expression> {
+    auto const& filter{dynamic_cast<FilterExpr const&>(*expr)};
+    auto const clpp_node_ids{collect_clpp_node_ids(*column)};
+    if (clpp_node_ids.empty()) {
+        if (is_shape_column(*column)) {
+            return nullptr;
+        }
+        return expr;
+    }
+    m_clpp_node_matched = true;
+    m_pure_wildcard_expanded = true;
+
+    if (filter.is_inverted()) {
+        return build_negated_pure_wildcard_expansion(*column, filter, clpp_node_ids);
+    }
+
+    auto expansion{OrExpr::create()};
+    if (auto residual{build_residual_wildcard_filter(*column, filter)}; nullptr != residual) {
+        expansion->add_operand(residual);
+    }
+    for (auto const node_id : clpp_node_ids) {
+        if (auto node_filter{build_resolved_node_filter(*column, node_id, filter)};
+            nullptr != node_filter)
+        {
+            expansion->add_operand(node_filter);
+        }
+    }
+    if (expansion->get_op_list().empty()) {
+        return nullptr;
+    }
+    return expansion;
+}
+
+auto SchemaMatch::build_negated_pure_wildcard_expansion(
+        ast::ColumnDescriptor const& column,
+        ast::FilterExpr const& filter,
+        std::vector<SchemaNode::id_t> const& clpp_node_ids
+) -> std::shared_ptr<ast::Expression> {
+    // Group schemas by the set of LogMessage/ParentRule nodes they contain, so that the negated
+    // "no node matches" condition only ANDs together the nodes that each group actually has
+    // (AND-ing every node instead would blow up during OrOfAndForm normalization, which expands
+    // AND-of-ORs combinatorially).
+    std::map<int32_t, std::vector<SchemaNode::id_t>> node_ids_by_schema;
+    for (auto const& [schema_id, _] : *m_schemas) {
+        node_ids_by_schema[schema_id];
+    }
+    for (auto const node_id : clpp_node_ids) {
+        for (auto const schema_id : m_clpp_matcher.find_matching_schemas(
+                     find_enclosing_log_message_node_id(node_id),
+                     m_tree->build_ls_rule_name(node_id),
+                     std::nullopt
+             ))
+        {
+            node_ids_by_schema[schema_id].push_back(node_id);
+        }
+    }
+    std::map<std::vector<SchemaNode::id_t>, std::unordered_set<int32_t>> schema_ids_by_node_ids;
+    for (auto& [schema_id, node_ids] : node_ids_by_schema) {
+        schema_ids_by_node_ids[std::move(node_ids)].emplace(schema_id);
+    }
+
+    auto groups{ast::OrExpr::create()};
+    for (auto const& [node_ids, schema_ids] : schema_ids_by_node_ids) {
+        // For schemas with no LogMessage/ParentRule node, the EXISTS selector is registered
+        // against a node they don't contain, which is fine because an EXISTS filter is
+        // constant-folded to True: it only serves to select the group's schemas.
+        auto const selector_node_id{node_ids.empty() ? clpp_node_ids.front() : node_ids.front()};
+        if (auto group{build_negated_clpp_node_group(
+                    column,
+                    filter,
+                    selector_node_id,
+                    node_ids,
+                    schema_ids
+            )};
+            nullptr != group)
+        {
+            groups->add_operand(group);
+        }
+    }
+    if (groups->get_op_list().empty()) {
+        return nullptr;
+    }
+    return groups;
+}
+
+auto SchemaMatch::build_negated_clpp_node_group(
+        ast::ColumnDescriptor const& column,
+        ast::FilterExpr const& filter,
+        SchemaNode::id_t selector_node_id,
+        std::vector<SchemaNode::id_t> const& node_ids,
+        std::unordered_set<int32_t> const& schema_ids
+) -> std::shared_ptr<ast::Expression> {
+    auto group{AndExpr::create()};
+    add_exists_operand(
+            group,
+            build_resolved_column(column, selector_node_id),
+            selector_node_id,
+            schema_ids
+    );
+    if (auto residual{build_residual_wildcard_filter(column, filter)}; nullptr != residual) {
+        group->add_operand(residual);
+    }
+    for (auto const node_id : node_ids) {
+        auto negated_node_filter{build_resolved_node_filter(column, node_id, filter)};
+        if (nullptr == negated_node_filter) {
+            return nullptr;
+        }
+        group->add_operand(negated_node_filter);
+    }
+    return group;
 }
 }  // namespace clp_s::search

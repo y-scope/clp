@@ -306,6 +306,90 @@ private:
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
+     * Collects every LogMessage and ParentRule node in the object subtree of `column`'s namespace.
+     * @param column
+     * @return The node IDs in ascending order.
+     */
+    [[nodiscard]] auto collect_clpp_node_ids(ast::ColumnDescriptor const& column) const
+            -> std::vector<SchemaNode::id_t>;
+
+    /**
+     * Builds the copy of a pure wildcard `filter` that searches every column type other than
+     * LogMessage/ParentRule nodes, which are searched through explicit per-node filters instead.
+     * @param column The pure wildcard column.
+     * @param filter The pure wildcard filter to copy.
+     * @return The residual filter, or nullptr if `column` is a shape() column or matches no other
+     * type.
+     */
+    [[nodiscard]] static auto build_residual_wildcard_filter(
+            ast::ColumnDescriptor const& column,
+            ast::FilterExpr const& filter
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * @param column The pure wildcard column.
+     * @param expr The expression containing `column`.
+     * @return true if `column` should be expanded over the schema tree's LogMessage/ParentRule
+     * nodes, false otherwise.
+     */
+    [[nodiscard]] static auto
+    should_expand_pure_wildcard(ast::ColumnDescriptor& column, ast::Expression const& expr)
+            -> bool;
+
+    /**
+     * Expands a pure wildcard filter over every LogMessage and ParentRule node, so that it
+     * searches them the same way `obj.*` does.
+     *
+     * A non-inverted filter becomes an OrExpr of the residual wildcard filter and one filter per
+     * node. An inverted filter (no column matches) is built per group of schemas sharing the same
+     * set of nodes; see `build_negated_clpp_node_group`.
+     * @param column The pure wildcard column.
+     * @param expr The FilterExpr containing `column`.
+     * @return The expanded expression, or nullptr if no schema can match.
+     */
+    auto expand_pure_wildcard_over_clpp_nodes(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            std::shared_ptr<ast::Expression> const& expr
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Builds the negated pure wildcard expansion for every schema: schemas are grouped by the set
+     * of LogMessage/ParentRule nodes they contain, and each group is built with
+     * `build_negated_clpp_node_group`, then OR-ed together.
+     * @param column The pure wildcard column.
+     * @param filter The inverted filter.
+     * @param clpp_node_ids Every LogMessage/ParentRule node in `column`'s namespace, in ascending
+     * order.
+     * @return The expanded expression, or nullptr if no schema can match.
+     */
+    auto build_negated_pure_wildcard_expansion(
+            ast::ColumnDescriptor const& column,
+            ast::FilterExpr const& filter,
+            std::vector<SchemaNode::id_t> const& clpp_node_ids
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Builds the negated pure wildcard expression for the schemas `schema_ids`, which all contain
+     * exactly the LogMessage/ParentRule nodes `node_ids`: an AndExpr of an EXISTS filter selecting
+     * `schema_ids`, the inverted residual wildcard filter, and the negated filter of every node.
+     * @param column The pure wildcard column.
+     * @param filter The inverted filter.
+     * @param selector_node_id The node the schema-selecting EXISTS filter is registered against.
+     * When `node_ids` is empty this is a node that none of `schema_ids` contain, which is fine
+     * because an EXISTS filter is constant-folded to True: the filter only selects schemas.
+     * @param node_ids The nodes contained by every schema in `schema_ids`.
+     * @param schema_ids The schemas whose events satisfy the filter's negation for the given nodes.
+     * @return The expression, or nullptr if some node's negation can't hold in any schema.
+     */
+    auto build_negated_clpp_node_group(
+            ast::ColumnDescriptor const& column,
+            ast::FilterExpr const& filter,
+            SchemaNode::id_t selector_node_id,
+            std::vector<SchemaNode::id_t> const& node_ids,
+            std::unordered_set<int32_t> const& schema_ids
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
      * Resolves the nearest enclosing `LogMessage` node of `node_id`. If `node_id` is a
      * `LogMessage`, it resolves to itself.  Because log events contain only sibling (never nested)
      * `LogMessage`s, every rule/`LogMessage` node has exactly one such enclosing node, whose ID
@@ -343,6 +427,7 @@ private:
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
     bool m_clpp_decomposed_query{false};
     bool m_clpp_node_matched{false};
+    bool m_pure_wildcard_expanded{false};
     uint64_t m_num_clpp_interpretations{0};
     ClppMatcher m_clpp_matcher;
 
