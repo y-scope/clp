@@ -61,8 +61,6 @@ telemetry:
 #
 ## `spider`, `compression_coordinator` and `query_coordinator` default to `null`. To use them, set
 ## `package.scheduler` to "spider", remove `null` from all three, and uncomment their fields below.
-## In this mode, the query path is served by the query coordinator instead of the query scheduler,
-## query workers and reducer.
 #spider: null
 ##  host: "localhost"
 ##  port: 50051
@@ -151,7 +149,6 @@ telemetry:
 #  task_soft_time_limit: 600  # A value of 0 disables the limit
 #  task_time_limit: 1200  # A value of 0 disables the limit
 #  query_trace_sampling_probability: 0.01
-#
 #
 #webui:
 #  host: "localhost"
