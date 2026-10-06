@@ -13,7 +13,7 @@
 #else
     #include <system_error>
 
-    #include <ystdlib/error_handling/Result.hpp>
+    #include <ystdlib/error_handling/ErrorCode.hpp>
 
     #include <clpp/ErrorCode.hpp>
 #endif
@@ -109,8 +109,11 @@ constexpr std::string_view cDecompositionUnsupportedMessage{
 };
 }  // namespace
 
-auto decompose_by_rule_name(log_surgeon::Parser&, std::string_view, std::string_view)
-        -> std::vector<Interpretation> {
+auto decompose_by_rule_name(
+        log_surgeon::ParsingSpec& /*parsing_spec*/,
+        std::string_view /*query*/,
+        std::string_view /*rule_name*/
+) -> std::vector<Interpretation> {
     throw std::system_error{
             ystdlib::error_handling::make_error_code(
                     clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported}
@@ -119,9 +122,11 @@ auto decompose_by_rule_name(log_surgeon::Parser&, std::string_view, std::string_
     };
 }
 
-auto
-decompose_by_log_shapes(log_surgeon::Parser&, std::string_view, std::span<std::string_view const>)
-        -> std::vector<std::vector<std::vector<LeafQuery>>> {
+auto decompose_by_log_shapes(
+        log_surgeon::ParsingSpec& /*parsing_spec*/,
+        std::string_view /*query*/,
+        std::span<std::string_view const> /*log_shapes*/
+) -> std::vector<std::vector<std::vector<LeafQuery>>> {
     throw std::system_error{
             ystdlib::error_handling::make_error_code(
                     clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported}
