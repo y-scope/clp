@@ -894,9 +894,9 @@ auto SchemaMatch::register_clpp_resolved_column(
         std::unordered_set<int32_t> const& matched_schema_ids
 ) -> void {
     column->set_clpp_resolved(true);
-    auto& mappings{m_descriptor_to_schema[column->get_id()]};
+    auto [it, _]{m_descriptor_to_schema.try_emplace(column->get_id())};
     for (int32_t const schema_id : matched_schema_ids) {
-        mappings.emplace(schema_id, node_id);
+        it->second.emplace(schema_id, node_id);
     }
 }
 

@@ -26,6 +26,8 @@ namespace {
  * Removes the leaf queries whose match is `*`, since they don't constrain the leaf's value and so
  * don't need to be represented as filter expressions downstream.
  */
+auto erase_unconstrained_leaves(std::vector<clpp::LeafQuery>& leaf_queries) -> void;
+
 auto erase_unconstrained_leaves(std::vector<clpp::LeafQuery>& leaf_queries) -> void {
     std::erase_if(leaf_queries, [](clpp::LeafQuery const& leaf) -> bool {
         return "*" == leaf.m_query;
@@ -177,7 +179,8 @@ auto ClppMatcher::decompose_by_rule_name(
                     // Unconstrained interpretations are satisfied by any matching occurrence, so
                     // their schemas are collected under a single position.
                     auto const key{interpretation.m_leaf_queries.empty() ? 0 : leaf_position};
-                    schema_ids_by_leaf_position[key].insert(schema_ids.begin(), schema_ids.end());
+                    auto [it, _]{schema_ids_by_leaf_position.try_emplace(key)};
+                    it->second.insert(schema_ids.begin(), schema_ids.end());
                 }
         );
         for (auto& [leaf_position, schema_ids] : schema_ids_by_leaf_position) {

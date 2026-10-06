@@ -77,9 +77,8 @@ namespace {
         if (false == node_type_consumes_column(node.get_type())) {
             return;
         }
-        name_to_reader_indices[tree.build_ls_rule_name(global_column_id)].push_back(
-                column_reader_idx
-        );
+        auto [it, _]{name_to_reader_indices.try_emplace(tree.build_ls_rule_name(global_column_id))};
+        it->second.push_back(column_reader_idx);
         ++column_reader_idx;
     });
     return {std::move(name_to_reader_indices), column_reader_idx};
@@ -1089,7 +1088,7 @@ auto SchemaReader::emit_parent_rule_arrays(
                 );
             }
 
-            YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
+            std::ignore = YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
                     occurrence.sub_schema,
                     parent_rule_id,
                     occurrence.start_column_reader_idx,
