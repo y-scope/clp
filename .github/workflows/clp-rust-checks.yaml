@@ -23,6 +23,8 @@ on:
     - cron: "15 0 * * *"
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
   # Cancel in-progress jobs for efficiency
@@ -30,6 +32,9 @@ concurrency:
 
 jobs:
   rust-checks:
+    permissions:
+      # To check out the repository.
+      contents: "read"
     runs-on: "ubuntu-22.04"
     steps:
       - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
