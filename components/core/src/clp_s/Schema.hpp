@@ -43,7 +43,7 @@ public:
      * Invokes `predicate` on every MPT node ID in this view, recursing into unordered object
      * sub-schemas, until the predicate returns true.
      * @param predicate A callable accepting a `SchemaNode::id_t` and returning a bool.
-     * @return true if the predicate returned true for any node ID, false otherwise.
+     * @return Whether the predicate returned true for any node ID.
      */
     template <typename Predicate>
     [[nodiscard]] auto any_node_id(Predicate const& predicate) const -> bool;
@@ -69,7 +69,7 @@ public:
      * the sub-schema if desired.
      * @param visit_node Invoked with each plain MPT node ID.
      * @param visit_object Invoked with each decoded unordered object.
-     * @return true if any visitor returned true, false otherwise.
+     * @return Whether any visitor returned true.
      */
     template <typename NodeVisitor, typename ObjectVisitor>
     auto visit_entries(NodeVisitor const& visit_node, ObjectVisitor const& visit_object) const
@@ -96,7 +96,7 @@ private:
     // Static methods
     /**
      * @param schema_entry
-     * @return true if the schema entry is an unordered-object delimiter, false otherwise
+     * @return Whether the schema entry is an unordered-object delimiter.
      */
     static constexpr auto is_unordered_object(int32_t schema_entry) -> bool {
         return 0 != (schema_entry & cEncodedTypeBitmask);

@@ -103,7 +103,7 @@ public:
 
     /**
      * @param section The section name to check.
-     * @return true if the section exists in the archive.
+     * @return Whether the section exists in the archive.
      */
     [[nodiscard]] auto has_section(std::string_view section) const -> bool;
 
@@ -122,7 +122,7 @@ public:
     [[nodiscard]] auto is_single_file_archive() const -> bool { return m_single_file_archive; }
 
     /**
-     * @return true if the archive info packet set the experimental bool.
+     * @return Whether the archive info packet set the experimental bool.
      */
     [[nodiscard]] auto experimental() const -> bool { return m_archive_info.experimental; }
 

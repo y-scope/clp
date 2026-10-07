@@ -159,7 +159,7 @@ wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_view wil
  * @tparam integer_t
  * @param raw
  * @param converted
- * @return true if the conversion was successful, false otherwise
+ * @return Whether the entire string was successfully converted.
  */
 template <std::integral integer_t>
 [[nodiscard]] auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool;
@@ -179,7 +179,7 @@ auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
  *
  * @param raw The string to convert.
  * @param converted Output parameter for the converted value.
- * @return true if the entire string was successfully converted, false otherwise.
+ * @return Whether the entire string was successfully converted.
  */
 [[nodiscard]] auto convert_string_to_double(std::string_view raw, double& converted) -> bool;
 }  // namespace clp::string_utils

@@ -120,7 +120,7 @@ public:
      * Checks whether a given schema node has a specific projection mode set.
      * @param node_id The schema node ID to check.
      * @param mode The projection mode to test.
-     * @return true if the node has the requested projection mode.
+     * @return Whether the node has the requested projection mode.
      */
     [[nodiscard]] auto is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) const -> bool;
 
@@ -134,7 +134,7 @@ public:
     /**
      * Checks whether a schema node's value should be emitted.
      * @param node_id The schema node ID to check.
-     * @return true if the node's value should be emitted.
+     * @return Whether the node's value should be emitted.
      */
     [[nodiscard]] auto should_emit_value(SchemaNode::id_t node_id) const -> bool;
 
@@ -142,7 +142,7 @@ public:
      * Checks whether a ParentRule schema node has any projected descendant leaf (i.e. a leaf
      * matched by some projection column is nested under this ParentRule).
      * @param node_id The ParentRule schema node ID to check.
-     * @return true if at least one descendant leaf of the node is projected.
+     * @return Whether at least one descendant leaf of the node is projected.
      */
     [[nodiscard]] auto has_projected_descendant(SchemaNode::id_t node_id) const -> bool;
 
@@ -163,14 +163,14 @@ public:
     /**
      * Checks whether a column corresponding to given leaf node should be included in the output
      * @param node_id
-     * @return true if the column should be included in the output, false if not.
+     * @return Whether the column should be included in the output.
      */
     [[nodiscard]] auto matches_node(SchemaNode::id_t node_id) const -> bool {
         return Mode::ReturnAllColumns == m_projection_mode || m_matching_nodes.contains(node_id);
     }
 
     /**
-     * @return true if the projection is in ReturnAllColumns mode.
+     * @return Whether the projection is in ReturnAllColumns mode.
      */
     [[nodiscard]] auto is_return_all_columns() const -> bool {
         return Mode::ReturnAllColumns == m_projection_mode;
@@ -218,7 +218,7 @@ private:
      * @param tree
      * @param matched_nodes The nodes matched by the column descriptor.
      * @param mode The output mode for this column.
-     * @return true if at least one matched node was a structural container.
+     * @return Whether at least one matched node was a structural container.
      */
     [[nodiscard]] auto collect_structural_projections(
             SchemaTree const& tree,

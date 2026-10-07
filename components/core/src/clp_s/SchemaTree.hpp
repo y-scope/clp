@@ -116,7 +116,7 @@ public:
     /**
      * Returns whether the node acts as a structural container (i.e., it can have children and be
      * traversed during key resolution).
-     * @return true for Object, LogMessage, and ParentRule; false otherwise.
+     * @return Whether the node type is Object, LogMessage, or ParentRule.
      */
     [[nodiscard]] auto is_structural_container() const -> bool;
 

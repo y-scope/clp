@@ -60,8 +60,7 @@ namespace {
 
 /**
  * @param type
- * @return true if the given node type corresponds to a scalar column that consumes a column
- * reader.
+ * @return Whether the given node type corresponds to a scalar column that consumes a column reader.
  */
 [[nodiscard]] auto node_type_consumes_column(NodeType type) -> bool;
 
