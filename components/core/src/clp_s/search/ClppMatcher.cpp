@@ -25,6 +25,7 @@ namespace {
 /**
  * Removes the leaf queries whose match is `*`, since they don't constrain the leaf's value and so
  * don't need to be represented as filter expressions downstream.
+ * @param leaf_queries The leaf queries to filter in place.
  */
 auto erase_unconstrained_leaves(std::vector<clpp::LeafQuery>& leaf_queries) -> void;
 
