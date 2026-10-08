@@ -35,6 +35,7 @@ pub struct Config {
     pub telemetry: Telemetry,
     pub spider: Option<Spider>,
     pub compression_coordinator: Option<CompressionCoordinator>,
+    pub query_coordinator: Option<QueryCoordinator>,
 }
 
 impl Default for Config {
@@ -54,6 +55,7 @@ impl Default for Config {
             telemetry: Telemetry::default(),
             spider: None,
             compression_coordinator: None,
+            query_coordinator: None,
         }
     }
 }
@@ -282,6 +284,25 @@ pub struct ResultsCache {
     pub db_name: String,
 }
 
+impl ResultsCache {
+    /// Builds the MongoDB URI for the results cache database.
+    ///
+    /// # Returns
+    ///
+    /// The MongoDB URI addressing the results cache database.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the formatted URI is empty, which it never is.
+    #[must_use]
+    pub fn uri(&self) -> NonEmptyString {
+        NonEmptyString::from_string(format!(
+            "mongodb://{}:{}/{}",
+            self.host, self.port, self.db_name
+        ))
+    }
+}
+
 impl Default for ResultsCache {
     fn default() -> Self {
         Self {
@@ -363,6 +384,7 @@ pub struct ArchiveOutput {
     pub target_encoded_file_size: u64,
     pub target_segment_size: u64,
     pub compression_level: u8,
+    pub retention_period: Option<NonZeroU64>,
 }
 
 impl ArchiveOutput {
@@ -417,6 +439,7 @@ impl Default for ArchiveOutput {
             target_encoded_file_size: 256 * 1024 * 1024,
             target_segment_size: 256 * 1024 * 1024,
             compression_level: 3,
+            retention_period: None,
         }
     }
 }
@@ -498,6 +521,38 @@ impl Default for Telemetry {
         Self {
             disable: false,
             endpoint: "https://telemetry.yscope.io".to_owned(),
+        }
+    }
+}
+
+/// Query coordinator configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct QueryCoordinator {
+    pub database_connection_pool_size: NonZeroU32,
+    pub job_polling_interval_millisecs: NonZeroU64,
+    pub max_concurrent_jobs: NonZeroUsize,
+    pub max_datasets_per_query: Option<NonZeroUsize>,
+    pub query_task_max_retry: u32,
+    pub result_polling_interval_millisecs: NonZeroU64,
+    pub termination_timeout_secs: NonZeroU64,
+}
+
+impl Default for QueryCoordinator {
+    fn default() -> Self {
+        Self {
+            database_connection_pool_size: NonZeroU32::new(10)
+                .expect("default database connection pool size should not be zero"),
+            job_polling_interval_millisecs: NonZeroU64::new(50)
+                .expect("default jobs poll delay should not be zero"),
+            max_concurrent_jobs: NonZeroUsize::new(1000)
+                .expect("default maximum number of concurrent jobs should not be zero"),
+            max_datasets_per_query: NonZeroUsize::new(10),
+            query_task_max_retry: 1,
+            result_polling_interval_millisecs: NonZeroU64::new(20)
+                .expect("default result polling interval should not be zero"),
+            termination_timeout_secs: NonZeroU64::new(30)
+                .expect("default termination timeout should not be zero"),
         }
     }
 }

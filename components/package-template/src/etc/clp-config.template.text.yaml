@@ -62,9 +62,11 @@ log_ingestor: null
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
 #
-## `spider` and `compression_coordinator` are unsupported with CLP Text and must stay `null`.
+## `spider`, `compression_coordinator` and `query_coordinator` are unsupported with CLP Text and
+## must stay `null`.
 #spider: null
 #compression_coordinator: null
+#query_coordinator: null
 #
 #query_scheduler:
 #  host: "localhost"

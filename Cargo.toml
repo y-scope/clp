@@ -40,9 +40,9 @@ secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 serial_test = "4.0.1"
-spider-client = { git = "https://github.com/y-scope/spider.git", rev = "86cfba7c73a6428eeb7501bd3b6587140425e9ad" }
-spider-core = { git = "https://github.com/y-scope/spider.git", rev = "86cfba7c73a6428eeb7501bd3b6587140425e9ad" }
-spider-tdl = { git = "https://github.com/y-scope/spider.git", rev = "86cfba7c73a6428eeb7501bd3b6587140425e9ad", features = ["derive"] }
+spider-client = { git = "https://github.com/y-scope/spider.git", rev = "278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc" }
+spider-core = { git = "https://github.com/y-scope/spider.git", rev = "278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc" }
+spider-tdl = { git = "https://github.com/y-scope/spider.git", rev = "278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc", features = ["derive"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
 strsim = "0.11.1"
 strum = "0.28.0"
