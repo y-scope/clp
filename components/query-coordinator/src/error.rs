@@ -2,12 +2,13 @@
 
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::task_io::query::QueryOptionError;
 
 /// Errors returned by the query coordinator.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("invalid query job configuration: {0}")]
-    InvalidQueryJobConfig(String),
+    InvalidQueryJobConfig(#[from] QueryOptionError),
 
     #[error("invalid query job status transition from {from:?} to {to:?}")]
     InvalidQueryJobStatusTransition {

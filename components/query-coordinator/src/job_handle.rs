@@ -1,6 +1,5 @@
 //! Handle for driving a single query job to completion.
 
-use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -12,7 +11,6 @@ use clp_rust_utils::job_config::SearchJobConfig;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use const_format::formatcp;
-use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
@@ -64,7 +62,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::InvalidQueryJobConfig`] if the query string is empty.
+    /// * Forwards [`ClpSQueryOption::try_from`]'s return values on failure.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -73,17 +71,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         search_job_config: SearchJobConfig,
         output_handle: OutputHandle,
     ) -> Result<Self, Error> {
-        let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
-            .map_err(|_| {
-                Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
-            })?;
-        let clp_s_query_option = ClpSQueryOption {
-            query_string,
-            max_num_results: NonZeroU32::new(search_job_config.max_num_results),
-            begin_timestamp_millisecs: search_job_config.begin_timestamp,
-            end_timestamp_millisecs: search_job_config.end_timestamp,
-            ignore_case: search_job_config.ignore_case,
-        };
+        let clp_s_query_option = ClpSQueryOption::try_from(&search_job_config)?;
 
         Ok(Self {
             context,
