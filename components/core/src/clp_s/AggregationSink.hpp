@@ -6,9 +6,9 @@
 #include <string_view>
 #include <vector>
 
-#include <bsoncxx/document/value.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <mongocxx/model/write.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/aggregators.hpp>
@@ -78,25 +78,17 @@ private:
 
 /**
  * Sink that writes aggregation results to a MongoDB results-cache collection.
+ * Keyed results store dataset, archive, and aggregation key fields in `_id`.
  */
 class ResultsCacheSink : public AggregationSink {
 public:
-    // Types
-    enum class WriteMode : uint8_t {
-        // Appends aggregation results using generated document identities.
-        Insert,
-        // Replaces per-archive count-by-time contributions using deterministic identities.
-        UpsertCountByTime,
-    };
-
     // Constructors
     ResultsCacheSink(
             std::string_view uri,
             std::string_view collection,
             uint64_t batch_size,
             std::string_view archive_id,
-            std::string_view dataset,
-            WriteMode write_mode
+            std::string_view dataset
     );
 
     // Methods implementing AggregationSink
@@ -122,12 +114,11 @@ public:
 private:
     // Methods
     /**
-     * Writes the buffered result documents into the collection. Count-by-time results replace
-     * existing contributions with the same dataset, archive, and bucket identity. Retries must use
-     * the same immutable archive and query options; buckets absent from a retry are not deleted.
+     * Writes buffered operations into the collection. Keyed results replace existing contributions
+     * with the same dataset, archive, and aggregation key; unkeyed results are inserted.
      *
      * @return A void result on success, or an error code indicating the failure:
-     * - std::errc::io_error if flushing failed or a count-by-time write was not acknowledged.
+     * - std::errc::io_error if flushing failed or a keyed write was not acknowledged.
      */
     [[nodiscard]] auto flush_buffer() -> ystdlib::error_handling::Result<void>;
 
@@ -137,8 +128,8 @@ private:
     uint64_t m_batch_size;
     std::string m_archive_id;
     std::string m_dataset;
-    WriteMode m_write_mode;
-    std::vector<bsoncxx::document::value> m_results;
+    bool m_requires_acknowledgment{false};
+    std::vector<mongocxx::model::write> m_writes;
 };
 }  // namespace clp_s
 

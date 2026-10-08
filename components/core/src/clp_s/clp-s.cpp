@@ -353,13 +353,7 @@ bool search_archive(
                                                 options.collection,
                                                 options.batch_size,
                                                 archive_reader->get_archive_id(),
-                                                options.dataset,
-                                                std::holds_alternative<
-                                                        clp_s::CountByTimeAggregator
-                                                >(aggregator.value())
-                                                        ? clp_s::ResultsCacheSink::WriteMode::
-                                                                  UpsertCountByTime
-                                                        : clp_s::ResultsCacheSink::WriteMode::Insert
+                                                options.dataset
                                         )
                                 );
                             }
