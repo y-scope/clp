@@ -288,6 +288,24 @@ public:
             SubQuery& sub_query
     ) -> bool;
 
+    /**
+     * Add the dictionary variable to the logtype dictionary entry and variable dictionary.
+     * @tparam LogTypeDictionaryEntryType
+     * @tparam VariableDictionaryWriterType
+     * @param var
+     * @param logtype_dict_entry
+     * @param var_dict
+     */
+    template <
+            LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
+            VariableDictionaryWriterReq VariableDictionaryWriterType
+    >
+    static auto encode_and_add_dict_var(
+            std::string_view var,
+            LogTypeDictionaryEntryType& logtype_dict_entry,
+            VariableDictionaryWriterType& var_dict
+    ) -> encoded_variable_t;
+
 private:
     /**
      * Encodes the given string as a dictionary or non-dictionary variable and adds a corresponding
@@ -690,6 +708,19 @@ auto EncodedVariableInterpreter::add_dict_var(
     logtype_dict_entry.add_dictionary_var();
 
     return id;
+}
+
+template <
+        LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
+        VariableDictionaryWriterReq VariableDictionaryWriterType
+>
+auto EncodedVariableInterpreter::encode_and_add_dict_var(
+        std::string_view var,
+        LogTypeDictionaryEntryType& logtype_dict_entry,
+        VariableDictionaryWriterType& var_dict
+) -> encoded_variable_t {
+    std::vector<variable_dictionary_id_t> unused{};
+    return encode_var_dict_id(add_dict_var(var, logtype_dict_entry, var_dict, unused));
 }
 }  // namespace clp
 

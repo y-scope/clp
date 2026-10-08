@@ -19,6 +19,21 @@ def json_multifile(
 
 
 @pytest.fixture(scope="session")
+def json_multimsg(
+    integration_test_path_config: IntegrationTestPathConfig,
+) -> SampleDataset:
+    """
+    Returns an object corresponding to the `json_multimsg` sample dataset.
+
+    This dataset has log events with multiple sibling unstructured text fields (`message` and
+    `details`) so it exercises multi-`LogMessage`-per-schema handling.
+    """
+    return SampleDataset(
+        dataset_root_dir=integration_test_path_config.test_data_dir / "json_multimsg",
+    )
+
+
+@pytest.fixture(scope="session")
 def text_multifile(
     integration_test_path_config: IntegrationTestPathConfig,
 ) -> SampleDataset:

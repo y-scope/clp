@@ -167,6 +167,20 @@ A flavor of CLP for unstructured (e.g., free-text) logs.
 :::
 ::::
 
+We're also developing an experimental flavor that parses unstructured logs into structured,
+queryable fields.
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: core-clpp/index
+CLP+ (experimental)
+^^^
+An experimental flavor of CLP that parses unstructured logs into queryable fields.
+:::
+::::
+
 The guide below explains how to use a container to try either flavor.
 
 ::::{grid} 1 1 2 2
@@ -225,13 +239,6 @@ Syntax reference for `clp-text`'s (and `clp`'s) search syntax.
 Package scripts
 ^^^
 Reference for the shell scripts in the package's `sbin/` directory.
-:::
-
-:::{grid-item-card}
-:link: reference-unstructured-schema-file
-Schema file syntax
-^^^
-Syntax reference for clp's schema file for parsing unstructured text logs.
 :::
 
 :::{grid-item-card}
@@ -298,6 +305,7 @@ guides-using-spider-scheduler
 
 core-clp-s
 core-unstructured/index
+core-clpp/index
 core-container
 :::
 
@@ -315,6 +323,5 @@ resources-datasets
 reference-json-search-syntax
 reference-text-search-syntax
 reference-sbin-scripts/index
-reference-unstructured-schema-file
 reference-telemetry
 :::

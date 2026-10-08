@@ -20,7 +20,6 @@ namespace {
 using clp::ReadOnlyMemoryMappedFile;
 using clp_s::ffi::sfa::ClpArchiveReader;
 using ystdlib::error_handling::Result;
-using ystdlib::error_handling::success;
 
 constexpr std::string_view cSfaReaderLogsDirectory{"test_log_files"};
 constexpr std::string_view cSfaReaderArchiveOutputDirectory{"test-clp_s-ffi_sfa-reader-archive"};
@@ -40,11 +39,15 @@ auto get_archive_output_root_dir() -> std::filesystem::path {
     return get_tests_dir() / cSfaReaderArchiveOutputDirectory;
 }
 
-auto generate_single_file_archive(std::filesystem::path const& log_path) -> std::filesystem::path {
+auto generate_single_file_archive(
+        std::filesystem::path const& log_path,
+        std::optional<std::filesystem::path> const& parsing_spec_path = std::nullopt
+) -> std::filesystem::path {
     auto const root_output_dir{get_archive_output_root_dir()};
     std::filesystem::create_directories(root_output_dir);
 
-    auto const output_dir{root_output_dir / log_path.stem().string()};
+    auto const* const suffix{parsing_spec_path.has_value() ? "_experimental" : ""};
+    auto const output_dir{root_output_dir / (log_path.stem().string() + suffix)};
 
     auto const archive_stats = compress_archive(
             log_path.string(),
@@ -52,7 +55,8 @@ auto generate_single_file_archive(std::filesystem::path const& log_path) -> std:
             std::nullopt,
             false,
             true,
-            false
+            false,
+            parsing_spec_path
     );
     REQUIRE(false == archive_stats.empty());
     return output_dir / archive_stats.front().get_id();
@@ -92,37 +96,45 @@ auto assert_reader_matches_expected(
     REQUIRE(expected_event_count == file_info.get_event_count());
 }
 
-auto create_reader_from_path(std::filesystem::path const& archive_path)
-        -> Result<ClpArchiveReader> {
-    return ClpArchiveReader::create(archive_path.string());
+auto create_reader_from_path(
+        std::filesystem::path const& archive_path,
+        clp_s::ArchiveReader::Options const& options
+) -> Result<ClpArchiveReader> {
+    return ClpArchiveReader::create(archive_path.string(), options);
 }
 
-auto create_reader_from_bytes(std::filesystem::path const& archive_path)
-        -> Result<ClpArchiveReader> {
+auto create_reader_from_bytes(
+        std::filesystem::path const& archive_path,
+        clp_s::ArchiveReader::Options const& options
+) -> Result<ClpArchiveReader> {
     auto const mapped_archive{
             YSTDLIB_ERROR_HANDLING_TRYX(ReadOnlyMemoryMappedFile::create(archive_path.string()))
     };
     auto const view{mapped_archive.get_view()};
     REQUIRE(false == view.empty());
-    return ClpArchiveReader::create(std::vector<char>{view.begin(), view.end()});
+    return ClpArchiveReader::create(std::vector<char>{view.begin(), view.end()}, options);
 }
 
 auto run_single_log_file_test(
         std::filesystem::path const& archive_path,
+        clp_s::ArchiveReader::Options const& options,
         std::string const& expected_file_name,
         uint64_t expected_event_count
 ) -> Result<void> {
-    auto const r_path{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_path(archive_path))};
+    auto const r_path{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_path(archive_path, options))};
     assert_reader_matches_expected(r_path, expected_file_name, expected_event_count);
 
-    auto const r_bytes{YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_bytes(archive_path))};
+    auto const r_bytes{
+            YSTDLIB_ERROR_HANDLING_TRYX(create_reader_from_bytes(archive_path, options))
+    };
     assert_reader_matches_expected(r_bytes, expected_file_name, expected_event_count);
 
-    return success();
+    return ystdlib::error_handling::success();
 }
 }  // namespace
 
 TEST_CASE("clp_s_ffi_sfa_reader", "[clp-s][ffi][sfa]") {
+    auto const experimental = GENERATE(false, true);
     TestOutputCleaner const test_cleanup{{get_archive_output_root_dir().string()}};
 
     auto const log_file_name{GENERATE(cInputNoFloats, cInputFloatTimestamp)};
@@ -130,12 +142,30 @@ TEST_CASE("clp_s_ffi_sfa_reader", "[clp-s][ffi][sfa]") {
     auto const log_path{get_log_local_path(log_file_name)};
     REQUIRE(std::filesystem::exists(log_path));
 
-    auto const archive_path{generate_single_file_archive(log_path)};
+    auto const parsing_spec_path{
+            experimental ? std::make_optional(get_heuristic_parsing_spec_path()) : std::nullopt
+    };
+    auto const archive_path{generate_single_file_archive(log_path, parsing_spec_path)};
     REQUIRE(std::filesystem::exists(archive_path));
 
     auto const expected_event_count{get_num_lines(log_path)};
-    auto const test_result{
-            run_single_log_file_test(archive_path, log_path.string(), expected_event_count)
-    };
+
+    auto const test_result{run_single_log_file_test(
+            archive_path,
+            {.m_experimental = experimental},
+            log_path.string(),
+            expected_event_count
+    )};
     REQUIRE(false == test_result.has_error());
+
+    // Also verify reading an experimental archive without the experimental option fails.
+    if (experimental) {
+        auto const test_fail_result{run_single_log_file_test(
+                archive_path,
+                {.m_experimental = false},
+                log_path.string(),
+                expected_event_count
+        )};
+        REQUIRE(test_fail_result.has_error());
+    }
 }

@@ -33,7 +33,10 @@ int main(int argc, char const* argv[]) {
     try {
         clp_s::indexer::IndexManager index_manager(
                 command_line_arguments.get_db_config(),
-                command_line_arguments.should_create_table()
+                clp_s::indexer::IndexManager::Options{
+                        .should_create_table = command_line_arguments.should_create_table(),
+                        .experimental = command_line_arguments.experimental()
+                }
         );
         index_manager.update_metadata(
                 command_line_arguments.get_dataset_name(),
