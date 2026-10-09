@@ -352,7 +352,8 @@ bool search_archive(
                                                 options.uri,
                                                 options.collection,
                                                 options.batch_size,
-                                                archive_reader->get_archive_id()
+                                                archive_reader->get_archive_id(),
+                                                options.dataset
                                         )
                                 );
                             }
