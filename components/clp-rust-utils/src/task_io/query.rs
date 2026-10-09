@@ -39,18 +39,6 @@ pub struct ClpSQueryOption {
 impl TryFrom<&SearchJobConfig> for ClpSQueryOption {
     type Error = QueryOptionError;
 
-    /// Converts a search job configuration to `clp-s` task options.
-    ///
-    /// # Returns
-    ///
-    /// Query task options on success. Timeline queries omit the raw-result limit.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`QueryOptionError::EmptyQuery`] if the query string is empty.
-    /// * [`QueryOptionError::InvalidCountByTimeBucketSize`] if the bucket width is nonpositive.
     fn try_from(config: &SearchJobConfig) -> Result<Self, Self::Error> {
         let bucket_size = config
             .aggregation_config
