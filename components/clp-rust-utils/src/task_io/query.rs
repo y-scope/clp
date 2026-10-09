@@ -16,8 +16,8 @@ pub struct ClpSQueryOption {
     /// The query string passed positionally to `clp-s`.
     pub query_string: NonEmptyString,
 
-    /// The per-archive raw-result limit. When absent, the task omits `--max-num-results` and uses
-    /// the `clp-s` default. Timeline queries omit this limit to count every matching record.
+    /// The per-archive result limit. When absent, the task omits `--max-num-results` and uses
+    /// `clp-s` default.
     pub max_num_results: Option<NonZeroU32>,
 
     /// Inclusive `--tge` bound in Unix epoch milliseconds.
