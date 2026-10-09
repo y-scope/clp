@@ -222,7 +222,7 @@ public:
      */
     auto mark_unordered_object(
             size_t column_reader_start,
-            SchemaNode::id_t subtree_root,
+            mpt_node_id_t subtree_root,
             SchemaView sub_schema,
             std::optional<clpp::log_shape_id_t> log_shape_id
     ) -> void;
@@ -234,7 +234,7 @@ public:
      * @param log_message_id The `LogMessage` root node ID.
      * @param column_reader_start The index of the object's first column reader.
      */
-    auto set_log_message_column_start(SchemaNode::id_t log_message_id, size_t column_reader_start)
+    auto set_log_message_column_start(mpt_node_id_t log_message_id, size_t column_reader_start)
             -> void {
         m_log_message_column_starts.emplace(log_message_id, column_reader_start);
     }
@@ -244,7 +244,7 @@ public:
      * @return The index of the object's first column reader, or std::nullopt if the schema has no
      * such object.
      */
-    [[nodiscard]] auto get_log_message_column_start(SchemaNode::id_t log_message_id) const
+    [[nodiscard]] auto get_log_message_column_start(mpt_node_id_t log_message_id) const
             -> std::optional<size_t> {
         auto const it{m_log_message_column_starts.find(log_message_id)};
         if (m_log_message_column_starts.end() == it) {
@@ -354,7 +354,7 @@ public:
      * @return the first column ID found in the given sub-schema, or -1 if the sub-schema contains
      * no columns
      */
-    [[nodiscard]] static auto get_first_column_in_span(SchemaView sub_schema) -> SchemaNode::id_t;
+    [[nodiscard]] static auto get_first_column_in_span(SchemaView sub_schema) -> mpt_node_id_t;
 
     /**
      * @return the timestamp found in the row pointed to by m_cur_message
@@ -378,7 +378,7 @@ private:
      * A leaf column targeted for decomposed output.
      */
     struct DecompositionTarget {
-        SchemaNode::id_t node_id{-1};
+        mpt_node_id_t node_id{-1};
         size_t reader_idx{};
         std::string_view name;
         NodeType type{NodeType::Unknown};
@@ -414,8 +414,8 @@ private:
     struct SchemaSpanContents {
         size_t next_column_reader_idx{0};
         std::vector<DecompositionTarget> entries;
-        std::vector<SchemaNode::id_t> parent_rule_insertion_order;
-        absl::flat_hash_map<SchemaNode::id_t, std::vector<ParentRuleOccurrence>>
+        std::vector<mpt_node_id_t> parent_rule_insertion_order;
+        absl::flat_hash_map<mpt_node_id_t, std::vector<ParentRuleOccurrence>>
                 parent_rule_occurrences;
     };
 
@@ -465,7 +465,7 @@ private:
      * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
      * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
      */
-    auto generate_log_message_template(SchemaNode::id_t log_msg_id)
+    auto generate_log_message_template(mpt_node_id_t log_msg_id)
             -> ystdlib::error_handling::Result<size_t>;
 
     /**
@@ -503,7 +503,7 @@ private:
      * @param node_id The global schema node ID to check.
      * @return true if the node should be included in the output.
      */
-    [[nodiscard]] auto is_node_projected(SchemaNode::id_t node_id) -> bool;
+    [[nodiscard]] auto is_node_projected(mpt_node_id_t node_id) -> bool;
 
     /**
      * Compiles a shape into a `CompiledShape` for per-message reconstruction.
@@ -534,12 +534,12 @@ private:
      *
      * @param schema
      * @param visit Invoked for each `ParentRule` scope, in depth-first schema order.
-     * @tparam Visit Callable accepting `(SchemaNode::id_t parent_rule_id, SchemaView sub_schema)`.
+     * @tparam Visit Callable accepting `(mpt_node_id_t parent_rule_id, SchemaView sub_schema)`.
      */
     template <typename Visit>
     auto for_each_parent_rule_scope(SchemaView schema, Visit const& visit) -> void {
         schema.visit_entries(
-                [](SchemaNode::id_t) -> bool { return false; },
+                [](mpt_node_id_t) -> bool { return false; },
                 [&](UnorderedObject const& obj) -> bool {
                     if (NodeType::ParentRule != obj.type) {
                         return false;
@@ -594,7 +594,7 @@ private:
      */
     [[nodiscard]] auto collect_scope_entries(
             SchemaView schema,
-            SchemaNode::id_t scope_node_id,
+            mpt_node_id_t scope_node_id,
             size_t start_column_reader_idx,
             bool ancestor_decomposed
     ) -> SchemaSpanContents;
@@ -634,7 +634,7 @@ private:
      */
     [[nodiscard]] auto emit_decomposed_scope(
             SchemaView schema,
-            SchemaNode::id_t scope_node_id,
+            mpt_node_id_t scope_node_id,
             size_t column_idx,
             clpp::log_shape_id_t log_shape_id,
             bool ancestor_decomposed
@@ -686,7 +686,7 @@ private:
     // Keyed by the object root's schema-tree node ID.
     std::map<int32_t, MarkedUnorderedObject> m_global_id_to_unordered_object;
     // Keyed by the `LogMessage` root's schema-tree node ID.
-    std::unordered_map<SchemaNode::id_t, size_t> m_log_message_column_starts;
+    std::unordered_map<mpt_node_id_t, size_t> m_log_message_column_starts;
     std::vector<CompiledShape> m_reconstruction_targets;
     LogShapeDictionaryReader const* m_log_shape_dict;
     clpp::ParentRuleShapesArray const* m_parent_rule_shapes;

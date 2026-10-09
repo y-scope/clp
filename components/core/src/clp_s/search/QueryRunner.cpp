@@ -1123,7 +1123,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
         }
         m_wildcard_columns.push_back(col);
         literal_type_bitmask_t matching_types{0};
-        (*m_schemas)[m_schema].get_view().for_each_node_id([&](SchemaNode::id_t node) -> void {
+        (*m_schemas)[m_schema].get_view().for_each_node_id([&](mpt_node_id_t node) -> void {
             if (m_metadata_columns.contains(node)) {
                 return;
             }

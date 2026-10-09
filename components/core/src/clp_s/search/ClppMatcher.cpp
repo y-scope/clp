@@ -63,10 +63,9 @@ ClppMatcher::ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive)
     }
 }
 
-auto ClppMatcher::get_schema_ids(
-        clpp::log_shape_id_t log_shape_id,
-        SchemaNode::id_t log_message_id
-) const -> std::unordered_set<int32_t> {
+auto
+ClppMatcher::get_schema_ids(clpp::log_shape_id_t log_shape_id, mpt_node_id_t log_message_id) const
+        -> std::unordered_set<int32_t> {
     std::unordered_set<int32_t> schema_ids;
     for (auto const& log_message_node : m_log_messages_per_log_shape.at(log_shape_id)) {
         if (log_message_node.log_message_id == log_message_id) {
@@ -77,7 +76,7 @@ auto ClppMatcher::get_schema_ids(
 }
 
 auto ClppMatcher::find_matching_schemas(
-        SchemaNode::id_t log_message_id,
+        mpt_node_id_t log_message_id,
         std::string_view rule_name,
         std::optional<std::string_view> shape_query
 ) const -> std::unordered_set<int32_t> {
@@ -94,7 +93,7 @@ auto ClppMatcher::find_matching_schemas(
 }
 
 auto ClppMatcher::decompose_query(
-        SchemaNode::id_t log_message_id,
+        mpt_node_id_t log_message_id,
         std::string_view query,
         std::string_view rule_name
 ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
@@ -115,7 +114,7 @@ auto ClppMatcher::ensure_parser() -> ystdlib::error_handling::Result<void> {
     return ystdlib::error_handling::success();
 }
 
-auto ClppMatcher::decompose_by_log_shapes(SchemaNode::id_t log_message_id, std::string_view query)
+auto ClppMatcher::decompose_by_log_shapes(mpt_node_id_t log_message_id, std::string_view query)
         -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
     std::vector<std::string_view> log_shapes;
     auto const& entries{m_archive_reader->get_log_shape_dictionary()->get_entries()};
@@ -161,7 +160,7 @@ auto ClppMatcher::decompose_by_log_shapes(SchemaNode::id_t log_message_id, std::
 }
 
 auto ClppMatcher::decompose_by_rule_name(
-        SchemaNode::id_t log_message_id,
+        mpt_node_id_t log_message_id,
         std::string_view query,
         std::string_view rule_name
 ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {

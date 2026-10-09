@@ -295,7 +295,7 @@ private:
      */
     [[nodiscard]] auto
     resolve_unordered_object_root(UnorderedObject const& obj, int32_t search_root_id)
-            -> SchemaNode::id_t;
+            -> mpt_node_id_t;
 
     /**
      * Appends columns for the sub-schema of an unordered object.
@@ -307,7 +307,7 @@ private:
      */
     auto append_unordered_reader_columns(
             SchemaReader& reader,
-            SchemaNode::id_t subtree_root_id,
+            mpt_node_id_t subtree_root_id,
             SchemaView sub_schema,
             std::optional<clpp::log_shape_id_t> log_shape_id,
             bool should_marshal_records

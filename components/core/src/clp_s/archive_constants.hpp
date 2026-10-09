@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string_view>
 
+#include <clp_s/Defs.hpp>
+
 namespace clp_s::constants {
 // Single file archive
 constexpr char cTmpPostfix[] = ".tmp";
@@ -31,7 +33,7 @@ constexpr std::string_view cArchiveLogShapeStatsFile{"/log_shape_stats"};
 
 // Schema tree constants
 constexpr char cRootNodeName[] = "";
-constexpr int32_t cRootNodeId = -1;
+constexpr mpt_node_id_t cRootNodeId{-1};
 constexpr char cMetadataSubtreeName[] = "";
 constexpr char cLogEventIdxName[] = "log_event_idx";
 constexpr std::string_view cAutogenNamespace{"@"};

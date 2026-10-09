@@ -143,7 +143,7 @@ private:
 struct ParentScope {
     log_surgeon::Match const* match;
     size_t scope_schema_idx;
-    SchemaNode::id_t tree_node_id;
+    mpt_node_id_t tree_node_id;
 };
 
 /**
@@ -164,9 +164,9 @@ auto update_open_parent_scopes(
         log_surgeon::Match const& leaf,
         std::vector<ParentScope>& open_scopes,
         Schema& schema,
-        SchemaNode::id_t log_msg_node_id,
+        mpt_node_id_t log_msg_node_id,
         ArchiveWriter& archive_writer
-) -> SchemaNode::id_t;
+) -> mpt_node_id_t;
 
 auto trim_trailing_whitespace(std::string_view str) -> std::string_view {
     size_t substr_size{str.size()};
@@ -190,9 +190,9 @@ auto update_open_parent_scopes(
         log_surgeon::Match const& leaf,
         std::vector<ParentScope>& open_scopes,
         Schema& schema,
-        SchemaNode::id_t log_msg_node_id,
+        mpt_node_id_t log_msg_node_id,
         ArchiveWriter& archive_writer
-) -> SchemaNode::id_t {
+) -> mpt_node_id_t {
     std::vector<log_surgeon::Match const*> parent_matches;
     for (auto const* cur{leaf.get_parent()}; nullptr != cur; cur = cur->get_parent()) {
         parent_matches.push_back(cur);
@@ -562,10 +562,10 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
 
 void JsonParser::parse_line(
         simdjson::ondemand::value line,
-        SchemaNode::id_t parent_node_id,
+        mpt_node_id_t parent_node_id,
         std::string const& parent_key
 ) {
-    SchemaNode::id_t node_id{};
+    mpt_node_id_t node_id{};
     std::stack<simdjson::ondemand::object> object_stack;
     std::stack<int32_t> node_id_stack;
     std::stack<simdjson::ondemand::object_iterator> object_it_stack;
@@ -912,7 +912,7 @@ auto JsonParser::ingest_json(
     size_t bytes_consumed_up_to_prev_record{0ULL};
 
     size_t file_split_number{0ULL};
-    SchemaNode::id_t log_event_idx_node_id{};
+    mpt_node_id_t log_event_idx_node_id{};
     auto initialize_fields_for_archive = [&]() -> bool {
         if (false == m_record_log_order) {
             return true;
@@ -1235,7 +1235,7 @@ auto JsonParser::ingest_kvir(
 }
 
 auto JsonParser::add_metadata_field(std::string_view const field_name, NodeType type)
-        -> SchemaNode::id_t {
+        -> mpt_node_id_t {
     auto metadata_subtree_id = m_archive_writer->add_node(
             constants::cRootNodeId,
             NodeType::Metadata,
@@ -1565,7 +1565,7 @@ void JsonParser::split_archive() {
 }
 
 auto JsonParser::parse_log_message(
-        SchemaNode::id_t parent_node_id,
+        mpt_node_id_t parent_node_id,
         std::string_view field_key,
         std::string_view field_value
 ) -> ystdlib::error_handling::Result<void> {
@@ -1599,7 +1599,7 @@ auto JsonParser::parse_log_message(
                 log_msg_node_id,
                 *m_archive_writer
         )};
-        SchemaNode::id_t node_id{-1};
+        mpt_node_id_t node_id{-1};
         switch (static_cast<clpp::EncodingType>(match.encoding_idx)) {
             case clpp::EncodingType::None:
                 break;
@@ -1668,9 +1668,9 @@ auto JsonParser::parse_log_message(
 
 auto JsonParser::try_add_float_value(
         std::string_view lexeme,
-        SchemaNode::id_t parent_node_id,
+        mpt_node_id_t parent_node_id,
         std::string_view rule_name
-) -> std::optional<SchemaNode::id_t> {
+) -> std::optional<mpt_node_id_t> {
     double double_value{};
     if (false == clp::string_utils::convert_string_to_double(lexeme, double_value)) {
         return std::nullopt;

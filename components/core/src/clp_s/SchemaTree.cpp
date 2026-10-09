@@ -62,27 +62,27 @@ auto SchemaNode::is_structural_container() const -> bool {
     }
 }
 
-auto SchemaTree::add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key_name)
-        -> SchemaNode::id_t {
+auto SchemaTree::add_node(mpt_node_id_t parent_node_id, NodeType type, std::string_view key_name)
+        -> mpt_node_id_t {
     auto node_id{add_node(parent_node_id, type, key_name, 0)};
     m_nodes[node_id].increase_count();
     return node_id;
 }
 
 // `Schema` uses the top bits of each entry to differentiate between MPT node (`SchemaNode`) and
-// unordered delimiter entries. Therefore, `SchemaNode::id_t` must not exceed `Schema::cMaxNodeId`.
+// unordered delimiter entries. Therefore, `mpt_node_id_t` must not exceed `Schema::cMaxNodeId`.
 auto SchemaTree::add_node(
-        SchemaNode::id_t parent_node_id,
+        mpt_node_id_t parent_node_id,
         NodeType type,
         std::string_view key_name,
         uint32_t initial_count
-) -> SchemaNode::id_t {
+) -> mpt_node_id_t {
     auto node_it{m_node_map.find({parent_node_id, key_name, type})};
     if (node_it != m_node_map.end()) {
         return node_it->second;
     }
 
-    if (Schema::cMaxNodeId < static_cast<SchemaNode::id_t>(m_nodes.size())) {
+    if (Schema::cMaxNodeId < static_cast<mpt_node_id_t>(m_nodes.size())) {
         throw std::overflow_error("SchemaNode allocation reached Schema::cMaxNodeId.");
     }
 
@@ -114,8 +114,7 @@ auto SchemaTree::get_subtree_node_id(std::string_view subtree_namespace, NodeTyp
     return -1;
 }
 
-auto SchemaTree::get_metadata_field_id(std::string_view const field_name) const
-        -> SchemaNode::id_t {
+auto SchemaTree::get_metadata_field_id(std::string_view const field_name) const -> mpt_node_id_t {
     auto const metadata_subtree_id = get_metadata_subtree_node_id();
     if (metadata_subtree_id < 0) {
         return -1;
@@ -182,11 +181,11 @@ auto SchemaTree::build_ls_rule_name(int32_t node_id) const -> std::string {
 }
 
 auto SchemaTree::find_matching_subtree_root_in_subtree(
-        SchemaNode::id_t const subtree_root_node,
-        SchemaNode::id_t node,
+        mpt_node_id_t const subtree_root_node,
+        mpt_node_id_t node,
         NodeType const type
-) const -> SchemaNode::id_t {
-    SchemaNode::id_t earliest_match{-1};
+) const -> mpt_node_id_t {
+    mpt_node_id_t earliest_match{-1};
     while (subtree_root_node != node) {
         auto const& schema_node{get_node(node)};
         if (schema_node.get_type() == type) {

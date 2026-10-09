@@ -97,7 +97,7 @@ private:
      */
     auto build_leaf_query_expr(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t decomposition_root,
+            mpt_node_id_t decomposition_root,
             std::span<clpp::LeafQuery const> leaf_queries,
             std::unordered_set<int32_t> const& matched_schema_ids
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
@@ -121,7 +121,7 @@ private:
      */
     auto build_negated_leaf_query_expr(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t decomposition_root,
+            mpt_node_id_t decomposition_root,
             std::span<clpp::LeafQuery const> leaf_queries,
             std::unordered_set<int32_t> const& matched_schema_ids
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
@@ -146,12 +146,10 @@ private:
      */
     auto resolve_leaf_rule_descriptors(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t decomposition_root,
+            mpt_node_id_t decomposition_root,
             std::vector<std::string_view> const& rule_names
-    )
-            -> std::optional<
-                    std::vector<std::pair<std::shared_ptr<ast::ColumnDescriptor>, SchemaNode::id_t>>
-            >;
+    ) -> std::
+            optional<std::vector<std::pair<std::shared_ptr<ast::ColumnDescriptor>, mpt_node_id_t>>>;
 
     /**
      * Finds all child schema nodes whose key name matches the given name.
@@ -159,8 +157,8 @@ private:
      * @param key_name The key name to match.
      * @return A vector of matching child node IDs (may be empty).
      */
-    auto find_child_nodes_by_key_name(SchemaNode::id_t parent_id, std::string_view key_name)
-            -> std::vector<SchemaNode::id_t>;
+    auto find_child_nodes_by_key_name(mpt_node_id_t parent_id, std::string_view key_name)
+            -> std::vector<mpt_node_id_t>;
 
     /**
      * Handles an EXISTS/NEXISTS or shape() filter at a LogMessage or ParentRule node by resolving
@@ -180,7 +178,7 @@ private:
      */
     auto build_shape_match_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t decomposition_root,
+            mpt_node_id_t decomposition_root,
             std::string_view rule_name,
             std::optional<std::string_view> shape_query,
             ast::FilterOperation op,
@@ -206,7 +204,7 @@ private:
      */
     auto build_decomposed_query_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t decomposition_root,
+            mpt_node_id_t decomposition_root,
             std::string_view rule_name,
             std::string_view query,
             bool is_inverted
@@ -230,7 +228,7 @@ private:
      */
     auto build_negated_decomposed_query_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t decomposition_root,
+            mpt_node_id_t decomposition_root,
             std::string_view rule_name,
             std::vector<ClppMatcher::InterpretationMatch> const& interpretations
     ) -> std::shared_ptr<ast::Expression>;
@@ -247,7 +245,7 @@ private:
     auto add_exists_operand(
             std::shared_ptr<ast::Expression> const& parent_expr,
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t decomposition_root,
+            mpt_node_id_t decomposition_root,
             std::unordered_set<int32_t> const& schema_ids
     ) -> void;
 
@@ -273,7 +271,7 @@ private:
      */
     auto build_clpp_query_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t decomposition_root,
+            mpt_node_id_t decomposition_root,
             ast::FilterExpr const& filter
     ) -> std::shared_ptr<ast::Expression>;
 
@@ -281,12 +279,12 @@ private:
      * Builds a column descriptor that fully resolves `node_id` from the root of the object subtree
      * of `column`'s namespace, typed as `node_id`'s literal type and inheriting `column`'s subtree
      * type.
-     * @param column The (unresolved) column the node was matched from.
+     * @param column The unresolved column the node was matched from.
      * @param node_id A node within the object subtree of `column`'s namespace.
      * @return The resolved column descriptor.
      */
     [[nodiscard]] auto
-    build_resolved_column(ast::ColumnDescriptor const& column, SchemaNode::id_t node_id) const
+    build_resolved_column(ast::ColumnDescriptor const& column, mpt_node_id_t node_id) const
             -> std::shared_ptr<ast::ColumnDescriptor>;
 
     /**
@@ -299,22 +297,22 @@ private:
      * @return The resolved expression, or nullptr if no schema can match (see
      * `build_clpp_query_filter`).
      */
-    auto build_resolved_node_filter(
+    [[nodiscard]] auto build_resolved_node_filter(
             ast::ColumnDescriptor const& column,
-            SchemaNode::id_t node_id,
+            mpt_node_id_t node_id,
             ast::FilterExpr const& filter
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
      * Collects every LogMessage and ParentRule node in the object subtree of `column`'s namespace.
-     * @param column
+     * @param column The column whose namespace's object subtree is searched.
      * @return The node IDs in ascending order.
      */
     [[nodiscard]] auto collect_clpp_node_ids(ast::ColumnDescriptor const& column) const
-            -> std::vector<SchemaNode::id_t>;
+            -> std::vector<mpt_node_id_t>;
 
     /**
-     * Builds the copy of a pure wildcard `filter` that searches every column type other than
+     * Builds a copy of a pure wildcard `filter` that searches every column type other than
      * LogMessage/ParentRule nodes, which are searched through explicit per-node filters instead.
      * @param column The pure wildcard column.
      * @param filter The pure wildcard filter to copy.
@@ -333,8 +331,7 @@ private:
      * nodes, false otherwise.
      */
     [[nodiscard]] static auto
-    should_expand_pure_wildcard(ast::ColumnDescriptor& column, ast::Expression const& expr)
-            -> bool;
+    should_expand_pure_wildcard(ast::ColumnDescriptor& column, ast::Expression const& expr) -> bool;
 
     /**
      * Expands a pure wildcard filter over every LogMessage and ParentRule node, so that it
@@ -398,8 +395,8 @@ private:
      * @return The enclosing `LogMessage` node's ID (`node_id` itself when it is a `LogMessage`), or
      * -1 if `node_id` has no enclosing `LogMessage`.
      */
-    [[nodiscard]] auto find_enclosing_log_message_node_id(SchemaNode::id_t node_id) const
-            -> SchemaNode::id_t;
+    [[nodiscard]] auto find_enclosing_log_message_node_id(mpt_node_id_t node_id) const
+            -> mpt_node_id_t;
 
     /**
      * Reads the dictionaries needed to read the columns in the given schema view, recursing into
@@ -412,8 +409,8 @@ private:
             m_column_to_descriptor;
     // TODO: The value in the map can be a set of k:v pairs with a hash & comparison
     // that only considers the key since each column descriptor only has one matching
-    // column id per schema
-    std::unordered_map<ast::ColumnDescriptor::id_t, std::map<int32_t, int32_t>>
+    // The MPT node ID within a schema representing the column descriptor.
+    std::unordered_map<ast::ColumnDescriptor::id_t, std::map<int32_t, mpt_node_id_t>>
             m_descriptor_to_schema;
     std::map<ast::ColumnDescriptor::id_t, std::set<int32_t>> m_unresolved_descriptor_to_descriptor;
     std::unordered_map<ast::Expression*, std::unordered_set<int32_t>> m_expression_to_schemas;
@@ -528,9 +525,10 @@ private:
     /**
      * @param col_id The id of the column descriptor.
      * @param schema
-     * @return The column id for a given column descriptor id.
+     * @return The MPT node ID that the column descriptor `col_id` resolves to in `schema`.
      */
-    int32_t get_column_id_for_descriptor(ast::ColumnDescriptor::id_t col_id, int32_t schema);
+    auto get_node_id_for_descriptor(ast::ColumnDescriptor::id_t col_id, int32_t schema)
+            -> mpt_node_id_t;
 
     /**
      * Marks a column as clpp-resolved and records (`in m_descriptor_to_schema`) that the column
@@ -550,7 +548,7 @@ private:
      */
     auto register_clpp_resolved_column(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            SchemaNode::id_t node_id,
+            mpt_node_id_t node_id,
             std::unordered_set<int32_t> const& matched_schema_ids
     ) -> void;
 

@@ -56,7 +56,7 @@ public:
      * @return The matching schema IDs.
      */
     [[nodiscard]] auto find_matching_schemas(
-            SchemaNode::id_t log_message_id,
+            mpt_node_id_t log_message_id,
             std::string_view rule_name,
             std::optional<std::string_view> shape_query
     ) const -> std::unordered_set<int32_t>;
@@ -74,7 +74,7 @@ public:
      * - Forwards `decompose_by_rule_name`'s return values.
      */
     [[nodiscard]] auto decompose_query(
-            SchemaNode::id_t log_message_id,
+            mpt_node_id_t log_message_id,
             std::string_view query,
             std::string_view rule_name
     ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
@@ -89,7 +89,7 @@ private:
      */
     struct LogMessageRef {
         int32_t schema_id;
-        SchemaNode::id_t log_message_id;
+        mpt_node_id_t log_message_id;
     };
 
     // Methods
@@ -101,7 +101,7 @@ private:
      * @return The matching schema IDs.
      */
     [[nodiscard]] auto
-    get_schema_ids(clpp::log_shape_id_t log_shape_id, SchemaNode::id_t log_message_id) const
+    get_schema_ids(clpp::log_shape_id_t log_shape_id, mpt_node_id_t log_message_id) const
             -> std::unordered_set<int32_t>;
 
     /**
@@ -117,8 +117,7 @@ private:
      * @return The interpretation matches, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
      */
-    [[nodiscard]] auto
-    decompose_by_log_shapes(SchemaNode::id_t log_message_id, std::string_view query)
+    [[nodiscard]] auto decompose_by_log_shapes(mpt_node_id_t log_message_id, std::string_view query)
             -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
 
     /**
@@ -129,7 +128,7 @@ private:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
      */
     [[nodiscard]] auto decompose_by_rule_name(
-            SchemaNode::id_t log_message_id,
+            mpt_node_id_t log_message_id,
             std::string_view query,
             std::string_view rule_name
     ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
@@ -148,7 +147,7 @@ private:
      */
     template <typename OnMatch>
     auto for_each_matching_occurrence(
-            SchemaNode::id_t log_message_id,
+            mpt_node_id_t log_message_id,
             std::string_view rule_name,
             std::optional<std::string_view> shape_query,
             OnMatch const& on_match
@@ -163,7 +162,7 @@ private:
 
 template <typename OnMatch>
 auto ClppMatcher::for_each_matching_occurrence(
-        SchemaNode::id_t log_message_id,
+        mpt_node_id_t log_message_id,
         std::string_view rule_name,
         std::optional<std::string_view> shape_query,
         OnMatch const& on_match

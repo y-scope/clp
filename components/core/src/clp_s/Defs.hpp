@@ -33,5 +33,7 @@ using segment_id_t = uint64_t;
 using encoded_variable_t = int64_t;
 
 using logtype_id_t = uint64_t;
+
+using mpt_node_id_t = int32_t;
 }  // namespace clp_s
 #endif  // CLP_S_DEFS_HPP

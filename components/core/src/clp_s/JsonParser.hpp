@@ -119,7 +119,7 @@ private:
      */
     void parse_line(
             simdjson::ondemand::value line,
-            SchemaNode::id_t parent_node_id,
+            mpt_node_id_t parent_node_id,
             std::string const& parent_key
     );
 
@@ -224,7 +224,7 @@ private:
      * Note: this method should be called before parsing a record so that internal fields come first
      * in each table. This isn't strictly necessary, but it is a nice convention.
      */
-    auto add_metadata_field(std::string_view const field_name, NodeType type) -> SchemaNode::id_t;
+    auto add_metadata_field(std::string_view const field_name, NodeType type) -> mpt_node_id_t;
 
     /**
      * Parse a string field as an unstructured log message using log surgeon and store its
@@ -239,7 +239,7 @@ private:
      * - Forwards `m_archive_writer->update_parent_rule_shapes`'s return values on failure.
      */
     auto parse_log_message(
-            SchemaNode::id_t parent_node_id,
+            mpt_node_id_t parent_node_id,
             std::string_view field_key,
             std::string_view field_value
     ) -> ystdlib::error_handling::Result<void>;
@@ -259,9 +259,9 @@ private:
      */
     auto try_add_float_value(
             std::string_view lexeme,
-            SchemaNode::id_t parent_node_id,
+            mpt_node_id_t parent_node_id,
             std::string_view rule_name
-    ) -> std::optional<SchemaNode::id_t>;
+    ) -> std::optional<mpt_node_id_t>;
 
     /**
      * @return The parsing specification text to persist into the archive, or std::nullopt when CLP+

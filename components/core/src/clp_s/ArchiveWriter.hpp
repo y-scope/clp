@@ -185,8 +185,8 @@ public:
      * @param key
      * @return the node id
      */
-    auto add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key)
-            -> SchemaNode::id_t;
+    auto add_node(mpt_node_id_t parent_node_id, NodeType type, std::string_view key)
+            -> mpt_node_id_t;
 
     /**
      * Checks if a leaf key with a given parent node id matches the authoritative timestamp column.

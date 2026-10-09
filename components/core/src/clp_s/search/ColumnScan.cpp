@@ -573,16 +573,16 @@ auto ColumnScan::build_filter(
         return bitmap;
     }
 
-    auto const column_id = column->get_column_id();
+    auto const node_id = column->get_bound_node_id().value();
     auto const& operand = filter->get_operand();
     bool const is_positional{column->get_leaf_position().has_value()};
     auto const& basic{
             is_positional ? find_readers(positional_readers.basic, filter)
-                          : find_readers(basic_readers, column_id)
+                          : find_readers(basic_readers, node_id)
     };
     auto const& var_string{
             is_positional ? find_readers(positional_readers.var_string, filter)
-                          : find_readers(var_string_readers, column_id)
+                          : find_readers(var_string_readers, node_id)
     };
 
     switch (column->get_literal_type()) {
@@ -617,7 +617,7 @@ auto ColumnScan::build_filter(
             return build_clp_string_filter(
                     m_num_messages,
                     clp_string_readers,
-                    column_id,
+                    node_id,
                     operation,
                     query
             );
@@ -632,7 +632,7 @@ auto ColumnScan::build_filter(
                 return bitmap;
             }
             if (nullptr != deprecated_datestring_reader
-                && column_id == deprecated_datestring_reader->get_id())
+                && node_id == deprecated_datestring_reader->get_id())
             {
                 return build_deprecated_datestring_filter(
                         m_num_messages,
@@ -644,7 +644,7 @@ auto ColumnScan::build_filter(
             return build_timestamp_filter(
                     m_num_messages,
                     timestamp_readers,
-                    column_id,
+                    node_id,
                     operation,
                     operand_value
             );

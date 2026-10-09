@@ -60,7 +60,7 @@ auto Projection::add_column(std::shared_ptr<ast::FunctionCall> function_call) ->
     add_column(column, mode);
 }
 
-auto Projection::is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) const -> bool {
+auto Projection::is_projected_as(mpt_node_id_t node_id, NodeMask::Mode mode) const -> bool {
     auto it{m_node_projections.find(node_id)};
     if (m_node_projections.end() == it) {
         return false;
@@ -68,7 +68,7 @@ auto Projection::is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) 
     return it->second.has(mode);
 }
 
-auto Projection::get_node_mask(SchemaNode::id_t node_id) const -> NodeMask {
+auto Projection::get_node_mask(mpt_node_id_t node_id) const -> NodeMask {
     auto it{m_node_projections.find(node_id)};
     if (m_node_projections.end() == it) {
         return {};
@@ -76,24 +76,24 @@ auto Projection::get_node_mask(SchemaNode::id_t node_id) const -> NodeMask {
     return it->second;
 }
 
-auto Projection::should_emit_value(SchemaNode::id_t node_id) const -> bool {
+auto Projection::should_emit_value(mpt_node_id_t node_id) const -> bool {
     auto const mask{get_node_mask(node_id)};
     return matches_node(node_id)
            && (mask.has(NodeMask::Mode::Value) || mask.has(NodeMask::Mode::Default));
 }
 
-auto Projection::has_projected_descendant(SchemaNode::id_t node_id) const -> bool {
+auto Projection::has_projected_descendant(mpt_node_id_t node_id) const -> bool {
     return m_nodes_with_projected_descendants.contains(node_id);
 }
 
-auto Projection::add_projection(SchemaNode::id_t node_id, NodeMask::Mode mode) -> void {
+auto Projection::add_projection(mpt_node_id_t node_id, NodeMask::Mode mode) -> void {
     auto [it, _]{m_node_projections.try_emplace(node_id)};
     it->second.set(mode);
 }
 
 auto Projection::collect_structural_projections(
         SchemaTree const& tree,
-        std::vector<SchemaNode::id_t> const& matched_nodes,
+        std::vector<mpt_node_id_t> const& matched_nodes,
         NodeMask::Mode mode
 ) -> bool {
     auto is_projectable_structure = [](NodeType type) -> bool {
@@ -153,7 +153,7 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
 }
 
 auto Projection::resolve_column(SchemaTree const& tree, ast::ColumnDescriptor& column)
-        -> std::vector<SchemaNode::id_t> {
+        -> std::vector<mpt_node_id_t> {
     /**
      * Ideally we would reuse the code from SchemaMatch for resolving columns, but unfortunately we
      * can not.

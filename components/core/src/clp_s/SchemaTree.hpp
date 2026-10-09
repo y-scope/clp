@@ -15,6 +15,7 @@
 #include <absl/container/flat_hash_map.h>
 
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/search/ast/Literal.hpp>
 
 namespace clp_s {
@@ -65,9 +66,6 @@ enum class NodeType : uint8_t {
  */
 class SchemaNode {
 public:
-    // Types
-    using id_t = int32_t;
-
     // Static methods
     /**
      * Converts a node type to a literal type.
@@ -78,8 +76,8 @@ public:
 
     // Constructors
     SchemaNode(
-            id_t parent_id,
-            id_t id,
+            mpt_node_id_t parent_id,
+            mpt_node_id_t id,
             std::string_view key_name,
             NodeType type,
             uint32_t count,
@@ -93,11 +91,11 @@ public:
               m_depth(depth) {}
 
     // Methods
-    [[nodiscard]] auto get_id() const -> id_t { return m_id; }
+    [[nodiscard]] auto get_id() const -> mpt_node_id_t { return m_id; }
 
-    [[nodiscard]] auto get_parent_id() const -> id_t { return m_parent_id; }
+    [[nodiscard]] auto get_parent_id() const -> mpt_node_id_t { return m_parent_id; }
 
-    [[nodiscard]] auto get_children_ids() const -> std::vector<id_t> const& {
+    [[nodiscard]] auto get_children_ids() const -> std::vector<mpt_node_id_t> const& {
         return m_children_ids;
     }
 
@@ -111,7 +109,7 @@ public:
 
     auto increase_count() -> void { m_count++; }
 
-    auto add_child(id_t child_id) -> void { m_children_ids.push_back(child_id); }
+    auto add_child(mpt_node_id_t child_id) -> void { m_children_ids.push_back(child_id); }
 
     /**
      * Returns whether the node acts as a structural container (i.e., it can have children and be
@@ -122,9 +120,9 @@ public:
 
 private:
     // Data members
-    id_t m_parent_id{-1};
-    id_t m_id{-1};
-    std::vector<id_t> m_children_ids;
+    mpt_node_id_t m_parent_id{-1};
+    mpt_node_id_t m_id{-1};
+    std::vector<mpt_node_id_t> m_children_ids;
     // We use a unique_ptr so that references to this key name are stable after this SchemaNode is
     // move constructed.
     // TODO clpp: see if possible to remove the need to reference key name.
@@ -145,10 +143,10 @@ public:
      * @param type
      * @param key_name
      * @return The schema node ID.
-     * @throw From `add_node(SchemaNode::id_t, NodeType, std::string_view, uint32_t)`.
+     * @throw From `add_node(mpt_node_id_t, NodeType, std::string_view, uint32_t)`.
      */
-    auto add_node(SchemaNode::id_t parent_node_id, NodeType type, std::string_view key_name)
-            -> SchemaNode::id_t;
+    auto add_node(mpt_node_id_t parent_node_id, NodeType type, std::string_view key_name)
+            -> mpt_node_id_t;
 
     /**
      * Add a new schema node to the schema tree if the tree doesn't already contain a node with the
@@ -162,17 +160,17 @@ public:
      * @throw std::overflow_error When SchemaNode allocation fails.
      */
     auto add_node(
-            SchemaNode::id_t parent_node_id,
+            mpt_node_id_t parent_node_id,
             NodeType type,
             std::string_view key_name,
             uint32_t initial_count
-    ) -> SchemaNode::id_t;
+    ) -> mpt_node_id_t;
 
-    [[nodiscard]] auto has_node(SchemaNode::id_t id) const -> bool {
+    [[nodiscard]] auto has_node(mpt_node_id_t id) const -> bool {
         return id < m_nodes.size() && id >= 0;
     }
 
-    [[nodiscard]] auto get_node(SchemaNode::id_t id) const -> SchemaNode const& {
+    [[nodiscard]] auto get_node(mpt_node_id_t id) const -> SchemaNode const& {
         if (id >= m_nodes.size() || id < 0) {
             throw std::invalid_argument("invalid access of id " + std::to_string(id));
         }
@@ -188,7 +186,7 @@ public:
      */
     [[nodiscard]] auto get_object_subtree_node_id_for_namespace(
             std::string_view subtree_namespace
-    ) const -> SchemaNode::id_t {
+    ) const -> mpt_node_id_t {
         return get_subtree_node_id(subtree_namespace, NodeType::Object);
     }
 
@@ -198,7 +196,7 @@ public:
      *
      * @return the field Id if the field exists within the Metadata sub-tree, -1 otherwise.
      */
-    [[nodiscard]] auto get_metadata_field_id(std::string_view field_name) const -> SchemaNode::id_t;
+    [[nodiscard]] auto get_metadata_field_id(std::string_view field_name) const -> mpt_node_id_t;
 
     /**
      * Gets the Id of the root for a subtree identified by a namespace and type.
@@ -208,10 +206,10 @@ public:
      * requested subtree does not exist.
      */
     [[nodiscard]] auto get_subtree_node_id(std::string_view subtree_namespace, NodeType type) const
-            -> SchemaNode::id_t;
+            -> mpt_node_id_t;
 
     [[nodiscard]] auto get_subtrees() const
-            -> absl::btree_map<std::pair<std::string_view, NodeType>, SchemaNode::id_t> const& {
+            -> absl::btree_map<std::pair<std::string_view, NodeType>, mpt_node_id_t> const& {
         return m_namespace_and_type_to_subtree_id;
     }
 
@@ -219,7 +217,7 @@ public:
      * @return the Id of the root of the Metadata sub-tree.
      * @return -1 if the Metadata sub-tree does not exist.
      */
-    [[nodiscard]] auto get_metadata_subtree_node_id() const -> SchemaNode::id_t {
+    [[nodiscard]] auto get_metadata_subtree_node_id() const -> mpt_node_id_t {
         return get_subtree_node_id(constants::cDefaultNamespace, NodeType::Metadata);
     }
 
@@ -248,7 +246,7 @@ public:
      * @param node_id The node ID to start from.
      * @return The qualified rule name.
      */
-    [[nodiscard]] auto build_ls_rule_name(SchemaNode::id_t node_id) const -> std::string;
+    [[nodiscard]] auto build_ls_rule_name(mpt_node_id_t node_id) const -> std::string;
 
     /**
      * Finds an ancestor node within a subtree that matches the given type. When multiple matching
@@ -259,17 +257,17 @@ public:
      * @return The ID of the ancestor node if it exists, otherwise -1
      */
     [[nodiscard]] auto find_matching_subtree_root_in_subtree(
-            SchemaNode::id_t subtree_root_node,
-            SchemaNode::id_t node,
+            mpt_node_id_t subtree_root_node,
+            mpt_node_id_t node,
             NodeType type
-    ) const -> SchemaNode::id_t;
+    ) const -> mpt_node_id_t;
 
 private:
     // Data members
     std::vector<SchemaNode> m_nodes;
-    absl::flat_hash_map<std::tuple<SchemaNode::id_t, std::string_view, NodeType>, SchemaNode::id_t>
+    absl::flat_hash_map<std::tuple<mpt_node_id_t, std::string_view, NodeType>, mpt_node_id_t>
             m_node_map;
-    absl::btree_map<std::pair<std::string_view, NodeType>, SchemaNode::id_t>
+    absl::btree_map<std::pair<std::string_view, NodeType>, mpt_node_id_t>
             m_namespace_and_type_to_subtree_id;
 };
 }  // namespace clp_s

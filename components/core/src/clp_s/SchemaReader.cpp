@@ -71,7 +71,7 @@ namespace {
 ) -> std::pair<std::unordered_map<std::string, std::vector<size_t>>, size_t> {
     std::unordered_map<std::string, std::vector<size_t>> name_to_reader_indices;
     size_t column_reader_idx{start_column_reader_idx};
-    sub_schema.for_each_node_id([&](SchemaNode::id_t global_column_id) -> void {
+    sub_schema.for_each_node_id([&](mpt_node_id_t global_column_id) -> void {
         auto const& node{tree.get_node(global_column_id)};
         if (false == node_type_consumes_column(node.get_type())) {
             return;
@@ -86,7 +86,7 @@ namespace {
 [[nodiscard]] auto count_column_consuming_entries(SchemaView schema, SchemaTree const& tree)
         -> size_t {
     size_t count{0};
-    schema.for_each_node_id([&](SchemaNode::id_t entry) -> void {
+    schema.for_each_node_id([&](mpt_node_id_t entry) -> void {
         if (node_type_consumes_column(tree.get_node(entry).get_type())) {
             ++count;
         }
@@ -461,7 +461,7 @@ void SchemaReader::generate_local_tree(int32_t global_id) {
 
 auto SchemaReader::mark_unordered_object(
         size_t column_reader_start,
-        SchemaNode::id_t subtree_root,
+        mpt_node_id_t subtree_root,
         SchemaView sub_schema,
         std::optional<clpp::log_shape_id_t> log_shape_id
 ) -> void {
@@ -478,10 +478,10 @@ auto SchemaReader::mark_unordered_object(
     );
 }
 
-auto SchemaReader::get_first_column_in_span(SchemaView sub_schema) -> SchemaNode::id_t {
-    SchemaNode::id_t first_column_id{-1};
+auto SchemaReader::get_first_column_in_span(SchemaView sub_schema) -> mpt_node_id_t {
+    mpt_node_id_t first_column_id{-1};
     sub_schema.visit_entries(
-            [&](SchemaNode::id_t node_id) -> bool {
+            [&](mpt_node_id_t node_id) -> bool {
                 first_column_id = node_id;
                 return true;
             },
@@ -501,11 +501,11 @@ auto SchemaReader::get_first_column_in_span(SchemaView sub_schema) -> SchemaNode
     return first_column_id;
 }
 
-auto SchemaReader::is_node_projected(SchemaNode::id_t node_id) -> bool {
+auto SchemaReader::is_node_projected(mpt_node_id_t node_id) -> bool {
     if (nullptr == m_projection) {
         return false;
     }
-    SchemaNode::id_t cur_id{node_id};
+    mpt_node_id_t cur_id{node_id};
     while (-1 != cur_id) {
         auto const& node{m_global_schema_tree->get_node(cur_id)};
         if (m_projection->matches_node(cur_id)) {
@@ -587,7 +587,7 @@ auto SchemaReader::generate_structured_array_template(
     int32_t depth = m_global_schema_tree->get_node(array_root_id).get_depth();
 
     schema.visit_entries(
-            [&](SchemaNode::id_t global_column_id) -> bool {
+            [&](mpt_node_id_t global_column_id) -> bool {
                 auto const& node = m_global_schema_tree->get_node(global_column_id);
                 switch (node.get_type()) {
                     case NodeType::Object: {
@@ -697,7 +697,7 @@ auto SchemaReader::generate_structured_object_template(
     std::vector<int32_t> path_to_intersection;
 
     schema.visit_entries(
-            [&](SchemaNode::id_t global_column_id) -> bool {
+            [&](mpt_node_id_t global_column_id) -> bool {
                 auto const& node = m_global_schema_tree->get_node(global_column_id);
                 int32_t next_root = node.get_parent_id();
                 find_intersection_and_fix_brackets(root, next_root, path_to_intersection);
@@ -808,7 +808,7 @@ void SchemaReader::initialize_serializer() {
                 generate_local_tree(root_id);
                 need_log_message = true;
             }
-            sub_schema.for_each_node_id([&](SchemaNode::id_t child_id) -> void {
+            sub_schema.for_each_node_id([&](mpt_node_id_t child_id) -> void {
                 if (is_node_projected(child_id)) {
                     generate_local_tree(child_id);
                     need_log_message = true;
@@ -972,14 +972,14 @@ auto SchemaReader::emit_log_shape(clpp::log_shape_id_t log_shape_id)
 
 auto SchemaReader::collect_scope_entries(
         SchemaView schema,
-        SchemaNode::id_t scope_node_id,
+        mpt_node_id_t scope_node_id,
         size_t start_column_reader_idx,
         bool ancestor_decomposed
 ) -> SchemaSpanContents {
     SchemaSpanContents scope;
     size_t column_reader_idx{start_column_reader_idx};
     schema.visit_entries(
-            [&](SchemaNode::id_t cur_node_id) -> bool {
+            [&](mpt_node_id_t cur_node_id) -> bool {
                 auto const& node{m_global_schema_tree->get_node(cur_node_id)};
                 if (node_type_consumes_column(node.get_type())) {
                     bool const should_emit{
@@ -1106,7 +1106,7 @@ auto SchemaReader::emit_parent_rule_arrays(
 
 auto SchemaReader::emit_decomposed_scope(
         SchemaView schema,
-        SchemaNode::id_t scope_node_id,
+        mpt_node_id_t scope_node_id,
         size_t column_idx,
         clpp::log_shape_id_t log_shape_id,
         bool ancestor_decomposed
@@ -1168,7 +1168,7 @@ auto SchemaReader::emit_grouped_leaf_entries(std::vector<DecompositionTarget>& e
     return ystdlib::error_handling::success();
 }
 
-auto SchemaReader::generate_log_message_template(SchemaNode::id_t log_msg_id)
+auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
         -> ystdlib::error_handling::Result<size_t> {
     auto log_msg_it{m_global_id_to_unordered_object.find(log_msg_id)};
     if (m_global_id_to_unordered_object.end() == log_msg_it) {

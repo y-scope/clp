@@ -122,21 +122,21 @@ public:
      * @param mode The projection mode to test.
      * @return Whether the node has the requested projection mode.
      */
-    [[nodiscard]] auto is_projected_as(SchemaNode::id_t node_id, NodeMask::Mode mode) const -> bool;
+    [[nodiscard]] auto is_projected_as(mpt_node_id_t node_id, NodeMask::Mode mode) const -> bool;
 
     /**
      * Gets the projection mask for a given schema node.
      * @param node_id The schema node ID to look up.
      * @return The node's projection mask, or an empty mask if the node has no projections.
      */
-    [[nodiscard]] auto get_node_mask(SchemaNode::id_t node_id) const -> NodeMask;
+    [[nodiscard]] auto get_node_mask(mpt_node_id_t node_id) const -> NodeMask;
 
     /**
      * Checks whether a schema node's value should be emitted.
      * @param node_id The schema node ID to check.
      * @return Whether the node's value should be emitted.
      */
-    [[nodiscard]] auto should_emit_value(SchemaNode::id_t node_id) const -> bool;
+    [[nodiscard]] auto should_emit_value(mpt_node_id_t node_id) const -> bool;
 
     /**
      * Checks whether a ParentRule schema node has any projected descendant leaf (i.e. a leaf
@@ -144,7 +144,7 @@ public:
      * @param node_id The ParentRule schema node ID to check.
      * @return Whether at least one descendant leaf of the node is projected.
      */
-    [[nodiscard]] auto has_projected_descendant(SchemaNode::id_t node_id) const -> bool;
+    [[nodiscard]] auto has_projected_descendant(mpt_node_id_t node_id) const -> bool;
 
     /**
      * Resolves all columns for the purpose of projection. This key resolution implementation is
@@ -165,7 +165,7 @@ public:
      * @param node_id
      * @return Whether the column should be included in the output.
      */
-    [[nodiscard]] auto matches_node(SchemaNode::id_t node_id) const -> bool {
+    [[nodiscard]] auto matches_node(mpt_node_id_t node_id) const -> bool {
         return Mode::ReturnAllColumns == m_projection_mode || m_matching_nodes.contains(node_id);
     }
 
@@ -183,7 +183,7 @@ private:
         TargetColumn(
                 std::shared_ptr<ast::ColumnDescriptor> column,
                 NodeMask::Mode mode,
-                std::vector<SchemaNode::id_t> matched_nodes
+                std::vector<mpt_node_id_t> matched_nodes
         )
                 : m_column(std::move(column)),
                   m_mode(mode),
@@ -192,7 +192,7 @@ private:
         // Data members
         std::shared_ptr<ast::ColumnDescriptor> m_column;
         NodeMask::Mode m_mode;
-        std::vector<SchemaNode::id_t> m_matched_nodes;
+        std::vector<mpt_node_id_t> m_matched_nodes;
     };
 
     // Methods
@@ -203,14 +203,14 @@ private:
      * @return The list of schema node IDs matched by the column descriptor.
      */
     [[nodiscard]] auto resolve_column(SchemaTree const& tree, ast::ColumnDescriptor& column)
-            -> std::vector<SchemaNode::id_t>;
+            -> std::vector<mpt_node_id_t>;
 
     /**
      * Records a projection mode for a schema node.
      * @param node_id
      * @param mode
      */
-    auto add_projection(SchemaNode::id_t node_id, NodeMask::Mode mode) -> void;
+    auto add_projection(mpt_node_id_t node_id, NodeMask::Mode mode) -> void;
 
     /**
      * For a resolved column's matched nodes, identifies structural nodes (LogMessage / ParentRule)
@@ -222,15 +222,15 @@ private:
      */
     [[nodiscard]] auto collect_structural_projections(
             SchemaTree const& tree,
-            std::vector<SchemaNode::id_t> const& matched_nodes,
+            std::vector<mpt_node_id_t> const& matched_nodes,
             NodeMask::Mode mode
     ) -> bool;
 
     // Data members
     std::vector<TargetColumn> m_columns;
-    absl::flat_hash_set<SchemaNode::id_t> m_matching_nodes;
-    absl::flat_hash_map<SchemaNode::id_t, NodeMask> m_node_projections;
-    absl::flat_hash_set<SchemaNode::id_t> m_nodes_with_projected_descendants;
+    absl::flat_hash_set<mpt_node_id_t> m_matching_nodes;
+    absl::flat_hash_map<mpt_node_id_t, NodeMask> m_node_projections;
+    absl::flat_hash_set<mpt_node_id_t> m_nodes_with_projected_descendants;
     Mode m_projection_mode{Mode::ReturnAllColumns};
     bool m_allow_duplicate_columns{false};
 };
