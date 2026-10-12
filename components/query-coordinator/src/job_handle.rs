@@ -277,7 +277,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::QueryJobCancelled`] if the query job is in [`QueryJobStatus::Cancelling`].
+    /// * [`Error::QueryJobCancelled`] if the query job is in [`QueryJobStatus::CancelRequested`].
     /// * [`Error::InvalidQueryJobStatusTransition`] if the query job is in any other status than
     ///   [`QueryJobStatus::Pending`].
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
@@ -294,7 +294,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let mut tx = self.context.db_pool.begin().await?;
         match self.lock_and_get_status(&mut tx).await? {
             QueryJobStatus::Pending => {}
-            QueryJobStatus::Cancelling => return Err(Error::QueryJobCancelled),
+            QueryJobStatus::CancelRequested => return Err(Error::QueryJobCancelled),
             from => {
                 return Err(Error::InvalidQueryJobStatusTransition {
                     from,
@@ -393,9 +393,10 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// persist from the locked status as follows:
     ///
     /// * [`QueryJobOutcome::Succeeded`] is permitted from [`QueryJobStatus::Pending`] and
-    ///   [`QueryJobStatus::Running`]. From [`QueryJobStatus::Cancelling`], the job is terminated as
-    ///   [`QueryJobStatus::Cancelled`] instead, since a cancellation wins over a success.
-    /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::Cancelling`].
+    ///   [`QueryJobStatus::Running`]. From [`QueryJobStatus::CancelRequested`], the job is
+    ///   terminated as [`QueryJobStatus::Cancelled`] instead, since a cancellation wins over a
+    ///   success.
+    /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::CancelRequested`].
     /// * [`QueryJobOutcome::Failed`] is permitted from any non-terminal status, since a failure
     ///   wins over both a success and a cancellation.
     ///
@@ -425,10 +426,10 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             (QueryJobOutcome::Succeeded, QueryJobStatus::Pending | QueryJobStatus::Running) => {
                 (to, None)
             }
-            (QueryJobOutcome::Cancelled, QueryJobStatus::Cancelling) => {
+            (QueryJobOutcome::Cancelled, QueryJobStatus::CancelRequested) => {
                 (to, Some(CANCELLED_MESSAGE.to_owned()))
             }
-            (QueryJobOutcome::Succeeded, QueryJobStatus::Cancelling) => {
+            (QueryJobOutcome::Succeeded, QueryJobStatus::CancelRequested) => {
                 tracing::info!(
                     query_job_id = % self.query_job_id,
                     "{CANCELLED_AFTER_COMPLETION_MESSAGE}",

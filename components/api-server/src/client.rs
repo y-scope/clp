@@ -371,9 +371,10 @@ impl Client {
                     break;
                 }
                 QueryJobStatus::Failed
+                | QueryJobStatus::CancelRequested
+                | QueryJobStatus::Cancelling
                 | QueryJobStatus::Cancelled
-                | QueryJobStatus::Killed
-                | QueryJobStatus::Cancelling => {
+                | QueryJobStatus::Killed => {
                     return Err(ClientError::QueryNotSucceeded);
                 }
                 QueryJobStatus::Running | QueryJobStatus::Pending => {
@@ -432,7 +433,7 @@ impl Client {
         let result = sqlx::query(&format!(
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ? AND status IN (?, ?)"
         ))
-        .bind::<i32>(QueryJobStatus::Cancelling.into())
+        .bind::<i32>(QueryJobStatus::CancelRequested.into())
         .bind(search_job_id)
         .bind::<i32>(QueryJobStatus::Pending.into())
         .bind::<i32>(QueryJobStatus::Running.into())

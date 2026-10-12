@@ -126,7 +126,12 @@ class ClpConnector:
         :raise: RuntimeError if the query fails or is cancelled.
         :raise: TimeoutError if the timeout is reached before the query completes.
         """
-        waiting_states = {QueryJobStatus.PENDING, QueryJobStatus.RUNNING, QueryJobStatus.CANCELLING}
+        waiting_states = {
+            QueryJobStatus.PENDING,
+            QueryJobStatus.RUNNING,
+            QueryJobStatus.CANCEL_REQUESTED,
+            QueryJobStatus.CANCELLING,
+        }
         error_states = {QueryJobStatus.FAILED, QueryJobStatus.CANCELLED, QueryJobStatus.KILLED}
         event_loop = asyncio.get_running_loop()
         start_time = event_loop.time()
