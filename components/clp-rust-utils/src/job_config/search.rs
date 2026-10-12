@@ -79,7 +79,18 @@ impl QueryJobStatus {
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
-#[derive(Clone, Debug, Deserialize, Eq, IntoPrimitive, PartialEq, Serialize, TryFromPrimitive)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    IntoPrimitive,
+    PartialEq,
+    Serialize,
+    TryFromPrimitive,
+    sqlx::Type,
+)]
 #[repr(i32)]
 pub enum QueryJobType {
     SearchOrAggregation = 0,
