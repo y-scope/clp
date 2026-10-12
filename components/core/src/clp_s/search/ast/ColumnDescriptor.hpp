@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include <clp_s/Defs.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/search/ast/Literal.hpp>
 #include <clp_s/TraceableException.hpp>
@@ -125,6 +126,35 @@ public:
     using id_t = uint32_t;
 
     /**
+     * The query function applied to a column, e.g. `shape(column)`. A function changes how the
+     * column resolves and how it is matched or projected:
+     * - None: a plain column with no special rules.
+     * - Shape: the column must resolve to LogMessage/ParentRule nodes; filters match against and
+     *   projections emit the node's shape rather than its value.
+     * - Decompose: (projection only) emit `Shape` and the node's and decomposed leaf values.
+     */
+    enum class Function : uint8_t {
+        None,
+        Shape,
+        Decompose,
+    };
+
+    /**
+     * @param function_name The name of a function as written in a query.
+     * @return The `Function` named `function_name`.
+     * @return std::nullopt if `function_name` doesn't name a function.
+     */
+    [[nodiscard]] static auto str_to_function(std::string_view function_name)
+            -> std::optional<Function>;
+
+    /**
+     * @param function
+     * @return The name of `function` as written in a query, or an empty string for
+     * `Function::None`.
+     */
+    [[nodiscard]] static auto function_to_str(Function function) -> std::string_view;
+
+    /**
      * Creates a ColumnDescriptor literal from a list of escaped tokens.
      *
      * In particular there are escaping rules for literal '\' and '*':
@@ -135,22 +165,26 @@ public:
      *
      * @param token(s) the escaped token or list of escaped tokens making up the descriptor
      * @param descriptor_namespace
+     * @param function The function applied to the column.
      * @return A ColumnDescriptor literal
      */
     static std::shared_ptr<ColumnDescriptor> create_from_escaped_tokens(
             std::vector<std::string> const& tokens,
-            std::string_view descriptor_namespace
+            std::string_view descriptor_namespace,
+            Function function = Function::None
     );
 
     /**
      * Create a ColumnDescriptor literal from a list of already-parsed DescriptorToken.
      * @param descriptors the list of parsed DescriptorToken
      * @param descriptor_namespace
+     * @param function The function applied to the column.
      * @return A ColumnDescriptor literal
      */
     static std::shared_ptr<ColumnDescriptor> create_from_descriptors(
             DescriptorList const& descriptors,
-            std::string_view descriptor_namespace
+            std::string_view descriptor_namespace,
+            Function function = Function::None
     );
 
     /**
@@ -271,6 +305,11 @@ public:
      */
     bool is_pure_wildcard() const { return m_pure_wildcard; }
 
+    /**
+     * @return The dotted column name built from this column's JSON-escaped tokens.
+     */
+    [[nodiscard]] auto to_string() const -> std::string;
+
     // Methods inherited from Value
     void print() const override;
 
@@ -317,8 +356,14 @@ public:
     }
 
     /**
-     * @return The LogMessage-relative leaf placeholder position this column is pinned to by clpp
-     * decomposition, or std::nullopt if the column matches any occurrence of its node.
+     * @return The function applied to this column.
+     */
+    [[nodiscard]] auto get_function() const -> Function { return m_function; }
+
+    /**
+     * @return Whether this column is the argument of a `shape()` function.
+     */
+    [[nodiscard]] auto is_shape_query() const -> bool { return Function::Shape == m_function; }
      */
     [[nodiscard]] auto get_leaf_position() const -> std::optional<size_t> {
         return m_leaf_position;
@@ -343,15 +388,24 @@ private:
     bool m_unresolved_descriptors{false};  // true if contains wildcards
     bool m_pure_wildcard{false};  // true if column is single wildcard
     std::optional<std::string> m_subtree_type;  // optional subtree type to resolve against
+    Function m_function{Function::None};
 
     bool m_is_clpp_resolved{false};
     std::optional<size_t> m_leaf_position;
     uint64_t m_id{};
 
     // Constructors
-    explicit ColumnDescriptor(std::vector<std::string> const&, std::string_view);
+    explicit ColumnDescriptor(
+            std::vector<std::string> const& tokens,
+            std::string_view descriptor_namespace,
+            Function function
+    );
 
-    explicit ColumnDescriptor(DescriptorList descriptors, std::string_view descriptor_namespace);
+    explicit ColumnDescriptor(
+            DescriptorList descriptors,
+            std::string_view descriptor_namespace,
+            Function function
+    );
 
     /**
      * Scan the list of descriptors to check if they contain wildcards and

@@ -3,6 +3,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
@@ -11,14 +12,10 @@
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
-#include <clp_s/search/ast/FunctionCall.hpp>
-#include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/TraceableException.hpp>
-#include <clpp/Defs.hpp>
 
 namespace clp_s::search {
-auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column, NodeMask::Mode mode)
-        -> void {
+auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) -> void {
     if (column->is_unresolved_descriptor()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
@@ -27,37 +24,24 @@ auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column, NodeM
     }
     if (false == m_allow_duplicate_columns) {
         for (auto const& existing : m_columns) {
-            if (*existing.m_column == *column && existing.m_mode == mode) {
+            if (*existing.m_column == *column) {
                 throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
             }
         }
     }
-    m_columns.emplace_back(TargetColumn{column, mode, {}});
-}
 
-auto Projection::add_column(std::shared_ptr<ast::FunctionCall> function_call) -> void {
-    auto const& function_name{function_call->get_function_name()};
-    auto const& args{function_call->get_args()};
-
-    if (args.size() != 1) {
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-    }
-
-    auto column{std::dynamic_pointer_cast<ast::ColumnDescriptor>(args.at(0))};
-    if (nullptr == column) {
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-    }
-
-    NodeMask::Mode mode{NodeMask::Mode::Value};
-    if (function_name == clpp::cShapeFunction) {
-        mode = NodeMask::Mode::Shape;
-    } else if (function_name == clpp::cDecomposeFunction) {
-        mode = NodeMask::Mode::Decompose;
-    } else {
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-    }
-
-    add_column(column, mode);
+    auto const mode{[&]() -> NodeMask::Mode {
+        switch (column->get_function()) {
+            case ast::ColumnDescriptor::Function::Shape:
+                return NodeMask::Mode::Shape;
+            case ast::ColumnDescriptor::Function::Decompose:
+                return NodeMask::Mode::Decompose;
+            case ast::ColumnDescriptor::Function::None:
+            default:
+                return NodeMask::Mode::Value;
+        }
+    }()};
+    m_columns.emplace_back(TargetColumn{std::move(column), mode});
 }
 
 auto Projection::is_projected_as(mpt_node_id_t node_id, NodeMask::Mode mode) const -> bool {
@@ -122,9 +106,10 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
                         fmt::format(
                                 "{}(<col>) can only be applied to LogMessage or ParentRule "
                                 "columns; no LogMessage or ParentRule nodes match column \"{}\".",
-                                NodeMask::Mode::Decompose == entry.m_mode ? clpp::cDecomposeFunction
-                                                                          : clpp::cShapeFunction,
-                                ast::column_descriptor_to_string(*entry.m_column)
+                                ast::ColumnDescriptor::function_to_str(
+                                        entry.m_column->get_function()
+                                ),
+                                entry.m_column->to_string()
                         )
                 );
             }

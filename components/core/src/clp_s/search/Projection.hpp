@@ -12,7 +12,6 @@
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
-#include <clp_s/search/ast/FunctionCall.hpp>
 #include <clp_s/TraceableException.hpp>
 
 namespace clp_s::search {
@@ -96,25 +95,11 @@ public:
     /**
      * Adds a column to the set of columns that should be included in the projected results.
      * @param column The column descriptor to project.
-     * @param mode The projection output mode.
-     * @throws OperationFailed if `column` contains a wildcard
-     * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns
-     * @throws OperationFailed if `column` is identical to a previously added column with the same
-     * output mode.
-     */
-    auto add_column(std::shared_ptr<ast::ColumnDescriptor> column, NodeMask::Mode mode) -> void;
-
-    /**
-     * Adds a projection column from a FunctionCall (e.g., shape(column) or decompose(column)).
-     * @param function_call The function call expression.
-     * @throws OperationFailed if the function name is not recognized.
-     * @throws OperationFailed if the argument is not a ColumnDescriptor.
-     * @throws OperationFailed if the column contains a wildcard.
+     * @throws OperationFailed if `column` contains a wildcard.
      * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns.
-     * @throws OperationFailed if the column is identical to a previously added column with the same
-     * output type.
+     * @throws OperationFailed if `column` is identical to a previously added column.
      */
-    auto add_column(std::shared_ptr<ast::FunctionCall> function_call) -> void;
+    auto add_column(std::shared_ptr<ast::ColumnDescriptor> column) -> void;
 
     /**
      * Checks whether a given schema node has a specific projection mode set.
@@ -180,14 +165,9 @@ private:
     // Types
     struct TargetColumn {
         // Constructors
-        TargetColumn(
-                std::shared_ptr<ast::ColumnDescriptor> column,
-                NodeMask::Mode mode,
-                std::vector<mpt_node_id_t> matched_nodes
-        )
+        TargetColumn(std::shared_ptr<ast::ColumnDescriptor> column, NodeMask::Mode mode)
                 : m_column(std::move(column)),
-                  m_mode(mode),
-                  m_matched_nodes(std::move(matched_nodes)) {}
+                  m_mode(mode) {}
 
         // Data members
         std::shared_ptr<ast::ColumnDescriptor> m_column;

@@ -1,13 +1,46 @@
 #include "ColumnDescriptor.hpp"
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 
+#include <simdjson.h>
+
+#include <clp_s/Defs.hpp>
+#include <clp_s/ErrorCode.hpp>
 #include <clp_s/search/ast/Literal.hpp>
 
 namespace clp_s::search::ast {
+namespace {
+constexpr std::string_view cShapeFunction{"shape"};
+constexpr std::string_view cDecomposeFunction{"decompose"};
+}  // namespace
+
 ColumnDescriptor::id_t ColumnDescriptor::m_next_id{0};
+
+auto ColumnDescriptor::function_to_str(Function function) -> std::string_view {
+    switch (function) {
+        case Function::None:
+            return {};
+        case Function::Shape:
+            return cShapeFunction;
+        case Function::Decompose:
+            return cDecomposeFunction;
+    }
+    return {};
+}
+
+auto ColumnDescriptor::str_to_function(std::string_view function_name) -> std::optional<Function> {
+    if (cShapeFunction == function_name) {
+        return Function::Shape;
+    }
+    if (cDecomposeFunction == function_name) {
+        return Function::Decompose;
+    }
+    return std::nullopt;
+}
 
 DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors) {
     DescriptorList list;
@@ -30,11 +63,13 @@ void ColumnDescriptor::check_and_set_unresolved_descriptor_flag() {
 
 ColumnDescriptor::ColumnDescriptor(
         std::vector<std::string> const& tokens,
-        std::string_view descriptor_namespace
+        std::string_view descriptor_namespace,
+        Function function
 )
         : m_descriptors{tokenize_descriptor(tokens)},
           m_namespace{descriptor_namespace},
           m_flags(cAllTypes),
+          m_function{function},
           m_id{m_next_id} {
     ++m_next_id;
     check_and_set_unresolved_descriptor_flag();
@@ -45,11 +80,13 @@ ColumnDescriptor::ColumnDescriptor(
 
 ColumnDescriptor::ColumnDescriptor(
         DescriptorList descriptors,
-        std::string_view descriptor_namespace
+        std::string_view descriptor_namespace,
+        Function function
 )
         : m_descriptors{std::move(descriptors)},
           m_namespace{descriptor_namespace},
           m_flags(cAllTypes),
+          m_function{function},
           m_id{m_next_id} {
     ++m_next_id;
     check_and_set_unresolved_descriptor_flag();
@@ -60,17 +97,21 @@ ColumnDescriptor::ColumnDescriptor(
 
 std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_escaped_tokens(
         std::vector<std::string> const& tokens,
-        std::string_view descriptor_namespace
+        std::string_view descriptor_namespace,
+        Function function
 ) {
-    return std::shared_ptr<ColumnDescriptor>(new ColumnDescriptor(tokens, descriptor_namespace));
+    return std::shared_ptr<ColumnDescriptor>(
+            new ColumnDescriptor(tokens, descriptor_namespace, function)
+    );
 }
 
 std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_descriptors(
         DescriptorList const& descriptors,
-        std::string_view descriptor_namespace
+        std::string_view descriptor_namespace,
+        Function function
 ) {
     return std::shared_ptr<ColumnDescriptor>(
-            new ColumnDescriptor(descriptors, descriptor_namespace)
+            new ColumnDescriptor(descriptors, descriptor_namespace, function)
     );
 }
 
@@ -83,6 +124,27 @@ auto ColumnDescriptor::copy_with_new_id() const -> std::shared_ptr<ColumnDescrip
     c->m_id = m_next_id;
     ++m_next_id;
     return c;
+}
+
+
+auto ColumnDescriptor::to_string() const -> std::string {
+    std::string result;
+    simdjson::builder::string_builder builder;
+    std::string_view separator;
+    for (auto const& descriptor : m_descriptors) {
+        result.append(separator);
+        separator = ".";
+        auto const& token{descriptor.get_token()};
+        builder.clear();
+        builder.escape_and_append(token);
+        std::string_view escaped_token;
+        if (simdjson::SUCCESS == builder.view().get(escaped_token)) {
+            result.append(escaped_token);
+        } else {
+            result.append(token);
+        }
+    }
+    return result;
 }
 
 void ColumnDescriptor::print() const {
@@ -102,6 +164,9 @@ void ColumnDescriptor::print() const {
 
     if (m_subtree_type.has_value()) {
         os << "subtree_type=\"" << m_subtree_type.value() << "\", ";
+    }
+    if (Function::None != m_function) {
+        os << "function=" << function_to_str(get_function()) << ", ";
     }
     if (m_leaf_position.has_value()) {
         os << "leaf_position=" << m_leaf_position.value() << ", ";
@@ -123,10 +188,13 @@ void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {
 }
 
 bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
-    return m_descriptors == rhs.m_descriptors && m_unresolved_tokens == rhs.m_unresolved_tokens
-           && m_flags == rhs.m_flags && m_schema_col_id == rhs.m_schema_col_id
+    return m_descriptors == rhs.m_descriptors
+           && m_flags == rhs.m_flags && m_function == rhs.m_function
+           && m_leaf_position == rhs.m_leaf_position && m_namespace == rhs.m_namespace
+           && m_pure_wildcard == rhs.m_pure_wildcard && m_schema_col_id == rhs.m_schema_col_id
+           && m_subtree_type == rhs.m_subtree_type
            && m_unresolved_descriptors == rhs.m_unresolved_descriptors
-           && m_pure_wildcard == rhs.m_pure_wildcard && m_leaf_position == rhs.m_leaf_position;
+           && m_unresolved_tokens == rhs.m_unresolved_tokens;
 }
 
 void ColumnDescriptor::simplify_descriptor_wildcards() {

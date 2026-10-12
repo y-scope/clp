@@ -54,9 +54,6 @@ template <size_t... is>
 }
 
 static_assert(verify_encoding_order(std::make_index_sequence<cEncodingPatterns.size()>{}));
-
-inline constexpr std::string_view cShapeFunction{"shape"};
-inline constexpr std::string_view cDecomposeFunction{"decompose"};
 }  // namespace clpp
 
 #endif  // CLPP_CONSTANTS_HPP

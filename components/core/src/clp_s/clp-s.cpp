@@ -36,7 +36,6 @@
 #include <clp/type_utils.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/FilterExpr.hpp>
-#include <clp_s/search/ast/FunctionCall.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
 #include <clp_s/search/TelemetryContext.hpp>
 
@@ -103,7 +102,7 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int;
  * @return The parsed projection columns, or std::nullopt if any column fails to parse.
  */
 auto parse_projection_columns(std::vector<std::string> const& columns)
-        -> std::optional<std::vector<std::shared_ptr<ast::Value>>>;
+        -> std::optional<std::vector<std::shared_ptr<ast::ColumnDescriptor>>>;
 
 /**
  * Finds the first `--experimental`-only function used by a search, either as a filter in `expr` or
@@ -114,7 +113,7 @@ auto parse_projection_columns(std::vector<std::string> const& columns)
  */
 auto find_experimental_function(
         std::shared_ptr<ast::Expression> const& expr,
-        std::vector<std::shared_ptr<ast::Value>> const& projection_columns
+        std::vector<std::shared_ptr<ast::ColumnDescriptor>> const& projection_columns
 ) -> std::optional<std::string_view>;
 
 /**
@@ -163,7 +162,7 @@ bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
         std::shared_ptr<ast::Expression> expr,
-        std::vector<std::shared_ptr<ast::Value>> const& projection_columns,
+        std::vector<std::shared_ptr<ast::ColumnDescriptor>> const& projection_columns,
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 );
 
@@ -357,8 +356,8 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
 }
 
 auto parse_projection_columns(std::vector<std::string> const& columns)
-        -> std::optional<std::vector<std::shared_ptr<ast::Value>>> {
-    std::vector<std::shared_ptr<ast::Value>> parsed_columns;
+        -> std::optional<std::vector<std::shared_ptr<ast::ColumnDescriptor>>> {
+    std::vector<std::shared_ptr<ast::ColumnDescriptor>> parsed_columns;
     for (auto const& column : columns) {
         auto parsed{kql::parse_projection_column(column)};
         if (nullptr == parsed) {
@@ -372,7 +371,7 @@ auto parse_projection_columns(std::vector<std::string> const& columns)
 
 auto find_experimental_function(
         std::shared_ptr<ast::Expression> const& expr,
-        std::vector<std::shared_ptr<ast::Value>> const& projection_columns
+        std::vector<std::shared_ptr<ast::ColumnDescriptor>> const& projection_columns
 ) -> std::optional<std::string_view> {
     std::vector<std::shared_ptr<ast::Expression>> work_list{expr};
     while (false == work_list.empty()) {
@@ -381,9 +380,10 @@ auto find_experimental_function(
         if (auto const filter{std::dynamic_pointer_cast<ast::FilterExpr>(cur_expr)};
             nullptr != filter)
         {
-            auto const& subtree_type{filter->get_column()->get_subtree_type()};
-            if (subtree_type.has_value() && clpp::cShapeFunction == subtree_type.value()) {
-                return clpp::cShapeFunction;
+            if (auto const function{filter->get_column()->get_function()};
+                ast::ColumnDescriptor::Function::None != function)
+            {
+                return ast::ColumnDescriptor::function_to_str(function);
             }
         }
         for (auto it{cur_expr->op_begin()}; it != cur_expr->op_end(); ++it) {
@@ -394,10 +394,10 @@ auto find_experimental_function(
         }
     }
     for (auto const& column : projection_columns) {
-        if (auto const func_call{std::dynamic_pointer_cast<ast::FunctionCall>(column)};
-            nullptr != func_call)
+        if (auto const function{column->get_function()};
+            ast::ColumnDescriptor::Function::None != function)
         {
-            return func_call->get_function_name();
+            return ast::ColumnDescriptor::function_to_str(function);
         }
     }
     return std::nullopt;
@@ -491,7 +491,7 @@ bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
         std::shared_ptr<ast::Expression> expr,
-        std::vector<std::shared_ptr<ast::Value>> const& projection_columns,
+        std::vector<std::shared_ptr<ast::ColumnDescriptor>> const& projection_columns,
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 ) {
     PROFILE_SCOPE("search_archive");
@@ -621,15 +621,8 @@ bool search_archive(
                                        : Projection::Mode::ReturnSelectedColumns
     );
     try {
-        for (auto const& parsed : projection_columns) {
-            if (auto func_call{std::dynamic_pointer_cast<ast::FunctionCall>(parsed)}) {
-                projection->add_column(func_call);
-            } else {
-                projection->add_column(
-                        std::static_pointer_cast<ast::ColumnDescriptor>(parsed),
-                        Projection::NodeMask::Mode::Value
-                );
-            }
+        for (auto const& column : projection_columns) {
+            projection->add_column(column);
         }
         projection->resolve_columns(*archive_reader->get_schema_tree());
     } catch (std::exception const& e) {

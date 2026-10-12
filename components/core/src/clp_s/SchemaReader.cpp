@@ -31,6 +31,8 @@
 
 namespace clp_s {
 namespace {
+constexpr std::string_view cShapeKey{"shape"};
+
 /**
  * Builds a map from column name to the list of reader indices (in schema order) for all
  * column-consuming (leaf rule) nodes in the given sub-schema.
@@ -954,7 +956,7 @@ auto SchemaReader::emit_parent_rule_shape_substring(
     if (parent_rule_shape.empty()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
-    m_json_serializer.add_constant_string_field(clpp::cShapeFunction, parent_rule_shape.view());
+    m_json_serializer.add_constant_string_field(cShapeKey, parent_rule_shape.view());
     return ystdlib::error_handling::success();
 }
 
@@ -964,7 +966,7 @@ auto SchemaReader::emit_log_shape(clpp::log_shape_id_t log_shape_id)
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
     m_json_serializer.add_constant_string_field(
-            clpp::cShapeFunction,
+            cShapeKey,
             m_log_shape_dict->get_value(log_shape_id)
     );
     return ystdlib::error_handling::success();

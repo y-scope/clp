@@ -62,26 +62,16 @@ namespace {
  */
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
 
-/**
- * @param column The column descriptor to inspect.
- * @return Whether `column` is the argument of a shape() function.
- */
-[[nodiscard]] auto is_shape_column(ast::ColumnDescriptor const& column) -> bool;
-
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     if (constants::cMetadataSubtreeType == subtree_type) {
         return NodeType::Metadata;
     }
-    if (constants::cObjectSubtreeType == subtree_type || clpp::cShapeFunction == subtree_type) {
+    if (constants::cObjectSubtreeType == subtree_type) {
         return NodeType::Object;
     }
     return NodeType::Unknown;
 }
 
-auto is_shape_column(ast::ColumnDescriptor const& column) -> bool {
-    auto const& subtree_type{column.get_subtree_type()};
-    return subtree_type.has_value() && clpp::cShapeFunction == subtree_type.value();
-}
 }  // namespace
 
 // TODO: write proper iterators on the AST to make this code less awful.
@@ -146,12 +136,12 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(
             m_clpp_node_matched = false;
             auto [mapped_succesfully, new_and_expr]{populate_column_mapping(column, cur)};
             if (false == mapped_succesfully) {
-                if (is_shape_column(*column) && false == m_clpp_node_matched) {
+                if (column->is_shape_query() && false == m_clpp_node_matched) {
                     throw std::runtime_error{fmt::format(
                             "{}(<col>) can only be applied to LogMessage or ParentRule columns; no "
                             "LogMessage or ParentRule nodes match column \"{}\".",
-                            clpp::cShapeFunction,
-                            ast::column_descriptor_to_string(*column)
+                            ast::ColumnDescriptor::function_to_str(column->get_function()),
+                            column->to_string()
                     )};
                 }
                 // no matching columns -- replace this expression with empty;
@@ -292,7 +282,7 @@ auto SchemaMatch::populate_column_mapping(
     }
     int32_t prev_level = 0;
     bool matched = false;
-    bool const is_shape_query{is_shape_column(*column)};
+    bool const is_shape_query{column->is_shape_query()};
     while (false == work_list.empty()) {
         auto& cur = work_list.top();
         auto [cur_depth, cur_it, cur_node_id] = cur;
@@ -1171,7 +1161,7 @@ auto SchemaMatch::build_clpp_query_filter(
         return nullptr;
     }
 
-    if (is_shape_column(*column)) {
+    if (column->is_shape_query()) {
         return build_shape_match_filter(
                 column,
                 decomposition_root,
@@ -1276,7 +1266,7 @@ auto SchemaMatch::build_residual_wildcard_filter(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter
 ) -> std::shared_ptr<ast::Expression> {
-    if (is_shape_column(column)) {
+    if (column.is_shape_query()) {
         return nullptr;
     }
     auto residual_column{column.copy()};
@@ -1331,7 +1321,7 @@ auto SchemaMatch::expand_pure_wildcard_over_clpp_nodes(
     auto const& filter{dynamic_cast<FilterExpr const&>(*expr)};
     auto const clpp_node_ids{collect_clpp_node_ids(*column)};
     if (clpp_node_ids.empty()) {
-        if (is_shape_column(*column)) {
+        if (column->is_shape_query()) {
             return nullptr;
         }
         return expr;

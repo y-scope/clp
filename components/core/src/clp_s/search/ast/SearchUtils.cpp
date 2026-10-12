@@ -180,18 +180,6 @@ auto unescape_kql_internal(std::string const& value, std::string& unescaped, boo
 }
 }  // namespace
 
-auto column_descriptor_to_string(ColumnDescriptor& column) -> std::string {
-    std::string result;
-    for (auto it{column.descriptor_begin()}; column.descriptor_end() != it;) {
-        if (column.descriptor_begin() != it) {
-            result.append(".");
-        }
-        result.append(it->get_token());
-        ++it;
-    }
-    return result;
-}
-
 void splice_into(
         std::shared_ptr<Expression> const& parent,
         std::shared_ptr<Expression> const& child,

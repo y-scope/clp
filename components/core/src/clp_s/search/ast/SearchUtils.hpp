@@ -13,13 +13,6 @@
 
 namespace clp_s::search::ast {
 /**
- * Builds a dotted column name string from a column descriptor's tokens.
- * @param column
- * @return The dotted column name.
- */
-[[nodiscard]] auto column_descriptor_to_string(ColumnDescriptor& column) -> std::string;
-
-/**
  * Splice a child expression into a parent expression at a given location
  * @param parent
  * @param child

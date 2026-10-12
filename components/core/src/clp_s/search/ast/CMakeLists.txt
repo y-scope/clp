@@ -22,8 +22,6 @@ set(
     FilterExpr.cpp
     FilterExpr.hpp
     FilterOperation.hpp
-    FunctionCall.cpp
-    FunctionCall.hpp
     Integral.cpp
     Integral.hpp
     Literal.hpp
