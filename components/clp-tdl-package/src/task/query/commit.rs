@@ -125,3 +125,108 @@ async fn publish_timeline_buckets(collection: &Collection<Document>) -> anyhow::
         .await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use clp_rust_utils::task_io::query::OutputHandle;
+    use clp_rust_utils::task_io::query::QueryTaskOutput;
+    use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+    use non_empty_string::NonEmptyString;
+
+    use super::commit_timeline_results;
+
+    /// # Returns
+    ///
+    /// An archive output identifying the timeline destination for query job 42.
+    fn timeline_output() -> QueryTaskOutput {
+        QueryTaskOutput {
+            query_job_id: 42,
+            output_handle: OutputHandle::ResultsCache {
+                uri: NonEmptyString::from_static_str("mongodb://localhost/results"),
+            },
+            timeline_collection: Some(NonEmptyString::from_static_str("42-timeline")),
+        }
+    }
+
+    #[tokio::test]
+    async fn rejects_empty_archive_outputs() -> anyhow::Result<()> {
+        let error = commit_timeline_results(&[])
+            .await
+            .expect_err("commit requires archive outputs");
+        assert_eq!(
+            error.to_string(),
+            "timeline commit received no task outputs"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rejects_inconsistent_archive_destinations() -> anyhow::Result<()> {
+        let output = timeline_output();
+        for different_output in [
+            QueryTaskOutput {
+                query_job_id: 43,
+                ..output.clone()
+            },
+            QueryTaskOutput {
+                output_handle: OutputHandle::ResultsCache {
+                    uri: NonEmptyString::from_static_str("mongodb://localhost/other"),
+                },
+                ..output.clone()
+            },
+            QueryTaskOutput {
+                timeline_collection: None,
+                ..output.clone()
+            },
+            QueryTaskOutput {
+                timeline_collection: Some(NonEmptyString::from_static_str("43-timeline")),
+                ..output.clone()
+            },
+        ] {
+            let error = commit_timeline_results(&[output.clone(), different_output])
+                .await
+                .expect_err("conflicting destinations must be rejected before publication");
+            assert_eq!(
+                error.to_string(),
+                "timeline task outputs have inconsistent result destinations"
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rejects_missing_or_incorrect_timeline_collection() -> anyhow::Result<()> {
+        for collection in [None, Some("42"), Some("43-timeline")] {
+            let output = QueryTaskOutput {
+                timeline_collection: collection.map(NonEmptyString::from_static_str),
+                ..timeline_output()
+            };
+            let error = commit_timeline_results(&[output])
+                .await
+                .expect_err("commit requires the query job's timeline collection");
+            let expected = if collection.is_none() {
+                "timeline commit requires a timeline collection"
+            } else {
+                "timeline collection does not match its query job ID"
+            };
+            assert_eq!(error.to_string(), expected);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rejects_file_output() -> anyhow::Result<()> {
+        let output = QueryTaskOutput {
+            output_handle: OutputHandle::File,
+            ..timeline_output()
+        };
+        let error = commit_timeline_results(&[output])
+            .await
+            .expect_err("commit requires results-cache output");
+        assert_eq!(
+            error.to_string(),
+            "timeline commit requires results-cache output"
+        );
+        Ok(())
+    }
+}

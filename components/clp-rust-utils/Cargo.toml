@@ -30,4 +30,5 @@ yaml_serde = { workspace = true }
 zstd = { workspace = true }
 
 [dev-dependencies]
+anyhow = { workspace = true }
 serde_json = { workspace = true }

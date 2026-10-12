@@ -354,6 +354,7 @@ fn run_clp_s_search(
 mod tests {
     use std::ffi::OsString;
     use std::num::NonZeroU32;
+    use std::num::NonZeroU64;
     use std::path::Path;
     use std::path::PathBuf;
 
@@ -777,5 +778,86 @@ mod tests {
         .expect_err("the clp storage engine is unsupported");
 
         assert!(error.to_string().contains("clp-s"));
+    }
+    #[test]
+    fn timeline_search_preserves_filters_and_omits_result_limit() -> anyhow::Result<()> {
+        let options = ClpSQueryOption {
+            max_num_results: NonZeroU32::new(7),
+            begin_timestamp_millisecs: Some(-1),
+            end_timestamp_millisecs: Some(120_000),
+            ignore_case: true,
+            count_by_time_bucket_size_millisecs: NonZeroU64::new(60_000),
+            ..unbounded_query_option()
+        };
+        let args = build_clp_s_search_args_for_result_cache(
+            &directory_selector(),
+            &options,
+            "mongodb://localhost/results",
+            42,
+            "ds1",
+        );
+        let expected = [
+            "s",
+            "/archives/ds1",
+            "--archive-id",
+            ARCHIVE_ID,
+            "level: \"ERROR\"",
+            "--tge",
+            "-1",
+            "--tle",
+            "120000",
+            "--ignore-case",
+            "--count-by-time",
+            "60000",
+            "results-cache",
+            "--uri",
+            "mongodb://localhost/results",
+            "--collection",
+            "42-timeline",
+            "--dataset",
+            "ds1",
+        ];
+        anyhow::ensure!(
+            args == expected.map(OsString::from),
+            "unexpected timeline arguments: {args:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn timeline_search_preserves_s3_authentication_and_large_bucket_width() -> anyhow::Result<()> {
+        let options = ClpSQueryOption {
+            max_num_results: NonZeroU32::new(7),
+            count_by_time_bucket_size_millisecs: NonZeroU64::new(u64::MAX),
+            ..unbounded_query_option()
+        };
+        let args = build_clp_s_search_args_for_result_cache(
+            &ArchiveSelector::ObjectUrl("https://bucket.s3.amazonaws.com/archive".to_owned()),
+            &options,
+            "mongodb://localhost/results",
+            42,
+            "ds1",
+        );
+        let expected = [
+            "s",
+            "https://bucket.s3.amazonaws.com/archive",
+            "--auth",
+            "s3",
+            "level: \"ERROR\"",
+            "--count-by-time",
+            "18446744073709551615",
+            "results-cache",
+            "--uri",
+            "mongodb://localhost/results",
+            "--collection",
+            "42-timeline",
+            "--dataset",
+            "ds1",
+        ];
+        anyhow::ensure!(
+            args == expected.map(OsString::from),
+            "unexpected timeline arguments: {args:?}"
+        );
+        Ok(())
     }
 }
