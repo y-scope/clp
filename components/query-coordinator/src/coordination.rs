@@ -483,8 +483,8 @@ impl Coordinator {
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_submitted_running_jobs(&self) -> Result<Vec<SubmittedJob>, Error> {
         const QUERY: &str = formatcp!(
-            "SELECT `id`, `spider_id`, `job_config` FROM `{table}` WHERE `type` = ? AND \
-             `status` = ? AND `spider_id` IS NOT NULL;",
+            "SELECT `id`, `spider_id`, `job_config` FROM `{table}` WHERE `type` = ? AND `status` \
+             = ? AND `spider_id` IS NOT NULL;",
             table = QUERY_JOBS_TABLE_NAME,
         );
 
