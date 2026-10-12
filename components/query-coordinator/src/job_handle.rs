@@ -653,7 +653,7 @@ impl ArchiveSelector<'_> {
     ) -> Result<(), Error> {
         let datasets_table = self.context.db_config.datasets_table_name();
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT COUNT(*) FROM `{datasets_table}` WHERE `name` IN ("
+            "SELECT COUNT(*) FROM `{datasets_table}` WHERE CAST(`name` AS BINARY) IN ("
         ));
         let mut separated_datasets = query_builder.separated(", ");
         for dataset in datasets {
