@@ -22,9 +22,29 @@ namespace clp_s {
 using AggregationValue = std::variant<int64_t, double, std::string, bool>;
 
 /**
- * One aggregation's result document: an ordered list of typed key-value pairs.
+ * An ordered list of typed aggregation fields.
  */
-using AggregationResult = std::vector<std::pair<std::string, AggregationValue>>;
+using AggregationFields = std::vector<std::pair<std::string, AggregationValue>>;
+
+/**
+ * An aggregation's result fields and optional key within an archive.
+ *
+ * Key fields must have stable order and be distinct from result and dataset/archive identity
+ * fields.
+ * Keyed results represent complete contributions: retries require identical inputs, and omitted
+ * keys are not deleted. Sinks determine how key fields are serialized.
+ */
+struct AggregationResult {
+    explicit AggregationResult(
+            AggregationFields fields,
+            std::optional<AggregationFields> optional_key = std::nullopt
+    )
+            : fields{std::move(fields)},
+              optional_key{std::move(optional_key)} {}
+
+    AggregationFields const fields;
+    std::optional<AggregationFields> const optional_key;
+};
 
 /**
  * Requirements a type must satisfy to be used as an aggregator.
