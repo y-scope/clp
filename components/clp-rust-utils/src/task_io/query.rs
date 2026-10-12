@@ -7,6 +7,7 @@ use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::job_config::QueryJobId;
 use crate::job_config::SearchJobConfig;
 
 /// `clp-s` options for a query job.
@@ -54,11 +55,7 @@ impl TryFrom<&SearchJobConfig> for ClpSQueryOption {
         Ok(Self {
             query_string: NonEmptyString::try_from(config.query_string.clone())
                 .map_err(|_| QueryOptionError::EmptyQuery)?,
-            max_num_results: if bucket_size.is_some() {
-                None
-            } else {
-                NonZeroU32::new(config.max_num_results)
-            },
+            max_num_results: NonZeroU32::new(config.max_num_results),
             begin_timestamp_millisecs: config.begin_timestamp,
             end_timestamp_millisecs: config.end_timestamp,
             ignore_case: config.ignore_case,
@@ -75,6 +72,22 @@ pub enum QueryOptionError {
 
     #[error("count-by-time bucket size must be positive, got {bucket_size}")]
     InvalidCountByTimeBucketSize { bucket_size: i64 },
+}
+
+/// Identifies the results produced by an archive query task.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct QueryTaskOutput {
+    /// The query job that owns these results.
+    pub query_job_id: QueryJobId,
+
+    /// The destination of the search results.
+    pub output_handle: OutputHandle,
+
+    /// The `<query_job_id>-timeline` collection containing count-by-time contributions, final
+    /// buckets, and the commit marker, or `None` for ordinary searches. Normal results remain in
+    /// the `<query_job_id>` collection. Readers must wait for successful job completion.
+    pub timeline_collection: Option<NonEmptyString>,
 }
 
 /// The output handler that `clp-s` writes a query task's results to.
@@ -97,22 +110,12 @@ mod tests {
     use std::num::NonZeroU64;
 
     use non_empty_string::NonEmptyString;
-    use serde::Deserialize;
-    use serde::Serialize;
 
     use super::ClpSQueryOption;
     use super::OutputHandle;
     use super::QueryOptionError;
-    use crate::job_config::QueryJobId;
+    use super::QueryTaskOutput;
     use crate::types::non_empty_string::ExpectedNonEmpty;
-
-    /// Identifies the results produced by a timeline query task.
-    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-    #[serde(deny_unknown_fields)]
-    struct TimelineTaskOutput {
-        query_job_id: QueryJobId,
-        output_handle: OutputHandle,
-    }
 
     #[test]
     fn clp_s_query_option_with_timestamp_bounds_round_trips_through_msgpack() {
@@ -274,11 +277,7 @@ mod tests {
                         .expect("valid search configuration should convert");
                     let expected = ClpSQueryOption {
                         query_string: NonEmptyString::from_static_str("level:error"),
-                        max_num_results: if width.is_some() {
-                            None
-                        } else {
-                            NonZeroU32::new(max_num_results)
-                        },
+                        max_num_results: NonZeroU32::new(max_num_results),
                         begin_timestamp_millisecs: begin,
                         end_timestamp_millisecs: end,
                         ignore_case: true,
@@ -337,8 +336,9 @@ mod tests {
     }
 
     #[test]
-    fn timeline_task_output_preserves_msgpack_contract() {
-        let expected = TimelineTaskOutput {
+    fn query_task_output_preserves_msgpack_contract() {
+        let expected = QueryTaskOutput {
+            timeline_collection: Some(NonEmptyString::from_static_str("42-timeline")),
             query_job_id: 42,
             output_handle: OutputHandle::ResultsCache {
                 uri: NonEmptyString::from_static_str("mongodb://results-cache:27017/timeline"),
@@ -349,28 +349,30 @@ mod tests {
             "uri": "mongodb://results-cache:27017/timeline",
         });
         let serialized = rmp_serde::to_vec(&expected).expect("test payload should serialize");
-        let contract: (i32, serde_json::Value) =
+        let contract: (i32, serde_json::Value, String) =
             rmp_serde::from_slice(&serialized).expect("serialized test payload should deserialize");
         assert_eq!(
             contract,
             (
                 42,
-                serde_json::json!(["results_cache", "mongodb://results-cache:27017/timeline"])
+                serde_json::json!(["results_cache", "mongodb://results-cache:27017/timeline"]),
+                "42-timeline".to_owned()
             )
         );
-        let actual: TimelineTaskOutput =
+        let actual: QueryTaskOutput =
             rmp_serde::from_slice(&serialized).expect("serialized test payload should deserialize");
         assert_eq!(actual, expected);
 
         let named_contract = serde_json::json!({
             "query_job_id": 42,
             "output_handle": expected_handle,
+            "timeline_collection": "42-timeline",
         });
         let serialized = rmp_serde::to_vec_named(&expected).expect("test payload should serialize");
         let actual_contract: serde_json::Value =
             rmp_serde::from_slice(&serialized).expect("serialized test payload should deserialize");
         assert_eq!(actual_contract, named_contract);
-        let actual: TimelineTaskOutput =
+        let actual: QueryTaskOutput =
             rmp_serde::from_slice(&serialized).expect("serialized test payload should deserialize");
         assert_eq!(actual, expected);
     }
