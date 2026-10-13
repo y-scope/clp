@@ -199,9 +199,8 @@ std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) 
         return expr;
     }
 
-    if (m_has_unresolved_columns || m_expr_rewritten) {
+    if (m_expr_rewritten) {
         m_column_to_descriptor.clear();
-        m_has_unresolved_columns = false;
 
         OrOfAndForm standard_form;
         expr = standard_form.run(expr);
@@ -551,7 +550,7 @@ auto SchemaMatch::populate_column_mapping(
                 leaf_node_ids.push_back(cur_node_id);
             } else {
                 column->resolution().wildcard_node_ids.emplace(cur_node_id);
-                m_has_unresolved_columns = true;
+                m_expr_rewritten = true;
             }
             matched_node = true;
             if (false == (wildcard_descriptor && is_decomposable)) {
@@ -590,11 +589,10 @@ void SchemaMatch::populate_schema_mapping() {
                 return;
             }
             for (auto const& descriptor : m_column_to_descriptor.at(node_id)) {
-                auto& resolution{descriptor->resolution()};
-                if (resolution.is_decomposed_leaf || descriptor->is_pure_wildcard()) {
+                if (descriptor->is_pure_wildcard()) {
                     continue;
                 }
-                resolution.schema_to_node_id.emplace(schema_id, node_id);
+                descriptor->resolution().schema_to_node_id.emplace(schema_id, node_id);
             }
         });
     }
@@ -1120,8 +1118,7 @@ auto SchemaMatch::build_leaf_filters(
     std::vector<std::shared_ptr<ast::Expression>> filters;
     filters.reserve(leaf_cols->size());
     for (auto& [leaf_col, node_id] : leaf_cols.value()) {
-        leaf_col->set_leaf_position(leaf.m_leaf_position);
-        leaf_col->bind_as_decomposed_leaf(node_id, matched_schema_ids);
+        leaf_col->bind_as_decomposed_leaf(node_id, leaf.m_leaf_position, matched_schema_ids);
         auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
         filters.emplace_back(
                 FilterExpr::create(leaf_col, FilterOperation::EQ, leaf_literal, is_inverted)

@@ -513,9 +513,6 @@ private:
     // Whether column resolution rewrote the expression (wildcard expansion, query decomposition or
     // multi-node expansion), requiring normalization and a second resolution pass.
     bool m_expr_rewritten{false};
-    // Whether column resolution matched a column with wildcard tokens to any MPT node, requiring
-    // normalization and a second resolution pass to expand it.
-    bool m_has_unresolved_columns{false};
     uint64_t m_num_clpp_interpretations{0};
     ClppMatcher m_clpp_matcher;
 
@@ -527,8 +524,8 @@ private:
      * recorded according to the column:
      * - fully resolved column: each matched leaf node is appended to `leaf_node_ids` for the
      *   caller to resolve;
-     * - column with wildcard tokens: matches are recorded in the column's resolution state for a
-     *   second pass after the query is converted to Or-of-And form;
+     * - column with wildcard tokens: matches are recorded in the column's resolution state, from
+     *   which the caller expands the column over the matched nodes;
      * - fully resolved column reaching an unstructured array: the remaining tokens are stored on
      *   the column and the array node is appended to `leaf_node_ids`.
      *
@@ -581,8 +578,7 @@ private:
 
     /**
      * Fills each column's schema-to-node mapping from `m_column_to_descriptor` by scanning every
-     * schema's nodes. Pure wildcards (resolved per schema at evaluation) and decomposed leaf
-     * columns (already mapped) are skipped.
+     * schema's nodes. Pure wildcards (resolved per schema at evaluation) are skipped.
      */
     void populate_schema_mapping();
 
