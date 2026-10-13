@@ -445,21 +445,6 @@ private:
     ) const -> ast::literal_type_bitmask_t;
 
     /**
-     * Binds `column` to `node_id`, maps it to exactly `schema_ids` in `m_descriptor_to_schema` and
-     * records it in `m_decomposed_leaf_columns`. The schemas are chosen by shape matching
-     * (`ClppMatcher`) rather than by which schemas contain `node_id`, and the mapping persists
-     * across `run()`'s second resolution pass.
-     * @param column The decomposed leaf column.
-     * @param node_id The MPT node to bind the column to.
-     * @param schema_ids The schemas to map the column to.
-     */
-    auto register_decomposed_leaf_column(
-            std::shared_ptr<ast::ColumnDescriptor> const& column,
-            mpt_node_id_t node_id,
-            std::unordered_set<int32_t> const& schema_ids
-    ) -> void;
-
-    /**
      * Records `column` as mapped to MPT node `node_id` in `m_column_to_descriptor`.
      * @param column
      * @param node_id
@@ -516,16 +501,6 @@ private:
     // Data members
     std::unordered_map<uint32_t, std::set<std::shared_ptr<ast::ColumnDescriptor>>>
             m_column_to_descriptor;
-    // The subset of `m_descriptor_to_schema`'s keys that are leaf rule columns created by query
-    // decomposition. Their entries were written by `register_decomposed_leaf_column` with the
-    // schemas containig a shape matching the interpretation.
-    std::unordered_set<ast::ColumnDescriptor::id_t> m_decomposed_leaf_columns;
-    // Maps each column descriptor to the MPT node it resolves to in each schema.
-    // TODO: The value in the map can be a set of k:v pairs with a hash & comparison that only
-    // considers the key since each column descriptor only has one matching MPT node per schema.
-    std::unordered_map<ast::ColumnDescriptor::id_t, std::map<int32_t, mpt_node_id_t>>
-            m_descriptor_to_schema;
-    std::map<ast::ColumnDescriptor::id_t, std::set<int32_t>> m_unresolved_descriptor_to_descriptor;
     std::unordered_map<ast::Expression*, std::unordered_set<int32_t>> m_expression_to_schemas;
     std::unordered_set<int32_t> m_matched_schema_ids;
     std::unordered_set<int32_t> m_array_search_schema_ids;
@@ -538,6 +513,9 @@ private:
     // Whether column resolution rewrote the expression (wildcard expansion, query decomposition or
     // multi-node expansion), requiring normalization and a second resolution pass.
     bool m_expr_rewritten{false};
+    // Whether column resolution matched a column with wildcard tokens to any MPT node, requiring
+    // normalization and a second resolution pass to expand it.
+    bool m_has_unresolved_columns{false};
     uint64_t m_num_clpp_interpretations{0};
     ClppMatcher m_clpp_matcher;
 
@@ -549,9 +527,8 @@ private:
      * recorded according to the column:
      * - fully resolved column: each matched leaf node is appended to `leaf_node_ids` for the
      *   caller to resolve;
-     * - column with wildcard tokens: matches are deferred to
-     *   `m_unresolved_descriptor_to_descriptor` for a second pass after the query is converted to
-     *   Or-of-And form;
+     * - column with wildcard tokens: matches are recorded in the column's resolution state for a
+     *   second pass after the query is converted to Or-of-And form;
      * - fully resolved column reaching an unstructured array: the remaining tokens are stored on
      *   the column and the array node is appended to `leaf_node_ids`.
      *
@@ -603,9 +580,9 @@ private:
             -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Derives `m_descriptor_to_schema` from `m_column_to_descriptor` by scanning every schema's
-     * nodes. Pure wildcards (resolved per schema at evaluation) and decomposed leaf columns
-     * (already mapped) are skipped.
+     * Fills each column's schema-to-node mapping from `m_column_to_descriptor` by scanning every
+     * schema's nodes. Pure wildcards (resolved per schema at evaluation) and decomposed leaf
+     * columns (already mapped) are skipped.
      */
     void populate_schema_mapping();
 
@@ -649,22 +626,6 @@ private:
             std::map<int32_t, std::shared_ptr<ast::Expression>>& queries,
             std::unordered_set<int32_t> const& relevant_schemas
     );
-
-    /**
-     * @param col_id The id of the column descriptor.
-     * @param schema
-     * @return The MPT node ID that the column descriptor `col_id` resolves to in `schema`.
-     */
-    auto get_node_id_for_descriptor(ast::ColumnDescriptor::id_t col_id, int32_t schema)
-            -> mpt_node_id_t;
-
-    /**
-     * @param col_id The id of the column descriptor.
-     * @param schema
-     * @return The literal type for a given column descriptor id.
-     */
-    ast::LiteralType
-    get_literal_type_for_column(ast::ColumnDescriptor::id_t col_id, int32_t schema);
 };
 }  // namespace clp_s::search
 

@@ -3,10 +3,13 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -128,6 +131,10 @@ DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors);
  *
  * A column bound to a leaf node within a LogMessage may additionally be pinned to one of that
  * LogMessage's leaf rule placeholder positions.
+ *
+ * Column resolution records its results on the column in a `ResolutionState`. `copy()` carries the
+ * results along, so a copy stands for the same logical column; `fork()` discards them, so the fork
+ * stands for a new logical column (e.g. one of several MPT nodes a column was split over).
  */
 class ColumnDescriptor : public Literal {
 public:
@@ -153,7 +160,18 @@ public:
         std::string m_message;
     };
 
-    using id_t = uint32_t;
+    /**
+     * The results of resolving a column against an archive's MPT and schemas. Written by
+     * `SchemaMatch` during column resolution.
+     */
+    struct ResolutionState {
+        // The MPT node this column resolves to in each schema that contains it.
+        std::map<int32_t, mpt_node_id_t> schema_to_node_id;
+        // For a column with wildcard tokens: the MPT nodes its token path matched.
+        std::set<mpt_node_id_t> wildcard_node_ids;
+        // Whether this column is a leaf rule column created by query decomposition.
+        bool is_decomposed_leaf{false};
+    };
 
     /**
      * The query function applied to a column, e.g. `shape(column)`. A function changes how the
@@ -232,17 +250,17 @@ public:
     }
 
     /**
-     * Deep copy of this ColumnDescriptor. The id is preserved, so the copy
-     * represents the same logical column (needed for OrOfAndForm distribution).
+     * Deep copy of this ColumnDescriptor, including its resolution state and MPT binding. The copy
+     * represents the same logical column (needed for OrOfAndForm distribution and per-schema
+     * splitting).
      */
     [[nodiscard]] auto copy() const -> std::shared_ptr<ColumnDescriptor>;
 
     /**
-     * Deep copy of this ColumnDescriptor with a new id. Use this when the
-     * copy represents a different logical column that needs its own identity in
-     * SchemaMatch's m_descriptor_to_schema.
+     * Copies this ColumnDescriptor as a new logical column that diverges from this point: the
+     * copy's resolution state, MPT binding and leaf position are cleared.
      */
-    [[nodiscard]] auto copy_with_new_id() const -> std::shared_ptr<ColumnDescriptor>;
+    [[nodiscard]] auto fork() const -> std::shared_ptr<ColumnDescriptor>;
 
     /**
      * Get iterators to this Column's list of descriptors
@@ -357,7 +375,12 @@ public:
         m_namespace = descriptor_namespace;
     }
 
-    [[nodiscard]] auto get_id() const -> id_t { return m_id; }
+    /**
+     * @return This column's resolution state.
+     */
+    [[nodiscard]] auto resolution() -> ResolutionState& { return m_resolution; }
+
+    [[nodiscard]] auto resolution() const -> ResolutionState const& { return m_resolution; }
 
     auto get_subtree_type() const -> std::optional<std::string> const& { return m_subtree_type; }
 
@@ -406,10 +429,18 @@ public:
      */
     auto set_bound_node_id(mpt_node_id_t node_id) -> void { m_bound_node_id = node_id; }
 
-private:
-    // Static data members
-    static id_t m_next_id;
+    /**
+     * Binds this column to `node_id` as a leaf rule column created by query decomposition, mapping
+     * it to exactly `schema_ids`. The schemas are chosen by shape matching rather than by which
+     * schemas contain `node_id`, so column resolution leaves the mapping untouched.
+     * @param node_id The MPT node to bind this column to.
+     * @param schema_ids The schemas to map this column to.
+     */
+    auto
+    bind_as_decomposed_leaf(mpt_node_id_t node_id, std::unordered_set<int32_t> const& schema_ids)
+            -> void;
 
+private:
     // Data members
     DescriptorList m_descriptors;  // list of descriptors describing the column
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
@@ -422,7 +453,7 @@ private:
 
     std::optional<size_t> m_leaf_position;
     std::optional<mpt_node_id_t> m_bound_node_id;
-    uint64_t m_id{};
+    ResolutionState m_resolution;
 
     // Constructors
     explicit ColumnDescriptor(

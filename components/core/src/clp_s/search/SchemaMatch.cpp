@@ -199,9 +199,9 @@ std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) 
         return expr;
     }
 
-    if (false == m_unresolved_descriptor_to_descriptor.empty() || m_expr_rewritten) {
+    if (m_has_unresolved_columns || m_expr_rewritten) {
         m_column_to_descriptor.clear();
-        m_unresolved_descriptor_to_descriptor.clear();
+        m_has_unresolved_columns = false;
 
         OrOfAndForm standard_form;
         expr = standard_form.run(expr);
@@ -270,7 +270,7 @@ auto SchemaMatch::expand_unresolved_column(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter
 ) -> std::shared_ptr<Expression> {
-    auto const& node_ids{m_unresolved_descriptor_to_descriptor.at(column.get_id())};
+    auto const& node_ids{column.resolution().wildcard_node_ids};
     auto expanded{build_multi_node_filter(
             column,
             std::vector<mpt_node_id_t>{node_ids.begin(), node_ids.end()},
@@ -360,6 +360,7 @@ auto SchemaMatch::populate_column_mapping(
         return resolve_pure_wildcard(column, expr);
     }
 
+    column->resolution().wildcard_node_ids.clear();
     bool matched_node{false};
     std::vector<mpt_node_id_t> leaf_node_ids;
     auto resolve_against_subtree{[&](SchemaNode const& root_node) -> void {
@@ -465,7 +466,7 @@ auto SchemaMatch::populate_column_mapping(
     std::priority_queue<state, std::vector<state>, std::greater<state>> work_list;
     std::set<std::pair<DescriptorList::iterator, int32_t>> visited_states;
     if (column->is_bound()) {
-        if (false == m_decomposed_leaf_columns.contains(column->get_id())) {
+        if (false == column->resolution().is_decomposed_leaf) {
             record_column_at_node(column, column->get_bound_node_id());
         }
         return true;
@@ -549,9 +550,8 @@ auto SchemaMatch::populate_column_mapping(
             if (false == column->is_unresolved_descriptor()) {
                 leaf_node_ids.push_back(cur_node_id);
             } else {
-                auto [node_ids_it, _]
-                        = m_unresolved_descriptor_to_descriptor.try_emplace(column->get_id());
-                node_ids_it->second.emplace(cur_node_id);
+                column->resolution().wildcard_node_ids.emplace(cur_node_id);
+                m_has_unresolved_columns = true;
             }
             matched_node = true;
             if (false == (wildcard_descriptor && is_decomposable)) {
@@ -590,15 +590,11 @@ void SchemaMatch::populate_schema_mapping() {
                 return;
             }
             for (auto const& descriptor : m_column_to_descriptor.at(node_id)) {
-                if (m_decomposed_leaf_columns.contains(descriptor->get_id())
-                    || descriptor->is_pure_wildcard())
-                {
+                auto& resolution{descriptor->resolution()};
+                if (resolution.is_decomposed_leaf || descriptor->is_pure_wildcard()) {
                     continue;
                 }
-
-                auto [schema_to_node_id_it, _]
-                        = m_descriptor_to_schema.try_emplace(descriptor->get_id());
-                schema_to_node_id_it->second.emplace(schema_id, node_id);
+                resolution.schema_to_node_id.emplace(schema_id, node_id);
             }
         });
     }
@@ -631,10 +627,10 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
         for (int32_t schema : common_schema) {
             m_matched_schema_ids.insert(schema);
 
-            for (auto column : columns) {
+            for (auto const* column : columns) {
                 if (false == column->is_pure_wildcard()) {
                     m_schema_to_searched_columns[schema].insert(
-                            get_node_id_for_descriptor(column->get_id(), schema)
+                            column->resolution().schema_to_node_id.at(schema)
                     );
                 }
             }
@@ -687,14 +683,13 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
 
         for (int32_t schema : or_schemas) {
             m_matched_schema_ids.insert(schema);
-            for (auto column : or_columns) {
-                if (false == column->is_pure_wildcard()
-                    && m_descriptor_to_schema.contains(column->get_id())
-                    && m_descriptor_to_schema.at(column->get_id()).contains(schema))
-                {
-                    m_schema_to_searched_columns[schema].insert(
-                            get_node_id_for_descriptor(column->get_id(), schema)
-                    );
+            for (auto const* column : or_columns) {
+                if (column->is_pure_wildcard()) {
+                    continue;
+                }
+                auto const& schema_to_node_id{column->resolution().schema_to_node_id};
+                if (auto const it{schema_to_node_id.find(schema)}; schema_to_node_id.end() != it) {
+                    m_schema_to_searched_columns[schema].insert(it->second);
                 }
             }
         }
@@ -738,9 +733,10 @@ auto SchemaMatch::intersect_and_sub_expr(
                             for (auto const& schema_it : *m_schemas) {
                                 or_schemas.insert(schema_it.first);
                             }
-                        } else if (m_descriptor_to_schema.contains(or_col->get_id())) {
-                            auto const& col_schemas{m_descriptor_to_schema.at(or_col->get_id())};
-                            for (auto const& [schema_id, _] : col_schemas) {
+                        } else {
+                            for (auto const& [schema_id, _] :
+                                 or_col->resolution().schema_to_node_id)
+                            {
                                 or_schemas.insert(schema_id);
                             }
                         }
@@ -790,14 +786,15 @@ auto SchemaMatch::intersect_and_sub_expr(
                     }
                 }
                 return false;
-            } else if (first && op != FilterOperation::NEXISTS) {
-                for (auto const& [schema_id, node_id] : m_descriptor_to_schema.at(column->get_id()))
-                {
+            }
+
+            auto const& cur_schemas{column->resolution().schema_to_node_id};
+            if (first && op != FilterOperation::NEXISTS) {
+                for (auto const& [schema_id, node_id] : cur_schemas) {
                     common_schema.insert(schema_id);
                 }
                 return false;
             } else if (first /*&& op == FilterOperation::NEXISTS */) {
-                auto const& cur_schemas{m_descriptor_to_schema.at(column->get_id())};
                 for (auto& schema : *m_schemas) {
                     if (0 == cur_schemas.count(schema.first)) {
                         common_schema.insert(schema.first);
@@ -806,7 +803,6 @@ auto SchemaMatch::intersect_and_sub_expr(
                 return false;
             } else if (op == FilterOperation::NEXISTS) {
                 std::set<int32_t> intersection;
-                auto const& cur_schemas{m_descriptor_to_schema.at(column->get_id())};
                 for (int32_t schema : common_schema) {
                     if (0 == cur_schemas.count(schema)) {
                         intersection.insert(schema);
@@ -815,7 +811,6 @@ auto SchemaMatch::intersect_and_sub_expr(
                 common_schema = intersection;
             } else {
                 std::set<int32_t> intersection;
-                auto const& cur_schemas{m_descriptor_to_schema.at(column->get_id())};
                 for (int32_t schema : common_schema) {
                     if (cur_schemas.count(schema)) {
                         intersection.insert(schema);
@@ -832,12 +827,13 @@ auto SchemaMatch::compute_candidate_types(
         ast::ColumnDescriptor const& column,
         std::set<int32_t> const& schemas
 ) const -> ast::literal_type_bitmask_t {
-    if (m_decomposed_leaf_columns.contains(column.get_id())) {
+    auto const& resolution{column.resolution()};
+    if (resolution.is_decomposed_leaf) {
         return SchemaNode::node_to_literal_type(
                 m_tree->get_node(column.get_bound_node_id()).get_type()
         );
     }
-    auto const& schema_mappings{m_descriptor_to_schema.at(column.get_id())};
+    auto const& schema_mappings{resolution.schema_to_node_id};
     ast::literal_type_bitmask_t types{0};
     for (auto const schema : schemas) {
         if (schema_mappings.contains(schema)) {
@@ -862,10 +858,9 @@ void SchemaMatch::split_expression_by_schema(
         for (int32_t schema_id : relevant_schemas) {
             auto new_filter = filter->copy();
             auto* descriptor{std::static_pointer_cast<FilterExpr>(new_filter)->get_column().get()};
-            auto old_descriptor_id{filter->get_column()->get_id()};
 
             if (false == descriptor->is_pure_wildcard()) {
-                auto const& schema_to_node_id{m_descriptor_to_schema.at(old_descriptor_id)};
+                auto const& schema_to_node_id{descriptor->resolution().schema_to_node_id};
                 if (auto const node_id_it{schema_to_node_id.find(schema_id)};
                     schema_to_node_id.end() != node_id_it)
                 {
@@ -950,11 +945,6 @@ void SchemaMatch::split_expression_by_schema(
     }
 }
 
-auto SchemaMatch::get_node_id_for_descriptor(ColumnDescriptor::id_t col_id, int32_t schema)
-        -> mpt_node_id_t {
-    return m_descriptor_to_schema.at(col_id).at(schema);
-}
-
 bool SchemaMatch::schema_matched(int32_t schema_id) {
     return m_matched_schema_ids.count(schema_id);
 }
@@ -1000,13 +990,6 @@ auto SchemaMatch::read_dictionaries_for_schema(SchemaView const& schema) -> void
     );
 }
 
-LiteralType
-SchemaMatch::get_literal_type_for_column(ColumnDescriptor::id_t col_id, int32_t schema) {
-    return SchemaNode::node_to_literal_type(
-            m_tree->get_node(get_node_id_for_descriptor(col_id, schema)).get_type()
-    );
-}
-
 std::shared_ptr<Expression> SchemaMatch::get_query_for_schema(int32_t schema) {
     return m_schema_to_query.at(schema);
 }
@@ -1039,7 +1022,7 @@ auto SchemaMatch::resolve_leaf_rule_descriptors(
         }
     }
 
-    auto base_col{column->copy_with_new_id()};
+    auto base_col{column->fork()};
     auto& base_descriptors{base_col->get_descriptor_list()};
     std::vector<mpt_node_id_t> cur_node_ids{decomposition_root};
     for (; seg_idx < rule_names.size(); ++seg_idx) {
@@ -1060,26 +1043,13 @@ auto SchemaMatch::resolve_leaf_rule_descriptors(
     std::vector<std::pair<std::shared_ptr<ast::ColumnDescriptor>, mpt_node_id_t>> results;
     results.reserve(cur_node_ids.size());
     for (auto const node_id : cur_node_ids) {
-        auto col{base_col->copy_with_new_id()};
+        auto col{base_col->fork()};
         col->set_matching_types(
                 SchemaNode::node_to_literal_type(m_tree->get_node(node_id).get_type())
         );
         results.emplace_back(std::move(col), node_id);
     }
     return results;
-}
-
-auto SchemaMatch::register_decomposed_leaf_column(
-        std::shared_ptr<ast::ColumnDescriptor> const& column,
-        mpt_node_id_t node_id,
-        std::unordered_set<int32_t> const& schema_ids
-) -> void {
-    column->set_bound_node_id(node_id);
-    m_decomposed_leaf_columns.emplace(column->get_id());
-    auto [it, _]{m_descriptor_to_schema.try_emplace(column->get_id())};
-    for (int32_t const schema_id : schema_ids) {
-        it->second.emplace(schema_id, node_id);
-    }
 }
 
 auto SchemaMatch::build_leaf_query_expr(
@@ -1151,7 +1121,7 @@ auto SchemaMatch::build_leaf_filters(
     filters.reserve(leaf_cols->size());
     for (auto& [leaf_col, node_id] : leaf_cols.value()) {
         leaf_col->set_leaf_position(leaf.m_leaf_position);
-        register_decomposed_leaf_column(leaf_col, node_id, matched_schema_ids);
+        leaf_col->bind_as_decomposed_leaf(node_id, matched_schema_ids);
         auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
         filters.emplace_back(
                 FilterExpr::create(leaf_col, FilterOperation::EQ, leaf_literal, is_inverted)
@@ -1419,7 +1389,7 @@ auto SchemaMatch::build_resolved_node_filter(
         auto resolved_column{build_resolved_decomposable_column(column, node_id)};
         return build_decomposable_node_filter(resolved_column, node_id, filter);
     }
-    auto resolved_column{column.copy_with_new_id()};
+    auto resolved_column{column.fork()};
     resolved_column->set_matching_type(SchemaNode::node_to_literal_type(node.get_type()));
     resolved_column->set_bound_node_id(node_id);
     return copy_filter_with_column(std::move(resolved_column), filter);

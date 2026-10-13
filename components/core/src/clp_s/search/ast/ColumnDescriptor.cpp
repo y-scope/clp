@@ -1,9 +1,11 @@
 #include "ColumnDescriptor.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 
 #include <simdjson.h>
@@ -17,8 +19,6 @@ namespace {
 constexpr std::string_view cShapeFunction{"shape"};
 constexpr std::string_view cDecomposeFunction{"decompose"};
 }  // namespace
-
-ColumnDescriptor::id_t ColumnDescriptor::m_next_id{0};
 
 auto ColumnDescriptor::function_to_str(Function function) -> std::string_view {
     switch (function) {
@@ -69,9 +69,7 @@ ColumnDescriptor::ColumnDescriptor(
         : m_descriptors{tokenize_descriptor(tokens)},
           m_namespace{descriptor_namespace},
           m_flags(cAllTypes),
-          m_function{function},
-          m_id{m_next_id} {
-    ++m_next_id;
+          m_function{function} {
     check_and_set_unresolved_descriptor_flag();
     if (is_unresolved_descriptor()) {
         simplify_descriptor_wildcards();
@@ -86,9 +84,7 @@ ColumnDescriptor::ColumnDescriptor(
         : m_descriptors{std::move(descriptors)},
           m_namespace{descriptor_namespace},
           m_flags(cAllTypes),
-          m_function{function},
-          m_id{m_next_id} {
-    ++m_next_id;
+          m_function{function} {
     check_and_set_unresolved_descriptor_flag();
     if (is_unresolved_descriptor()) {
         simplify_descriptor_wildcards();
@@ -119,11 +115,23 @@ auto ColumnDescriptor::copy() const -> std::shared_ptr<ColumnDescriptor> {
     return std::make_shared<ColumnDescriptor>(*this);
 }
 
-auto ColumnDescriptor::copy_with_new_id() const -> std::shared_ptr<ColumnDescriptor> {
-    auto c = copy();
-    c->m_id = m_next_id;
-    ++m_next_id;
-    return c;
+auto ColumnDescriptor::fork() const -> std::shared_ptr<ColumnDescriptor> {
+    auto forked{copy()};
+    forked->m_resolution = {};
+    forked->m_bound_node_id.reset();
+    forked->m_leaf_position.reset();
+    return forked;
+}
+
+auto ColumnDescriptor::bind_as_decomposed_leaf(
+        mpt_node_id_t node_id,
+        std::unordered_set<int32_t> const& schema_ids
+) -> void {
+    m_bound_node_id = node_id;
+    m_resolution.is_decomposed_leaf = true;
+    for (int32_t const schema_id : schema_ids) {
+        m_resolution.schema_to_node_id.emplace(schema_id, node_id);
+    }
 }
 
 auto ColumnDescriptor::get_bound_node_id() const -> mpt_node_id_t {
