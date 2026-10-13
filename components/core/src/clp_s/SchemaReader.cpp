@@ -60,12 +60,6 @@ constexpr std::string_view cShapeKey{"shape"};
 [[nodiscard]] auto count_column_consuming_entries(SchemaView schema, SchemaTree const& tree)
         -> size_t;
 
-/**
- * @param type
- * @return Whether the given node type corresponds to a scalar column that consumes a column reader.
- */
-[[nodiscard]] auto node_type_consumes_column(NodeType type) -> bool;
-
 [[nodiscard]] auto build_name_to_reader_indices(
         SchemaView sub_schema,
         SchemaTree const& tree,
@@ -75,7 +69,7 @@ constexpr std::string_view cShapeKey{"shape"};
     size_t column_reader_idx{start_column_reader_idx};
     sub_schema.for_each_node_id([&](mpt_node_id_t global_column_id) -> void {
         auto const& node{tree.get_node(global_column_id)};
-        if (false == node_type_consumes_column(node.get_type())) {
+        if (false == unordered_node_type_consumes_column(node.get_type())) {
             return;
         }
         auto [it, _]{name_to_reader_indices.try_emplace(tree.build_ls_rule_name(global_column_id))};
@@ -89,23 +83,11 @@ constexpr std::string_view cShapeKey{"shape"};
         -> size_t {
     size_t count{0};
     schema.for_each_node_id([&](mpt_node_id_t entry) -> void {
-        if (node_type_consumes_column(tree.get_node(entry).get_type())) {
+        if (unordered_node_type_consumes_column(tree.get_node(entry).get_type())) {
             ++count;
         }
     });
     return count;
-}
-
-[[nodiscard]] auto node_type_consumes_column(NodeType type) -> bool {
-    switch (type) {
-        case NodeType::LogMessage:
-        case NodeType::ParentRule: {
-            return false;
-        }
-        default: {
-            return true;
-        }
-    }
 }
 }  // namespace
 
@@ -983,7 +965,7 @@ auto SchemaReader::collect_scope_entries(
     schema.visit_entries(
             [&](mpt_node_id_t cur_node_id) -> bool {
                 auto const& node{m_global_schema_tree->get_node(cur_node_id)};
-                if (node_type_consumes_column(node.get_type())) {
+                if (unordered_node_type_consumes_column(node.get_type())) {
                     bool const should_emit{
                             ancestor_decomposed
                             || (m_projection && false == m_projection->is_return_all_columns()

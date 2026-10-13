@@ -59,6 +59,36 @@ enum class NodeType : uint8_t {
 };
 
 /**
+ * @return Whether a schema entry of the given node type consumes a column reader within an
+ * unordered region. This must match the set of node types for which
+ * `ArchiveReader::append_unordered_reader_columns` pushes a column reader into its `SchemaReader`.
+ */
+[[nodiscard]] constexpr auto unordered_node_type_consumes_column(NodeType type) -> bool {
+    switch (type) {
+        case NodeType::Integer:
+        case NodeType::DeltaInteger:
+        case NodeType::Float:
+        case NodeType::FormattedFloat:
+        case NodeType::DictionaryFloat:
+        case NodeType::ClpString:
+        case NodeType::VarString:
+        case NodeType::Boolean:
+            return true;
+        case NodeType::UnstructuredArray:
+        case NodeType::DeprecatedDateString:
+        case NodeType::Timestamp:
+        case NodeType::Object:
+        case NodeType::StructuredArray:
+        case NodeType::Metadata:
+        case NodeType::NullValue:
+        case NodeType::LogMessage:
+        case NodeType::ParentRule:
+        case NodeType::Unknown:
+            return false;
+    }
+}
+
+/**
  * This class represents a single node in the SchemaTree.
  *
  * Note: the result of get_key_name is valid even if the original SchemaNode is later

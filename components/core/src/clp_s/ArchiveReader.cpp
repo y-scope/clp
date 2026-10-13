@@ -517,21 +517,15 @@ auto ArchiveReader::append_unordered_reader_columns(
                                 std::make_unique<BooleanColumnReader>(node_id)
                         );
                         break;
-                    // UnstructuredArray, DeprecatedDateString, and Timestamp currently aren't
-                    // supported as part of any unordered object, so we disregard them here
-                    case NodeType::UnstructuredArray:
-                    case NodeType::DeprecatedDateString:
-                    case NodeType::Timestamp:
-                    // No need to push columns without associated object readers into the
-                    // SchemaReader.
-                    case NodeType::StructuredArray:
-                    case NodeType::Object:
-                    case NodeType::Metadata:
-                    case NodeType::NullValue:
-                    case NodeType::LogMessage:
-                    case NodeType::ParentRule:
-                    case NodeType::Unknown:
+                    default: {
+                        if (unordered_node_type_consumes_column(
+                                    m_schema_tree->get_node(node_id).get_type()
+                            ))
+                        {
+                            throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
+                        }
                         break;
+                    }
                 }
                 return false;
             },
