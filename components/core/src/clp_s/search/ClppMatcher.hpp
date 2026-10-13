@@ -20,16 +20,16 @@
 
 namespace clp_s::search {
 /**
- * Utility for running clpp queries.
+ * Utility for matching shapes and decomposing queries against them.
  */
 class ClppMatcher {
 public:
     // Types
     /**
-     * A matched interpretation of a clpp query, made of the schema IDs containing a matching shape
-     * (log shape or parent rule shape) and any leaf queries constraining it. If `leaf_queries` is
-     * empty then matching shapes satisfy the query without constraining any leaf values.
-     * Leaf positions are relative to the leaf placeholders of the whole log shape.
+     * A matched interpretation of a decomposed query, made of the schema IDs containing a matching
+     * shape (log shape or parent rule shape) and any leaf queries constraining it. If
+     * `leaf_queries` is empty then matching shapes satisfy the query without constraining any leaf
+     * values. Leaf positions are relative to the leaf placeholders of the whole log shape.
      */
     struct InterpretationMatch {
         std::unordered_set<int32_t> schema_ids;
@@ -38,8 +38,9 @@ public:
 
     // Constructors
     /**
-     * Builds an index from each log shape ID to its `LogMessage`s to enable clpp querying.
-     * If the archive is not experimental construction is skipped and the object is invalid.
+     * Builds an index from each log shape ID to its `LogMessage`s to enable shape matching and
+     * query decomposition. If the archive is not experimental construction is skipped and the
+     * object is invalid.
      * @param archive_reader
      * @param case_sensitive Whether matching is case sensitive.
      * @throw std::runtime_error if the log shape dictionary is not valid.

@@ -27,9 +27,9 @@ public:
     using VarMatchMap = std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*>;
 
     /**
-     * Column readers pinned to a clpp leaf placeholder position, keyed by the filter expression. A
-     * LogMessage or ParentRule can only contain integer, float, and variable string leaves. A
-     * vector is used to match the filter evaluation API, but can only have one reader.
+     * Column readers pinned to a leaf placeholder position, keyed by the filter expression. A
+     * decomposable node can only contain integer, float, and variable string leaves. A vector is
+     * used to match the filter evaluation API, but can only have one reader.
      */
     struct PositionalReaderMaps {
         std::unordered_map<ast::FilterExpr*, std::vector<BaseColumnReader*>> basic;
@@ -43,7 +43,7 @@ public:
      * @param clp_string_readers A map of relevant clp string readers for the given ERT.
      * @param var_string_readers A map of relevant variable string readers for the given ERT.
      * @param timestamp_readers A map of relevant timestamp readers for the given ERT.
-     * @param positional_readers Readers pinned to a clpp leaf placeholder position.
+     * @param positional_readers Readers pinned to a leaf rule placeholder position.
      * @param deprecated_datestring_reader The deprecated date-string reader for the given ERT, or
      * nullptr if the ERT has none.
      * @param clp_queries A map of precomputed clp string searches.
@@ -170,6 +170,7 @@ private:
      * @param clp_queries
      * @param var_matches
      * @return A bitmap indexed by message number, with nonzero entries for matching messages.
+     * @throws Forwards `ast::ColumnDescriptor::get_bound_node_id`'s exceptions.
      */
     [[nodiscard]] auto build_filter(
             ast::FilterExpr* filter,

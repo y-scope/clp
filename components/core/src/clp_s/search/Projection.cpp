@@ -75,32 +75,27 @@ auto Projection::add_projection(mpt_node_id_t node_id, NodeMask::Mode mode) -> v
     it->second.set(mode);
 }
 
-auto Projection::collect_structural_projections(
+auto Projection::collect_decomposable_projections(
         SchemaTree const& tree,
         std::vector<mpt_node_id_t> const& matched_nodes,
         NodeMask::Mode mode
 ) -> bool {
-    auto is_projectable_structure = [](NodeType type) -> bool {
-        return NodeType::LogMessage == type || NodeType::ParentRule == type;
-    };
-
-    bool found_structural_match{false};
+    bool found_decomposable_node{false};
     for (auto node_id : matched_nodes) {
-        auto const& node = tree.get_node(node_id);
-        auto const type = node.get_type();
-        if (is_projectable_structure(type)) {
-            found_structural_match = true;
+        if (tree.get_node(node_id).is_decomposable()) {
+            found_decomposable_node = true;
             add_projection(node_id, mode);
         }
     }
-    return found_structural_match;
+    return found_decomposable_node;
 }
 
 auto Projection::resolve_columns(SchemaTree const& tree) -> void {
     for (auto& entry : m_columns) {
         entry.m_matched_nodes = resolve_column(tree, *entry.m_column);
         if (NodeMask::Mode::Decompose == entry.m_mode || NodeMask::Mode::Shape == entry.m_mode) {
-            if (false == collect_structural_projections(tree, entry.m_matched_nodes, entry.m_mode))
+            if (false
+                == collect_decomposable_projections(tree, entry.m_matched_nodes, entry.m_mode))
             {
                 throw std::runtime_error(
                         fmt::format(
@@ -115,7 +110,7 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
             }
         } else {
             static_cast<void>(
-                    collect_structural_projections(tree, entry.m_matched_nodes, entry.m_mode)
+                    collect_decomposable_projections(tree, entry.m_matched_nodes, entry.m_mode)
             );
         }
     }

@@ -193,14 +193,14 @@ private:
     auto add_projection(mpt_node_id_t node_id, NodeMask::Mode mode) -> void;
 
     /**
-     * For a resolved column's matched nodes, identifies structural nodes (LogMessage / ParentRule)
-     * and records their projection mode. Returns whether any structural node was found.
+     * Records `mode` as the projection mode of every decomposable node among a resolved column's
+     * matched nodes.
      * @param tree
      * @param matched_nodes The nodes matched by the column descriptor.
      * @param mode The output mode for this column.
-     * @return Whether at least one matched node was a structural container.
+     * @return Whether at least one matched node was decomposable.
      */
-    [[nodiscard]] auto collect_structural_projections(
+    [[nodiscard]] auto collect_decomposable_projections(
             SchemaTree const& tree,
             std::vector<mpt_node_id_t> const& matched_nodes,
             NodeMask::Mode mode

@@ -25,6 +25,8 @@ set(
     Integral.cpp
     Integral.hpp
     Literal.hpp
+    NarrowSchemasExpr.cpp
+    NarrowSchemasExpr.hpp
     NarrowTypes.cpp
     NarrowTypes.hpp
     NullLiteral.cpp

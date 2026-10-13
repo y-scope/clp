@@ -126,6 +126,18 @@ auto ColumnDescriptor::copy_with_new_id() const -> std::shared_ptr<ColumnDescrip
     return c;
 }
 
+auto ColumnDescriptor::get_bound_node_id() const -> mpt_node_id_t {
+    if (false == m_bound_node_id.has_value()) {
+        throw OperationFailed(
+                ErrorCodeNotInit,
+                // NOLINTNEXTLINE(misc-include-cleaner)
+                __FILENAME__,
+                __LINE__,
+                "Column \"" + to_string() + "\" is not bound to an MPT node."
+        );
+    }
+    return m_bound_node_id.value();
+}
 
 auto ColumnDescriptor::to_string() const -> std::string {
     std::string result;
@@ -171,6 +183,9 @@ void ColumnDescriptor::print() const {
     if (m_leaf_position.has_value()) {
         os << "leaf_position=" << m_leaf_position.value() << ", ";
     }
+    if (m_bound_node_id.has_value()) {
+        os << "bound_node_id=" << m_bound_node_id.value() << ", ";
+    }
     os << "namespace=\"" << m_namespace << "\", tokens=[";
     for (auto it = m_descriptors.begin(); it != m_descriptors.end();) {
         os << "\"" << (*it).get_token() << "\"";
@@ -188,11 +203,10 @@ void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {
 }
 
 bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
-    return m_descriptors == rhs.m_descriptors
+    return m_bound_node_id == rhs.m_bound_node_id && m_descriptors == rhs.m_descriptors
            && m_flags == rhs.m_flags && m_function == rhs.m_function
            && m_leaf_position == rhs.m_leaf_position && m_namespace == rhs.m_namespace
-           && m_pure_wildcard == rhs.m_pure_wildcard && m_schema_col_id == rhs.m_schema_col_id
-           && m_subtree_type == rhs.m_subtree_type
+           && m_pure_wildcard == rhs.m_pure_wildcard && m_subtree_type == rhs.m_subtree_type
            && m_unresolved_descriptors == rhs.m_unresolved_descriptors
            && m_unresolved_tokens == rhs.m_unresolved_tokens;
 }

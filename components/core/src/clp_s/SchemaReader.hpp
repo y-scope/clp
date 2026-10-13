@@ -230,7 +230,7 @@ public:
     /**
      * Records the index into the column readers of the first column of a `LogMessage` object.
      * Unlike `mark_unordered_object`, this is recorded whether or not records are marshalled, since
-     * search needs it to resolve clpp leaf filters pinned to a leaf placeholder position.
+     * search needs it to resolve leaf filters pinned to a leaf rule placeholder position.
      * @param log_message_id The `LogMessage` root node ID.
      * @param column_reader_start The index of the object's first column reader.
      */
@@ -241,8 +241,8 @@ public:
 
     /**
      * @param log_message_id The `LogMessage` root node ID.
-     * @return The index of the object's first column reader, or std::nullopt if the schema has no
-     * such object.
+     * @return The index of the object's first column reader.
+     * @return std::nullopt if the schema has no such object.
      */
     [[nodiscard]] auto get_log_message_column_start(mpt_node_id_t log_message_id) const
             -> std::optional<size_t> {
@@ -586,7 +586,7 @@ private:
      * parent-rule node ID, with insertion order preserved), while advancing the column index past
      * all column-consuming entries including those inside nested scopes.
      * @param schema The sub-schema to walk.
-     * @param scope_node_id The node ID of the owning scope (LogMessage or ParentRule).
+     * @param scope_node_id The node ID of the owning decomposable scope.
      * @param start_column_reader_idx The index of this scope's first column reader in `m_columns`.
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active,
      * causing all direct leaves to be collected regardless of individual projection checks.
@@ -617,11 +617,11 @@ private:
     ) -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Emits the decomposed content of a LogMessage or ParentRule sub-schema as direct leaf arrays
-     * and nested ParentRule objects. The ParentRule objects contain their direct leaf arrays and
-     * other nested ParentRule objects.
+     * Emits the decomposed content of a decomposable sub-schema as direct leaf rule arrays and
+     * nested ParentRule objects. The ParentRule objects contain their direct leaf arrays and other
+     * nested ParentRule objects.
      * @param schema The sub-schema to walk.
-     * @param scope_node_id The node ID of the owning scope (LogMessage or ParentRule).
+     * @param scope_node_id The node ID of the owning decomposable scope.
      * @param column_idx The index of this scope's first column reader in `m_columns`.
      * @param log_shape_id
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active,

@@ -573,7 +573,7 @@ auto ColumnScan::build_filter(
         return bitmap;
     }
 
-    auto const node_id = column->get_bound_node_id().value();
+    auto const node_id{column->get_bound_node_id()};
     auto const& operand = filter->get_operand();
     bool const is_positional{column->get_leaf_position().has_value()};
     auto const& basic{

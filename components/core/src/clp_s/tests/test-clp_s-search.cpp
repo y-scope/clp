@@ -41,6 +41,7 @@
 constexpr std::string_view cTestSearchArchiveDirectory{"test-clp-s-search-archive"};
 constexpr std::string_view cTestInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestSearchInputFile{"test_search.jsonl"};
+constexpr std::string_view cTestSearchMixedTypesFile{"test_search_mixed_types.jsonl"};
 constexpr std::string_view cTestSearchFormattedFloatFile{"test_search_formatted_float.jsonl"};
 constexpr std::string_view cTestSearchFloatTimestampFile{"test_search_float_timestamp.jsonl"};
 constexpr std::string_view cTestSearchIntTimestampFile{"test_search_int_timestamp.jsonl"};
@@ -240,7 +241,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(ambiguous_varstring: "a*e")aa", {10, 11, 12}},
             {R"aa(ambiguous_varstring: "a\*e")aa", {12}},
             {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
-            {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}}
+            {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}},
+            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
@@ -276,7 +278,15 @@ TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
             {R"aa(var_string: *)aa", {9}},
             {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
             {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}},
-            {R"aa(msg > "foo")aa", {}}
+            {R"aa(msg > "foo")aa", {}},
+            {R"aa(msg: *)aa", {1, 2, 3, 4, 5, 6}},
+            {R"aa(NOT msg: *)aa", {0, 7, 8, 9, 10, 11, 12, 13}},
+            {R"aa(shape(msg): *)aa", {1, 2, 3, 4, 5, 6}},
+            {R"aa(NOT shape(msg): "xxx")aa", {1, 2, 3, 4, 5, 6}},
+            {R"aa(NOT msg: "xxx")aa", {1, 2, 3, 4, 5, 6}},
+            {R"aa(NOT msg: "Msg 1*")aa", {2, 3, 4, 5, 6}},
+            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}},
+            {R"aa(idx: 0 OR NOT msg: "xxx")aa", {0, 1, 2, 3, 4, 5, 6}}
     };
     auto const single_file_archive = GENERATE(true, false);
 
@@ -285,6 +295,61 @@ TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
                     get_test_input_local_path(cTestSearchInputFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false,
+                    get_heuristic_parsing_spec_path()
+            )
+    );
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        CAPTURE(single_file_archive);
+        REQUIRE_NOTHROW(search(query, false, true, expected_results));
+    }
+}
+
+// Tests column resolution when a key maps to several MPT nodes of different types, at least one of
+// which is decomposable. The filter must be expanded over every matched node rather than bound to
+// just one of them, with the per-node filters combined so that the original query's semantics are
+// preserved.
+//
+// In the test input, `msg` is a LogMessage node (idx 0), an Integer node (idx 1) and an
+// UnstructuredArray node (idx 5), and `nested.msg` is a LogMessage node (idx 3) and an Integer node
+// (idx 4); idx 2 has no `msg` at all. The cases cover:
+// - Value filters, which hold if the value at any matched node matches (`msg: *`, `msg: 42`,
+//   `msg: 2`, `msg: "Msg 0*"`).
+// - Inverted value filters, which still require the key to be present (`NOT msg: "Msg 0*"`,
+//   `NOT msg: 42`).
+// - Inverted existence filters, which hold only when the key is absent under every matched node
+//   (`NOT msg: *`, `NOT *.msg: *`).
+// - Wildcard paths resolving to nodes at different depths (`*.msg: *`, `*.msg: 7`).
+// - shape() filters, which only target the decomposable node (`shape(msg): *`,
+//   `NOT shape(msg): "xxx"`).
+TEST_CASE("clp-s-search-experimental-mixed-type-columns", "[clp-s][search][clpp]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(msg: *)aa", {0, 1, 5}},
+            {R"aa(msg: 42)aa", {1}},
+            {R"aa(msg: 2)aa", {5}},
+            {R"aa(msg: "Msg 0*")aa", {0}},
+            {R"aa(NOT msg: "Msg 0*")aa", {1, 5}},
+            {R"aa(NOT msg: 42)aa", {0, 5}},
+            {R"aa(NOT msg: *)aa", {2, 3, 4}},
+            {R"aa(*.msg: *)aa", {0, 1, 3, 4, 5}},
+            {R"aa(*.msg: 7)aa", {4}},
+            {R"aa(NOT *.msg: *)aa", {2}},
+            {R"aa(shape(msg): *)aa", {0}},
+            {R"aa(NOT shape(msg): "xxx")aa", {0}},
+    };
+    auto const single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchMixedTypesFile),
                     std::string{cTestSearchArchiveDirectory},
                     std::string{cTestIdxKey},
                     false,

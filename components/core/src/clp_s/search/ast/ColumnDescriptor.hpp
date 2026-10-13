@@ -114,23 +114,53 @@ using DescriptorList = std::vector<DescriptorToken>;
 DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors);
 
 /**
- * Class representing a Column in the Search AST. The Column is specified
- * by a list of DescriptorTokens which may be wildcards.
+ * Class representing a Column in the Search AST. The Column is specified by a list of
+ * DescriptorTokens which may be wildcards.
  *
- * Currently only pure wildcard DescriptorTokens are supported -- some descriptor
- * in the list of descriptors can be a wildcard, but individual descriptors can not mix
- * wildcards with other characters.
+ * Currently only pure wildcard DescriptorTokens are supported -- some descriptor in the list of
+ * descriptors can be a wildcard, but individual descriptors can not mix wildcards with other
+ * characters.
+ *
+ * A column starts unbound: its token path is matched against the MPT during column resolution. A
+ * column is bound once it targets a single MPT node; its token path is then no longer matched, and
+ * evaluation uses the bound node to locate column readers. Every column other than a pure wildcard
+ * is bound before evaluation.
+ *
+ * A column bound to a leaf node within a LogMessage may additionally be pinned to one of that
+ * LogMessage's leaf rule placeholder positions.
  */
 class ColumnDescriptor : public Literal {
 public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(
+                ErrorCode error_code,
+                char const* const filename,
+                int line_number,
+                std::string message
+        )
+                : TraceableException(error_code, filename, line_number),
+                  m_message(std::move(message)) {}
+
+        // Methods
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return m_message.c_str();
+        }
+
+    private:
+        std::string m_message;
+    };
+
     using id_t = uint32_t;
 
     /**
      * The query function applied to a column, e.g. `shape(column)`. A function changes how the
      * column resolves and how it is matched or projected:
      * - None: a plain column with no special rules.
-     * - Shape: the column must resolve to LogMessage/ParentRule nodes; filters match against and
-     *   projections emit the node's shape rather than its value.
+     * - Shape: the column must resolve to decomposable nodes; filters match against and projections
+     *   emit the node's shape rather than its value.
      * - Decompose: (projection only) emit `Shape` and the node's and decomposed leaf values.
      */
     enum class Function : uint8_t {
@@ -261,17 +291,6 @@ public:
     void remove_matching_type(LiteralType type) { m_flags &= ~type; }
 
     /**
-     * @return the CLJ column Id this Column represents. Garbage value if it was never set.
-     */
-    auto get_column_id() const -> int32_t { return m_schema_col_id; }
-
-    /**
-     * Set the CLJ column Id this column represents
-     * @param id the CLJ column Id to set this column to
-     */
-    auto set_column_id(int32_t id) -> void { m_schema_col_id = id; }
-
-    /**
      * Get the list of unresolved tokens used for array search
      * @return the list of unresolved tokens
      * FIXME: should be reference?
@@ -294,10 +313,9 @@ public:
     literal_type_bitmask_t get_matching_types() const { return m_flags; }
 
     /**
-     * Whether the list of Descriptor's contains any wildcards
-     * @return true if the descriptor contains any wildcards that need to be resolved
+     * @return Whether the descriptor list contains any wildcard tokens.
      */
-    bool is_unresolved_descriptor() const { return m_unresolved_descriptors; }
+    auto is_unresolved_descriptor() const -> bool { return m_unresolved_descriptors; }
 
     /**
      * Whether this Column is a single wildcard
@@ -315,11 +333,17 @@ public:
 
     // Methods inherited from Literal
     // ColumnDescriptor can implicitly match several different types at the same time.
-    bool matches_type(LiteralType type) override { return m_flags & type; }
+    [[nodiscard]] auto matches_type(LiteralType type) const -> bool override {
+        return m_flags & type;
+    }
 
-    bool matches_any(literal_type_bitmask_t mask) override { return m_flags & mask; }
+    [[nodiscard]] auto matches_any(literal_type_bitmask_t mask) const -> bool override {
+        return m_flags & mask;
+    }
 
-    bool matches_exactly(literal_type_bitmask_t mask) override { return m_flags == mask; }
+    [[nodiscard]] auto matches_exactly(literal_type_bitmask_t mask) const -> bool override {
+        return m_flags == mask;
+    }
 
     /**
      * Equal to operator to allow comparison between two column descriptors.
@@ -332,20 +356,6 @@ public:
     void set_namespace(std::string_view descriptor_namespace) {
         m_namespace = descriptor_namespace;
     }
-
-    /**
-     * Whether this column was resolved by CLPP decomposition. CLPP-resolved
-     * columns have their schema mappings stored in SchemaMatch's m_descriptor_to_schema
-     * and must not be re-registered in m_column_to_descriptor, which would cause
-     * populate_schema_mapping to inflate the mappings to all schemas containing the node
-     * rather than just the matched schemas.
-     */
-    [[nodiscard]] auto is_clpp_resolved() const -> bool { return m_is_clpp_resolved; }
-
-    /**
-     * Mark this column as resolved by CLPP decomposition.
-     */
-    auto set_clpp_resolved(bool resolved) -> void { m_is_clpp_resolved = resolved; }
 
     [[nodiscard]] auto get_id() const -> id_t { return m_id; }
 
@@ -364,6 +374,10 @@ public:
      * @return Whether this column is the argument of a `shape()` function.
      */
     [[nodiscard]] auto is_shape_query() const -> bool { return Function::Shape == m_function; }
+
+    /**
+     * @return The leaf placeholder position this column is pinned to by decomposition.
+     * @return std::nullopt if the column matches any occurrence of its MPT node.
      */
     [[nodiscard]] auto get_leaf_position() const -> std::optional<size_t> {
         return m_leaf_position;
@@ -375,6 +389,23 @@ public:
      */
     auto set_leaf_position(size_t position) -> void { m_leaf_position = position; }
 
+    /**
+     * @return Whether this column is bound to an MPT node.
+     */
+    [[nodiscard]] auto is_bound() const -> bool { return m_bound_node_id.has_value(); }
+
+    /**
+     * @return The MPT node this column is bound to.
+     * @throws OperationFailed if this column is unbound.
+     */
+    [[nodiscard]] auto get_bound_node_id() const -> mpt_node_id_t;
+
+    /**
+     * Binds this column to `node_id`, bypassing token matching.
+     * @param node_id An MPT node ID.
+     */
+    auto set_bound_node_id(mpt_node_id_t node_id) -> void { m_bound_node_id = node_id; }
+
 private:
     // Static data members
     static id_t m_next_id;
@@ -384,14 +415,13 @@ private:
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
     std::string m_namespace;
     literal_type_bitmask_t m_flags{cAllTypes};  // set of types this column can match
-    int32_t m_schema_col_id{-1};  // unambiguous CLJ column id this column represents. May be unset.
     bool m_unresolved_descriptors{false};  // true if contains wildcards
     bool m_pure_wildcard{false};  // true if column is single wildcard
     std::optional<std::string> m_subtree_type;  // optional subtree type to resolve against
     Function m_function{Function::None};
 
-    bool m_is_clpp_resolved{false};
     std::optional<size_t> m_leaf_position;
+    std::optional<mpt_node_id_t> m_bound_node_id;
     uint64_t m_id{};
 
     // Constructors

@@ -188,7 +188,8 @@ private:
      * Evaluates a filter expression
      * @param expr
      * @param schema
-     * @return true if the expression evaluates to true, false otherwise
+     * @return Whether the expression evaluates to true.
+     * @throws Forwards `ast::ColumnDescriptor::get_bound_node_id`'s exceptions.
      */
     auto evaluate_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
 
@@ -428,7 +429,7 @@ private:
     void populate_internal_columns();
 
     /**
-     * Resolves the reader for every clpp leaf filter in `expr` that is pinned to a leaf placeholder
+     * Resolves the reader for every leaf rule filter in `expr` that is pinned to a leaf placeholder
      * position, using the current ERT's column readers. A filter whose position doesn't resolve to
      * a reader for its column gets no entry and evaluates to false.
      * @param expr
@@ -440,14 +441,14 @@ private:
     ) -> void;
 
     /**
-     * Resolves the column reader for a clpp leaf filter column pinned to a leaf placeholder
+     * Resolves the column reader for a leaf rule filter column pinned to a leaf placeholder
      * position. The reader for leaf position `leaf_position` of a LogMessage is the reader at
      * `log_message_column_start + leaf_position`, which holds because readers are appended in the
      * document order of the leaf placeholders.
      * @param column A column with a leaf position.
      * @param column_readers The current ERT's column readers, in schema order.
-     * @return The reader, or nullptr if the position doesn't resolve to a reader for `column`'s
-     * node in the current ERT.
+     * @return The reader, or nullptr if `column` is unbound or the position doesn't resolve to a
+     * reader for `column`'s node in the current ERT.
      */
     [[nodiscard]] auto find_positional_reader(
             ast::ColumnDescriptor const& column,
@@ -455,7 +456,8 @@ private:
     ) const -> BaseColumnReader*;
 
     /**
-     * Constant propagates an expression
+     * Constant propagates an expression. Operands that schema matching already resolved for the
+     * current schema (EXISTS/NEXISTS filters and `NarrowSchemasExpr`) are constants here.
      * @param expr
      * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
      * if the expression evaluates to false, EvaluatedValue::Unknown otherwise

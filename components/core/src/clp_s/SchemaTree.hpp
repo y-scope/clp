@@ -118,6 +118,12 @@ public:
      */
     [[nodiscard]] auto is_structural_container() const -> bool;
 
+    /**
+     * @return Whether the node's input text is parsed into a shape and leaf values, so that queries
+     * against it are decomposed (LogMessage and ParentRule nodes).
+     */
+    [[nodiscard]] auto is_decomposable() const -> bool;
+
 private:
     // Data members
     mpt_node_id_t m_parent_id{-1};

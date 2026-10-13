@@ -7,16 +7,17 @@
 #include <optional>
 #include <set>
 #include <span>
-#include <string>
 #include <string_view>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include <clp_s/ArchiveReader.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/Schema.hpp>
-#include <clp_s/search/ast/FilterOperation.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/search/ast/NarrowSchemasExpr.hpp>
 #include <clp_s/search/ClppMatcher.hpp>
 #include <clpp/Interpretation.hpp>
 
@@ -26,8 +27,6 @@
 #include "ast/FilterExpr.hpp"
 #include "ast/Literal.hpp"
 #include "ast/Transformation.hpp"
-#include "clp_s/ArchiveReader.hpp"
-#include "clp_s/SchemaTree.hpp"
 
 namespace clp_s::search {
 class SchemaMatch : public ast::Transformation {
@@ -71,29 +70,56 @@ public:
     void add_searched_column_to_schema(int32_t schema, int32_t column);
 
     /**
-     * @return The total number of clpp interpretation matches created during schema matching.
+     * @return The total number of interpretations produced by query decomposition during schema
+     * matching.
      */
     [[nodiscard]] auto get_num_clpp_interpretations() const -> uint64_t {
         return m_num_clpp_interpretations;
     }
 
 private:
+    // Static methods
+    /**
+     * Builds a copy of a pure wildcard `filter` narrowed to every non-decomposable column type,
+     * i.e., with `ClppDecomposeT` removed from the column's matching types. Decomposable nodes are
+     * covered separately by per-node filters.
+     * @param column The pure wildcard column.
+     * @param filter The pure wildcard filter to copy.
+     * @return The filter, or nullptr if `column` is a shape() column (shapes exist only on
+     * decomposable nodes) or matches no other type.
+     */
+    [[nodiscard]] static auto build_non_decomposable_wildcard_filter(
+            ast::ColumnDescriptor const& column,
+            ast::FilterExpr const& filter
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Builds a `NarrowSchemasExpr` that narrows its enclosing expression to `schema_ids` (or, when
+     * inverted, to every other schema) without constraining any column value.
+     * @param schema_ids The schemas to narrow to.
+     * @param is_inverted Whether the expression holds for the schemas outside `schema_ids` instead.
+     * @return The expression, or nullptr if `schema_ids` is empty and `is_inverted` is false (no
+     * schema can match). An inverted expression over an empty set holds for every schema.
+     */
+    [[nodiscard]] static auto
+    narrow_to_schemas(std::unordered_set<int32_t> const& schema_ids, bool is_inverted = false)
+            -> std::shared_ptr<ast::Expression>;
+
     // Methods
     /**
-     * Builds an expression from a single interpretation of a decomposed clpp query, and registers
-     * leaf columns in m_descriptor_to_schema for the given schemas.
+     * Builds an expression from a single interpretation of a decomposed query, and registers the
+     * leaf columns against the given schemas.
      *
      * When `leaf_queries` is non-empty, returns an AndExpr of leaf equality filters (one per leaf
      * query). When `leaf_queries` is empty (the shape text itself satisfies the query, so no leaf
-     * value is constrained), registers the column and returns an EXISTS filter.
+     * value is constrained), returns a `NarrowSchemasExpr` for `matched_schema_ids`.
      *
-     * @param column The original column descriptor triggering clpp decomposition.
-     * @param decomposition_root The LogMessage or ParentRule node where the clpp query's
-     * decomposition is rooted.
+     * @param column The original column descriptor triggering query decomposition.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param leaf_queries The interpretation's leaf queries, constraining value matches.
      * @param matched_schema_ids Schemas to register the leaf columns against.
-     * @return The expression, or std::nullopt if a leaf column cannot be resolved in the schema
-     * tree.
+     * @return The expression.
+     * @return std::nullopt if a leaf column cannot be resolved in the MPT.
      */
     auto build_leaf_query_expr(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
@@ -103,21 +129,20 @@ private:
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 
     /**
-     * Builds the negation of a single interpretation of a decomposed clpp query, and registers
-     * leaf columns in m_descriptor_to_schema for the given schemas.
+     * Builds the negation of a single interpretation of a decomposed query, and registers the leaf
+     * columns against the given schemas.
      *
      * An interpretation holds when every leaf query matches, so its negation holds when any leaf
      * query fails to match. The expression is returned in De Morgan'd form (an OrExpr over leaves,
-     * each an AndExpr of inverted equality filters, one per schema-tree node the leaf resolves
-     * to), so inversion is carried only by leaf filters.
+     * each an AndExpr of inverted equality filters, one per MPT node the leaf resolves to), so
+     * inversion is carried only by leaf filters.
      *
-     * @param column The original column descriptor triggering clpp decomposition.
-     * @param decomposition_root The LogMessage or ParentRule node where the clpp query's
-     * decomposition is rooted.
+     * @param column The original column descriptor triggering query decomposition.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param leaf_queries The interpretation's leaf queries; must be non-empty.
      * @param matched_schema_ids Schemas to register the leaf columns against.
-     * @return The expression, or std::nullopt if a leaf column cannot be resolved in the schema
-     * tree.
+     * @return The expression.
+     * @return std::nullopt if a leaf column cannot be resolved in the MPT.
      */
     auto build_negated_leaf_query_expr(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
@@ -127,7 +152,27 @@ private:
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 
     /**
-     * Resolves a CLPP leaf's rule-name path against the MPT and produces column descriptors for
+     * Resolves a single leaf query to its MPT nodes and builds one equality filter per node, each
+     * on a column bound to the node, pinned to the leaf's position, and mapped to
+     * `matched_schema_ids` only.
+     * @param column The original column descriptor triggering query decomposition.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
+     * @param leaf The leaf query.
+     * @param matched_schema_ids Schemas to map the leaf columns to.
+     * @param is_inverted Whether each equality filter is inverted.
+     * @return One filter per resolved node.
+     * @return std::nullopt if the leaf cannot be resolved in the MPT.
+     */
+    auto build_leaf_filters(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            mpt_node_id_t decomposition_root,
+            clpp::LeafQuery const& leaf,
+            std::unordered_set<int32_t> const& matched_schema_ids,
+            bool is_inverted
+    ) -> std::optional<std::vector<std::shared_ptr<ast::Expression>>>;
+
+    /**
+     * Resolves a leaf's rule-name path against the MPT and produces column descriptors for
      * each matching MPT node at the leaf position.
      *
      * Computes the common prefix between the column's existing descriptor tokens and the rule
@@ -137,12 +182,11 @@ private:
      * name. A rule name may resolve to several nodes because MPT nodes are keyed by both name and
      * type, so one pair is returned per matching node.
      *
-     * @param column The original column descriptor triggering clpp decomposition.
-     * @param decomposition_root The LogMessage or ParentRule node where the clpp query's
-     * decomposition is rooted.
+     * @param column The original column descriptor triggering query decomposition.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param rule_names The split rule names from the log-surgeon qualified name.
-     * @return A vector of (column, node_id) pairs, or std::nullopt if any rule name cannot be
-     * resolved in the MPT.
+     * @return One (column, node ID) pair per matching node.
+     * @return std::nullopt if any rule name cannot be resolved in the MPT.
      */
     auto resolve_leaf_rule_descriptors(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
@@ -152,8 +196,8 @@ private:
             optional<std::vector<std::pair<std::shared_ptr<ast::ColumnDescriptor>, mpt_node_id_t>>>;
 
     /**
-     * Finds all child schema nodes whose key name matches the given name.
-     * @param parent_id The parent schema node ID.
+     * Finds all child MPT nodes whose key name matches the given name.
+     * @param parent_id The parent MPT node ID.
      * @param key_name The key name to match.
      * @return A vector of matching child node IDs (may be empty).
      */
@@ -161,46 +205,36 @@ private:
             -> std::vector<mpt_node_id_t>;
 
     /**
-     * Handles an EXISTS/NEXISTS or shape() filter at a LogMessage or ParentRule node by resolving
-     * it to an EXISTS filter over the schemas the filter selects:
-     * - no `shape_query`: every schema containing the node.
-     * - `shape_query`, not inverted: the schemas whose shapes satisfy `shape_query`.
-     * - `shape_query`, inverted: the schemas containing the node whose shapes do not satisfy
-     *   `shape_query` (the returned filter is not inverted).
-     * @param column The column triggering clpp decomposition.
-     * @param decomposition_root The LogMessage or ParentRule node where the clpp query's
-     * decomposition is rooted.
-     * @param rule_name The parent rule name, or empty for a LogMessage node.
-     * @param shape_query A wildcard pattern, or std::nullopt to match every shape.
-     * @param op The operation to apply to the resolved column.
+     * Handles a shape() filter at a decomposable node by resolving it to a `NarrowSchemasExpr`
+     * over:
+     * - not inverted: the schemas whose shapes satisfy `shape_query`.
+     * - inverted: the schemas containing the node whose shapes do not satisfy `shape_query`.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
+     * @param shape_query A wildcard pattern matched against the node's shapes.
      * @param is_inverted Whether the original filter was negated.
-     * @return The filter expression, or nullptr if no schemas are selected.
+     * @return The `NarrowSchemasExpr`, or nullptr if no schemas are selected.
      */
-    auto build_shape_match_filter(
-            std::shared_ptr<ast::ColumnDescriptor> const& column,
+    auto build_shape_filter(
             mpt_node_id_t decomposition_root,
-            std::string_view rule_name,
-            std::optional<std::string_view> shape_query,
-            ast::FilterOperation op,
+            std::string_view shape_query,
             bool is_inverted
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Handles a non-inverted value filter at a LogMessage or ParentRule node by decomposing `query`
+     * Handles a non-inverted value filter at a decomposable node by decomposing `query`
      * and OR-ing together the leaf query expressions of every interpretation found to match a
      * schema.
      *
-     * Each interpretation's leaf columns are registered (via register_clpp_resolved_column) only
-     * for the schemas whose log shape matched that interpretation, so that later passes give each
-     * schema only the interpretations relevant to it.
-     * @param column The column triggering clpp decomposition.
-     * @param decomposition_root The LogMessage or ParentRule node where the clpp query's
-     * decomposition is rooted.
+     * Each interpretation's leaf columns are registered only against the schemas containing a shape
+     * matching that interpretation, so that later passes give each schema only the interpretations
+     * relevant to it.
+     * @param column The column triggering query decomposition.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param rule_name The parent rule name, or empty for a LogMessage node.
      * @param query The value to match against the node's decomposed shapes.
      * @param is_inverted Whether the original filter was negated.
      * @return The filter expression, or nullptr if no interpretation matched.
-     * @throw std::runtime_error if `ClppMatcher::decompose_query` returns an error.
+     * @throws std::runtime_error if `ClppMatcher::decompose_query` returns an error.
      */
     auto build_decomposed_query_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
@@ -211,91 +245,91 @@ private:
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Builds the expression for a negated value filter at a LogMessage or ParentRule node.
+     * Builds the expression for a negated value filter at a decomposable node.
      *
      * Schemas are grouped by their (matching) interpretations, and each group's operand registers
      * its columns against only the schemas in that group. Each group becomes:
      * - nothing, if an interpretation with no leaf constraints applies (the query always holds);
-     * - an EXISTS filter, if no interpretation applies (the query never holds);
+     * - a `NarrowSchemasExpr`, if no interpretation applies (the query never holds);
      * - an AndExpr of the applicable interpretations' negated leaf query expressions otherwise.
      * Interpretations whose leaves cannot be resolved can never hold and are omitted.
-     * @param column The column triggering clpp decomposition.
-     * @param decomposition_root The LogMessage or ParentRule node where the clpp query's
-     * decomposition is rooted.
-     * @param rule_name The parent rule name, or empty for a LogMessage node.
+     * @param column The column triggering query decomposition.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param interpretations The interpretation matches applicable to a schema.
      * @return The filter expression, or nullptr if no schema can match.
      */
     auto build_negated_decomposed_query_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             mpt_node_id_t decomposition_root,
-            std::string_view rule_name,
             std::vector<ClppMatcher::InterpretationMatch> const& interpretations
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Adds an EXISTS filter on `column` to `parent_expr`, registering the column against
-     * `schema_ids`. Does nothing if `schema_ids` is empty.
-     * @param parent_expr The expression to add the operand to.
-     * @param column The column triggering clpp decomposition.
-     * @param decomposition_root The LogMessage or ParentRule node where the clpp query's
-     * decomposition is rooted.
-     * @param schema_ids The schemas the filter selects.
+     * @param narrowing
+     * @return The schemas `narrowing` holds for: its schema IDs, or their complement over the
+     * archive's schemas if it is inverted.
      */
-    auto add_exists_operand(
-            std::shared_ptr<ast::Expression> const& parent_expr,
-            std::shared_ptr<ast::ColumnDescriptor> const& column,
-            mpt_node_id_t decomposition_root,
-            std::unordered_set<int32_t> const& schema_ids
-    ) -> void;
+    [[nodiscard]] auto get_narrowed_schemas(ast::NarrowSchemasExpr const& narrowing) const
+            -> std::set<int32_t>;
 
     /**
-     * Resolves a clpp filter at a LogMessage or ParentRule node into an expression.
+     * @param node_id A decomposable node.
+     * @return Every schema containing `node_id`.
+     */
+    [[nodiscard]] auto find_schemas_containing_node(mpt_node_id_t node_id) const
+            -> std::unordered_set<int32_t>;
+
+    /**
+     * Resolves a filter at a decomposable node into an expression.
      *
      * `decomposition_root` decides what the query is matched against: at a LogMessage node it is
      * matched against whole log shapes, and at a ParentRule node only against that rule's shapes.
      *
      * There are 3 possible filter cases:
-     * 1. EXISTS/NEXISTS: matches every schema that contains the node.
-     * 2. shape(): matches the schemas containing shapes satisfying the query.
-     * 3. Any other operation: the query is decomposed into interpretations, each expanded
-     *   into leaf filters.
+     * 1. EXISTS/NEXISTS: narrows to the schemas that contain the node, or to their complement when
+     *    the filter holds for events lacking the node (NEXISTS, or inverted EXISTS).
+     * 2. shape(): narrows to the schemas containing shapes satisfying the query.
+     * 3. Any other operation: the query is decomposed into interpretations, each expanded into
+     *    leaf filters.
      *
-     * @param column The column triggering clpp decomposition.
-     * @param decomposition_root The LogMessage or ParentRule node where the clpp query's
-     * decomposition is rooted.
+     * @param column The column triggering query decomposition.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param filter The FilterExpr containing the operation and operand.
      * @return The transformed expression on success, or nullptr if no schema matches, the filter
      * has no operand, or the operand can not be converted to a string for the filter's operation
      * (e.g. a range operation).
      */
-    auto build_clpp_query_filter(
+    auto build_decomposable_node_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             mpt_node_id_t decomposition_root,
             ast::FilterExpr const& filter
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Builds a column descriptor that fully resolves `node_id` from the root of the object subtree
-     * of `column`'s namespace, typed as `node_id`'s literal type and inheriting `column`'s subtree
-     * type.
-     * @param column The unresolved column the node was matched from.
-     * @param node_id A node within the object subtree of `column`'s namespace.
+     * Builds a fully resolved column descriptor whose token path targets the decomposable MPT node
+     * `node_id`, typed as `node_id`'s literal type and keeping `column`'s namespace, subtree type
+     * and function.
+     *
+     * Decomposable nodes only ever exist within the object subtree (see
+     * `JsonParser::parse_log_message`), so the token path is built by walking from `node_id` up to
+     * the root of the object subtree for `column`'s namespace. Non-decomposable nodes are bound
+     * directly by node ID instead (see `build_resolved_node_filter`) and must not be passed here.
+     * @param column The unbound column that `node_id` was matched from.
+     * @param node_id A decomposable node.
      * @return The resolved column descriptor.
      */
-    [[nodiscard]] auto
-    build_resolved_column(ast::ColumnDescriptor const& column, mpt_node_id_t node_id) const
-            -> std::shared_ptr<ast::ColumnDescriptor>;
+    [[nodiscard]] auto build_resolved_decomposable_column(
+            ast::ColumnDescriptor const& column,
+            mpt_node_id_t node_id
+    ) const -> std::shared_ptr<ast::ColumnDescriptor>;
 
     /**
-     * Builds `filter` against the single node `node_id`. LogMessage and ParentRule nodes are
-     * resolved through `build_clpp_query_filter`; any other node becomes a copy of `filter` on the
-     * resolved column.
-     * @param column The (unresolved) column the node was matched from.
-     * @param node_id The matched node.
-     * @param filter The filter to resolve.
-     * @return The resolved expression, or nullptr if no schema can match (see
-     * `build_clpp_query_filter`).
+     * Builds `filter` against the single MPT node `node_id`: a decomposable node gets a
+     * decomposable-node filter; any other node gets a copy of `column` bound to `node_id`.
+     * @param column The unbound column that matched `node_id`.
+     * @param node_id An MPT node matched from `column`.
+     * @param filter The filter targeting `column`.
+     * @return The expression, or nullptr if no schema can match.
      */
     [[nodiscard]] auto build_resolved_node_filter(
             ast::ColumnDescriptor const& column,
@@ -304,96 +338,81 @@ private:
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Collects every LogMessage and ParentRule node in the object subtree of `column`'s namespace.
-     * @param column The column whose namespace's object subtree is searched.
-     * @return The node IDs in ascending order.
+     * Builds `filter` against every MPT node in `node_ids` (see `build_resolved_node_filter`) and
+     * combines the per-node filters. A value filter on `column` holds when the value at any of
+     * the nodes matches, so the per-node filters are OR-ed together. When `filter` is an
+     * existence filter that holds for events lacking the column (NEXISTS, or inverted EXISTS), it
+     * holds only when the column is absent at every node, so the per-node filters are AND-ed
+     * together. (An inverted value filter does not hold for events lacking the column, so it is
+     * OR-ed like any other value filter.)
+     * @param column The column that matched `node_ids`.
+     * @param node_ids The MPT nodes matched from `column`.
+     * @param filter The filter targeting `column`.
+     * @return The combined expression, or nullptr if no schema can match.
      */
-    [[nodiscard]] auto collect_clpp_node_ids(ast::ColumnDescriptor const& column) const
-            -> std::vector<mpt_node_id_t>;
-
-    /**
-     * Builds a copy of a pure wildcard `filter` that searches every column type other than
-     * LogMessage/ParentRule nodes, which are searched through explicit per-node filters instead.
-     * @param column The pure wildcard column.
-     * @param filter The pure wildcard filter to copy.
-     * @return The residual filter, or nullptr if `column` is a shape() column or matches no other
-     * type.
-     */
-    [[nodiscard]] static auto build_residual_wildcard_filter(
+    [[nodiscard]] auto build_multi_node_filter(
             ast::ColumnDescriptor const& column,
+            std::vector<mpt_node_id_t> const& node_ids,
             ast::FilterExpr const& filter
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
+     * Builds the pure wildcard expansion: an OR of the non-decomposable wildcard filter and one
+     * resolved filter per decomposable node.
      * @param column The pure wildcard column.
-     * @param expr The expression containing `column`.
-     * @return true if `column` should be expanded over the schema tree's LogMessage/ParentRule
-     * nodes, false otherwise.
-     */
-    [[nodiscard]] static auto
-    should_expand_pure_wildcard(ast::ColumnDescriptor& column, ast::Expression const& expr) -> bool;
-
-    /**
-     * Expands a pure wildcard filter over every LogMessage and ParentRule node, so that it
-     * searches them the same way `obj.*` does.
-     *
-     * A non-inverted filter becomes an OrExpr of the residual wildcard filter and one filter per
-     * node. An inverted filter (no column matches) is built per group of schemas sharing the same
-     * set of nodes; see `build_negated_clpp_node_group`.
-     * @param column The pure wildcard column.
-     * @param expr The FilterExpr containing `column`.
+     * @param filter The non-inverted filter.
+     * @param decomposable_node_ids Every decomposable node in `column`'s namespace. Must be
+     * non-empty.
      * @return The expanded expression, or nullptr if no schema can match.
      */
-    auto expand_pure_wildcard_over_clpp_nodes(
-            std::shared_ptr<ast::ColumnDescriptor> const& column,
-            std::shared_ptr<ast::Expression> const& expr
+    [[nodiscard]] auto build_pure_wildcard_expansion(
+            ast::ColumnDescriptor const& column,
+            ast::FilterExpr const& filter,
+            std::vector<mpt_node_id_t> const& decomposable_node_ids
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Builds the negated pure wildcard expansion for every schema: schemas are grouped by the set
-     * of LogMessage/ParentRule nodes they contain, and each group is built with
-     * `build_negated_clpp_node_group`, then OR-ed together.
+     * Builds the negated pure wildcard expansion, which holds when neither any decomposable node
+     * nor any other column matches `filter`. Schemas are grouped by the exact set of decomposable
+     * nodes they contain so that each group's conjunction stays small; AND-ing every node for every
+     * schema would blow up under OrOfAndForm.
      * @param column The pure wildcard column.
      * @param filter The inverted filter.
-     * @param clpp_node_ids Every LogMessage/ParentRule node in `column`'s namespace, in ascending
-     * order.
+     * @param decomposable_node_ids Every decomposable node in `column`'s namespace. Must be
+     * non-empty.
      * @return The expanded expression, or nullptr if no schema can match.
      */
-    auto build_negated_pure_wildcard_expansion(
+    [[nodiscard]] auto build_negated_pure_wildcard_expansion(
             ast::ColumnDescriptor const& column,
             ast::FilterExpr const& filter,
-            std::vector<SchemaNode::id_t> const& clpp_node_ids
+            std::vector<mpt_node_id_t> const& decomposable_node_ids
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Builds the negated pure wildcard expression for the schemas `schema_ids`, which all contain
-     * exactly the LogMessage/ParentRule nodes `node_ids`: an AndExpr of an EXISTS filter selecting
-     * `schema_ids`, the inverted residual wildcard filter, and the negated filter of every node.
+     * Builds the negated expression for one group of schemas that contain exactly the decomposable
+     * nodes `node_ids`: an AND of a `NarrowSchemasExpr` for `schema_ids`, the inverted
+     * non-decomposable wildcard filter, and the negated filter of every node in `node_ids`.
      * @param column The pure wildcard column.
      * @param filter The inverted filter.
-     * @param selector_node_id The node the schema-selecting EXISTS filter is registered against.
-     * When `node_ids` is empty this is a node that none of `schema_ids` contain, which is fine
-     * because an EXISTS filter is constant-folded to True: the filter only selects schemas.
-     * @param node_ids The nodes contained by every schema in `schema_ids`.
-     * @param schema_ids The schemas whose events satisfy the filter's negation for the given nodes.
-     * @return The expression, or nullptr if some node's negation can't hold in any schema.
+     * @param node_ids The nodes contained by every schema in `schema_ids` (may be empty).
+     * @param schema_ids The schemas that contain exactly `node_ids`.
+     * @return The expression, or nullptr if some node's negation cannot hold in any schema.
      */
-    auto build_negated_clpp_node_group(
+    [[nodiscard]] auto build_negated_decomposable_node_group(
             ast::ColumnDescriptor const& column,
             ast::FilterExpr const& filter,
-            SchemaNode::id_t selector_node_id,
-            std::vector<SchemaNode::id_t> const& node_ids,
+            std::vector<mpt_node_id_t> const& node_ids,
             std::unordered_set<int32_t> const& schema_ids
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
      * Resolves the nearest enclosing `LogMessage` node of `node_id`. If `node_id` is a
-     * `LogMessage`, it resolves to itself.  Because log events contain only sibling (never nested)
-     * `LogMessage`s, every rule/`LogMessage` node has exactly one such enclosing node, whose ID
+     * `LogMessage`, it resolves to itself. Because log events contain only sibling (never nested)
+     * `LogMessage`s, every decomposable node has exactly one such enclosing node, whose ID
      * identifies which unstructured field a query targets.
-     * @param node_id The schema-tree node whose enclosing `LogMessage` to find.
+     * @param node_id The MPT node whose enclosing `LogMessage` to find.
      * @return The enclosing `LogMessage` node's ID (`node_id` itself when it is a `LogMessage`), or
-     * -1 if `node_id` has no enclosing `LogMessage`.
+     * `constants::cRootNodeId` if `node_id` has no enclosing `LogMessage`.
      */
     [[nodiscard]] auto find_enclosing_log_message_node_id(mpt_node_id_t node_id) const
             -> mpt_node_id_t;
@@ -404,12 +423,106 @@ private:
      */
     auto read_dictionaries_for_schema(SchemaView const& schema) -> void;
 
+    /**
+     * Computes the set of literal types a column may resolve to, as a bitmask.
+     *
+     * A column can map to a different node (and therefore a different literal type) in each schema,
+     * so the mask is the union of its node types across several schemas. split_expression_by_schema
+     * later replaces this mask with the single type the column has in one specific schema.
+     *
+     * For a decomposed leaf rule column, `schemas` is ignored: it is bound to a single node, so its
+     * type is that node's type regardless of schema.
+     * For any other column, the union is taken over the schemas in `schemas` that the column also
+     * maps to.
+     *
+     * @param column The column whose mask is being computed.
+     * @param schemas The schemas to take the union over.
+     * @return The bitmask of literal types.
+     */
+    [[nodiscard]] auto compute_candidate_types(
+            ast::ColumnDescriptor const& column,
+            std::set<int32_t> const& schemas
+    ) const -> ast::literal_type_bitmask_t;
+
+    /**
+     * Binds `column` to `node_id`, maps it to exactly `schema_ids` in `m_descriptor_to_schema` and
+     * records it in `m_decomposed_leaf_columns`. The schemas are chosen by shape matching
+     * (`ClppMatcher`) rather than by which schemas contain `node_id`, and the mapping persists
+     * across `run()`'s second resolution pass.
+     * @param column The decomposed leaf column.
+     * @param node_id The MPT node to bind the column to.
+     * @param schema_ids The schemas to map the column to.
+     */
+    auto register_decomposed_leaf_column(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            mpt_node_id_t node_id,
+            std::unordered_set<int32_t> const& schema_ids
+    ) -> void;
+
+    /**
+     * Records `column` as mapped to MPT node `node_id` in `m_column_to_descriptor`.
+     * @param column
+     * @param node_id
+     */
+    auto record_column_at_node(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            mpt_node_id_t node_id
+    ) -> void;
+
+    /**
+     * Handles the special case of a pure wildcard column (`*`). A pure wildcard has no MPT node of
+     * its own, so the object subtree of `column`'s namespace is walked to collect every
+     * decomposable node:
+     * - If the filter is expandable over decomposable nodes and such nodes exist, it is rewritten
+     *   into an expression with one filter per node plus a non-decomposable wildcard filter over
+     *   every other column type (or `EmptyExpr` if no schema can match).
+     * - If the column is a shape() column and no such nodes exist, the column matches no node.
+     * - Otherwise, it falls back to matching by node type.
+     * @param column The pure wildcard column.
+     * @param expr The FilterExpr containing `column`.
+     * @return The rewritten expression (`expr` itself if unchanged), or nullptr if the column
+     * matched no node.
+     */
+    [[nodiscard]] auto resolve_pure_wildcard(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            std::shared_ptr<ast::Expression> const& expr
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Resolves a pure wildcard by checking that at least one MPT node has a type the column can
+     * match. If the filter is inverted and no node type matches, nothing can satisfy it, so its
+     * negation holds for every record and the filter is rewritten to always match.
+     * @param column The pure wildcard column.
+     * @param expr The FilterExpr containing `column`.
+     * @return `expr` if some node type matched, an inverted (always-true) `EmptyExpr` if none did
+     * and the filter is inverted, or nullptr if none did and the filter is not inverted.
+     */
+    [[nodiscard]] auto resolve_pure_wildcard_by_node_type(
+            std::shared_ptr<ast::ColumnDescriptor> const& column,
+            std::shared_ptr<ast::Expression> const& expr
+    ) const -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Expands a filter on a column with unresolved wildcard tokens over the MPT nodes the column
+     * matched on the first resolution pass (see `build_multi_node_filter`).
+     * @param column The column with unresolved wildcard tokens.
+     * @param filter The filter containing `column`.
+     * @return The expansion, or `EmptyExpr` if no schema can match.
+     */
+    auto
+    expand_unresolved_column(ast::ColumnDescriptor const& column, ast::FilterExpr const& filter)
+            -> std::shared_ptr<ast::Expression>;
+
     // Data members
     std::unordered_map<uint32_t, std::set<std::shared_ptr<ast::ColumnDescriptor>>>
             m_column_to_descriptor;
-    // TODO: The value in the map can be a set of k:v pairs with a hash & comparison
-    // that only considers the key since each column descriptor only has one matching
-    // The MPT node ID within a schema representing the column descriptor.
+    // The subset of `m_descriptor_to_schema`'s keys that are leaf rule columns created by query
+    // decomposition. Their entries were written by `register_decomposed_leaf_column` with the
+    // schemas containig a shape matching the interpretation.
+    std::unordered_set<ast::ColumnDescriptor::id_t> m_decomposed_leaf_columns;
+    // Maps each column descriptor to the MPT node it resolves to in each schema.
+    // TODO: The value in the map can be a set of k:v pairs with a hash & comparison that only
+    // considers the key since each column descriptor only has one matching MPT node per schema.
     std::unordered_map<ast::ColumnDescriptor::id_t, std::map<int32_t, mpt_node_id_t>>
             m_descriptor_to_schema;
     std::map<ast::ColumnDescriptor::id_t, std::set<int32_t>> m_unresolved_descriptor_to_descriptor;
@@ -422,45 +535,77 @@ private:
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<SchemaTree> m_tree;
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
-    bool m_clpp_decomposed_query{false};
-    bool m_clpp_node_matched{false};
-    bool m_pure_wildcard_expanded{false};
+    // Whether column resolution rewrote the expression (wildcard expansion, query decomposition or
+    // multi-node expansion), requiring normalization and a second resolution pass.
+    bool m_expr_rewritten{false};
     uint64_t m_num_clpp_interpretations{0};
     ClppMatcher m_clpp_matcher;
 
     /**
-     * Populates the column mapping for a given column
-     * @param column
-     * @param node_id
-     * @return true if matching is successful, false otherwise
+     * Matches a column's token path against a subtree of the MPT, starting from `subtree_root_id`.
+     * For a node to match, its type must be compatible with the column's filter.
+     *
+     * Wildcard tokens may match any number of intermediate nodes (including zero). Matches are
+     * recorded according to the column:
+     * - fully resolved column: each matched leaf node is appended to `leaf_node_ids` for the
+     *   caller to resolve;
+     * - column with wildcard tokens: matches are deferred to
+     *   `m_unresolved_descriptor_to_descriptor` for a second pass after the query is converted to
+     *   Or-of-And form;
+     * - fully resolved column reaching an unstructured array: the remaining tokens are stored on
+     *   the column and the array node is appended to `leaf_node_ids`.
+     *
+     * A bound column skips the walk. It is recorded in `m_column_to_descriptor` so that
+     * `populate_schema_mapping` maps it to every schema containing its node, except for a
+     * decomposed leaf column, whose schemas are already fixed.
+     * @param column The column descriptor to resolve.
+     * @param subtree_root_id The ID of the MPT node to start resolution from.
+     * @param leaf_node_ids Receives the leaf nodes matched by a fully resolved column.
+     * @return Whether the column matched at least one node.
      */
     auto populate_column_mapping(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
-            int32_t node_id,
-            std::shared_ptr<ast::Expression> const& expr
-    ) -> std::tuple<bool, std::shared_ptr<ast::Expression>>;
+            mpt_node_id_t subtree_root_id,
+            std::vector<mpt_node_id_t>& leaf_node_ids
+    ) -> bool;
 
     /**
-     * Populates the column mapping for a given column
-     * @param column
-     * @return
+     * Resolves a single column against the MPT, choosing which subtree root(s) to start
+     * from. If the column has an explicit subtree type (e.g. `metadata`), only that subtree is
+     * searched; otherwise every subtree matching the column's namespace is searched (except the
+     * Metadata subtree).
+     *
+     * A fully resolved column may match several same-named leaf nodes of different types. If none
+     * is decomposable, every match is recorded in `m_column_to_descriptor`. Otherwise `expr` is
+     * rewritten with `build_multi_node_filter` over all matches, so a decomposable node's filter
+     * and its non-decomposable siblings are resolved together.
+     * @param column The column descriptor to resolve.
+     * @param expr The FilterExpr containing `column`.
+     * @return The rewritten expression (`expr` itself if unchanged, or `EmptyExpr` if every matched
+     * node was found unsatisfiable), or nullptr if the column matched no node.
      */
     auto populate_column_mapping(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             std::shared_ptr<ast::Expression> const& expr
-    ) -> std::tuple<bool, std::shared_ptr<ast::Expression>>;
+    ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Populates the column mapping for a given expression
-     * @param cur
-     * @return The transformed expression
+     * Resolves every column reference in a query expression tree against the archive's MPT.
+     * Filters whose column matches no node are replaced with `EmptyExpr` (no results). This is
+     * the first transformation applied to a query, and runs a second time after Or-of-And
+     * normalization if the first pass left unresolved wildcards or arrays, or rewrote the
+     * expression (wildcard expansion, query decomposition or multi-node expansion).
+     * @param cur The expression to process.
+     * @return The transformed expression.
+     * @throws std::runtime_error if a shape() column has no decomposable node to target.
      */
-    std::shared_ptr<ast::Expression> populate_column_mapping(
-            std::shared_ptr<ast::Expression> const& cur
-    );
+    auto populate_column_mapping(std::shared_ptr<ast::Expression> const& cur)
+            -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Populates the schema mapping
+     * Derives `m_descriptor_to_schema` from `m_column_to_descriptor` by scanning every schema's
+     * nodes. Pure wildcards (resolved per schema at evaluation) and decomposed leaf columns
+     * (already mapped) are skipped.
      */
     void populate_schema_mapping();
 
@@ -490,31 +635,14 @@ private:
     );
 
     /**
-     * Computes the set of literal types a column may resolve to, as a bitmask.
-     *
-     * A column can map to a different node (and therefore a different literal type) in each schema,
-     * so the mask is the union of its node types across several schemas. split_expression_by_schema
-     * later replaces this mask with the single type the column has in one specific schema.
-     *
-     * For a column resolved by ClppMatcher, `schemas` is ignored: ClppMatcher already determined
-     * exactly which schemas the query matched, so the union is taken over those schemas instead.
-     * For any other column, the union is taken over the schemas in `schemas` that the column also
-     * maps to.
-     *
-     * @param column The column whose mask is being computed.
-     * @param schemas The schemas to take the union over.
-     * @return The bitmask of literal types.
-     */
-    [[nodiscard]] auto compute_candidate_types(
-            ast::ColumnDescriptor const& column,
-            std::set<int32_t> const& schemas
-    ) const -> ast::literal_type_bitmask_t;
-
-    /**
-     * Splits an expression into sub-expressions based on the schemas it searches against
+     * Splits an expression into one copy per schema it searches against. In each copy, a filter's
+     * column is bound to the schema's node for that column and narrowed to the node's type. Two
+     * kinds of operands are left as-is because `QueryRunner` evaluates them as constants:
+     * - a NEXISTS filter in a schema lacking its column (there is no node to bind to);
+     * - a `NarrowSchemasExpr`, which is only handed to the schemas it holds for.
      * @param expr
-     * @param queries a map from schema id to expression
-     * @param relevant_schemas
+     * @param queries Receives the copy of `expr` for each schema ID.
+     * @param relevant_schemas The schemas `expr` searches against.
      */
     void split_expression_by_schema(
             std::shared_ptr<ast::Expression> const& expr,
@@ -529,28 +657,6 @@ private:
      */
     auto get_node_id_for_descriptor(ast::ColumnDescriptor::id_t col_id, int32_t schema)
             -> mpt_node_id_t;
-
-    /**
-     * Marks a column as clpp-resolved and records (`in m_descriptor_to_schema`) that the column
-     * resolves to `node_id` in each of `matched_schema_ids`.
-     *
-     * ClppMatcher matched only the schemas whose shape satisfied the query, and that subset must
-     * survive to the end of SchemaMatch::run. Two things preserve it:
-     * - run() clears m_column_to_descriptor before re-running populate_column_mapping, but leaves
-     *   m_descriptor_to_schema intact, so these mappings survive.
-     * - The is_clpp_resolved flag keeps the column out of m_column_to_descriptor, so
-     *   populate_schema_mapping skips it. That function maps a column to every schema containing
-     *   its node, which for a clpp column would add back the schemas whose shape did not match.
-     *
-     * @param column The column descriptor to register.
-     * @param node_id The schema-tree node ID to map to.
-     * @param matched_schema_ids The schemas to register the column for.
-     */
-    auto register_clpp_resolved_column(
-            std::shared_ptr<ast::ColumnDescriptor> const& column,
-            mpt_node_id_t node_id,
-            std::unordered_set<int32_t> const& matched_schema_ids
-    ) -> void;
 
     /**
      * @param col_id The id of the column descriptor.

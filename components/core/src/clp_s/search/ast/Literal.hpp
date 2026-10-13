@@ -48,11 +48,11 @@ public:
      * Strict checks for type matching against a given literal type.
      * @return true if the check succeeds
      */
-    virtual bool matches_type(LiteralType type) = 0;
+    [[nodiscard]] virtual auto matches_type(LiteralType type) const -> bool = 0;
 
-    virtual bool matches_any(literal_type_bitmask_t mask) = 0;
+    [[nodiscard]] virtual auto matches_any(literal_type_bitmask_t mask) const -> bool = 0;
 
-    virtual bool matches_exactly(literal_type_bitmask_t mask) = 0;
+    [[nodiscard]] virtual auto matches_exactly(literal_type_bitmask_t mask) const -> bool = 0;
 
     /**
      * Convert LiteralType enum values to strings . Only used for printing.

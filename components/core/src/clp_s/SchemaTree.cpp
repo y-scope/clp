@@ -62,6 +62,10 @@ auto SchemaNode::is_structural_container() const -> bool {
     }
 }
 
+auto SchemaNode::is_decomposable() const -> bool {
+    return NodeType::LogMessage == m_type || NodeType::ParentRule == m_type;
+}
+
 auto SchemaTree::add_node(mpt_node_id_t parent_node_id, NodeType type, std::string_view key_name)
         -> mpt_node_id_t {
     auto node_id{add_node(parent_node_id, type, key_name, 0)};

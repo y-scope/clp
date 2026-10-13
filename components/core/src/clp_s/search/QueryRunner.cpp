@@ -14,6 +14,7 @@
 
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/Schema.hpp>
+#include <clp_s/search/ast/NarrowSchemasExpr.hpp>
 
 #include "../../clp/Defs.h"
 #include "../../clp/GrepCore.hpp"
@@ -206,13 +207,13 @@ auto QueryRunner::find_positional_reader(
         std::vector<BaseColumnReader*> const& column_readers
 ) const -> BaseColumnReader* {
     auto const leaf_position{column.get_leaf_position()};
-    if (false == leaf_position.has_value()) {
+    if (false == leaf_position.has_value() || false == column.is_bound()) {
         return nullptr;
     }
-    auto const column_id{column.get_column_id()};
+    auto const node_id{column.get_bound_node_id()};
     auto const log_message_id{m_schema_tree->find_matching_subtree_root_in_subtree(
             constants::cRootNodeId,
-            column_id,
+            node_id,
             NodeType::LogMessage
     )};
     if (constants::cRootNodeId == log_message_id) {
@@ -223,8 +224,7 @@ auto QueryRunner::find_positional_reader(
         return nullptr;
     }
     auto const reader_idx{column_start.value() + leaf_position.value()};
-    if (reader_idx >= column_readers.size() || column_readers.at(reader_idx)->get_id() != column_id)
-    {
+    if (reader_idx >= column_readers.size() || column_readers.at(reader_idx)->get_id() != node_id) {
         return nullptr;
     }
     return column_readers.at(reader_idx);
@@ -439,14 +439,16 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
 
 bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
     auto* column = expr->get_column().get();
-    int32_t column_id = column->get_column_id();
+    auto const node_id{column->get_bound_node_id()};
     auto literal = expr->get_operand();
     bool const is_positional{column->get_leaf_position().has_value()};
     auto& basic_readers{
-            is_positional ? m_positional_readers.basic[expr] : m_basic_readers[column_id]
+            is_positional ? m_positional_readers.basic.try_emplace(expr).first->second
+                          : m_basic_readers.try_emplace(node_id).first->second
     };
     auto& var_string_readers{
-            is_positional ? m_positional_readers.var_string[expr] : m_var_string_readers[column_id]
+            is_positional ? m_positional_readers.var_string.try_emplace(expr).first->second
+                          : m_var_string_readers.try_emplace(node_id).first->second
     };
     clp::Query* q = nullptr;
     std::unordered_set<int64_t>* matching_vars = nullptr;
@@ -460,7 +462,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
             return evaluate_clp_string_filter(
                     expr->get_operation(),
                     q,
-                    m_clp_string_readers[column_id]
+                    m_clp_string_readers.try_emplace(node_id).first->second
             );
         case LiteralType::VarStringT:
             matching_vars = m_expr_var_match_map.at(expr);
@@ -475,12 +477,12 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
             return evaluate_array_filter(
                     expr->get_operation(),
                     column->get_unresolved_tokens(),
-                    get_cached_decompressed_unstructured_array(column_id),
+                    get_cached_decompressed_unstructured_array(node_id),
                     literal
             );
         case LiteralType::TimestampT: {
             if (nullptr != m_deprecated_datestring_reader
-                && m_deprecated_datestring_reader->get_id() == column_id)
+                && m_deprecated_datestring_reader->get_id() == node_id)
             {
                 return evaluate_epoch_date_filter(
                         expr->get_operation(),
@@ -490,7 +492,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
             }
             return evaluate_timestamp_filter(
                     expr->get_operation(),
-                    m_timestamp_readers.at(column_id),
+                    m_timestamp_readers.at(node_id),
                     literal
             );
         }
@@ -1211,6 +1213,8 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             return expr->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
         }
         return EvaluatedValue::Unknown;
+    } else if (std::dynamic_pointer_cast<ast::NarrowSchemasExpr>(expr)) {
+        return EvaluatedValue::True;
     } else if (auto filter = std::dynamic_pointer_cast<FilterExpr>(expr)) {
         if ((filter->get_operation() == FilterOperation::EXISTS
              || filter->get_operation() == FilterOperation::NEXISTS)
