@@ -48,4 +48,7 @@ pub enum Error {
 
     #[error("number of query tasks {0} exceeds `i32::MAX`")]
     TooManyQueryTasks(usize),
+
+    #[error("unsupported query job configuration: {0}")]
+    UnsupportedJobConfig(String),
 }
