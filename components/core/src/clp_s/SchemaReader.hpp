@@ -501,7 +501,8 @@ private:
      * Checks whether a node (or any ancestor up to and including the LogMessage root) is
      * projected. When all columns are returned (ReturnAllColumns mode), this always returns true.
      * @param node_id The global schema node ID to check.
-     * @return true if the node should be included in the output.
+     * @return Whether the node should be included in the output.
+     * @return false if projection has not been initialized.
      */
     [[nodiscard]] auto is_node_projected(mpt_node_id_t node_id) -> bool;
 
