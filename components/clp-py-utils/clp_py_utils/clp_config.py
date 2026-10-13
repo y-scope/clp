@@ -760,7 +760,6 @@ class ApiServer(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
-    default_max_num_query_results: int = 1000
 
     def transform_for_container(self):
         self.host = API_SERVER_COMPONENT_NAME
