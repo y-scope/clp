@@ -1,6 +1,5 @@
 //! Handle for driving a single query job to completion.
 
-use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -79,7 +78,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             })?;
         let clp_s_query_option = ClpSQueryOption {
             query_string,
-            max_num_results: NonZeroU32::new(search_job_config.max_num_results),
+            max_num_results: search_job_config.max_num_results,
             begin_timestamp_millisecs: search_job_config.begin_timestamp,
             end_timestamp_millisecs: search_job_config.end_timestamp,
             ignore_case: search_job_config.ignore_case,
