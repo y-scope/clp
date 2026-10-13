@@ -6,9 +6,9 @@
 #include <string_view>
 #include <vector>
 
-#include <bsoncxx/document/value.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <mongocxx/model/write.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/aggregators.hpp>
@@ -78,6 +78,7 @@ private:
 
 /**
  * Sink that writes aggregation results to a MongoDB results-cache collection.
+ * Keyed results store dataset, archive, and aggregation key fields in `_id`.
  */
 class ResultsCacheSink : public AggregationSink {
 public:
@@ -86,7 +87,8 @@ public:
             std::string_view uri,
             std::string_view collection,
             uint64_t batch_size,
-            std::string_view archive_id
+            std::string_view archive_id,
+            std::string_view dataset
     );
 
     // Methods implementing AggregationSink
@@ -112,9 +114,11 @@ public:
 private:
     // Methods
     /**
-     * Inserts the buffered result documents into the collection.
+     * Writes buffered operations into the collection. Keyed results replace existing contributions
+     * with the same dataset, archive, and aggregation key; unkeyed results are inserted.
+     *
      * @return A void result on success, or an error code indicating the failure:
-     * - std::errc::io_error if flushing failed.
+     * - std::errc::io_error if flushing failed or a keyed write was not acknowledged.
      */
     [[nodiscard]] auto flush_buffer() -> ystdlib::error_handling::Result<void>;
 
@@ -123,7 +127,9 @@ private:
     mongocxx::collection m_collection;
     uint64_t m_batch_size;
     std::string m_archive_id;
-    std::vector<bsoncxx::document::value> m_results;
+    std::string m_dataset;
+    bool m_requires_acknowledgment{false};
+    std::vector<mongocxx::model::write> m_writes;
 };
 }  // namespace clp_s
 

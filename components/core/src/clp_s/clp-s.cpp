@@ -238,7 +238,8 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
                                             options.uri,
                                             options.collection,
                                             options.batch_size,
-                                            archive_id
+                                            archive_id,
+                                            options.dataset
                                     )
                             );
                         },

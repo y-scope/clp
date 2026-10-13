@@ -18,7 +18,7 @@ use spider_core::task::TerminationTaskDescriptor;
 use spider_core::task::ValueTypeDescriptor;
 use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
-use spider_core::types::io::TaskInput;
+use spider_core::types::io::TaskGraphInputBuilder;
 
 use crate::compression_job_submitter::CompressionJobOutcome;
 use crate::compression_job_submitter::S3CompressionJobSubmitter;
@@ -33,7 +33,10 @@ impl S3CompressionJobSubmitter for SpiderClient {
     /// * Forwards [`TaskGraph::new`]'s return values on failure.
     /// * Forwards [`ValueTypeDescriptor::struct_from_name`]'s return values on failure.
     /// * Forwards [`TaskGraph::insert_task`]'s return values on failure.
-    /// * Forwards [`rmp_serde::to_vec`]'s return values on failure.
+    /// * Forwards [`TaskGraphInputBuilder::create_shared_input_payload`]'s return values on
+    ///   failure.
+    /// * Forwards [`TaskGraphInputBuilder::append_shared_task_input`]'s return values on failure.
+    /// * Forwards [`TaskGraphInputBuilder::append_task_input`]'s return values on failure.
     /// * Forwards [`SpiderClient::submit_job`]'s return values on failure.
     async fn submit_s3_compression_job(
         &self,
@@ -48,7 +51,6 @@ impl S3CompressionJobSubmitter for SpiderClient {
         const CLP_TDL_PACKAGE_NAME: &str = "clp";
         const COMPRESSION_TASK_FUNC: &str = "compression::clp_s_s3_compress";
         const COMMIT_TASK_FUNC: &str = "compression::commit";
-        const COMPRESSION_TASK_NUM_INPUTS: usize = 3;
 
         let commit_task = TerminationTaskDescriptor {
             tdl_context: TdlContext {
@@ -59,8 +61,9 @@ impl S3CompressionJobSubmitter for SpiderClient {
         };
         let mut graph = TaskGraph::new(Some(commit_task), None)?;
 
-        let mut inputs: Vec<TaskInput> =
-            Vec::with_capacity(input_sources.len() * COMPRESSION_TASK_NUM_INPUTS);
+        let mut inputs = TaskGraphInputBuilder::new();
+        let compression_option_input = inputs.create_shared_input_payload(&clp_s_option)?;
+        let dataset_input = inputs.create_shared_input_payload(&dataset)?;
         for (input_source, execution_policy) in input_sources {
             graph.insert_task(TaskDescriptor {
                 tdl_context: TdlContext {
@@ -84,12 +87,14 @@ impl S3CompressionJobSubmitter for SpiderClient {
                 )],
                 input_sources: None,
             })?;
-            inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(&clp_s_option)?));
-            inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(&dataset)?));
-            inputs.push(TaskInput::ValuePayload(rmp_serde::to_vec(&input_source)?));
+            inputs.append_shared_task_input(compression_option_input)?;
+            inputs.append_shared_task_input(dataset_input)?;
+            inputs.append_task_input(&input_source)?;
         }
 
-        let job_id = self.submit_job(resource_group_id, &graph, inputs).await?;
+        let job_id = self
+            .submit_job(resource_group_id, &graph, &inputs.build())
+            .await?;
 
         tracing::info!(
             compression_job_id = % compression_job_id,

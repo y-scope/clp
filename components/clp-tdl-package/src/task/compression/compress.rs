@@ -868,7 +868,7 @@ mod tests {
         assert_eq!(
             parse_archive_stats(line).expect("valid archive stats line"),
             ArchiveMetadata {
-                id: ArchiveId::try_from(ARCHIVE_ID).expect("valid archive UUID"),
+                id: ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
                 begin_timestamp: 10,
                 end_timestamp: 20,
                 size: 40,

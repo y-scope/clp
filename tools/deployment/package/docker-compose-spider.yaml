@@ -51,6 +51,9 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "compression-coordinator"
+    environment:
+      SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "compression"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "${CLP_SPIDER_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
 
   webui:
     extends:
