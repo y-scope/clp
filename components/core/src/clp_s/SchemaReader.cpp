@@ -39,10 +39,11 @@ constexpr std::string_view cShapeKey{"shape"};
  *
  * @param sub_schema The sub-schema to scan.
  * @param tree
- * @param start_column_reader_idx The starting index in `m_columns` for the first column in the
- * sub-schema.
- * @return A map from column name to reader indices, and the next reader index after the last
- * consumed column.
+ * @param start_column_reader_idx The starting index in `m_columns` for the first unordered column
+ * reader in the sub-schema.
+ * @return A pair of:
+ * - A map from column name to reader indices.
+ * - The next reader index after the last consumed column.
  */
 [[nodiscard]] auto build_name_to_reader_indices(
         SchemaView sub_schema,
@@ -51,11 +52,11 @@ constexpr std::string_view cShapeKey{"shape"};
 ) -> std::pair<std::unordered_map<std::string, std::vector<size_t>>, size_t>;
 
 /**
- * Counts the number of column-consuming entries in a sub-schema, including entries within
+ * Counts the number of unordered column readers consumed by a sub-schema, including entries within
  * nested unordered-object scopes.
  * @param schema The sub-schema to scan.
  * @param tree The MPT (used to resolve node types for non-delimiter entries).
- * @return The number of column-consuming entries.
+ * @return The number of unordered column readers consumed.
  */
 [[nodiscard]] auto count_column_consuming_entries(SchemaView schema, SchemaTree const& tree)
         -> size_t;
@@ -925,7 +926,8 @@ void SchemaReader::generate_json_template(int32_t id) {
 
 auto SchemaReader::emit_parent_rule_shape_substring(
         clpp::log_shape_id_t log_shape_id,
-        std::string_view parent_rule_column_name
+        std::string_view parent_rule_column_name,
+        size_t occurrence_idx
 ) -> ystdlib::error_handling::Result<void> {
     if (nullptr == m_log_shape_dict || nullptr == m_parent_rule_shapes) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
@@ -933,7 +935,8 @@ auto SchemaReader::emit_parent_rule_shape_substring(
     clpp::TextShape<std::string_view> const log_shape{m_log_shape_dict->get_value(log_shape_id)};
     auto const parent_rule_shape{log_shape.narrow_to_parent_rule(
             m_parent_rule_shapes->at(log_shape_id),
-            parent_rule_column_name
+            parent_rule_column_name,
+            occurrence_idx
     )};
     if (parent_rule_shape.empty()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
@@ -1051,7 +1054,9 @@ auto SchemaReader::emit_parent_rule_arrays(
         auto const parent_rule_column_name{
                 m_global_schema_tree->build_ls_rule_name(parent_rule_id)
         };
-        for (auto const& occurrence : scope.parent_rule_occurrences.at(parent_rule_id)) {
+        auto const& occurrences{scope.parent_rule_occurrences.at(parent_rule_id)};
+        for (size_t occurrence_idx{0}; occurrence_idx < occurrences.size(); ++occurrence_idx) {
+            auto const& occurrence{occurrences.at(occurrence_idx)};
             m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedObject);
 
             if (emit_text) {
@@ -1061,14 +1066,17 @@ auto SchemaReader::emit_parent_rule_arrays(
                         log_shape_id,
                         parent_rule_column_name,
                         occurrence.start_column_reader_idx,
-                        occurrence.sub_schema
+                        occurrence.sub_schema,
+                        occurrence_idx
                 )));
             }
 
             if (parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)) {
-                YSTDLIB_ERROR_HANDLING_TRYX(
-                        emit_parent_rule_shape_substring(log_shape_id, parent_rule_column_name)
-                );
+                YSTDLIB_ERROR_HANDLING_TRYX(emit_parent_rule_shape_substring(
+                        log_shape_id,
+                        parent_rule_column_name,
+                        occurrence_idx
+                ));
             }
 
             std::ignore = YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
@@ -1179,9 +1187,9 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
     if (m_extract_mode) {
         m_json_serializer.add_special_key(key_name);
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.push_back(
-                YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(log_shape_id, "", column_start, schema))
-        );
+        m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(
+                compile_shape(log_shape_id, "", column_start, schema, 0)
+        ));
         auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(
                 emit_decomposed_scope(schema, log_msg_id, column_start, log_shape_id, has_decompose)
         )};
@@ -1194,9 +1202,9 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
     if (emit_text) {
         m_json_serializer.add_special_key("text");
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.push_back(
-                YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(log_shape_id, "", column_start, schema))
-        );
+        m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(
+                compile_shape(log_shape_id, "", column_start, schema, 0)
+        ));
     }
 
     if (has_shape) {
@@ -1217,7 +1225,8 @@ auto SchemaReader::compile_shape(
         clpp::log_shape_id_t log_shape_id,
         std::string_view parent_rule_column_name,
         size_t start_column_reader_idx,
-        SchemaView sub_schema
+        SchemaView sub_schema,
+        size_t occurrence_idx
 ) -> ystdlib::error_handling::Result<CompiledShape> {
     CompiledShape compiled_shape;
 
@@ -1233,7 +1242,8 @@ auto SchemaReader::compile_shape(
                 shape_to_scan = log_shape
                                         .narrow_to_parent_rule(
                                                 m_parent_rule_shapes->at(log_shape_id),
-                                                parent_rule_column_name
+                                                parent_rule_column_name,
+                                                occurrence_idx
                                         )
                                         .view();
             }

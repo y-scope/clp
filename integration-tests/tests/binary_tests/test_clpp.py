@@ -7,7 +7,7 @@ import json
 import os
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, NamedTuple
 
 import pytest
 
@@ -35,9 +35,16 @@ _requires_decomposition = pytest.mark.skipif(
 )
 
 
+def _project_matches(matches: list[MatchT], fields: list[str]) -> list[MatchT]:
+    """Returns a copy of each expected occurrence entry containing only the given fields."""
+    return [{field: match[field] for field in fields} for match in matches]
+
+
 class _InflightMatch:
     """
-    Structured result values for the provided query.
+    Expected values for the log event matched by `query`: an event with two `key_value` parent
+    rule occurrences that share the same shape (`%key_value.key%: %key_value.int_value%`).
+
     This is dependant on both the elasticsearch dataset and the heuristic parsing spec. If either
     change these constants will need updating.
     """
@@ -77,12 +84,8 @@ class _InflightMatch:
         "shape": shape,
         "has_number": ["31gb"],
         "hex_fallback": ["46b", "46b", "92b"],
-        "key_value": [{field: match[field] for field in ["key", "int_value"]} for match in matches],
+        "key_value": _project_matches(matches, ["key", "int_value"]),
     }
-
-    @classmethod
-    def project_matches(cls, fields: list[str]) -> list[MatchT] | LeafValueT | str:
-        return [{field: match[field] for field in fields} for match in cls.matches]
 
 
 class _DiskMatch:
@@ -106,26 +109,137 @@ class _DiskMatch:
     }
 
 
+class _MixedKvMatch:
+    """
+    A log event with two `key_value` parent rule occurrences of different shapes: an `int_value`
+    variant followed by a `str_value` variant.
+
+    This is dependant on both the `json_clpp_synthetic` dataset and the heuristic parsing spec. If
+    either change these constants will need updating.
+    """
+
+    query: Final[str] = 'message.key_value.key: "clppmulti_a"'
+    result_count: Final[int] = 1
+    text: Final[str] = "clppmulti clppmulti_a: 1234 clppmulti_b=replicated"
+    int_shape: Final[str] = "%key_value.key%: %key_value.int_value%"
+    str_shape: Final[str] = "%key_value.key%=%key_value.str_value%"
+    int_match: Final[MatchT] = {
+        "text": "clppmulti_a: 1234",
+        "shape": int_shape,
+        "key": ["clppmulti_a"],
+        "int_value": [1234],
+    }
+    str_match: Final[MatchT] = {
+        "text": "clppmulti_b=replicated",
+        "shape": str_shape,
+        "key": ["clppmulti_b"],
+        "str_value": ["replicated"],
+    }
+
+    matches: Final[list[MatchT]] = [int_match, str_match]
+
+    # Decompose-mode emission (shape + leaves, without reconstructed text).
+    decomposed_matches: Final[list[MatchT]] = [
+        {"shape": int_shape, "key": ["clppmulti_a"], "int_value": [1234]},
+        {"shape": str_shape, "key": ["clppmulti_b"], "str_value": ["replicated"]},
+    ]
+
+
+def _make_test_paths(
+    integration_test_path_config: IntegrationTestPathConfig,
+    dataset: SampleDataset,
+) -> CompressionTestPathConfig:
+    """
+    Creates per-module test paths for the given dataset.
+
+    :param integration_test_path_config:
+    :param dataset:
+    :return: The created path configuration.
+    """
+    return CompressionTestPathConfig(
+        test_name=f"clpp-{dataset.dataset_name}",
+        logs_source_path=dataset.logs_path,
+        integration_test_path_config=integration_test_path_config,
+    )
+
+
 @pytest.fixture(scope="module", name="clpp_test_paths")
 def clpp_test_paths_fixture(
     integration_test_path_config: IntegrationTestPathConfig,
     json_multifile: SampleDataset,
 ) -> Iterator[CompressionTestPathConfig]:
     """
-    Provides per-module test paths for clp+ tests and cleans up outputs on teardown.
+    Provides test paths for clp+ tests on the `json_multifile` dataset and cleans up outputs on
+    teardown.
 
     :param integration_test_path_config:
     :param json_multifile:
     :return: An iterator yielding the path configuration.
     """
-    test_paths = CompressionTestPathConfig(
-        test_name=f"clpp-{json_multifile.dataset_name}",
-        logs_source_path=json_multifile.logs_path,
-        integration_test_path_config=integration_test_path_config,
-    )
+    test_paths = _make_test_paths(integration_test_path_config, json_multifile)
     test_paths.clear_test_outputs()
     yield test_paths
     test_paths.clear_test_outputs()
+
+
+@pytest.fixture(scope="module", name="clpp_synthetic_test_paths")
+def clpp_synthetic_test_paths_fixture(
+    integration_test_path_config: IntegrationTestPathConfig,
+    json_clpp_synthetic: SampleDataset,
+) -> Iterator[CompressionTestPathConfig]:
+    """
+    Provides test paths for clp+ tests on the `json_clpp_synthetic` dataset and cleans up outputs
+    on teardown.
+
+    :param integration_test_path_config:
+    :param json_clpp_synthetic:
+    :return: An iterator yielding the path configuration.
+    """
+    test_paths = _make_test_paths(integration_test_path_config, json_clpp_synthetic)
+    test_paths.clear_test_outputs()
+    yield test_paths
+    test_paths.clear_test_outputs()
+
+
+def _compress_dataset_with_clpp(
+    clp_core_path_config: ClpCorePathConfig,
+    integration_test_path_config: IntegrationTestPathConfig,
+    dataset: SampleDataset,
+    compression_dir: Path,
+) -> None:
+    """
+    Compresses the given dataset with clp+ into `compression_dir`.
+
+    :param clp_core_path_config:
+    :param integration_test_path_config: Used to resolve the parsing spec path relative to the
+    repository root.
+    :param dataset:
+    :param compression_dir:
+    """
+    parsing_spec_path = (
+        integration_test_path_config.integration_tests_project_root.parent
+        / "components/package-template/src/etc/parsing-spec.template.txt"
+    )
+    if not parsing_spec_path.is_file():
+        pytest.fail(f"Parsing specification not found: '{parsing_spec_path}'")
+
+    timestamp_key = dataset.metadata.timestamp_key
+    if timestamp_key is None:
+        pytest.fail(f"The `{dataset.dataset_name}` dataset must define a `timestamp_key`.")
+
+    compression_cmd = [
+        str(clp_core_path_config.clp_s_binary_path),
+        "c",
+        "--experimental",
+        "--timestamp-key",
+        timestamp_key,
+        f"--parsing-specification={parsing_spec_path}",
+        str(compression_dir),
+        str(dataset.logs_path),
+    ]
+    compression_action = ClpAction.from_cmd(compression_cmd)
+    compression_result = compression_action.verify_returncode()
+    assert compression_result, compression_result.failure_message
 
 
 @pytest.fixture(scope="module", name="clpp_archive")
@@ -136,41 +250,48 @@ def clpp_archive_fixture(
     clpp_test_paths: CompressionTestPathConfig,
 ) -> Path:
     """
-    Compresses the `json_multifile` dataset once with clp+, shared by all tests in this module.
+    Compresses the `json_multifile` dataset with clp+; the module-scoped archive is shared by the
+    tests that request this fixture.
 
     :param clp_core_path_config:
-    :param integration_test_path_config: Used to resolve the parsing spec path relative to the
-    repository root.
+    :param integration_test_path_config:
     :param json_multifile:
     :param clpp_test_paths:
     :return: The path to the compressed archive directory.
     """
-    parsing_spec_path = (
-        integration_test_path_config.integration_tests_project_root.parent
-        / "components/package-template/src/etc/parsing-spec.template.txt"
+    _compress_dataset_with_clpp(
+        clp_core_path_config,
+        integration_test_path_config,
+        json_multifile,
+        clpp_test_paths.compression_dir,
     )
-    if not parsing_spec_path.is_file():
-        pytest.fail(f"Parsing specification not found: '{parsing_spec_path}'")
-
-    timestamp_key = json_multifile.metadata.timestamp_key
-    if timestamp_key is None:
-        pytest.fail("The `json_multifile` dataset must define a `timestamp_key`.")
-
-    compression_cmd = [
-        str(clp_core_path_config.clp_s_binary_path),
-        "c",
-        "--experimental",
-        "--timestamp-key",
-        timestamp_key,
-        f"--parsing-specification={parsing_spec_path}",
-        str(clpp_test_paths.compression_dir),
-        str(clpp_test_paths.logs_source_path),
-    ]
-    compression_action = ClpAction.from_cmd(compression_cmd)
-    compression_result = compression_action.verify_returncode()
-    assert compression_result, compression_result.failure_message
-
     return clpp_test_paths.compression_dir
+
+
+@pytest.fixture(scope="module", name="clpp_synthetic_archive")
+def clpp_synthetic_archive_fixture(
+    clp_core_path_config: ClpCorePathConfig,
+    integration_test_path_config: IntegrationTestPathConfig,
+    json_clpp_synthetic: SampleDataset,
+    clpp_synthetic_test_paths: CompressionTestPathConfig,
+) -> Path:
+    """
+    Compresses the `json_clpp_synthetic` dataset with clp+; the module-scoped archive is shared by
+    the tests that request this fixture.
+
+    :param clp_core_path_config:
+    :param integration_test_path_config:
+    :param json_clpp_synthetic:
+    :param clpp_synthetic_test_paths:
+    :return: The path to the compressed archive directory.
+    """
+    _compress_dataset_with_clpp(
+        clp_core_path_config,
+        integration_test_path_config,
+        json_clpp_synthetic,
+        clpp_synthetic_test_paths.compression_dir,
+    )
+    return clpp_synthetic_test_paths.compression_dir
 
 
 @pytest.mark.clpp
@@ -215,97 +336,56 @@ def test_clpp_roundtrip(
     )
 
 
-@pytest.mark.clpp
-def test_clpp_search_leaf(
-    clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
-) -> None:
-    """
-    Validates the search result of a leaf rule query.
-
-    :param clp_core_path_config:
-    :param clpp_archive:
-    """
-    query = _InflightMatch.query
-    expected_count = 1
-    expected_message = _InflightMatch.text
-
-    results = _search(clp_core_path_config, clpp_archive, query)
-    assert len(results) == expected_count, (
-        f"Query '{query}' expected {expected_count} results, got {len(results)}."
-    )
-
-    actual_message = results[0]["message"]["text"]
-    assert actual_message == expected_message, (
-        f"Query '{query}' returned unexpected message.\n"
-        f"  Expected: {expected_message!r}\n"
-        f"  Actual:   {actual_message!r}"
-    )
+_DURATION_EVENT_TEXT: Final[str] = (
+    "recovery completed from [shard_store], took [13.4s]\n"
+    "    index    : files           [0] with total_size [0b], took[9.5s]\n"
+    "             : recovered_files [0] with total_size [0b]\n"
+    "             : reusing_files   [0] with total_size [0b]\n"
+    "    verify_index    : took [0s], check_index [0s]\n"
+    "    translog : number_of_operations [0], took [3.7s]"
+)
 
 
 @pytest.mark.clpp
-@pytest.mark.clpp_decomposition
-@_requires_decomposition
-def test_clpp_search_parent_rule(
+@pytest.mark.parametrize(
+    ("query", "expected_text"),
+    [
+        pytest.param(_InflightMatch.query, _InflightMatch.text, id="leaf_rule"),
+        pytest.param(
+            'message.duration: "13.4s"',
+            _DURATION_EVENT_TEXT,
+            id="parent_rule",
+            marks=[pytest.mark.clpp_decomposition, _requires_decomposition],
+        ),
+        pytest.param(
+            'message: "*Adjusted breaker*"',
+            "[inflight_requests] Adjusted breaker by [0] bytes, now [0]",
+            id="full_message",
+            marks=[pytest.mark.clpp_decomposition, _requires_decomposition],
+        ),
+    ],
+)
+def test_clpp_search_single_message(
     clp_core_path_config: ClpCorePathConfig,
     clpp_archive: Path,
+    query: str,
+    expected_text: str,
 ) -> None:
     """
-    Validates the search result of a parent rule query.
+    Validates the search result of a query that matches exactly one log event.
 
     :param clp_core_path_config:
     :param clpp_archive:
+    :param query: The query expected to match exactly one event.
+    :param expected_text: The expected reconstructed text of the event's message.
     """
-    query = 'message.duration: "13.4s"'
-    expected_count = 1
-    expected_message = (
-        "recovery completed from [shard_store], took [13.4s]\n"
-        "    index    : files           [0] with total_size [0b], took[9.5s]\n"
-        "             : recovered_files [0] with total_size [0b]\n"
-        "             : reusing_files   [0] with total_size [0b]\n"
-        "    verify_index    : took [0s], check_index [0s]\n"
-        "    translog : number_of_operations [0], took [3.7s]"
-    )
-
     results = _search(clp_core_path_config, clpp_archive, query)
-    assert len(results) == expected_count, (
-        f"Query '{query}' expected {expected_count} results, got {len(results)}."
-    )
+    assert len(results) == 1, f"Query '{query}' expected 1 result, got {len(results)}."
 
     actual_message = results[0]["message"]["text"]
-    assert actual_message == expected_message, (
+    assert actual_message == expected_text, (
         f"Query '{query}' returned unexpected message.\n"
-        f"  Expected: {expected_message!r}\n"
-        f"  Actual:   {actual_message!r}"
-    )
-
-
-@pytest.mark.clpp
-@pytest.mark.clpp_decomposition
-@_requires_decomposition
-def test_clpp_search_full_message(
-    clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
-) -> None:
-    """
-    Validates the search result of a wildcard full message query.
-
-    :param clp_core_path_config:
-    :param clpp_archive:
-    """
-    query = 'message: "*Adjusted breaker*"'
-    expected_count = 1
-    expected_message = "[inflight_requests] Adjusted breaker by [0] bytes, now [0]"
-
-    results = _search(clp_core_path_config, clpp_archive, query)
-    assert len(results) == expected_count, (
-        f"Query '{query}' expected {expected_count} results, got {len(results)}."
-    )
-
-    actual_message = results[0]["message"]["text"]
-    assert actual_message == expected_message, (
-        f"Query '{query}' returned unexpected message.\n"
-        f"  Expected: {expected_message!r}\n"
+        f"  Expected: {expected_text!r}\n"
         f"  Actual:   {actual_message!r}"
     )
 
@@ -329,73 +409,66 @@ def test_clpp_search_no_match(
     assert len(results) == 0, f"Query '{query}' expected 0 results, got {len(results)}."
 
 
-@pytest.mark.clpp
-@pytest.mark.clpp_decomposition
-@_requires_decomposition
-def test_clpp_search_negated_full_message(
-    clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
-) -> None:
+class _NegationCase(NamedTuple):
     """
-    Validates that a negated full message query excludes exactly the positive matches.
-
-    :param clp_core_path_config:
-    :param clpp_archive:
+    A query's negation results are the results of `scope_query` minus the events matching the
+    positive query.
     """
-    total_count = len(_search(clp_core_path_config, clpp_archive, "message: *"))
-    query = 'not message: "*Adjusted breaker*"'
-    excluded_message = "[inflight_requests] Adjusted breaker by [0] bytes, now [0]"
 
-    results = _search(clp_core_path_config, clpp_archive, query)
-    assert len(results) == total_count - 1, (
-        f"Query '{query}' expected {total_count - 1} results, got {len(results)}."
-    )
-    assert all(result["message"]["text"] != excluded_message for result in results), (
-        f"Query '{query}' returned the excluded message {excluded_message!r}."
-    )
+    query: str  # The positive query being negated.
+    scope_query: str  # The query scoping the negation (the events the column belongs to).
+    matched_count: int  # The number of events the positive query matches.
+    excluded_text: str | None = None  # A message text the negated query must not return.
 
 
 @pytest.mark.clpp
 @pytest.mark.clpp_decomposition
 @_requires_decomposition
-def test_clpp_search_negated_parent_rule(
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param(
+            _NegationCase(
+                'message: "*Adjusted breaker*"',
+                "message: *",
+                1,
+                "[inflight_requests] Adjusted breaker by [0] bytes, now [0]",
+            ),
+            id="full_message",
+        ),
+        pytest.param(
+            _NegationCase('message.duration: "13.4s"', "message.duration: *", 1),
+            id="parent_rule",
+        ),
+        pytest.param(
+            _NegationCase('message: "*ZZZ_NO_SUCH_TOKEN*"', "message: *", 0),
+            id="no_match",
+        ),
+    ],
+)
+def test_clpp_search_negated(
     clp_core_path_config: ClpCorePathConfig,
     clpp_archive: Path,
+    case: _NegationCase,
 ) -> None:
     """
-    Validates that a negated parent rule query is scoped to the events having the rule.
+    Validates that a negated query is scoped to the events the column belongs to, excluding exactly
+    the events matching the positive query.
 
     :param clp_core_path_config:
     :param clpp_archive:
+    :param case:
     """
-    with_rule_count = len(_search(clp_core_path_config, clpp_archive, "message.duration: *"))
-    query = 'not message.duration: "13.4s"'
-
-    results = _search(clp_core_path_config, clpp_archive, query)
-    assert len(results) == with_rule_count - 1, (
-        f"Query '{query}' expected {with_rule_count - 1} results, got {len(results)}."
+    total_count = len(_search(clp_core_path_config, clpp_archive, case.scope_query))
+    results = _search(clp_core_path_config, clpp_archive, f"not {case.query}")
+    assert len(results) == total_count - case.matched_count, (
+        f"Negated query of '{case.query}' expected {total_count - case.matched_count} results,"
+        f" got {len(results)}."
     )
-
-
-@pytest.mark.clpp
-@pytest.mark.clpp_decomposition
-@_requires_decomposition
-def test_clpp_search_negated_no_match(
-    clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
-) -> None:
-    """
-    Validates that negating a query matching nothing returns every event having the column.
-
-    :param clp_core_path_config:
-    :param clpp_archive:
-    """
-    total_count = len(_search(clp_core_path_config, clpp_archive, "message: *"))
-    query = 'not message: "*ZZZ_NO_SUCH_TOKEN*"'
-
-    results = _search(clp_core_path_config, clpp_archive, query)
-    assert len(results) == total_count, (
-        f"Query '{query}' expected {total_count} results, got {len(results)}."
+    if case.excluded_text is None:
+        return
+    assert all(result["message"]["text"] != case.excluded_text for result in results), (
+        f"Query 'not {case.query}' returned the excluded message {case.excluded_text!r}."
     )
 
 
@@ -509,39 +582,45 @@ def test_clpp_search_occurrence_precision(
         ),
         pytest.param(
             ["message.key_value"],
-            {"key_value": _InflightMatch.project_matches(["text"])},
+            {"key_value": _project_matches(_InflightMatch.matches, ["text"])},
             id="parent_rule",
         ),
         pytest.param(
             ["message.key_value.key"],
-            {"key_value": _InflightMatch.project_matches(["key"])},
+            {"key_value": _project_matches(_InflightMatch.matches, ["key"])},
             id="leaf_only",
         ),
         pytest.param(
             ["message.key_value", "message.key_value.int_value"],
-            {"key_value": _InflightMatch.project_matches(["text", "int_value"])},
+            {"key_value": _project_matches(_InflightMatch.matches, ["text", "int_value"])},
             id="combined",
         ),
         pytest.param(
             ["shape(message.key_value)"],
-            {"key_value": _InflightMatch.project_matches(["shape"])},
+            {"key_value": _project_matches(_InflightMatch.matches, ["shape"])},
             id="shape_parent_rule",
         ),
         pytest.param(
             ["decompose(message.key_value)"],
-            {"key_value": _InflightMatch.project_matches(["shape", "key", "int_value"])},
+            {"key_value": _project_matches(_InflightMatch.matches, ["shape", "key", "int_value"])},
             id="decompose_parent_rule",
         ),
         pytest.param(
             ["message.key_value", "decompose(message.key_value)"],
-            {"key_value": _InflightMatch.project_matches(["text", "shape", "key", "int_value"])},
+            {
+                "key_value": _project_matches(
+                    _InflightMatch.matches, ["text", "shape", "key", "int_value"]
+                )
+            },
             id="parent_rule_decompose",
         ),
         pytest.param(
             ["message", "decompose(message.key_value)"],
             {
                 "text": _InflightMatch.text,
-                "key_value": _InflightMatch.project_matches(["shape", "key", "int_value"]),
+                "key_value": _project_matches(
+                    _InflightMatch.matches, ["shape", "key", "int_value"]
+                ),
             },
             id="message_decompose_parent_rule",
         ),
@@ -591,7 +670,8 @@ def test_clpp_projection_error(
 
     :param clp_core_path_config:
     :param clpp_archive:
-    :param projection: Field name of a leaf rule match.
+    :param projection: Column specifiers applying `shape()`/`decompose()` to a leaf column, passed
+        via `--projection`.
     """
     search_cmd = _build_search_cmd(
         clp_core_path_config, clpp_archive, _InflightMatch.query, projection
@@ -609,46 +689,93 @@ def test_clpp_projection_error(
 
 
 @pytest.mark.clpp
-def test_clpp_encoding_int(
+@pytest.mark.parametrize(
+    ("projection", "expected_message"),
+    [
+        pytest.param(
+            ["message.key_value"],
+            {"key_value": _project_matches(_MixedKvMatch.matches, ["text"])},
+            id="parent_rule_text",
+        ),
+        pytest.param(
+            ["shape(message.key_value)"],
+            {"key_value": _project_matches(_MixedKvMatch.matches, ["shape"])},
+            id="parent_rule_shape",
+        ),
+        pytest.param(
+            ["decompose(message.key_value)"],
+            {"key_value": _MixedKvMatch.decomposed_matches},
+            id="parent_rule_decompose",
+        ),
+        pytest.param(
+            ["message", "message.key_value"],
+            {
+                "text": _MixedKvMatch.text,
+                "key_value": _project_matches(_MixedKvMatch.matches, ["text"]),
+            },
+            id="message_and_parent_rule_text",
+        ),
+    ],
+)
+def test_clpp_projection_repeated_parent_rule(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_synthetic_archive: Path,
+    projection: list[str],
+    expected_message: Any,
 ) -> None:
     """
-    Validates that integer values are encoded as numeric columns by using > and < queries.
+    Validates that when one log event contains multiple occurrences of the same parent rule with
+    different shapes, each occurrence is emitted with its own text, shape, and leaf values.
 
     :param clp_core_path_config:
-    :param clpp_archive:
+    :param clpp_synthetic_archive:
+    :param projection: Column specifiers to pass to `--projection`.
+    :param expected_message: Expected JSON `message` object depending on the projection.
     """
-    query = (
-        f"message.{_DiskMatch.int_rule_name} > {_DiskMatch.int_value - 1}"
-        f" and message.{_DiskMatch.int_rule_name} < {_DiskMatch.int_value + 1}"
+    results = _search(clp_core_path_config, clpp_synthetic_archive, _MixedKvMatch.query, projection)
+    assert len(results) == _MixedKvMatch.result_count, (
+        f"Query '{_MixedKvMatch.query}' expected {_MixedKvMatch.result_count} results,"
+        f" got {len(results)}."
     )
-    results = _search(
-        clp_core_path_config,
-        clpp_archive,
-        query,
-    )
-    assert len(results) == _DiskMatch.result_count, (
-        f"Query '{query}' expected {_DiskMatch.result_count} results, got {len(results)}."
+
+    assert results[0].get("message") == expected_message, (
+        f"Projection {projection} produced unexpected output.\n"
+        f"  Expected: {expected_message!r}\n"
+        f"  Actual:   {results[0].get('message')!r}"
     )
 
 
 @pytest.mark.clpp
-def test_clpp_encoding_float(
+@pytest.mark.parametrize(
+    ("rule_name", "lower_bound", "upper_bound"),
+    [
+        pytest.param(
+            _DiskMatch.int_rule_name,
+            _DiskMatch.int_value - 1,
+            _DiskMatch.int_value + 1,
+            id="int",
+        ),
+        pytest.param(_DiskMatch.float_rule_name, 26.05, 26.06, id="float"),
+    ],
+)
+def test_clpp_encoding_range_query(
     clp_core_path_config: ClpCorePathConfig,
     clpp_archive: Path,
+    rule_name: str,
+    lower_bound: float,
+    upper_bound: float,
 ) -> None:
     """
-    Validates that float values are encoded as numeric columns by using a range query with
-    fractional thresholds.
+    Validates that numeric values are encoded as numeric columns by using a range query (`>` and
+    `<`) around the encoded value.
 
     :param clp_core_path_config:
     :param clpp_archive:
+    :param rule_name: The leaf rule whose value column is queried.
+    :param lower_bound: Exclusive lower bound of the range query.
+    :param upper_bound: Exclusive upper bound of the range query.
     """
-    query = (
-        f"message.{_DiskMatch.float_rule_name} > 26.05"
-        f" and message.{_DiskMatch.float_rule_name} < 26.06"
-    )
+    query = f"message.{rule_name} > {lower_bound} and message.{rule_name} < {upper_bound}"
     results = _search(clp_core_path_config, clpp_archive, query)
     assert len(results) == _DiskMatch.result_count, (
         f"Query '{query}' expected {_DiskMatch.result_count} results, got {len(results)}."

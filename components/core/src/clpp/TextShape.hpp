@@ -256,28 +256,38 @@ public:
     }
 
     /**
-     * Return a parent rule shape narrowed from this shape.
+     * Narrows this shape to a single occurrence of a parent rule.
+     *
+     * Occurrences of `parent_rule_column_name` are considered in document order (the order in which
+     * `parent_rule_shapes` collects them), so the i-th occurrence here corresponds to the i-th
+     * occurrence of the rule in any schema walk of the same shape.
      *
      * @param parent_rule_shapes All parent rule shapes contained in this shape.
      * @param parent_rule_column_name The qualified name of the parent rule to narrow to.
-     * @return A TextShape view of the parent rule, or an empty view on failure.
+     * @param occurrence_idx The index of the parent rule occurrence to narrow to.
+     * @return A TextShape view of the parent rule occurrence, or an empty view on failure
+     * (including when fewer than `occurrence_idx + 1` occurrences exist).
      */
     [[nodiscard]] auto narrow_to_parent_rule(
             clpp::ParentRuleShapes const& parent_rule_shapes,
-            std::string_view parent_rule_column_name
+            std::string_view parent_rule_column_name,
+            size_t occurrence_idx
     ) const -> TextShape<std::string_view> {
         auto const log_shape{view()};
+        size_t seen{0};
         for (auto const& match : parent_rule_shapes.get()) {
-            if (match.m_name == parent_rule_column_name) {
-                if (match.m_start < log_shape.size()
-                    && match.m_start + match.m_size <= log_shape.size())
-                {
-                    return TextShape<std::string_view>{
-                            log_shape.substr(match.m_start, match.m_size)
-                    };
-                }
-                return {};
+            if (match.m_name != parent_rule_column_name) {
+                continue;
             }
+            if (seen++ != occurrence_idx) {
+                continue;
+            }
+            if (match.m_start < log_shape.size()
+                && match.m_start + match.m_size <= log_shape.size())
+            {
+                return TextShape<std::string_view>{log_shape.substr(match.m_start, match.m_size)};
+            }
+            return {};
         }
         return {};
     }

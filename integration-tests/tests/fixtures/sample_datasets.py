@@ -19,6 +19,21 @@ def json_multifile(
 
 
 @pytest.fixture(scope="session")
+def json_clpp_synthetic(
+    integration_test_path_config: IntegrationTestPathConfig,
+) -> SampleDataset:
+    """
+    Returns an object corresponding to the `json_clpp_synthetic` sample dataset.
+
+    This dataset holds synthetic structured log events exercising clp+ cases that do not show up
+    naturally in the captured datasets (e.g. repeated parent rules with different shapes).
+    """
+    return SampleDataset(
+        dataset_root_dir=integration_test_path_config.test_data_dir / "json_clpp_synthetic",
+    )
+
+
+@pytest.fixture(scope="session")
 def json_multimsg(
     integration_test_path_config: IntegrationTestPathConfig,
 ) -> SampleDataset:

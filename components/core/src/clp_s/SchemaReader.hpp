@@ -409,7 +409,8 @@ private:
      * columns.
      * @var entries The direct leaf entries collected from this sub-schema.
      * @var parent_rule_insertion_order ParentRule node IDs in first-seen order.
-     * @var parent_rule_occurrences Maps each ParentRule node ID to all of its occurrences.
+     * @var parent_rule_occurrences Maps each ParentRule node ID to its occurrences, in document
+     * order.
      */
     struct SchemaSpanContents {
         size_t next_column_reader_idx{0};
@@ -518,6 +519,8 @@ private:
      * or empty to reconstruct the full LogMessage shape.
      * @param start_column_reader_idx Index in `m_columns`.
      * @param sub_schema The sub-schema to iterate for column values.
+     * @param occurrence_idx The index of the `parent_rule_column_name` occurrence to narrow to
+     * (ignored when `parent_rule_column_name` is empty).
      * @return A result containing the fully-compiled shape or an error code indicating the failure:
      * - Forwards `segments` return values.
      */
@@ -525,7 +528,8 @@ private:
             clpp::log_shape_id_t log_shape_id,
             std::string_view parent_rule_column_name,
             size_t start_column_reader_idx,
-            SchemaView sub_schema
+            SchemaView sub_schema,
+            size_t occurrence_idx
     ) -> ystdlib::error_handling::Result<CompiledShape>;
 
     /**
@@ -562,15 +566,18 @@ private:
             -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Emits the shape substring for a specific ParentRule within a LogMessage's shape.
+     * Emits the shape substring for a specific occurrence of a ParentRule within a LogMessage's
+     * shape.
      * @param log_shape_id The log shape ID.
      * @param parent_rule_column_name The column name of the ParentRule.
+     * @param occurrence_idx The index of the ParentRule occurrence to emit the shape of.
      * @return A void result on success, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if the shape dictionary or parent rule shapes are not available.
      */
     [[nodiscard]] auto emit_parent_rule_shape_substring(
             clpp::log_shape_id_t log_shape_id,
-            std::string_view parent_rule_column_name
+            std::string_view parent_rule_column_name,
+            size_t occurrence_idx
     ) -> ystdlib::error_handling::Result<void>;
 
     /**
