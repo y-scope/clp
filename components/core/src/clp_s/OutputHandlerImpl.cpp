@@ -30,16 +30,17 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
-void FileOutputHandler::write(
+auto FileOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
         string_view archive_id,
         int64_t log_event_idx
-) {
+) -> ErrorCode {
     static constexpr string_view cOrigFilePathPlaceholder{""};
     msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
             src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
     msgpack::pack(m_file_writer, src);
+    return ErrorCodeSuccess;
 }
 
 NetworkOutputHandler::NetworkOutputHandler(
@@ -55,12 +56,12 @@ NetworkOutputHandler::NetworkOutputHandler(
     }
 }
 
-void NetworkOutputHandler::write(
+auto NetworkOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
         string_view archive_id,
         int64_t log_event_idx
-) {
+) -> ErrorCode {
     static constexpr string_view cOrigFilePathPlaceholder{""};
     msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
             src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
@@ -70,13 +71,14 @@ void NetworkOutputHandler::write(
     if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
         throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
     }
+    return ErrorCodeSuccess;
 }
 
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         string_view uri,
         string_view collection,
         uint64_t batch_size,
-        uint64_t max_num_results,
+        std::optional<uint64_t> max_num_results,
         string_view dataset,
         bool should_output_timestamp
 )
@@ -90,76 +92,83 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
 }
 
 ErrorCode ResultsCacheOutputHandler::finish() {
-    size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
         m_latest_results.pop();
-
-        try {
-            m_results.emplace_back(
-                    std::move(
-                            bsoncxx::builder::basic::make_document(
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cId,
-                                            bsoncxx::builder::basic::make_document(
-                                                    bsoncxx::builder::basic::kvp(
-                                                            constants::results_cache::search::
-                                                                    cArchiveId,
-                                                            std::move(result.archive_id)
-                                                    ),
-                                                    bsoncxx::builder::basic::kvp(
-                                                            constants::results_cache::search::
-                                                                    cLogEventIdx,
-                                                            result.log_event_idx
-                                                    )
-                                            )
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cOrigFilePath,
-                                            std::move(result.original_path)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cMessage,
-                                            std::move(result.message)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cTimestamp,
-                                            result.timestamp
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            std::string{constants::results_cache::search::cDataset},
-                                            std::move(result.dataset)
-                                    )
-                            )
-                    )
-            );
-        } catch (mongocxx::exception const& e) {
-            SPDLOG_ERROR("Failed to build search result - {}", e.what());
-            return ErrorCode::ErrorCodeFailureDbBulkWrite;
-        }
-
-        count++;
-        if (count == m_batch_size) {
-            if (false == insert_results()) {
-                return ErrorCode::ErrorCodeFailureDbBulkWrite;
-            }
-            count = 0;
+        if (auto const error_code{append_result(std::move(result))}; ErrorCodeSuccess != error_code)
+        {
+            return error_code;
         }
     }
 
     if (false == m_results.empty() && false == insert_results()) {
+        return ErrorCodeFailureDbBulkWrite;
+    }
+    return ErrorCodeSuccess;
+}
+
+auto ResultsCacheOutputHandler::append_result(QueryResult result) -> ErrorCode {
+    try {
+        m_results.emplace_back(
+                std::move(
+                        bsoncxx::builder::basic::make_document(
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cId,
+                                        bsoncxx::builder::basic::make_document(
+                                                bsoncxx::builder::basic::kvp(
+                                                        constants::results_cache::search::
+                                                                cArchiveId,
+                                                        std::move(result.archive_id)
+                                                ),
+                                                bsoncxx::builder::basic::kvp(
+                                                        constants::results_cache::search::
+                                                                cLogEventIdx,
+                                                        result.log_event_idx
+                                                )
+                                        )
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cOrigFilePath,
+                                        std::move(result.original_path)
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cMessage,
+                                        std::move(result.message)
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cTimestamp,
+                                        result.timestamp
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        std::string{constants::results_cache::search::cDataset},
+                                        std::move(result.dataset)
+                                )
+                        )
+                )
+        );
+    } catch (mongocxx::exception const& e) {
+        SPDLOG_ERROR("Failed to build search result - {}", e.what());
+        return ErrorCodeFailureDbBulkWrite;
+    }
+
+    if (m_results.size() >= m_batch_size && false == insert_results()) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
     return ErrorCode::ErrorCodeSuccess;
 }
 
-void ResultsCacheOutputHandler::write(
+auto ResultsCacheOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
         string_view archive_id,
         int64_t log_event_idx
-) {
-    if (m_latest_results.size() < m_max_num_results) {
+) -> ErrorCode {
+    if (false == m_max_num_results.has_value()) {
+        return append_result(
+                QueryResult{string_view{}, message, timestamp, archive_id, log_event_idx, m_dataset}
+        );
+    }
+    if (m_latest_results.size() < m_max_num_results.value()) {
         m_latest_results.emplace(
                 std::make_unique<QueryResult>(
                         string_view{},
@@ -183,6 +192,7 @@ void ResultsCacheOutputHandler::write(
                 )
         );
     }
+    return ErrorCode::ErrorCodeSuccess;
 }
 
 auto ResultsCacheOutputHandler::insert_results() -> bool {
@@ -208,8 +218,9 @@ CountReducerOutputHandler::CountReducerOutputHandler(int reducer_socket_fd)
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
-auto CountReducerOutputHandler::write(string_view message) -> void {
+auto CountReducerOutputHandler::write(string_view message) -> ErrorCode {
     m_pipeline.push_record(reducer::EmptyRecord{});
+    return ErrorCode::ErrorCodeSuccess;
 }
 
 auto CountReducerOutputHandler::finish() -> ErrorCode {

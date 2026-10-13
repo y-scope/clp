@@ -119,13 +119,31 @@ bool Output::filter() {
             {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
-                m_output_handler->write(message, timestamp, archive_id, log_event_idx);
+                if (auto const error_code{
+                            m_output_handler->write(message, timestamp, archive_id, log_event_idx)
+                    };
+                    ErrorCodeSuccess != error_code)
+                {
+                    SPDLOG_ERROR(
+                            "Failed to write search result, error={}.",
+                            clp::enum_to_underlying_type(error_code)
+                    );
+                    return false;
+                }
             }
         } else {
             while (reader.get_next_message(message, filter)) {
                 schema_has_match = true;
                 ++m_result_metrics.num_archive_records_matching_query;
-                m_output_handler->write(message);
+                if (auto const error_code{m_output_handler->write(message)};
+                    ErrorCodeSuccess != error_code)
+                {
+                    SPDLOG_ERROR(
+                            "Failed to write search result, error={}.",
+                            clp::enum_to_underlying_type(error_code)
+                    );
+                    return false;
+                }
             }
         }
         if (schema_has_match) {
