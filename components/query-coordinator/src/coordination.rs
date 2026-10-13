@@ -63,7 +63,7 @@ pub struct Coordinator {
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
-    job_handler_permits: Arc<Semaphore>,
+    job_handler_sem: Arc<Semaphore>,
 }
 
 impl Coordinator {
@@ -159,12 +159,64 @@ impl Coordinator {
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
             cancellation_token: cancellation_token.clone(),
-            job_handler_permits: Arc::new(Semaphore::new(max_concurrent_jobs)),
+            job_handler_sem: Arc::new(Semaphore::new(max_concurrent_jobs)),
         };
 
         coordinator.recover_submitted_jobs().await?;
 
         Ok((coordinator, cancellation_token))
+    }
+
+    /// Spawns a detached handle to drive each query job that a previous coordinator instance had
+    /// already submitted to Spider.
+    ///
+    /// A job whose handle cannot be constructed is logged and skipped.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
+    async fn recover_submitted_jobs(&self) -> Result<(), Error> {
+        // NOTE: The current implementation does not enforce concurrency limits for recovered jobs
+        // since they were already submitted to Spider. See #2472.
+        for SubmittedJob {
+            id: job_id,
+            spider_job_id,
+            search_job_config,
+            job_creation_timestamp_millisecs,
+        } in self.fetch_submitted_running_jobs().await?
+        {
+            tracing::info!(
+                job_id = % job_id,
+                spider_job_id = % spider_job_id,
+                "Recovering a previously submitted job."
+            );
+            let Ok(job_handle) = QueryJobHandle::new(
+                self.job_handle_context.clone(),
+                job_id,
+                self.spider_client.clone(),
+                self.resource_group_id,
+                search_job_config,
+                self.output_handle.clone(),
+                job_creation_timestamp_millisecs,
+            )
+            .inspect_err(|e| {
+                tracing::error!(
+                    error = % e,
+                    job_id = % job_id,
+                    "Failed to create the query job handle for recovery. Skipping."
+                );
+            }) else {
+                continue;
+            };
+            tokio::spawn(async move {
+                // `QueryJobHandle::recover` already logs and persists its own failures.
+                let _ = job_handle.recover(spider_job_id).await;
+            });
+        }
+
+        Ok(())
     }
 
     /// Runs the coordinator's poll loop until cancelled.
@@ -215,65 +267,6 @@ impl Coordinator {
         Ok(())
     }
 
-    /// Spawns a detached handle to drive each query job that a previous coordinator instance had
-    /// already submitted to Spider.
-    ///
-    /// A job whose handle cannot be constructed is marked [`QueryJobStatus::Failed`] and skipped,
-    /// since nothing else would ever drive it to a terminal status.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
-    async fn recover_submitted_jobs(&self) -> Result<(), Error> {
-        // NOTE: The current implementation does not enforce concurrency limits for recovered jobs
-        // since they were already submitted to Spider. See #2472.
-        for SubmittedJob {
-            id: job_id,
-            spider_job_id,
-            search_job_config,
-            job_creation_timestamp_millisecs,
-        } in self.fetch_submitted_running_jobs().await?
-        {
-            tracing::info!(
-                job_id = % job_id,
-                spider_job_id = % spider_job_id,
-                "Recovering a previously submitted job."
-            );
-            let job_handle = match QueryJobHandle::new(
-                self.job_handle_context.clone(),
-                job_id,
-                self.spider_client.clone(),
-                self.resource_group_id,
-                search_job_config,
-                self.output_handle.clone(),
-                job_creation_timestamp_millisecs,
-            ) {
-                Ok(job_handle) => job_handle,
-                Err(e) => {
-                    tracing::error!(
-                        error = % e,
-                        job_id = % job_id,
-                        "Failed to create the query job handle for recovery. Skipping."
-                    );
-                    self.mark_job_failed(
-                        job_id,
-                        &format!("Failed to create the query job handle for recovery: {e}"),
-                    )
-                    .await;
-                    continue;
-                }
-            };
-            tokio::spawn(async move {
-                // `QueryJobHandle::recover` already logs and persists its own failures.
-                let _ = job_handle.recover(spider_job_id).await;
-            });
-        }
-
-        Ok(())
-    }
-
     /// Marks the query job identified by `job_id` as [`QueryJobStatus::Failed`].
     ///
     /// This is a best-effort update; if it fails, the error is logged and otherwise ignored.
@@ -302,8 +295,8 @@ impl Coordinator {
     /// the job-handler semaphore.
     ///
     /// A job whose config cannot be deserialized is marked [`QueryJobStatus::Failed`] and skipped;
-    /// a job whose handle cannot be constructed, which includes every job config the coordinator
-    /// doesn't support, is marked failed and skipped as well.
+    /// a job whose handle cannot be constructed is marked failed and skipped as well. Aggregation
+    /// jobs are left undispatched for another scheduler.
     ///
     /// # Returns
     ///
@@ -314,13 +307,10 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::Semaphore`] if acquiring a job handler permit from `job_handler_sem` fails.
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `job_handler_permits` has been closed, which the coordinator never does.
     async fn schedule_new_jobs(&mut self) -> Result<Vec<QueryJobId>, Error> {
-        if self.job_handler_permits.available_permits() == 0 {
+        if self.job_handler_sem.available_permits() == 0 {
             return Ok(Vec::new());
         }
 
@@ -348,6 +338,14 @@ impl Coordinator {
                         continue;
                     }
                 };
+            if search_job_config.aggregation_config.is_some() {
+                tracing::info!(
+                    job_id = % job_id,
+                    "Aggregation jobs are currently not supported by `query-coordinator`. \
+                     They will be handled by `search-scheduler` instead. Skipping."
+                );
+                continue;
+            }
             tracing::info!(job_id = % job_id, "Scheduling new job.");
             let job_handle = match QueryJobHandle::new(
                 self.job_handle_context.clone(),
@@ -375,11 +373,13 @@ impl Coordinator {
             };
 
             let permit = self
-                .job_handler_permits
+                .job_handler_sem
                 .clone()
                 .acquire_owned()
                 .await
-                .expect("the job handler semaphore is never closed");
+                .map_err(|e| {
+                    Error::Semaphore(format!("failed to acquire a job handler permit: {e}"))
+                })?;
 
             tokio::spawn(async move {
                 let _permit = permit;
@@ -472,7 +472,7 @@ impl Coordinator {
                 .bind(QueryJobType::SearchOrAggregation)
                 .bind(QueryJobStatus::Pending)
                 .bind(
-                    i64::try_from(self.job_handler_permits.available_permits())
+                    i64::try_from(self.job_handler_sem.available_permits())
                         .expect("limit is bounded by Semaphore::MAX_PERMITS, which fits in i64"),
                 )
         };
@@ -531,6 +531,14 @@ impl Coordinator {
                     continue;
                 }
             };
+            if search_job_config.aggregation_config.is_some() {
+                tracing::error!(
+                    job_id = % row.id,
+                    "Aggregation jobs are not supposed to be handled by `query-coordinator` yet. \
+                     It should not have a Spider job; The database might be corrupted. Skipping."
+                );
+                continue;
+            }
             recovery_context.push(SubmittedJob {
                 id: row.id,
                 spider_job_id: row.spider_job_id,
