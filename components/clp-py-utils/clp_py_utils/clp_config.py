@@ -9,12 +9,14 @@ import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Discriminator,
     Field,
     field_validator,
     model_validator,
     PlainSerializer,
     PrivateAttr,
     StringConstraints,
+    Tag,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum, SnakeCaseStrEnum
 
@@ -802,7 +804,6 @@ class SpiderEmRegistry(BaseModel):
 
 
 class SpiderRoundRobin(BaseModel):
-    type: Literal[SpiderSchedulerPolicy.ROUND_ROBIN.value] = SpiderSchedulerPolicy.ROUND_ROBIN.value
     active_job_queue_capacity: PositiveInt | None = None
     dispatch_queue_capacity: PositiveInt | None = None
     ready_task_capacity: PositiveInt | None = None
@@ -814,9 +815,6 @@ class SpiderRoundRobin(BaseModel):
 
 
 class SpiderResourceGroupRoundRobin(BaseModel):
-    type: Literal[SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value] = (
-        SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value
-    )
     active_job_list_capacity: PositiveInt | None = None
     dispatch_queue_capacity: PositiveInt | None = None
     ready_task_capacity: PositiveInt | None = None
@@ -827,12 +825,43 @@ class SpiderResourceGroupRoundRobin(BaseModel):
     finalizing_job_expiration_timeout_sec: PositiveInt | None = None
 
 
-class SpiderScheduler(BaseModel):
+class SpiderSchedulerBase(BaseModel):
     log_level: LoggingLevelRust | None = None
-    policy: SpiderRoundRobin | SpiderResourceGroupRoundRobin = SpiderResourceGroupRoundRobin()
     connection_pool_size: PositiveInt | None = None
     stop_timeout_sec: PositiveInt | None = None
     em_registry: SpiderEmRegistry = SpiderEmRegistry()
+
+
+class SpiderRoundRobinScheduler(SpiderSchedulerBase):
+    policy: Literal[SpiderSchedulerPolicy.ROUND_ROBIN.value]
+    config: SpiderRoundRobin = SpiderRoundRobin()
+
+
+class SpiderResourceGroupRoundRobinScheduler(SpiderSchedulerBase):
+    policy: Literal[SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value] = (
+        SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value
+    )
+    config: SpiderResourceGroupRoundRobin = SpiderResourceGroupRoundRobin()
+
+
+def _get_spider_scheduler_policy(scheduler: Any) -> str:
+    """
+    :param scheduler: The raw `spider.scheduler` config, or an already-validated scheduler model.
+    :return: The scheduler's `policy`, defaulting to `resource_group_round_robin` when unset.
+    """
+    if isinstance(scheduler, dict):
+        return scheduler.get("policy", SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value)
+    return scheduler.policy
+
+
+SpiderScheduler = Annotated[
+    Annotated[SpiderRoundRobinScheduler, Tag(SpiderSchedulerPolicy.ROUND_ROBIN.value)]
+    | Annotated[
+        SpiderResourceGroupRoundRobinScheduler,
+        Tag(SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value),
+    ],
+    Discriminator(_get_spider_scheduler_policy),
+]
 
 
 class SpiderLiveness(BaseModel):
@@ -872,7 +901,7 @@ class Spider(BaseModel):
     port: Port = DEFAULT_PORT
 
     storage: SpiderStorage = SpiderStorage()
-    scheduler: SpiderScheduler = SpiderScheduler()
+    scheduler: SpiderScheduler = SpiderResourceGroupRoundRobinScheduler()
     worker: SpiderWorker = SpiderWorker()
 
     def dump_to_primitive_dict(self):

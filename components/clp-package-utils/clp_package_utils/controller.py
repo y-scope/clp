@@ -593,7 +593,7 @@ class BaseController(ABC):
         # Scheduler config
         env_vars |= {
             "SPIDER_SCHEDULER_LOG_LEVEL": scheduler.log_level,
-            "SPIDER_SCHEDULER_POLICY": scheduler.policy.type,
+            "SPIDER_SCHEDULER_POLICY": scheduler.policy,
             "SPIDER_SCHEDULER_CONNECTION_POOL_SIZE": _str_or_none(scheduler.connection_pool_size),
             "SPIDER_SCHEDULER_STOP_TIMEOUT_SEC": _str_or_none(scheduler.stop_timeout_sec),
             "SPIDER_SCHEDULER_EM_REGISTRY_DEAD_EM_CUTOFF_SEC": _str_or_none(
@@ -603,7 +603,7 @@ class BaseController(ABC):
                 scheduler.em_registry.liveness_tracking_interval_ms
             ),
         }
-        env_vars |= _get_spider_scheduler_policy_env_vars(scheduler.policy)
+        env_vars |= _get_spider_scheduler_policy_env_vars(scheduler.config)
 
         # Worker config
         env_vars |= {
@@ -1588,15 +1588,15 @@ def _get_spider_resource_group_round_robin_scheduler_env_vars(
 
 
 def _get_spider_scheduler_policy_env_vars(
-    policy: SpiderRoundRobin | SpiderResourceGroupRoundRobin,
+    config: SpiderRoundRobin | SpiderResourceGroupRoundRobin,
 ) -> EnvVarsDict:
     """
-    :param policy:
+    :param config: The selected scheduler policy's config.
     :return: Dictionary of environment variables necessary to tune the selected scheduler policy.
     """
-    if isinstance(policy, SpiderRoundRobin):
-        return _get_spider_round_robin_scheduler_env_vars(policy)
-    return _get_spider_resource_group_round_robin_scheduler_env_vars(policy)
+    if isinstance(config, SpiderRoundRobin):
+        return _get_spider_round_robin_scheduler_env_vars(config)
+    return _get_spider_resource_group_round_robin_scheduler_env_vars(config)
 
 
 def _str_or_none(value: int | pathlib.Path | None) -> str | None:
