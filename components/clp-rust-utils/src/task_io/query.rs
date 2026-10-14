@@ -29,10 +29,9 @@ pub struct ClpSQueryOption {
     /// Whether `clp-s` performs a case-insensitive search.
     pub ignore_case: bool,
 
-    /// The positive count-by-time bucket width in milliseconds.
-    ///
-    /// * When set, the query aggregates the timestamps of all log events in the archive.
-    /// * When absent, the query returns matching records without count-by-time aggregation.
+    /// The positive width, in milliseconds, of each count-by-time bucket. When set, the query
+    /// groups all matching log events in the archive into time buckets and counts the events in
+    /// each bucket, regardless of `max_num_results`.
     pub count_by_time_bucket_size_millisecs: Option<NonZeroU64>,
 }
 
