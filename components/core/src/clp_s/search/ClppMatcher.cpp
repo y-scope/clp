@@ -124,9 +124,9 @@ auto ClppMatcher::decompose_by_log_shapes(mpt_node_id_t log_message_id, std::str
     }
 
     YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
-    auto interpretations_per_shape{
+    auto interpretations_per_shape{YSTDLIB_ERROR_HANDLING_TRYX(
             clpp::decompose_by_log_shapes(*m_parsing_spec, query, log_shapes)
-    };
+    )};
     std::vector<InterpretationMatch> matches;
     matches.reserve(interpretations_per_shape.size());
     for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < interpretations_per_shape.size();
@@ -165,7 +165,9 @@ auto ClppMatcher::decompose_by_rule_name(
         std::string_view rule_name
 ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
     YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
-    auto interpretations{clpp::decompose_by_rule_name(*m_parsing_spec, query, rule_name)};
+    auto interpretations{YSTDLIB_ERROR_HANDLING_TRYX(
+            clpp::decompose_by_rule_name(*m_parsing_spec, query, rule_name)
+    )};
     std::vector<InterpretationMatch> matches;
     matches.reserve(interpretations.size());
     for (auto& interpretation : interpretations) {

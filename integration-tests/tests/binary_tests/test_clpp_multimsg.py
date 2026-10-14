@@ -33,6 +33,7 @@ _requires_decomposition = pytest.mark.skipif(
     not _DECOMPOSITION_SUPPORTED,
     reason="Requires clp-s built with -DCLP_BUILD_CLPP_DECOMPOSITION=ON",
 )
+_decomposition_marks: Final = [pytest.mark.clpp_decomposition, _requires_decomposition]
 
 
 class _MultiMessage:
@@ -163,20 +164,19 @@ def test_multimsg_roundtrip(
 
 
 @pytest.mark.clpp
-@pytest.mark.clpp_decomposition
-@_requires_decomposition
 @pytest.mark.parametrize(
     ("query", "expected_count"),
     [
-        pytest.param('message: "*alpha*"', 2, id="message_alpha"),
-        pytest.param('details: "*gamma*"', 1, id="details_gamma"),
-        pytest.param('message: "*shared*"', 1, id="message_shared"),
-        pytest.param('details: "*shared*"', 2, id="details_shared"),
+        pytest.param('message: "*alpha*"', 2, id="message_alpha", marks=_decomposition_marks),
+        pytest.param('details: "*gamma*"', 1, id="details_gamma", marks=_decomposition_marks),
+        pytest.param('message: "*shared*"', 1, id="message_shared", marks=_decomposition_marks),
+        pytest.param('details: "*shared*"', 2, id="details_shared", marks=_decomposition_marks),
         pytest.param("details: *", 4, id="details_exists"),
         pytest.param(
             'message: "*alpha*" and details: "*shared*"',
             1,
             id="cross_field_and",
+            marks=_decomposition_marks,
         ),
     ],
 )
@@ -229,8 +229,6 @@ def test_multimsg_shared_shape_disambiguation(
 
 
 @pytest.mark.clpp
-@pytest.mark.clpp_decomposition
-@_requires_decomposition
 def test_multimsg_same_parent_rule_name_both_fields(
     clp_core_path_config: ClpCorePathConfig,
     multimsg_archive: Path,
@@ -294,8 +292,6 @@ def test_multimsg_negation_scoped_to_field(
 
 
 @pytest.mark.clpp
-@pytest.mark.clpp_decomposition
-@_requires_decomposition
 @pytest.mark.parametrize(
     ("query", "expected_count"),
     [

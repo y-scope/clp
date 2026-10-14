@@ -7,27 +7,12 @@
 
 namespace clpp {
 enum class ClppErrorCodeEnum : uint8_t {
-    Success = 0,
     BadParam,
-    BadParamDbUri,
     Corrupt,
-    Errno,
-    EndOfFile,
-    FileExists,
-    FileNotFound,
-    NoMem,
-    NotInit,
-    NotReady,
-    OutOfBounds,
-    TooLong,
-    Truncated,
-    Unsupported,
-    NoAccess,
     Failure,
-    FailureMetadataCorrupted,
-    MetadataCorrupted,
-    FailureDbBulkWrite,
-    FailureNetwork
+    OutOfBounds,
+    Unsupported,
+    UnsupportedDecomposition
 };
 
 using ClppErrorCode = ystdlib::error_handling::ErrorCode<ClppErrorCodeEnum>;

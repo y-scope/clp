@@ -12,8 +12,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
+
+#include <clpp/Interpretation.hpp>
 
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
@@ -69,6 +72,18 @@ void validate_results(
         std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 );
+
+/**
+ * Runs experimental searches, asserting the decomposed queries fail with `UnsupportedDecomposition`
+ * when this build doesn't support decomposition.
+ * @param queries_and_results
+ * @param decomposed_queries_and_results
+ */
+auto search_experimental(
+        std::vector<std::pair<std::string, std::vector<int64_t>>> const& queries_and_results,
+        std::vector<std::pair<std::string, std::vector<int64_t>>> const&
+                decomposed_queries_and_results
+) -> void;
 
 auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
         -> std::filesystem::path {
@@ -212,6 +227,29 @@ void search(
 
     validate_results(results, expected_results);
 }
+
+auto search_experimental(
+        std::vector<std::pair<std::string, std::vector<int64_t>>> const& queries_and_results,
+        std::vector<std::pair<std::string, std::vector<int64_t>>> const&
+                decomposed_queries_and_results
+) -> void {
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, true, expected_results));
+    }
+
+    for (auto const& [query, expected_results] : decomposed_queries_and_results) {
+        CAPTURE(query);
+        if (clpp::supports_decomposition()) {
+            REQUIRE_NOTHROW(search(query, false, true, expected_results));
+        } else {
+            REQUIRE_THROWS_WITH(
+                    search(query, false, true, expected_results),
+                    Catch::Matchers::ContainsSubstring("-DCLP_BUILD_CLPP_DECOMPOSITION=ON")
+            );
+        }
+    }
+}
 }  // namespace
 
 TEST_CASE("clp-s-search", "[clp-s][search]") {
@@ -271,9 +309,7 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
 }
 
 TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
-    std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
-            {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
-            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(arr.b > 1000)aa", {7, 8}},
             {R"aa(var_string: *)aa", {9}},
             {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
@@ -282,7 +318,11 @@ TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
             {R"aa(msg: *)aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT msg: *)aa", {0, 7, 8, 9, 10, 11, 12, 13}},
             {R"aa(shape(msg): *)aa", {1, 2, 3, 4, 5, 6}},
-            {R"aa(NOT shape(msg): "xxx")aa", {1, 2, 3, 4, 5, 6}},
+            {R"aa(NOT shape(msg): "xxx")aa", {1, 2, 3, 4, 5, 6}}
+    };
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
+            {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
+            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT msg: "xxx")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT msg: "Msg 1*")aa", {2, 3, 4, 5, 6}},
             {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}},
@@ -304,11 +344,8 @@ TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
             )
     );
 
-    for (auto const& [query, expected_results] : queries_and_results) {
-        CAPTURE(query);
-        CAPTURE(single_file_archive);
-        REQUIRE_NOTHROW(search(query, false, true, expected_results));
-    }
+    CAPTURE(single_file_archive);
+    search_experimental(queries_and_results, decomposed_queries_and_results);
 }
 
 // Tests column resolution when a key maps to several MPT nodes of different types, at least one of
@@ -331,17 +368,19 @@ TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
 TEST_CASE("clp-s-search-experimental-mixed-type-columns", "[clp-s][search][clpp]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(msg: *)aa", {0, 1, 5}},
+            {R"aa(NOT msg: *)aa", {2, 3, 4}},
+            {R"aa(*.msg: *)aa", {0, 1, 3, 4, 5}},
+            {R"aa(NOT *.msg: *)aa", {2}},
+            {R"aa(shape(msg): *)aa", {0}},
+            {R"aa(NOT shape(msg): "xxx")aa", {0}},
+    };
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
             {R"aa(msg: 42)aa", {1}},
             {R"aa(msg: 2)aa", {5}},
             {R"aa(msg: "Msg 0*")aa", {0}},
             {R"aa(NOT msg: "Msg 0*")aa", {1, 5}},
             {R"aa(NOT msg: 42)aa", {0, 5}},
-            {R"aa(NOT msg: *)aa", {2, 3, 4}},
-            {R"aa(*.msg: *)aa", {0, 1, 3, 4, 5}},
             {R"aa(*.msg: 7)aa", {4}},
-            {R"aa(NOT *.msg: *)aa", {2}},
-            {R"aa(shape(msg): *)aa", {0}},
-            {R"aa(NOT shape(msg): "xxx")aa", {0}},
     };
     auto const single_file_archive = GENERATE(true, false);
 
@@ -359,11 +398,8 @@ TEST_CASE("clp-s-search-experimental-mixed-type-columns", "[clp-s][search][clpp]
             )
     );
 
-    for (auto const& [query, expected_results] : queries_and_results) {
-        CAPTURE(query);
-        CAPTURE(single_file_archive);
-        REQUIRE_NOTHROW(search(query, false, true, expected_results));
-    }
+    CAPTURE(single_file_archive);
+    search_experimental(queries_and_results, decomposed_queries_and_results);
 }
 
 TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {

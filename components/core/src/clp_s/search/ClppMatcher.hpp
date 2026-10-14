@@ -117,6 +117,7 @@ private:
      * @param log_message_id The `LogMessage` node to search within.
      * @return The interpretation matches, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
+     * - Forwards `clpp::decompose_by_log_shapes`'s return values.
      */
     [[nodiscard]] auto decompose_by_log_shapes(mpt_node_id_t log_message_id, std::string_view query)
             -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
@@ -127,6 +128,7 @@ private:
      * @param log_message_id The `LogMessage` node to search within.
      * @return The interpretation matches, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
+     * - Forwards `clpp::decompose_by_rule_name`'s return values.
      */
     [[nodiscard]] auto decompose_by_rule_name(
             mpt_node_id_t log_message_id,
