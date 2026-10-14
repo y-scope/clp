@@ -804,13 +804,13 @@ class SpiderEmRegistry(BaseModel):
 class SpiderRoundRobin(BaseModel):
     type: Literal[SpiderSchedulerPolicy.ROUND_ROBIN.value] = SpiderSchedulerPolicy.ROUND_ROBIN.value
     active_job_queue_capacity: PositiveInt | None = None
-    cleanup_ready_task_capacity: PositiveInt | None = None
-    commit_ready_task_capacity: PositiveInt | None = None
     dispatch_queue_capacity: PositiveInt | None = None
-    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
     ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
     storage_poll_timeout_ms: PositiveInt | None = None
     tick_interval_ms: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
 
 
 class SpiderResourceGroupRoundRobin(BaseModel):
@@ -818,13 +818,13 @@ class SpiderResourceGroupRoundRobin(BaseModel):
         SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value
     )
     active_job_list_capacity: PositiveInt | None = None
-    cleanup_ready_task_capacity: PositiveInt | None = None
-    commit_ready_task_capacity: PositiveInt | None = None
     dispatch_queue_capacity: PositiveInt | None = None
-    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
     ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
     storage_poll_timeout_ms: PositiveInt | None = None
     tick_interval_ms: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
 
 
 class SpiderScheduler(BaseModel):
