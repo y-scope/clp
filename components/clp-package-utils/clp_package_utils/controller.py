@@ -650,7 +650,9 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "CLP_SPIDER_RESOURCE_GROUP_PASSWORD": coordinator_config.resource_group_password,
+            "CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
         }
 
         return env_vars

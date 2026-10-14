@@ -36,7 +36,8 @@ services:
     environment:
       <<: *clp_spider_worker_env_defaults
       SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "compression"
-      SPIDER_RESOURCE_GROUP_PASSWORD: "${CLP_SPIDER_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "\
+        ${CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
     # The worker can only register after the coordinator creates the resource group.
     depends_on:
       compression-coordinator:
