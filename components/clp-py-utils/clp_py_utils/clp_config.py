@@ -816,8 +816,6 @@ class SpiderRoundRobin(BaseModel):
 
 
 class SpiderResourceGroupRoundRobin(BaseModel):
-    """Tuning for Spider's `resource_group_round_robin` scheduler policy."""
-
     active_job_list_capacity: PositiveInt | None = None
     cleanup_ready_task_capacity: PositiveInt | None = None
     commit_ready_task_capacity: PositiveInt | None = None
