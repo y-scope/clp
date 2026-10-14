@@ -13,7 +13,7 @@
 
 #include <clp/string_utils/string_utils.hpp>
 #include <clp_s/ArchiveReader.hpp>
-#include <clp_s/SchemaTree.hpp>
+#include <clp_s/Defs.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 #include <clpp/TextShape.hpp>

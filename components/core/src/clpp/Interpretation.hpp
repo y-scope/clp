@@ -2,7 +2,6 @@
 #define CLPP_INTERPRETATION_HPP
 
 #include <cstddef>
-#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -95,7 +94,7 @@ struct Interpretation {
 [[nodiscard]] auto decompose_by_log_shapes(
         log_surgeon::ParsingSpec& parsing_spec,
         std::string_view query,
-        std::span<std::string_view const> log_shapes
+        std::vector<log_surgeon::CCharArray> const& log_shapes
 ) -> ystdlib::error_handling::Result<std::vector<std::vector<std::vector<LeafQuery>>>>;
 
 /**

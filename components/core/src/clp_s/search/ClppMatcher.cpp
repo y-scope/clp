@@ -16,7 +16,7 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveReader.hpp>
-#include <clp_s/SchemaTree.hpp>
+#include <clp_s/Defs.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 
@@ -116,11 +116,11 @@ auto ClppMatcher::ensure_parser() -> ystdlib::error_handling::Result<void> {
 
 auto ClppMatcher::decompose_by_log_shapes(mpt_node_id_t log_message_id, std::string_view query)
         -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
-    std::vector<std::string_view> log_shapes;
+    std::vector<log_surgeon::CCharArray> log_shapes;
     auto const& entries{m_archive_reader->get_log_shape_dictionary()->get_entries()};
     log_shapes.reserve(entries.size());
     for (auto const& log_shape : entries) {
-        log_shapes.emplace_back(log_shape.get_value());
+        log_shapes.emplace_back(log_surgeon::CCharArray::from_string_view(log_shape.get_value()));
     }
 
     YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
