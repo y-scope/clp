@@ -1596,7 +1596,9 @@ def _get_spider_scheduler_policy_env_vars(
     """
     if isinstance(config, SpiderRoundRobin):
         return _get_spider_round_robin_scheduler_env_vars(config)
-    return _get_spider_resource_group_round_robin_scheduler_env_vars(config)
+    if isinstance(config, SpiderResourceGroupRoundRobin):
+        return _get_spider_resource_group_round_robin_scheduler_env_vars(config)
+    raise NotImplementedError("unknown Spider scheduler policy")
 
 
 def _str_or_none(value: int | pathlib.Path | None) -> str | None:
