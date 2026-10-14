@@ -53,11 +53,7 @@ impl TryFrom<&SearchJobConfig> for ClpSQueryOption {
         Ok(Self {
             query_string: NonEmptyString::try_from(config.query_string.clone())
                 .map_err(|_| QueryOptionError::EmptyQuery)?,
-            max_num_results: if bucket_size.is_some() {
-                None
-            } else {
-                config.max_num_results
-            },
+            max_num_results: config.max_num_results,
             begin_timestamp_millisecs: config.begin_timestamp,
             end_timestamp_millisecs: config.end_timestamp,
             ignore_case: config.ignore_case,
@@ -270,11 +266,7 @@ mod tests {
                         .expect("valid search configuration should convert");
                     let expected = ClpSQueryOption {
                         query_string: NonEmptyString::from_static_str("level:error"),
-                        max_num_results: if width.is_some() {
-                            None
-                        } else {
-                            max_num_results
-                        },
+                        max_num_results,
                         begin_timestamp_millisecs: begin,
                         end_timestamp_millisecs: end,
                         ignore_case: true,
