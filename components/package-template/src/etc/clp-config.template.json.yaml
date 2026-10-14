@@ -68,7 +68,8 @@ telemetry:
 ##    log_level: "INFO"
 ##  scheduler:
 ##    log_level: "INFO"
-##    policy: "resource_group_round_robin"
+##    policy:
+##      type: "resource_group_round_robin"
 ##  worker:
 ##    log_level: "INFO"
 ##    pools:

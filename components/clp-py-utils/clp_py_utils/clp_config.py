@@ -155,9 +155,6 @@ class SpiderSchedulerPolicy(SnakeCaseStrEnum):
     RESOURCE_GROUP_ROUND_ROBIN = auto()
 
 
-SpiderSchedulerPolicyStr = Annotated[SpiderSchedulerPolicy, StrEnumSerializer]
-
-
 class QueryEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
@@ -805,6 +802,7 @@ class SpiderEmRegistry(BaseModel):
 
 
 class SpiderRoundRobin(BaseModel):
+    type: Literal[SpiderSchedulerPolicy.ROUND_ROBIN.value] = SpiderSchedulerPolicy.ROUND_ROBIN.value
     active_job_queue_capacity: PositiveInt | None = None
     cleanup_ready_task_capacity: PositiveInt | None = None
     commit_ready_task_capacity: PositiveInt | None = None
@@ -816,6 +814,9 @@ class SpiderRoundRobin(BaseModel):
 
 
 class SpiderResourceGroupRoundRobin(BaseModel):
+    type: Literal[SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value] = (
+        SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value
+    )
     active_job_list_capacity: PositiveInt | None = None
     cleanup_ready_task_capacity: PositiveInt | None = None
     commit_ready_task_capacity: PositiveInt | None = None
@@ -827,17 +828,11 @@ class SpiderResourceGroupRoundRobin(BaseModel):
 
 
 class SpiderScheduler(BaseModel):
-    DEFAULT_POLICY: ClassVar[SpiderSchedulerPolicy] = (
-        SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN
-    )
-
     log_level: LoggingLevelRust | None = None
-    policy: SpiderSchedulerPolicyStr | None = None
+    policy: SpiderRoundRobin | SpiderResourceGroupRoundRobin = SpiderResourceGroupRoundRobin()
     connection_pool_size: PositiveInt | None = None
     stop_timeout_sec: PositiveInt | None = None
     em_registry: SpiderEmRegistry = SpiderEmRegistry()
-    round_robin: SpiderRoundRobin = SpiderRoundRobin()
-    resource_group_round_robin: SpiderResourceGroupRoundRobin = SpiderResourceGroupRoundRobin()
 
 
 class SpiderLiveness(BaseModel):
