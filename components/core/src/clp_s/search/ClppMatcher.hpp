@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_CLPPMATCHER_HPP
 #define CLP_S_SEARCH_CLPPMATCHER_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -19,6 +20,21 @@
 #include <clpp/TextShape.hpp>
 
 namespace clp_s::search {
+/**
+ * Requirements for a callback invoked by `ClppMatcher::for_each_matching_occurrence` for each
+ * occurrence (a parent rule occurrence or a whole log shape) whose shape matches the query.
+ * @param on_match
+ * @param schema_ids The schema IDs containing a matching shape.
+ * @param leaf_position The position of the occurrence's first leaf placeholder among the leaf
+ * placeholders of the whole log shape (always 0 for a whole log shape).
+ */
+template <typename OccurrenceMatchHandler>
+concept OccurrenceMatchHandlerReq = requires(
+        OccurrenceMatchHandler const& on_match,
+        std::unordered_set<int32_t> const& schema_ids,
+        size_t leaf_position
+) { on_match(schema_ids, leaf_position); };
+
 /**
  * Utility for matching shapes and decomposing queries against them.
  */
@@ -140,15 +156,14 @@ private:
      * Invokes `on_match` for every occurrence of `rule_name` (or every whole log shape if
      * `rule_name` is empty) whose shape satisfies `shape_query`, walking occurrences in document
      * order. Only shapes of the `LogMessage` node `log_message_id` are considered.
+     * @tparam OnMatch The callback type of `on_match`, constrained by `OccurrenceMatchHandlerReq`.
      * @param log_message_id The `LogMessage` node to search within.
      * @param rule_name A parent rule name, or empty to match the entire log shape.
      * @param shape_query A wildcard pattern, or std::nullopt to match every shape.
-     * @param on_match Invoked as `on_match(schema_ids, leaf_position)` with the schema IDs of the
-     * log shape and the position of the occurrence's first leaf placeholder within the log shape (0
-     * for a whole log shape).
+     * @param on_match Invoked for every matching occurrence.
      * @throw Propagates `ArchiveReader::get_parent_rule_shapes`'s exceptions.
      */
-    template <typename OnMatch>
+    template <OccurrenceMatchHandlerReq OnMatch>
     auto for_each_matching_occurrence(
             mpt_node_id_t log_message_id,
             std::string_view rule_name,
@@ -163,7 +178,7 @@ private:
     std::unique_ptr<log_surgeon::ParsingSpec> m_parsing_spec;
 };
 
-template <typename OnMatch>
+template <OccurrenceMatchHandlerReq OnMatch>
 auto ClppMatcher::for_each_matching_occurrence(
         mpt_node_id_t log_message_id,
         std::string_view rule_name,
