@@ -78,6 +78,35 @@ pub struct CompressionJob {
     pub job_id: i64,
 }
 
+/// Fields from a stored compression job config that the `WebUI` may display.
+#[derive(Clone, Debug, Deserialize, ToSchema)]
+pub struct CompressionMetadataDisplayConfig {
+    pub input: CompressionMetadataDisplayInput,
+    pub output: CompressionMetadataDisplayOutput,
+}
+
+/// Partial input fields kept for older compression jobs.
+#[derive(Clone, Debug, Deserialize, ToSchema)]
+pub struct CompressionMetadataDisplayInput {
+    pub r#type: Option<String>,
+    pub dataset: Option<String>,
+    pub paths_to_compress: Option<Vec<String>>,
+    pub path_prefix_to_remove: Option<String>,
+    pub keys: Option<Vec<String>>,
+    pub timestamp_key: Option<String>,
+    pub unstructured: Option<bool>,
+}
+
+/// Partial output fields kept for older compression jobs.
+#[derive(Clone, Debug, Deserialize, ToSchema)]
+pub struct CompressionMetadataDisplayOutput {
+    pub compression_level: Option<f64>,
+    pub target_archive_size: Option<f64>,
+    pub target_dictionaries_size: Option<f64>,
+    pub target_encoded_file_size: Option<f64>,
+    pub target_segment_size: Option<f64>,
+}
+
 /// A row of compression metadata, with the decoded CLP IO config.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct CompressionMetadata {
@@ -100,6 +129,7 @@ pub struct CompressionMetadata {
     /// Total compressed archive size, in bytes.
     pub compressed_size: i64,
     /// Display fields from the decoded CLP IO config. Storage credentials are omitted.
+    #[schema(value_type = CompressionMetadataDisplayConfig)]
     pub clp_config: serde_json::Value,
 }
 
@@ -1204,6 +1234,7 @@ fn compression_metadata_config(mut config: serde_json::Value) -> serde_json::Val
 
 #[cfg(test)]
 mod metadata_tests {
+    use super::CompressionMetadataDisplayConfig;
     use super::compression_metadata_config;
 
     #[test]
@@ -1225,8 +1256,12 @@ mod metadata_tests {
                 "output": {"compression_level": 3},
                 "private_field": "private-value"
             });
+            let display = compression_metadata_config(config);
+            let parsed: CompressionMetadataDisplayConfig =
+                serde_json::from_value(display.clone()).expect("valid display contract");
+            assert_eq!(parsed.input.r#type.as_deref(), Some(input_type));
             assert_eq!(
-                compression_metadata_config(config),
+                display,
                 serde_json::json!({
                     "input": {"type": input_type, "dataset": "logs", "timestamp_key": null,
                         "unstructured": false},
@@ -1242,6 +1277,10 @@ mod metadata_tests {
             "input": {"type": "fs", "paths_to_compress": ["/mnt/logs/app.log"],
                 "path_prefix_to_remove": null}, "output": {}
         });
-        assert_eq!(compression_metadata_config(config.clone()), config);
+        let display = compression_metadata_config(config.clone());
+        let parsed: CompressionMetadataDisplayConfig =
+            serde_json::from_value(display.clone()).expect("valid partial display contract");
+        assert_eq!(parsed.input.paths_to_compress.unwrap().len(), 1);
+        assert_eq!(display, config);
     }
 }

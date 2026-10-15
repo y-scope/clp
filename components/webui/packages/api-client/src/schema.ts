@@ -291,7 +291,7 @@ export interface components {
              */
             _id: number;
             /** @description Display fields from the decoded CLP IO config. Storage credentials are omitted. */
-            clp_config: unknown;
+            clp_config: components["schemas"]["CompressionMetadataDisplayConfig"];
             /**
              * Format: int64
              * @description Total compressed archive size, in bytes.
@@ -319,6 +319,34 @@ export interface components {
             uncompressed_size: number;
             /** @description Time the job was last updated (RFC 3339). */
             update_time: string;
+        };
+        /** @description Fields from a stored compression job config that the `WebUI` may display. */
+        CompressionMetadataDisplayConfig: {
+            input: components["schemas"]["CompressionMetadataDisplayInput"];
+            output: components["schemas"]["CompressionMetadataDisplayOutput"];
+        };
+        /** @description Partial input fields kept for older compression jobs. */
+        CompressionMetadataDisplayInput: {
+            dataset?: string | null;
+            keys?: string[] | null;
+            path_prefix_to_remove?: string | null;
+            paths_to_compress?: string[] | null;
+            timestamp_key?: string | null;
+            type?: string | null;
+            unstructured?: boolean | null;
+        };
+        /** @description Partial output fields kept for older compression jobs. */
+        CompressionMetadataDisplayOutput: {
+            /** Format: double */
+            compression_level?: number | null;
+            /** Format: double */
+            target_archive_size?: number | null;
+            /** Format: double */
+            target_dictionaries_size?: number | null;
+            /** Format: double */
+            target_encoded_file_size?: number | null;
+            /** Format: double */
+            target_segment_size?: number | null;
         };
         /** @description Resource usage statistics for the compression job with the specified ID. */
         CompressionUsage: {

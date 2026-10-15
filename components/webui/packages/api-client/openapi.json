@@ -671,6 +671,7 @@
             "description": "The compression job's ID. Named `_id` to match the webui's existing JSON contract."
           },
           "clp_config": {
+            "$ref": "#/components/schemas/CompressionMetadataDisplayConfig",
             "description": "Display fields from the decoded CLP IO config. Storage credentials are omitted."
           },
           "compressed_size": {
@@ -710,6 +711,117 @@
           "update_time": {
             "type": "string",
             "description": "Time the job was last updated (RFC 3339)."
+          }
+        }
+      },
+      "CompressionMetadataDisplayConfig": {
+        "type": "object",
+        "description": "Fields from a stored compression job config that the `WebUI` may display.",
+        "required": [
+          "input",
+          "output"
+        ],
+        "properties": {
+          "input": {
+            "$ref": "#/components/schemas/CompressionMetadataDisplayInput"
+          },
+          "output": {
+            "$ref": "#/components/schemas/CompressionMetadataDisplayOutput"
+          }
+        }
+      },
+      "CompressionMetadataDisplayInput": {
+        "type": "object",
+        "description": "Partial input fields kept for older compression jobs.",
+        "properties": {
+          "dataset": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "keys": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "path_prefix_to_remove": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paths_to_compress": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unstructured": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
+      "CompressionMetadataDisplayOutput": {
+        "type": "object",
+        "description": "Partial output fields kept for older compression jobs.",
+        "properties": {
+          "compression_level": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "target_archive_size": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "target_dictionaries_size": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "target_encoded_file_size": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "target_segment_size": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
           }
         }
       },

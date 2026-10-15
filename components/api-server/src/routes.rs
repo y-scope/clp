@@ -97,6 +97,9 @@ mod api_doc {
     use crate::webui_client::CompressionJob;
     use crate::webui_client::CompressionJobCreation;
     use crate::webui_client::CompressionMetadata;
+    use crate::webui_client::CompressionMetadataDisplayConfig;
+    use crate::webui_client::CompressionMetadataDisplayInput;
+    use crate::webui_client::CompressionMetadataDisplayOutput;
     use crate::webui_client::DirEntry;
     use crate::webui_client::ExtractJobType;
     use crate::webui_client::IngestionDetails;
@@ -148,6 +151,9 @@ mod api_doc {
             CompressionJob,
             CompressionJobCreation,
             CompressionMetadata,
+            CompressionMetadataDisplayConfig,
+            CompressionMetadataDisplayInput,
+            CompressionMetadataDisplayOutput,
             DirEntry,
             ExtractJobType,
             IngestionDetails,
