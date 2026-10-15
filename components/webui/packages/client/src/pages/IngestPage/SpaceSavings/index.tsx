@@ -5,6 +5,7 @@ import {apiClient} from "../../../api/search";
 import {createApiError} from "../../../api/utils";
 import {DashboardCard} from "../../../components/DashboardCard";
 import Stat from "../../../components/Stat";
+import QueryErrorAlert from "../QueryErrorAlert";
 import CompressedSize from "./CompressedSize";
 import styles from "./index.module.css";
 import UncompressedSize from "./UncompressedSize";
@@ -27,18 +28,32 @@ const SPACE_SAVINGS_DEFAULT = {
 const SpaceSavings = () => {
     const {token} = theme.useToken();
 
-    const {data: spaceSavings = SPACE_SAVINGS_DEFAULT, isPending} = useQuery({
+    const {data, error, isError, isPending, refetch} = useQuery({
         queryKey: ["space-savings"],
         queryFn: async () => {
             // eslint-disable-next-line new-cap
-            const {data, error, response} = await apiClient.GET("/metadata/space_savings", {});
-            if ("undefined" === typeof data) {
-                throw createApiError("Failed to fetch space savings", response, error);
+            const result = await apiClient.GET("/metadata/space_savings", {});
+            if ("undefined" === typeof result.data) {
+                throw createApiError("Failed to fetch savings", result.response, result.error);
             }
 
-            return data;
+            return result.data;
         },
     });
+    const spaceSavings = data ?? SPACE_SAVINGS_DEFAULT;
+
+    if (isError && "undefined" === typeof data) {
+        return (
+            <div className={styles["spaceSavingsGrid"]}>
+                <QueryErrorAlert
+                    error={error}
+                    hasPreviousData={false}
+                    onRetry={() => {
+                        refetch().catch(console.error);
+                    }}/>
+            </div>
+        );
+    }
 
     const compressedSize = spaceSavings.total_compressed_size;
     const uncompressedSize = spaceSavings.total_uncompressed_size;
@@ -51,6 +66,14 @@ const SpaceSavings = () => {
 
     return (
         <div className={styles["spaceSavingsGrid"]}>
+            {isError && (
+                <QueryErrorAlert
+                    error={error}
+                    hasPreviousData={true}
+                    onRetry={() => {
+                        refetch().catch(console.error);
+                    }}/>
+            )}
             <div className={styles["spaceSavingsCard"]}>
                 <DashboardCard
                     backgroundColor={token.colorPrimary}

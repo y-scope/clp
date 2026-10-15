@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import {apiClient} from "../../../api/search";
 import {createApiError} from "../../../api/utils";
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
+import QueryErrorAlert from "../QueryErrorAlert";
 import Files from "./Files";
 import styles from "./index.module.css";
 import Messages from "./Messages";
@@ -33,22 +34,44 @@ const DETAILS_DEFAULT: DetailsItem = {
  * @return
  */
 const Details = () => {
-    const {data: details = DETAILS_DEFAULT, isPending} = useQuery({
+    const {data, error, isError, isPending, refetch} = useQuery({
         queryKey: ["details"],
         queryFn: async () => {
             // eslint-disable-next-line new-cap
-            const {data, error, response} = await apiClient.GET("/metadata/ingestion_details", {});
-            if ("undefined" === typeof data) {
-                throw createApiError("Failed to fetch details", response, error);
+            const result = await apiClient.GET("/metadata/ingestion_details", {});
+            if ("undefined" === typeof result.data) {
+                throw createApiError("Failed to fetch details", result.response, result.error);
             }
 
-            return data ?? DETAILS_DEFAULT;
+            return result.data ?? DETAILS_DEFAULT;
         },
     });
+    const details = data ?? DETAILS_DEFAULT;
+
+    if (isError && "undefined" === typeof data) {
+        return (
+            <div className={styles["detailsGrid"]}>
+                <QueryErrorAlert
+                    error={error}
+                    hasPreviousData={false}
+                    onRetry={() => {
+                        refetch().catch(console.error);
+                    }}/>
+            </div>
+        );
+    }
 
     if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
         return (
             <div className={styles["detailsGrid"]}>
+                {isError && (
+                    <QueryErrorAlert
+                        error={error}
+                        hasPreviousData={true}
+                        onRetry={() => {
+                            refetch().catch(console.error);
+                        }}/>
+                )}
                 <div className={styles["timeRange"]}>
                     <TimeRange
                         beginDate={dayjs.utc(details.begin_timestamp)}
@@ -66,11 +89,21 @@ const Details = () => {
     }
 
     return (
-        <div>
-            <TimeRange
-                beginDate={dayjs.utc(details.begin_timestamp)}
-                endDate={dayjs.utc(details.end_timestamp)}
-                isLoading={isPending}/>
+        <div className={styles["detailsGrid"]}>
+            {isError && (
+                <QueryErrorAlert
+                    error={error}
+                    hasPreviousData={true}
+                    onRetry={() => {
+                        refetch().catch(console.error);
+                    }}/>
+            )}
+            <div className={styles["timeRange"]}>
+                <TimeRange
+                    beginDate={dayjs.utc(details.begin_timestamp)}
+                    endDate={dayjs.utc(details.end_timestamp)}
+                    isLoading={isPending}/>
+            </div>
         </div>
     );
 };
