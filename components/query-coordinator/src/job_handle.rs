@@ -393,10 +393,13 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// persist from the locked status as follows:
     ///
     /// * [`QueryJobOutcome::Succeeded`] is permitted from [`QueryJobStatus::Pending`] and
-    ///   [`QueryJobStatus::Running`]. From [`QueryJobStatus::CancelRequested`], the job is
-    ///   terminated as [`QueryJobStatus::Cancelled`] instead, since a cancellation wins over a
-    ///   success.
-    /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::CancelRequested`].
+    ///   [`QueryJobStatus::Running`]. From [`QueryJobStatus::CancelRequested`] and
+    ///   [`QueryJobStatus::Cancelling`], the job is terminated as [`QueryJobStatus::Cancelled`]
+    ///   instead, since a cancellation wins over a success.
+    /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::CancelRequested`]
+    ///   and [`QueryJobStatus::Cancelling`]. From [`QueryJobStatus::Running`], the job is
+    ///   terminated as [`QueryJobStatus::Failed`] instead, since its Spider job was cancelled
+    ///   unexpectedly without a cancellation request.
     /// * [`QueryJobOutcome::Failed`] is permitted from any non-terminal status, since a failure
     ///   wins over both a success and a cancellation.
     ///
@@ -417,6 +420,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         const CANCELLED_AFTER_COMPLETION_MESSAGE: &str =
             "The query job completed, but it had already been requested to be cancelled.";
         const CANCELLED_MESSAGE: &str = "The query job was cancelled.";
+        const CANCELLED_UNEXPECTED_MESSAGE: &str =
+            "The query job was cancelled unexpectedly without a cancelation request.";
 
         let mut tx = self.context.db_pool.begin().await?;
         let current_status = self.lock_and_get_status(&mut tx).await?;
@@ -426,10 +431,14 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             (QueryJobOutcome::Succeeded, QueryJobStatus::Pending | QueryJobStatus::Running) => {
                 (to, None)
             }
-            (QueryJobOutcome::Cancelled, QueryJobStatus::CancelRequested) => {
-                (to, Some(CANCELLED_MESSAGE.to_owned()))
-            }
-            (QueryJobOutcome::Succeeded, QueryJobStatus::CancelRequested) => {
+            (
+                QueryJobOutcome::Cancelled,
+                QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling,
+            ) => (to, Some(CANCELLED_MESSAGE.to_owned())),
+            (
+                QueryJobOutcome::Succeeded,
+                QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling,
+            ) => {
                 tracing::info!(
                     query_job_id = % self.query_job_id,
                     "{CANCELLED_AFTER_COMPLETION_MESSAGE}",
@@ -437,6 +446,16 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 (
                     QueryJobStatus::Cancelled,
                     Some(CANCELLED_AFTER_COMPLETION_MESSAGE.to_owned()),
+                )
+            }
+            (QueryJobOutcome::Cancelled, QueryJobStatus::Running) => {
+                tracing::error!(
+                    query_job_id = % self.query_job_id,
+                    "{CANCELLED_UNEXPECTED_MESSAGE}",
+                );
+                (
+                    QueryJobStatus::Failed,
+                    Some(CANCELLED_UNEXPECTED_MESSAGE.to_owned()),
                 )
             }
             (QueryJobOutcome::Failed { error_message }, from) if !from.is_terminal() => {

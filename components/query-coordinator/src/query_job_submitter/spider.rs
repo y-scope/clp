@@ -106,6 +106,20 @@ impl QueryJobSubmitter for SpiderClient {
             _ => unreachable!("a terminal Spider state must have a terminal outcome"),
         })
     }
+
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`SpiderClient::cancel_job`]'s return values on failure, except
+    ///   [`ClientError::InvalidJobState`], which indicates the job is already being cancelled or
+    ///   has already terminated.
+    async fn cancel_query_job(&self, spider_job_id: JobId) -> Result<(), Error> {
+        match self.cancel_job(spider_job_id).await {
+            Ok(_) | Err(ClientError::InvalidJobState(_)) => Ok(()),
+            Err(error) => Err(error.into()),
+        }
+    }
 }
 
 /// Builds independent archive-search tasks and their positionally ordered external inputs.
