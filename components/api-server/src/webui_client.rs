@@ -675,16 +675,13 @@ impl WebuiClient {
                 "compression-job submission is not supported for S3 logs input".to_owned(),
             ));
         };
-        let paths_to_compress: Vec<String> = creation
-            .paths
-            .iter()
-            .map(|path| {
-                format!(
-                    "{CONTAINER_INPUT_LOGS_ROOT_DIR}/{}",
-                    path.trim_start_matches('/')
-                )
-            })
-            .collect();
+        let root = Path::new(CONTAINER_INPUT_LOGS_ROOT_DIR);
+        let mut paths_to_compress = Vec::with_capacity(creation.paths.len());
+        for path in &creation.paths {
+            let requested = root.join(path.trim_start_matches('/'));
+            let resolved = canonical_log_input_path(root, &requested).await?;
+            paths_to_compress.push(resolved.to_string_lossy().into_owned());
+        }
 
         let mut input = serde_json::json!({
             "dataset": null,
@@ -744,18 +741,19 @@ impl WebuiClient {
     /// * [`ClientError::NotFound`] if the path does not exist.
     /// * [`ClientError::Io`] if the path cannot be read.
     pub async fn list_files(&self, path: String) -> Result<Vec<DirEntry>, ClientError> {
+        if !matches!(&self.config.logs_input, LogsInput::Fs { .. }) {
+            return Err(ClientError::InvalidInput(
+                "file listing requires filesystem logs input".to_owned(),
+            ));
+        }
         let path_buf = PathBuf::from(&path);
-        let metadata = tokio::fs::metadata(&path_buf).await.map_err(|err| {
-            if err.kind() == std::io::ErrorKind::NotFound {
-                ClientError::NotFound(path)
-            } else {
-                ClientError::Io(err)
-            }
-        })?;
+        let resolved =
+            canonical_log_input_path(Path::new(CONTAINER_INPUT_LOGS_ROOT_DIR), &path_buf).await?;
+        let metadata = tokio::fs::metadata(&resolved).await?;
         if !metadata.is_dir() {
             return Ok(Vec::new());
         }
-        let mut entries = tokio::fs::read_dir(&path_buf).await?;
+        let mut entries = tokio::fs::read_dir(&resolved).await?;
         let mut out = Vec::new();
         while let Some(entry) = entries.next_entry().await? {
             let file_type = entry.file_type().await?;
@@ -963,6 +961,42 @@ impl WebuiClient {
 /// Mirror of `CONTAINER_INPUT_LOGS_ROOT_DIR` in `clp_package_utils.general`.
 const CONTAINER_INPUT_LOGS_ROOT_DIR: &str = "/mnt/logs";
 
+/// Resolves an input path before the API reads it or submits it to a worker.
+async fn canonical_log_input_path(root: &Path, requested: &Path) -> Result<PathBuf, ClientError> {
+    if !requested.is_absolute() {
+        return Err(ClientError::InvalidInput(
+            "input path must be absolute".to_owned(),
+        ));
+    }
+    let within_root = requested.strip_prefix(root).map_err(|_| {
+        ClientError::InvalidInput(
+            "input path must stay within the mounted logs directory".to_owned(),
+        )
+    })?;
+    if within_root
+        .components()
+        .any(|component| component == std::path::Component::ParentDir)
+    {
+        return Err(ClientError::InvalidInput(
+            "input path must not contain parent directory components".to_owned(),
+        ));
+    }
+    let canonical_root = tokio::fs::canonicalize(root).await?;
+    let canonical_path = tokio::fs::canonicalize(requested).await.map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            ClientError::NotFound(requested.to_string_lossy().into_owned())
+        } else {
+            ClientError::Io(error)
+        }
+    })?;
+    if !canonical_path.starts_with(&canonical_root) {
+        return Err(ClientError::InvalidInput(
+            "input path must stay within the mounted logs directory".to_owned(),
+        ));
+    }
+    Ok(canonical_path)
+}
+
 /// Internal document shape for the stream-files `MongoDB` collection.
 #[derive(Debug, Deserialize)]
 struct StreamFileMetadataDoc {
@@ -1020,9 +1054,69 @@ fn validate_compression_job_creation(creation: &CompressionJobCreation) -> Resul
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+    use std::path::PathBuf;
+    use std::time::SystemTime;
+    use std::time::UNIX_EPOCH;
+
     use super::CompressionJobCreation;
+    use super::canonical_log_input_path;
     use super::validate_compression_job_creation;
     use crate::error::ClientError;
+
+    struct TestDirectory(PathBuf);
+
+    impl Drop for TestDirectory {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[tokio::test]
+    async fn input_paths_cannot_escape_through_parents_or_symlinks() {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("current time after Unix epoch")
+            .as_nanos();
+        let base = std::env::temp_dir().join(format!(
+            "clp-log-input-test-{}-{timestamp}",
+            std::process::id()
+        ));
+        let _cleanup = TestDirectory(base.clone());
+        let root = base.join("logs");
+        std::fs::create_dir_all(&root).expect("create log root");
+        let inside = root.join("inside.log");
+        std::fs::write(&inside, b"log entry").expect("create log input");
+        let outside = base.join("private.log");
+        std::fs::write(&outside, b"private entry").expect("create outside file");
+        std::os::unix::fs::symlink(&outside, root.join("outside-link"))
+            .expect("create outside symlink");
+
+        assert_eq!(
+            canonical_log_input_path(&root, &inside).await.unwrap(),
+            std::fs::canonicalize(&inside).unwrap()
+        );
+        assert!(matches!(
+            canonical_log_input_path(&root, &root.join("../private.log")).await,
+            Err(ClientError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            canonical_log_input_path(&root, &root.join("outside-link")).await,
+            Err(ClientError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            canonical_log_input_path(&root, &outside).await,
+            Err(ClientError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            canonical_log_input_path(&root, Path::new("relative.log")).await,
+            Err(ClientError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            canonical_log_input_path(&root, &root.join("missing.log")).await,
+            Err(ClientError::NotFound(_))
+        ));
+    }
 
     fn compression_job_creation(paths: &[&str]) -> CompressionJobCreation {
         CompressionJobCreation {
