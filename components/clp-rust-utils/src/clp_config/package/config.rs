@@ -577,9 +577,40 @@ mod tests {
 
     use super::ArchiveOutput;
     use super::ArchiveOutputStorage;
+    use super::Config;
     use super::Database;
     use super::LogsInput;
     use super::SpiderTaskExecutorConfig;
+    use super::StreamOutputStorage;
+
+    #[test]
+    fn deserialize_package_stream_output_with_named_profile() {
+        let config: Config = serde_json::from_value(serde_json::json!({
+            "stream_output": {
+                "storage": {
+                    "type": "s3",
+                    "staging_directory": "/var/data/staged-streams",
+                    "s3_config": {
+                        "bucket": "test-bucket",
+                        "key_prefix": "streams/",
+                        "aws_authentication": {
+                            "type": "profile",
+                            "profile": "test-profile"
+                        }
+                    }
+                }
+            }
+        }))
+        .expect("a documented named profile must load in the API server configuration");
+
+        let StreamOutputStorage::S3 { s3_config, .. } = config.stream_output.storage else {
+            panic!("expected S3 stream output");
+        };
+        assert!(matches!(
+            s3_config.aws_authentication,
+            crate::clp_config::AwsAuthentication::Profile { .. }
+        ));
+    }
 
     #[test]
     fn deserialize_logs_input_s3_config() {
@@ -606,9 +637,7 @@ mod tests {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
-                crate::clp_config::AwsAuthentication::Default => {
-                    panic!("Expected credentials, got `default`")
-                }
+                other => panic!("Expected credentials, got {other:?}"),
             },
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }
