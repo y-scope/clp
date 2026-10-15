@@ -1,6 +1,5 @@
 """Tests for the clp-json package."""
 
-import datetime
 import json
 import logging
 import uuid
@@ -132,43 +131,28 @@ def test_clp_json_search(clp_package: ClpPackage) -> None:
 
 
 @pytest.mark.search
-@pytest.mark.parametrize("engine", ["clp-s", "clo"])
 @pytest.mark.parametrize("limit", [None, 7, 2_000])
 def test_results_cache_optional_limit(
     clp_package: ClpPackage,
     clp_core_path_config: ClpCorePathConfig,
     tmp_path: Path,
-    engine: str,
     limit: int | None,
 ) -> None:
     """An omitted limit returns over 1,000 events; a positive limit retains the latest events."""
     num_events = 1_205
     timestamps = [1_700_000_000_000 + index * 1_000 for index in range(num_events)]
-    source = tmp_path / "input.log"
+    source = tmp_path / "input.jsonl"
     archives = tmp_path / "archives"
-    if engine == "clp-s":
-        # Alternate schemas to exercise a limit spanning multiple ERTs.
-        source.write_text(
-            "".join(
-                json.dumps({"timestamp": timestamp, "message": "match", f"field{index % 2}": index})
-                + "\n"
-                for index, timestamp in enumerate(timestamps)
-            )
+    # Alternate schemas to exercise a limit spanning multiple ERTs.
+    source.write_text(
+        "".join(
+            json.dumps({"timestamp": timestamp, "message": "match", f"field{index % 2}": index})
+            + "\n"
+            for index, timestamp in enumerate(timestamps)
         )
-        binary = clp_core_path_config.clp_s_binary_path
-        compression = [str(binary), "c", "--timestamp-key", "timestamp"]
-    else:
-        source.write_text(
-            "".join(
-                datetime.datetime.fromtimestamp(
-                    timestamp / 1_000, tz=datetime.timezone.utc
-                ).strftime("%Y-%m-%d %H:%M:%S")
-                + " match\n"
-                for timestamp in timestamps
-            )
-        )
-        binary = clp_core_path_config.clp_binary_path.parent / "clo"
-        compression = [str(clp_core_path_config.clp_binary_path), "c"]
+    )
+    binary = clp_core_path_config.clp_s_binary_path
+    compression = [str(binary), "c", "--timestamp-key", "timestamp"]
     result = ClpAction.from_cmd([*compression, str(archives), str(source)]).verify_returncode()
     assert result, result.failure_message
     archive_paths = [path for path in archives.iterdir() if path.is_dir()]

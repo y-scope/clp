@@ -212,8 +212,8 @@ private:
     }
 
     /**
-     * Converts a result BSON and appends it to `m_results`. Flushes MongoDB batch when it reaches
-     * `m_batch_size` documents.
+     * Converts a result to BSON and appends it to `m_results`. Flushes MongoDB batch when it
+     * reaches `m_batch_size` documents.
      *
      * @return ErrorCode_Success on success.
      * @return ErrorCode_Failure_DB_Bulk_Write if document construction or batch insertion fails.
