@@ -12,6 +12,7 @@ use utoipa_axum::routes;
 
 use super::AppState;
 use super::HandlerError;
+use crate::error::ClientError;
 use crate::webui_client::CompressionJob;
 use crate::webui_client::CompressionJobCreation;
 use crate::webui_client::CompressionMetadata;
@@ -41,6 +42,19 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(list_files))
         .routes(routes!(compression_job))
         .routes(routes!(extract_stream_file))
+}
+
+/// Records unexpected failures without logging request payloads or stored configuration.
+fn log_unexpected_error(operation: &str, error: &ClientError) {
+    let kind = match error {
+        ClientError::Sql(_) => "sql",
+        ClientError::Mongo(_) => "mongodb",
+        ClientError::Io(_) => "filesystem",
+        ClientError::Aws { .. } => "aws",
+        ClientError::MalformedData => "malformed_data",
+        _ => return,
+    };
+    tracing::error!(operation, kind, "WebUI API request failed");
 }
 
 /// Query parameters for the dataset-scoped metadata endpoints.
@@ -81,7 +95,15 @@ fn parse_datasets(dataset: Option<String>) -> Vec<String> {
     )
 )]
 async fn datasets(State(state): State<AppState>) -> Result<Json<Vec<String>>, HandlerError> {
-    Ok(Json(state.webui_client.get_dataset_names().await?))
+    Ok(Json(
+        state
+            .webui_client
+            .get_dataset_names()
+            .await
+            .inspect_err(|err| {
+                log_unexpected_error("datasets", err);
+            })?,
+    ))
 }
 
 #[utoipa::path(
@@ -102,7 +124,15 @@ async fn time_range(
     Query(params): Query<DatasetsParams>,
 ) -> Result<Json<Option<TimeRange>>, HandlerError> {
     let datasets = parse_datasets(params.dataset);
-    Ok(Json(state.webui_client.get_time_range(&datasets).await?))
+    Ok(Json(
+        state
+            .webui_client
+            .get_time_range(&datasets)
+            .await
+            .inspect_err(|err| {
+                log_unexpected_error("time_range", err);
+            })?,
+    ))
 }
 
 #[utoipa::path(
@@ -116,7 +146,15 @@ async fn time_range(
     )
 )]
 async fn space_savings(State(state): State<AppState>) -> Result<Json<SpaceSavings>, HandlerError> {
-    Ok(Json(state.webui_client.get_space_savings().await?))
+    Ok(Json(
+        state
+            .webui_client
+            .get_space_savings()
+            .await
+            .inspect_err(|err| {
+                log_unexpected_error("space_savings", err);
+            })?,
+    ))
 }
 
 #[utoipa::path(
@@ -132,7 +170,15 @@ async fn space_savings(State(state): State<AppState>) -> Result<Json<SpaceSaving
 async fn ingestion_details(
     State(state): State<AppState>,
 ) -> Result<Json<Option<IngestionDetails>>, HandlerError> {
-    Ok(Json(state.webui_client.get_ingestion_details().await?))
+    Ok(Json(
+        state
+            .webui_client
+            .get_ingestion_details()
+            .await
+            .inspect_err(|err| {
+                log_unexpected_error("ingestion_details", err);
+            })?,
+    ))
 }
 
 /// Query parameters for the query speed endpoint.
@@ -168,7 +214,8 @@ async fn query_speed(
         state
             .webui_client
             .get_query_speed(&datasets, params.search_job_id)
-            .await?,
+            .await
+            .inspect_err(|err| log_unexpected_error("query_speed", err))?,
     ))
 }
 
@@ -191,7 +238,8 @@ async fn timestamp_column_names(
         state
             .webui_client
             .get_timestamp_column_names(&dataset_name)
-            .await?,
+            .await
+            .inspect_err(|err| log_unexpected_error("timestamp_column_names", err))?,
     ))
 }
 
@@ -208,7 +256,15 @@ async fn timestamp_column_names(
 async fn compression_metadata(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<CompressionMetadata>>, HandlerError> {
-    Ok(Json(state.webui_client.get_compression_metadata().await?))
+    Ok(Json(
+        state
+            .webui_client
+            .get_compression_metadata()
+            .await
+            .inspect_err(|err| {
+                log_unexpected_error("compression_metadata", err);
+            })?,
+    ))
 }
 
 /// Query parameters for the file-listing endpoint.
@@ -234,7 +290,15 @@ async fn list_files(
     State(state): State<AppState>,
     Query(params): Query<ListFilesParams>,
 ) -> Result<Json<Vec<DirEntry>>, HandlerError> {
-    Ok(Json(state.webui_client.list_files(params.path).await?))
+    Ok(Json(
+        state
+            .webui_client
+            .list_files(params.path)
+            .await
+            .inspect_err(|err| {
+                log_unexpected_error("list_files", err);
+            })?,
+    ))
 }
 
 #[utoipa::path(
@@ -252,7 +316,13 @@ async fn compression_job(
     State(state): State<AppState>,
     Json(creation): Json<CompressionJobCreation>,
 ) -> Result<(StatusCode, Json<CompressionJob>), HandlerError> {
-    let job = state.webui_client.submit_compression_job(creation).await?;
+    let job = state
+        .webui_client
+        .submit_compression_job(creation)
+        .await
+        .inspect_err(|err| {
+            log_unexpected_error("compression_job", err);
+        })?;
     Ok((StatusCode::CREATED, Json(job)))
 }
 
@@ -274,7 +344,13 @@ async fn extract_stream_file(
     Json(extraction): Json<StreamFileExtraction>,
 ) -> Result<Json<StreamFileMetadata>, HandlerError> {
     Ok(Json(
-        state.webui_client.extract_stream_file(extraction).await?,
+        state
+            .webui_client
+            .extract_stream_file(extraction)
+            .await
+            .inspect_err(|err| {
+                log_unexpected_error("extract_stream_file", err);
+            })?,
     ))
 }
 
