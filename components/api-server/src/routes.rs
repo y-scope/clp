@@ -52,24 +52,24 @@ pub struct AppState {
 ///
 /// * Forwards [`OpenApi::to_json`]'s return values on failure.
 pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error> {
-    let (router, _) = OpenApiRouter::with_openapi(WebUiApiDoc::openapi())
+    let (public_routes, _) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
         .routes(routes!(health))
         .routes(routes!(query))
         .routes(routes!(query_results))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
-        .merge(webui::router())
-        .with_state(state)
+        .with_state(state.clone())
         .split_for_parts();
     let api_json = ApiDoc::openapi().to_json()?;
-    let router = router
+    let public_routes = public_routes
         .route(
             "/openapi.json",
             get(|| async { (StatusCode::OK, api_json) }),
         )
         .layer(CorsLayer::new().allow_origin(Any));
-    Ok(router)
+    let (webui_routes, _) = webui::router().with_state(state).split_for_parts();
+    Ok(public_routes.merge(webui_routes))
 }
 
 // `utoipa::OpenApi` triggers `clippy::needless_for_each`
@@ -423,11 +423,62 @@ mod tests {
     use axum::body::Body;
     use axum::http::Request;
     use axum::http::StatusCode;
+    use axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN;
+    use axum::http::header::ORIGIN;
     use axum::routing::get;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     use super::*;
+
+    #[tokio::test]
+    async fn webui_routes_do_not_allow_unrelated_browser_origins() {
+        let config = clp_rust_utils::clp_config::package::config::Config::default();
+        let mongodb_client = mongodb::Client::with_uri_str("mongodb://localhost:27017")
+            .await
+            .expect("valid local MongoDB URI");
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .connect_lazy("mysql://localhost/clp")
+            .expect("valid local MySQL URI");
+        let state = AppState {
+            client: Client::new(&config, mongodb_client.clone(), sql_pool.clone()),
+            webui_client: WebuiClient::new(&config, mongodb_client, sql_pool, None),
+        };
+        let app = from_app_state(state).expect("valid API documentation");
+
+        let public_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .header(ORIGIN, "https://unrelated.example")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            public_response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN),
+            Some(&axum::http::HeaderValue::from_static("*"))
+        );
+
+        let webui_response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/os/ls?path=.")
+                    .header(ORIGIN, "https://unrelated.example")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(
+            webui_response
+                .headers()
+                .get(ACCESS_CONTROL_ALLOW_ORIGIN)
+                .is_none()
+        );
+    }
 
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
