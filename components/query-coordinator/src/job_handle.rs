@@ -421,7 +421,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             "The query job completed, but it had already been requested to be cancelled.";
         const CANCELLED_MESSAGE: &str = "The query job was cancelled.";
         const CANCELLED_UNEXPECTED_MESSAGE: &str =
-            "The query job was cancelled unexpectedly without a cancelation request.";
+            "The query job was cancelled unexpectedly without a cancellation request.";
 
         let mut tx = self.context.db_pool.begin().await?;
         let current_status = self.lock_and_get_status(&mut tx).await?;
