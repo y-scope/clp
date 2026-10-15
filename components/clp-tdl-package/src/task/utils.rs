@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use anyhow::Context;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::config::ProvideCredentials;
+use clp_rust_utils::aws::named_profile_credentials_provider;
 use clp_rust_utils::clp_config::AwsAuthentication;
 
 /// Resolves the path of a CLP binary under `clp_home`, joining `bin/{binary}`.
@@ -47,28 +48,26 @@ pub(super) fn s3_credential_env(
     /// The env var holding the AWS session token.
     const AWS_SESSION_TOKEN_ENV_VAR: &str = "AWS_SESSION_TOKEN";
 
-    let resolve_from_chain =
-        |profile: Option<&str>| -> anyhow::Result<(String, String, Option<String>)> {
-            let mut loader = aws_config::defaults(BehaviorVersion::latest())
-                .region(aws_sdk_s3::config::Region::new(region.to_string()));
-            if let Some(profile) = profile {
-                loader = loader.profile_name(profile);
-            }
-            let sdk_config = runtime.block_on(loader.load());
-            let provider = sdk_config
-                .credentials_provider()
-                .context("AWS SDK credential provider is unavailable")?;
-            let credentials = runtime
-                .block_on(provider.provide_credentials())
-                .context("failed to resolve credentials from the AWS SDK provider chain")?;
-            Ok((
-                credentials.access_key_id().to_string(),
-                credentials.secret_access_key().to_string(),
-                credentials
-                    .session_token()
-                    .map(std::string::ToString::to_string),
-            ))
-        };
+    let resolve_from_chain = || -> anyhow::Result<(String, String, Option<String>)> {
+        let sdk_config = runtime.block_on(
+            aws_config::defaults(BehaviorVersion::latest())
+                .region(aws_sdk_s3::config::Region::new(region.to_string()))
+                .load(),
+        );
+        let provider = sdk_config
+            .credentials_provider()
+            .context("AWS SDK credential provider is unavailable")?;
+        let credentials = runtime
+            .block_on(provider.provide_credentials())
+            .context("failed to resolve credentials from the AWS SDK provider chain")?;
+        Ok((
+            credentials.access_key_id().to_string(),
+            credentials.secret_access_key().to_string(),
+            credentials
+                .session_token()
+                .map(std::string::ToString::to_string),
+        ))
+    };
 
     let (access_key_id, secret_access_key, session_token) = match auth {
         AwsAuthentication::Credentials { credentials } => (
@@ -76,8 +75,20 @@ pub(super) fn s3_credential_env(
             credentials.secret_access_key.clone(),
             credentials.session_token.clone(),
         ),
-        AwsAuthentication::Profile { profile } => resolve_from_chain(Some(profile.as_str()))?,
-        AwsAuthentication::Default | AwsAuthentication::EnvVars => resolve_from_chain(None)?,
+        AwsAuthentication::Profile { profile } => {
+            let provider = named_profile_credentials_provider(profile.as_str(), region);
+            let credentials = runtime
+                .block_on(provider.provide_credentials())
+                .context("failed to resolve credentials from the named AWS profile")?;
+            (
+                credentials.access_key_id().to_string(),
+                credentials.secret_access_key().to_string(),
+                credentials
+                    .session_token()
+                    .map(std::string::ToString::to_string),
+            )
+        }
+        AwsAuthentication::Default | AwsAuthentication::EnvVars => resolve_from_chain()?,
     };
 
     let mut env = vec![

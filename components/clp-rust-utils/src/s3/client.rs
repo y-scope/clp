@@ -5,6 +5,7 @@ use aws_sdk_s3::config::Credentials;
 use aws_sdk_s3::config::Region;
 use non_empty_string::NonEmptyString;
 
+use crate::aws::named_profile_credentials_provider;
 use crate::clp_config::AwsAuthentication;
 
 /// Creates a new S3 client.
@@ -43,7 +44,9 @@ pub async fn create_new_client(
             ));
         }
         AwsAuthentication::Profile { profile } => {
-            config_defaults = config_defaults.profile_name(profile.as_str());
+            config_defaults = config_defaults.credentials_provider(
+                named_profile_credentials_provider(profile.as_str(), region_id),
+            );
         }
         AwsAuthentication::Default | AwsAuthentication::EnvVars => {}
     }
