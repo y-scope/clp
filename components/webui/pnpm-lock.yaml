@@ -189,12 +189,6 @@ importers:
 
   packages/server:
     dependencies:
-      '@aws-sdk/client-s3':
-        specifier: ^3.971.0
-        version: 3.1113.0
-      '@aws-sdk/s3-request-presigner':
-        specifier: ^3.971.0
-        version: 3.1113.0
       '@fastify/autoload':
         specifier: ^6.3.1
         version: 6.5.0
@@ -210,9 +204,6 @@ importers:
       '@fastify/mongodb':
         specifier: ^9.0.2
         version: 9.0.2(socks@2.8.9)
-      '@fastify/mysql':
-        specifier: ^5.0.2
-        version: 5.0.3(@types/node@24.13.3)
       '@fastify/rate-limit':
         specifier: ^10.3.0
         version: 10.3.0
@@ -225,9 +216,6 @@ importers:
       '@fastify/type-provider-typebox':
         specifier: ^5.2.0
         version: 5.2.0(@sinclair/typebox@0.34.52)(fastify@5.12.1)
-      '@msgpack/msgpack':
-        specifier: ^3.1.3
-        version: 3.1.3
       '@sinclair/typebox':
         specifier: ^0.34.41
         version: 0.34.52
@@ -249,9 +237,6 @@ importers:
       mongodb:
         specifier: ^6.21.0
         version: 6.21.0(socks@2.8.9)
-      mysql2:
-        specifier: ^3.22.5
-        version: 3.23.3(@types/node@24.13.3)
       pino-pretty:
         specifier: ^13.1.3
         version: 13.1.3
@@ -262,9 +247,6 @@ importers:
         specifier: ^4.8.3
         version: 4.8.3
     devDependencies:
-      '@smithy/types':
-        specifier: ^4.14.3
-        version: 4.17.2
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
