@@ -25,6 +25,6 @@ For detailed usage of CLP core features and design documentation, see the offici
 
 * [**clp-s**][clp-s-docs]: CLP for JSON logs.
 
-[clp-core-docs]: https://docs.yscope.com/clp/main/user-docs/index.html#core
-[clp-s-docs]: https://docs.yscope.com/clp/main/user-docs/core-clp-s
+[clp-core-docs]: https://docs.yscope.com/clp/v0.14.1/user-docs/index.html#core
+[clp-s-docs]: https://docs.yscope.com/clp/v0.14.1/user-docs/core-clp-s
 [pypi-release]: https://pypi.org/project/yscope-clp-core
