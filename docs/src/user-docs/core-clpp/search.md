@@ -5,15 +5,9 @@ by CLP-S. Because each log message is parsed into named rules (see
 [Terminology](index.md#terminology)), you can query those rule matches directly rather than
 substring-matching the whole log message.
 
-Usage:
-
-```shell
-./clp-s s [<options>] <archives-path> <kql-query>
-```
-
-* `--projection <column> ...` selects which parts of a result to output. See
-  [Projections](#projections).
-* All standard `clp-s s` options still apply. For a complete list, run `./clp-s s --help`.
+CLP+ archives are searched with the same `clp-s s` command as regular `clp-s` archives (see
+[Search](../core-clp-s.md#search)); no CLP+-specific flag is needed. The sections below cover the
+query and projection features specific to CLP+ archives.
 
 ## Querying leaf rule matches
 

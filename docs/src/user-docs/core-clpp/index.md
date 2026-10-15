@@ -42,14 +42,11 @@ from. The two matches above are therefore queryable as `message.block_id.num` an
 `message.block_id.gen_stamp`. All rules may match more than once per log message, which is why they
 appear as arrays in [search output](search.md#output-format).
 
-## Enabling CLP+
-
-CLP+ is selected at compression time with `--flavour clpp`, which also requires
-`--parsing-specification`. The flavour is stored in the archive, so extraction and search need no
-flag: `clp-s x` and `clp-s s` read both CLP+ and regular `clp-s` archives based on the archive's
-contents alone.
-
 ## Compression
+
+CLP+ is selected at compression time with `--flavour clpp`. The flavour is stored in the archive, so
+it is the only point at which CLP+ needs to be requested; see
+[Extraction and search](#extraction-and-search).
 
 Usage:
 
@@ -89,37 +86,16 @@ without `--flavour clpp`, or `--flavour clpp` without it, is an error.
     /mnt/logs/app.jsonl
 ```
 
-## Extraction
+## Extraction and search
 
-Usage:
+CLP+ archives are extracted and searched exactly like regular `clp-s` archives: `clp-s x` and
+`clp-s s` take no CLP+-specific flag and detect the flavour from the archive itself. See
+[Decompression](../core-clp-s.md#decompression) and [Search](../core-clp-s.md#search) for usage.
 
-```shell
-./clp-s x [<options>] <archives-path> <output-dir>
-```
-
-Extraction reconstructs each log message from its log shape and leaf rule matches. No CLP+-specific
-flag is needed.
-
-* `--ordered` preserves the original order of log events.
-* All standard `clp-s x` options still apply. For a complete list, run `./clp-s x --help`.
-
-### Examples
-
-**Extract all logs from a CLP+ archive directory, preserving order:**
-
-```shell
-./clp-s x --ordered /mnt/data/archives /mnt/data/extracted
-```
-
-**Extract a single archive by ID:**
-
-```shell
-./clp-s x --archive-id <archive-id> /mnt/data/archives /mnt/data/extracted
-```
-
-## Searching
-
-See [Searching CLP+ archives](search.md).
+* Extraction reconstructs each log message from its log shape and leaf rule matches, so the output
+  matches what a regular `clp-s` archive would produce.
+* Search additionally supports querying rule matches and log shapes directly. See
+  [Searching CLP+ archives](search.md).
 
 ## Limitations
 

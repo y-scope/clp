@@ -36,6 +36,10 @@ Usage:
       exists.
     * For more information on usage with S3, see our
       [dedicated guide](guides-using-object-storage/index).
+  * `--flavour <clp-s|clpp>` selects the archive flavour (default `clp-s`). `clpp` parses
+    unstructured text fields into queryable parts and requires `--parsing-specification`; see
+    [CLP+](core-clpp/index). Decompression and search detect the flavour from the archive, so they
+    take no corresponding option.
 
 For a complete list of options, run `./clp-s c --help`.
 
