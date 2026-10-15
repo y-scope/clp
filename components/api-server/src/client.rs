@@ -385,9 +385,9 @@ impl Client {
         let max_num_results = job_config.max_num_results;
 
         if job_config.aggregation_config.is_some() {
-            // Aggregation results are always buffered in MongoDB. Each document is an
-            // aggregation record (e.g., a time bucket) rather than a log message, so stream the
-            // documents whole and without a limit.
+            // Aggregation results are always buffered in MongoDB. Each document is an aggregation
+            // record (e.g., a time bucket) rather than a log message, so stream the documents whole
+            // and without a limit.
             return self
                 .fetch_results_from_mongo(search_job_id, None, true, false)
                 .await
