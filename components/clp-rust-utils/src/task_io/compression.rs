@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::clp_config::AwsAuthentication;
+use crate::types::ArchiveId;
 
 /// `clp-s` tuning and engine options for a compression job.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -35,7 +36,7 @@ pub struct CompressionTaskOutput {
 /// Metadata of an archive produced by `clp-s`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArchiveMetadata {
-    pub id: String,
+    pub id: ArchiveId,
     pub begin_timestamp: i64,
     pub end_timestamp: i64,
     pub size: i64,

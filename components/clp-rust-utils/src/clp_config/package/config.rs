@@ -10,6 +10,8 @@ use serde::Deserialize;
 use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
 use crate::dataset::resolve_dataset_name;
+use crate::types::ArchiveId;
+use crate::types::non_empty_string::ExpectedNonEmpty;
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -284,6 +286,17 @@ pub struct ResultsCache {
     pub stream_collection_name: String,
 }
 
+impl ResultsCache {
+    /// Returns the MongoDB URI for the results cache database.
+    #[must_use]
+    pub fn uri(&self) -> NonEmptyString {
+        NonEmptyString::from_string(format!(
+            "mongodb://{}:{}/{}",
+            self.host, self.port, self.db_name
+        ))
+    }
+}
+
 impl Default for ResultsCache {
     fn default() -> Self {
         Self {
@@ -376,6 +389,7 @@ pub struct ArchiveOutput {
     pub target_encoded_file_size: u64,
     pub target_segment_size: u64,
     pub compression_level: u8,
+    pub retention_period: Option<NonZeroU64>,
 }
 
 impl ArchiveOutput {
@@ -396,6 +410,29 @@ impl ArchiveOutput {
             .to_string_lossy()
             .into_owned()
     }
+
+    /// Derives the S3 object key of an archive in a dataset.
+    ///
+    /// # Returns
+    ///
+    /// The dataset's archive storage directory joined with `archive_id`, where a `None` dataset
+    /// resolves to `default`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the derived object key is empty. This should never happen since the key always
+    /// contains at least the `/` separator.
+    #[must_use]
+    pub fn dataset_archive_object_key(
+        &self,
+        dataset: Option<&str>,
+        archive_id: &ArchiveId,
+    ) -> NonEmptyString {
+        NonEmptyString::from_string(format!(
+            "{}/{archive_id}",
+            self.dataset_archive_storage_directory(dataset)
+        ))
+    }
 }
 
 impl Default for ArchiveOutput {
@@ -407,6 +444,7 @@ impl Default for ArchiveOutput {
             target_encoded_file_size: 256 * 1024 * 1024,
             target_segment_size: 256 * 1024 * 1024,
             compression_level: 3,
+            retention_period: None,
         }
     }
 }
@@ -492,11 +530,36 @@ impl Default for Telemetry {
     }
 }
 
+/// Query coordinator configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct QueryCoordinator {
+    pub job_polling_interval_millisecs: NonZeroU64,
+    pub max_concurrent_jobs: NonZeroUsize,
+    pub max_datasets_per_query: Option<NonZeroUsize>,
+    pub query_task_max_retry: u32,
+    pub result_polling_interval_millisecs: NonZeroU64,
+}
+
+impl Default for QueryCoordinator {
+    fn default() -> Self {
+        Self {
+            job_polling_interval_millisecs: NonZeroU64::new(100)
+                .expect("default jobs poll delay should not be zero"),
+            max_concurrent_jobs: NonZeroUsize::new(1000)
+                .expect("default maximum number of concurrent jobs should not be zero"),
+            max_datasets_per_query: NonZeroUsize::new(10),
+            query_task_max_retry: 1,
+            result_polling_interval_millisecs: NonZeroU64::new(100)
+                .expect("default result polling interval should not be zero"),
+        }
+    }
+}
+
 /// Compression coordinator configuration.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct CompressionCoordinator {
-    pub resource_group: SpiderResourceGroup,
     pub job_polling_interval_millisecs: NonZeroU64,
     pub max_concurrent_jobs: NonZeroUsize,
     pub result_polling: PollingBackoff,
@@ -511,10 +574,6 @@ pub struct CompressionCoordinator {
 impl Default for CompressionCoordinator {
     fn default() -> Self {
         Self {
-            resource_group: SpiderResourceGroup {
-                name: NonEmptyString::new("compression-coordinator".to_owned())
-                    .expect("default resource group name should not be empty"),
-            },
             job_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default jobs poll delay should not be zero"),
             max_concurrent_jobs: NonZeroUsize::new(1000)
@@ -544,12 +603,6 @@ impl Default for CompressionCoordinator {
 pub struct Spider {
     pub host: NonEmptyString,
     pub port: u16,
-}
-
-/// Spider resource group configuration.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-pub struct SpiderResourceGroup {
-    pub name: NonEmptyString,
 }
 
 /// Polling backoff configuration.
@@ -751,6 +804,46 @@ mod tests {
         assert_eq!(
             archive_output.dataset_archive_storage_directory(None),
             "prefix/default"
+        );
+    }
+
+    #[test]
+    fn dataset_archive_object_key_joins_prefix_dataset_and_id() {
+        use non_empty_string::NonEmptyString;
+
+        use crate::clp_config::AwsAuthentication;
+        use crate::clp_config::S3Config;
+        use crate::types::ArchiveId;
+        use crate::types::non_empty_string::ExpectedNonEmpty;
+
+        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+
+        let archive_id = ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID");
+        let archive_output = ArchiveOutput {
+            storage: ArchiveOutputStorage::S3 {
+                staging_directory: "var/data/staged-archives".to_owned(),
+                s3_config: S3Config {
+                    bucket: NonEmptyString::from_static_str("bucket"),
+                    region_code: None,
+                    key_prefix: NonEmptyString::from_static_str("LIB1/"),
+                    endpoint_url: None,
+                    aws_authentication: AwsAuthentication::Default,
+                },
+            },
+            ..ArchiveOutput::default()
+        };
+
+        assert_eq!(
+            archive_output
+                .dataset_archive_object_key(None, &archive_id)
+                .as_str(),
+            format!("LIB1/default/{ARCHIVE_ID}")
+        );
+        assert_eq!(
+            archive_output
+                .dataset_archive_object_key(Some("mydataset"), &archive_id)
+                .as_str(),
+            format!("LIB1/mydataset/{ARCHIVE_ID}")
         );
     }
 

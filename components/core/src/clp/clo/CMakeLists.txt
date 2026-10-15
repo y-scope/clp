@@ -166,8 +166,14 @@ set(
         ../../reducer/types.hpp
 )
 
+set(
+        CLP_S_MONGODB_UTILS_SOURCES
+        ../../clp_s/MongoDBUtils.cpp
+        ../../clp_s/MongoDBUtils.hpp
+)
+
 if(CLP_BUILD_EXECUTABLES)
-        add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
+        add_executable(clo ${CLO_SOURCES} ${CLP_S_MONGODB_UTILS_SOURCES} ${REDUCER_SOURCES})
         target_compile_features(clo PRIVATE cxx_std_20)
         target_include_directories(clo
                 PRIVATE

@@ -9,6 +9,8 @@ on:
       - ".github/workflows/clp-rust-checks.yaml"
       - "components/api-server/**"
       - "components/clp-rust-utils/**"
+      - "components/clp-tdl-package/**"
+      - "components/compression-coordinator/**"
       - "components/log-ingestor/**"
       - "taskfile.yaml"
       - "taskfiles/**"

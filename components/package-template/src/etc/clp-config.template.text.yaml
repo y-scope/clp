@@ -42,12 +42,13 @@ log_ingestor: null
 #credentials_file_path: "etc/credentials.yaml"
 #
 ## Remove any bundled services below if you wish to use your own.
-#bundled:
-#  - "database"
-#  - "queue"
-#  - "redis"
-#  - "results_cache"
-#  - "otel_collector"
+#bundled: [
+#  "database",
+#  "queue",
+#  "redis",
+#  "results_cache",
+#  "otel_collector",
+#]
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -60,6 +61,10 @@ log_ingestor: null
 #  jobs_poll_delay: 0.1  # seconds
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
+#
+## `spider` and `compression_coordinator` are unsupported with CLP Text and must stay `null`.
+#spider: null
+#compression_coordinator: null
 #
 #query_scheduler:
 #  host: "localhost"

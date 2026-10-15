@@ -21,6 +21,7 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     ClpConfig,
+    COMPRESSION_RESOURCE_GROUP_NAME,
     CONTAINER_AWS_CONFIG_DIRECTORY,
     CONTAINER_CLP_HOME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -31,6 +32,8 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_COMPONENT_NAME,
+    SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
@@ -519,6 +522,9 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
         },
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
+        SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME: {
+            COMPRESSION_RESOURCE_GROUP_NAME: secrets.token_urlsafe(16)
+        },
     }
 
     with open(credentials_file_path, "w") as f:
@@ -541,6 +547,13 @@ def validate_credentials_file_path(
             raise ValueError(f"Credentials file path '{credentials_file_path}' does not exist.")
     elif not resolved_credentials_file_path.is_file():
         raise ValueError(f"Credentials file path '{credentials_file_path}' is not a file.")
+
+
+def validate_and_load_compression_coordinator_credentials_file(
+    clp_config: ClpConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
+    validate_credentials_file_path(clp_config, clp_home, generate_default_file)
+    clp_config.compression_coordinator.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_db_credentials_file(
@@ -656,6 +669,10 @@ def validate_webui_config(
         raise ValueError("The API server must be enabled when the Web UI is enabled.")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_spider_config(clp_config: ClpConfig):
+    validate_port(f"{SPIDER_COMPONENT_NAME}.port", clp_config.spider.host, clp_config.spider.port)
 
 
 def validate_mcp_server_config(clp_config: ClpConfig, logs_dir: pathlib.Path):
