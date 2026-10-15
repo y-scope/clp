@@ -35,7 +35,7 @@ queries, hostnames, IP addresses, or any other Personally Identifiable
 Information (PII).
 
 Telemetry is sent to: https://telemetry.yscope.io
-For details, see: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
+For details, see: https://docs.yscope.com/clp/v0.14.1/user-docs/reference-telemetry
 
 You can disable metrics at any time by setting the environment variable
 CLP_DISABLE_TELEMETRY=true. Network admins can also block
