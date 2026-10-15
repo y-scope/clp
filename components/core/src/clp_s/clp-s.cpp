@@ -92,9 +92,11 @@ bool compress(CommandLineArguments const& command_line_arguments);
 void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_option);
 
 /**
- * @return -1 if no experimental query found, 0 on success, >0 on failure
+ * Handles the `stats.*` queries, which report archive metadata instead of log events.
+ * @param cli_args
+ * @return -1 if the query isn't a stats query, 0 on success, >0 on failure
  */
-auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int;
+auto handle_stats_queries(CommandLineArguments const& cli_args) -> int;
 
 /**
  * Parses each projection column.
@@ -105,13 +107,14 @@ auto parse_projection_columns(std::vector<std::string> const& columns)
         -> std::optional<std::vector<std::shared_ptr<ast::ColumnDescriptor>>>;
 
 /**
- * Finds the first `--experimental`-only function used by a search, either as a filter in `expr` or
- * as a projection column. Used to reject searches on inputs that don't support these functions.
+ * Finds the first clpp-only function used by a search, either as a filter in `expr` or as a
+ * projection column. Used to reject searches on inputs that don't support these functions.
  * @param expr The parsed search query.
  * @param projection_columns The parsed projection columns.
- * @return The name of the first function found, or std::nullopt if none found.
+ * @return The name of the first function found.
+ * @return std::nullopt if none found.
  */
-auto find_experimental_function(
+auto find_clpp_function(
         std::shared_ptr<ast::Expression> const& expr,
         std::vector<std::shared_ptr<ast::ColumnDescriptor>> const& projection_columns
 ) -> std::optional<std::string_view>;
@@ -127,8 +130,8 @@ auto output_archive_stats(
 ) -> void;
 
 /**
- * For each archive, output statistics of each log-shape as JSON objects. For archives not
- * compressed with `--experimental`, each log type is reported as a shape without a `count`.
+ * For each archive, output statistics of each log-shape as JSON objects. For clp-s-flavour
+ * archives, each log type is reported as a shape without a `count`.
  * @param archive_reader
  * @param output_handler
  */
@@ -293,7 +296,8 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
-    option.experimental = command_line_arguments.experimental();
+    option.flavour = command_line_arguments.get_flavour();
+    option.parsing_spec_path = command_line_arguments.get_parsing_spec_path();
 
     clp_s::JsonParser parser(option);
     if (false == parser.ingest()) {
@@ -309,7 +313,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
     constructor.store();
 }
 
-auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
+auto handle_stats_queries(CommandLineArguments const& cli_args) -> int {
     auto const& query{cli_args.get_query()};
     if (CommandLineArguments::cArchiveStatsQuery != query
         && CommandLineArguments::cLogShapeStatsQuery != query
@@ -317,19 +321,12 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
     {
         return -1;
     }
-    if (false == cli_args.experimental().has_value()) {
-        SPDLOG_ERROR("--experimental must be set to run {}", query);
-        return 1;
-    }
     auto archive_reader{std::make_shared<clp_s::ArchiveReader>()};
     for (auto const& input_path : cli_args.get_input_paths()) {
         try {
             archive_reader->open(
                     input_path,
-                    clp_s::ArchiveReader::Options{
-                            .m_network_auth = cli_args.get_network_auth(),
-                            .m_experimental = cli_args.experimental().has_value()
-                    }
+                    clp_s::ArchiveReader::Options{.m_network_auth = cli_args.get_network_auth()}
             );
         } catch (std::exception const& e) {
             SPDLOG_ERROR("Failed to open archive - {}", e.what());
@@ -370,7 +367,7 @@ auto parse_projection_columns(std::vector<std::string> const& columns)
     return parsed_columns;
 }
 
-auto find_experimental_function(
+auto find_clpp_function(
         std::shared_ptr<ast::Expression> const& expr,
         std::vector<std::shared_ptr<ast::ColumnDescriptor>> const& projection_columns
 ) -> std::optional<std::string_view> {
@@ -715,7 +712,6 @@ int main(int argc, char const* argv[]) {
         option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
         option.print_ordered_chunk_stats = command_line_arguments.print_ordered_chunk_stats();
         option.network_auth = command_line_arguments.get_network_auth();
-        option.m_experimental = command_line_arguments.experimental().has_value();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db
                     = {command_line_arguments.get_mongodb_uri(),
@@ -733,7 +729,7 @@ int main(int argc, char const* argv[]) {
         }
     } else {
         auto const& query{command_line_arguments.get_query()};
-        if (auto const result{handle_experimental_queries(command_line_arguments)}; -1 < result) {
+        if (auto const result{handle_stats_queries(command_line_arguments)}; -1 < result) {
             return result;
         }
 
@@ -768,16 +764,14 @@ int main(int argc, char const* argv[]) {
         if (false == projection_columns.has_value()) {
             return 1;
         }
-        auto const experimental_function{
-                find_experimental_function(expr, projection_columns.value())
-        };
+        auto const clpp_function{find_clpp_function(expr, projection_columns.value())};
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         for (auto const& input_path : command_line_arguments.get_input_paths()) {
             if (std::string::npos != input_path.path.find(clp::ir::cIrFileExtension)) {
-                if (experimental_function.has_value()) {
+                if (clpp_function.has_value()) {
                     SPDLOG_ERROR(
                             "{}() is unsupported for KV-IR stream {}",
-                            experimental_function.value(),
+                            clpp_function.value(),
                             input_path.path
                     );
                     return 1;
@@ -850,8 +844,7 @@ int main(int argc, char const* argv[]) {
                 archive_reader->open(
                         input_path,
                         clp_s::ArchiveReader::Options{
-                                .m_network_auth = command_line_arguments.get_network_auth(),
-                                .m_experimental = command_line_arguments.experimental().has_value()
+                                .m_network_auth = command_line_arguments.get_network_auth()
                         }
                 );
             } catch (std::exception const& e) {
@@ -861,16 +854,14 @@ int main(int argc, char const* argv[]) {
                 }
                 return 1;
             }
-            if (experimental_function.has_value() && false == archive_reader->experimental()) {
+            if (clpp_function.has_value() && clp_s::ClpFlavour::Clpp != archive_reader->flavour()) {
                 SPDLOG_ERROR(
-                        "{}() requires an archive compressed with --experimental: {}",
-                        experimental_function.value(),
+                        "{}() requires an archive compressed with --flavour clpp: {}",
+                        clpp_function.value(),
                         archive_reader->get_archive_id()
                 );
                 if (nullptr != telemetry_span) {
-                    telemetry_span->set_error(
-                            "experimental function used with non-experimental archive"
-                    );
+                    telemetry_span->set_error("clpp function used with non-clpp archive");
                 }
                 return 1;
             }

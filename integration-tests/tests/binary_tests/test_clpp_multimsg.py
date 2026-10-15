@@ -106,7 +106,8 @@ def multimsg_archive_fixture(
     compression_cmd = [
         str(clp_core_path_config.clp_s_binary_path),
         "c",
-        "--experimental",
+        "--flavour",
+        "clpp",
         "--timestamp-key",
         timestamp_key,
         f"--parsing-specification={parsing_spec_path}",
@@ -138,7 +139,6 @@ def test_multimsg_roundtrip(
     decompression_cmd = [
         str(clp_core_path_config.clp_s_binary_path),
         "x",
-        "--experimental",
         "--ordered",
         str(multimsg_archive),
         str(multimsg_test_paths.decompression_dir),
@@ -382,7 +382,7 @@ def _build_search_cmd(
     projection: list[str] | None = None,
 ) -> list[str]:
     """
-    Builds the `clp-s s --experimental` command for the given query and optional projection.
+    Builds the `clp-s s` command for the given query and optional projection.
 
     :param clp_core_path_config:
     :param archive_path:
@@ -393,7 +393,6 @@ def _build_search_cmd(
     search_cmd = [
         str(clp_core_path_config.clp_s_binary_path),
         "s",
-        "--experimental",
         str(archive_path),
         query,
     ]
@@ -410,7 +409,7 @@ def _search(
     projection: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """
-    Runs `clp-s s --experimental` and parses each output line as a JSON object.
+    Runs `clp-s s` and parses each output line as a JSON object.
 
     :param clp_core_path_config:
     :param archive_path:

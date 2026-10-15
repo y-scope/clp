@@ -8,7 +8,11 @@
 #include <tuple>
 #include <vector>
 
+#include <clp_s/Defs.hpp>
+
 #include "msgpack.hpp"
+
+MSGPACK_ADD_ENUM(clp_s::ClpFlavour);
 
 namespace clp_s {
 /**
@@ -120,9 +124,10 @@ enum struct ArchiveMetadataPacketType : uint8_t {
 
 struct ArchiveInfoPacket {
     uint64_t num_segments{};
-    bool experimental{false};
+    // Archives written before this field existed omit it, leaving the `Clps` default.
+    ClpFlavour flavour{ClpFlavour::Clps};
 
-    MSGPACK_DEFINE_MAP(num_segments, experimental);
+    MSGPACK_DEFINE_MAP(num_segments, flavour);
 };
 
 struct ArchiveFileInfo {

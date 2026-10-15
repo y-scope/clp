@@ -44,31 +44,28 @@ appear as arrays in [search output](search.md#output-format).
 
 ## Enabling CLP+
 
-Every CLP+ command requires `--experimental`. Compression additionally requires
-`--parsing-specification`, but extraction and search do not as the spec is stored in the archive.
-
-:::{note}
-Reading a CLP+ archive without `--experimental` fails with an error. Passing `--experimental` when
-reading a regular `clp-s` archive is harmless.
-:::
+CLP+ is selected at compression time with `--flavour clpp`, which also requires
+`--parsing-specification`. The flavour is stored in the archive, so extraction and search need no
+flag: `clp-s x` and `clp-s s` read both CLP+ and regular `clp-s` archives based on the archive's
+contents alone.
 
 ## Compression
 
 Usage:
 
 ```shell
-./clp-s c --experimental --parsing-specification=<spec-path> [<options>] \
+./clp-s c --flavour clpp --parsing-specification=<spec-path> [<options>] \
     <archives-dir> <input-path> [<input-path> ...]
 ```
 
-* `--experimental` enables CLP+.
+* `--flavour clpp` enables CLP+. The default flavour, `clp-s`, produces a regular `clp-s` archive.
 * `--parsing-specification <spec-path>` is the [parsing specification](parsing-spec) used to parse
   log messages.
 * All standard `clp-s c` options still apply. For a complete list, run `./clp-s c --help`.
 
 :::{note}
-`--experimental` and `--parsing-specification` must be used together. Supplying only one is an
-error.
+`--parsing-specification` is required by, and only valid with, `--flavour clpp`. Supplying it
+without `--flavour clpp`, or `--flavour clpp` without it, is an error.
 :::
 
 ### Examples
@@ -76,7 +73,7 @@ error.
 **Compress `/mnt/logs/app.log` into `/mnt/data/archives`:**
 
 ```shell
-./clp-s c --experimental \
+./clp-s c --flavour clpp \
     --parsing-specification=./parsing-spec.txt \
     /mnt/data/archives \
     /mnt/logs/app.log
@@ -85,7 +82,7 @@ error.
 **Compress JSON logs where the timestamp lives in its own field:**
 
 ```shell
-./clp-s c --experimental \
+./clp-s c --flavour clpp \
     --parsing-specification=./parsing-spec.txt \
     --timestamp-key timestamp \
     /mnt/data/archives \
@@ -97,10 +94,11 @@ error.
 Usage:
 
 ```shell
-./clp-s x --experimental [<options>] <archives-path> <output-dir>
+./clp-s x [<options>] <archives-path> <output-dir>
 ```
 
-Extraction reconstructs each log message from its log shape and leaf rule matches.
+Extraction reconstructs each log message from its log shape and leaf rule matches. No CLP+-specific
+flag is needed.
 
 * `--ordered` preserves the original order of log events.
 * All standard `clp-s x` options still apply. For a complete list, run `./clp-s x --help`.
@@ -110,13 +108,13 @@ Extraction reconstructs each log message from its log shape and leaf rule matche
 **Extract all logs from a CLP+ archive directory, preserving order:**
 
 ```shell
-./clp-s x --experimental --ordered /mnt/data/archives /mnt/data/extracted
+./clp-s x --ordered /mnt/data/archives /mnt/data/extracted
 ```
 
 **Extract a single archive by ID:**
 
 ```shell
-./clp-s x --experimental --archive-id <archive-id> /mnt/data/archives /mnt/data/extracted
+./clp-s x --archive-id <archive-id> /mnt/data/archives /mnt/data/extracted
 ```
 
 ## Searching

@@ -20,7 +20,7 @@
  * @param single_file_archive
  * @param structurize_arrays
  * @param parsing_spec_path Path to a parsing specification file. When set, the archive is
- * compressed with experimental enabled.
+ * compressed with the clpp flavour.
  * @return Statistics for every compressed archive.
  */
 [[nodiscard]] auto compress_archive(

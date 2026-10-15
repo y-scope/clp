@@ -20,7 +20,7 @@
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
 #include <clp_s/ArchiveWriter.hpp>
-#include <clp_s/CommandLineArguments.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
@@ -44,7 +44,8 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
-    std::optional<CommandLineArguments::ExperimentalOptions> experimental;
+    ClpFlavour flavour{ClpFlavour::Clps};
+    std::optional<Path> parsing_spec_path;
 };
 
 class JsonParser {

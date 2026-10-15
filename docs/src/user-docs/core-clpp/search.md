@@ -8,7 +8,7 @@ substring-matching the whole log message.
 Usage:
 
 ```shell
-./clp-s s --experimental [<options>] <archives-path> <kql-query>
+./clp-s s [<options>] <archives-path> <kql-query>
 ```
 
 * `--projection <column> ...` selects which parts of a result to output. See
@@ -22,19 +22,19 @@ Each leaf rule is a column addressed by its dotted path. Given a log shape of
 
 ```shell
 # Exact match on a leaf rule
-./clp-s s --experimental /mnt/data/archives 'message.block_id.gen_stamp: 5660'
+./clp-s s /mnt/data/archives 'message.block_id.gen_stamp: 5660'
 
 # Wildcards
-./clp-s s --experimental /mnt/data/archives 'message.block_id.gen_stamp: 566*'
+./clp-s s /mnt/data/archives 'message.block_id.gen_stamp: 566*'
 
 # Numeric comparison; matches that look like numbers are stored as numbers
-./clp-s s --experimental /mnt/data/archives 'message.block_id.num > 1073746400'
+./clp-s s /mnt/data/archives 'message.block_id.num > 1073746400'
 
 # Existence
-./clp-s s --experimental /mnt/data/archives 'message.block_id.num: *'
+./clp-s s /mnt/data/archives 'message.block_id.num: *'
 
 # Combine with AND/OR, like any KQL query
-./clp-s s --experimental /mnt/data/archives \
+./clp-s s /mnt/data/archives \
     'message.block_id.num: 1073746400 and message.block_id.gen_stamp: 566*'
 ```
 
@@ -45,10 +45,10 @@ finding all log messages of a given form regardless of the matches they carry.
 
 ```shell
 # Log messages whose log shape contains this static text
-./clp-s s --experimental /mnt/data/archives 'shape(message): "*to MEMORY*"'
+./clp-s s /mnt/data/archives 'shape(message): "*to MEMORY*"'
 
 # Log messages containing a block_id whose rule shape starts with blk_
-./clp-s s --experimental /mnt/data/archives 'shape(message.block_id): "blk_*"'
+./clp-s s /mnt/data/archives 'shape(message.block_id): "blk_*"'
 ```
 
 `column` must be a log message or a parent rule. Applying `shape()` to a leaf rule is an error:
@@ -60,8 +60,8 @@ ParentRule nodes match column "message.block_id.gen_stamp".
 
 `shape()` may be used both as a filter and as a [projection](#projections).
 
-`shape()` and `decompose()` require `--experimental` and an archive compressed with
-`--experimental`; using them on any other archive or on a KV-IR stream is an error.
+`shape()` and `decompose()` require an archive compressed with `--flavour clpp`; using them on any
+other archive or on a KV-IR stream is an error.
 
 ## Wildcards in column names
 
@@ -162,15 +162,15 @@ Two noteworthy details:
 
 ```shell
 # Shape only
-./clp-s s --experimental /mnt/data/archives 'message.block_id: *' \
+./clp-s s /mnt/data/archives 'message.block_id: *' \
     --projection "shape(message)"
 
 # Full structural breakdown
-./clp-s s --experimental /mnt/data/archives 'message.block_id: *' \
+./clp-s s /mnt/data/archives 'message.block_id: *' \
     --projection "decompose(message)"
 
 # Original text alongside the breakdown
-./clp-s s --experimental /mnt/data/archives 'message.block_id: *' \
+./clp-s s /mnt/data/archives 'message.block_id: *' \
     --projection "message" "decompose(message)"
 ```
 
@@ -180,14 +180,14 @@ Projection applies to search only. `clp-s x` always extracts the original log me
 
 ## Archive statistics
 
-Three queries report archive metadata instead of log events. All require `--experimental` and work
-on both CLP+ and regular `clp-s` archives. Each output line carries an `archive_id` so results from
-multiple archives can be told apart.
+Three queries report archive metadata instead of log events. All work on both CLP+ and regular
+`clp-s` archives. Each output line carries an `archive_id` so results from multiple archives can be
+told apart.
 
 ```shell
-./clp-s s --experimental /mnt/data/archives 'stats.archives'
-./clp-s s --experimental /mnt/data/archives 'stats.log_shapes'
-./clp-s s --experimental /mnt/data/archives 'stats.schema_tree'
+./clp-s s /mnt/data/archives 'stats.archives'
+./clp-s s /mnt/data/archives 'stats.log_shapes'
+./clp-s s /mnt/data/archives 'stats.schema_tree'
 ```
 
 `stats.archives` — one line per archive:
@@ -208,7 +208,7 @@ multiple archives can be told apart.
 :::{note}
 For regular `clp-s` archives, `num_log_shapes` counts log types, and `stats.log_shapes` reports each
 log type without a `count` (shape counts are only stored in archives compressed with
-`--experimental`).
+`--flavour clpp`).
 :::
 
 :::{note}

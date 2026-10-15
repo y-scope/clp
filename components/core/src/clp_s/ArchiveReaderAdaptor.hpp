@@ -16,6 +16,8 @@
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 
+#include <clp_s/Defs.hpp>
+
 #include "../clp/BoundedReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "InputConfig.hpp"
@@ -122,9 +124,9 @@ public:
     [[nodiscard]] auto is_single_file_archive() const -> bool { return m_single_file_archive; }
 
     /**
-     * @return Whether the archive info packet set the experimental bool.
+     * @return The flavour of CLP the archive was compressed with.
      */
-    [[nodiscard]] auto experimental() const -> bool { return m_archive_info.experimental; }
+    [[nodiscard]] auto flavour() const -> ClpFlavour { return m_archive_info.flavour; }
 
     /**
      * @param log_event_idx

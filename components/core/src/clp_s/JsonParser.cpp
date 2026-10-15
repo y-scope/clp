@@ -274,15 +274,17 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.id = m_generator();
     m_archive_options.authoritative_timestamp = m_timestamp_column;
     m_archive_options.authoritative_timestamp_namespace = m_timestamp_namespace;
-    m_archive_options.experimental = option.experimental.has_value();
+    m_archive_options.flavour = option.flavour;
 
     m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);
 
-    if (option.experimental) {
-        auto spec_reader{
-                try_create_reader(option.experimental->parsing_spec_path, option.network_auth)
-        };
+    if (ClpFlavour::Clpp == option.flavour) {
+        if (false == option.parsing_spec_path.has_value()) {
+            SPDLOG_ERROR("A parsing specification is required for the clpp flavour.");
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
+        auto spec_reader{try_create_reader(option.parsing_spec_path.value(), option.network_auth)};
         auto parser{clpp::build_parser(*spec_reader)};
         if (parser.has_error()) {
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
@@ -407,7 +409,7 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             }
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
-                if (m_archive_options.experimental) {
+                if (m_clpp.has_value()) {
                     if (auto const result{parse_log_message(node_id_stack.top(), cur_key, value)};
                         result.has_error())
                     {
@@ -523,7 +525,7 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             }
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
-                if (m_archive_options.experimental) {
+                if (m_clpp.has_value()) {
                     if (auto const result{parse_log_message(parent_node_id, "", value)};
                         result.has_error())
                     {
@@ -725,7 +727,7 @@ void JsonParser::parse_line(
 
                 std::string_view value = line.get_string(true);
                 if (value.find(' ') != std::string::npos) {
-                    if (m_archive_options.experimental) {
+                    if (m_clpp.has_value()) {
                         if (auto const result{
                                     parse_log_message(node_id_stack.top(), cur_key, value)
                             };

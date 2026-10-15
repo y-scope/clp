@@ -70,7 +70,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_var_dict->open(var_dict_path, m_compression_level, UINT64_MAX);
 
     std::string log_dict_path = m_archive_path + constants::cArchiveLogDictFile;
-    if (option.experimental) {
+    if (ClpFlavour::Clpp == option.flavour) {
         m_clpp.emplace(std::make_shared<VariableDictionaryWriter>());
         m_clpp->log_shape_dict->open(log_dict_path, m_compression_level, UINT64_MAX);
     } else {
@@ -237,7 +237,10 @@ auto ArchiveWriter::write_archive_metadata(
     compressor.write_numeric_value<uint8_t>(num_constant_packets + num_optional_packets);
 
     // Write archive info
-    ArchiveInfoPacket archive_info{.num_segments = 1, .experimental = m_clpp.has_value()};
+    ArchiveInfoPacket archive_info{
+            .num_segments = 1,
+            .flavour = m_clpp.has_value() ? ClpFlavour::Clpp : ClpFlavour::Clps
+    };
     std::stringstream msgpack_buffer;
     msgpack::pack(msgpack_buffer, archive_info);
     std::string archive_info_str = msgpack_buffer.str();

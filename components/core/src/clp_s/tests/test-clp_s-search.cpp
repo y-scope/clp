@@ -56,16 +56,11 @@ auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
         -> std::filesystem::path;
 auto get_test_input_local_path(std::string_view test_input_path) -> std::string;
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression>;
-void search(
-        std::string const& query,
-        bool ignore_case,
-        bool experimental,
-        std::vector<int64_t> const& expected_results
-);
+void
+search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results);
 void search(
         std::shared_ptr<clp_s::search::ast::Expression> expr,
         bool ignore_case,
-        bool experimental,
         std::vector<int64_t> const& expected_results
 );
 void validate_results(
@@ -74,12 +69,12 @@ void validate_results(
 );
 
 /**
- * Runs experimental searches, asserting the decomposed queries fail with `UnsupportedDecomposition`
- * when this build doesn't support decomposition.
+ * Runs searches against clpp archives, asserting the decomposed queries fail with
+ * `UnsupportedDecomposition` when this build doesn't support decomposition.
  * @param queries_and_results
  * @param decomposed_queries_and_results
  */
-auto search_experimental(
+auto search_clpp(
         std::vector<std::pair<std::string, std::vector<int64_t>>> const& queries_and_results,
         std::vector<std::pair<std::string, std::vector<int64_t>>> const&
                 decomposed_queries_and_results
@@ -150,21 +145,16 @@ void validate_results(
     REQUIRE(results.size() == expected_results.size());
 }
 
-void search(
-        std::string const& query,
-        bool ignore_case,
-        bool experimental,
-        std::vector<int64_t> const& expected_results
-) {
+void
+search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results) {
     auto query_stream = std::istringstream{query};
     auto expr = clp_s::search::kql::parse_kql_expression(query_stream);
-    search(expr, ignore_case, experimental, expected_results);
+    search(expr, ignore_case, expected_results);
 }
 
 void search(
         std::shared_ptr<clp_s::search::ast::Expression> expr,
         bool ignore_case,
-        bool experimental,
         std::vector<int64_t> const& expected_results
 ) {
     REQUIRE(nullptr != expr);
@@ -189,10 +179,7 @@ void search(
                 .source{clp_s::InputSource::Filesystem},
                 .path{entry.path().string()}
         };
-        archive_reader->open(
-                archive_path,
-                clp_s::ArchiveReader::Options{.m_experimental = experimental}
-        );
+        archive_reader->open(archive_path, clp_s::ArchiveReader::Options{});
 
         auto archive_expr = expr->copy();
 
@@ -228,23 +215,23 @@ void search(
     validate_results(results, expected_results);
 }
 
-auto search_experimental(
+auto search_clpp(
         std::vector<std::pair<std::string, std::vector<int64_t>>> const& queries_and_results,
         std::vector<std::pair<std::string, std::vector<int64_t>>> const&
                 decomposed_queries_and_results
 ) -> void {
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, true, expected_results));
+        REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 
     for (auto const& [query, expected_results] : decomposed_queries_and_results) {
         CAPTURE(query);
         if (clpp::supports_decomposition()) {
-            REQUIRE_NOTHROW(search(query, false, true, expected_results));
+            REQUIRE_NOTHROW(search(query, false, expected_results));
         } else {
             REQUIRE_THROWS_WITH(
-                    search(query, false, true, expected_results),
+                    search(query, false, expected_results),
                     Catch::Matchers::ContainsSubstring("-DCLP_BUILD_CLPP_DECOMPOSITION=ON")
             );
         }
@@ -300,15 +287,15 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, false, expected_results));
+        REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 
     std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
     REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
-    REQUIRE_NOTHROW(search(expr, false, false, {0}));
+    REQUIRE_NOTHROW(search(expr, false, {0}));
 }
 
-TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
+TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(arr.b > 1000)aa", {7, 8}},
             {R"aa(var_string: *)aa", {9}},
@@ -345,7 +332,7 @@ TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
     );
 
     CAPTURE(single_file_archive);
-    search_experimental(queries_and_results, decomposed_queries_and_results);
+    search_clpp(queries_and_results, decomposed_queries_and_results);
 }
 
 // Tests column resolution when a key maps to several MPT nodes of different types, at least one of
@@ -365,7 +352,7 @@ TEST_CASE("clp-s-search-experimental", "[clp-s][search][clpp]") {
 // - Wildcard paths resolving to nodes at different depths (`*.msg: *`, `*.msg: 7`).
 // - shape() filters, which only target the decomposable node (`shape(msg): *`,
 //   `NOT shape(msg): "xxx"`).
-TEST_CASE("clp-s-search-experimental-mixed-type-columns", "[clp-s][search][clpp]") {
+TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(msg: *)aa", {0, 1, 5}},
             {R"aa(NOT msg: *)aa", {2, 3, 4}},
@@ -399,7 +386,7 @@ TEST_CASE("clp-s-search-experimental-mixed-type-columns", "[clp-s][search][clpp]
     );
 
     CAPTURE(single_file_archive);
-    search_experimental(queries_and_results, decomposed_queries_and_results);
+    search_clpp(queries_and_results, decomposed_queries_and_results);
 }
 
 TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
@@ -431,12 +418,12 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, false, expected_results));
+        REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 
     std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
     REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
-    REQUIRE_NOTHROW(search(expr, false, false, {0}));
+    REQUIRE_NOTHROW(search(expr, false, {0}));
 }
 
 TEST_CASE("clp-s-search-float-timestamp", "[clp-s][search]") {
@@ -466,7 +453,7 @@ TEST_CASE("clp-s-search-float-timestamp", "[clp-s][search]") {
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, false, expected_results));
+        REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 }
 
@@ -497,6 +484,6 @@ TEST_CASE("clp-s-search-epoch-timestamp", "[clp-s][search]") {
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
-        REQUIRE_NOTHROW(search(query, false, false, expected_results));
+        REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 }

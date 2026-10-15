@@ -17,6 +17,7 @@
 #include <simdjson.h>
 
 #include <clp/ReaderInterface.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/search/ColumnScan.hpp>
 
 #include "../../clp/Query.hpp"
@@ -60,7 +61,7 @@ public:
               m_schema_tree(m_archive_reader->get_schema_tree()),
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
               m_schemas(m_archive_reader->get_schema_map()),
-              m_experimental(m_archive_reader->experimental()) {}
+              m_flavour(m_archive_reader->flavour()) {}
 
     // Destructor
     virtual ~QueryRunner() = default;
@@ -136,7 +137,7 @@ private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
-    bool m_experimental{false};
+    ClpFlavour m_flavour{ClpFlavour::Clps};
 
     std::map<std::string, std::optional<clp::Query>> m_string_query_map;
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;

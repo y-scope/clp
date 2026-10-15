@@ -11,6 +11,8 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clp_s/ArchiveReader.hpp>
+
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
 #include "../src/clp_s/ffi/sfa/ClpArchiveReader.hpp"
 #include "clp_s_test_utils.hpp"
@@ -46,7 +48,7 @@ auto generate_single_file_archive(
     auto const root_output_dir{get_archive_output_root_dir()};
     std::filesystem::create_directories(root_output_dir);
 
-    auto const* const suffix{parsing_spec_path.has_value() ? "_experimental" : ""};
+    auto const* const suffix{parsing_spec_path.has_value() ? "_clpp" : ""};
     auto const output_dir{root_output_dir / (log_path.stem().string() + suffix)};
 
     auto const archive_stats = compress_archive(
@@ -134,7 +136,7 @@ auto run_single_log_file_test(
 }  // namespace
 
 TEST_CASE("clp_s_ffi_sfa_reader", "[clp-s][ffi][sfa]") {
-    auto const experimental = GENERATE(false, true);
+    auto const is_clpp{GENERATE(false, true)};
     TestOutputCleaner const test_cleanup{{get_archive_output_root_dir().string()}};
 
     auto const log_file_name{GENERATE(cInputNoFloats, cInputFloatTimestamp)};
@@ -143,7 +145,7 @@ TEST_CASE("clp_s_ffi_sfa_reader", "[clp-s][ffi][sfa]") {
     REQUIRE(std::filesystem::exists(log_path));
 
     auto const parsing_spec_path{
-            experimental ? std::make_optional(get_heuristic_parsing_spec_path()) : std::nullopt
+            is_clpp ? std::make_optional(get_heuristic_parsing_spec_path()) : std::nullopt
     };
     auto const archive_path{generate_single_file_archive(log_path, parsing_spec_path)};
     REQUIRE(std::filesystem::exists(archive_path));
@@ -152,20 +154,9 @@ TEST_CASE("clp_s_ffi_sfa_reader", "[clp-s][ffi][sfa]") {
 
     auto const test_result{run_single_log_file_test(
             archive_path,
-            {.m_experimental = experimental},
+            clp_s::ArchiveReader::Options{},
             log_path.string(),
             expected_event_count
     )};
     REQUIRE(false == test_result.has_error());
-
-    // Also verify reading an experimental archive without the experimental option fails.
-    if (experimental) {
-        auto const test_fail_result{run_single_log_file_test(
-                archive_path,
-                {.m_experimental = false},
-                log_path.string(),
-                expected_event_count
-        )};
-        REQUIRE(test_fail_result.has_error());
-    }
 }

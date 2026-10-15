@@ -55,7 +55,7 @@ public:
     // Constructors
     /**
      * Builds an index from each log shape ID to its `LogMessage`s to enable shape matching and
-     * query decomposition. If the archive is not experimental construction is skipped and the
+     * query decomposition. If the archive is not clpp-flavour construction is skipped and the
      * object is invalid.
      * @param archive_reader
      * @param case_sensitive Whether matching is case sensitive.

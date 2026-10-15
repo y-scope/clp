@@ -24,7 +24,7 @@ namespace clp_s {
  *
  * The number used to represent each node type can not change. That means that elements in this
  * enum can never be reordered and that new node types always need to be added to the end of the
- * enum (but before Unknown).
+ * enum before `Unknown`.
  *
  * Node types are used to help record the structure of a log record, with the exception of the
  * "Metadata" node type. The "Metadata" type is a special type used by the implementation to
@@ -32,7 +32,7 @@ namespace clp_s {
  * the implementation may create a special subtree of the MPT which contains fields used to record
  * things like original log order.
  *
- * The following NodeTypes are only used in the experimental prototype:
+ * The following NodeTypes are only used by the clpp flavour:
  *
  * `LogMessage`: Stores a structured representation of an unstructured log message. It is made up of
  * `ParentRule`s and primitive type nodes that are in the message.

@@ -18,6 +18,7 @@
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReaderAdaptor.hpp>
 #include <clp_s/ColumnReader.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
@@ -71,12 +72,6 @@ auto ArchiveReader::initialize_archive_reader() -> void {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
 
-    bool const experimental_archive{m_archive_reader_adaptor->experimental()};
-    if (experimental_archive && false == m_options.m_experimental) {
-        SPDLOG_ERROR("Archive was created with --experimental but --experimental flag is not set");
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-    }
-
     m_schema_tree = ReaderUtils::read_schema_tree(*m_archive_reader_adaptor);
     m_read_sections.emplace(constants::cArchiveSchemaTreeFile);
     m_schema_map = ReaderUtils::read_schemas(*m_archive_reader_adaptor);
@@ -85,7 +80,7 @@ auto ArchiveReader::initialize_archive_reader() -> void {
     m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
-    if (experimental_archive) {
+    if (ClpFlavour::Clpp == m_archive_reader_adaptor->flavour()) {
         m_clpp.emplace();
         m_clpp->log_shape_dict
                 = std::make_shared<LogShapeDictionaryReader>(*m_archive_reader_adaptor);

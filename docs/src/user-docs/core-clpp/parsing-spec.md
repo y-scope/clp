@@ -31,15 +31,15 @@ details.
 Compress a sample and inspect the resulting log shapes to confirm the rule works:
 
 ```shell
-./clp-s c --experimental --parsing-specification=./my-spec.txt /tmp/archives /tmp/sample.log
-./clp-s s --experimental /tmp/archives 'stats.log_shapes'
+./clp-s c --flavour clpp --parsing-specification=./my-spec.txt /tmp/archives /tmp/sample.log
+./clp-s s /tmp/archives 'stats.log_shapes'
 ```
 
 After compression, each leaf rule is a queryable column, named by its fully qualified name and
 prefixed by the field the log message came from:
 
 ```shell
-./clp-s s --experimental /tmp/archives 'message.block_id.num: 1073746484'
+./clp-s s /tmp/archives 'message.block_id.num: 1073746484'
 ```
 
 :::{tip}
@@ -54,7 +54,7 @@ number is stored as a JSON number rather than a string, regardless of the rule's
 transparently and is what makes numeric comparisons work:
 
 ```shell
-./clp-s s --experimental /mnt/data/archives 'message.block_id.num > 1073746400'
+./clp-s s /mnt/data/archives 'message.block_id.num > 1073746400'
 ```
 
 **`header` rules are not used by `clp-s`.** A `header` rule marks where one log message ends and the

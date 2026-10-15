@@ -9,7 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <clp_s/ArchiveWriter.hpp>
-#include <clp_s/CommandLineArguments.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/JsonParser.hpp>
 
@@ -49,11 +49,10 @@ auto compress_archive(
         parser_option.timestamp_key = std::move(timestamp_key.value());
     }
     if (parsing_spec_path.has_value()) {
-        parser_option.experimental = clp_s::CommandLineArguments::ExperimentalOptions{
-                .parsing_spec_path = clp_s::Path{
-                        .source = clp_s::InputSource::Filesystem,
-                        .path = parsing_spec_path.value().string()
-                }
+        parser_option.flavour = clp_s::ClpFlavour::Clpp;
+        parser_option.parsing_spec_path = clp_s::Path{
+                .source = clp_s::InputSource::Filesystem,
+                .path = parsing_spec_path.value().string()
         };
     }
 

@@ -15,6 +15,7 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/DictionaryReader.hpp>
 #include <clp_s/InputConfig.hpp>
@@ -42,7 +43,6 @@ public:
 
     struct Options {
         NetworkAuthOption m_network_auth{};
-        bool m_experimental{false};
         bool m_extract_mode{false};
     };
 
@@ -140,7 +140,7 @@ public:
 
     /**
      * @return The log type dictionary, reading it from the archive if it hasn't been read yet.
-     * Always null for an experimental archive, which stores log shapes instead.
+     * Always null for a clpp-flavour archive, which stores log shapes instead.
      */
     auto get_log_type_dictionary() -> std::shared_ptr<LogTypeDictionaryReader>;
 
@@ -151,7 +151,7 @@ public:
 
     /**
      * @return The log shape dictionary, reading it from the archive if it hasn't been read yet, or
-     * null if the archive isn't experimental.
+     * null if the archive isn't clpp-flavour.
      */
     auto get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictionaryReader>;
 
@@ -232,7 +232,12 @@ public:
         return m_archive_reader_adaptor->get_metadata_for_log_event(log_event_idx);
     }
 
-    [[nodiscard]] auto experimental() const -> bool { return m_clpp.has_value(); }
+    /**
+     * @return The flavour of CLP the archive was compressed with.
+     */
+    [[nodiscard]] auto flavour() const -> ClpFlavour {
+        return m_clpp.has_value() ? ClpFlavour::Clpp : ClpFlavour::Clps;
+    }
 
 private:
     // Types

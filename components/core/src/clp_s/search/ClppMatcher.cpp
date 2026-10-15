@@ -39,7 +39,7 @@ auto erase_unconstrained_leaves(std::vector<clpp::LeafQuery>& leaf_queries) -> v
 ClppMatcher::ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive)
         : m_archive_reader{archive_reader},
           m_case_sensitive{case_sensitive} {
-    if (false == m_archive_reader->experimental()) {
+    if (ClpFlavour::Clpp != m_archive_reader->flavour()) {
         return;
     }
     auto const log_shape_dict{m_archive_reader->get_log_shape_dictionary()};

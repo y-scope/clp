@@ -34,10 +34,6 @@ public:
         Search = 's'
     };
 
-    struct ExperimentalOptions {
-        Path parsing_spec_path;
-    };
-
     struct ResultsCacheOutputHandlerOptions {
         std::string uri;
         std::string collection;
@@ -152,8 +148,14 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
-    [[nodiscard]] auto experimental() const -> std::optional<ExperimentalOptions> const& {
-        return m_experimental;
+    [[nodiscard]] auto get_flavour() const -> ClpFlavour { return m_flavour; }
+
+    /**
+     * @return The parsing specification path.
+     * @return std::nullopt if the flavour isn't clpp.
+     */
+    [[nodiscard]] auto get_parsing_spec_path() const -> std::optional<Path> const& {
+        return m_parsing_spec_path;
     }
 
 private:
@@ -281,7 +283,8 @@ private:
 
     std::optional<Aggregator> m_aggregator;
 
-    std::optional<ExperimentalOptions> m_experimental;
+    ClpFlavour m_flavour{ClpFlavour::Clps};
+    std::optional<Path> m_parsing_spec_path;
 };
 }  // namespace clp_s
 

@@ -13,9 +13,10 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 
+#include <clp_s/Defs.hpp>
+
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
-#include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonConstructor.hpp"
 #include "../src/clp_s/SchemaTree.hpp"
@@ -44,7 +45,7 @@ namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
         -> std::filesystem::path;
 auto get_test_input_local_path(std::string_view const test_input_path) -> std::string;
-auto extract(bool experimental = false) -> std::filesystem::path;
+auto extract() -> std::filesystem::path;
 void compare(std::filesystem::path const& extracted_json_path);
 void compare_with_input(
         std::string const& input_file_path,
@@ -55,7 +56,12 @@ void literallyCompare(
         std::filesystem::path const& extracted_json_path
 );
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types);
-void validate_archive_header(bool experimental = false);
+
+/**
+ * Validates the header of every archive in the test archive directory.
+ * @param expected_flavour The flavour each archive is expected to report.
+ */
+auto validate_archive_header(clp_s::ClpFlavour expected_flavour = clp_s::ClpFlavour::Clps) -> void;
 
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
         -> std::filesystem::path {
@@ -103,7 +109,7 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
     }
 }
 
-void validate_archive_header(bool experimental) {
+auto validate_archive_header(clp_s::ClpFlavour expected_flavour) -> void {
     clp_s::ArchiveReader archive_reader;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
         REQUIRE_NOTHROW(archive_reader.open(
@@ -111,8 +117,9 @@ void validate_archive_header(bool experimental) {
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
-                clp_s::ArchiveReader::Options{.m_experimental = experimental}
+                clp_s::ArchiveReader::Options{}
         ));
+        REQUIRE(expected_flavour == archive_reader.flavour());
         auto const& archive_header{archive_reader.get_header()};
         REQUIRE(clp_s::cArchiveVersion == archive_header.version);
         auto const [major_version, minor_version, patch_version]
@@ -134,7 +141,7 @@ void validate_archive_header(bool experimental) {
     }
 }
 
-auto extract(bool experimental) -> std::filesystem::path {
+auto extract() -> std::filesystem::path {
     constexpr auto cDefaultOrdered = false;
     constexpr auto cDefaultTargetOrderedChunkSize = 0;
 
@@ -145,7 +152,6 @@ auto extract(bool experimental) -> std::filesystem::path {
     constructor_option.output_dir = cTestEndToEndOutputDirectory;
     constructor_option.ordered = cDefaultOrdered;
     constructor_option.target_ordered_chunk_size = cDefaultTargetOrderedChunkSize;
-    constructor_option.m_experimental = experimental;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
         constructor_option.archive_path = clp_s::Path{
                 .source{clp_s::InputSource::Filesystem},
@@ -253,7 +259,7 @@ void compare_with_input(
 }  // namespace
 
 TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
-    auto const experimental = GENERATE(false, true);
+    auto const flavour{GENERATE(clp_s::ClpFlavour::Clps, clp_s::ClpFlavour::Clpp)};
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
 
@@ -263,13 +269,14 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
              std::string{cTestEndToEndOutputSortedJson}}
     };
 
+    auto const is_clpp{clp_s::ClpFlavour::Clpp == flavour};
     auto const parsing_spec_path{
-            experimental ? std::make_optional(get_heuristic_parsing_spec_path()) : std::nullopt
+            is_clpp ? std::make_optional(get_heuristic_parsing_spec_path()) : std::nullopt
     };
 
     // clpp requires retain_float_format for the extracted output of unstructured text to exactly
     // match the original input.
-    auto const retain_float_format{experimental};
+    auto const retain_float_format{is_clpp};
 
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
@@ -282,9 +289,9 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
                     parsing_spec_path
             )
     );
-    validate_archive_header(experimental);
+    validate_archive_header(flavour);
 
-    auto extracted_json_path = extract(experimental);
+    auto extracted_json_path{extract()};
 
     compare(extracted_json_path);
 }
@@ -324,7 +331,7 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
     };
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract(false);
+    auto extracted_json_path{extract()};
     literallyCompare(
             get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile),
             extracted_json_path
@@ -368,7 +375,7 @@ TEST_CASE("clp-s-compress-extract-invalid-formatted-floats", "[clp-s][end-to-end
     };
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract(false);
+    auto extracted_json_path{extract()};
     literallyCompare(
             get_test_input_local_path(cTestEndToEndInvalidFormattedFloatInputFile),
             extracted_json_path
@@ -400,7 +407,7 @@ TEST_CASE("clp-s-compress-extract-empty-containers", "[clp-s][end-to-end]") {
     );
     validate_archive_header();
 
-    auto const extracted_json_path = extract(false);
+    auto const extracted_json_path{extract()};
     compare_with_input(
             get_test_input_local_path(cTestEndToEndEmptyContainersInputFile),
             extracted_json_path
@@ -433,7 +440,7 @@ TEST_CASE("clp-s-compress-extract-timestamps", "[clp-s][end-to-end]") {
     std::set<clp_s::NodeType> const expected_matching_types{clp_s::NodeType::Timestamp};
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract(false);
+    auto extracted_json_path{extract()};
     literallyCompare(
             get_test_input_local_path(cTestEndToEndTimestampInputFile),
             extracted_json_path

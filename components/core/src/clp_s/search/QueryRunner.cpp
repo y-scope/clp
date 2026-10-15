@@ -13,6 +13,7 @@
 #include <string_utils/string_utils.hpp>
 
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/Schema.hpp>
 #include <clp_s/search/ast/NarrowSchemasExpr.hpp>
 
@@ -1042,7 +1043,8 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
         && !(filter->get_operation() == FilterOperation::EXISTS
              || filter->get_operation() == FilterOperation::NEXISTS))
     {
-        if (false == m_experimental && filter->get_column()->matches_type(LiteralType::ClpStringT))
+        if (ClpFlavour::Clps == m_flavour
+            && filter->get_column()->matches_type(LiteralType::ClpStringT))
         {
             std::string query_string;
             filter->get_operand()->as_clp_string(query_string, filter->get_operation());
@@ -1252,7 +1254,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 return EvaluatedValue::False;
             }
             if (filter->get_column()->matches_type(LiteralType::ClpStringT)) {
-                if (m_experimental) {
+                if (ClpFlavour::Clpp == m_flavour) {
                     m_expr_clp_query[expr.get()] = nullptr;
                 } else {
                     auto& query_processing_result = m_string_query_map.at(filter_string);
@@ -1303,7 +1305,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 return EvaluatedValue::False;
             }
             return EvaluatedValue::Unknown;
-        } else if (false == m_experimental
+        } else if (ClpFlavour::Clps == m_flavour
                    && filter->get_column()->matches_type(LiteralType::ClpStringT))
         {
             std::string filter_string;

@@ -7,13 +7,16 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../archive_constants.hpp"
-#include "../TimestampDictionaryReader.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReader.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
         std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config,
-        IndexManager::Options const& options
+        bool should_create_table
 ) {
     try {
         auto const& db_config = optional_db_config.value();
@@ -32,8 +35,7 @@ IndexManager::IndexManager(
     m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
         m_mysql_index_storage->add_field(field_name, field_type);
     };
-    m_should_create_table = options.should_create_table;
-    m_experimental = options.experimental;
+    m_should_create_table = should_create_table;
     m_output_type = OutputType::Database;
 }
 
@@ -47,7 +49,14 @@ void IndexManager::update_metadata(std::string const& dataset_name, Path const& 
     m_mysql_index_storage->init(dataset_name, m_should_create_table);
 
     ArchiveReader archive_reader;
-    archive_reader.open(archive_path, {.m_experimental = m_experimental});
+    archive_reader.open(archive_path, ArchiveReader::Options{});
+    if (ClpFlavour::Clpp == archive_reader.flavour()) {
+        SPDLOG_ERROR(
+                "Indexing clpp-flavour archives is unsupported: {}",
+                archive_reader.get_archive_id()
+        );
+        throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
+    }
 
     traverse_schema_tree_and_update_metadata(
             archive_reader.get_schema_tree(),

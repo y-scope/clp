@@ -43,8 +43,7 @@ struct ArchiveWriterOption {
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
-
-    bool experimental{false};
+    ClpFlavour flavour{ClpFlavour::Clps};
 };
 
 class ArchiveStats {
@@ -311,7 +310,7 @@ public:
      * - The log shape ID.
      * - True if the log shape is a new entry in the dictionary, false otherwise.
      * The possible error codes:
-     * - ClppErrorCodeEnum::Unsupported if experimental stats are not enabled.
+     * - ClppErrorCodeEnum::Unsupported if the archive isn't clpp-flavour.
      */
     auto update_log_shape_dict(clpp::TextShape<std::string> const& log_shape)
             -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>>;
