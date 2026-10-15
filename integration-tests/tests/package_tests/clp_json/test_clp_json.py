@@ -144,7 +144,7 @@ def test_results_cache_optional_limit(
     """An omitted limit returns over 1,000 events; a positive limit retains the latest events."""
     num_events = 1_205
     timestamps = [1_700_000_000_000 + index * 1_000 for index in range(num_events)]
-    source = tmp_path / "input.log"
+    source = tmp_path / "input.jsonl"
     archives = tmp_path / "archives"
     if engine == "clp-s":
         # Alternate schemas to exercise a limit spanning multiple ERTs.
