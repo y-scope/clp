@@ -497,6 +497,12 @@ impl Client {
     /// * Forwards [`tokio::fs::read_dir`]'s return values on failure.
     /// * Forwards [`tokio::fs::ReadDir::next_entry`]'s return values on failure.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`limit_result_stream`]'s return values on failure.
+    ///
     /// # Panics
     ///
     /// Panics if the stream output storage is not file system.
@@ -550,10 +556,11 @@ impl Client {
     ///
     /// # Errors
     ///
-    /// Return an error if:
+    /// Returns an error if:
     ///
     /// * [`ClientError::Aws`] if a region code is not provided when using the default AWS S3
     ///   endpoint.
+    /// * Forwards [`limit_result_stream`]'s return values on failure.
     ///
     /// # Panics
     ///
@@ -889,22 +896,21 @@ where
 ///
 /// # Type Parameters
 ///
-/// * `S` - The input stream type.
+/// * `StreamType` - The input stream type.
 ///
 /// # Returns
 ///
-/// A stream yielding at most `max_num_results` items, or all items when no limit is set, on
-/// success.
+/// A stream yielding at most `max_num_results` items, or all items if unset, on success.
 ///
 /// # Errors
 ///
-/// Returns [`ClientError::InvalidSearchJobConfig`] if the limit cannot be represented as a `usize`.
-fn limit_result_stream<S>(
-    stream: S,
+/// Returns an error if:
+///
+/// * [`ClientError::InvalidSearchJobConfig`] if the limit cannot be represented as a [`usize`].
+fn limit_result_stream<StreamType: Stream<Item = Result<String, ClientError>>>(
+    stream: StreamType,
     max_num_results: Option<NonZeroU32>,
-) -> Result<impl Stream<Item = Result<String, ClientError>>, ClientError>
-where
-    S: Stream<Item = Result<String, ClientError>>, {
+) -> Result<impl Stream<Item = Result<String, ClientError>>, ClientError> {
     let limit = max_num_results
         .map(|limit| usize::try_from(limit.get()))
         .transpose()
