@@ -107,6 +107,44 @@ ErrorCode ResultsCacheOutputHandler::finish() {
     return ErrorCodeSuccess;
 }
 
+auto ResultsCacheOutputHandler::write(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id,
+        int64_t log_event_idx
+) -> ErrorCode {
+    if (false == m_max_num_results.has_value()) {
+        return append_result(
+                QueryResult{string_view{}, message, timestamp, archive_id, log_event_idx, m_dataset}
+        );
+    }
+    if (m_latest_results.size() < m_max_num_results.value()) {
+        m_latest_results.emplace(
+                std::make_unique<QueryResult>(
+                        string_view{},
+                        message,
+                        timestamp,
+                        archive_id,
+                        log_event_idx,
+                        m_dataset
+                )
+        );
+    } else if (m_latest_results.top()->timestamp < timestamp) {
+        m_latest_results.pop();
+        m_latest_results.emplace(
+                std::make_unique<QueryResult>(
+                        string_view{},
+                        message,
+                        timestamp,
+                        archive_id,
+                        log_event_idx,
+                        m_dataset
+                )
+        );
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
 auto ResultsCacheOutputHandler::append_result(QueryResult result) -> ErrorCode {
     try {
         m_results.emplace_back(
@@ -153,44 +191,6 @@ auto ResultsCacheOutputHandler::append_result(QueryResult result) -> ErrorCode {
 
     if (m_results.size() >= m_batch_size && false == insert_results()) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
-    }
-    return ErrorCode::ErrorCodeSuccess;
-}
-
-auto ResultsCacheOutputHandler::write(
-        string_view message,
-        epochtime_t timestamp,
-        string_view archive_id,
-        int64_t log_event_idx
-) -> ErrorCode {
-    if (false == m_max_num_results.has_value()) {
-        return append_result(
-                QueryResult{string_view{}, message, timestamp, archive_id, log_event_idx, m_dataset}
-        );
-    }
-    if (m_latest_results.size() < m_max_num_results.value()) {
-        m_latest_results.emplace(
-                std::make_unique<QueryResult>(
-                        string_view{},
-                        message,
-                        timestamp,
-                        archive_id,
-                        log_event_idx,
-                        m_dataset
-                )
-        );
-    } else if (m_latest_results.top()->timestamp < timestamp) {
-        m_latest_results.pop();
-        m_latest_results.emplace(
-                std::make_unique<QueryResult>(
-                        string_view{},
-                        message,
-                        timestamp,
-                        archive_id,
-                        log_event_idx,
-                        m_dataset
-                )
-        );
     }
     return ErrorCode::ErrorCodeSuccess;
 }

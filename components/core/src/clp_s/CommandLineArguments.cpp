@@ -1279,7 +1279,9 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
     }
 
     if (0 != parsed_options.count("max-num-results")) {
-        results_cache_options.max_num_results = parsed_options["max-num-results"].as<uint64_t>();
+        results_cache_options.max_num_results.emplace(
+                parsed_options["max-num-results"].as<uint64_t>()
+        );
     }
     if (0 == results_cache_options.max_num_results) {
         throw std::invalid_argument("max-num-results cannot be 0.");
