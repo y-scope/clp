@@ -638,6 +638,7 @@ impl WebuiClient {
     ///
     /// * [`ClientError::MalformedData`] if a stored `clp_config` cannot be decoded.
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    /// * [`ClientError::TaskJoin`] if the decoding task fails.
     pub async fn get_compression_metadata(&self) -> Result<Vec<CompressionMetadata>, ClientError> {
         let rows = sqlx::query(
             "SELECT id, status, status_msg, start_time, update_time, duration, uncompressed_size, \
@@ -646,6 +647,12 @@ impl WebuiClient {
         .bind(COMPRESSION_METADATA_QUERY_LIMIT)
         .fetch_all(&self.sql_pool)
         .await?;
+        tokio::task::spawn_blocking(move || Self::decode_compression_metadata(rows)).await?
+    }
+
+    fn decode_compression_metadata(
+        rows: Vec<sqlx::mysql::MySqlRow>,
+    ) -> Result<Vec<CompressionMetadata>, ClientError> {
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
             let clp_io_config: serde_json::Value = compression_metadata_config(

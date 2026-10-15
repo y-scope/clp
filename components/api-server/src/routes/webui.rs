@@ -52,6 +52,7 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         ClientError::Io(_) => "filesystem",
         ClientError::Aws { .. } => "aws",
         ClientError::MalformedData => "malformed_data",
+        ClientError::TaskJoin(_) => "background_task",
         _ => return,
     };
     tracing::error!(operation, kind, "WebUI API request failed");
