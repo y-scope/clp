@@ -3,6 +3,7 @@ import {Nullable} from "@webui/common/utility-types";
 
 import {ExtractStreamResp} from "../../typings/query";
 import {apiClient} from "../search";
+import {createApiError} from "../utils";
 
 
 interface SubmitExtractStreamJobProps {
@@ -51,7 +52,7 @@ const submitExtractStreamJob = async ({
     onUploadProgress();
 
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.POST("/stream_files/extract", {
+    const {data, error, response} = await apiClient.POST("/stream_files/extract", {
         body: {
             dataset: dataset,
             extract_job_type: mapExtractJobType(extractJobType),
@@ -61,7 +62,7 @@ const submitExtractStreamJob = async ({
     });
 
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to extract stream file: HTTP ${response.status}`);
+        throw createApiError("Failed to extract stream file", response, error);
     }
 
     return {

@@ -95,7 +95,9 @@ const QueryStatus = () => {
                     `#logEventNum=${innerLogEventNum}`;
             })
             .catch((e: unknown) => {
-                const msg = `Unable to extract stream with streamId=${streamId} at ` +
+                const msg = e instanceof Error ?
+                    e.message :
+                    `Unable to extract stream with streamId=${streamId} at ` +
                     `logEventIdx=${logEventIdx}.`;
 
                 console.error(msg, e);

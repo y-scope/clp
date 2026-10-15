@@ -4,6 +4,7 @@ import {Nullable} from "@webui/common/utility-types";
 import dayjs from "dayjs";
 
 import {apiClient} from "../../../api/search";
+import {createApiError} from "../../../api/utils";
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import Files from "./Files";
 import styles from "./index.module.css";
@@ -36,9 +37,9 @@ const Details = () => {
         queryKey: ["details"],
         queryFn: async () => {
             // eslint-disable-next-line new-cap
-            const {data, response} = await apiClient.GET("/metadata/ingestion_details", {});
+            const {data, error, response} = await apiClient.GET("/metadata/ingestion_details", {});
             if ("undefined" === typeof data) {
-                throw new Error(`Failed to fetch details: HTTP ${response.status}`);
+                throw createApiError("Failed to fetch details", response, error);
             }
 
             return data ?? DETAILS_DEFAULT;

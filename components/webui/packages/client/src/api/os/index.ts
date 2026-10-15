@@ -1,6 +1,7 @@
 import {FileListing} from "@webui/common/schemas/os";
 
 import {apiClient} from "../search";
+import {createApiError} from "../utils";
 
 
 /**
@@ -12,9 +13,9 @@ import {apiClient} from "../search";
  */
 const listFiles = async (path: string): Promise<FileListing> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/os/ls", {params: {query: {path}}});
+    const {data, error, response} = await apiClient.GET("/os/ls", {params: {query: {path}}});
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to list files: HTTP ${response.status}`);
+        throw createApiError("Failed to list files", response, error);
     }
 
     return data;

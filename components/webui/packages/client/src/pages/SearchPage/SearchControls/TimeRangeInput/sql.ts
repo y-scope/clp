@@ -1,6 +1,7 @@
 import dayjs, {Dayjs} from "dayjs";
 
 import {apiClient} from "../../../../api/search";
+import {createApiError} from "../../../../api/utils";
 import {DEFAULT_TIME_RANGE} from "./utils";
 
 
@@ -15,12 +16,12 @@ import {DEFAULT_TIME_RANGE} from "./utils";
  */
 const fetchAllTimeRange = async (selectedDatasets: string[]): Promise<[Dayjs, Dayjs]> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/time_range", {
+    const {data, error, response} = await apiClient.GET("/metadata/time_range", {
         params: {query: {dataset: selectedDatasets.join(",")}},
     });
 
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch time range: HTTP ${response.status}`);
+        throw createApiError("Failed to fetch time range", response, error);
     }
 
     if (null === data) {

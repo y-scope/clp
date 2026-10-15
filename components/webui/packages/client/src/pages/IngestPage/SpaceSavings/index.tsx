@@ -2,6 +2,7 @@ import {useQuery} from "@tanstack/react-query";
 import {theme} from "antd";
 
 import {apiClient} from "../../../api/search";
+import {createApiError} from "../../../api/utils";
 import {DashboardCard} from "../../../components/DashboardCard";
 import Stat from "../../../components/Stat";
 import CompressedSize from "./CompressedSize";
@@ -30,9 +31,9 @@ const SpaceSavings = () => {
         queryKey: ["space-savings"],
         queryFn: async () => {
             // eslint-disable-next-line new-cap
-            const {data, response} = await apiClient.GET("/metadata/space_savings", {});
+            const {data, error, response} = await apiClient.GET("/metadata/space_savings", {});
             if ("undefined" === typeof data) {
-                throw new Error(`Failed to fetch space savings: HTTP ${response.status}`);
+                throw createApiError("Failed to fetch space savings", response, error);
             }
 
             return data;

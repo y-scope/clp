@@ -12,6 +12,7 @@ import {
 } from "antd";
 
 import {apiClient} from "../../../../api/search";
+import {createApiError} from "../../../../api/utils";
 import {SETTINGS_MAX_DATASETS_PER_QUERY} from "../../../../config";
 import useSearchStore from "../../SearchState";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
@@ -42,10 +43,11 @@ const DatasetSelect = ({isMultiSelect, maxTagCount, ...selectProps}: DatasetSele
     const {data, isPending, isSuccess, error} = useQuery({
         queryKey: ["datasets"],
         queryFn: async () => {
-            // eslint-disable-next-line new-cap
-            const {data: datasetNames, response} = await apiClient.GET("/metadata/datasets", {});
+            // eslint-disable-next-line new-cap, @stylistic/max-len
+            const {data: datasetNames, error: apiError, response} = await apiClient.GET("/metadata/datasets", {});
+
             if ("undefined" === typeof datasetNames) {
-                throw new Error(`Failed to fetch dataset names: HTTP ${response.status}`);
+                throw createApiError("Failed to fetch dataset names", response, apiError);
             }
 
             return datasetNames;
@@ -84,7 +86,9 @@ const DatasetSelect = ({isMultiSelect, maxTagCount, ...selectProps}: DatasetSele
         if (error) {
             messageApi.error({
                 key: "fetchError",
-                content: "Error fetching datasets.",
+                content: error instanceof Error ?
+                    error.message :
+                    "Error fetching datasets.",
             });
         }
     }, [error,

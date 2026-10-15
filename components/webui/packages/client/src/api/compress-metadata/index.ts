@@ -1,6 +1,7 @@
 import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 
 import {apiClient} from "../search";
+import {createApiError} from "../utils";
 
 
 /**
@@ -11,9 +12,9 @@ import {apiClient} from "../search";
  */
 const fetchCompressionJobs = async (): Promise<CompressionMetadataDecoded[]> => {
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.GET("/metadata/compression_jobs", {});
+    const {data, error, response} = await apiClient.GET("/metadata/compression_jobs", {});
     if ("undefined" === typeof data) {
-        throw new Error(`Failed to fetch compression jobs: HTTP ${response.status}`);
+        throw createApiError("Failed to fetch compression jobs", response, error);
     }
 
     return data as unknown as CompressionMetadataDecoded[];
