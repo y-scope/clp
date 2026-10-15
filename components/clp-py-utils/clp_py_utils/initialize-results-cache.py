@@ -134,9 +134,7 @@ def main(argv):
 
             file_split_id_index = IndexModel(["file_split_id"])
             orig_file_id_index = IndexModel(["orig_file_id", "begin_msg_ix", "end_msg_ix"])
-            stream_id_index = IndexModel(
-                [("stream_id", ASCENDING), ("begin_msg_ix", DESCENDING)]
-            )
+            stream_id_index = IndexModel([("stream_id", ASCENDING), ("begin_msg_ix", DESCENDING)])
             stream_collection.create_indexes(
                 [file_split_id_index, orig_file_id_index, stream_id_index]
             )
