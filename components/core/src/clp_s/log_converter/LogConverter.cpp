@@ -20,7 +20,10 @@
 
 namespace clp_s::log_converter {
 namespace {
-constexpr std::string_view cDelimiters{R"(\ \t\r\n[(:)"};
+// log_surgeon::ParsingSpecBuilder::set_delimiters interprets this string verbatim.
+constexpr std::string_view cDelimiters{" \t\r\n[(:"};
+constexpr std::string_view cHeaderRuleName{"header"};
+constexpr std::string_view cTimestampRuleName{"timestamp"};
 
 /**
  * Non-exhaustive timestamp parsing specification which covers many common patterns.
@@ -46,7 +49,6 @@ constexpr std::array cHeaderRulePatterns{
         PREFIX R"([ \d]{2}[ /-])" MONTH R"([ /-]\d{2,4})" SEP TIME ZONE SUFFIX,
         PREFIX DATE R"([T ])" TIME SUFFIX,
         PREFIX DATE R"( {1,2})" TIME SUFFIX,
-        PREFIX R"(\[)" DATE R"([T\- ])" TIME R"(\]?)" SUFFIX,
         PREFIX R"(\[)" DATE R"([T\- ])" TIME R"(\]?)" SUFFIX,
         PREFIX R"(\[\d{2}/[A-Z][a-z]{2}/\d{4}:)" TIME SUFFIX,
         PREFIX R"(\[\d{2}/\d{2}/\d{4}:)" TIME SUFFIX,
@@ -74,7 +76,7 @@ auto LogConverter::create(size_t max_buffer_size, size_t initial_buffer_size) ->
     log_surgeon::ParsingSpecBuilder builder;
     builder.set_delimiters(cDelimiters);
     for (auto const& header_pattern : cHeaderRulePatterns) {
-        if (false == builder.add_rule_with_priority("header", header_pattern)) {
+        if (false == builder.add_rule_with_priority(cHeaderRuleName, header_pattern)) {
             throw std::runtime_error("failed to add header rule parsing spec");
         }
     }
@@ -128,22 +130,16 @@ auto LogConverter::convert_file(
             num_bytes_consumed += message.size();
 
             auto const match{event->get_leaf_match(0)};
-            if (false == match.has_value()) {
-                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
-            } else if ("timestamp" == match->get_rule_name()
-                       && match->get_fully_qualified_name().starts_with("header"))
+            if (match.has_value() && 0 == match->range.start
+                && cTimestampRuleName == match->get_rule_name()
+                && match->get_fully_qualified_name().starts_with(cHeaderRuleName))
             {
                 YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(
                         match->get_lexeme(),
                         message.substr(match->range.end)
                 ));
             } else {
-                SPDLOG_ERROR(
-                        "found a non-timestamp leaf match '{}': '{}'",
-                        match->get_rule_name(),
-                        match->get_lexeme()
-                );
-                return std::errc::not_supported;
+                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
             }
         }
     }
