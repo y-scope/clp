@@ -431,9 +431,11 @@ impl IntoResponse for HandlerError {
 #[cfg(test)]
 mod tests {
     use axum::body::Body;
+    use axum::http::Method;
     use axum::http::Request;
     use axum::http::StatusCode;
     use axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN;
+    use axum::http::header::CONTENT_TYPE;
     use axum::http::header::ORIGIN;
     use axum::routing::get;
     use http_body_util::BodyExt;
@@ -441,9 +443,10 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test]
-    async fn webui_routes_do_not_allow_unrelated_browser_origins() {
-        let config = clp_rust_utils::clp_config::package::config::Config::default();
+    async fn app_with_lazy_clients() -> axum::Router {
+        let mut config = clp_rust_utils::clp_config::package::config::Config::default();
+        config.package.storage_engine =
+            clp_rust_utils::clp_config::package::config::StorageEngine::ClpS;
         let mongodb_client = mongodb::Client::with_uri_str("mongodb://localhost:27017")
             .await
             .expect("valid local MongoDB URI");
@@ -454,7 +457,12 @@ mod tests {
             client: Client::new(&config, mongodb_client.clone(), sql_pool.clone()),
             webui_client: WebuiClient::new(&config, mongodb_client, sql_pool, None),
         };
-        let app = from_app_state(state).expect("valid API documentation");
+        from_app_state(state).expect("valid API documentation")
+    }
+
+    #[tokio::test]
+    async fn webui_routes_do_not_allow_unrelated_browser_origins() {
+        let app = app_with_lazy_clients().await;
 
         let public_response = app
             .clone()
@@ -487,6 +495,83 @@ mod tests {
                 .headers()
                 .get(ACCESS_CONTROL_ALLOW_ORIGIN)
                 .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn migrated_routes_reject_invalid_requests_before_accessing_storage() {
+        let app = app_with_lazy_clients().await;
+
+        for (body, expected) in [
+            (r#"{"paths":[]}"#, "at least one path"),
+            (r#"{"paths":["relative.log"]}"#, "must be absolute"),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::POST)
+                        .uri("/compression/jobs")
+                        .header(CONTENT_TYPE, "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            assert!(get_body(response).await.contains(expected));
+        }
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/os/ls?path=/etc")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert!(get_body(response).await.contains("mounted logs directory"));
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/metadata/time_range?dataset=invalid-name")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert!(get_body(response).await.contains("Invalid dataset name"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/stream_files/extract")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "dataset": null,
+                            "extract_job_type": "ExtractIr",
+                            "log_event_idx": 0,
+                            "stream_id": "",
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert!(
+            get_body(response)
+                .await
+                .contains("stream_id must not be empty")
         );
     }
 
