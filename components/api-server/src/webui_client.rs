@@ -483,7 +483,10 @@ impl WebuiClient {
                     });
                 }
                 let union = self.dataset_union(&datasets, "archives", |table| {
-                    format!("SELECT uncompressed_size, size FROM `{table}`")
+                    format!(
+                        "SELECT SUM(uncompressed_size) AS uncompressed_size, SUM(size) AS size \
+                         FROM `{table}`"
+                    )
                 })?;
                 format!(
                     "SELECT CAST(COALESCE(SUM(uncompressed_size), 0) AS SIGNED) AS \
