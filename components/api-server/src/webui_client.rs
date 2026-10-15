@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -60,6 +61,7 @@ const COMPRESSION_METADATA_QUERY_LIMIT: i64 = 1000;
 #[serde(deny_unknown_fields)]
 pub struct CompressionJobCreation {
     /// Absolute filesystem paths of the files to compress.
+    #[schema(min_items = 1)]
     pub paths: Vec<String>,
     /// Dataset to compress into (CLP-S only). Optional for the CLP storage engine.
     #[serde(default)]
@@ -100,8 +102,7 @@ pub struct CompressionMetadata {
     pub uncompressed_size: i64,
     /// Total compressed archive size, in bytes.
     pub compressed_size: i64,
-    /// Decoded CLP IO config (as a JSON value) since the stored config is a zstd-compressed
-    /// msgpack blob.
+    /// Display fields from the decoded CLP IO config. Storage credentials are omitted.
     pub clp_config: serde_json::Value,
 }
 
@@ -668,8 +669,9 @@ impl WebuiClient {
         .await?;
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
-            let clp_io_config: serde_json::Value =
-                ZstdMsgpack::deserialize(row.try_get::<Vec<u8>, _>("clp_config")?.as_slice())?;
+            let clp_io_config: serde_json::Value = compression_metadata_config(
+                ZstdMsgpack::deserialize(row.try_get::<Vec<u8>, _>("clp_config")?.as_slice())?,
+            );
             out.push(CompressionMetadata {
                 _id: row.try_get("id")?,
                 status: row.try_get("status")?,
@@ -707,18 +709,15 @@ impl WebuiClient {
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidDatasetName`] if the dataset name is invalid.
-    /// * [`ClientError::InvalidInput`] if the package is configured with S3 logs input.
+    /// * [`ClientError::InvalidInput`] if no paths are supplied, any path is relative, or the
+    ///   package is configured with S3 logs input.
     /// * Forwards [`ZstdMsgpack::serialize`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_compression_job(
         &self,
         creation: CompressionJobCreation,
     ) -> Result<CompressionJob, ClientError> {
-        if let Some(dataset) = creation.dataset.as_deref()
-            && !VALID_DATASET_NAME_REGEX.is_match(dataset)
-        {
-            return Err(ClientError::InvalidDatasetName);
-        }
+        validate_compression_job_creation(&creation)?;
         let archive_output = &self.config.archive_output;
         let storage_engine = &self.config.package.storage_engine;
 
@@ -1040,3 +1039,151 @@ impl StreamFileMetadataDoc {
 
 /// Expiry time in seconds for pre-signed stream-file URLs.
 const PRE_SIGNED_URL_EXPIRY_TIME_SECONDS: u64 = 3600;
+
+/// Validates compression paths and the optional dataset name.
+///
+/// # Errors
+///
+/// Returns [`ClientError::InvalidDatasetName`] if `dataset` is invalid. Returns
+/// [`ClientError::InvalidInput`] if no paths are supplied or any path is relative.
+fn validate_compression_job_creation(creation: &CompressionJobCreation) -> Result<(), ClientError> {
+    if let Some(dataset) = creation.dataset.as_deref()
+        && !VALID_DATASET_NAME_REGEX.is_match(dataset)
+    {
+        return Err(ClientError::InvalidDatasetName);
+    }
+    if creation.paths.is_empty() {
+        return Err(ClientError::InvalidInput(
+            "a compression job must specify at least one path".to_owned(),
+        ));
+    }
+    if let Some(path) = creation
+        .paths
+        .iter()
+        .find(|path| !Path::new(path).is_absolute())
+    {
+        return Err(ClientError::InvalidInput(format!(
+            "compression path '{path}' must be absolute"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CompressionJobCreation;
+    use super::validate_compression_job_creation;
+    use crate::error::ClientError;
+
+    fn compression_job_creation(paths: &[&str]) -> CompressionJobCreation {
+        CompressionJobCreation {
+            paths: paths.iter().map(|path| (*path).to_owned()).collect(),
+            dataset: Some("logs".to_owned()),
+            timestamp_key: None,
+            unstructured: None,
+        }
+    }
+
+    #[test]
+    fn compression_job_creation_accepts_absolute_paths() {
+        validate_compression_job_creation(&compression_job_creation(&["/app.log", "/var/log"]))
+            .expect("absolute paths should be accepted");
+    }
+
+    #[test]
+    fn compression_job_creation_rejects_an_empty_path_list() {
+        let error = validate_compression_job_creation(&compression_job_creation(&[]))
+            .expect_err("an empty path list should be rejected");
+        assert!(matches!(error, ClientError::InvalidInput(_)));
+    }
+
+    #[test]
+    fn compression_job_creation_rejects_relative_paths() {
+        let error = validate_compression_job_creation(&compression_job_creation(&["app.log"]))
+            .expect_err("a relative path should be rejected");
+        assert!(matches!(error, ClientError::InvalidInput(_)));
+    }
+}
+
+/// Selects the job configuration fields exposed in compression history.
+fn compression_metadata_config(mut config: serde_json::Value) -> serde_json::Value {
+    // Match the display fields in `ClpIoPartialConfigSchema`. Stored input configs also
+    // contain AWS credentials, which must never be returned to the browser.
+    let input_fields = [
+        "type",
+        "dataset",
+        "timestamp_key",
+        "unstructured",
+        "paths_to_compress",
+        "path_prefix_to_remove",
+        "keys",
+    ];
+    let output_fields = [
+        "compression_level",
+        "target_archive_size",
+        "target_dictionaries_size",
+        "target_encoded_file_size",
+        "target_segment_size",
+    ];
+    let mut displayed = serde_json::Map::new();
+    for (section, fields) in [
+        ("input", input_fields.as_slice()),
+        ("output", output_fields.as_slice()),
+    ] {
+        if let Some(values) = config
+            .get_mut(section)
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            values.retain(|name, _| fields.contains(&name.as_str()));
+            displayed.insert(
+                section.to_owned(),
+                serde_json::Value::Object(std::mem::take(values)),
+            );
+        }
+    }
+    serde_json::Value::Object(displayed)
+}
+
+#[cfg(test)]
+mod metadata_tests {
+    use super::compression_metadata_config;
+
+    #[test]
+    fn compression_history_omits_storage_credentials() {
+        for input_type in ["s3", "s3_object_metadata"] {
+            let config = serde_json::json!({
+                "input": {
+                    "type": input_type,
+                    "dataset": "logs",
+                    "timestamp_key": null,
+                    "unstructured": false,
+                    "aws_authentication": {"credentials": {
+                        "access_key_id": "test-key",
+                        "secret_access_key": "test-secret",
+                        "session_token": "test-token"
+                    }},
+                    "bucket": "private-bucket"
+                },
+                "output": {"compression_level": 3},
+                "private_field": "private-value"
+            });
+            assert_eq!(
+                compression_metadata_config(config),
+                serde_json::json!({
+                    "input": {"type": input_type, "dataset": "logs", "timestamp_key": null,
+                        "unstructured": false},
+                    "output": {"compression_level": 3}
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn compression_history_preserves_partial_filesystem_config() {
+        let config = serde_json::json!({
+            "input": {"type": "fs", "paths_to_compress": ["/mnt/logs/app.log"],
+                "path_prefix_to_remove": null}, "output": {}
+        });
+        assert_eq!(compression_metadata_config(config.clone()), config);
+    }
+}

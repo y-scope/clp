@@ -290,10 +290,7 @@ export interface components {
              * @description The compression job's ID. Named `_id` to match the webui's existing JSON contract.
              */
             _id: number;
-            /**
-             * @description Decoded CLP IO config (as a JSON value) since the stored config is a zstd-compressed
-             *     msgpack blob.
-             */
+            /** @description Display fields from the decoded CLP IO config. Storage credentials are omitted. */
             clp_config: unknown;
             /**
              * Format: int64
