@@ -8,8 +8,6 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
-use clp_rust_utils::clp_config::package::credentials::Credentials;
-use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::job_config::AggregationConfig;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
@@ -250,41 +248,6 @@ impl Client {
             mongodb_client,
             sql_pool,
         }
-    }
-
-    /// Factory method to create a new client with active connections to both `MySQL` and `MongoDB`
-    /// databases.
-    ///
-    /// # Returns
-    ///
-    /// A newly created [`Client`] instance with active connections to both databases.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::ConfigIsNone`] if `config.api_server` is `None`.
-    /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
-    /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
-    pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
-        if config.api_server.is_none() {
-            return Err(ClientError::ConfigIsNone);
-        }
-
-        let sql_pool =
-            create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
-
-        let mongo_uri = format!(
-            "mongodb://{}:{}/{}?directConnection=true",
-            config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
-        );
-        let mongo_client = mongodb::Client::with_uri_str(mongo_uri).await?;
-
-        Ok(Self {
-            config: config.clone(),
-            mongodb_client: mongo_client,
-            sql_pool,
-        })
     }
 
     /// Submits a search or aggregation query as a job. The job is a count-by-time aggregation
@@ -728,52 +691,6 @@ impl Client {
             Ok(message.clone())
         });
         Ok(mapped)
-    }
-
-    /// Retrieves timestamp column names for a given dataset.
-    ///
-    /// # Returns
-    ///
-    /// A vector of timestamp column name strings on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
-    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
-    pub async fn get_timestamp_column_names(
-        &self,
-        dataset_name: &str,
-    ) -> Result<Vec<String>, ClientError> {
-        // Must be kept in sync with `NodeType::Timestamp` in
-        // `components/core/src/clp_s/SchemaTree.hpp`.
-        const TIMESTAMP_NODE_TYPE: i8 = 14;
-        // MySQL error number for "Table doesn't exist".
-        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
-
-        if !clp_rust_utils::dataset::is_valid_dataset_name(dataset_name) {
-            return Err(ClientError::InvalidDatasetName);
-        }
-        let table_name = format!("clp_{dataset_name}_column_metadata");
-        let names: Vec<String> =
-            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
-                .bind(TIMESTAMP_NODE_TYPE)
-                .fetch_all(&self.sql_pool)
-                .await
-                .map_err(|err| {
-                    if let sqlx::Error::Database(db_err) = &err
-                        && let Some(mysql_err) =
-                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
-                    {
-                        return ClientError::DatasetNotFound(dataset_name.to_owned());
-                    }
-                    err.into()
-                })?;
-
-        Ok(names)
     }
 
     /// Returns compression usage for each job within a time range, optionally

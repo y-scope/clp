@@ -5,14 +5,11 @@ use std::time::Duration;
 use aws_sdk_s3::presigning::PresigningConfig;
 use chrono::DateTime;
 use chrono::Utc;
-use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::S3Config;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::LogsInput;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
-use clp_rust_utils::clp_config::package::credentials::Credentials;
-use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::dataset::is_valid_dataset_name;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::serde::ZstdMsgpack;
@@ -279,57 +276,6 @@ impl WebuiClient {
             sql_pool,
             stream_output_s3_client,
         }
-    }
-
-    /// Factory method to create a new [`WebuiClient`] with active connections to both
-    /// `MySQL` and `MongoDB`.
-    ///
-    /// # Returns
-    ///
-    /// A newly created [`WebuiClient`] instance with active connections to both databases.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::ConfigIsNone`] if `config.api_server` is `None`.
-    /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
-    /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
-    pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
-        if config.api_server.is_none() {
-            return Err(ClientError::ConfigIsNone);
-        }
-
-        let sql_pool =
-            create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
-
-        let mongo_uri = format!(
-            "mongodb://{}:{}/{}?directConnection=true",
-            config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
-        );
-        let mongo_client = mongodb::Client::with_uri_str(mongo_uri).await?;
-
-        let stream_output_s3_client = match &config.stream_output.storage {
-            StreamOutputStorage::S3 { s3_config, .. } => Some(
-                clp_rust_utils::s3::create_new_client(
-                    s3_config
-                        .region_code
-                        .as_ref()
-                        .map_or(AWS_DEFAULT_REGION, non_empty_string::NonEmptyString::as_str),
-                    s3_config.endpoint_url.as_ref(),
-                    &s3_config.aws_authentication,
-                )
-                .await,
-            ),
-            StreamOutputStorage::Fs { .. } => None,
-        };
-
-        Ok(Self::new(
-            config,
-            mongo_client,
-            sql_pool,
-            stream_output_s3_client,
-        ))
     }
 
     /// Builds a metadata table name, mirroring
