@@ -203,6 +203,7 @@ pub struct ApiServer {
     pub port: u16,
     pub query_job_polling: QueryJobPollingConfig,
     pub default_max_num_query_results: u32,
+    pub stream_file_extraction_timeout_secs: NonZeroU64,
 }
 
 impl Default for ApiServer {
@@ -212,6 +213,8 @@ impl Default for ApiServer {
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
             default_max_num_query_results: 1000,
+            stream_file_extraction_timeout_secs: NonZeroU64::new(1800)
+                .expect("the default extraction timeout is positive"),
         }
     }
 }
@@ -575,6 +578,7 @@ fn default_archive_staging_directory() -> String {
 mod tests {
     use std::path::Path;
 
+    use super::ApiServer;
     use super::ArchiveOutput;
     use super::ArchiveOutputStorage;
     use super::Config;
@@ -582,6 +586,16 @@ mod tests {
     use super::LogsInput;
     use super::SpiderTaskExecutorConfig;
     use super::StreamOutputStorage;
+
+    #[test]
+    fn extraction_timeout_has_a_positive_backward_compatible_default() {
+        let config: ApiServer = serde_json::from_str("{}").expect("default API configuration");
+        assert_eq!(config.stream_file_extraction_timeout_secs.get(), 1800);
+        assert!(
+            serde_json::from_str::<ApiServer>(r#"{"stream_file_extraction_timeout_secs":0}"#)
+                .is_err()
+        );
+    }
 
     #[test]
     fn deserialize_package_stream_output_with_named_profile() {

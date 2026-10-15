@@ -38,3 +38,12 @@ test("shows a structured validation message", () => {
         "Failed to submit compression job: At least one path is required"
     );
 });
+
+test("gives a safe retry message after extraction times out", () => {
+    const response = new Response("private diagnostic", {status: 504});
+
+    assert.equal(
+        createApiError("Failed to extract stream file", response, "private diagnostic").message,
+        "Failed to extract stream file: Request timed out. Try again later."
+    );
+});

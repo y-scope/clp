@@ -503,6 +503,16 @@
           },
           "500": {
             "description": ""
+          },
+          "504": {
+            "description": "Stream extraction timed out",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }

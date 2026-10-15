@@ -336,6 +336,12 @@ async fn compression_job(
     responses(
         (status = OK, body = StreamFileMetadata),
         (status = BAD_REQUEST, description = "Invalid dataset name or extract job type"),
+        (
+            status = GATEWAY_TIMEOUT,
+            body = String,
+            content_type = "text/plain",
+            description = "Stream extraction timed out"
+        ),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]

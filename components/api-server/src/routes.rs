@@ -385,6 +385,8 @@ enum HandlerError {
     NotFound,
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Gateway timeout: {0}")]
+    GatewayTimeout(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -402,6 +404,7 @@ impl From<ClientError> for HandlerError {
             ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
                 Self::BadRequest(format!("{err}"))
             }
+            ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(err.to_string()),
             _ => Self::InternalServer,
         }
     }
@@ -414,6 +417,7 @@ impl IntoResponse for HandlerError {
             Self::NotFound => StatusCode::NOT_FOUND.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
         }
     }
 }
@@ -502,6 +506,14 @@ mod tests {
             .expect("failed to read body")
             .to_bytes();
         String::from_utf8(bytes.to_vec()).expect("body is not utf-8")
+    }
+
+    #[tokio::test]
+    async fn extraction_timeout_returns_a_gateway_timeout() {
+        let response =
+            HandlerError::from(ClientError::StreamExtractionTimeout(1800)).into_response();
+        assert_eq!(response.status(), StatusCode::GATEWAY_TIMEOUT);
+        assert!(get_body(response).await.contains("1800 seconds"));
     }
 
     #[tokio::test]

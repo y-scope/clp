@@ -1004,6 +1004,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Stream extraction timed out */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
         };
     };
     compression_usage: {

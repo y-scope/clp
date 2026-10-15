@@ -786,6 +786,7 @@ impl WebuiClient {
     /// * [`ClientError::InvalidDatasetName`] if the dataset name is invalid.
     /// * [`ClientError::InvalidInput`] if `stream_id` is empty, or if the extract job fails, is
     ///   cancelled, or produces no stream file containing the log event.
+    /// * [`ClientError::StreamExtractionTimeout`] if the job exceeds the configured wait limit.
     /// * [`ClientError::Aws`] if a pre-signed URL couldn't be generated.
     /// * Forwards [`mongodb::error::Error`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
@@ -818,7 +819,15 @@ impl WebuiClient {
         let mut metadata = if let Some(doc) = existing {
             doc.into_metadata()
         } else {
-            self.submit_and_wait_extract_job(&extraction).await?;
+            let timeout_secs = self.config.api_server.as_ref().map_or(1800, |config| {
+                config.stream_file_extraction_timeout_secs.get()
+            });
+            tokio::time::timeout(
+                Duration::from_secs(timeout_secs),
+                self.submit_and_wait_extract_job(&extraction),
+            )
+            .await
+            .map_err(|_| ClientError::StreamExtractionTimeout(timeout_secs))??;
             let doc = stream_files_collection
                 .find_one(doc! {
                     "stream_id": &extraction.stream_id,
@@ -926,7 +935,13 @@ impl WebuiClient {
             .await?;
         let job_id = result.last_insert_id();
 
-        let mut delay_ms = 100u64;
+        let polling = self
+            .config
+            .api_server
+            .as_ref()
+            .map(|config| &config.query_job_polling);
+        let mut delay_ms = polling.map_or(100, |config| config.initial_backoff_ms.max(1));
+        let max_delay_ms = polling.map_or(5000, |config| config.max_backoff_ms.max(delay_ms));
         loop {
             let row = sqlx::query("SELECT status FROM query_jobs WHERE id = ?")
                 .bind(job_id)
@@ -940,7 +955,7 @@ impl WebuiClient {
                 QueryJobStatus::Succeeded => break,
                 QueryJobStatus::Pending | QueryJobStatus::Running | QueryJobStatus::Cancelling => {
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-                    delay_ms = std::cmp::min(delay_ms.saturating_mul(2), 5000);
+                    delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
                 }
                 QueryJobStatus::Cancelled => {
                     return Err(ClientError::InvalidInput(format!(
