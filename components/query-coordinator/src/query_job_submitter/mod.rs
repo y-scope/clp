@@ -102,15 +102,14 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         poll_interval: Duration,
     ) -> Result<QueryJobOutcome, Error>;
 
-    /// Idempotently cancel the job identified by `spider_job_id`
+    /// Idempotently cancels the job identified by `spider_job_id`.
     ///
     /// Safe to call regardless of whether the job is not-yet-started, already running, or already
     /// terminal.
     ///
     /// # Parameters
     ///
-    /// * `spider_job_id` - The job to cancel (if needed) and wait on.
-    ///
+    /// * `spider_job_id` - The job to cancel.
     ///
     /// # Errors
     ///

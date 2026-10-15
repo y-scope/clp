@@ -9,7 +9,6 @@ use clp_rust_utils::job_config::QueryJobType;
 use const_format::formatcp;
 use spider_core::types::id::JobId as SpiderJobId;
 use sqlx::MySqlPool;
-use tokio::select;
 use tokio_util::sync::CancellationToken;
 
 use crate::Error;
@@ -54,6 +53,8 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     /// Jobs are processed one at a time by design, since cancellations are expected to be rare.
     /// Errors are logged and never terminate the monitor.
     pub async fn run(self, cancellation_token: CancellationToken) {
+        use tokio::select;
+
         loop {
             let result = select! {
                 () = cancellation_token.cancelled() => break,
@@ -82,9 +83,7 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     /// Terminates every query job in [`QueryJobStatus::CancelRequested`] that has no recorded
     /// Spider job as [`QueryJobStatus::Cancelled`].
     ///
-    /// This is meant to run once at startup, before the coordinator dispatches or recovers any job,
-    /// so that no job handle is ever created for a job whose cancellation was requested before it
-    /// was submitted. Each job is terminated in its own transaction that locks only its row.
+    /// This is meant to run once at startup, before the coordinator dispatches or recovers any job.
     ///
     /// A job that fails to be terminated is logged and skipped, since [`Self::run`] retries it.
     ///
@@ -150,7 +149,7 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     ///
     /// # Returns
     ///
-    /// The oldest job whose cancellation has been requested on success, or `None` if there is none.
+    /// The oldest job whose cancellation was requested, or `None` if there is none, on success.
     ///
     /// # Errors
     ///
@@ -175,15 +174,13 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     /// Relays the cancellation of `job` to Spider.
     ///
     /// * If no Spider job is recorded for `job`, there is nothing to cancel, so the job is
-    ///   terminated as [`QueryJobStatus::Cancelled`] directly. Its Spider job ID can never be
-    ///   recorded afterwards, since that requires the job to be in [`QueryJobStatus::Pending`].
+    ///   terminated as [`QueryJobStatus::Cancelled`] directly.
     /// * Otherwise, its Spider job is cancelled and the job is moved to
-    ///   [`QueryJobStatus::Cancelling`], which removes it from the monitor's discovery set. The job
-    ///   handle waiting on the Spider job then terminates the query job.
+    ///   [`QueryJobStatus::Cancelling`]. The job handle waiting on the Spider job then terminates
+    ///   the query job.
     ///
-    /// The Spider job is cancelled outside any transaction so that its row isn't locked across the
-    /// request. On a failed request, the job stays in [`QueryJobStatus::CancelRequested`], so the
-    /// cancellation is retried.
+    /// On a failure, the job stays in [`QueryJobStatus::CancelRequested`], so the cancellation is
+    /// retried.
     ///
     /// # Errors
     ///
@@ -230,9 +227,8 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     /// Transitions the query job identified by `query_job_id` from
     /// [`QueryJobStatus::CancelRequested`] to `to`, in a transaction that locks the job's row.
     ///
-    /// The job handle may concurrently drive the same job to a terminal status, so the status is
-    /// re-read under the row lock. If the job is no longer in [`QueryJobStatus::CancelRequested`],
-    /// nothing is persisted, since the job has already moved on through another path.
+    /// If the job is no longer in [`QueryJobStatus::CancelRequested`], for example because its job
+    /// handle has already terminated it, nothing is persisted.
     ///
     /// # Errors
     ///

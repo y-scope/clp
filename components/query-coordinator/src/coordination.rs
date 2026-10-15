@@ -518,12 +518,12 @@ impl Coordinator {
     /// A job in [`QueryJobStatus::CancelRequested`] is recovered like a running one, since the
     /// [`CancellationMonitor`] relays its cancellation to Spider independently of its handle.
     ///
-    /// A running job whose config cannot be deserialized is marked [`QueryJobStatus::Failed`] and
+    /// A submitted job whose config cannot be deserialized is marked [`QueryJobStatus::Failed`] and
     /// skipped.
     ///
     /// # Returns
     ///
-    /// A vector of [`SubmittedJob`]s on success, each represents a running query job to recover.
+    /// A vector of [`SubmittedJob`]s on success, each represents a submitted query job to recover.
     ///
     /// # Errors
     ///
@@ -555,7 +555,7 @@ impl Coordinator {
                     tracing::error!(
                         error = % e,
                         job_id = % row.id,
-                        "Failed to deserialize search job config of a running job. The database \
+                        "Failed to deserialize search job config of a submitted job. The database \
                          might be corrupted. Skipping."
                     );
                     self.mark_job_failed(
