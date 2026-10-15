@@ -206,7 +206,7 @@ public:
 
 private:
     /**
-     * Converts a result sto BSON and appends it to `m_results`. Flushes MongoDB batch when it
+     * Converts a result to BSON and appends it to `m_results`. Flushes MongoDB batch when it
      * reaches `m_batch_size` documents.
      *
      * @return ErrorCodeSuccess on success.

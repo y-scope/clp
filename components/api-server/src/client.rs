@@ -651,8 +651,7 @@ impl Client {
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
     ///
-    /// When `max_num_results` is set, the query is limited to at most that many
-    /// documents.
+    /// When `max_num_results` is set, the query is limited to at most that many documents.
     ///
     /// When `raw_docs` is `true`, each document is serialized to JSON whole (used
     /// for aggregation results); otherwise the document's "message" field is extracted (used for
