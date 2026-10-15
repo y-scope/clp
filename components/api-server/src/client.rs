@@ -523,18 +523,7 @@ impl Client {
                 }
             }
         };
-        let limit = max_num_results
-            .map(|limit| usize::try_from(limit.get()))
-            .transpose()
-            .map_err(|_| {
-                ClientError::InvalidSearchJobConfig(
-                    "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
-                )
-            })?;
-        Ok(match limit {
-            Some(limit) => stream.take(limit).left_stream(),
-            None => stream.right_stream(),
-        })
+        limit_result_stream(stream, max_num_results)
     }
 
     /// Asynchronously fetches results of a completed search job from S3.
@@ -635,18 +624,7 @@ impl Client {
                 }
             }
         };
-        let limit = max_num_results
-            .map(|limit| usize::try_from(limit.get()))
-            .transpose()
-            .map_err(|_| {
-                ClientError::InvalidSearchJobConfig(
-                    "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
-                )
-            })?;
-        Ok(match limit {
-            Some(limit) => stream.take(limit).left_stream(),
-            None => stream.right_stream(),
-        })
+        limit_result_stream(stream, max_num_results)
     }
 
     /// Asynchronously fetches results of a completed search job from `MongoDB`.
@@ -906,6 +884,40 @@ where
         }
         poll
     }
+}
+
+/// Applies an optional limit to a search result stream.
+///
+/// # Type Parameters
+///
+/// * `S` - The input stream type.
+///
+/// # Returns
+///
+/// A stream yielding at most `max_num_results` items, or all items when no limit is set, on
+/// success.
+///
+/// # Errors
+///
+/// Returns [`ClientError::InvalidSearchJobConfig`] if the limit cannot be represented as a `usize`.
+fn limit_result_stream<S>(
+    stream: S,
+    max_num_results: Option<NonZeroU32>,
+) -> Result<impl Stream<Item = Result<String, ClientError>>, ClientError>
+where
+    S: Stream<Item = Result<String, ClientError>>, {
+    let limit = max_num_results
+        .map(|limit| usize::try_from(limit.get()))
+        .transpose()
+        .map_err(|_| {
+            ClientError::InvalidSearchJobConfig(
+                "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
+            )
+        })?;
+    Ok(match limit {
+        Some(limit) => stream.take(limit).left_stream(),
+        None => stream.right_stream(),
+    })
 }
 
 #[cfg(test)]
