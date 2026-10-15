@@ -30,8 +30,7 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     ///
     /// # Returns
     ///
-    /// A newly created [`CancellationMonitor`] that polls for cancellation requests every
-    /// `polling_interval` while it has none to relay.
+    /// A newly created [`CancellationMonitor`].
     pub const fn new(
         db_pool: MySqlPool,
         job_submitter: SubmitterType,
@@ -45,13 +44,6 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     }
 
     /// Runs the monitor until `cancellation_token` is triggered.
-    ///
-    /// On each iteration, this method relays the cancellation of at most one query job. It sleeps
-    /// for the polling interval only when there is no cancellation to relay or the relay failed,
-    /// so a backlog of cancellations is drained without delay.
-    ///
-    /// Jobs are processed one at a time by design, since cancellations are expected to be rare.
-    /// Errors are logged and never terminate the monitor.
     pub async fn run(self, cancellation_token: CancellationToken) {
         use tokio::select;
 
@@ -82,10 +74,6 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
 
     /// Terminates every query job in [`QueryJobStatus::CancelRequested`] that has no recorded
     /// Spider job as [`QueryJobStatus::Cancelled`].
-    ///
-    /// This is meant to run once at startup, before the coordinator dispatches or recovers any job.
-    ///
-    /// A job that fails to be terminated is logged and skipped, since [`Self::run`] retries it.
     ///
     /// # Errors
     ///
@@ -144,9 +132,6 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
 
     /// Fetches the oldest query job in [`QueryJobStatus::CancelRequested`].
     ///
-    /// This is a non-locking read used only to discover a candidate; every status transition
-    /// re-reads the job's status under its row lock.
-    ///
     /// # Returns
     ///
     /// The oldest job whose cancellation was requested, or `None` if there is none, on success.
@@ -172,15 +157,6 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     }
 
     /// Relays the cancellation of `job` to Spider.
-    ///
-    /// * If no Spider job is recorded for `job`, there is nothing to cancel, so the job is
-    ///   terminated as [`QueryJobStatus::Cancelled`] directly.
-    /// * Otherwise, its Spider job is cancelled and the job is moved to
-    ///   [`QueryJobStatus::Cancelling`]. The job handle waiting on the Spider job then terminates
-    ///   the query job.
-    ///
-    /// On a failure, the job stays in [`QueryJobStatus::CancelRequested`], so the cancellation is
-    /// retried.
     ///
     /// # Errors
     ///
@@ -225,10 +201,9 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     }
 
     /// Transitions the query job identified by `query_job_id` from
-    /// [`QueryJobStatus::CancelRequested`] to `to`, in a transaction that locks the job's row.
+    /// [`QueryJobStatus::CancelRequested`] to `to`.
     ///
-    /// If the job is no longer in [`QueryJobStatus::CancelRequested`], for example because its job
-    /// handle has already terminated it, nothing is persisted.
+    /// If the job is no longer in [`QueryJobStatus::CancelRequested`], nothing is persisted.
     ///
     /// # Errors
     ///

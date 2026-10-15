@@ -398,8 +398,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///   instead, since a cancellation wins over a success.
     /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::CancelRequested`]
     ///   and [`QueryJobStatus::Cancelling`]. From [`QueryJobStatus::Running`], the job is
-    ///   terminated as [`QueryJobStatus::Failed`] instead, since its Spider job was cancelled
-    ///   unexpectedly without a cancellation request.
+    ///   terminated as [`QueryJobStatus::Failed`] instead.
     /// * [`QueryJobOutcome::Failed`] is permitted from any non-terminal status, since a failure
     ///   wins over both a success and a cancellation.
     ///

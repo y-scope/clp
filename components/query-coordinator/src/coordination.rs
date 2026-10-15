@@ -17,8 +17,7 @@
 //! * A non-NULL `dispatch_time` indicates that the coordinator has picked up the job and granted it
 //!   permission to run under the concurrency limit.
 //! * `CANCEL_REQUESTED` is non-terminal and is reachable from both PENDING and RUNNING.
-//! * CANCELLING is non-terminal and is reachable only from `CANCEL_REQUESTED`, through the
-//!   [`CancellationMonitor`] after it has cancelled the job's Spider job.
+//! * CANCELLING is non-terminal and is reachable only from `CANCEL_REQUESTED`.
 
 use std::num::NonZeroU64;
 use std::sync::Arc;
@@ -69,10 +68,9 @@ pub struct Coordinator {
 impl Coordinator {
     /// Factory function.
     ///
-    /// On construction, this first cancels the query jobs whose cancellation was requested before
-    /// they were submitted to Spider. It then recovers query jobs that a previous coordinator
-    /// instance had already submitted to Spider (those still live with a Spider job ID) by
-    /// spawning a detached handle to drive each one to completion.
+    /// On construction, this recovers query jobs that a previous coordinator instance had already
+    /// submitted to Spider (those still non-terminal with a Spider job ID) by spawning a detached
+    /// handle to drive each one to completion.
     ///
     /// # Returns
     ///
@@ -227,9 +225,6 @@ impl Coordinator {
 
     /// Runs the coordinator's poll loop until cancelled.
     ///
-    /// A [`CancellationMonitor`] is spawned alongside the poll loop to relay query job
-    /// cancellations to Spider, and is stopped by the same cancellation token.
-    ///
     /// On each iteration, this method fetches the pending query jobs, spawns a detached handle to
     /// drive each one, and then sleeps until the next poll or until the cancellation token is
     /// triggered. The jobs dispatched in the iteration are marked once the sleep elapses, so their
@@ -284,10 +279,12 @@ impl Coordinator {
         Ok(())
     }
 
+    /// Creates a [`CancellationMonitor`] from the coordinator's database pool, Spider client, and
+    /// job polling interval.
+    ///
     /// # Returns
     ///
-    /// A newly created [`CancellationMonitor`] that shares the coordinator's database pool and
-    /// Spider client, and polls at the coordinator's job polling interval.
+    /// A newly created [`CancellationMonitor`].
     fn create_cancellation_monitor(&self) -> CancellationMonitor<SpiderClient> {
         CancellationMonitor::new(
             self.db_pool.clone(),
@@ -514,9 +511,6 @@ impl Coordinator {
     /// Fetches jobs that were previously submitted to Spider by the query coordinator and are still
     /// in [`QueryJobStatus::Running`], [`QueryJobStatus::CancelRequested`], or
     /// [`QueryJobStatus::Cancelling`].
-    ///
-    /// A job in [`QueryJobStatus::CancelRequested`] is recovered like a running one, since the
-    /// [`CancellationMonitor`] relays its cancellation to Spider independently of its handle.
     ///
     /// A submitted job whose config cannot be deserialized is marked [`QueryJobStatus::Failed`] and
     /// skipped.

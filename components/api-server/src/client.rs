@@ -418,9 +418,6 @@ impl Client {
 
     /// Submits a cancellation request for a search job.
     ///
-    /// The request is idempotent: a job whose cancellation has already been requested is accepted
-    /// without being updated.
-    ///
     /// # Returns
     ///
     /// `Ok(())` on success.
