@@ -509,9 +509,9 @@ impl ArchiveSelector<'_> {
     ///
     /// This method validates and deduplicates the job's requested datasets, then retrieves from the
     /// CLP database the metadata of the archives matching the query, ordered by descending archive
-    /// end timestamp, and attaches an execution policy derived from each archive's size to its
-    /// task. Archives that end before the job's archive retention lower bound, if any, are
-    /// excluded.
+    /// end timestamp, and attaches an execution policy derived from each archive's uncompressed
+    /// size to its task. Archives that end before the job's archive retention lower bound, if any,
+    /// are excluded.
     ///
     /// # Returns
     ///
@@ -540,7 +540,8 @@ impl ArchiveSelector<'_> {
         Ok(selected_archives
             .into_iter()
             .map(|archive| {
-                let execution_policy = self.compute_query_task_execution_policy(archive.size);
+                let execution_policy =
+                    self.compute_query_task_execution_policy(archive.uncompressed_size);
                 (archive, execution_policy)
             })
             .collect())
@@ -664,7 +665,7 @@ impl ArchiveSelector<'_> {
             .db_config
             .archives_table_name(Some(dataset.as_str()));
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT `id`, `size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
+            "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
         ));
         if let Some(end_timestamp) = self.search_job_config.end_timestamp {
             query_builder
@@ -691,14 +692,14 @@ impl ArchiveSelector<'_> {
             .map(|row| ArchiveMetadata {
                 id: row.id,
                 dataset: Some(dataset.clone()),
-                size: row.size,
+                uncompressed_size: row.uncompressed_size,
                 end_timestamp: row.end_timestamp,
             })
             .collect())
     }
 
-    /// Derives the execution policy of the query task that searches an archive of `archive_size`
-    /// bytes.
+    /// Derives the execution policy of the query task that searches an archive whose uncompressed
+    /// size is `archive_uncompressed_size` bytes.
     ///
     /// The soft timeout is an aggressive estimate of the task's execution time, whereas the hard
     /// timeout is a conservative deadline that assumes the entire archive is extracted.
@@ -706,7 +707,10 @@ impl ArchiveSelector<'_> {
     /// # Returns
     ///
     /// The query task's execution policy.
-    fn compute_query_task_execution_policy(&self, archive_size: u64) -> ExecutionPolicy {
+    fn compute_query_task_execution_policy(
+        &self,
+        archive_uncompressed_size: u64,
+    ) -> ExecutionPolicy {
         const BYTES_PER_MIB: u64 = 1024 * 1024;
         const SOFT_TIMEOUT_MILLISECS_PER_MIB: u64 = 10;
         const HARD_TIMEOUT_MILLISECS_PER_MIB: u64 = 2 * 1000;
@@ -717,10 +721,12 @@ impl ArchiveSelector<'_> {
         /// The maximum timeout accepted by Spider, in milliseconds (24 hours).
         const MAX_TIMEOUT_MILLISECS: u64 = 1000 * 60 * 60 * 24;
 
-        let hard_timeout_ms = (archive_size.saturating_mul(HARD_TIMEOUT_MILLISECS_PER_MIB)
+        let hard_timeout_ms = (archive_uncompressed_size
+            .saturating_mul(HARD_TIMEOUT_MILLISECS_PER_MIB)
             / BYTES_PER_MIB)
             .clamp(MIN_TIMEOUT_MILLISECS + 1, MAX_TIMEOUT_MILLISECS);
-        let soft_timeout_ms = (archive_size.saturating_mul(SOFT_TIMEOUT_MILLISECS_PER_MIB)
+        let soft_timeout_ms = (archive_uncompressed_size
+            .saturating_mul(SOFT_TIMEOUT_MILLISECS_PER_MIB)
             / BYTES_PER_MIB)
             .clamp(MIN_TIMEOUT_MILLISECS, hard_timeout_ms - 1);
 
@@ -743,6 +749,6 @@ impl ArchiveSelector<'_> {
 struct ArchiveRowProjection {
     id: ArchiveId,
     #[sqlx(try_from = "i64")]
-    size: u64,
+    uncompressed_size: u64,
     end_timestamp: i64,
 }
