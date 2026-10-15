@@ -839,9 +839,10 @@ tasks:
         {{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.rustfmt.toml \
         {{.ROOT_DIR}}/.rustfmt.toml
 
-  # Runs `cargo +nightly fmt` in the root Rust workspace directory with the specified flags.
+  # Runs `cargo +{{.G_RUST_NIGHTLY_TOOLCHAIN}} fmt` in the root Rust workspace directory with the
+  # specified flags.
   #
-  # @param {string} CARGO_FMT_FLAGS The flags to pass to the `cargo +nightly fmt` command.
+  # @param {string} CARGO_FMT_FLAGS The flags to pass to the `cargo fmt` command.
   cargo-workspace-fmt:
     internal: true
     requires:
@@ -850,11 +851,12 @@ tasks:
     deps: ["rust-lint-configs", "toolchains:rust"]
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-      cargo +nightly fmt --all -- {{.CARGO_FMT_FLAGS}}
+      cargo +{{.G_RUST_NIGHTLY_TOOLCHAIN}} fmt --all -- {{.CARGO_FMT_FLAGS}}
 
-  # Runs `cargo +nightly clippy` in the root Rust workspace directory with the specified flags.
+  # Runs `cargo +{{.G_RUST_NIGHTLY_TOOLCHAIN}} clippy` in the root Rust workspace directory with the
+  # specified flags.
   #
-  # @param {string} CARGO_CLIPPY_FLAGS The flags to pass to the `cargo +nightly clippy` command.
+  # @param {string} CARGO_CLIPPY_FLAGS The flags to pass to the `cargo clippy` command.
   cargo-workspace-clippy:
     internal: true
     requires:
@@ -863,7 +865,10 @@ tasks:
     deps: ["toolchains:rust"]
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-      cargo +nightly clippy --all-targets --all-features {{.CARGO_CLIPPY_FLAGS}}
+      cargo +{{.G_RUST_NIGHTLY_TOOLCHAIN}} clippy \
+        --all-targets \
+        --all-features \
+        {{.CARGO_CLIPPY_FLAGS}}
 
   venv:
     internal: true

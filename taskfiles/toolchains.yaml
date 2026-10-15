@@ -13,6 +13,9 @@ vars:
   G_NODEJS_VERSION_FILE: "{{.G_WEBUI_SRC_DIR}}/.node-version"
   G_ORAS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains-oras.md5"
   G_ORAS_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/oras"
+  # Pin linting and formatting so a broken rolling-nightly snapshot can't break otherwise
+  # unchanged builds. Update this deliberately after validating the new snapshot.
+  G_RUST_NIGHTLY_TOOLCHAIN: "nightly-2026-08-21"
   G_RUST_TOOLCHAIN_DIR: "{{.G_BUILD_DIR}}/toolchains/rust"
   G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_DIR}}/env"
 
@@ -177,7 +180,10 @@ tasks:
       # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
       - |-
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-        rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
+        rustup toolchain install \
+          "{{.G_RUST_NIGHTLY_TOOLCHAIN}}" \
+          --allow-downgrade \
+          --component clippy,rustfmt
         rustup toolchain install stable
         rustup default stable
         cargo install --locked cargo-nextest
