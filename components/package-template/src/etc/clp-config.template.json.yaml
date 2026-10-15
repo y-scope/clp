@@ -76,6 +76,8 @@ telemetry:
 ##        replicas: 2
 ##      compression:
 ##        replicas: 2
+##      query:
+##        replicas: 4
 #
 #compression_coordinator: null
 ##  logging_level: "INFO"

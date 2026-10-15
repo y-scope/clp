@@ -885,6 +885,7 @@ class SpiderWorkerPools(BaseModel):
 
     general: SpiderWorkerPool = SpiderWorkerPool()
     compression: SpiderWorkerPool = SpiderWorkerPool()
+    query: SpiderWorkerPool = SpiderWorkerPool(replicas=4)
 
 
 class SpiderWorker(BaseModel):

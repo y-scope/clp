@@ -610,6 +610,7 @@ class BaseController(ABC):
         env_vars |= {
             "SPIDER_WORKER_REPLICAS": str(worker.pools.general.replicas),
             "CLP_SPIDER_COMPRESSION_WORKER_REPLICAS": str(worker.pools.compression.replicas),
+            "CLP_SPIDER_QUERY_WORKER_REPLICAS": str(worker.pools.query.replicas),
             "SPIDER_WORKER_LOG_LEVEL": worker.log_level,
             "SPIDER_WORKER_CONNECTION_POOL_SIZE": _str_or_none(worker.connection_pool_size),
             "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _str_or_none(worker.scheduler_poll_wait_ms),

@@ -45,3 +45,20 @@ services:
         condition: "service_started"
     deploy:
       replicas: "${CLP_SPIDER_COMPRESSION_WORKER_REPLICAS:-2}"
+
+  spider-worker-query:
+    <<: *clp_spider_worker_defaults
+    extends:
+      file: "compose.yaml"
+      service: "spider-worker-dedicated"
+    environment:
+      <<: *clp_spider_worker_env_defaults
+      SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "query"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "\
+        ${CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
+    # The worker can only register after the coordinator creates the resource group.
+    depends_on:
+      query-coordinator:
+        condition: "service_started"
+    deploy:
+      replicas: "${CLP_SPIDER_QUERY_WORKER_REPLICAS:-4}"
