@@ -13,7 +13,7 @@ use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::clp_config::package::credentials::Credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
-use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::is_valid_dataset_name;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::serde::ZstdMsgpack;
 use mongodb::bson::doc;
@@ -371,7 +371,7 @@ impl WebuiClient {
         datasets
             .iter()
             .map(|dataset| {
-                if !VALID_DATASET_NAME_REGEX.is_match(dataset) {
+                if !is_valid_dataset_name(dataset) {
                     return Err(ClientError::InvalidDatasetName);
                 }
                 Ok(select_for_table(&self.table_name(Some(dataset), suffix)))
@@ -623,7 +623,7 @@ impl WebuiClient {
         /// `MySQL` error number for `Table doesn't exist`.
         const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
-        if !VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
+        if !is_valid_dataset_name(dataset_name) {
             return Err(ClientError::InvalidDatasetName);
         }
         let table_name = self.table_name(Some(dataset_name), "column_metadata");
@@ -847,7 +847,7 @@ impl WebuiClient {
         extraction: StreamFileExtraction,
     ) -> Result<StreamFileMetadata, ClientError> {
         if let Some(dataset) = extraction.dataset.as_deref()
-            && !VALID_DATASET_NAME_REGEX.is_match(dataset)
+            && !is_valid_dataset_name(dataset)
         {
             return Err(ClientError::InvalidDatasetName);
         }
@@ -1048,7 +1048,7 @@ const PRE_SIGNED_URL_EXPIRY_TIME_SECONDS: u64 = 3600;
 /// [`ClientError::InvalidInput`] if no paths are supplied or any path is relative.
 fn validate_compression_job_creation(creation: &CompressionJobCreation) -> Result<(), ClientError> {
     if let Some(dataset) = creation.dataset.as_deref()
-        && !VALID_DATASET_NAME_REGEX.is_match(dataset)
+        && !is_valid_dataset_name(dataset)
     {
         return Err(ClientError::InvalidDatasetName);
     }

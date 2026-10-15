@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use axum::Json;
 use axum::extract::Path;
 use axum::extract::Query;
@@ -54,13 +56,15 @@ struct DatasetsParams {
 ///
 /// # Returns
 ///
-/// The trimmed, non-empty dataset names; empty when the parameter is absent.
+/// The trimmed, non-empty dataset names in first-seen order, without duplicates.
 fn parse_datasets(dataset: Option<String>) -> Vec<String> {
     dataset
         .map(|s| {
+            let mut seen = HashSet::new();
             s.split(',')
                 .map(str::trim)
                 .filter(|t| !t.is_empty())
+                .filter(|t| seen.insert(*t))
                 .map(str::to_owned)
                 .collect()
         })
@@ -272,4 +276,17 @@ async fn extract_stream_file(
     Ok(Json(
         state.webui_client.extract_stream_file(extraction).await?,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_datasets;
+
+    #[test]
+    fn dataset_query_names_are_distinct_and_keep_their_first_order() {
+        assert_eq!(
+            parse_datasets(Some(" logs, other,logs, ,other ".to_owned())),
+            vec!["logs".to_owned(), "other".to_owned()]
+        );
+    }
 }
