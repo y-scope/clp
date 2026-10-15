@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
 
 # Anonymous usage telemetry.
-# See: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
+# See: https://docs.yscope.com/clp/v0.14.1/user-docs/reference-telemetry
 telemetry:
   disable: false
   endpoint: "https://telemetry.yscope.io"
