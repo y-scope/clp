@@ -116,7 +116,9 @@ projection-only; it cannot be used as a filter.
 
 ### Output format
 
-A CLP+ log message is always emitted as a JSON object, never a bare string. Which sub-keys appear
+A CLP+ log message (or parent rule match) is emitted as a bare string holding its reconstructed
+original text, unless something *inside* it is projected — `shape()` or `decompose()` on it, or a
+column nested under it. In that case it is emitted as a JSON object, and which sub-keys appear
 depends on what you project:
 
 * `text` is the reconstructed original text.
@@ -130,13 +132,13 @@ The examples below use a log message with the log shape
 
 | `--projection`                                 | Output                                                                                                   |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| *(omitted)*                                    | `{"message": {"text": "blk_1073746484_5660"}}`                                                           |
-| `message`                                      | `{"message": {"text": "blk_1073746484_5660"}}`                                                           |
+| *(omitted)*                                    | `{"message": "blk_1073746484_5660"}`                                                                     |
+| `message`                                      | `{"message": "blk_1073746484_5660"}`                                                                     |
 | `shape(message)`                               | `{"message": {"shape": "blk_%block_id.num%_%block_id.gen_stamp%"}}`                                      |
 | `decompose(message)`                           | `{"message": {"shape": "...", "block_id": [{"num": [1073746484], "gen_stamp": [5660]}]}}`                |
 | `message shape(message)`                       | `{"message": {"text": "...", "shape": "..."}}`                                                           |
 | `message decompose(message)`                   | `{"message": {"text": "...", "shape": "...", "block_id": [...]}}`                                        |
-| `message.block_id`                             | `{"message": {"block_id": [{"text": "blk_1073746484_5660"}]}}`                                           |
+| `message.block_id`                             | `{"message": {"block_id": ["blk_1073746484_5660"]}}`                                                     |
 | `message.block_id.gen_stamp`                   | `{"message": {"block_id": [{"gen_stamp": [5660]}]}}`                                                     |
 | `message.block_id message.block_id.gen_stamp`  | `{"message": {"block_id": [{"text": "...", "gen_stamp": [5660]}]}}`                                      |
 | `shape(message.block_id)`                      | `{"message": {"block_id": [{"shape": "blk_%block_id.num%_%block_id.gen_stamp%"}]}}`                      |

@@ -32,6 +32,7 @@
 namespace clp_s {
 namespace {
 constexpr std::string_view cShapeKey{"shape"};
+constexpr std::string_view cTextKey{"text"};
 
 /**
  * Builds a map from column name to the list of reader indices (in schema order) for all
@@ -290,6 +291,13 @@ auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
                 auto const& shape{m_reconstruction_targets.at(reconstruction_target_index)};
                 ++reconstruction_target_index;
                 m_json_serializer.append_key();
+                auto& buffer{m_json_serializer.get_serialized_string()};
+                reconstruct_compiled_shape(shape, message_index, buffer);
+                break;
+            }
+            case JsonSerializer::Op::AddReconstructedLogShapeValue: {
+                auto const& shape{m_reconstruction_targets.at(reconstruction_target_index)};
+                ++reconstruction_target_index;
                 auto& buffer{m_json_serializer.get_serialized_string()};
                 reconstruct_compiled_shape(shape, message_index, buffer);
                 break;
@@ -1045,6 +1053,11 @@ auto SchemaReader::emit_parent_rule_arrays(
         if (false == should_include) {
             continue;
         }
+        bool const text_only{
+                emit_text && false == ancestor_decomposed
+                && false == parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)
+                && false == has_projected_descendant
+        };
 
         m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
         m_json_serializer.add_special_key(
@@ -1057,10 +1070,22 @@ auto SchemaReader::emit_parent_rule_arrays(
         auto const& occurrences{scope.parent_rule_occurrences.at(parent_rule_id)};
         for (size_t occurrence_idx{0}; occurrence_idx < occurrences.size(); ++occurrence_idx) {
             auto const& occurrence{occurrences.at(occurrence_idx)};
+            if (text_only) {
+                m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeValue);
+                m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(
+                        log_shape_id,
+                        parent_rule_column_name,
+                        occurrence.start_column_reader_idx,
+                        occurrence.sub_schema,
+                        occurrence_idx
+                )));
+                continue;
+            }
+
             m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedObject);
 
             if (emit_text) {
-                m_json_serializer.add_special_key("text");
+                m_json_serializer.add_special_key(cTextKey);
                 m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
                 m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(
                         log_shape_id,
@@ -1183,8 +1208,11 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
     bool const emit_text{m_projection && m_projection->should_emit_value(log_msg_id)};
     bool const has_shape{combined_mask.has(search::Projection::NodeMask::Mode::Shape)};
     bool const has_decompose{combined_mask.has(search::Projection::NodeMask::Mode::Decompose)};
+    bool const has_internal_projection{
+            has_shape || (m_projection && m_projection->has_projected_descendant(log_msg_id))
+    };
 
-    if (m_extract_mode) {
+    if (m_extract_mode || (emit_text && false == has_internal_projection)) {
         m_json_serializer.add_special_key(key_name);
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
         m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(
@@ -1200,7 +1228,7 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
     m_json_serializer.add_special_key(key_name);
 
     if (emit_text) {
-        m_json_serializer.add_special_key("text");
+        m_json_serializer.add_special_key(cTextKey);
         m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
         m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(
                 compile_shape(log_shape_id, "", column_start, schema, 0)

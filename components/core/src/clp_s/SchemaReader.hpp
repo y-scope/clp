@@ -460,6 +460,11 @@ private:
 
     /**
      * Generates a JSON template for a LogMessage.
+     *
+     * The LogMessage is emitted as a bare reconstructed-text string when extracting, or when its
+     * value is projected and nothing inside it is (no `shape()`/`decompose()` on it and no
+     * projected descendant). Otherwise it is emitted as an object holding the projected `text`,
+     * `shape`, leaf arrays, and ParentRule arrays.
      * @param log_msg_id The LogMessage node ID.
      * @return A result containing the index of the next reader in m_columns after those consumed by
      * this object, or an error code indicating the failure:
@@ -609,8 +614,10 @@ private:
 
     /**
      * Emits ParentRule arrays from the grouped occurrences in a `SchemaSpanContents`. For each
-     * ParentRule group, emits a JSON array with one object per occurrence. Each object contains any
-     * projected fields.
+     * ParentRule group, emits a JSON array with one element per occurrence. An occurrence is a bare
+     * reconstructed-text string when only the ParentRule's value is projected (no `shape()`/
+     * `decompose()` on it or an ancestor, and no projected descendant); otherwise it is an object
+     * containing the projected fields.
      * @param scope The collected scope contents.
      * @param log_shape_id
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active.

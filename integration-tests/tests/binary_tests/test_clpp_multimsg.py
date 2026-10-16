@@ -133,14 +133,14 @@ def test_multimsg_shared_shape_disambiguation(
     """
     message_results = search(clp_core_path_config, multimsg_archive.path, 'message: "*shared*"')
     assert 1 == len(message_results), f"Expected one `message` match, got {len(message_results)}."
-    assert message_results[0]["message"]["text"] == "shared 333 text"
+    assert message_results[0]["message"] == "shared 333 text"
 
     details_results = search(clp_core_path_config, multimsg_archive.path, 'details: "*shared*"')
     assert _MultiMessage.shared_details_events == len(details_results), (
         f"Expected {_MultiMessage.shared_details_events} `details` matches, "
         f"got {len(details_results)}."
     )
-    assert {result["details"]["text"] for result in details_results} == {
+    assert {result["details"] for result in details_results} == {
         "shared 444 text",
         "shared 777 text",
     }
@@ -204,8 +204,8 @@ def test_multimsg_negation_scoped_to_field(
         f"Query '{query}' expected {total_details - _MultiMessage.shared_details_events} results, "
         f"got {len(results)}."
     )
-    assert all(result["details"]["text"] != "shared 444 text" for result in results)
-    assert all(result["details"]["text"] != "shared 777 text" for result in results)
+    assert all(result["details"] != "shared 444 text" for result in results)
+    assert all(result["details"] != "shared 777 text" for result in results)
 
 
 @pytest.mark.clpp
@@ -254,7 +254,7 @@ def test_multimsg_shape_filter_scoping(
             'details: "*777*"',
             ["message", "decompose(details)"],
             {
-                "message": {"text": "alpha 666 beta"},
+                "message": "alpha 666 beta",
                 "details": {"shape": _MultiMessage.shared_shape, "int_fallback": [777]},
             },
             id="text_plus_decompose_sibling",

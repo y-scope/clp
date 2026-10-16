@@ -124,9 +124,9 @@ public:
     [[nodiscard]] auto should_emit_value(mpt_node_id_t node_id) const -> bool;
 
     /**
-     * Checks whether a ParentRule schema node has any projected descendant leaf (i.e. a leaf
-     * matched by some projection column is nested under this ParentRule).
-     * @param node_id The ParentRule schema node ID to check.
+     * Checks whether a LogMessage or ParentRule schema node has any projected descendant (i.e. a
+     * column matched by some projection column is nested under this node).
+     * @param node_id The LogMessage or ParentRule schema node ID to check.
      * @return Whether at least one descendant leaf of the node is projected.
      */
     [[nodiscard]] auto has_projected_descendant(mpt_node_id_t node_id) const -> bool;

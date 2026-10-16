@@ -120,13 +120,15 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
         return;
     }
     for (auto node_id : m_matching_nodes) {
-        for (auto cur_id{tree.get_node(node_id).get_parent_id()};
-             constants::cRootNodeId != cur_id
-             && NodeType::LogMessage != tree.get_node(cur_id).get_type();
+        for (auto cur_id{tree.get_node(node_id).get_parent_id()}; constants::cRootNodeId != cur_id;
              cur_id = tree.get_node(cur_id).get_parent_id())
         {
-            if (NodeType::ParentRule == tree.get_node(cur_id).get_type()) {
+            auto const type{tree.get_node(cur_id).get_type()};
+            if (NodeType::ParentRule == type) {
                 m_nodes_with_projected_descendants.insert(cur_id);
+            } else if (NodeType::LogMessage == type) {
+                m_nodes_with_projected_descendants.insert(cur_id);
+                break;
             }
         }
     }

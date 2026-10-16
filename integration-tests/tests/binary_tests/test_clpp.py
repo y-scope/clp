@@ -37,6 +37,11 @@ def _project_matches(matches: list[MatchT], fields: list[str]) -> list[MatchT]:
     return [{field: match[field] for field in fields} for match in matches]
 
 
+def _project_texts(matches: list[MatchT]) -> list[LeafValueT | str]:
+    """Returns each expected occurrence's text, i.e. its output when only its value is projected."""
+    return [match["text"] for match in matches]
+
+
 class _InflightMatch:
     """
     Expected values for the log event matched by `query`: an event with two `key_value` parent
@@ -242,7 +247,7 @@ def test_clpp_search_single_message(
     results = search(clp_core_path_config, clpp_archive.path, query)
     assert len(results) == 1, f"Query '{query}' expected 1 result, got {len(results)}."
 
-    actual_message = results[0]["message"]["text"]
+    actual_message = results[0]["message"]
     assert actual_message == expected_text, (
         f"Query '{query}' returned unexpected message.\n"
         f"  Expected: {expected_text!r}\n"
@@ -325,7 +330,7 @@ def test_clpp_search_negated(
     )
     if case.excluded_text is None:
         return
-    assert all(result["message"]["text"] != case.excluded_text for result in results), (
+    assert all(result["message"] != case.excluded_text for result in results), (
         f"Query 'not {case.query}' returned the excluded message {case.excluded_text!r}."
     )
 
@@ -390,7 +395,7 @@ def test_clpp_search_occurrence_precision(
     assert len(results) == expected_count, (
         f"Query '{query}' expected {expected_count} results, got {len(results)}."
     )
-    assert all(result["message"]["text"] == _InflightMatch.text for result in results), (
+    assert all(result["message"] == _InflightMatch.text for result in results), (
         f"Query '{query}' returned a non-matching message: {results}."
     )
 
@@ -409,12 +414,12 @@ def test_clpp_search_occurrence_precision(
     [
         pytest.param(
             None,
-            {"text": _InflightMatch.text},
+            _InflightMatch.text,
             id="return_all_columns",
         ),
         pytest.param(
             ["message"],
-            {"text": _InflightMatch.text},
+            _InflightMatch.text,
             id="text",
         ),
         pytest.param(
@@ -439,7 +444,7 @@ def test_clpp_search_occurrence_precision(
         ),
         pytest.param(
             ["message.key_value"],
-            {"key_value": _project_matches(_InflightMatch.matches, ["text"])},
+            {"key_value": _project_texts(_InflightMatch.matches)},
             id="parent_rule",
         ),
         pytest.param(
@@ -551,7 +556,7 @@ def test_clpp_projection_error(
     [
         pytest.param(
             ["message.key_value"],
-            {"key_value": _project_matches(_MixedKvMatch.matches, ["text"])},
+            {"key_value": _project_texts(_MixedKvMatch.matches)},
             id="parent_rule_text",
         ),
         pytest.param(
@@ -568,7 +573,7 @@ def test_clpp_projection_error(
             ["message", "message.key_value"],
             {
                 "text": _MixedKvMatch.text,
-                "key_value": _project_matches(_MixedKvMatch.matches, ["text"]),
+                "key_value": _project_texts(_MixedKvMatch.matches),
             },
             id="message_and_parent_rule_text",
         ),
