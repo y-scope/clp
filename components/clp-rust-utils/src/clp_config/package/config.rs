@@ -206,7 +206,6 @@ pub struct ApiServer {
     pub host: String,
     pub port: u16,
     pub query_job_polling: QueryJobPollingConfig,
-    pub default_max_num_query_results: u32,
 }
 
 impl Default for ApiServer {
@@ -215,7 +214,6 @@ impl Default for ApiServer {
             host: "localhost".to_owned(),
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
-            default_max_num_query_results: 1000,
         }
     }
 }
