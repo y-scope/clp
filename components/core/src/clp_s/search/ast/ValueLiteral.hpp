@@ -69,23 +69,20 @@ private:
             std::string string_value,
             std::optional<double> float_option,
             std::optional<bool> bool_option,
-            std::optional<int64_t> int_lower_bound_option,
-            std::optional<int64_t> int_upper_bound_option
+            std::optional<std::pair<int64_t, int64_t>> int_bounds_option
     )
             : m_types{types},
               m_string{std::move(string_value)},
               m_float_option{float_option},
               m_bool_option{bool_option},
-              m_int_lower_bound_option{int_lower_bound_option},
-              m_int_upper_bound_option{int_upper_bound_option} {}
+              m_int_bounds_option{int_bounds_option} {}
 
     // Variables
     literal_type_bitmask_t m_types{};
     std::string m_string;
     std::optional<double> m_float_option{};
     std::optional<bool> m_bool_option{};
-    std::optional<int64_t> m_int_lower_bound_option{};
-    std::optional<int64_t> m_int_upper_bound_option{};
+    std::optional<std::pair<int64_t, int64_t>> m_int_bounds_option{};
 };
 }  // namespace clp_s::search::ast
 
