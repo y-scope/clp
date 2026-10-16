@@ -371,9 +371,10 @@ impl Client {
                     break;
                 }
                 QueryJobStatus::Failed
+                | QueryJobStatus::CancelRequested
+                | QueryJobStatus::Cancelling
                 | QueryJobStatus::Cancelled
-                | QueryJobStatus::Killed
-                | QueryJobStatus::Cancelling => {
+                | QueryJobStatus::Killed => {
                     return Err(ClientError::QueryNotSucceeded);
                 }
                 QueryJobStatus::Running | QueryJobStatus::Pending => {
@@ -428,11 +429,13 @@ impl Client {
     /// * [`ClientError::SearchJobNotFound`] if no matching job was found (e.g., the job doesn't
     ///   exist or is not in a cancellable state).
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    /// * Forwards [`Self::get_status`]'s return values on failure, except
+    ///   [`sqlx::Error::RowNotFound`].
     pub async fn cancel_search_job(&self, search_job_id: u64) -> Result<(), ClientError> {
         let result = sqlx::query(&format!(
             "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ? AND status IN (?, ?)"
         ))
-        .bind::<i32>(QueryJobStatus::Cancelling.into())
+        .bind::<i32>(QueryJobStatus::CancelRequested.into())
         .bind(search_job_id)
         .bind::<i32>(QueryJobStatus::Pending.into())
         .bind::<i32>(QueryJobStatus::Running.into())
@@ -440,7 +443,13 @@ impl Client {
         .await?;
 
         if result.rows_affected() == 0 {
-            return Err(ClientError::SearchJobNotFound(search_job_id));
+            return match self.get_status(search_job_id).await {
+                Ok(QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling) => Ok(()),
+                Ok(_) | Err(ClientError::Sql(sqlx::Error::RowNotFound)) => {
+                    Err(ClientError::SearchJobNotFound(search_job_id))
+                }
+                Err(e) => Err(e),
+            };
         }
 
         Ok(())

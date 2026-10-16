@@ -691,6 +691,39 @@ class BaseController(ABC):
 
         return env_vars
 
+    def _set_up_env_for_query_coordinator(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the query coordinator component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUERY_COORDINATOR_COMPONENT_NAME
+        coordinator_config = self._clp_config.query_coordinator
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Runtime config
+        env_vars |= {
+            "CLP_QUERY_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
+        }
+
+        # Credentials
+        env_vars |= {
+            "CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
+        }
+
+        return env_vars
+
     def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
         """
         Sets up environment variables for the compression worker component.
