@@ -931,11 +931,18 @@ class BaseController(ABC):
         if self._clp_config.query_scheduler is not None:
             max_datasets_per_query = self._clp_config.query_scheduler.max_datasets_per_query
 
+        s3_scanner_enabled = (
+            self._clp_config.package.storage_engine == StorageEngine.CLP_S
+            and self._clp_config.logs_input.type == StorageType.S3
+            and self._clp_config.log_ingestor is not None
+        )
+
         public_settings_updates = {
             "ClpQueryEngine": self._clp_config.webui.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "LogsInputRootDir": logs_input_root_dir,
             "LogsInputType": self._clp_config.logs_input.type,
+            "S3ScannerEnabled": s3_scanner_enabled,
             "MaxDatasetsPerQuery": max_datasets_per_query,
             "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "SqlDbClpArchivesTableName": archives_table_name,
@@ -949,6 +956,8 @@ class BaseController(ABC):
         }
 
         server_settings_updates = {
+            # The configured ingestor host/port bind the host; use its Compose service address.
+            "LogIngestorUrl": "http://log_ingestor:3002" if s3_scanner_enabled else None,
             "ApiServerUrl": (
                 f"http://{container_clp_config.api_server.host}"
                 f":{container_clp_config.api_server.port}"

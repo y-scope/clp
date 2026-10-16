@@ -19,6 +19,7 @@ const WebuiPublicSettingsSchema = Type.Object({
         Type.Null(),
     ]),
     LogsInputType: Type.Enum(STORAGE_TYPE),
+    S3ScannerEnabled: Type.Boolean({default: false}),
 
     MaxDatasetsPerQuery: Type.Union([
         Type.Integer({minimum: 1}),
@@ -38,6 +39,10 @@ const WebuiPublicSettingsSchema = Type.Object({
 
 const WebuiServerSettingsSchema = Type.Object({
     ApiServerUrl: Type.String(),
+    LogIngestorUrl: Type.Union([
+        Type.String({minLength: 1, pattern: "^https?://"}),
+        Type.Null(),
+    ], {default: null}),
 
     SqlDbHost: Type.String(),
     SqlDbName: Type.String(),
