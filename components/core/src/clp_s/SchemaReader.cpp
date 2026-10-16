@@ -494,27 +494,6 @@ auto SchemaReader::get_first_column_in_span(SchemaView sub_schema) -> mpt_node_i
     return first_column_id;
 }
 
-auto SchemaReader::is_node_projected(mpt_node_id_t node_id) -> bool {
-    if (nullptr == m_projection) {
-        return false;
-    }
-    mpt_node_id_t cur_id{node_id};
-    while (-1 != cur_id) {
-        auto const& node{m_global_schema_tree->get_node(cur_id)};
-        if (m_projection->matches_node(cur_id)) {
-            if (m_projection->is_projected_as(cur_id, search::Projection::NodeMask::Mode::Shape)) {
-                return node_id == cur_id;
-            }
-            return true;
-        }
-        if (NodeType::LogMessage == node.get_type()) {
-            break;
-        }
-        cur_id = node.get_parent_id();
-    }
-    return false;
-}
-
 void SchemaReader::find_intersection_and_fix_brackets(
         int32_t cur_root,
         int32_t next_root,
@@ -793,36 +772,8 @@ void SchemaReader::initialize_serializer() {
 
     for (auto const& entry : m_global_id_to_unordered_object) {
         auto const root_id{entry.first};
-        auto const& root_node{m_global_schema_tree->get_node(root_id)};
-        if (NodeType::LogMessage == root_node.get_type()) {
-            auto const& sub_schema{entry.second.sub_schema};
-            bool need_log_message{false};
-            if (m_projection->matches_node(root_id)) {
-                generate_local_tree(root_id);
-                need_log_message = true;
-            }
-            sub_schema.for_each_node_id([&](mpt_node_id_t child_id) -> void {
-                if (is_node_projected(child_id)) {
-                    generate_local_tree(child_id);
-                    need_log_message = true;
-                }
-            });
-            // Shape projection of a ParentRule is exclusive to the node itself, so
-            // is_node_projected on its leaves does not flag the LogMessage; detect projected
-            // ParentRule scopes directly and ensure the LogMessage (and the scope's tree path) is
-            // materialized.
-            for_each_parent_rule_scope(sub_schema, [&](auto parent_rule_id, auto) -> void {
-                if (m_projection->matches_node(parent_rule_id)
-                    || m_projection->has_projected_descendant(parent_rule_id))
-                {
-                    generate_local_tree(parent_rule_id);
-                    need_log_message = true;
-                }
-            });
-            if (need_log_message && false == m_projection->matches_node(root_id)) {
-                generate_local_tree(root_id);
-            }
-        } else if (m_projection->matches_node(root_id)) {
+        if (m_projection->matches_node(root_id) || m_projection->has_projected_descendant(root_id))
+        {
             generate_local_tree(root_id);
         }
     }

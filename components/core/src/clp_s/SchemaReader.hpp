@@ -502,15 +502,6 @@ private:
     );
 
     /**
-     * Checks whether a node (or any ancestor up to and including the LogMessage root) is
-     * projected. In the Default projection mode, this always returns true.
-     * @param node_id The global schema node ID to check.
-     * @return Whether the node should be included in the output.
-     * @return false if projection has not been initialized.
-     */
-    [[nodiscard]] auto is_node_projected(mpt_node_id_t node_id) -> bool;
-
-    /**
      * Compiles a shape into a `CompiledShape` for per-message reconstruction.
      *
      * Parses the shape, unescapes literal %'s, escapes JSON characters, and resolves each
@@ -556,30 +547,6 @@ private:
             SchemaView sub_schema,
             size_t occurrence_idx
     ) -> ystdlib::error_handling::Result<void>;
-
-    /**
-     * Visits every `ParentRule` unordered object contained in `schema`, recursing into nested
-     * objects, and invokes `visit` with the ParentRule's MPT node ID and its sub-schema (excluding
-     * the leading `node_id` metadata entry).
-     *
-     * @param schema
-     * @param visit Invoked for each `ParentRule` scope, in depth-first schema order.
-     * @tparam Visit Callable accepting `(mpt_node_id_t parent_rule_id, SchemaView sub_schema)`.
-     */
-    template <typename Visit>
-    auto for_each_parent_rule_scope(SchemaView schema, Visit const& visit) -> void {
-        schema.visit_entries(
-                [](mpt_node_id_t) -> bool { return false; },
-                [&](UnorderedObject const& obj) -> bool {
-                    if (NodeType::ParentRule != obj.type) {
-                        return false;
-                    }
-                    visit(obj.node_id.value(), obj.sub_schema);
-                    for_each_parent_rule_scope(obj.sub_schema, visit);
-                    return false;
-                }
-        );
-    }
 
     /**
      * Emits the shape constant string field.
