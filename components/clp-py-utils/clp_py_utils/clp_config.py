@@ -9,12 +9,14 @@ import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Discriminator,
     Field,
     field_validator,
     model_validator,
     PlainSerializer,
     PrivateAttr,
     StringConstraints,
+    Tag,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum, SnakeCaseStrEnum
 
@@ -152,9 +154,7 @@ CompressionOrchestrationStr = Annotated[CompressionOrchestration, StrEnumSeriali
 
 class SpiderSchedulerPolicy(SnakeCaseStrEnum):
     ROUND_ROBIN = auto()
-
-
-SpiderSchedulerPolicyStr = Annotated[SpiderSchedulerPolicy, StrEnumSerializer]
+    RESOURCE_GROUP_ROUND_ROBIN = auto()
 
 
 class QueryEngine(KebabCaseStrEnum):
@@ -805,24 +805,63 @@ class SpiderEmRegistry(BaseModel):
 
 class SpiderRoundRobin(BaseModel):
     active_job_queue_capacity: PositiveInt | None = None
-    cleanup_ready_task_capacity: PositiveInt | None = None
-    commit_ready_task_capacity: PositiveInt | None = None
     dispatch_queue_capacity: PositiveInt | None = None
-    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
     ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
     storage_poll_timeout_ms: PositiveInt | None = None
     tick_interval_ms: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
 
 
-class SpiderScheduler(BaseModel):
-    DEFAULT_POLICY: ClassVar[SpiderSchedulerPolicy] = SpiderSchedulerPolicy.ROUND_ROBIN
+class SpiderResourceGroupRoundRobin(BaseModel):
+    active_job_list_capacity: PositiveInt | None = None
+    dispatch_queue_capacity: PositiveInt | None = None
+    ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
+    storage_poll_timeout_ms: PositiveInt | None = None
+    tick_interval_ms: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
 
+
+class SpiderSchedulerBase(BaseModel):
     log_level: LoggingLevelRust | None = None
-    policy: SpiderSchedulerPolicyStr | None = None
     connection_pool_size: PositiveInt | None = None
     stop_timeout_sec: PositiveInt | None = None
     em_registry: SpiderEmRegistry = SpiderEmRegistry()
-    round_robin: SpiderRoundRobin = SpiderRoundRobin()
+
+
+class SpiderRoundRobinScheduler(SpiderSchedulerBase):
+    policy: Literal[SpiderSchedulerPolicy.ROUND_ROBIN.value]
+    config: SpiderRoundRobin = SpiderRoundRobin()
+
+
+class SpiderResourceGroupRoundRobinScheduler(SpiderSchedulerBase):
+    policy: Literal[SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value] = (
+        SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value
+    )
+    config: SpiderResourceGroupRoundRobin = SpiderResourceGroupRoundRobin()
+
+
+def _get_spider_scheduler_policy(scheduler: Any) -> str:
+    """
+    :param scheduler: The raw `spider.scheduler` config, or an already-validated scheduler model.
+    :return: The scheduler's `policy`, defaulting to `resource_group_round_robin` when unset.
+    """
+    if isinstance(scheduler, dict):
+        return scheduler.get("policy", SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value)
+    return scheduler.policy
+
+
+SpiderScheduler = Annotated[
+    Annotated[SpiderRoundRobinScheduler, Tag(SpiderSchedulerPolicy.ROUND_ROBIN.value)]
+    | Annotated[
+        SpiderResourceGroupRoundRobinScheduler,
+        Tag(SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value),
+    ],
+    Discriminator(_get_spider_scheduler_policy),
+]
 
 
 class SpiderLiveness(BaseModel):
@@ -830,8 +869,24 @@ class SpiderLiveness(BaseModel):
     storage_heartbeat_interval_sec: PositiveInt | None = None
 
 
+class SpiderWorkerPool(BaseModel):
+    """A pool of Spider workers."""
+
+    replicas: NonNegativeInt = 2
+
+
+class SpiderWorkerPools(BaseModel):
+    """
+    Spider worker pools. `general` runs any resource group's tasks; each other pool is dedicated
+    to the resource group of the same name.
+    """
+
+    general: SpiderWorkerPool = SpiderWorkerPool()
+    compression: SpiderWorkerPool = SpiderWorkerPool()
+
+
 class SpiderWorker(BaseModel):
-    replicas: PositiveInt | None = None
+    pools: SpiderWorkerPools = SpiderWorkerPools()
     log_level: LoggingLevelRust | None = None
     connection_pool_size: PositiveInt | None = None
     scheduler_poll_wait_ms: PositiveInt | None = None
@@ -846,7 +901,7 @@ class Spider(BaseModel):
     port: Port = DEFAULT_PORT
 
     storage: SpiderStorage = SpiderStorage()
-    scheduler: SpiderScheduler = SpiderScheduler()
+    scheduler: SpiderScheduler = SpiderResourceGroupRoundRobinScheduler()
     worker: SpiderWorker = SpiderWorker()
 
     def dump_to_primitive_dict(self):
