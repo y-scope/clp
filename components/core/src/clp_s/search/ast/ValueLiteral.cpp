@@ -23,8 +23,9 @@ constexpr std::string_view cFalseString{"false"};
 constexpr std::string_view cNullString{"null"};
 constexpr std::string_view cMatchAnyString{"*"};
 
-// -2^63, which is exactly representable as a double (unlike the `int64_t` max, 2^63 - 1). The floor
-// and ceiling of any double in [-2^63, 2^63) are representable as an `int64_t`.
+// -2^63, which is exactly representable as a double (unlike the `int64_t` max, 2^63 - 1, which has
+// too many significant bits to be exactly represented as a double). The floor and ceiling of any
+// double in [-2^63, 2^63) are representable as an `int64_t`.
 constexpr double cInt64Min{static_cast<double>(std::numeric_limits<int64_t>::min())};
 
 /**
@@ -45,7 +46,7 @@ auto is_equality_op(FilterOperation op) -> bool;
 /**
  * Determines which string types a string can be interpreted as. A string containing spaces or
  * unescaped wildcards can match a CLP string, and a string without spaces can match a variable
- * string. Any string can match an array.
+ * string.
  * @param str
  * @return A bitmask of the matching string types.
  */
@@ -58,9 +59,7 @@ auto get_string_types(std::string_view str) -> literal_type_bitmask_t;
  * - The ceiling of `v`, or `std::nullopt` if `v` is outside the range of `int64_t`.
  */
 auto get_int_bounds(double v) -> std::pair<std::optional<int64_t>, std::optional<int64_t>>;
-}  // namespace
 
-namespace {
 template <typename T>
 auto parse_number(std::string const& str) -> std::optional<T> {
     T value{};
@@ -77,7 +76,7 @@ auto is_equality_op(FilterOperation op) -> bool {
 }
 
 auto get_string_types(std::string_view str) -> literal_type_bitmask_t {
-    literal_type_bitmask_t types{LiteralType::ArrayT};
+    literal_type_bitmask_t types{};
     if (std::string_view::npos != str.find(' ')) {
         types |= LiteralType::ClpStringT;
     } else {
@@ -109,11 +108,11 @@ auto ValueLiteral::create(double v) -> std::shared_ptr<Literal> {
     std::ostringstream ss;
     ss << v;
     auto str{ss.str()};
-    auto const [int_lower_bound, int_upper_bound]{get_int_bounds(v)};
+    auto const [int_lower_bound_option, int_upper_bound_option]{get_int_bounds(v)};
     literal_type_bitmask_t types{
             LiteralType::FloatT | LiteralType::TimestampT | get_string_types(str)
     };
-    if (int_lower_bound.has_value()) {
+    if (int_lower_bound_option.has_value()) {
         types |= LiteralType::IntegerT;
     }
     return std::shared_ptr<Literal>{new ValueLiteral{
@@ -121,8 +120,8 @@ auto ValueLiteral::create(double v) -> std::shared_ptr<Literal> {
             std::move(str),
             v,
             std::nullopt,
-            int_lower_bound,
-            int_upper_bound
+            int_lower_bound_option,
+            int_upper_bound_option
     }};
 }
 
@@ -137,26 +136,29 @@ auto ValueLiteral::create(bool v) -> std::shared_ptr<Literal> {
 auto ValueLiteral::create(std::string_view v) -> std::shared_ptr<Literal> {
     std::string str{v};
     literal_type_bitmask_t types{get_string_types(str)};
-    std::optional<double> float_value;
-    std::optional<bool> bool_value;
-    std::optional<int64_t> int_lower_bound;
-    std::optional<int64_t> int_upper_bound;
-    if (auto const int_value{parse_number<int64_t>(str)}; int_value.has_value()) {
+    std::optional<double> float_option;
+    std::optional<bool> bool_option;
+    std::optional<int64_t> int_lower_bound_option;
+    std::optional<int64_t> int_upper_bound_option;
+    if (auto const parsed_int_option{parse_number<int64_t>(str)}; parsed_int_option.has_value()) {
         types |= cIntegralTypes | LiteralType::TimestampT;
-        float_value = static_cast<double>(int_value.value());
-        int_lower_bound = int_value;
-        int_upper_bound = int_value;
-    } else if (auto const parsed_float{parse_number<double>(str)}; parsed_float.has_value()) {
+        float_option = static_cast<double>(parsed_int_option.value());
+        int_lower_bound_option = parsed_int_option;
+        int_upper_bound_option = parsed_int_option;
+    } else if (auto const parsed_float_option{parse_number<double>(str)};
+               parsed_float_option.has_value())
+    {
         types |= LiteralType::FloatT | LiteralType::TimestampT;
-        float_value = parsed_float;
-        std::tie(int_lower_bound, int_upper_bound) = get_int_bounds(parsed_float.value());
-        if (int_lower_bound.has_value()) {
+        float_option = parsed_float_option;
+        std::tie(int_lower_bound_option, int_upper_bound_option)
+                = get_int_bounds(parsed_float_option.value());
+        if (int_lower_bound_option.has_value()) {
             types |= LiteralType::IntegerT;
         }
     }
     if (cTrueString == str || cFalseString == str) {
         types |= LiteralType::BooleanT;
-        bool_value = cTrueString == str;
+        bool_option = cTrueString == str;
     }
     if (cNullString == str) {
         types |= LiteralType::NullT;
@@ -164,10 +166,10 @@ auto ValueLiteral::create(std::string_view v) -> std::shared_ptr<Literal> {
     return std::shared_ptr<Literal>{new ValueLiteral{
             types,
             std::move(str),
-            float_value,
-            bool_value,
-            int_lower_bound,
-            int_upper_bound
+            float_option,
+            bool_option,
+            int_lower_bound_option,
+            int_upper_bound_option
     }};
 }
 
@@ -197,40 +199,42 @@ auto ValueLiteral::as_var_string(std::string& ret, FilterOperation op) -> bool {
 }
 
 auto ValueLiteral::as_float(double& ret, FilterOperation /*op*/) -> bool {
-    if (false == m_float.has_value()) {
+    if (false == m_float_option.has_value()) {
         return false;
     }
-    ret = m_float.value();
+    ret = m_float_option.value();
     return true;
 }
 
 auto ValueLiteral::as_int(int64_t& ret, FilterOperation op) -> bool {
-    if (false == m_int_lower_bound.has_value() || false == m_int_upper_bound.has_value()) {
+    if (false == m_int_lower_bound_option.has_value()
+        || false == m_int_upper_bound_option.has_value())
+    {
         return false;
     }
     switch (op) {
         case FilterOperation::LT:
         case FilterOperation::GTE:
-            ret = m_int_upper_bound.value();
+            ret = m_int_upper_bound_option.value();
             return true;
         case FilterOperation::GT:
         case FilterOperation::LTE:
-            ret = m_int_lower_bound.value();
+            ret = m_int_lower_bound_option.value();
             return true;
         default:
-            if (m_int_lower_bound != m_int_upper_bound) {
+            if (m_int_lower_bound_option != m_int_upper_bound_option) {
                 return false;
             }
-            ret = m_int_lower_bound.value();
+            ret = m_int_lower_bound_option.value();
             return true;
     }
 }
 
 auto ValueLiteral::as_bool(bool& ret, FilterOperation op) -> bool {
-    if (false == is_equality_op(op) || false == m_bool.has_value()) {
+    if (false == is_equality_op(op) || false == m_bool_option.has_value()) {
         return false;
     }
-    ret = m_bool.value();
+    ret = m_bool_option.value();
     return true;
 }
 

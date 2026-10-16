@@ -67,25 +67,25 @@ private:
     ValueLiteral(
             literal_type_bitmask_t types,
             std::string string_value,
-            std::optional<double> float_value,
-            std::optional<bool> bool_value,
-            std::optional<int64_t> int_lower_bound,
-            std::optional<int64_t> int_upper_bound
+            std::optional<double> float_option,
+            std::optional<bool> bool_option,
+            std::optional<int64_t> int_lower_bound_option,
+            std::optional<int64_t> int_upper_bound_option
     )
             : m_types{types},
               m_string{std::move(string_value)},
-              m_float{float_value},
-              m_bool{bool_value},
-              m_int_lower_bound{int_lower_bound},
-              m_int_upper_bound{int_upper_bound} {}
+              m_float_option{float_option},
+              m_bool_option{bool_option},
+              m_int_lower_bound_option{int_lower_bound_option},
+              m_int_upper_bound_option{int_upper_bound_option} {}
 
     // Variables
-    literal_type_bitmask_t m_types;
+    literal_type_bitmask_t m_types{};
     std::string m_string;
-    std::optional<double> m_float;
-    std::optional<bool> m_bool;
-    std::optional<int64_t> m_int_lower_bound;
-    std::optional<int64_t> m_int_upper_bound;
+    std::optional<double> m_float_option{};
+    std::optional<bool> m_bool_option{};
+    std::optional<int64_t> m_int_lower_bound_option{};
+    std::optional<int64_t> m_int_upper_bound_option{};
 };
 }  // namespace clp_s::search::ast
 
