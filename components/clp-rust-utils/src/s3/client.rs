@@ -5,13 +5,17 @@ use aws_sdk_s3::config::Credentials;
 use aws_sdk_s3::config::Region;
 use non_empty_string::NonEmptyString;
 
+use crate::aws::named_profile_credentials_provider;
 use crate::clp_config::AwsAuthentication;
 
 /// Creates a new S3 client.
 ///
-/// When `aws_authentication` is [`AwsAuthentication::Credentials`], the client uses the given
-/// access key pair. When [`AwsAuthentication::Default`], the client uses the default AWS SDK
-/// credential provider chain.
+/// Credentials come from `aws_authentication`:
+///
+/// * [`AwsAuthentication::Credentials`] — the given access key pair.
+/// * [`AwsAuthentication::Profile`] — the named profile from the shared AWS config files.
+/// * [`AwsAuthentication::Default`] and [`AwsAuthentication::EnvVars`] — the default AWS SDK
+///   credential provider chain, which consults the standard environment variables first.
 ///
 /// # Notes
 ///
@@ -29,14 +33,22 @@ pub async fn create_new_client(
 ) -> Client {
     let mut config_defaults =
         aws_config::defaults(BehaviorVersion::latest()).region(Region::new(region_id.to_string()));
-    if let AwsAuthentication::Credentials { credentials } = aws_authentication {
-        config_defaults = config_defaults.credentials_provider(Credentials::new(
-            credentials.access_key_id.as_str(),
-            credentials.secret_access_key.as_str(),
-            credentials.session_token.clone(),
-            None,
-            "clp-credentials-provider",
-        ));
+    match aws_authentication {
+        AwsAuthentication::Credentials { credentials } => {
+            config_defaults = config_defaults.credentials_provider(Credentials::new(
+                credentials.access_key_id.as_str(),
+                credentials.secret_access_key.as_str(),
+                credentials.session_token.clone(),
+                None,
+                "clp-credentials-provider",
+            ));
+        }
+        AwsAuthentication::Profile { profile } => {
+            config_defaults = config_defaults.credentials_provider(
+                named_profile_credentials_provider(profile.as_str(), region_id),
+            );
+        }
+        AwsAuthentication::Default | AwsAuthentication::EnvVars => {}
     }
     let base_config = config_defaults.load().await;
     let mut config_builder = Builder::from(&base_config).force_path_style(true);

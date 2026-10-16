@@ -22,11 +22,11 @@ pub enum ClientError {
     #[error("Malformed data")]
     MalformedData,
 
+    #[error("Background task failed: {0}")]
+    TaskJoin(#[from] tokio::task::JoinError),
+
     #[error("`AwsError`: {description}")]
     Aws { description: String },
-
-    #[error("api_server configuration is missing")]
-    ConfigIsNone,
 
     #[error("Search job not found: {0}")]
     SearchJobNotFound(u64),
@@ -37,8 +37,14 @@ pub enum ClientError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    #[error("Stream extraction timed out after {0} seconds")]
+    StreamExtractionTimeout(u64),
+
     #[error("Dataset not found: {0}")]
     DatasetNotFound(String),
+
+    #[error("Path not found: {0}")]
+    NotFound(String),
 
     #[error("Invalid search job config: {0}")]
     InvalidSearchJobConfig(String),

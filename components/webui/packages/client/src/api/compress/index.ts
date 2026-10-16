@@ -2,7 +2,9 @@ import {
     CompressionJob,
     CompressionJobCreation,
 } from "@webui/common/schemas/compression";
-import axios from "axios";
+
+import {apiClient} from "../search";
+import {createApiError} from "../utils";
 
 
 /**
@@ -10,12 +12,26 @@ import axios from "axios";
  *
  * @param payload
  * @return
+ * @throws {Error} If the request fails or the API server returns an unexpected response.
  */
 const submitCompressionJob = async (payload: CompressionJobCreation): Promise<CompressionJob> => {
     console.log("Submitting compression job:", JSON.stringify(payload));
-    const {data} = await axios.post<CompressionJob>("/api/compress", payload);
 
-    return data;
+    // eslint-disable-next-line new-cap
+    const {data, error, response} = await apiClient.POST("/compression/jobs", {
+        body: {
+            dataset: payload.dataset ?? null,
+            paths: payload.paths,
+            timestamp_key: payload.timestampKey ?? null,
+            unstructured: payload.unstructured ?? null,
+        },
+    });
+
+    if ("undefined" === typeof data) {
+        throw createApiError("Failed to submit compression job", response, error);
+    }
+
+    return {jobId: data.job_id};
 };
 
 

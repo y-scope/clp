@@ -205,6 +205,7 @@ pub struct ApiServer {
     pub port: u16,
     pub query_job_polling: QueryJobPollingConfig,
     pub default_max_num_query_results: u32,
+    pub stream_file_extraction_timeout_secs: NonZeroU64,
 }
 
 impl Default for ApiServer {
@@ -214,6 +215,8 @@ impl Default for ApiServer {
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
             default_max_num_query_results: 1000,
+            stream_file_extraction_timeout_secs: NonZeroU64::new(1800)
+                .expect("the default extraction timeout is positive"),
         }
     }
 }
@@ -280,6 +283,7 @@ pub struct ResultsCache {
     pub host: String,
     pub port: u16,
     pub db_name: String,
+    pub stream_collection_name: String,
 }
 
 impl ResultsCache {
@@ -299,6 +303,7 @@ impl Default for ResultsCache {
             host: "localhost".to_owned(),
             port: 27017,
             db_name: "clp-query-results".to_owned(),
+            stream_collection_name: "stream-files".to_owned(),
         }
     }
 }
@@ -308,10 +313,20 @@ impl Default for ResultsCache {
 /// # NOTE
 ///
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Clone, Default, Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct StreamOutput {
     pub storage: StreamOutputStorage,
+    pub target_uncompressed_size: u64,
+}
+
+impl Default for StreamOutput {
+    fn default() -> Self {
+        Self {
+            storage: StreamOutputStorage::default(),
+            target_uncompressed_size: 134_217_728,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -616,11 +631,53 @@ fn default_archive_staging_directory() -> String {
 mod tests {
     use std::path::Path;
 
+    use super::ApiServer;
     use super::ArchiveOutput;
     use super::ArchiveOutputStorage;
+    use super::Config;
     use super::Database;
     use super::LogsInput;
     use super::SpiderTaskExecutorConfig;
+    use super::StreamOutputStorage;
+
+    #[test]
+    fn extraction_timeout_has_a_positive_backward_compatible_default() {
+        let config: ApiServer = serde_json::from_str("{}").expect("default API configuration");
+        assert_eq!(config.stream_file_extraction_timeout_secs.get(), 1800);
+        assert!(
+            serde_json::from_str::<ApiServer>(r#"{"stream_file_extraction_timeout_secs":0}"#)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn deserialize_package_stream_output_with_named_profile() {
+        let config: Config = serde_json::from_value(serde_json::json!({
+            "stream_output": {
+                "storage": {
+                    "type": "s3",
+                    "staging_directory": "/var/data/staged-streams",
+                    "s3_config": {
+                        "bucket": "test-bucket",
+                        "key_prefix": "streams/",
+                        "aws_authentication": {
+                            "type": "profile",
+                            "profile": "test-profile"
+                        }
+                    }
+                }
+            }
+        }))
+        .expect("a documented named profile must load in the API server configuration");
+
+        let StreamOutputStorage::S3 { s3_config, .. } = config.stream_output.storage else {
+            panic!("expected S3 stream output");
+        };
+        assert!(matches!(
+            s3_config.aws_authentication,
+            crate::clp_config::AwsAuthentication::Profile { .. }
+        ));
+    }
 
     #[test]
     fn deserialize_logs_input_s3_config() {
@@ -647,9 +704,7 @@ mod tests {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
-                crate::clp_config::AwsAuthentication::Default => {
-                    panic!("Expected credentials, got `default`")
-                }
+                other => panic!("Expected credentials, got {other:?}"),
             },
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }

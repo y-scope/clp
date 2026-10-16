@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
-use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::is_valid_dataset_name;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -560,7 +560,7 @@ impl ArchiveSelector<'_> {
     /// * [`Error::InvalidQueryJobConfig`] if:
     ///   * The job doesn't request any datasets, since clp-text queries aren't supported.
     ///   * The job's requested datasets are empty.
-    ///   * A dataset name doesn't match [`VALID_DATASET_NAME_REGEX`].
+    ///   * A dataset name fails [`is_valid_dataset_name`].
     ///   * The number of distinct datasets exceeds
     ///     [`ArchiveSelectionOptions::max_datasets_per_query`].
     fn deduplicate_and_validate_requested_datasets(
@@ -583,7 +583,7 @@ impl ArchiveSelector<'_> {
             .map(|dataset| {
                 NonEmptyString::new(dataset.clone())
                     .ok()
-                    .filter(|name| VALID_DATASET_NAME_REGEX.is_match(name.as_str()))
+                    .filter(|name| is_valid_dataset_name(name.as_str()))
                     .ok_or_else(|| {
                         Error::InvalidQueryJobConfig(format!("invalid dataset name `{dataset}`"))
                     })

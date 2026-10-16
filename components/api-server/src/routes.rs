@@ -21,12 +21,24 @@ use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+mod webui;
+
 use crate::client::Client;
 use crate::client::ClientError;
 use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
 use crate::client::ValidatedCompressionUsageParams;
+use crate::webui_client::WebuiClient;
+
+/// Shared application state passed to all route handlers.
+#[derive(Clone)]
+pub struct AppState {
+    /// Client for search query orchestration.
+    pub client: Client,
+    /// Client for metadata, compression-job, and stream-file operations.
+    pub webui_client: WebuiClient,
+}
 
 /// Factory method to create an Axum router configured with all API routes.
 ///
@@ -39,28 +51,25 @@ use crate::client::ValidatedCompressionUsageParams;
 /// Returns an error if:
 ///
 /// * Forwards [`OpenApi::to_json`]'s return values on failure.
-pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
-    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error> {
+    let (public_routes, _) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
         .routes(routes!(health))
         .routes(routes!(query))
         .routes(routes!(query_results))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
-        .route(
-            "/column_metadata/{dataset_name}/timestamp",
-            get(get_timestamp_column_names),
-        )
-        .with_state(client)
+        .with_state(state.clone())
         .split_for_parts();
-    let api_json = api.to_json()?;
-    let router = router
+    let api_json = ApiDoc::openapi().to_json()?;
+    let public_routes = public_routes
         .route(
             "/openapi.json",
             get(|| async { (StatusCode::OK, api_json) }),
         )
         .layer(CorsLayer::new().allow_origin(Any));
-    Ok(router)
+    let (webui_routes, _) = webui::router().with_state(state).split_for_parts();
+    Ok(public_routes.merge(webui_routes))
 }
 
 // `utoipa::OpenApi` triggers `clippy::needless_for_each`
@@ -74,7 +83,31 @@ mod api_doc {
     use super::__path_query;
     use super::__path_query_results;
     use super::CompressionUsage;
+    use super::webui::__path_compression_job;
+    use super::webui::__path_compression_metadata;
+    use super::webui::__path_datasets;
+    use super::webui::__path_extract_stream_file;
+    use super::webui::__path_ingestion_details;
+    use super::webui::__path_list_files;
+    use super::webui::__path_query_speed;
+    use super::webui::__path_space_savings;
+    use super::webui::__path_time_range;
+    use super::webui::__path_timestamp_column_names;
     use crate::client::CompressionJobStatus;
+    use crate::webui_client::CompressionJob;
+    use crate::webui_client::CompressionJobCreation;
+    use crate::webui_client::CompressionMetadata;
+    use crate::webui_client::CompressionMetadataDisplayConfig;
+    use crate::webui_client::CompressionMetadataDisplayInput;
+    use crate::webui_client::CompressionMetadataDisplayOutput;
+    use crate::webui_client::DirEntry;
+    use crate::webui_client::ExtractJobType;
+    use crate::webui_client::IngestionDetails;
+    use crate::webui_client::QuerySpeed;
+    use crate::webui_client::SpaceSavings;
+    use crate::webui_client::StreamFileExtraction;
+    use crate::webui_client::StreamFileMetadata;
+    use crate::webui_client::TimeRange;
 
     #[derive(utoipa::OpenApi)]
     #[openapi(
@@ -87,6 +120,51 @@ mod api_doc {
         components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
+
+    #[derive(utoipa::OpenApi)]
+    #[openapi(
+        info(
+            title = "API Server",
+            description = "API Server for CLP",
+            contact(name = "YScope")
+        ),
+        paths(
+            health,
+            query,
+            query_results,
+            cancel_query,
+            compression_usage,
+            datasets,
+            time_range,
+            space_savings,
+            ingestion_details,
+            query_speed,
+            timestamp_column_names,
+            compression_metadata,
+            list_files,
+            compression_job,
+            extract_stream_file,
+        ),
+        components(schemas(
+            CompressionUsage,
+            CompressionJobStatus,
+            CompressionJob,
+            CompressionJobCreation,
+            CompressionMetadata,
+            CompressionMetadataDisplayConfig,
+            CompressionMetadataDisplayInput,
+            CompressionMetadataDisplayOutput,
+            DirEntry,
+            ExtractJobType,
+            IngestionDetails,
+            QuerySpeed,
+            SpaceSavings,
+            StreamFileExtraction,
+            StreamFileMetadata,
+            TimeRange,
+        ))
+    )]
+    pub struct WebUiApiDoc;
 }
 pub use api_doc::*;
 
@@ -126,11 +204,11 @@ async fn health() -> String {
     )
 )]
 async fn query(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
     tracing::info!("Submitting query: {:?}", query_config);
-    let search_job_id = match client.submit_query(query_config).await {
+    let search_job_id = match state.client.submit_query(query_config).await {
         Ok(id) => {
             tracing::info!("Submitted query with search job ID: {}", id);
             id
@@ -190,12 +268,13 @@ struct QueryResultsParams {
     )
 )]
 async fn query_results(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Path(search_job_id): Path<u64>,
     Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
     tracing::info!("Fetching results for search job ID: {}", search_job_id);
-    let results_stream = match client
+    let results_stream = match state
+        .client
         .fetch_results(search_job_id, params.raw_docs, params.sorted)
         .await
     {
@@ -244,11 +323,11 @@ async fn query_results(
     )
 )]
 async fn cancel_query(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Path(search_job_id): Path<u64>,
 ) -> Result<StatusCode, HandlerError> {
     tracing::info!("Cancelling search job ID: {}", search_job_id);
-    match client.cancel_search_job(search_job_id).await {
+    match state.client.cancel_search_job(search_job_id).await {
         Ok(()) => {
             tracing::info!(
                 "Successfully submitted cancellation request for search job ID: {}",
@@ -267,24 +346,6 @@ async fn cancel_query(
     }
 }
 
-async fn get_timestamp_column_names(
-    State(client): State<Client>,
-    Path(dataset_name): Path<String>,
-) -> Result<Json<Vec<String>>, HandlerError> {
-    let names = client
-        .get_timestamp_column_names(&dataset_name)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                "Failed to get timestamp column names for dataset '{}': {:?}",
-                dataset_name,
-                err
-            );
-            HandlerError::from(err)
-        })?;
-    Ok(Json(names))
-}
-
 #[utoipa::path(
     get,
     path = "/usage/compression",
@@ -300,7 +361,7 @@ async fn get_timestamp_column_names(
     )
 )]
 async fn compression_usage(
-    State(client): State<Client>,
+    State(state): State<AppState>,
     Query(params): Query<CompressionUsageParams>,
 ) -> Result<Json<Vec<CompressionUsage>>, HandlerError> {
     let validated = ValidatedCompressionUsageParams::try_from(params)?;
@@ -311,7 +372,8 @@ async fn compression_usage(
         validated.job_statuses,
     );
     Ok(Json(
-        client
+        state
+            .client
             .get_compression_usage(&validated)
             .await
             .inspect_err(|err| {
@@ -329,6 +391,8 @@ enum HandlerError {
     NotFound,
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Gateway timeout: {0}")]
+    GatewayTimeout(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -340,10 +404,13 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::SearchJobNotFound(_)
+            | ClientError::DatasetNotFound(_)
+            | ClientError::NotFound(_) => Self::NotFound,
             ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
                 Self::BadRequest(format!("{err}"))
             }
+            ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(err.to_string()),
             _ => Self::InternalServer,
         }
     }
@@ -356,6 +423,7 @@ impl IntoResponse for HandlerError {
             Self::NotFound => StatusCode::NOT_FOUND.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
         }
     }
 }
@@ -363,13 +431,149 @@ impl IntoResponse for HandlerError {
 #[cfg(test)]
 mod tests {
     use axum::body::Body;
+    use axum::http::Method;
     use axum::http::Request;
     use axum::http::StatusCode;
+    use axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN;
+    use axum::http::header::CONTENT_TYPE;
+    use axum::http::header::ORIGIN;
     use axum::routing::get;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     use super::*;
+
+    async fn app_with_lazy_clients() -> axum::Router {
+        let mut config = clp_rust_utils::clp_config::package::config::Config::default();
+        config.package.storage_engine =
+            clp_rust_utils::clp_config::package::config::StorageEngine::ClpS;
+        let mongodb_client = mongodb::Client::with_uri_str("mongodb://localhost:27017")
+            .await
+            .expect("valid local MongoDB URI");
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .connect_lazy("mysql://localhost/clp")
+            .expect("valid local MySQL URI");
+        let state = AppState {
+            client: Client::new(&config, mongodb_client.clone(), sql_pool.clone()),
+            webui_client: WebuiClient::new(&config, mongodb_client, sql_pool, None),
+        };
+        from_app_state(state).expect("valid API documentation")
+    }
+
+    #[tokio::test]
+    async fn webui_routes_do_not_allow_unrelated_browser_origins() {
+        let app = app_with_lazy_clients().await;
+
+        let public_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .header(ORIGIN, "https://unrelated.example")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            public_response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN),
+            Some(&axum::http::HeaderValue::from_static("*"))
+        );
+
+        let webui_response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/os/ls?path=.")
+                    .header(ORIGIN, "https://unrelated.example")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(
+            webui_response
+                .headers()
+                .get(ACCESS_CONTROL_ALLOW_ORIGIN)
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn migrated_routes_reject_invalid_requests_before_accessing_storage() {
+        let app = app_with_lazy_clients().await;
+
+        for (body, expected) in [
+            (r#"{"paths":[]}"#, "at least one path"),
+            (r#"{"paths":["relative.log"]}"#, "must be absolute"),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::POST)
+                        .uri("/compression/jobs")
+                        .header(CONTENT_TYPE, "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            assert!(get_body(response).await.contains(expected));
+        }
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/os/ls?path=/etc")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert!(get_body(response).await.contains("mounted logs directory"));
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/metadata/time_range?dataset=invalid-name")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert!(get_body(response).await.contains("Invalid dataset name"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/stream_files/extract")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "dataset": null,
+                            "extract_job_type": "ExtractIr",
+                            "log_event_idx": 0,
+                            "stream_id": "",
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert!(
+            get_body(response)
+                .await
+                .contains("stream_id must not be empty")
+        );
+    }
 
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
@@ -393,6 +597,14 @@ mod tests {
             .expect("failed to read body")
             .to_bytes();
         String::from_utf8(bytes.to_vec()).expect("body is not utf-8")
+    }
+
+    #[tokio::test]
+    async fn extraction_timeout_returns_a_gateway_timeout() {
+        let response =
+            HandlerError::from(ClientError::StreamExtractionTimeout(1800)).into_response();
+        assert_eq!(response.status(), StatusCode::GATEWAY_TIMEOUT);
+        assert!(get_body(response).await.contains("1800 seconds"));
     }
 
     #[tokio::test]

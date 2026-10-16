@@ -3,7 +3,7 @@
 use anyhow::Context;
 use clp_rust_utils::clp_config::package::credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
-use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::is_valid_dataset_name;
 use clp_rust_utils::dataset::resolve_dataset_name;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -58,7 +58,7 @@ pub(super) async fn commit(
     // The dataset is interpolated into the table name (it cannot be bound), so guard against SQL
     // injection by validating it against the allowed-name pattern.
     if let Some(dataset) = dataset.as_deref()
-        && !VALID_DATASET_NAME_REGEX.is_match(dataset)
+        && !is_valid_dataset_name(dataset)
     {
         anyhow::bail!("invalid dataset name: {dataset}");
     }

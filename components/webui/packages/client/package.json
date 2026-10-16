@@ -7,6 +7,7 @@
     "build": "tsc -b && vite build",
     "lint:check": "eslint . --max-warnings 0",
     "lint:fix": "pnpm run lint:check --fix",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "dev": "vite"
   },
   "author": "YScope Inc. <dev@yscope.com>",
