@@ -24,10 +24,10 @@
 #include "../src/clp_s/search/ast/EmptyExpr.hpp"
 #include "../src/clp_s/search/ast/Expression.hpp"
 #include "../src/clp_s/search/ast/FilterExpr.hpp"
-#include "../src/clp_s/search/ast/Integral.hpp"
 #include "../src/clp_s/search/ast/NarrowTypes.hpp"
 #include "../src/clp_s/search/ast/OrExpr.hpp"
 #include "../src/clp_s/search/ast/OrOfAndForm.hpp"
+#include "../src/clp_s/search/ast/ValueLiteral.hpp"
 #include "../src/clp_s/search/EvaluateRangeIndexFilters.hpp"
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
@@ -76,8 +76,8 @@ auto get_test_input_local_path(std::string_view test_input_path) -> std::string 
 }
 
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression> {
-    auto zero_literal = clp_s::search::ast::Integral::create_from_int(0);
-    auto one_literal = clp_s::search::ast::Integral::create_from_int(1);
+    auto zero_literal = clp_s::search::ast::ValueLiteral::create(int64_t{0});
+    auto one_literal = clp_s::search::ast::ValueLiteral::create(int64_t{1});
     auto column_with_no_subtree_type
             = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
                     {std::string{clp_s::constants::cLogEventIdxName}},

@@ -14,15 +14,13 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/generators/catch_generators_range.hpp>
 
-#include "../../../../../clp_s/search/ast/BooleanLiteral.hpp"
 #include "../../../../../clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../../../../../clp_s/search/ast/Expression.hpp"
 #include "../../../../../clp_s/search/ast/FilterExpr.hpp"
 #include "../../../../../clp_s/search/ast/FilterOperation.hpp"
-#include "../../../../../clp_s/search/ast/Integral.hpp"
 #include "../../../../../clp_s/search/ast/Literal.hpp"
-#include "../../../../../clp_s/search/ast/StringLiteral.hpp"
 #include "../../../../../clp_s/search/ast/TimestampLiteral.hpp"
+#include "../../../../../clp_s/search/ast/ValueLiteral.hpp"
 #include "../../../../ir/types.hpp"
 #include "../../../EncodedTextAst.hpp"
 #include "../../../Value.hpp"
@@ -36,16 +34,14 @@ using clp::ffi::value_float_t;
 using clp::ffi::value_int_t;
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;
-using clp_s::search::ast::BooleanLiteral;
 using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
-using clp_s::search::ast::Integral;
 using clp_s::search::ast::Literal;
 using clp_s::search::ast::LiteralType;
-using clp_s::search::ast::StringLiteral;
 using clp_s::search::ast::TimestampLiteral;
+using clp_s::search::ast::ValueLiteral;
 
 using ValueToMatchedFilterOpsPair
         = std::pair<std::optional<Value>, std::unordered_set<FilterOperation>>;
@@ -391,10 +387,10 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
     constexpr value_float_t cRefFloat{0};
     constexpr value_bool_t cRefBool{false};
 
-    auto ref_str_literal{StringLiteral::create("*" + std::string{cRefTestString} + "*")};
-    auto ref_bool_literal{BooleanLiteral::create_from_bool(cRefBool)};
-    auto ref_int_literal{Integral::create_from_int(cRefInt)};
-    auto ref_float_literal{Integral::create_from_float(cRefFloat)};
+    auto ref_str_literal{ValueLiteral::create("*" + std::string{cRefTestString} + "*")};
+    auto ref_bool_literal{ValueLiteral::create(cRefBool)};
+    auto ref_int_literal{ValueLiteral::create(cRefInt)};
+    auto ref_float_literal{ValueLiteral::create(cRefFloat)};
     auto ref_timestamp_literal{TimestampLiteral::create(cRefInt)};
 
     REQUIRE_FALSE((nullptr == ref_str_literal));

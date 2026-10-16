@@ -1,5 +1,6 @@
 #include "EvaluateRangeIndexFilters.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -20,9 +21,9 @@
 #include "ast/EmptyExpr.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
-#include "ast/Integral.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/OrOfAndForm.hpp"
+#include "ast/ValueLiteral.hpp"
 
 using clp::ffi::ir_stream::search::evaluate_filter_against_literal_type_value_pair;
 
@@ -81,8 +82,8 @@ void EvaluateRangeIndexFilters::evaluate_and_rewrite_filter(
         replacement_expr = ast::OrExpr::create();
 
         auto add_range_to_filter = [&](std::pair<size_t, size_t> const& range) {
-            auto begin_literal{ast::Integral::create_from_int(range.first)};
-            auto end_literal{ast::Integral::create_from_int(range.second)};
+            auto begin_literal{ast::ValueLiteral::create(static_cast<int64_t>(range.first))};
+            auto end_literal{ast::ValueLiteral::create(static_cast<int64_t>(range.second))};
             auto begin_filter{ast::FilterExpr::create(
                     log_event_idx_col,
                     ast::FilterOperation::GTE,
