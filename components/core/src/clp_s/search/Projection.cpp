@@ -19,7 +19,7 @@ auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) -> vo
     if (column->is_unresolved_descriptor()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
-    if (Mode::ReturnAllColumns == m_projection_mode) {
+    if (Mode::Default == m_projection_mode) {
         throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
     }
     if (false == m_allow_duplicate_columns) {
@@ -61,7 +61,7 @@ auto Projection::get_node_mask(mpt_node_id_t node_id) const -> NodeMask {
 }
 
 auto Projection::should_emit_value(SchemaNode const& node) const -> bool {
-    if (Mode::ReturnAllColumns == m_projection_mode) {
+    if (Mode::Default == m_projection_mode) {
         return NodeType::LogMessage == node.get_type();
     }
     auto const node_id{node.get_id()};
@@ -126,7 +126,7 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
     }
 
     m_nodes_with_projected_descendants.clear();
-    if (Mode::ReturnAllColumns == m_projection_mode) {
+    if (Mode::Default == m_projection_mode) {
         return;
     }
     for (auto node_id : m_matching_nodes) {

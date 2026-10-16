@@ -31,9 +31,15 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    /**
+     * How records are projected.
+     * - Default: no columns were projected. Every record is emitted in its default form: plain
+     *   columns in full, and each LogMessage as its reconstructed text.
+     * - Explicit: only the projected columns are emitted.
+     */
     enum class Mode : uint8_t {
-        ReturnAllColumns,
-        ReturnSelectedColumns
+        Default,
+        Explicit
     };
 
     /**
@@ -96,7 +102,7 @@ public:
      * Adds a column to the set of columns that should be included in the projected results.
      * @param column The column descriptor to project.
      * @throws OperationFailed if `column` contains a wildcard.
-     * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns.
+     * @throws OperationFailed if this instance of Projection is in mode Default.
      * @throws OperationFailed if `column` is identical to a previously added column.
      */
     auto add_column(std::shared_ptr<ast::ColumnDescriptor> column) -> void;
@@ -117,10 +123,9 @@ public:
     [[nodiscard]] auto get_node_mask(mpt_node_id_t node_id) const -> NodeMask;
 
     /**
-     * Checks whether a schema node's value should be emitted. In ReturnAllColumns mode only
-     * LogMessage nodes emit their value, since their reconstructed text covers every node nested
-     * within them. Otherwise a node emits its value when it is projected without `shape()` or
-     * `decompose()`.
+     * Checks whether a schema node's value should be emitted. In the Default mode only LogMessage
+     * nodes emit their value, since their reconstructed text covers every node nested within them.
+     * Otherwise a node emits its value when it is projected without `shape()` or `decompose()`.
      * @param node The schema node to check.
      * @return Whether the node's value should be emitted.
      */
@@ -163,7 +168,7 @@ public:
      * @return Whether the column should be included in the output.
      */
     [[nodiscard]] auto matches_node(mpt_node_id_t node_id) const -> bool {
-        return Mode::ReturnAllColumns == m_projection_mode || m_matching_nodes.contains(node_id);
+        return Mode::Default == m_projection_mode || m_matching_nodes.contains(node_id);
     }
 
 private:
@@ -216,7 +221,7 @@ private:
     absl::flat_hash_set<mpt_node_id_t> m_matching_nodes;
     absl::flat_hash_map<mpt_node_id_t, NodeMask> m_node_projections;
     absl::flat_hash_set<mpt_node_id_t> m_nodes_with_projected_descendants;
-    Mode m_projection_mode{Mode::ReturnAllColumns};
+    Mode m_projection_mode{Mode::Default};
     bool m_allow_duplicate_columns{false};
 };
 }  // namespace clp_s::search

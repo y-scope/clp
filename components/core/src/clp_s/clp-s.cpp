@@ -615,8 +615,7 @@ bool search_archive(
 
     // Populate projection
     auto projection = std::make_shared<Projection>(
-            projection_columns.empty() ? Projection::Mode::ReturnAllColumns
-                                       : Projection::Mode::ReturnSelectedColumns
+            projection_columns.empty() ? Projection::Mode::Default : Projection::Mode::Explicit
     );
     try {
         for (auto const& column : projection_columns) {
