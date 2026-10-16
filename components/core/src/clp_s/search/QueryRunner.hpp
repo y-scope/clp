@@ -443,9 +443,9 @@ private:
 
     /**
      * Resolves the column reader for a leaf rule filter column pinned to a leaf placeholder
-     * position. The reader for leaf position `leaf_position` of a LogMessage is the reader at
-     * `log_message_column_start + leaf_position`, which holds because readers are appended in the
-     * document order of the leaf placeholders.
+     * position. The reader for leaf position `leaf_position` of a StructurizedText is the reader
+     * at `structurized_text_column_start + leaf_position`, which holds because readers are
+     * appended in the document order of the leaf placeholders.
      * @param column A column with a leaf position.
      * @param column_readers The current ERT's column readers, in schema order.
      * @return The reader, or nullptr if `column` is unbound or the position doesn't resolve to a
@@ -477,7 +477,7 @@ private:
     void add_wildcard_columns_to_searched_columns();
 
     /**
-     * Gets the cached decompressed structured array for the current message stored in the column
+     * Gets the cached decompressed unstructured array for the current message stored in the column
      * column_id. Decompressing array fields can be expensive, so this interface allows us to
      * decompress lazily, and decompress the field only once.
      *

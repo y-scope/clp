@@ -428,8 +428,8 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::Metadata:
         case NodeType::NullValue:
         case NodeType::Object:
-        case NodeType::StructuredArray:
-        case NodeType::LogMessage:
+        case NodeType::StructurizedArray:
+        case NodeType::StructurizedText:
         case NodeType::ParentRule:
         case NodeType::Unknown:
             break;
@@ -462,8 +462,8 @@ auto ArchiveReader::append_unordered_reader_columns(
         bool should_marshal_records
 ) -> void {
     size_t const object_begin_pos{reader.get_column_size()};
-    if (NodeType::LogMessage == m_schema_tree->get_node(subtree_root_id).get_type()) {
-        reader.set_log_message_column_start(subtree_root_id, object_begin_pos);
+    if (NodeType::StructurizedText == m_schema_tree->get_node(subtree_root_id).get_type()) {
+        reader.set_structurized_text_column_start(subtree_root_id, object_begin_pos);
     }
     sub_schema.visit_entries(
             [&](mpt_node_id_t node_id) -> bool {

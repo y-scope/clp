@@ -61,7 +61,7 @@ auto Projection::get_node_mask(mpt_node_id_t node_id) const -> NodeMask {
 
 auto Projection::should_emit_value(SchemaNode const& node) const -> bool {
     if (Mode::Default == m_projection_mode) {
-        return NodeType::LogMessage == node.get_type();
+        return NodeType::StructurizedText == node.get_type();
     }
     auto const node_id{node.get_id()};
     auto const mask{get_node_mask(node_id)};
@@ -98,8 +98,8 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
             {
                 throw std::runtime_error(
                         fmt::format(
-                                "{}(<col>) can only be applied to LogMessage or ParentRule "
-                                "columns; no LogMessage or ParentRule nodes match column \"{}\".",
+                                "{}(<col>) can only be applied to StructurizedText or ParentRule "
+                                "columns; no StructurizedText or ParentRule nodes match \"{}\".",
                                 ast::ColumnDescriptor::function_to_str(
                                         entry.m_column->get_function()
                                 ),
@@ -128,7 +128,7 @@ auto Projection::resolve_column(SchemaTree const& tree, ast::ColumnDescriptor& c
      * It would be possible to create code that can handle our use-case and SchemaMatch's use-case
      * in an elegant way, but it's a significant refactor. In particular, if we extend our column
      * type system to be one-per-token instead of one-per-column we can make it so that intermediate
-     * tokens will not match certain kinds of MPT nodes (like the node for structured arrays).
+     * tokens will not match certain kinds of MPT nodes (like the node for structurized arrays).
      *
      * In light of that we implement a simple version of column resolution here that does exactly
      * what we need.

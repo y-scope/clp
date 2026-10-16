@@ -45,10 +45,11 @@ finding all log messages of a given form regardless of the matches they carry.
 ./clp-s s /mnt/data/archives 'shape(message.block_id): "blk_*"'
 ```
 
-`column` must be a log message or a parent rule. Applying `shape()` to a leaf rule is an error:
+`column` must be a structurized text field or a parent rule. Applying `shape()` to a leaf rule is
+an error:
 
 ```text
-shape(<col>) can only be applied to LogMessage or ParentRule columns; no LogMessage or
+shape(<col>) can only be applied to StructurizedText or ParentRule columns; no StructurizedText or
 ParentRule nodes match column "message.block_id.gen_stamp".
 ```
 

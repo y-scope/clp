@@ -180,7 +180,7 @@ public:
         m_local_id_to_global_id.clear();
         m_global_id_to_local_id.clear();
         m_global_id_to_unordered_object.clear();
-        m_log_message_column_starts.clear();
+        m_structurized_text_column_starts.clear();
         m_local_schema_tree.clear();
         m_json_serializer.clear();
         m_reconstruction_targets.clear();
@@ -218,7 +218,7 @@ public:
      * @param column_reader_start
      * @param subtree_root
      * @param sub_schema The object's sub-schema.
-     * @param log_shape_id The object's log shape ID (present for `LogMessage` objects).
+     * @param log_shape_id The object's log shape ID (present for `StructurizedText` objects).
      */
     auto mark_unordered_object(
             size_t column_reader_start,
@@ -228,26 +228,29 @@ public:
     ) -> void;
 
     /**
-     * Records the index into the column readers of the first column of a `LogMessage` object.
-     * Unlike `mark_unordered_object`, this is recorded whether or not records are marshalled, since
-     * search needs it to resolve leaf filters pinned to a leaf rule placeholder position.
-     * @param log_message_id The `LogMessage` root node ID.
+     * Records the index into the column readers of the first column of a `StructurizedText`
+     * object. Unlike `mark_unordered_object`, this is recorded whether or not records are
+     * marshalled, since search needs it to resolve leaf filters pinned to a leaf rule placeholder
+     * position.
+     * @param structurized_text_id The `StructurizedText` root node ID.
      * @param column_reader_start The index of the object's first column reader.
      */
-    auto set_log_message_column_start(mpt_node_id_t log_message_id, size_t column_reader_start)
-            -> void {
-        m_log_message_column_starts.emplace(log_message_id, column_reader_start);
+    auto set_structurized_text_column_start(
+            mpt_node_id_t structurized_text_id,
+            size_t column_reader_start
+    ) -> void {
+        m_structurized_text_column_starts.emplace(structurized_text_id, column_reader_start);
     }
 
     /**
-     * @param log_message_id The `LogMessage` root node ID.
+     * @param structurized_text_id The `StructurizedText` root node ID.
      * @return The index of the object's first column reader.
      * @return std::nullopt if the schema has no such object.
      */
-    [[nodiscard]] auto get_log_message_column_start(mpt_node_id_t log_message_id) const
+    [[nodiscard]] auto get_structurized_text_column_start(mpt_node_id_t structurized_text_id) const
             -> std::optional<size_t> {
-        auto const it{m_log_message_column_starts.find(log_message_id)};
-        if (m_log_message_column_starts.end() == it) {
+        auto const it{m_structurized_text_column_starts.find(structurized_text_id)};
+        if (m_structurized_text_column_starts.end() == it) {
             return std::nullopt;
         }
         return it->second;
@@ -395,7 +398,7 @@ private:
 
     /**
      * A marked unordered object: its starting column index, sub-schema, and log shape ID (present
-     * for `LogMessage` objects).
+     * for `StructurizedText` objects).
      */
     struct MarkedUnorderedObject {
         size_t column_reader_start{0};
@@ -436,7 +439,7 @@ private:
     void generate_json_template(int32_t id);
 
     /**
-     * Generates a json template for a structured array
+     * Generates a json template for a structurized array
      * @param array_root_id
      * @param column_start the index of the first reader in m_columns belonging to this array
      * @param schema
@@ -459,17 +462,18 @@ private:
             -> size_t;
 
     /**
-     * Generates a JSON template for a LogMessage. Its possible fields are the reconstructed text
-     * (when the LogMessage itself is projected), its shape, and its leaf-rule and ParentRule
-     * arrays. The LogMessage is emitted as an object containig those fields, or as a bare text
-     * string when the text is its only field. Extraction always emits the bare text.
-     * @param log_msg_id The LogMessage node ID.
+     * Generates a JSON template for a StructurizedText. Its possible fields are the reconstructed
+     * text (when the StructurizedText itself is projected), its shape, and its leaf-rule and
+     * ParentRule arrays. The StructurizedText is emitted as an object containing those fields, or
+     * as a bare text string when the text is its only field. Extraction always emits the bare
+     * text.
+     * @param structurized_text_id The StructurizedText node ID.
      * @return A result containing the index of the next reader in m_columns after those consumed by
      * this object, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
      * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
      */
-    auto generate_log_message_template(mpt_node_id_t log_msg_id)
+    auto generate_structurized_text_template(mpt_node_id_t structurized_text_id)
             -> ystdlib::error_handling::Result<size_t>;
 
     /**
@@ -508,9 +512,9 @@ private:
      * `%column_name%` placeholder to its corresponding column reader. This allows reconstructing
      * each message to be done in a single pass with no repeated work.
      *
-     * @param log_shape_id The log shape ID of the owning LogMessage scope.
+     * @param log_shape_id The log shape ID of the owning StructurizedText scope.
      * @param parent_rule_column_name The column name of the ParentRule to narrow the shape to,
-     * or empty to reconstruct the full LogMessage shape.
+     * or empty to reconstruct the full StructurizedText shape.
      * @param start_column_reader_idx Index in `m_columns`.
      * @param sub_schema The sub-schema to iterate for column values.
      * @param occurrence_idx The index of the `parent_rule_column_name` occurrence to narrow to
@@ -555,8 +559,8 @@ private:
             -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Emits the shape substring for a specific occurrence of a ParentRule within a LogMessage's
-     * shape.
+     * Emits the shape substring for a specific occurrence of a ParentRule within a
+     * StructurizedText's shape.
      * @param log_shape_id The log shape ID.
      * @param parent_rule_column_name The column name of the ParentRule.
      * @param occurrence_idx The index of the ParentRule occurrence to emit the shape of.
@@ -684,8 +688,8 @@ private:
 
     // Keyed by the object root's schema-tree node ID.
     std::map<int32_t, MarkedUnorderedObject> m_global_id_to_unordered_object;
-    // Keyed by the `LogMessage` root's schema-tree node ID.
-    std::unordered_map<mpt_node_id_t, size_t> m_log_message_column_starts;
+    // Keyed by the `StructurizedText` root's schema-tree node ID.
+    std::unordered_map<mpt_node_id_t, size_t> m_structurized_text_column_starts;
     std::vector<CompiledShape> m_reconstruction_targets;
     LogShapeDictionaryReader const* m_log_shape_dict;
     clpp::ParentRuleShapesArray const* m_parent_rule_shapes;

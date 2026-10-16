@@ -41,7 +41,7 @@ def json_multimsg(
     Returns an object corresponding to the `json_multimsg` sample dataset.
 
     This dataset has log events with multiple sibling unstructured text fields (`message` and
-    `details`) so it exercises multi-`LogMessage`-per-schema handling.
+    `details`) so it exercises multi-`StructurizedText`-per-schema handling.
     """
     return SampleDataset(
         dataset_root_dir=integration_test_path_config.test_data_dir / "json_multimsg",

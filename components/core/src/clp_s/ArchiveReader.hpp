@@ -307,7 +307,7 @@ private:
      * @param reader
      * @param subtree_root_id
      * @param sub_schema
-     * @param log_shape_id The log shape ID if sub_schema is a `LogMessage` object.
+     * @param log_shape_id The log shape ID if sub_schema is a `StructurizedText` object.
      * @param should_marshal_records
      */
     auto append_unordered_reader_columns(

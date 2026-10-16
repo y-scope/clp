@@ -34,8 +34,8 @@ namespace clp_s {
  *
  * The following NodeTypes are only used by the clpp flavour:
  *
- * `LogMessage`: Stores a structured representation of an unstructured log message. It is made up of
- * `ParentRule`s and primitive type nodes that are in the message.
+ * `StructurizedText`: Stores a structurized representation of unstructured text. It is made up of
+ * `ParentRule`s and primitive type nodes that are in the text.
  */
 enum class NodeType : uint8_t {
     Integer = 0,
@@ -47,13 +47,13 @@ enum class NodeType : uint8_t {
     UnstructuredArray = 6,
     NullValue = 7,
     DeprecatedDateString = 8,
-    StructuredArray = 9,
+    StructurizedArray = 9,
     Metadata = 10,
     DeltaInteger = 11,
     FormattedFloat = 12,
     DictionaryFloat = 13,
     Timestamp = 14,
-    LogMessage = 15,
+    StructurizedText = 15,
     ParentRule = 16,
     Unknown = 17
 };
@@ -78,10 +78,10 @@ enum class NodeType : uint8_t {
         case NodeType::DeprecatedDateString:
         case NodeType::Timestamp:
         case NodeType::Object:
-        case NodeType::StructuredArray:
+        case NodeType::StructurizedArray:
         case NodeType::Metadata:
         case NodeType::NullValue:
-        case NodeType::LogMessage:
+        case NodeType::StructurizedText:
         case NodeType::ParentRule:
         case NodeType::Unknown:
             return false;
@@ -144,13 +144,13 @@ public:
     /**
      * Returns whether the node acts as a structural container (i.e., it can have children and be
      * traversed during key resolution).
-     * @return Whether the node type is Object, LogMessage, or ParentRule.
+     * @return Whether the node type is Object, StructurizedText, or ParentRule.
      */
     [[nodiscard]] auto is_structural_container() const -> bool;
 
     /**
      * @return Whether the node's input text is parsed into a shape and leaf values, so that queries
-     * against it are decomposed (LogMessage and ParentRule nodes).
+     * against it are decomposed (StructurizedText and ParentRule nodes).
      */
     [[nodiscard]] auto is_decomposable() const -> bool;
 
@@ -278,7 +278,7 @@ public:
 
     /**
      * Builds the log-surgeon qualified rule name for a node by walking up to (but not including)
-     * the LogMessage ancestor and concatenating key names with ".".
+     * the StructurizedText ancestor and concatenating key names with ".".
      * @param node_id The node ID to start from.
      * @return The qualified rule name.
      */

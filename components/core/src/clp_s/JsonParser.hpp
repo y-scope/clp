@@ -228,7 +228,7 @@ private:
     auto add_metadata_field(std::string_view const field_name, NodeType type) -> mpt_node_id_t;
 
     /**
-     * Parse a string field as an unstructured log message using log surgeon and store its
+     * Parses a string field as unstructured text using log-surgeon and stores its structurized
      * components in the current parsed message, clp-s schema, and dictionaries.
      * @param parent_node_id
      * @param field_key
@@ -239,7 +239,7 @@ private:
      * - Forwards `m_archive_writer->update_log_shape_dict`'s return values on failure.
      * - Forwards `m_archive_writer->update_parent_rule_shapes`'s return values on failure.
      */
-    auto parse_log_message(
+    auto parse_unstructured_text(
             mpt_node_id_t parent_node_id,
             std::string_view field_key,
             std::string_view field_value

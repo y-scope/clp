@@ -157,14 +157,14 @@ struct ParentScope {
  * @param open_scopes The current stack of open scopes to update (outermost->innermost).
  * @param schema The schema whose unordered objects to open and/or close.
  * @param archive_writer Used to add `ParentRule` tree nodes for newly opened scopes.
- * @param log_msg_node_id The `LogMessage` tree node ID owning the root scope.
+ * @param structurized_text_node_id The `StructurizedText` tree node ID owning the root scope.
  * @return The schema tree node ID of the innermost open scope.
  */
 auto update_open_parent_scopes(
         log_surgeon::Match const& leaf,
         std::vector<ParentScope>& open_scopes,
         Schema& schema,
-        mpt_node_id_t log_msg_node_id,
+        mpt_node_id_t structurized_text_node_id,
         ArchiveWriter& archive_writer
 ) -> mpt_node_id_t;
 
@@ -190,7 +190,7 @@ auto update_open_parent_scopes(
         log_surgeon::Match const& leaf,
         std::vector<ParentScope>& open_scopes,
         Schema& schema,
-        mpt_node_id_t log_msg_node_id,
+        mpt_node_id_t structurized_text_node_id,
         ArchiveWriter& archive_writer
 ) -> mpt_node_id_t {
     std::vector<log_surgeon::Match const*> parent_matches;
@@ -213,7 +213,7 @@ auto update_open_parent_scopes(
         --i;
         auto const* parent{parent_matches.at(i)};
         auto const parent_node_id{
-                open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id
+                open_scopes.empty() ? structurized_text_node_id : open_scopes.back().tree_node_id
         };
         auto const node_id{archive_writer.add_node(
                 parent_node_id,
@@ -225,7 +225,7 @@ auto update_open_parent_scopes(
                 {.match = parent, .scope_schema_idx = schema_start, .tree_node_id = node_id}
         );
     }
-    return open_scopes.empty() ? log_msg_node_id : open_scopes.back().tree_node_id;
+    return open_scopes.empty() ? structurized_text_node_id : open_scopes.back().tree_node_id;
 }
 }  // namespace
 
@@ -351,7 +351,7 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::array: {
                 node_id = m_archive_writer->add_node(
                         node_id_stack.top(),
-                        NodeType::StructuredArray,
+                        NodeType::StructurizedArray,
                         cur_key
                 );
                 parse_array(cur_value.get_array(), node_id);
@@ -410,11 +410,13 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (m_clpp.has_value()) {
-                    if (auto const result{parse_log_message(node_id_stack.top(), cur_key, value)};
+                    if (auto const result{
+                                parse_unstructured_text(node_id_stack.top(), cur_key, value)
+                        };
                         result.has_error())
                     {
                         throw(std::runtime_error(
-                                "parse_log_message failed with: " + result.error().message()
+                                "parse_unstructured_text failed with: " + result.error().message()
                         ));
                     }
                     break;
@@ -458,7 +460,7 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
         return;
     }
 
-    size_t array_start = m_current_schema.start_unordered_object(NodeType::StructuredArray);
+    size_t array_start = m_current_schema.start_unordered_object(NodeType::StructurizedArray);
     simdjson::ondemand::value cur_value;
     int32_t node_id;
     for (; it != array.end(); ++it) {
@@ -471,7 +473,8 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                 break;
             }
             case simdjson::ondemand::json_type::array: {
-                node_id = m_archive_writer->add_node(parent_node_id, NodeType::StructuredArray, "");
+                node_id = m_archive_writer
+                                  ->add_node(parent_node_id, NodeType::StructurizedArray, "");
                 parse_array(std::move(cur_value.get_array()), node_id);
                 break;
             }
@@ -526,11 +529,11 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (m_clpp.has_value()) {
-                    if (auto const result{parse_log_message(parent_node_id, "", value)};
+                    if (auto const result{parse_unstructured_text(parent_node_id, "", value)};
                         result.has_error())
                     {
                         throw(std::runtime_error(
-                                "parse_log_message failed with: " + result.error().message()
+                                "parse_unstructured_text failed with: " + result.error().message()
                         ));
                     }
                     break;
@@ -605,7 +608,7 @@ void JsonParser::parse_line(
                 if (m_structurize_arrays) {
                     node_id = m_archive_writer->add_node(
                             node_id_stack.top(),
-                            NodeType::StructuredArray,
+                            NodeType::StructurizedArray,
                             cur_key
                     );
                     parse_array(std::move(line.get_array()), node_id);
@@ -729,12 +732,13 @@ void JsonParser::parse_line(
                 if (value.find(' ') != std::string::npos) {
                     if (m_clpp.has_value()) {
                         if (auto const result{
-                                    parse_log_message(node_id_stack.top(), cur_key, value)
+                                    parse_unstructured_text(node_id_stack.top(), cur_key, value)
                             };
                             result.has_error())
                         {
                             throw(std::runtime_error(
-                                    "parse_log_message failed with: " + result.error().message()
+                                    "parse_unstructured_text failed with: "
+                                    + result.error().message()
                             ));
                         }
                     } else {
@@ -1566,13 +1570,13 @@ void JsonParser::split_archive() {
     m_archive_writer->open(m_archive_options);
 }
 
-auto JsonParser::parse_log_message(
+auto JsonParser::parse_unstructured_text(
         mpt_node_id_t parent_node_id,
         std::string_view field_key,
         std::string_view field_value
 ) -> ystdlib::error_handling::Result<void> {
-    auto const log_msg_node_id{
-            m_archive_writer->add_node(parent_node_id, NodeType::LogMessage, field_key)
+    auto const structurized_text_node_id{
+            m_archive_writer->add_node(parent_node_id, NodeType::StructurizedText, field_key)
     };
     if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
@@ -1582,10 +1586,10 @@ auto JsonParser::parse_log_message(
     if (false == event.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
-    auto log_msg_obj{m_current_schema.start_log_message(log_msg_node_id)};
+    auto structurized_text_obj{m_current_schema.start_structurized_text(structurized_text_node_id)};
 
     clpp::TextShape<std::string> log_shape{field_value.size()};
-    size_t log_msg_pos{0};
+    size_t unstructured_text_pos{0};
     std::vector<ParentScope> open_scopes;
     for (auto const& match : event->get_all_matches()) {
         if (false == match.is_leaf) {
@@ -1598,7 +1602,7 @@ auto JsonParser::parse_log_message(
                 match,
                 open_scopes,
                 m_current_schema,
-                log_msg_node_id,
+                structurized_text_node_id,
                 *m_archive_writer
         )};
         mpt_node_id_t node_id{-1};
@@ -1643,12 +1647,12 @@ auto JsonParser::parse_log_message(
         m_current_schema.insert_unordered(node_id);
 
         log_shape.escape_and_append(
-                field_value.substr(log_msg_pos, match.range.start - log_msg_pos)
+                field_value.substr(unstructured_text_pos, match.range.start - unstructured_text_pos)
         );
         log_shape.append_placeholder(match.get_fully_qualified_name());
-        log_msg_pos = match.range.end;
+        unstructured_text_pos = match.range.end;
     }
-    log_shape.escape_and_append(field_value.substr(log_msg_pos));
+    log_shape.escape_and_append(field_value.substr(unstructured_text_pos));
 
     while (false == open_scopes.empty()) {
         m_current_schema.end_unordered_object(open_scopes.back().scope_schema_idx);
@@ -1664,7 +1668,7 @@ auto JsonParser::parse_log_message(
         YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_parent_rule_shapes(parent_shapes));
     }
 
-    m_current_schema.end_log_message(log_msg_obj, log_shape_id);
+    m_current_schema.end_structurized_text(structurized_text_obj, log_shape_id);
     return ystdlib::error_handling::success();
 }
 

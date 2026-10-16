@@ -26,7 +26,7 @@ auto SchemaNode::node_to_literal_type(NodeType type) -> clp_s::search::ast::Lite
         case NodeType::FormattedFloat:
         case NodeType::DictionaryFloat:
             return clp_s::search::ast::LiteralType::FloatT;
-        case NodeType::LogMessage:
+        case NodeType::StructurizedText:
         case NodeType::ParentRule:
             return clp_s::search::ast::LiteralType::ClppDecomposeT;
         case NodeType::ClpString:
@@ -52,7 +52,7 @@ auto SchemaNode::node_to_literal_type(NodeType type) -> clp_s::search::ast::Lite
 auto SchemaNode::is_structural_container() const -> bool {
     switch (m_type) {
         case NodeType::Object:
-        case NodeType::LogMessage:
+        case NodeType::StructurizedText:
         case NodeType::ParentRule: {
             return true;
         }
@@ -63,7 +63,7 @@ auto SchemaNode::is_structural_container() const -> bool {
 }
 
 auto SchemaNode::is_decomposable() const -> bool {
-    return NodeType::LogMessage == m_type || NodeType::ParentRule == m_type;
+    return NodeType::StructurizedText == m_type || NodeType::ParentRule == m_type;
 }
 
 auto SchemaTree::add_node(mpt_node_id_t parent_node_id, NodeType type, std::string_view key_name)
@@ -167,7 +167,7 @@ auto SchemaTree::build_ls_rule_name(int32_t node_id) const -> std::string {
     auto cur_id{node_id};
     while (constants::cRootNodeId != cur_id) {
         auto const& node = get_node(cur_id);
-        if (NodeType::LogMessage == node.get_type()) {
+        if (NodeType::StructurizedText == node.get_type()) {
             break;
         }
         names.emplace_back(node.get_key_name());

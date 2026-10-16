@@ -340,9 +340,9 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
 // just one of them, with the per-node filters combined so that the original query's semantics are
 // preserved.
 //
-// In the test input, `msg` is a LogMessage node (idx 0), an Integer node (idx 1) and an
-// UnstructuredArray node (idx 5), and `nested.msg` is a LogMessage node (idx 3) and an Integer node
-// (idx 4); idx 2 has no `msg` at all. The cases cover:
+// In the test input, `msg` is a StructurizedText node (idx 0), an Integer node (idx 1) and an
+// UnstructuredArray node (idx 5), and `nested.msg` is a StructurizedText node (idx 3) and an
+// Integer node (idx 4); idx 2 has no `msg` at all. The cases cover:
 // - Value filters, which hold if the value at any matched node matches (`msg: *`, `msg: 42`,
 //   `msg: 2`, `msg: "Msg 0*"`).
 // - Inverted value filters, which still require the key to be present (`NOT msg: "Msg 0*"`,

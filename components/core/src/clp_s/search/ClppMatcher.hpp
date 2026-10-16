@@ -54,8 +54,8 @@ public:
 
     // Constructors
     /**
-     * Builds an index from each log shape ID to its `LogMessage`s to enable shape matching and
-     * query decomposition. If the archive is not clpp-flavour construction is skipped and the
+     * Builds an index from each log shape ID to its `StructurizedText`s to enable shape matching
+     * and query decomposition. If the archive is not clpp-flavour construction is skipped and the
      * object is invalid.
      * @param archive_reader
      * @param case_sensitive Whether matching is case sensitive.
@@ -66,14 +66,14 @@ public:
     // Methods
     /**
      * Finds the schemas whose log shapes (or parent rule shapes of `rule_name`) satisfy
-     * `shape_query`, considering only shapes of the `LogMessage` node `log_message_id`.
-     * @param log_message_id The `LogMessage` node to search within.
+     * `shape_query`, considering only shapes of the `StructurizedText` node `structurized_text_id`.
+     * @param structurized_text_id The `StructurizedText` node to search within.
      * @param rule_name A parent rule name, or empty to query the entire log shape.
      * @param shape_query A wildcard pattern, or std::nullopt to match every shape.
      * @return The matching schema IDs.
      */
     [[nodiscard]] auto find_matching_schemas(
-            mpt_node_id_t log_message_id,
+            mpt_node_id_t structurized_text_id,
             std::string_view rule_name,
             std::optional<std::string_view> shape_query
     ) const -> std::unordered_set<int32_t>;
@@ -81,8 +81,8 @@ public:
     /**
      * Decomposes `query` against the parent rule `rule_name`, or against every log shape if
      * `rule_name` is empty, then returns the possible interpretations. Only shapes of the
-     * `LogMessage` node `log_message_id` are considered.
-     * @param log_message_id The `LogMessage` node to search within.
+     * `StructurizedText` node `structurized_text_id` are considered.
+     * @param structurized_text_id The `StructurizedText` node to search within.
      * @param query
      * @param rule_name A qualified parent rule name, or empty to decompose against every log shape.
      * @return The interpretation matches (empty if no interpretation matched a shape), or an error
@@ -91,7 +91,7 @@ public:
      * - Forwards `decompose_by_rule_name`'s return values.
      */
     [[nodiscard]] auto decompose_query(
-            mpt_node_id_t log_message_id,
+            mpt_node_id_t structurized_text_id,
             std::string_view query,
             std::string_view rule_name
     ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
@@ -99,26 +99,26 @@ public:
 private:
     // Types
     /**
-     * A reference to a `LogMessage` occurrence within a schema, identified by the schema ID and the
-     * `LogMessage` node's MPT node ID. A schema can contain several sibling `LogMessage` nodes when
-     * a log event has multiple unstructured text fields, so the schema ID alone does not
-     * disambiguate which field to use.
+     * A reference to a `StructurizedText` occurrence within a schema, identified by the schema ID
+     * and the `StructurizedText` node's MPT node ID. A schema can contain several sibling
+     * `StructurizedText` nodes when a log event has multiple unstructured text fields, so the
+     * schema ID alone does not disambiguate which field to use.
      */
-    struct LogMessageRef {
+    struct StructurizedTextRef {
         int32_t schema_id;
-        mpt_node_id_t log_message_id;
+        mpt_node_id_t structurized_text_id;
     };
 
     // Methods
     /**
-     * Collects the schema IDs whose `LogMessage` node `log_message_id` has log shape ID
+     * Collects the schema IDs whose `StructurizedText` node `structurized_text_id` has log shape ID
      * `log_shape_id`.
      * @param log_shape_id
-     * @param log_message_id
+     * @param structurized_text_id
      * @return The matching schema IDs.
      */
     [[nodiscard]] auto
-    get_schema_ids(clpp::log_shape_id_t log_shape_id, mpt_node_id_t log_message_id) const
+    get_schema_ids(clpp::log_shape_id_t log_shape_id, mpt_node_id_t structurized_text_id) const
             -> std::unordered_set<int32_t>;
 
     /**
@@ -130,24 +130,25 @@ private:
 
     /**
      * Decomposes `query` against the log shapes returning interpretations that matched a log shape.
-     * @param log_message_id The `LogMessage` node to search within.
+     * @param structurized_text_id The `StructurizedText` node to search within.
      * @return The interpretation matches, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
      * - Forwards `clpp::decompose_by_log_shapes`'s return values.
      */
-    [[nodiscard]] auto decompose_by_log_shapes(mpt_node_id_t log_message_id, std::string_view query)
+    [[nodiscard]] auto
+    decompose_by_log_shapes(mpt_node_id_t structurized_text_id, std::string_view query)
             -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
 
     /**
      * Decomposes `query` against the parent rule `rule_name`, then matches each interpretation's
      * shape query against each occurrence of `rule_name` in relevant log shapes.
-     * @param log_message_id The `LogMessage` node to search within.
+     * @param structurized_text_id The `StructurizedText` node to search within.
      * @return The interpretation matches, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
      * - Forwards `clpp::decompose_by_rule_name`'s return values.
      */
     [[nodiscard]] auto decompose_by_rule_name(
-            mpt_node_id_t log_message_id,
+            mpt_node_id_t structurized_text_id,
             std::string_view query,
             std::string_view rule_name
     ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
@@ -155,9 +156,9 @@ private:
     /**
      * Invokes `on_match` for every occurrence of `rule_name` (or every whole log shape if
      * `rule_name` is empty) whose shape satisfies `shape_query`, walking occurrences in document
-     * order. Only shapes of the `LogMessage` node `log_message_id` are considered.
+     * order. Only shapes of the `StructurizedText` node `structurized_text_id` are considered.
      * @tparam OnMatch The callback type of `on_match`, constrained by `OccurrenceMatchHandlerReq`.
-     * @param log_message_id The `LogMessage` node to search within.
+     * @param structurized_text_id The `StructurizedText` node to search within.
      * @param rule_name A parent rule name, or empty to match the entire log shape.
      * @param shape_query A wildcard pattern, or std::nullopt to match every shape.
      * @param on_match Invoked for every matching occurrence.
@@ -165,7 +166,7 @@ private:
      */
     template <OccurrenceMatchHandlerReq OnMatch>
     auto for_each_matching_occurrence(
-            mpt_node_id_t log_message_id,
+            mpt_node_id_t structurized_text_id,
             std::string_view rule_name,
             std::optional<std::string_view> shape_query,
             OnMatch const& on_match
@@ -174,13 +175,13 @@ private:
     // Data members
     ArchiveReader* m_archive_reader;
     bool m_case_sensitive{false};
-    std::vector<std::vector<LogMessageRef>> m_log_messages_per_log_shape;
+    std::vector<std::vector<StructurizedTextRef>> m_structurized_texts_per_log_shape;
     std::unique_ptr<log_surgeon::ParsingSpec> m_parsing_spec;
 };
 
 template <OccurrenceMatchHandlerReq OnMatch>
 auto ClppMatcher::for_each_matching_occurrence(
-        mpt_node_id_t log_message_id,
+        mpt_node_id_t structurized_text_id,
         std::string_view rule_name,
         std::optional<std::string_view> shape_query,
         OnMatch const& on_match
@@ -193,7 +194,7 @@ auto ClppMatcher::for_each_matching_occurrence(
     for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < log_shape_entries.size();
          ++log_shape_id)
     {
-        auto const schema_ids{get_schema_ids(log_shape_id, log_message_id)};
+        auto const schema_ids{get_schema_ids(log_shape_id, structurized_text_id)};
         if (schema_ids.empty()) {
             continue;
         }

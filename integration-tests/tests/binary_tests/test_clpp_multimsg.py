@@ -1,10 +1,10 @@
 """
 Integration tests verifying CLP+ handles multiple sibling unstructured text fields per event.
 
-A log event may have several string fields that are each parsed as an unstructured log message,
-which produces several sibling `LogMessage` nodes in a single schema. These tests validate that
+A log event may have several string fields that are each parsed as unstructured text, which
+produces several sibling `StructurizedText` nodes in a single schema. These tests validate that
 search, decomposition, and projection remain correctly scoped to the queried field rather than
-only honoring the first `LogMessage` node in the schema.
+only honoring the first `StructurizedText` node in the schema.
 """
 
 from collections.abc import Iterator
@@ -254,7 +254,7 @@ def test_multimsg_shape_filter_scoping(
             'details: "*777*"',
             ["message", "decompose(details)"],
             {
-                "message": "alpha 666 beta",
+                "message": {"text": "alpha 666 beta"},
                 "details": {"shape": _MultiMessage.shared_shape, "int_fallback": [777]},
             },
             id="text_plus_decompose_sibling",

@@ -34,8 +34,8 @@ public:
     /**
      * How records are projected.
      * - Default: no columns were projected. Every record is emitted in its default form: plain
-     *   columns in full, and each LogMessage as its reconstructed text.
-     * - Explicit: only the projected columns are emitted. LogMessage and ParentRule nodes are
+     *   columns in full, and each StructurizedText as its reconstructed text.
+     * - Explicit: only the projected columns are emitted. StructurizedText and ParentRule nodes are
      *   emitted as objects whose fields each come from a projection.
      */
     enum class Mode : uint8_t {
@@ -124,9 +124,10 @@ public:
     [[nodiscard]] auto get_node_mask(mpt_node_id_t node_id) const -> NodeMask;
 
     /**
-     * Checks whether a schema node's value should be emitted. In the Default mode only LogMessage
-     * nodes emit their value, since their reconstructed text covers every node nested within them.
-     * Otherwise a node emits its value when it is projected without `shape()` or `decompose()`.
+     * Checks whether a schema node's value should be emitted. In the Default mode only
+     * StructurizedText nodes emit their value, since their reconstructed text covers every node
+     * nested within them. Otherwise a node emits its value when it is projected without `shape()`
+     * or `decompose()`.
      * @param node The schema node to check.
      * @return Whether the node's value should be emitted.
      */

@@ -240,8 +240,8 @@ auto SchemaMatch::populate_column_mapping(std::shared_ptr<Expression> const& cur
             if (nullptr == resolved_expr) {
                 if (column->is_shape_query()) {
                     throw std::runtime_error{fmt::format(
-                            "{}(<col>) can only be applied to LogMessage or ParentRule columns; no "
-                            "LogMessage or ParentRule nodes match column \"{}\".",
+                            "{}(<col>) can only be applied to StructurizedText or ParentRule "
+                            "columns; no StructurizedText or ParentRule nodes match column \"{}\".",
                             ast::ColumnDescriptor::function_to_str(column->get_function()),
                             column->to_string()
                     )};
@@ -977,7 +977,7 @@ auto SchemaMatch::read_dictionaries_for_schema(SchemaView const& schema) -> void
                 return false;
             },
             [&](UnorderedObject const& obj) -> bool {
-                if (NodeType::LogMessage == obj.type) {
+                if (NodeType::StructurizedText == obj.type) {
                     m_archive_reader->get_log_shape_dictionary();
                 } else if (NodeType::ParentRule == obj.type) {
                     m_archive_reader->get_parent_rule_shapes();
@@ -1001,7 +1001,7 @@ auto SchemaMatch::resolve_leaf_rule_descriptors(
     auto cur_id{decomposition_root};
     while (true) {
         auto const& node{m_tree->get_node(cur_id)};
-        if (NodeType::LogMessage == node.get_type()) {
+        if (NodeType::StructurizedText == node.get_type()) {
             break;
         }
         parent_names.emplace_back(node.get_key_name());
@@ -1144,7 +1144,7 @@ auto SchemaMatch::build_shape_filter(
         bool is_inverted
 ) -> std::shared_ptr<ast::Expression> {
     auto const matched_schema_ids{m_clpp_matcher.find_matching_schemas(
-            find_enclosing_log_message_node_id(decomposition_root),
+            find_enclosing_structurized_text_node_id(decomposition_root),
             m_tree->build_ls_rule_name(decomposition_root),
             shape_query
     )};
@@ -1168,7 +1168,7 @@ auto SchemaMatch::build_decomposed_query_filter(
         bool is_inverted
 ) -> std::shared_ptr<ast::Expression> {
     auto interpretations{m_clpp_matcher.decompose_query(
-            find_enclosing_log_message_node_id(decomposition_root),
+            find_enclosing_structurized_text_node_id(decomposition_root),
             query,
             rule_name
     )};
@@ -1233,7 +1233,7 @@ auto SchemaMatch::get_narrowed_schemas(ast::NarrowSchemasExpr const& narrowing) 
 auto SchemaMatch::find_schemas_containing_node(mpt_node_id_t node_id) const
         -> std::unordered_set<int32_t> {
     return m_clpp_matcher.find_matching_schemas(
-            find_enclosing_log_message_node_id(node_id),
+            find_enclosing_structurized_text_node_id(node_id),
             m_tree->build_ls_rule_name(node_id),
             std::nullopt
     );
@@ -1308,11 +1308,12 @@ auto SchemaMatch::build_negated_decomposed_query_filter(
     return results;
 }
 
-auto SchemaMatch::find_enclosing_log_message_node_id(mpt_node_id_t node_id) const -> mpt_node_id_t {
+auto SchemaMatch::find_enclosing_structurized_text_node_id(mpt_node_id_t node_id) const
+        -> mpt_node_id_t {
     return m_tree->find_matching_subtree_root_in_subtree(
             constants::cRootNodeId,
             node_id,
-            NodeType::LogMessage
+            NodeType::StructurizedText
     );
 }
 

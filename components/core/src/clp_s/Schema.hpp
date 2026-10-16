@@ -76,15 +76,16 @@ public:
             -> bool;
 
     /**
-     * Collects every `LogMessage` unordered object in this view, recursing into other unordered
-     * objects (e.g. nested objects and structured arrays) but not into `LogMessage` sub-schemas.
+     * Collects every `StructurizedText` unordered object in this view, recursing into other
+     * unordered objects (e.g. nested objects and structurized arrays) but not into
+     * `StructurizedText` sub-schemas.
      *
-     * A schema may contain several sibling `LogMessage` objects when a log event has multiple
-     * unstructured text fields.
-     * @return A pair of the `LogMessage` node ID and its log shape ID for each LogMessage
-     * object, in document order.
+     * A schema may contain several sibling `StructurizedText` objects when a log event has
+     * multiple unstructured text fields.
+     * @return A pair of the `StructurizedText` node ID and its log shape ID for each
+     * StructurizedText object, in document order.
      */
-    [[nodiscard]] auto find_log_messages() const
+    [[nodiscard]] auto find_structurized_texts() const
             -> std::vector<std::pair<mpt_node_id_t, clpp::log_shape_id_t>>;
 
 private:
@@ -137,8 +138,8 @@ private:
  * and the object's sub-schema.
  *
  * Metadata for each node type:
- * - LogMessage:
- *  - enclosing LogMessage node's MPT node ID
+ * - StructurizedText:
+ *  - enclosing StructurizedText node's MPT node ID
  *  - log shape ID
  * - ParentRule:
  *  - enclosing ParentRule node's MPT node ID
@@ -150,7 +151,7 @@ struct UnorderedObject {
      */
     [[nodiscard]] static constexpr auto get_num_metadata_entries(NodeType type) -> size_t {
         switch (type) {
-            case NodeType::LogMessage:
+            case NodeType::StructurizedText:
                 return 2;
             case NodeType::ParentRule:
                 return 1;
@@ -195,24 +196,24 @@ SchemaView::visit_entries(NodeVisitor const& visit_node, ObjectVisitor const& vi
     return false;
 }
 
-inline auto SchemaView::find_log_messages() const
+inline auto SchemaView::find_structurized_texts() const
         -> std::vector<std::pair<mpt_node_id_t, clpp::log_shape_id_t>> {
-    std::vector<std::pair<mpt_node_id_t, clpp::log_shape_id_t>> msgs;
+    std::vector<std::pair<mpt_node_id_t, clpp::log_shape_id_t>> texts;
     visit_entries(
             [](mpt_node_id_t) -> bool { return false; },
             [&](UnorderedObject const& obj) -> bool {
-                if (NodeType::LogMessage == obj.type) {
+                if (NodeType::StructurizedText == obj.type) {
                     if (obj.node_id.has_value() && obj.log_shape_id.has_value()) {
-                        msgs.emplace_back(obj.node_id.value(), obj.log_shape_id.value());
+                        texts.emplace_back(obj.node_id.value(), obj.log_shape_id.value());
                     }
                     return false;
                 }
-                auto const nested_msgs{obj.sub_schema.find_log_messages()};
-                msgs.insert(msgs.end(), nested_msgs.begin(), nested_msgs.end());
+                auto const nested_texts{obj.sub_schema.find_structurized_texts()};
+                texts.insert(texts.end(), nested_texts.begin(), nested_texts.end());
                 return false;
             }
     );
-    return msgs;
+    return texts;
 }
 
 inline auto SchemaView::decode_unordered_object(size_t i) const -> std::optional<UnorderedObject> {
@@ -389,27 +390,27 @@ public:
     }
 
     /**
-     * Starts a `NodeType::LogMessage` unordered object, storing the MPT node ID of the `LogMessage`
-     * node and a reserved log shape ID (to be filled in by `end_log_message`) as its metadata
-     * entries.
+     * Starts a `NodeType::StructurizedText` unordered object, storing the MPT node ID of the
+     * `StructurizedText` node and a reserved log shape ID (to be filled in by
+     * `end_structurized_text`) as its metadata entries.
      *
-     * The log shape ID must be filled in by calling `end_log_message`.
-     * @param node_id The MPT node ID of the `LogMessage` node.
+     * The log shape ID must be filled in by calling `end_structurized_text`.
+     * @param node_id The MPT node ID of the `StructurizedText` node.
      * @return The start position of the unordered object content.
      */
-    [[nodiscard]] auto start_log_message(mpt_node_id_t node_id) -> size_t {
-        auto const start_position{start_unordered_object(NodeType::LogMessage, node_id)};
+    [[nodiscard]] auto start_structurized_text(mpt_node_id_t node_id) -> size_t {
+        auto const start_position{start_unordered_object(NodeType::StructurizedText, node_id)};
         insert_unordered(0);
         return start_position;
     }
 
     /**
-     * Ends a `NodeType::LogMessage` unordered object, writing the log shape ID into the reserved
-     * entry created by `start_log_message`.
-     * @param start_position The value returned by `start_log_message`.
+     * Ends a `NodeType::StructurizedText` unordered object, writing the log shape ID into the
+     * reserved entry created by `start_structurized_text`.
+     * @param start_position The value returned by `start_structurized_text`.
      * @param log_shape_id
      */
-    auto end_log_message(size_t start_position, clpp::log_shape_id_t log_shape_id) -> void {
+    auto end_structurized_text(size_t start_position, clpp::log_shape_id_t log_shape_id) -> void {
         m_schema.at(start_position + 1) = static_cast<int32_t>(log_shape_id);
         end_unordered_object(start_position);
     }

@@ -17,7 +17,7 @@ namespace clp_s::indexer {
  * delimiter `.` at each level.
  *
  * Currently, only leaf nodes with primitive types are indexed. Object nodes and subtrees of
- * structured arrays are not indexed. The results are stored in a database to enable efficient
+ * structurized arrays are not indexed. The results are stored in a database to enable efficient
  * querying.
  *
  * Multiple archives related to the same topic can form a table that can be queried using a SQL

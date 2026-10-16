@@ -230,7 +230,7 @@ private:
      * relevant to it.
      * @param column The column triggering query decomposition.
      * @param decomposition_root The decomposable node where the query's decomposition is rooted.
-     * @param rule_name The parent rule name, or empty for a LogMessage node.
+     * @param rule_name The parent rule name, or empty for a StructurizedText node.
      * @param query The value to match against the node's decomposed shapes.
      * @param is_inverted Whether the original filter was negated.
      * @return The filter expression, or nullptr if no interpretation matched.
@@ -282,8 +282,9 @@ private:
     /**
      * Resolves a filter at a decomposable node into an expression.
      *
-     * `decomposition_root` decides what the query is matched against: at a LogMessage node it is
-     * matched against whole log shapes, and at a ParentRule node only against that rule's shapes.
+     * `decomposition_root` decides what the query is matched against: at a StructurizedText node it
+     * is matched against whole log shapes, and at a ParentRule node only against that rule's
+     * shapes.
      *
      * There are 3 possible filter cases:
      * 1. EXISTS/NEXISTS: narrows to the schemas that contain the node, or to their complement when
@@ -311,9 +312,10 @@ private:
      * and function.
      *
      * Decomposable nodes only ever exist within the object subtree (see
-     * `JsonParser::parse_log_message`), so the token path is built by walking from `node_id` up to
-     * the root of the object subtree for `column`'s namespace. Non-decomposable nodes are bound
-     * directly by node ID instead (see `build_resolved_node_filter`) and must not be passed here.
+     * `JsonParser::parse_unstructured_text`), so the token path is built by walking from `node_id`
+     * up to the root of the object subtree for `column`'s namespace. Non-decomposable nodes are
+     * bound directly by node ID instead (see `build_resolved_node_filter`) and must not be passed
+     * here.
      * @param column The unbound column that `node_id` was matched from.
      * @param node_id A decomposable node.
      * @return The resolved column descriptor.
@@ -406,15 +408,16 @@ private:
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
-     * Resolves the nearest enclosing `LogMessage` node of `node_id`. If `node_id` is a
-     * `LogMessage`, it resolves to itself. Because log events contain only sibling (never nested)
-     * `LogMessage`s, every decomposable node has exactly one such enclosing node, whose ID
-     * identifies which unstructured field a query targets.
-     * @param node_id The MPT node whose enclosing `LogMessage` to find.
-     * @return The enclosing `LogMessage` node's ID (`node_id` itself when it is a `LogMessage`), or
-     * `constants::cRootNodeId` if `node_id` has no enclosing `LogMessage`.
+     * Resolves the nearest enclosing `StructurizedText` node of `node_id`. If `node_id` is a
+     * `StructurizedText`, it resolves to itself. Because log events contain only sibling (never
+     * nested) `StructurizedText`s, every decomposable node has exactly one such enclosing node,
+     * whose ID identifies which unstructured field a query targets.
+     * @param node_id The MPT node whose enclosing `StructurizedText` to find.
+     * @return The enclosing `StructurizedText` node's ID (`node_id` itself when it is a
+     * `StructurizedText`), or `constants::cRootNodeId` if `node_id` has no enclosing
+     * `StructurizedText`.
      */
-    [[nodiscard]] auto find_enclosing_log_message_node_id(mpt_node_id_t node_id) const
+    [[nodiscard]] auto find_enclosing_structurized_text_node_id(mpt_node_id_t node_id) const
             -> mpt_node_id_t;
 
     /**

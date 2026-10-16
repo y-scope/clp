@@ -37,11 +37,6 @@ def _project_matches(matches: list[MatchT], fields: list[str]) -> list[MatchT]:
     return [{field: match[field] for field in fields} for match in matches]
 
 
-def _project_texts(matches: list[MatchT]) -> list[LeafValueT | str]:
-    """Returns each expected occurrence's text, i.e. its output when only its value is projected."""
-    return [match["text"] for match in matches]
-
-
 class _InflightMatch:
     """
     Expected values for the log event matched by `query`: an event with two `key_value` parent
@@ -344,31 +339,31 @@ def test_clpp_search_negated(
             'message: "*estimate: 9*"',
             "message: *",
             True,
-            id="log_message_same_occurrence",
+            id="whole_text_key_and_value_from_same_occurrence",
         ),
         pytest.param(
             'message: "*limit: 9*"',
             "message: *",
             False,
-            id="log_message_crossed_occurrences",
+            id="whole_text_key_from_first_value_from_second",
         ),
         pytest.param(
             'message: "*estimate: 3*"',
             "message: *",
             False,
-            id="log_message_crossed_reversed",
+            id="whole_text_key_from_second_value_from_first",
         ),
         pytest.param(
             'message.key_value: "estimate: 9*"',
             "message.key_value: *",
             True,
-            id="parent_rule_same_occurrence",
+            id="parent_rule_key_and_value_from_same_occurrence",
         ),
         pytest.param(
             'message.key_value: "limit: 9*"',
             "message.key_value: *",
             False,
-            id="parent_rule_crossed_occurrences",
+            id="parent_rule_key_from_first_value_from_second",
         ),
     ],
 )
@@ -382,6 +377,10 @@ def test_clpp_search_occurrence_precision(
     """
     Validates that a decomposed query constrains the leaves of a single occurrence of a repeated
     parent rule rather than any occurrence, for both the query and its negation.
+
+    The `_InflightMatch` event has two `key_value` occurrences: `limit: 33285996544` (first) and
+    `estimate: 92` (second). A query only matches when its key and value come from the same
+    occurrence.
 
     :param clp_core_path_config:
     :param clpp_archive:
@@ -419,7 +418,7 @@ def test_clpp_search_occurrence_precision(
         ),
         pytest.param(
             ["message"],
-            _InflightMatch.text,
+            {"text": _InflightMatch.text},
             id="text",
         ),
         pytest.param(
@@ -444,7 +443,7 @@ def test_clpp_search_occurrence_precision(
         ),
         pytest.param(
             ["message.key_value"],
-            {"key_value": _project_texts(_InflightMatch.matches)},
+            {"key_value": _project_matches(_InflightMatch.matches, ["text"])},
             id="parent_rule",
         ),
         pytest.param(
@@ -544,7 +543,7 @@ def test_clpp_projection_error(
         f"stdout: {action.completed_proc.stdout!r}\n"
         f"stderr: {action.completed_proc.stderr!r}"
     )
-    assert "no LogMessage or ParentRule nodes match" in action.completed_proc.stderr, (
+    assert "no StructurizedText or ParentRule nodes match" in action.completed_proc.stderr, (
         f"Projection {projection} did not produce expected error.\n"
         f"stderr: {action.completed_proc.stderr!r}"
     )
@@ -556,7 +555,7 @@ def test_clpp_projection_error(
     [
         pytest.param(
             ["message.key_value"],
-            {"key_value": _project_texts(_MixedKvMatch.matches)},
+            {"key_value": _project_matches(_MixedKvMatch.matches, ["text"])},
             id="parent_rule_text",
         ),
         pytest.param(
@@ -573,7 +572,7 @@ def test_clpp_projection_error(
             ["message", "message.key_value"],
             {
                 "text": _MixedKvMatch.text,
-                "key_value": _project_texts(_MixedKvMatch.matches),
+                "key_value": _project_matches(_MixedKvMatch.matches, ["text"]),
             },
             id="message_and_parent_rule_text",
         ),

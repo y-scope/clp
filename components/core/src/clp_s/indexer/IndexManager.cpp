@@ -140,8 +140,8 @@ void IndexManager::traverse_schema_tree_and_update_metadata(
 
         auto const& node = schema_tree->get_node(node_id);
         auto node_type = node.get_type();
-        // TODO: Add support for structured arrays
-        if (NodeType::StructuredArray == node_type) {
+        // TODO: Add support for structurized arrays
+        if (NodeType::StructurizedArray == node_type) {
             continue;
         }
         auto const& children_ids = node.get_children_ids();

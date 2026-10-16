@@ -129,8 +129,8 @@ DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors);
  * evaluation uses the bound node to locate column readers. Every column other than a pure wildcard
  * is bound before evaluation.
  *
- * A column bound to a leaf node within a LogMessage may additionally be pinned to one of that
- * LogMessage's leaf rule placeholder positions.
+ * A column bound to a leaf node within a StructurizedText may additionally be pinned to one of that
+ * StructurizedText's leaf rule placeholder positions.
  *
  * Column resolution records its results, including the binding and pin above, on the column in a
  * `ResolutionState`. `copy()` carries the results along, so a copy stands for the same logical
@@ -173,7 +173,7 @@ public:
         bool is_decomposed_leaf{false};
         // The single MPT node this column has been bound to, if any.
         std::optional<mpt_node_id_t> bound_node_id;
-        // For a column bound to a leaf node within a LogMessage: the leaf rule placeholder
+        // For a column bound to a leaf node within a StructurizedText: the leaf rule placeholder
         // position this column is pinned to, if any.
         std::optional<size_t> leaf_position;
     };
@@ -436,7 +436,8 @@ public:
      * The schemas are chosen by shape matching rather than by which schemas contain `node_id`, so
      * column resolution leaves the mapping untouched.
      * @param node_id The MPT node to bind this column to.
-     * @param leaf_position The LogMessage-relative leaf placeholder position to pin this column to.
+     * @param leaf_position The StructurizedText-relative leaf placeholder position to pin this
+     * column to.
      * @param schema_ids The schemas to map this column to.
      */
     auto bind_as_decomposed_leaf(

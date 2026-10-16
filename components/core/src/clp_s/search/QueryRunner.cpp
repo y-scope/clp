@@ -212,15 +212,15 @@ auto QueryRunner::find_positional_reader(
         return nullptr;
     }
     auto const node_id{column.get_bound_node_id()};
-    auto const log_message_id{m_schema_tree->find_matching_subtree_root_in_subtree(
+    auto const structurized_text_id{m_schema_tree->find_matching_subtree_root_in_subtree(
             constants::cRootNodeId,
             node_id,
-            NodeType::LogMessage
+            NodeType::StructurizedText
     )};
-    if (constants::cRootNodeId == log_message_id) {
+    if (constants::cRootNodeId == structurized_text_id) {
         return nullptr;
     }
-    auto const column_start{m_reader->get_log_message_column_start(log_message_id)};
+    auto const column_start{m_reader->get_structurized_text_column_start(structurized_text_id)};
     if (false == column_start.has_value()) {
         return nullptr;
     }

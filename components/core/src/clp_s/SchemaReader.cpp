@@ -64,7 +64,7 @@ constexpr std::string_view cTextKey{"text"};
 
 /**
  * Checks whether a sub-schema contains a projected node, i.e. a leaf entry or a nested
- * LogMessage/ParentRule (at any depth) that the projection matches.
+ * StructurizedText/ParentRule (at any depth) that the projection matches.
  * @param schema The sub-schema to scan.
  * @param projection
  * @return Whether any node in the sub-schema is projected.
@@ -554,7 +554,7 @@ void SchemaReader::find_intersection_and_fix_brackets(
                     no_name ? JsonSerializer::Op::BeginUnnamedObject
                             : JsonSerializer::Op::BeginObject
             );
-        } else if (NodeType::StructuredArray == node.get_type()) {
+        } else if (NodeType::StructurizedArray == node.get_type()) {
             m_json_serializer.add_op(
                     no_name ? JsonSerializer::Op::BeginUnnamedArray : JsonSerializer::Op::BeginArray
             );
@@ -587,7 +587,7 @@ auto SchemaReader::generate_structured_array_template(
                         }
                         break;
                     }
-                    case NodeType::StructuredArray: {
+                    case NodeType::StructurizedArray: {
                         m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedArray);
                         m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                         break;
@@ -627,7 +627,7 @@ auto SchemaReader::generate_structured_array_template(
                     case NodeType::DeprecatedDateString:
                     case NodeType::UnstructuredArray:
                     case NodeType::Metadata:
-                    case NodeType::LogMessage:
+                    case NodeType::StructurizedText:
                     case NodeType::ParentRule:
                     case NodeType::Timestamp:
                     case NodeType::Unknown:
@@ -636,12 +636,12 @@ auto SchemaReader::generate_structured_array_template(
                 return false;
             },
             [&](UnorderedObject const& obj) -> bool {
-                if (NodeType::StructuredArray == obj.type) {
+                if (NodeType::StructurizedArray == obj.type) {
                     auto const sub_array_root{
                             m_global_schema_tree->find_matching_subtree_root_in_subtree(
                                     array_root_id,
                                     get_first_column_in_span(obj.sub_schema),
-                                    NodeType::StructuredArray
+                                    NodeType::StructurizedArray
                             )
                     };
                     m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedArray);
@@ -695,7 +695,7 @@ auto SchemaReader::generate_structured_object_template(
                         m_json_serializer.add_op(JsonSerializer::Op::EndObject);
                         break;
                     }
-                    case NodeType::StructuredArray: {
+                    case NodeType::StructurizedArray: {
                         m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
                         m_json_serializer.add_special_key(node.get_key_name());
                         m_json_serializer.add_op(JsonSerializer::Op::EndArray);
@@ -737,7 +737,7 @@ auto SchemaReader::generate_structured_object_template(
                     case NodeType::DeprecatedDateString:
                     case NodeType::UnstructuredArray:
                     case NodeType::Metadata:
-                    case NodeType::LogMessage:
+                    case NodeType::StructurizedText:
                     case NodeType::ParentRule:
                     case NodeType::Timestamp:
                     case NodeType::Unknown:
@@ -748,11 +748,11 @@ auto SchemaReader::generate_structured_object_template(
             [&](UnorderedObject const& obj) -> bool {
                 // It should only be possible to encounter arrays inside of structured objects
                 // we can guarantee that the last array we hit on the path to object root must be
-                // the right one because otherwise we'd be inside the structured array generator
+                // the right one because otherwise we'd be inside the structurized array generator
                 int32_t array_root = m_global_schema_tree->find_matching_subtree_root_in_subtree(
                         object_root,
                         get_first_column_in_span(obj.sub_schema),
-                        NodeType::StructuredArray
+                        NodeType::StructurizedArray
                 );
 
                 find_intersection_and_fix_brackets(root, array_root, path_to_intersection);
@@ -824,7 +824,7 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
             }
-            case NodeType::StructuredArray: {
+            case NodeType::StructurizedArray: {
                 m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
                 m_json_serializer.add_special_key(key);
                 auto structured_it = m_global_id_to_unordered_object.find(child_global_id);
@@ -839,12 +839,13 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }
-            case NodeType::LogMessage: {
-                if (auto const result{generate_log_message_template(child_global_id)};
+            case NodeType::StructurizedText: {
+                if (auto const result{generate_structurized_text_template(child_global_id)};
                     result.has_error())
                 {
                     throw(std::runtime_error(
-                            "generate_log_message_template failed with: " + result.error().message()
+                            "generate_structurized_text_template failed with: "
+                            + result.error().message()
                     ));
                 }
                 break;
@@ -1126,13 +1127,13 @@ auto SchemaReader::emit_grouped_leaf_entries(std::vector<DecompositionTarget>& e
     return ystdlib::error_handling::success();
 }
 
-auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
+auto SchemaReader::generate_structurized_text_template(mpt_node_id_t structurized_text_id)
         -> ystdlib::error_handling::Result<size_t> {
-    auto log_msg_it{m_global_id_to_unordered_object.find(log_msg_id)};
-    if (m_global_id_to_unordered_object.end() == log_msg_it) {
+    auto structurized_text_it{m_global_id_to_unordered_object.find(structurized_text_id)};
+    if (m_global_id_to_unordered_object.end() == structurized_text_it) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
-    auto const& record{log_msg_it->second};
+    auto const& record{structurized_text_it->second};
     if (false == record.log_shape_id.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
@@ -1140,8 +1141,8 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
     auto const column_start{record.column_reader_start};
     auto const schema{record.sub_schema};
 
-    auto const& log_msg_node{m_global_schema_tree->get_node(log_msg_id)};
-    auto const key_name{log_msg_node.get_key_name()};
+    auto const& structurized_text_node{m_global_schema_tree->get_node(structurized_text_id)};
+    auto const key_name{structurized_text_node.get_key_name()};
 
     bool const emit_bare_text{
             m_extract_mode || nullptr == m_projection
@@ -1155,14 +1156,14 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
         return column_start + count_column_consuming_entries(schema, *m_global_schema_tree);
     }
 
-    auto const mask{m_projection->get_node_mask(log_msg_id)};
+    auto const mask{m_projection->get_node_mask(structurized_text_id)};
     bool const has_shape{mask.has(search::Projection::NodeMask::Mode::Shape)};
     bool const has_decompose{mask.has(search::Projection::NodeMask::Mode::Decompose)};
 
     m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
     m_json_serializer.add_special_key(key_name);
 
-    if (m_projection->should_emit_value(log_msg_node)) {
+    if (m_projection->should_emit_value(structurized_text_node)) {
         m_json_serializer.add_special_key(cTextKey);
         YSTDLIB_ERROR_HANDLING_TRYV(
                 emit_reconstructed_text(log_shape_id, "", column_start, schema, 0)
@@ -1175,9 +1176,13 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
         }
     }
 
-    auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(
-            emit_decomposed_scope(schema, log_msg_id, column_start, log_shape_id, has_decompose)
-    )};
+    auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
+            schema,
+            structurized_text_id,
+            column_start,
+            log_shape_id,
+            has_decompose
+    ))};
 
     m_json_serializer.add_op(JsonSerializer::Op::EndObject);
     return column_idx;
