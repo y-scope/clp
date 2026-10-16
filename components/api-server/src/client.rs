@@ -21,6 +21,7 @@ use futures::Stream;
 use futures::StreamExt;
 use pin_project_lite::pin_project;
 use serde::Deserialize;
+use serde::Deserializer;
 use serde::Serialize;
 use sqlx::Row;
 use utoipa::IntoParams;
@@ -209,10 +210,11 @@ pub struct QueryConfig {
     #[serde(default)]
     pub buffer_results_in_mongodb: bool,
 
-    /// The size of each time bucket (in milliseconds) for count-by-time aggregation.
+    /// The positive size of each time bucket (in milliseconds) for count-by-time aggregation.
     /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
     /// search job, and its results are always buffered in `MongoDB`.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_positive_i64")]
+    #[schema(minimum = 1)]
     pub count_by_time_bucket_size_millisecs: Option<i64>,
 }
 
@@ -925,11 +927,181 @@ fn limit_result_stream<StreamType: Stream<Item = Result<String, ClientError>>>(
     })
 }
 
+fn deserialize_optional_positive_i64<'deserialize, DeserializerType: Deserializer<'deserialize>>(
+    deserializer: DeserializerType,
+) -> Result<Option<i64>, DeserializerType::Error> {
+    let value = Option::<i64>::deserialize(deserializer)?;
+    if value.is_some_and(|value| value <= 0) {
+        return Err(serde::de::Error::custom("value must be > 0"));
+    }
+    Ok(value)
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
+    use axum::body::Body;
+    use axum::http::Request;
+    use axum::http::StatusCode;
+    use http_body_util::BodyExt;
+    use serde_json::json;
+    use tower::ServiceExt;
+
     use super::*;
+
+    async fn test_router() -> axum::Router {
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .connect_lazy("mysql://localhost/unused")
+            .expect("test database URL must be valid");
+        sql_pool.close().await;
+        let mongodb_client =
+            mongodb::Client::with_options(mongodb::options::ClientOptions::default())
+                .expect("default MongoDB options must be valid");
+        crate::routes::from_client(Client {
+            mongodb_client,
+            sql_pool,
+            config: Config::default(),
+        })
+        .expect("router schema must serialize")
+    }
+
+    #[tokio::test]
+    async fn reject_invalid_query_values_consistently() -> anyhow::Result<()> {
+        let app = test_router().await;
+        for field in ["max_num_results", "count_by_time_bucket_size_millisecs"] {
+            for value in [json!(0), json!(-1), json!(1.5), json!("1"), json!(u64::MAX)] {
+                let mut body = json!({"query_string": "*"});
+                body[field] = value;
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::post("/query")
+                            .header("content-type", "application/json")
+                            .body(Body::from(body.to_string()))?,
+                    )
+                    .await?;
+                assert_eq!(
+                    response.status(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "{body}"
+                );
+                assert_eq!(
+                    response.headers()["content-type"],
+                    "text/plain; charset=utf-8"
+                );
+                let text =
+                    String::from_utf8(response.into_body().collect().await?.to_bytes().to_vec())?;
+                assert!(
+                    text.starts_with("Failed to deserialize the JSON body into the target type: "),
+                    "{text}"
+                );
+                assert!(text.contains(field), "{text}");
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn accept_valid_query_value_boundaries() -> anyhow::Result<()> {
+        for body in [
+            json!({"query_string": "*"}),
+            json!({
+                "query_string": "*",
+                "max_num_results": null,
+                "count_by_time_bucket_size_millisecs": null
+            }),
+            json!({
+                "query_string": "*",
+                "max_num_results": 1,
+                "count_by_time_bucket_size_millisecs": 1
+            }),
+            json!({
+                "query_string": "*",
+                "max_num_results": u32::MAX,
+                "count_by_time_bucket_size_millisecs": i64::MAX
+            }),
+        ] {
+            let config: QueryConfig = serde_json::from_value(body.clone())?;
+            let serialized = serde_json::to_value(&config)?;
+            for field in ["max_num_results", "count_by_time_bucket_size_millisecs"] {
+                assert_eq!(serialized[field], body[field]);
+            }
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn query_extractor_errors_match_documented_statuses() -> anyhow::Result<()> {
+        let app = test_router().await;
+        for (body, content_type, status) in [
+            (
+                "{".to_owned(),
+                Some("application/json"),
+                StatusCode::BAD_REQUEST,
+            ),
+            (
+                "{}".to_owned(),
+                Some("application/json"),
+                StatusCode::UNPROCESSABLE_ENTITY,
+            ),
+            (
+                r#"{"query_string":"*","unknown":1}"#.to_owned(),
+                Some("application/json"),
+                StatusCode::UNPROCESSABLE_ENTITY,
+            ),
+            ("{}".to_owned(), None, StatusCode::UNSUPPORTED_MEDIA_TYPE),
+            (
+                "{}".to_owned(),
+                Some("text/plain"),
+                StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            ),
+            (
+                " ".repeat(2 * 1024 * 1024 + 1),
+                Some("application/json"),
+                StatusCode::PAYLOAD_TOO_LARGE,
+            ),
+        ] {
+            let mut request = Request::post("/query");
+            if let Some(content_type) = content_type {
+                request = request.header("content-type", content_type);
+            }
+            let response = app.clone().oneshot(request.body(Body::from(body))?).await?;
+            assert_eq!(response.status(), status);
+            assert_eq!(
+                response.headers()["content-type"],
+                "text/plain; charset=utf-8"
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn other_routes_reject_invalid_input() -> anyhow::Result<()> {
+        let app = test_router().await;
+        for (method, uri) in [
+            ("GET", "/query_results/invalid"),
+            ("GET", "/query_results/1?raw_docs=invalid"),
+            ("DELETE", "/query/invalid"),
+            ("GET", "/column_metadata/invalid-name/timestamp"),
+            (
+                "GET",
+                "/usage/compression?time_range_begin_millisecs=2&time_range_end_millisecs=1",
+            ),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method(method)
+                        .uri(uri)
+                        .body(Body::empty())?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{uri}");
+        }
+        Ok(())
+    }
 
     #[test]
     fn parse_job_status_pending_not_in_defaults() {

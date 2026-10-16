@@ -47,10 +47,7 @@ pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
         .routes(routes!(query_results))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
-        .route(
-            "/column_metadata/{dataset_name}/timestamp",
-            get(get_timestamp_column_names),
-        )
+        .routes(routes!(get_timestamp_column_names))
         .with_state(client)
         .split_for_parts();
     let api_json = api.to_json()?;
@@ -70,6 +67,7 @@ mod api_doc {
     // documentation. Importing the paths directly prevents this issue.
     use super::__path_cancel_query;
     use super::__path_compression_usage;
+    use super::__path_get_timestamp_column_names;
     use super::__path_health;
     use super::__path_query;
     use super::__path_query_results;
@@ -83,7 +81,14 @@ mod api_doc {
             description = "API Server for CLP",
             contact(name = "YScope")
         ),
-        paths(health, query, query_results, cancel_query, compression_usage),
+        paths(
+            health,
+            query,
+            query_results,
+            cancel_query,
+            compression_usage,
+            get_timestamp_column_names
+        ),
         components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
@@ -121,6 +126,16 @@ async fn health() -> String {
             description = "The URI to fetch the results of the submitted query.",
             example = json!({"query_results_uri":"query_results/1"})
         ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The request body is not valid JSON or could not be read."),
+        (status = PAYLOAD_TOO_LARGE, body = String, content_type = "text/plain",
+            description = "The request body exceeds the configured size limit."),
+        (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
+            description = "The Content-Type header is missing or is not a JSON media type."),
+        (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
+            description = "The JSON body contains missing or unknown fields, invalid types, or \
+                invalid values. max_num_results and count_by_time_bucket_size_millisecs must \
+                be positive integers when non-null."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -185,6 +200,8 @@ struct QueryResultsParams {
                 single line of the query result in JSON format.",
             example = r#"data: {"timestamp": 1633036800, "message": "Example log message"}\n"#
         ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The search job ID or query parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -239,6 +256,8 @@ async fn query_results(
             status = NOT_FOUND,
             description = "No cancellable query job with the given ID was found."
         ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The search job ID is invalid."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -266,6 +285,18 @@ async fn cancel_query(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/column_metadata/{dataset_name}/timestamp",
+    description = "Gets timestamp column names for a dataset.",
+    responses(
+        (status = OK, body = Vec<String>),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The dataset name is invalid."),
+        (status = NOT_FOUND, description = "The dataset's column metadata table does not exist."),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
 async fn get_timestamp_column_names(
     State(client): State<Client>,
     Path(dataset_name): Path<String>,
@@ -292,7 +323,8 @@ async fn get_timestamp_column_names(
     params(CompressionUsageParams),
     responses(
         (status = OK, body = Vec<CompressionUsage>),
-        (status = BAD_REQUEST, description = "Invalid query parameters \
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "Invalid query parameters \
             (e.g., time_range_begin_millisecs > time_range_end_millisecs, \
             missing required fields)"),
         (status = INTERNAL_SERVER_ERROR)
@@ -369,6 +401,42 @@ mod tests {
     use tower::ServiceExt;
 
     use super::*;
+
+    #[test]
+    fn document_invalid_input_responses() -> anyhow::Result<()> {
+        let document = serde_json::to_value(ApiDoc::openapi())?;
+        let responses = &document["paths"]["/query"]["post"]["responses"];
+        for status in ["400", "413", "415", "422"] {
+            assert_eq!(
+                responses[status]["content"]["text/plain"]["schema"]["type"],
+                "string"
+            );
+            assert!(
+                responses[status]["description"]
+                    .as_str()
+                    .is_some_and(|description| !description.is_empty())
+            );
+        }
+        let config = &document["components"]["schemas"]["QueryConfig"]["properties"];
+        for field in ["max_num_results", "count_by_time_bucket_size_millisecs"] {
+            assert_eq!(config[field]["minimum"], 1);
+        }
+        for (path, method) in [
+            ("/query_results/{search_job_id}", "get"),
+            ("/query/{search_job_id}", "delete"),
+            ("/column_metadata/{dataset_name}/timestamp", "get"),
+            ("/usage/compression", "get"),
+        ] {
+            assert!(
+                document["paths"][path][method]["responses"]["400"].is_object(),
+                "{path}"
+            );
+        }
+        let timestamp = &document["paths"]["/column_metadata/{dataset_name}/timestamp"]["get"];
+        assert_eq!(timestamp["parameters"][0]["name"], "dataset_name");
+        assert_eq!(timestamp["parameters"][0]["in"], "path");
+        Ok(())
+    }
 
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
