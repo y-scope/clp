@@ -789,38 +789,44 @@ mod tests {
             count_by_time_bucket_size_millisecs: NonZeroU64::new(60_000),
             ..unbounded_query_option()
         };
-        let args = build_clp_s_search_args_for_result_cache(
-            &directory_selector(),
-            &options,
-            "mongodb://localhost/results",
-            42,
-            "ds1",
-        );
-        let expected = [
-            "s",
-            "/archives/ds1",
-            "--archive-id",
-            ARCHIVE_ID,
-            "level: \"ERROR\"",
-            "--tge",
-            "-1",
-            "--tle",
-            "120000",
-            "--ignore-case",
-            "--count-by-time",
-            "60000",
-            "results-cache",
-            "--uri",
-            "mongodb://localhost/results",
-            "--collection",
-            "42-timeline",
-            "--dataset",
-            "ds1",
-        ];
-        anyhow::ensure!(
-            args == expected.map(OsString::from),
-            "unexpected timeline arguments: {args:?}"
-        );
+        for max_num_results in [None, options.max_num_results] {
+            let options = ClpSQueryOption {
+                max_num_results,
+                ..options.clone()
+            };
+            let args = build_clp_s_search_args_for_result_cache(
+                &directory_selector(),
+                &options,
+                "mongodb://localhost/results",
+                42,
+                "ds1",
+            );
+            let expected = [
+                "s",
+                "/archives/ds1",
+                "--archive-id",
+                ARCHIVE_ID,
+                "level: \"ERROR\"",
+                "--tge",
+                "-1",
+                "--tle",
+                "120000",
+                "--ignore-case",
+                "--count-by-time",
+                "60000",
+                "results-cache",
+                "--uri",
+                "mongodb://localhost/results",
+                "--collection",
+                "42-timeline",
+                "--dataset",
+                "ds1",
+            ];
+            anyhow::ensure!(
+                args == expected.map(OsString::from),
+                "unexpected timeline arguments: {args:?}"
+            );
+        }
         Ok(())
     }
 

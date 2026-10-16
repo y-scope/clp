@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
 use serde::Deserialize;
@@ -27,7 +29,7 @@ pub struct AggregationConfig {
 pub struct SearchJobConfig {
     pub datasets: Option<Vec<String>>,
     pub query_string: String,
-    pub max_num_results: u32,
+    pub max_num_results: Option<NonZeroU32>,
     pub begin_timestamp: Option<i64>,
     pub end_timestamp: Option<i64>,
     pub ignore_case: bool,
@@ -79,7 +81,18 @@ impl QueryJobStatus {
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
-#[derive(Clone, Debug, Deserialize, Eq, IntoPrimitive, PartialEq, Serialize, TryFromPrimitive)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    IntoPrimitive,
+    PartialEq,
+    Serialize,
+    TryFromPrimitive,
+    sqlx::Type,
+)]
 #[repr(i32)]
 pub enum QueryJobType {
     SearchOrAggregation = 0,

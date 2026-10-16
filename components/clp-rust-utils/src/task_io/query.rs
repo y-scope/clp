@@ -17,8 +17,8 @@ pub struct ClpSQueryOption {
     /// The query string passed positionally to `clp-s`.
     pub query_string: NonEmptyString,
 
-    /// The per-archive result limit. When absent, the task omits `--max-num-results` and uses
-    /// `clp-s` default.
+    /// The per-archive normal-search result limit. When absent, the task omits `--max-num-results`
+    /// and returns all matching results. Timeline aggregation is not limited by this value.
     pub max_num_results: Option<NonZeroU32>,
 
     /// Inclusive `--tge` bound in Unix epoch milliseconds.
@@ -30,10 +30,9 @@ pub struct ClpSQueryOption {
     /// Whether `clp-s` performs a case-insensitive search.
     pub ignore_case: bool,
 
-    /// The positive count-by-time bucket width in milliseconds.
-    ///
-    /// * When set, the query aggregates the timestamps of all log events in the archive.
-    /// * When absent, the query returns matching records without count-by-time aggregation.
+    /// The positive width, in milliseconds, of each count-by-time bucket. When set, the task
+    /// additionally groups all matching log events into time buckets and counts the events in
+    /// each bucket, regardless of `max_num_results`.
     pub count_by_time_bucket_size_millisecs: Option<NonZeroU64>,
 }
 
@@ -55,7 +54,7 @@ impl TryFrom<&SearchJobConfig> for ClpSQueryOption {
         Ok(Self {
             query_string: NonEmptyString::try_from(config.query_string.clone())
                 .map_err(|_| QueryOptionError::EmptyQuery)?,
-            max_num_results: NonZeroU32::new(config.max_num_results),
+            max_num_results: config.max_num_results,
             begin_timestamp_millisecs: config.begin_timestamp,
             end_timestamp_millisecs: config.end_timestamp,
             ignore_case: config.ignore_case,
@@ -178,7 +177,7 @@ mod tests {
 
         let base = SearchJobConfig {
             query_string: "*".to_owned(),
-            max_num_results: 7,
+            max_num_results: NonZeroU32::new(7),
             ..Default::default()
         };
         assert_eq!(
@@ -225,7 +224,7 @@ mod tests {
     fn ordinary_search_preserves_aggregation_and_timestamp_behavior() {
         let config = crate::job_config::SearchJobConfig {
             query_string: "*".to_owned(),
-            max_num_results: 7,
+            max_num_results: NonZeroU32::new(7),
             begin_timestamp: Some(1),
             end_timestamp: Some(0),
             aggregation_config: Some(crate::job_config::AggregationConfig {
@@ -237,10 +236,7 @@ mod tests {
         let actual =
             ClpSQueryOption::try_from(&config).expect("valid search configuration should convert");
         assert_eq!(actual.count_by_time_bucket_size_millisecs, None);
-        assert_eq!(
-            actual.max_num_results.map(NonZeroU32::get),
-            Some(config.max_num_results)
-        );
+        assert_eq!(actual.max_num_results, config.max_num_results);
         assert_eq!(actual.begin_timestamp_millisecs, config.begin_timestamp);
         assert_eq!(actual.end_timestamp_millisecs, config.end_timestamp);
     }
@@ -248,7 +244,7 @@ mod tests {
     #[test]
     fn persisted_search_config_converts_supported_options() {
         for width in [None, Some(1_i64), Some(i64::MAX)] {
-            for max_num_results in [0_u32, 7] {
+            for max_num_results in [None, NonZeroU32::new(7)] {
                 for (begin, end) in [
                     (None, None),
                     (Some(-1), None),
@@ -277,7 +273,7 @@ mod tests {
                         .expect("valid search configuration should convert");
                     let expected = ClpSQueryOption {
                         query_string: NonEmptyString::from_static_str("level:error"),
-                        max_num_results: NonZeroU32::new(max_num_results),
+                        max_num_results,
                         begin_timestamp_millisecs: begin,
                         end_timestamp_millisecs: end,
                         ignore_case: true,
