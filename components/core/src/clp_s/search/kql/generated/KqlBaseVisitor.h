@@ -53,7 +53,19 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitFunction_call(KqlParser::Function_callContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitColumn(KqlParser::ColumnContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitColumn_literal(KqlParser::Column_literalContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitProjection_column(KqlParser::Projection_columnContext *ctx) override {
     return visitChildren(ctx);
   }
 

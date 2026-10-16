@@ -111,7 +111,6 @@ tasks:
           --config-file "tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml" \
           ".github" \
           "components/core/.clang-format" \
-          "components/core/config" \
           "components/core/tools/" \
           "components/package-template/src/etc" \
           "docs" \
@@ -307,8 +306,6 @@ tasks:
             - "clp/LibarchiveFileReader.hpp"
             - "clp/LibarchiveReader.cpp"
             - "clp/LibarchiveReader.hpp"
-            - "clp/LogSurgeonReader.cpp"
-            - "clp/LogSurgeonReader.hpp"
             - "clp/LogTypeDictionaryEntry.cpp"
             - "clp/LogTypeDictionaryEntry.hpp"
             - "clp/LogTypeDictionaryWriter.cpp"
@@ -443,7 +440,6 @@ tasks:
             - "clp_s/SchemaReader.cpp"
             - "clp_s/SchemaReader.hpp"
             - "clp_s/SchemaTree.cpp"
-            - "clp_s/SchemaTree.hpp"
             - "clp_s/SchemaWriter.cpp"
             - "clp_s/SchemaWriter.hpp"
             - "clp_s/search/AddTimestampConditions.cpp"
@@ -486,11 +482,8 @@ tasks:
             - "clp_s/search/EvaluateTimestampIndex.hpp"
             - "clp_s/search/kql/generated/*"
             - "clp_s/search/kql/kql.cpp"
-            - "clp_s/search/kql/kql.hpp"
             - "clp_s/search/Output.cpp"
             - "clp_s/search/Output.hpp"
-            - "clp_s/search/Projection.cpp"
-            - "clp_s/search/Projection.hpp"
             - "clp_s/search/QueryRunner.cpp"
             - "clp_s/search/QueryRunner.hpp"
             - "clp_s/search/SchemaMatch.cpp"
@@ -729,7 +722,6 @@ tasks:
             - "test-kql.cpp"
             - "test-math_utils.cpp"
             - "test-NetworkReader.cpp"
-            - "test-ParserWithUserSchema.cpp"
             - "test-query_methods.cpp"
             - "test-Segment.cpp"
             - "test-SQLiteDB.cpp"

@@ -1,16 +1,16 @@
 {
     "dataset_name": "json_multifile",
     "unstructured": false,
-    "timestamp_key": "timestamp",
-    "begin_ts": 1310138944000,
-    "end_ts": 1311208074120,
+    "timestamp_key": "@timestamp",
+    "begin_ts": 1679976002040,
+    "end_ts": 1679976232990,
     "logs_subdir": "logs",
     "file_names": [
-        "sts-135-2011-07-08.jsonl",
-        "sts-135-2011-07-09.jsonl",
-        "sts-135-2011-07-11.jsonl",
-        "sts-135-2011-07-19.jsonl",
-        "sts-135-2011-07-21.jsonl"
+        "elasticsearch-0.log",
+        "elasticsearch-1.log",
+        "elasticsearch-2.log",
+        "elasticsearch-3.log",
+        "elasticsearch-4.log"
     ],
-    "single_match_wildcard_query": "\"detail\":\"Roll program complete, heads down attitude achieved for ascent\""
+    "single_match_wildcard_query": "\"message\":\"top warming took [43.9micros]\""
 }

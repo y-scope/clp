@@ -16,6 +16,8 @@
 
 #include <simdjson.h>
 
+#include <clp/ReaderInterface.hpp>
+#include <clp_s/Defs.hpp>
 #include <clp_s/search/ColumnScan.hpp>
 
 #include "../../clp/Query.hpp"
@@ -45,6 +47,7 @@ namespace clp_s::search {
  */
 class QueryRunner : public FilterClass {
 public:
+    // Constructors
     QueryRunner(
             std::shared_ptr<SchemaMatch> const& match,
             std::shared_ptr<ast::Expression> const& expr,
@@ -56,11 +59,9 @@ public:
               m_match(match),
               m_ignore_case(ignore_case),
               m_schema_tree(m_archive_reader->get_schema_tree()),
-              m_var_dict(m_archive_reader->get_variable_dictionary()),
-              m_log_dict(m_archive_reader->get_log_type_dictionary()),
-              m_array_dict(m_archive_reader->get_array_dictionary()),
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
-              m_schemas(m_archive_reader->get_schema_map()) {}
+              m_schemas(m_archive_reader->get_schema_map()),
+              m_flavour(m_archive_reader->flavour()) {}
 
     // Destructor
     virtual ~QueryRunner() = default;
@@ -71,6 +72,7 @@ public:
     QueryRunner(QueryRunner&&) = delete;
     auto operator=(QueryRunner&&) -> QueryRunner& = delete;
 
+    // Methods
     /**
      * Initializes the query processing context that is common to all schemas.
      */
@@ -132,12 +134,10 @@ private:
     SchemaReader* m_reader{nullptr};
 
     std::shared_ptr<SchemaTree> m_schema_tree;
-    std::shared_ptr<VariableDictionaryReader> m_var_dict;
-    std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
-    std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
+    ClpFlavour m_flavour{ClpFlavour::Clps};
 
     std::map<std::string, std::optional<clp::Query>> m_string_query_map;
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;
@@ -148,6 +148,7 @@ private:
     std::unordered_map<int32_t, TimestampColumnReader*> m_timestamp_readers;
     DeprecatedDateStringColumnReader* m_deprecated_datestring_reader{nullptr};
     std::unordered_map<int32_t, std::vector<BaseColumnReader*>> m_basic_readers;
+    ColumnScan::PositionalReaderMaps m_positional_readers;
     std::unordered_map<int32_t, std::string> m_extracted_unstructured_arrays;
     uint64_t m_cur_message{0};
     EvaluatedValue m_expression_value{EvaluatedValue::Unknown};
@@ -188,7 +189,8 @@ private:
      * Evaluates a filter expression
      * @param expr
      * @param schema
-     * @return true if the expression evaluates to true, false otherwise
+     * @return Whether the expression evaluates to true.
+     * @throws Forwards `ast::ColumnDescriptor::get_bound_node_id`'s exceptions.
      */
     auto evaluate_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
 
@@ -203,13 +205,13 @@ private:
     /**
      * Evaluates a int filter expression
      * @param op
-     * @param column_id
+     * @param readers
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_int_filter(
             ast::FilterOperation op,
-            int32_t column_id,
+            std::vector<BaseColumnReader*> const& readers,
             std::shared_ptr<ast::Literal> const& operand
     ) -> bool;
 
@@ -226,13 +228,13 @@ private:
     /**
      * Evaluates a float filter expression
      * @param op
-     * @param column_id
+     * @param readers
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_float_filter(
             ast::FilterOperation op,
-            int32_t column_id,
+            std::vector<BaseColumnReader*> const& readers,
             std::shared_ptr<ast::Literal> const& operand
     ) -> bool;
 
@@ -406,13 +408,13 @@ private:
     /**
      * Evaluates a bool filter expression
      * @param op
-     * @param column_id
+     * @param readers
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_bool_filter(
             ast::FilterOperation op,
-            int32_t column_id,
+            std::vector<BaseColumnReader*> const& readers,
             std::shared_ptr<ast::Literal> const& operand
     ) -> bool;
 
@@ -428,7 +430,35 @@ private:
     void populate_internal_columns();
 
     /**
-     * Constant propagates an expression
+     * Resolves the reader for every leaf rule filter in `expr` that is pinned to a leaf placeholder
+     * position, using the current ERT's column readers. A filter whose position doesn't resolve to
+     * a reader for its column gets no entry and evaluates to false.
+     * @param expr
+     * @param column_readers The current ERT's column readers, in schema order.
+     */
+    auto populate_positional_readers(
+            std::shared_ptr<ast::Expression> const& expr,
+            std::vector<BaseColumnReader*> const& column_readers
+    ) -> void;
+
+    /**
+     * Resolves the column reader for a leaf rule filter column pinned to a leaf placeholder
+     * position. The reader for leaf position `leaf_position` of a LogMessage is the reader at
+     * `log_message_column_start + leaf_position`, which holds because readers are appended in the
+     * document order of the leaf placeholders.
+     * @param column A column with a leaf position.
+     * @param column_readers The current ERT's column readers, in schema order.
+     * @return The reader, or nullptr if `column` is unbound or the position doesn't resolve to a
+     * reader for `column`'s node in the current ERT.
+     */
+    [[nodiscard]] auto find_positional_reader(
+            ast::ColumnDescriptor const& column,
+            std::vector<BaseColumnReader*> const& column_readers
+    ) const -> BaseColumnReader*;
+
+    /**
+     * Constant propagates an expression. Operands that schema matching already resolved for the
+     * current schema (EXISTS/NEXISTS filters and `NarrowSchemasExpr`) are constants here.
      * @param expr
      * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
      * if the expression evaluates to false, EvaluatedValue::Unknown otherwise

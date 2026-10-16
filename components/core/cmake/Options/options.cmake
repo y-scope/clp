@@ -84,6 +84,12 @@ option(
 )
 
 option(
+    CLP_BUILD_CLP_S_LOG_CONVERTER
+    "Build clp_s::log_converter."
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES
     "Build clp_s::reducer_dependencies."
     ON
@@ -125,6 +131,12 @@ option(
     ON
 )
 
+option(
+    CLP_BUILD_CLPP_DECOMPOSITION
+    "Enable clp+ query decomposition (log-surgeon interpretation generation)."
+    OFF
+)
+
 # Validates that the `CLP_BUILD_` options required by `TARGET_CLP_BUILD_OPTION` are `ON`.
 #
 # @param {string} TARGET_CLP_BUILD_OPTION
@@ -158,6 +170,7 @@ function(validate_clp_binaries_dependencies)
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_IO
         CLP_BUILD_CLP_S_JSONCONSTRUCTOR
+        CLP_BUILD_CLP_S_LOG_CONVERTER
         CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES
         CLP_BUILD_CLP_S_SEARCH
         CLP_BUILD_CLP_S_SEARCH_AST
@@ -198,6 +211,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_S_FFI_SFA
         CLP_BUILD_CLP_S_FILTER
         CLP_BUILD_CLP_S_JSONCONSTRUCTOR
+        CLP_BUILD_CLP_S_LOG_CONVERTER
         CLP_BUILD_CLP_S_SEARCH
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
@@ -217,7 +231,6 @@ function(set_clp_tests_dependencies)
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LIBLZMA
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_NLOHMANN_JSON
@@ -305,6 +318,7 @@ endfunction()
 function(set_clp_s_clp_dependencies_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LOG_SURGEON
@@ -385,6 +399,25 @@ function(set_clp_s_json_constructor_dependencies)
         CLP_NEED_MONGOCXX
         CLP_NEED_SPDLOG
         CLP_NEED_ZSTD
+    )
+endfunction()
+
+function(validate_clp_s_log_converter_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_LOG_CONVERTER
+        CLP_BUILD_CLP_S_CLP_DEPENDENCIES
+        CLP_BUILD_CLP_S_IO
+    )
+endfunction()
+
+function(set_clp_s_log_converter_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_BOOST
+        CLP_NEED_FMT
+        CLP_NEED_LOG_SURGEON
+        CLP_NEED_MSGPACKCXX
+        CLP_NEED_NLOHMANN_JSON
+        CLP_NEED_SPDLOG
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -551,6 +584,11 @@ function(validate_and_setup_all_clp_dependency_flags)
         set_clp_s_json_constructor_dependencies()
     endif()
 
+    if (CLP_BUILD_CLP_S_LOG_CONVERTER)
+        validate_clp_s_log_converter_dependencies()
+        set_clp_s_log_converter_dependencies()
+    endif()
+
     if (CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
         validate_clp_s_reducer_dependencies_dependencies()
         set_clp_s_reducer_dependencies_dependencies()
@@ -594,6 +632,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_CATCH2
         CLP_NEED_CURL
         CLP_NEED_DATE
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LIBLZMA

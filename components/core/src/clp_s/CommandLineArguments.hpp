@@ -1,6 +1,7 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -67,6 +68,11 @@ public:
 
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
+
+    // Static data members
+    static constexpr std::string_view cArchiveStatsQuery{"stats.archives"};
+    static constexpr std::string_view cLogShapeStatsQuery{"stats.log_shapes"};
+    static constexpr std::string_view cSchemaTreeStatsQuery{"stats.schema_tree"};
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]);
@@ -141,6 +147,16 @@ public:
     std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
+
+    [[nodiscard]] auto get_flavour() const -> ClpFlavour { return m_flavour; }
+
+    /**
+     * @return The parsing specification path.
+     * @return std::nullopt if the flavour isn't clpp.
+     */
+    [[nodiscard]] auto get_parsing_spec_path() const -> std::optional<Path> const& {
+        return m_parsing_spec_path;
+    }
 
 private:
     // Methods
@@ -266,6 +282,9 @@ private:
     std::vector<std::string> m_projection_columns;
 
     std::optional<Aggregator> m_aggregator;
+
+    ClpFlavour m_flavour{ClpFlavour::Clps};
+    std::optional<Path> m_parsing_spec_path;
 };
 }  // namespace clp_s
 

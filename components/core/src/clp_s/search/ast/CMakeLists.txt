@@ -25,6 +25,8 @@ set(
     Integral.cpp
     Integral.hpp
     Literal.hpp
+    NarrowSchemasExpr.cpp
+    NarrowSchemasExpr.hpp
     NarrowTypes.cpp
     NarrowTypes.hpp
     NullLiteral.cpp
@@ -62,6 +64,8 @@ if(CLP_BUILD_CLP_S_SEARCH_AST)
     target_include_directories(clp_s_search_ast PUBLIC ../../../)
     target_link_libraries(
         clp_s_search_ast
+        PUBLIC
+        ystdlib::error_handling
         PRIVATE
         simdjson::simdjson
     )

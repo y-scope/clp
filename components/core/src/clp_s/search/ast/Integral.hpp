@@ -54,11 +54,15 @@ public:
     void print() const override;
 
     // Methods inherited from Literal
-    bool matches_type(LiteralType type) override { return type & cIntegralLiteralTypes; }
+    [[nodiscard]] auto matches_type(LiteralType type) const -> bool override {
+        return type & cIntegralLiteralTypes;
+    }
 
-    bool matches_any(literal_type_bitmask_t mask) override { return mask & cIntegralLiteralTypes; }
+    [[nodiscard]] auto matches_any(literal_type_bitmask_t mask) const -> bool override {
+        return mask & cIntegralLiteralTypes;
+    }
 
-    bool matches_exactly(literal_type_bitmask_t mask) override {
+    [[nodiscard]] auto matches_exactly(literal_type_bitmask_t mask) const -> bool override {
         return mask == cIntegralLiteralTypes;
     }
 

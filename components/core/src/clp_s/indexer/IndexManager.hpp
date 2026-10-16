@@ -57,6 +57,7 @@ public:
      * Updates the metadata for a given archive
      * @param dataset_name
      * @param archive_path
+     * @throw OperationFailed with `ErrorCodeUnsupported` if the archive is a clpp-flavour archive.
      */
     void update_metadata(std::string const& dataset_name, Path const& archive_path);
 
