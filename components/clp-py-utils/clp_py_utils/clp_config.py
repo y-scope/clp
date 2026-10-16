@@ -40,6 +40,7 @@ RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 OTEL_COLLECTOR_COMPONENT_NAME = "otel-collector"
 COMPRESSION_COORDINATOR_COMPONENT_NAME = "compression_coordinator"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
+QUERY_COORDINATOR_COMPONENT_NAME = "query_coordinator"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
@@ -55,6 +56,7 @@ GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 # Spider resource groups
 SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME = "spider_resource_groups"
 COMPRESSION_RESOURCE_GROUP_NAME = "compression"
+QUERY_RESOURCE_GROUP_NAME = "query"
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -760,7 +762,6 @@ class ApiServer(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
-    default_max_num_query_results: int = 1000
 
     def transform_for_container(self):
         self.host = API_SERVER_COMPONENT_NAME
@@ -883,6 +884,7 @@ class SpiderWorkerPools(BaseModel):
 
     general: SpiderWorkerPool = SpiderWorkerPool()
     compression: SpiderWorkerPool = SpiderWorkerPool()
+    query: SpiderWorkerPool = SpiderWorkerPool(replicas=4)
 
 
 class SpiderWorker(BaseModel):
@@ -940,6 +942,27 @@ class CompressionCoordinator(BaseModel):
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         self.resource_group_password = _load_spider_resource_group_password(
             credentials_file_path, COMPRESSION_RESOURCE_GROUP_NAME
+        )
+
+
+class QueryCoordinator(BaseModel):
+    logging_level: LoggingLevelRust = "INFO"
+    database_connection_pool_size: PositiveInt = 10
+    job_polling_interval_millisecs: PositiveInt = 100
+    max_concurrent_jobs: PositiveInt = 1000
+    max_datasets_per_query: PositiveInt | None = 10
+    query_task_max_retry: NonNegativeInt = 1
+    result_polling_interval_millisecs: PositiveInt = 100
+    termination_timeout_secs: PositiveInt = 30
+    # This field is loaded at runtime through `load_credentials_from_file`.
+    resource_group_password: str | None = None
+
+    def dump_to_primitive_dict(self):
+        return self.model_dump(exclude={"resource_group_password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        self.resource_group_password = _load_spider_resource_group_password(
+            credentials_file_path, QUERY_RESOURCE_GROUP_NAME
         )
 
 
@@ -1016,6 +1039,7 @@ class ClpConfig(BaseModel):
     log_ingestor: LogIngestor | None = LogIngestor()
     spider: Spider | None = None
     compression_coordinator: CompressionCoordinator | None = None
+    query_coordinator: QueryCoordinator | None = None
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
@@ -1195,6 +1219,7 @@ class ClpConfig(BaseModel):
         custom_serialized_fields = {
             "compression_coordinator",
             "database",
+            "query_coordinator",
             "queue",
             "redis",
             "spider",
@@ -1218,8 +1243,8 @@ class ClpConfig(BaseModel):
     @model_validator(mode="after")
     def validate_compression_orchestration_config(self):
         if CompressionOrchestration.SPIDER != self.package.scheduler:
-            # Neither service is deployed in this mode, so no `spider` or
-            # `compression_coordinator` config check is necessary.
+            # None of these services are deployed in this mode, so no `spider`,
+            # `compression_coordinator` or `query_coordinator` config check is necessary.
             return self
         if self.spider is None:
             msg = (
@@ -1230,6 +1255,12 @@ class ClpConfig(BaseModel):
         if self.compression_coordinator is None:
             msg = (
                 "`compression_coordinator` must be configured when `package.scheduler` is"
+                f" `{CompressionOrchestration.SPIDER}`."
+            )
+            raise ValueError(msg)
+        if self.query_coordinator is None:
+            msg = (
+                "`query_coordinator` must be configured when `package.scheduler` is"
                 f" `{CompressionOrchestration.SPIDER}`."
             )
             raise ValueError(msg)
@@ -1247,6 +1278,20 @@ class ClpConfig(BaseModel):
             raise ValueError(msg)
         if self.spider is None:
             msg = "compression-coordinator requires Spider to be configured."
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def validate_query_coordinator_config(self):
+        if self.query_coordinator is None:
+            return self
+        if self.package.storage_engine != StorageEngine.CLP_S:
+            msg = (
+                f"query-coordinator is only compatible with storage engine `{StorageEngine.CLP_S}`."
+            )
+            raise ValueError(msg)
+        if self.spider is None:
+            msg = "query-coordinator requires Spider to be configured."
             raise ValueError(msg)
         return self
 

@@ -1029,7 +1029,7 @@ async def handle_finished_search_job(
         if len(job.remaining_archives_for_search) == 0:
             new_job_status = QueryJobStatus.SUCCEEDED
         # Check if we've reached max results
-        elif False == is_reducer_job and max_num_results > 0:
+        elif False == is_reducer_job and max_num_results is not None:
             if found_max_num_latest_results(
                 results_cache_uri,
                 job_id,

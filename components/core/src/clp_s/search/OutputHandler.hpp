@@ -28,19 +28,21 @@ public:
      * @param timestamp The timestamp of the log event.
      * @param archive_id The archive containing the log event.
      * @param log_event_idx The index of the log event within an archive.
+     * @return ErrorCodeSuccess on success or relevant error code on error.
      */
-    virtual void write(
-            std::string_view message,
-            epochtime_t timestamp,
-            std::string_view archive_id,
-            int64_t log_event_idx
-    ) = 0;
+    [[nodiscard]] virtual auto
+    write(std::string_view message,
+          epochtime_t timestamp,
+          std::string_view archive_id,
+          int64_t log_event_idx) -> ErrorCode
+            = 0;
 
     /**
      * Writes a message to the output handler.
      * @param message The message to write.
+     * @return ErrorCodeSuccess on success or relevant error code on error.
      */
-    virtual void write(std::string_view message) = 0;
+    [[nodiscard]] virtual auto write(std::string_view message) -> ErrorCode = 0;
 
     /**
      * Flushes the output handler after each table that gets searched.

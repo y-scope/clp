@@ -169,7 +169,6 @@ clpConfig:
   api_server:
     serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30301  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
-    default_max_num_query_results: 1000
     query_job_polling:
       initial_backoff_ms: 100
       max_backoff_ms: 5000
@@ -393,9 +392,9 @@ spider:
   image:
     # Temporary pin: upcoming Spider `main` changes may break, and its next release is a while away.
     scheduler:
-      tag: "sha-86cfba7"
+      tag: "sha-278d06f"
     storage:
-      tag: "sha-86cfba7"
+      tag: "sha-278d06f"
     worker:
       repository: "ghcr.io/y-scope/clp/clp-spider-worker"
       tag: "main"
