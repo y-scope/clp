@@ -27,6 +27,10 @@ public:
 
     [[nodiscard]] static auto create(std::string_view v) -> std::shared_ptr<Literal>;
 
+    [[nodiscard]] static auto create(char const* v) -> std::shared_ptr<Literal> {
+        return create(std::string_view{v});
+    }
+
     // Delete copy and move constructors and assignment operators
     ValueLiteral(ValueLiteral const&) = delete;
     auto operator=(ValueLiteral const&) -> ValueLiteral& = delete;
