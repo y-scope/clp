@@ -2,12 +2,12 @@
 
 import socket
 from dataclasses import dataclass
-from typing import Any
 
 from clp_py_utils.clp_config import (
     ClpConfig,
     REDUCER_COMPONENT_NAME,
 )
+from pydantic import BaseModel
 
 # Port constants.
 MIN_NON_PRIVILEGED_PORT = 1024
@@ -22,72 +22,58 @@ PORT_ATTR_NAMES = ["port", "base_port"]
 
 
 @dataclass
-class PortAssignment:
+class ComponentPortAssignment:
     """
-    Represents a port assignment for a CLP component.
+    A port assignment for a CLP component.
 
-    :param component: The component configuration object that needs port assignment.
-    :param attr_name: The name of the port attribute on the component.
-    :param port_count: The number of consecutive ports needed by this component.
+    :param component_name: The name of the CLP component.
+    :param component_config: The component configuration object.
+    :param port_attr_name: The name of the port attribute in `component_config`.
+    :param start_port: The first port in this component's assignment range.
+    :param port_count: The number of ports required by the component.
     """
 
-    component: Any
-    attr_name: str
+    component_name: str
+    component_config: BaseModel
+    port_attr_name: str
+    start_port: int
     port_count: int
+
+    @property
+    def port_range(self) -> range:
+        """:return: The range of port numbers required by this component."""
+        return range(self.start_port, self.start_port + self.port_count)
 
 
 def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
     """
-    Assign ports to all components in `clp_config` that require them, starting from `base_port`.
+    Assigns ports to all components in `clp_config` that require them, starting from `base_port`.
     Ports are assigned sequentially, with each component receiving the number of ports it requires.
 
     :param base_port:
     :param clp_config:
     :raise ValueError: If the base port is out of range, or if any required port is in use.
     """
-    # Discover which components need port assignments.
-    port_assignments = _discover_port_assignments(clp_config)
-    total_ports_needed = sum(assignment.port_count for assignment in port_assignments)
+    port_assignments = _assign_component_ports(base_port, clp_config)
+    _check_ports_available(host="127.0.0.1", port_assignments=port_assignments)
 
-    # Validate that all required ports are valid and available.
-    port_range = range(base_port, base_port + total_ports_needed)
-    _validate_port_range_bounds(port_range)
-    _check_ports_available(host="127.0.0.1", port_range=port_range)
-
-    # Assign ports to the components.
-    current_port = base_port
+    # Write the port assignments to each component config.
     for assignment in port_assignments:
-        setattr(assignment.component, assignment.attr_name, current_port)
-        current_port += assignment.port_count
+        setattr(assignment.component_config, assignment.port_attr_name, assignment.start_port)
 
 
-def _check_ports_available(host: str, port_range: range) -> None:
+def _assign_component_ports(base_port: int, clp_config: ClpConfig) -> list[ComponentPortAssignment]:
     """
-    Check that all ports in the given range are available for binding.
+    Assigns port numbers to all components that require them. Validates that the port assignments do
+    not exceed the valid port range.
 
-    :param host:
-    :param port_range:
-    :raise ValueError: If any port in the range is already in use.
-    """
-    for port in port_range:
-        if not _is_port_free(port=port, host=host):
-            range_str = _format_port_range(port_range)
-            err_msg = (
-                f"Port '{port}' in the desired range ({range_str}) is already in use. "
-                "Choose a different port range for the test environment."
-            )
-            raise ValueError(err_msg)
-
-
-def _discover_port_assignments(clp_config: ClpConfig) -> list[PortAssignment]:
-    """
-    Discover which components in `clp_config` require port assignments.
-
+    :param base_port:
     :param clp_config:
-    :return: A list of PortAssignment objects describing what ports each component needs.
+    :return: A list of ComponentPortAssignment objects.
     """
-    port_assignments: list[PortAssignment] = []
+    port_assignments: list[ComponentPortAssignment] = []
 
+    current_port = base_port
     for component_name, component_config in vars(clp_config).items():
         # Skip private attributes and None values.
         if component_name.startswith("_") or component_config is None:
@@ -106,14 +92,39 @@ def _discover_port_assignments(clp_config: ClpConfig) -> list[PortAssignment]:
         port_count = REDUCER_MAX_PORTS if component_name == REDUCER_COMPONENT_NAME else 1
 
         port_assignments.append(
-            PortAssignment(
-                component=component_config,
-                attr_name=port_attr_name,
+            ComponentPortAssignment(
+                component_name=component_name,
+                component_config=component_config,
+                port_attr_name=port_attr_name,
+                start_port=current_port,
                 port_count=port_count,
             )
         )
 
+        current_port += port_count
+
+    port_range = range(base_port, current_port)
+    _validate_port_range_bounds(port_range)
+
     return port_assignments
+
+
+def _check_ports_available(host: str, port_assignments: list[ComponentPortAssignment]) -> None:
+    """
+    Checks that all ports in the given port assignment list are available for binding.
+
+    :param host:
+    :param port_assignments:
+    :raise ValueError: If any port in the range is already in use.
+    """
+    for assignment in port_assignments:
+        for port_num in assignment.port_range:
+            if not _is_port_free(port=port_num, host=host):
+                err_msg = (
+                    f"Port '{port_num}' requested by component '{assignment.component_name}' is"
+                    " already in use. Choose a different base port for the test environment."
+                )
+                raise ValueError(err_msg)
 
 
 def _format_port_range(port_range: range) -> str:
