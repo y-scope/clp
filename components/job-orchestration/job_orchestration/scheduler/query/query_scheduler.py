@@ -186,6 +186,59 @@ task_duration_histogram = meter.create_histogram(
     unit="s",
     description="Duration of query tasks",
 )
+uncompressed_bytes_scanned_histogram = meter.create_histogram(
+    "clp.query.uncompressed_bytes_scanned",
+    unit="By",
+    description=(
+        "Distribution of logical uncompressed archive bytes scanned per successful search job"
+    ),
+)
+compressed_bytes_scanned_histogram = meter.create_histogram(
+    "clp.query.compressed_bytes_scanned",
+    unit="By",
+    description=(
+        "Distribution of logical compressed archive bytes scanned per successful search job"
+    ),
+)
+uncompressed_bytes_scanned_counter = meter.create_counter(
+    "clp.query.uncompressed_bytes_scanned_total",
+    unit="By",
+    description=(
+        "Total logical uncompressed size of archives whose search tasks completed successfully"
+    ),
+)
+compressed_bytes_scanned_counter = meter.create_counter(
+    "clp.query.compressed_bytes_scanned_total",
+    unit="By",
+    description=(
+        "Total logical compressed size of archives whose search tasks completed successfully"
+    ),
+)
+
+
+def _record_search_bytes_scanned(
+    job: SearchJob,
+    archive_sizes: tuple[int, int] | None,
+) -> None:
+    if archive_sizes is None:
+        logger.error(
+            "Archive-size metadata is missing for the completed search task; bytes scanned metrics "
+            "were not emitted."
+        )
+        return
+    uncompressed_size, compressed_size = archive_sizes
+    if uncompressed_size < 0 or compressed_size < 0:
+        logger.error(
+            "Search task result contains negative archive-size metadata; bytes scanned metrics were "
+            "not emitted."
+        )
+        return
+
+    uncompressed_bytes_scanned_counter.add(uncompressed_size)
+    compressed_bytes_scanned_counter.add(compressed_size)
+
+    job.uncompressed_bytes_scanned += uncompressed_size
+    job.compressed_bytes_scanned += compressed_size
 
 
 class DispatchExecutor:
@@ -211,13 +264,21 @@ class DispatchExecutor:
     @staticmethod
     def dispatch_job_and_update_db(
         job_config_blob: bytes, job_type: QueryJobType, job_id: str, archives: list[dict]
-    ) -> tuple[str, int, str]:
+    ) -> tuple[str, int, str, dict[int, tuple[int, int]]]:
         if not QueryJobType.SEARCH_OR_AGGREGATION == job_type:
             raise NotImplementedError(f"Unexpected job type: {job_type}")
 
         archive_ids = [a["archive_id"] for a in archives]
         with contextlib.closing(DispatchExecutor._db_conn_pool.connect()) as db_conn:
             task_ids = insert_query_tasks_into_db(db_conn, job_id, archive_ids)
+
+        task_archive_sizes = {
+            task_ids[i]: (
+                archives[i]["uncompressed_size"] or 0,
+                archives[i]["compressed_size"] or 0,
+            )
+            for i in range(len(archives))
+        }
 
         celery_task_group = celery.group(
             search.s(
@@ -233,7 +294,7 @@ class DispatchExecutor:
         )
         group_result = celery_task_group.apply_async()
         group_result.save()
-        return job_id, len(archives), group_result.id
+        return job_id, len(archives), group_result.id, task_archive_sizes
 
 
 class StreamExtractionHandle(ABC):
@@ -596,7 +657,10 @@ def _get_archives_for_search_without_datasets(
         where_clause = " WHERE " + " AND ".join(filter_clauses)
 
     table = get_archives_table_name(table_prefix, None)
-    query = f"SELECT id AS archive_id, end_timestamp FROM {table}{where_clause}"
+    query = (
+        f"SELECT id AS archive_id, end_timestamp, uncompressed_size, size AS compressed_size"
+        f" FROM {table}{where_clause}"
+    )
     query += " ORDER BY end_timestamp DESC"
 
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
@@ -629,7 +693,8 @@ def get_archives_for_search(
     for ds in datasets:
         table = get_archives_table_name(table_prefix, ds)
         union_parts.append(
-            f"SELECT id AS archive_id, end_timestamp, '{ds}' AS dataset FROM {table}{where_clause}"
+            f"SELECT id AS archive_id, end_timestamp, uncompressed_size, size AS compressed_size,"
+            f" '{ds}' AS dataset FROM {table}{where_clause}"
         )
     query = " UNION ALL ".join(union_parts) + " ORDER BY end_timestamp DESC"
 
@@ -757,6 +822,13 @@ def dispatch_query_job(
     global active_jobs
     archive_ids = [a["archive_id"] for a in archives]
     task_ids = insert_query_tasks_into_db(db_conn, job.id, archive_ids)
+
+    if isinstance(job, SearchJob):
+        for i, task_id in enumerate(task_ids):
+            job.task_archive_sizes[task_id] = (
+                archives[i]["uncompressed_size"] or 0,
+                archives[i]["compressed_size"] or 0,
+            )
 
     task_group = get_task_group_for_job(
         archives,
@@ -947,9 +1019,10 @@ def handle_pending_query_jobs(
                 )
 
         for future in concurrent.futures.as_completed(futures):
-            job_id, num_archives_for_search, group_result_id = future.result()
+            job_id, num_archives_for_search, group_result_id, task_archive_sizes = future.result()
             job = active_jobs[job_id]
             with bound_contextvars(**_get_query_job_log_context_from_job(job)):
+                job.task_archive_sizes.update(task_archive_sizes)
                 job.current_sub_job_async_task_result = celery.result.GroupResult.restore(
                     group_result_id, app=app
                 )
@@ -1014,12 +1087,14 @@ async def handle_finished_search_job(
 
         with bound_contextvars(task_id=task_id):
             task_duration_histogram.record(task_result.duration)
+            archive_sizes = job.task_archive_sizes.pop(task_id, None)
             if not task_status == QueryTaskStatus.SUCCEEDED:
                 tasks_failed_counter.add(1)
                 new_job_status = QueryJobStatus.FAILED
                 logger.error("Search task failed.")
             else:
                 tasks_completed_counter.add(1)
+                _record_search_bytes_scanned(job, archive_sizes)
                 job.num_archives_searched += 1
                 logger.info("Search task succeeded in %s second(s).", task_result.duration)
 
@@ -1077,7 +1152,10 @@ async def handle_finished_search_job(
         duration=duration,
     ):
         job_duration_histogram.record(duration)
+
         if new_job_status == QueryJobStatus.SUCCEEDED:
+            uncompressed_bytes_scanned_histogram.record(job.uncompressed_bytes_scanned)
+            compressed_bytes_scanned_histogram.record(job.compressed_bytes_scanned)
             logger.info("Completed job.")
         elif reducer_failed:
             logger.error("Completed job with failing reducer.")
@@ -1499,6 +1577,8 @@ def _handle_new_search_job(
             num_tasks=0,
             duration=0,
         ):
+            uncompressed_bytes_scanned_histogram.record(0)
+            compressed_bytes_scanned_histogram.record(0)
             logger.info("No matching archives, skipping job.")
         return
 
