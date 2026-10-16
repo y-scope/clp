@@ -10,7 +10,6 @@ import subprocess
 import time
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from typing import Any
 
 from clp_py_utils.clp_config import (
@@ -49,8 +48,8 @@ from clp_py_utils.clp_config import (
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     SPIDER_COMPONENT_NAME,
-    SpiderScheduler,
-    SpiderSchedulerPolicy,
+    SpiderResourceGroupRoundRobin,
+    SpiderRoundRobin,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -605,11 +604,13 @@ class BaseController(ABC):
                 scheduler.em_registry.liveness_tracking_interval_ms
             ),
         }
-        env_vars |= _get_spider_scheduler_policy_env_vars(scheduler)
+        env_vars |= _get_spider_scheduler_policy_env_vars(scheduler.config)
 
         # Worker config
         env_vars |= {
-            "SPIDER_WORKER_REPLICAS": _str_or_none(worker.replicas),
+            "SPIDER_WORKER_REPLICAS": str(worker.pools.general.replicas),
+            "CLP_SPIDER_COMPRESSION_WORKER_REPLICAS": str(worker.pools.compression.replicas),
+            "CLP_SPIDER_QUERY_WORKER_REPLICAS": str(worker.pools.query.replicas),
             "SPIDER_WORKER_LOG_LEVEL": worker.log_level,
             "SPIDER_WORKER_CONNECTION_POOL_SIZE": _str_or_none(worker.connection_pool_size),
             "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _str_or_none(worker.scheduler_poll_wait_ms),
@@ -650,7 +651,42 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "CLP_SPIDER_RESOURCE_GROUP_PASSWORD": coordinator_config.resource_group_password,
+            "CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_query_coordinator(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the query coordinator component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUERY_COORDINATOR_COMPONENT_NAME
+        coordinator_config = self._clp_config.query_coordinator
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Runtime config
+        env_vars |= {
+            "CLP_QUERY_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
+        }
+
+        # Credentials
+        env_vars |= {
+            "CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
         }
 
         return env_vars
@@ -1547,31 +1583,27 @@ def _chown_recursively(
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
 
 
-def _get_spider_round_robin_scheduler_env_vars(scheduler: SpiderScheduler) -> EnvVarsDict:
+def _get_spider_round_robin_scheduler_env_vars(round_robin: SpiderRoundRobin) -> EnvVarsDict:
     """
-    :param scheduler:
+    :param round_robin:
     :return: Dictionary of environment variables necessary to tune the round-robin policy.
     """
-    round_robin = scheduler.round_robin
     return EnvVarsDict(
         {
             "SPIDER_SCHEDULER_ROUND_ROBIN_ACTIVE_JOB_QUEUE_CAPACITY": _str_or_none(
                 round_robin.active_job_queue_capacity
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
-                round_robin.cleanup_ready_task_capacity
+            "SPIDER_SCHEDULER_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
+                round_robin.dispatch_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.ready_task_capacity
             ),
             "SPIDER_SCHEDULER_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
                 round_robin.commit_ready_task_capacity
             ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
-                round_robin.dispatch_queue_capacity
-            ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": _str_or_none(
-                round_robin.finalizing_job_expiration_timeout_sec
-            ),
-            "SPIDER_SCHEDULER_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
-                round_robin.ready_task_capacity
+            "SPIDER_SCHEDULER_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.cleanup_ready_task_capacity
             ),
             "SPIDER_SCHEDULER_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
                 round_robin.storage_poll_timeout_ms
@@ -1579,31 +1611,63 @@ def _get_spider_round_robin_scheduler_env_vars(scheduler: SpiderScheduler) -> En
             "SPIDER_SCHEDULER_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
                 round_robin.tick_interval_ms
             ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": _str_or_none(
+                round_robin.finalizing_job_expiration_timeout_sec
+            ),
         }
     )
 
 
-_SPIDER_SCHEDULER_POLICY_ENV_GETTERS: dict[
-    SpiderSchedulerPolicy, Callable[[SpiderScheduler], EnvVarsDict]
-] = {
-    SpiderSchedulerPolicy.ROUND_ROBIN: _get_spider_round_robin_scheduler_env_vars,
-}
-
-
-def _get_spider_scheduler_policy_env_vars(scheduler: SpiderScheduler) -> EnvVarsDict:
+def _get_spider_resource_group_round_robin_scheduler_env_vars(
+    rg_round_robin: SpiderResourceGroupRoundRobin,
+) -> EnvVarsDict:
     """
-    :param scheduler:
-    :return: Dictionary of environment variables necessary to tune the policy selected by
-        `scheduler.policy`, or by `SpiderScheduler.DEFAULT_POLICY` if it's unset.
-    :raise NotImplementedError: If no getter is registered for the selected policy.
+    :param rg_round_robin:
+    :return: Dictionary of environment variables necessary to tune the resource-group round-robin
+        policy.
     """
-    policy = SpiderScheduler.DEFAULT_POLICY if scheduler.policy is None else scheduler.policy
-    get_env = _SPIDER_SCHEDULER_POLICY_ENV_GETTERS.get(policy)
-    if get_env is None:
-        msg = f"No environment getter is registered for Spider scheduler policy `{policy}`."
-        raise NotImplementedError(msg)
+    return EnvVarsDict(
+        {
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_ACTIVE_JOB_LIST_CAPACITY": _str_or_none(
+                rg_round_robin.active_job_list_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
+                rg_round_robin.dispatch_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.commit_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.cleanup_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
+                rg_round_robin.storage_poll_timeout_ms
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
+                rg_round_robin.tick_interval_ms
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": (
+                _str_or_none(rg_round_robin.finalizing_job_expiration_timeout_sec)
+            ),
+        }
+    )
 
-    return get_env(scheduler)
+
+def _get_spider_scheduler_policy_env_vars(
+    config: SpiderRoundRobin | SpiderResourceGroupRoundRobin,
+) -> EnvVarsDict:
+    """
+    :param config: The selected scheduler policy's config.
+    :return: Dictionary of environment variables necessary to tune the selected scheduler policy.
+    """
+    if isinstance(config, SpiderRoundRobin):
+        return _get_spider_round_robin_scheduler_env_vars(config)
+    if isinstance(config, SpiderResourceGroupRoundRobin):
+        return _get_spider_resource_group_round_robin_scheduler_env_vars(config)
+    raise NotImplementedError("unknown Spider scheduler policy")
 
 
 def _str_or_none(value: int | pathlib.Path | None) -> str | None:
