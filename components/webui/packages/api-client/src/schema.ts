@@ -148,8 +148,8 @@ export interface components {
              */
             buffer_results_in_mongodb?: boolean;
             /**
-             * Format: int64
-             * @description The size of each time bucket (in milliseconds) for count-by-time aggregation.
+             * Format: int32
+             * @description The positive size of each time bucket (in milliseconds) for count-by-time aggregation.
              *     When set, the job is submitted as a count-by-time aggregation job instead of a plain
              *     search job, and its results are always buffered in `MongoDB`.
              */
@@ -248,6 +248,42 @@ export interface operations {
                     "application/json": components["schemas"]["QueryResultsUri"];
                 };
             };
+            /** @description The request body is not valid JSON or could not be read. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The request body exceeds the configured size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The Content-Type header is missing or is not a JSON media type. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results and count_by_time_bucket_size_millisecs must be positive integers when non-null. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -273,6 +309,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The search job ID is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
             };
             /** @description No cancellable query job with the given ID was found. */
             404: {
@@ -324,6 +369,15 @@ export interface operations {
                     "text/event-stream": string;
                 };
             };
+            /** @description The search job ID or query parameters are invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -368,7 +422,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/plain": string;
+                };
             };
             500: {
                 headers: {

@@ -121,6 +121,16 @@ async fn health() -> String {
             description = "The URI to fetch the results of the submitted query.",
             example = json!({"query_results_uri":"query_results/1"})
         ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The request body is not valid JSON or could not be read."),
+        (status = PAYLOAD_TOO_LARGE, body = String, content_type = "text/plain",
+            description = "The request body exceeds the configured size limit."),
+        (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
+            description = "The Content-Type header is missing or is not a JSON media type."),
+        (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
+            description = "The JSON body contains missing or unknown fields, invalid types, or \
+                invalid values. max_num_results and count_by_time_bucket_size_millisecs must \
+                be positive integers when non-null."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -185,6 +195,8 @@ struct QueryResultsParams {
                 single line of the query result in JSON format.",
             example = r#"data: {"timestamp": 1633036800, "message": "Example log message"}\n"#
         ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The search job ID or query parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -239,6 +251,8 @@ async fn query_results(
             status = NOT_FOUND,
             description = "No cancellable query job with the given ID was found."
         ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The search job ID is invalid."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -292,7 +306,8 @@ async fn get_timestamp_column_names(
     params(CompressionUsageParams),
     responses(
         (status = OK, body = Vec<CompressionUsage>),
-        (status = BAD_REQUEST, description = "Invalid query parameters \
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "Invalid query parameters \
             (e.g., time_range_begin_millisecs > time_range_end_millisecs, \
             missing required fields)"),
         (status = INTERNAL_SERVER_ERROR)
@@ -392,6 +407,41 @@ mod tests {
             .expect("failed to read body")
             .to_bytes();
         String::from_utf8(bytes.to_vec()).expect("body is not utf-8")
+    }
+
+    #[tokio::test]
+    async fn reject_nonpositive_query_values() -> anyhow::Result<()> {
+        let app = axum::Router::new().route(
+            "/query",
+            axum::routing::post(|Json(_): Json<QueryConfig>| async { StatusCode::OK }),
+        );
+        for (field, value) in [
+            ("max_num_results", 0),
+            ("count_by_time_bucket_size_millisecs", 0),
+            ("count_by_time_bucket_size_millisecs", -1),
+        ] {
+            let mut body = serde_json::json!({"query_string": "*"});
+            body[field] = value.into();
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::post("/query")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body.to_string()))?,
+                )
+                .await?;
+            assert_eq!(
+                response.status(),
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{body}"
+            );
+            assert_eq!(
+                response.headers()["content-type"],
+                "text/plain; charset=utf-8"
+            );
+            assert!(get_body(response).await.contains(field), "{body}");
+        }
+        Ok(())
     }
 
     #[tokio::test]

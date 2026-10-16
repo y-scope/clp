@@ -209,11 +209,12 @@ pub struct QueryConfig {
     #[serde(default)]
     pub buffer_results_in_mongodb: bool,
 
-    /// The size of each time bucket (in milliseconds) for count-by-time aggregation.
+    /// The positive size of each time bucket (in milliseconds) for count-by-time aggregation.
     /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
     /// search job, and its results are always buffered in `MongoDB`.
     #[serde(default)]
-    pub count_by_time_bucket_size_millisecs: Option<i64>,
+    #[schema(value_type = Option<u32>, minimum = 1)]
+    pub count_by_time_bucket_size_millisecs: Option<NonZeroU32>,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
@@ -287,19 +288,10 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidInput`] if `count_by_time_bucket_size_millisecs` is set and is `<=
-    ///   0`.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
-        if let Some(bucket_size) = count_by_time_bucket_size
-            && bucket_size <= 0
-        {
-            return Err(ClientError::InvalidInput(
-                "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
-            ));
-        }
         let mut search_job_config: SearchJobConfig = query_config.into();
         if search_job_config.datasets.is_none() {
             search_job_config.datasets = match self.config.package.storage_engine {
@@ -309,7 +301,7 @@ impl Client {
         }
         if let Some(bucket_size) = count_by_time_bucket_size {
             search_job_config.aggregation_config = Some(AggregationConfig {
-                count_by_time_bucket_size: Some(bucket_size),
+                count_by_time_bucket_size: Some(i64::from(bucket_size.get())),
                 ..AggregationConfig::default()
             });
             // Aggregation results are always buffered in MongoDB.
