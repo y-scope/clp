@@ -1,6 +1,7 @@
 """Global pytest setup."""
 
 import datetime
+import os
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 
@@ -82,6 +83,27 @@ def pytest_report_header(config: pytest.Config) -> str:  # noqa: ARG001
     :return: A string containing the log directory path for display in the session header.
     """
     return f"Log directory for this test run: {get_test_log_dir()}"
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config,  # noqa: ARG001
+    items: list[pytest.Item],
+) -> None:
+    """
+    Skips tests marked `clpp_decomposition` unless `CLP_BUILD_CLPP_DECOMPOSITION=1`, signalling that
+    `clp-s` was built with `-DCLP_BUILD_CLPP_DECOMPOSITION=ON`.
+
+    :param config:
+    :param items:
+    """
+    if "1" == os.environ.get("CLP_BUILD_CLPP_DECOMPOSITION"):
+        return
+    skip_decomposition = pytest.mark.skip(
+        reason="Requires clp-s built with -DCLP_BUILD_CLPP_DECOMPOSITION=ON"
+    )
+    for item in items:
+        if "clpp_decomposition" in item.keywords:
+            item.add_marker(skip_decomposition)
 
 
 def pytest_report_collectionfinish(

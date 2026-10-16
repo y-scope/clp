@@ -8,28 +8,26 @@ only honoring the first `LogMessage` node in the schema.
 """
 
 from collections.abc import Iterator
-from pathlib import Path
 from typing import Any, Final
 
 import pytest
 
 from tests.binary_tests.clp_s_utils import (
     assert_dataset_roundtrip,
-    compress_dataset_with_clpp,
-    DECOMPOSITION_MARKS,
-    requires_decomposition,
+    clpp_archive_for,
+    ClppArchive,
     search,
 )
 from tests.utils.classes import (
     IntegrationTestPathConfig,
     SampleDataset,
 )
-from tests.utils.config import (
-    ClpCorePathConfig,
-    CompressionTestPathConfig,
-)
+from tests.utils.config import ClpCorePathConfig
 
 pytestmark = pytest.mark.core
+
+# Marks `pytest.param` cases that need clp-s built with decomposition support.
+_decomposed = pytest.mark.clpp_decomposition
 
 
 class _MultiMessage:
@@ -50,94 +48,60 @@ class _MultiMessage:
     shared_details_events: Final[int] = 2
 
 
-@pytest.fixture(scope="module", name="multimsg_test_paths")
-def multimsg_test_paths_fixture(
-    integration_test_path_config: IntegrationTestPathConfig,
-    json_multimsg: SampleDataset,
-) -> Iterator[CompressionTestPathConfig]:
-    """
-    Provides per-module test paths for the multi-message clp+ tests and cleans up on teardown.
-
-    :param integration_test_path_config:
-    :param json_multimsg:
-    :return: An iterator yielding the path configuration.
-    """
-    test_paths = CompressionTestPathConfig(
-        test_name=f"clpp-multimsg-{json_multimsg.dataset_name}",
-        logs_source_path=json_multimsg.logs_path,
-        integration_test_path_config=integration_test_path_config,
-    )
-    test_paths.clear_test_outputs()
-    yield test_paths
-    test_paths.clear_test_outputs()
-
-
 @pytest.fixture(scope="module", name="multimsg_archive")
 def multimsg_archive_fixture(
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
     json_multimsg: SampleDataset,
-    multimsg_test_paths: CompressionTestPathConfig,
-) -> Path:
+) -> Iterator[ClppArchive]:
     """
-    Compresses the `json_multimsg` dataset once with clp+, shared by all tests in this module.
+    Provides the `json_multimsg` dataset compressed with clp+, shared by this module's tests.
 
     :param clp_core_path_config:
     :param integration_test_path_config:
     :param json_multimsg:
-    :param multimsg_test_paths:
-    :return: The path to the compressed archive directory.
+    :return: An iterator yielding the compressed archive.
     """
-    compress_dataset_with_clpp(
-        clp_core_path_config,
-        integration_test_path_config,
-        json_multimsg,
-        multimsg_test_paths.compression_dir,
-        multimsg_test_paths.logs_source_path,
-    )
-    return multimsg_test_paths.compression_dir
+    with clpp_archive_for(
+        clp_core_path_config, integration_test_path_config, json_multimsg
+    ) as archive:
+        yield archive
 
 
 @pytest.mark.clpp
 def test_multimsg_roundtrip(
     clp_core_path_config: ClpCorePathConfig,
-    json_multimsg: SampleDataset,
-    multimsg_test_paths: CompressionTestPathConfig,
-    multimsg_archive: Path,
+    multimsg_archive: ClppArchive,
 ) -> None:
     """
     Validates that compressing and extracting an event with two unstructured fields is lossless.
 
     :param clp_core_path_config:
-    :param json_multimsg:
-    :param multimsg_test_paths:
     :param multimsg_archive:
     """
-    assert_dataset_roundtrip(
-        clp_core_path_config, json_multimsg, multimsg_archive, multimsg_test_paths.decompression_dir
-    )
+    assert_dataset_roundtrip(clp_core_path_config, multimsg_archive)
 
 
 @pytest.mark.clpp
 @pytest.mark.parametrize(
     ("query", "expected_count"),
     [
-        pytest.param('message: "*alpha*"', 2, id="message_alpha", marks=DECOMPOSITION_MARKS),
-        pytest.param('details: "*gamma*"', 1, id="details_gamma", marks=DECOMPOSITION_MARKS),
-        pytest.param('message: "*shared*"', 1, id="message_shared", marks=DECOMPOSITION_MARKS),
-        pytest.param('details: "*shared*"', 2, id="details_shared", marks=DECOMPOSITION_MARKS),
+        pytest.param('message: "*alpha*"', 2, id="message_alpha", marks=_decomposed),
+        pytest.param('details: "*gamma*"', 1, id="details_gamma", marks=_decomposed),
+        pytest.param('message: "*shared*"', 1, id="message_shared", marks=_decomposed),
+        pytest.param('details: "*shared*"', 2, id="details_shared", marks=_decomposed),
         pytest.param("details: *", 4, id="details_exists"),
         pytest.param(
             'message: "*alpha*" and details: "*shared*"',
             1,
             id="cross_field_and",
-            marks=DECOMPOSITION_MARKS,
+            marks=_decomposed,
         ),
     ],
 )
 def test_multimsg_search_scoping(
     clp_core_path_config: ClpCorePathConfig,
-    multimsg_archive: Path,
+    multimsg_archive: ClppArchive,
     query: str,
     expected_count: int,
 ) -> None:
@@ -149,7 +113,7 @@ def test_multimsg_search_scoping(
     :param query: KQL query string.
     :param expected_count: Expected number of matching events.
     """
-    results = search(clp_core_path_config, multimsg_archive, query)
+    results = search(clp_core_path_config, multimsg_archive.path, query)
     assert len(results) == expected_count, (
         f"Query '{query}' expected {expected_count} results, got {len(results)}."
     )
@@ -157,10 +121,9 @@ def test_multimsg_search_scoping(
 
 @pytest.mark.clpp
 @pytest.mark.clpp_decomposition
-@requires_decomposition
 def test_multimsg_shared_shape_disambiguation(
     clp_core_path_config: ClpCorePathConfig,
-    multimsg_archive: Path,
+    multimsg_archive: ClppArchive,
 ) -> None:
     """
     Validates that two sibling fields with the same shape are attributed to the correct field.
@@ -168,11 +131,11 @@ def test_multimsg_shared_shape_disambiguation(
     Events 1 and 4 both contain `message`/`details` with shape `shared %int_fallback% text`. A
     query on `message` must match only the message occurrences, and the same for `details`.
     """
-    message_results = search(clp_core_path_config, multimsg_archive, 'message: "*shared*"')
+    message_results = search(clp_core_path_config, multimsg_archive.path, 'message: "*shared*"')
     assert 1 == len(message_results), f"Expected one `message` match, got {len(message_results)}."
     assert message_results[0]["message"]["text"] == "shared 333 text"
 
-    details_results = search(clp_core_path_config, multimsg_archive, 'details: "*shared*"')
+    details_results = search(clp_core_path_config, multimsg_archive.path, 'details: "*shared*"')
     assert _MultiMessage.shared_details_events == len(details_results), (
         f"Expected {_MultiMessage.shared_details_events} `details` matches, "
         f"got {len(details_results)}."
@@ -186,7 +149,7 @@ def test_multimsg_shared_shape_disambiguation(
 @pytest.mark.clpp
 def test_multimsg_same_parent_rule_name_both_fields(
     clp_core_path_config: ClpCorePathConfig,
-    multimsg_archive: Path,
+    multimsg_archive: ClppArchive,
 ) -> None:
     """
     Validates that a parent rule present in both fields is not merged across the sibling scopes.
@@ -197,7 +160,7 @@ def test_multimsg_same_parent_rule_name_both_fields(
     """
     message_results = search(
         clp_core_path_config,
-        multimsg_archive,
+        multimsg_archive.path,
         "message.key_value.int_value: 10",
         ["decompose(message)"],
     )
@@ -206,7 +169,7 @@ def test_multimsg_same_parent_rule_name_both_fields(
 
     details_results = search(
         clp_core_path_config,
-        multimsg_archive,
+        multimsg_archive.path,
         "details.key_value.int_value: 20",
         ["decompose(details)"],
     )
@@ -214,19 +177,18 @@ def test_multimsg_same_parent_rule_name_both_fields(
     assert details_results[0]["details"]["key_value"] == [{"key": ["count"], "int_value": [20]}]
 
     assert 0 == len(
-        search(clp_core_path_config, multimsg_archive, "message.key_value.int_value: 20")
+        search(clp_core_path_config, multimsg_archive.path, "message.key_value.int_value: 20")
     ), "`message` unexpectedly matched the `details` value."
     assert 0 == len(
-        search(clp_core_path_config, multimsg_archive, "details.key_value.int_value: 10")
+        search(clp_core_path_config, multimsg_archive.path, "details.key_value.int_value: 10")
     ), "`details` unexpectedly matched the `message` value."
 
 
 @pytest.mark.clpp
 @pytest.mark.clpp_decomposition
-@requires_decomposition
 def test_multimsg_negation_scoped_to_field(
     clp_core_path_config: ClpCorePathConfig,
-    multimsg_archive: Path,
+    multimsg_archive: ClppArchive,
 ) -> None:
     """
     Validates that negating a value query excludes events based only on the queried field.
@@ -234,10 +196,10 @@ def test_multimsg_negation_scoped_to_field(
     :param clp_core_path_config:
     :param multimsg_archive:
     """
-    total_details = len(search(clp_core_path_config, multimsg_archive, "details: *"))
+    total_details = len(search(clp_core_path_config, multimsg_archive.path, "details: *"))
     query = 'not details: "*shared*"'
 
-    results = search(clp_core_path_config, multimsg_archive, query)
+    results = search(clp_core_path_config, multimsg_archive.path, query)
     assert len(results) == total_details - _MultiMessage.shared_details_events, (
         f"Query '{query}' expected {total_details - _MultiMessage.shared_details_events} results, "
         f"got {len(results)}."
@@ -256,7 +218,7 @@ def test_multimsg_negation_scoped_to_field(
 )
 def test_multimsg_shape_filter_scoping(
     clp_core_path_config: ClpCorePathConfig,
-    multimsg_archive: Path,
+    multimsg_archive: ClppArchive,
     query: str,
     expected_count: int,
 ) -> None:
@@ -268,7 +230,7 @@ def test_multimsg_shape_filter_scoping(
     :param query: KQL shape query string.
     :param expected_count: Expected number of matching events.
     """
-    results = search(clp_core_path_config, multimsg_archive, query)
+    results = search(clp_core_path_config, multimsg_archive.path, query)
     assert len(results) == expected_count, (
         f"Query '{query}' expected {expected_count} results, got {len(results)}."
     )
@@ -276,7 +238,6 @@ def test_multimsg_shape_filter_scoping(
 
 @pytest.mark.clpp
 @pytest.mark.clpp_decomposition
-@requires_decomposition
 @pytest.mark.parametrize(
     ("query", "projection", "expected"),
     [
@@ -302,7 +263,7 @@ def test_multimsg_shape_filter_scoping(
 )
 def test_multimsg_projection_scoping(
     clp_core_path_config: ClpCorePathConfig,
-    multimsg_archive: Path,
+    multimsg_archive: ClppArchive,
     query: str,
     projection: list[str],
     expected: dict[str, Any],
@@ -316,7 +277,7 @@ def test_multimsg_projection_scoping(
     :param projection: Column specifiers passed to `--projection`.
     :param expected: Expected `message`/`details` objects.
     """
-    results = search(clp_core_path_config, multimsg_archive, query, projection)
+    results = search(clp_core_path_config, multimsg_archive.path, query, projection)
     assert 1 == len(results), f"Expected one result, got {len(results)}."
     assert results[0]["message"] == expected["message"], (
         f"Query '{query}' produced unexpected `message`.\n"

@@ -4,7 +4,6 @@ over structurized log messages, projection output structure, and value encoding 
 """
 
 from collections.abc import Iterator, Sequence
-from pathlib import Path
 from typing import Any, Final, NamedTuple
 
 import pytest
@@ -12,9 +11,8 @@ import pytest
 from tests.binary_tests.clp_s_utils import (
     assert_dataset_roundtrip,
     build_search_cmd,
-    compress_dataset_with_clpp,
-    DECOMPOSITION_MARKS,
-    requires_decomposition,
+    clpp_archive_for,
+    ClppArchive,
     search,
 )
 from tests.utils.classes import (
@@ -22,12 +20,12 @@ from tests.utils.classes import (
     IntegrationTestPathConfig,
     SampleDataset,
 )
-from tests.utils.config import (
-    ClpCorePathConfig,
-    CompressionTestPathConfig,
-)
+from tests.utils.config import ClpCorePathConfig
 
 pytestmark = pytest.mark.core
+
+# Marks `pytest.param` cases that need clp-s built with decomposition support.
+_decomposed = pytest.mark.clpp_decomposition
 
 LeafValueT = Sequence[float | int | str]
 MatchT = dict[str, LeafValueT | str]
@@ -144,86 +142,24 @@ class _MixedKvMatch:
     ]
 
 
-def _make_test_paths(
-    integration_test_path_config: IntegrationTestPathConfig,
-    dataset: SampleDataset,
-) -> CompressionTestPathConfig:
-    """
-    Creates per-module test paths for the given dataset.
-
-    :param integration_test_path_config:
-    :param dataset:
-    :return: The created path configuration.
-    """
-    return CompressionTestPathConfig(
-        test_name=f"clpp-{dataset.dataset_name}",
-        logs_source_path=dataset.logs_path,
-        integration_test_path_config=integration_test_path_config,
-    )
-
-
-@pytest.fixture(scope="module", name="clpp_test_paths")
-def clpp_test_paths_fixture(
-    integration_test_path_config: IntegrationTestPathConfig,
-    json_multifile: SampleDataset,
-) -> Iterator[CompressionTestPathConfig]:
-    """
-    Provides test paths for clp+ tests on the `json_multifile` dataset and cleans up outputs on
-    teardown.
-
-    :param integration_test_path_config:
-    :param json_multifile:
-    :return: An iterator yielding the path configuration.
-    """
-    test_paths = _make_test_paths(integration_test_path_config, json_multifile)
-    test_paths.clear_test_outputs()
-    yield test_paths
-    test_paths.clear_test_outputs()
-
-
-@pytest.fixture(scope="module", name="clpp_synthetic_test_paths")
-def clpp_synthetic_test_paths_fixture(
-    integration_test_path_config: IntegrationTestPathConfig,
-    json_clpp_synthetic: SampleDataset,
-) -> Iterator[CompressionTestPathConfig]:
-    """
-    Provides test paths for clp+ tests on the `json_clpp_synthetic` dataset and cleans up outputs
-    on teardown.
-
-    :param integration_test_path_config:
-    :param json_clpp_synthetic:
-    :return: An iterator yielding the path configuration.
-    """
-    test_paths = _make_test_paths(integration_test_path_config, json_clpp_synthetic)
-    test_paths.clear_test_outputs()
-    yield test_paths
-    test_paths.clear_test_outputs()
-
-
 @pytest.fixture(scope="module", name="clpp_archive")
 def clpp_archive_fixture(
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
     json_multifile: SampleDataset,
-    clpp_test_paths: CompressionTestPathConfig,
-) -> Path:
+) -> Iterator[ClppArchive]:
     """
-    Compresses the `json_multifile` dataset with clp+; the module-scoped archive is shared by the
-    tests that request this fixture.
+    Provides the `json_multifile` dataset compressed with clp+, shared by this module's tests.
 
     :param clp_core_path_config:
     :param integration_test_path_config:
     :param json_multifile:
-    :param clpp_test_paths:
-    :return: The path to the compressed archive directory.
+    :return: An iterator yielding the compressed archive.
     """
-    compress_dataset_with_clpp(
-        clp_core_path_config,
-        integration_test_path_config,
-        json_multifile,
-        clpp_test_paths.compression_dir,
-    )
-    return clpp_test_paths.compression_dir
+    with clpp_archive_for(
+        clp_core_path_config, integration_test_path_config, json_multifile
+    ) as archive:
+        yield archive
 
 
 @pytest.fixture(scope="module", name="clpp_synthetic_archive")
@@ -231,45 +167,33 @@ def clpp_synthetic_archive_fixture(
     clp_core_path_config: ClpCorePathConfig,
     integration_test_path_config: IntegrationTestPathConfig,
     json_clpp_synthetic: SampleDataset,
-    clpp_synthetic_test_paths: CompressionTestPathConfig,
-) -> Path:
+) -> Iterator[ClppArchive]:
     """
-    Compresses the `json_clpp_synthetic` dataset with clp+; the module-scoped archive is shared by
-    the tests that request this fixture.
+    Provides the `json_clpp_synthetic` dataset compressed with clp+, shared by this module's tests.
 
     :param clp_core_path_config:
     :param integration_test_path_config:
     :param json_clpp_synthetic:
-    :param clpp_synthetic_test_paths:
-    :return: The path to the compressed archive directory.
+    :return: An iterator yielding the compressed archive.
     """
-    compress_dataset_with_clpp(
-        clp_core_path_config,
-        integration_test_path_config,
-        json_clpp_synthetic,
-        clpp_synthetic_test_paths.compression_dir,
-    )
-    return clpp_synthetic_test_paths.compression_dir
+    with clpp_archive_for(
+        clp_core_path_config, integration_test_path_config, json_clpp_synthetic
+    ) as archive:
+        yield archive
 
 
 @pytest.mark.clpp
 def test_clpp_roundtrip(
     clp_core_path_config: ClpCorePathConfig,
-    json_multifile: SampleDataset,
-    clpp_test_paths: CompressionTestPathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
 ) -> None:
     """
     Validates that clp+ compression and extraction are lossless (allowing key reordering).
 
     :param clp_core_path_config:
-    :param json_multifile:
-    :param clpp_test_paths:
     :param clpp_archive:
     """
-    assert_dataset_roundtrip(
-        clp_core_path_config, json_multifile, clpp_archive, clpp_test_paths.decompression_dir
-    )
+    assert_dataset_roundtrip(clp_core_path_config, clpp_archive)
 
 
 _DURATION_EVENT_TEXT: Final[str] = (
@@ -291,19 +215,19 @@ _DURATION_EVENT_TEXT: Final[str] = (
             'message.duration: "13.4s"',
             _DURATION_EVENT_TEXT,
             id="parent_rule",
-            marks=DECOMPOSITION_MARKS,
+            marks=_decomposed,
         ),
         pytest.param(
             'message: "*Adjusted breaker*"',
             "[inflight_requests] Adjusted breaker by [0] bytes, now [0]",
             id="full_message",
-            marks=DECOMPOSITION_MARKS,
+            marks=_decomposed,
         ),
     ],
 )
 def test_clpp_search_single_message(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
     query: str,
     expected_text: str,
 ) -> None:
@@ -315,7 +239,7 @@ def test_clpp_search_single_message(
     :param query: The query expected to match exactly one event.
     :param expected_text: The expected reconstructed text of the event's message.
     """
-    results = search(clp_core_path_config, clpp_archive, query)
+    results = search(clp_core_path_config, clpp_archive.path, query)
     assert len(results) == 1, f"Query '{query}' expected 1 result, got {len(results)}."
 
     actual_message = results[0]["message"]["text"]
@@ -328,10 +252,9 @@ def test_clpp_search_single_message(
 
 @pytest.mark.clpp
 @pytest.mark.clpp_decomposition
-@requires_decomposition
 def test_clpp_search_no_match(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
 ) -> None:
     """
     Validates that a wildcard query with no matching tokens returns zero results.
@@ -341,7 +264,7 @@ def test_clpp_search_no_match(
     """
     query = 'message: "*ZZZ_NO_SUCH_TOKEN*"'
 
-    results = search(clp_core_path_config, clpp_archive, query)
+    results = search(clp_core_path_config, clpp_archive.path, query)
     assert len(results) == 0, f"Query '{query}' expected 0 results, got {len(results)}."
 
 
@@ -359,7 +282,6 @@ class _NegationCase(NamedTuple):
 
 @pytest.mark.clpp
 @pytest.mark.clpp_decomposition
-@requires_decomposition
 @pytest.mark.parametrize(
     "case",
     [
@@ -384,7 +306,7 @@ class _NegationCase(NamedTuple):
 )
 def test_clpp_search_negated(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
     case: _NegationCase,
 ) -> None:
     """
@@ -395,8 +317,8 @@ def test_clpp_search_negated(
     :param clpp_archive:
     :param case:
     """
-    total_count = len(search(clp_core_path_config, clpp_archive, case.scope_query))
-    results = search(clp_core_path_config, clpp_archive, f"not {case.query}")
+    total_count = len(search(clp_core_path_config, clpp_archive.path, case.scope_query))
+    results = search(clp_core_path_config, clpp_archive.path, f"not {case.query}")
     assert len(results) == total_count - case.matched_count, (
         f"Negated query of '{case.query}' expected {total_count - case.matched_count} results,"
         f" got {len(results)}."
@@ -410,7 +332,6 @@ def test_clpp_search_negated(
 
 @pytest.mark.clpp
 @pytest.mark.clpp_decomposition
-@requires_decomposition
 @pytest.mark.parametrize(
     ("query", "scope_query", "matches"),
     [
@@ -448,7 +369,7 @@ def test_clpp_search_negated(
 )
 def test_clpp_search_occurrence_precision(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
     query: str,
     scope_query: str,
     matches: bool,
@@ -465,7 +386,7 @@ def test_clpp_search_occurrence_precision(
     :param matches: Whether `query` should match the `_InflightMatch` event.
     """
     expected_count = 1 if matches else 0
-    results = search(clp_core_path_config, clpp_archive, query)
+    results = search(clp_core_path_config, clpp_archive.path, query)
     assert len(results) == expected_count, (
         f"Query '{query}' expected {expected_count} results, got {len(results)}."
     )
@@ -473,9 +394,9 @@ def test_clpp_search_occurrence_precision(
         f"Query '{query}' returned a non-matching message: {results}."
     )
 
-    total_count = len(search(clp_core_path_config, clpp_archive, scope_query))
+    total_count = len(search(clp_core_path_config, clpp_archive.path, scope_query))
     negated_query = f"not {query}"
-    negated_results = search(clp_core_path_config, clpp_archive, negated_query)
+    negated_results = search(clp_core_path_config, clpp_archive.path, negated_query)
     assert len(negated_results) == total_count - expected_count, (
         f"Query '{negated_query}' expected {total_count - expected_count} results,"
         f" got {len(negated_results)}."
@@ -564,7 +485,7 @@ def test_clpp_search_occurrence_precision(
 )
 def test_clpp_projection(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
     projection: list[str] | None,
     expected_message: Any,
 ) -> None:
@@ -576,7 +497,7 @@ def test_clpp_projection(
     :param projection: Column specifiers to pass to `--projection`, or `None` for default behavior.
     :param expected_message: Expected JSON `message` object depending on the projection.
     """
-    results = search(clp_core_path_config, clpp_archive, _InflightMatch.query, projection)
+    results = search(clp_core_path_config, clpp_archive.path, _InflightMatch.query, projection)
     assert len(results) == 1, (
         f"Query '{_InflightMatch.query}' expected 1 result, got {len(results)}."
     )
@@ -598,7 +519,7 @@ def test_clpp_projection(
 )
 def test_clpp_projection_error(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
     projection: list[str],
 ) -> None:
     """
@@ -610,7 +531,7 @@ def test_clpp_projection_error(
         via `--projection`.
     """
     search_cmd = build_search_cmd(
-        clp_core_path_config, clpp_archive, _InflightMatch.query, projection
+        clp_core_path_config, clpp_archive.path, _InflightMatch.query, projection
     )
     action = ClpAction.from_cmd(search_cmd)
     assert 0 != action.completed_proc.returncode, (
@@ -655,7 +576,7 @@ def test_clpp_projection_error(
 )
 def test_clpp_projection_repeated_parent_rule(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_synthetic_archive: Path,
+    clpp_synthetic_archive: ClppArchive,
     projection: list[str],
     expected_message: Any,
 ) -> None:
@@ -668,7 +589,9 @@ def test_clpp_projection_repeated_parent_rule(
     :param projection: Column specifiers to pass to `--projection`.
     :param expected_message: Expected JSON `message` object depending on the projection.
     """
-    results = search(clp_core_path_config, clpp_synthetic_archive, _MixedKvMatch.query, projection)
+    results = search(
+        clp_core_path_config, clpp_synthetic_archive.path, _MixedKvMatch.query, projection
+    )
     assert len(results) == _MixedKvMatch.result_count, (
         f"Query '{_MixedKvMatch.query}' expected {_MixedKvMatch.result_count} results,"
         f" got {len(results)}."
@@ -696,7 +619,7 @@ def test_clpp_projection_repeated_parent_rule(
 )
 def test_clpp_encoding_range_query(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
     rule_name: str,
     lower_bound: float,
     upper_bound: float,
@@ -712,7 +635,7 @@ def test_clpp_encoding_range_query(
     :param upper_bound: Exclusive upper bound of the range query.
     """
     query = f"message.{rule_name} > {lower_bound} and message.{rule_name} < {upper_bound}"
-    results = search(clp_core_path_config, clpp_archive, query)
+    results = search(clp_core_path_config, clpp_archive.path, query)
     assert len(results) == _DiskMatch.result_count, (
         f"Query '{query}' expected {_DiskMatch.result_count} results, got {len(results)}."
     )
@@ -721,7 +644,7 @@ def test_clpp_encoding_range_query(
 @pytest.mark.clpp
 def test_clpp_encoding_decompose(
     clp_core_path_config: ClpCorePathConfig,
-    clpp_archive: Path,
+    clpp_archive: ClppArchive,
 ) -> None:
     """
     Validates that decomposed output contains native JSON numbers (not strings) for encoded
@@ -731,7 +654,7 @@ def test_clpp_encoding_decompose(
     :param clpp_archive:
     """
     query = f"message.{_DiskMatch.int_rule_name}: {_DiskMatch.int_value}"
-    results = search(clp_core_path_config, clpp_archive, query, ["decompose(message)"])
+    results = search(clp_core_path_config, clpp_archive.path, query, ["decompose(message)"])
     assert len(results) == _DiskMatch.result_count, (
         f"Query '{query}' expected {_DiskMatch.result_count} results, got {len(results)}."
     )

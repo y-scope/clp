@@ -7,28 +7,17 @@ parsing specification to `compress` selects `--flavour clpp`.
 """
 
 import json
-import os
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
 import pytest
 
 from tests.utils.classes import ClpAction, IntegrationTestPathConfig, SampleDataset
-from tests.utils.config import ClpCorePathConfig
+from tests.utils.config import ClpCorePathConfig, CompressionTestPathConfig
 from tests.utils.fs_validation import is_json_file_structurally_equal
-
-#: Whether `clp-s` was built with `-DCLP_BUILD_CLPP_DECOMPOSITION=ON` (signalled via env var).
-DECOMPOSITION_SUPPORTED: Final[bool] = os.environ.get("CLP_BUILD_CLPP_DECOMPOSITION") == "1"
-
-#: Skips a test unless `clp-s` was built with decomposition support.
-requires_decomposition: Final = pytest.mark.skipif(
-    not DECOMPOSITION_SUPPORTED,
-    reason="Requires clp-s built with -DCLP_BUILD_CLPP_DECOMPOSITION=ON",
-)
-
-#: Marks for `pytest.param` cases that run decomposed clpp queries and so require the opt-in build.
-#: Whole test functions use `@pytest.mark.clpp_decomposition` and `@requires_decomposition`.
-DECOMPOSITION_MARKS: Final = [pytest.mark.clpp_decomposition, requires_decomposition]
 
 _PARSING_SPEC_PATH_FROM_REPO_ROOT: Final[str] = (
     "components/package-template/src/etc/parsing-spec.template.txt"
@@ -81,16 +70,14 @@ def compress_dataset_with_clpp(
     integration_test_path_config: IntegrationTestPathConfig,
     dataset: SampleDataset,
     archives_dir: Path,
-    input_path: Path | None = None,
 ) -> None:
     """
-    Compresses a dataset with the clpp flavour, keyed on the dataset's timestamp key.
+    Compresses a dataset's logs with the clpp flavour, keyed on the dataset's timestamp key.
 
     :param clp_core_path_config:
     :param integration_test_path_config:
     :param dataset:
     :param archives_dir:
-    :param input_path: The input to compress; defaults to the dataset's logs directory.
     """
     timestamp_key = dataset.metadata.timestamp_key
     if timestamp_key is None:
@@ -98,10 +85,49 @@ def compress_dataset_with_clpp(
     compress(
         clp_core_path_config,
         archives_dir,
-        dataset.logs_path if input_path is None else input_path,
+        dataset.logs_path,
         timestamp_key=timestamp_key,
         parsing_spec_path=get_parsing_spec_path(integration_test_path_config),
     )
+
+
+@dataclass(frozen=True)
+class ClppArchive:
+    """A dataset compressed with the clpp flavour, plus a scratch directory for extracting it."""
+
+    dataset: SampleDataset
+    path: Path
+    decompression_dir: Path
+
+
+@contextmanager
+def clpp_archive_for(
+    clp_core_path_config: ClpCorePathConfig,
+    integration_test_path_config: IntegrationTestPathConfig,
+    dataset: SampleDataset,
+) -> Iterator[ClppArchive]:
+    """
+    Compresses `dataset` with the clpp flavour into fresh test output directories, removing them on
+    exit. Intended to back module-scoped fixtures so the archive is shared across a module's tests.
+
+    :param clp_core_path_config:
+    :param integration_test_path_config:
+    :param dataset:
+    :return: An iterator yielding the compressed archive.
+    """
+    test_paths = CompressionTestPathConfig(
+        test_name=f"clpp-{dataset.dataset_name}",
+        logs_source_path=dataset.logs_path,
+        integration_test_path_config=integration_test_path_config,
+    )
+    test_paths.clear_test_outputs()
+    try:
+        compress_dataset_with_clpp(
+            clp_core_path_config, integration_test_path_config, dataset, test_paths.compression_dir
+        )
+        yield ClppArchive(dataset, test_paths.compression_dir, test_paths.decompression_dir)
+    finally:
+        test_paths.clear_test_outputs()
 
 
 def extract(
@@ -126,22 +152,17 @@ def extract(
     _run_and_verify(cmd)
 
 
-def assert_dataset_roundtrip(
-    clp_core_path_config: ClpCorePathConfig,
-    dataset: SampleDataset,
-    archive_path: Path,
-    output_dir: Path,
-) -> None:
+def assert_dataset_roundtrip(clp_core_path_config: ClpCorePathConfig, archive: ClppArchive) -> None:
     """
-    Extracts `archive_path` in log order and asserts the result is structurally equal (i.e., equal
-    up to JSON key order) to the dataset's files concatenated in metadata order.
+    Extracts `archive` in log order and asserts the result is structurally equal (i.e., equal up to
+    JSON key order) to the dataset's files concatenated in metadata order.
 
     :param clp_core_path_config:
-    :param dataset:
-    :param archive_path:
-    :param output_dir:
+    :param archive:
     """
-    extract(clp_core_path_config, archive_path, output_dir, ordered=True)
+    dataset = archive.dataset
+    output_dir = archive.decompression_dir
+    extract(clp_core_path_config, archive.path, output_dir, ordered=True)
 
     extracted_paths = list(output_dir.glob("*.jsonl"))
     assert 1 == len(extracted_paths), f"Expected one output file, got: {extracted_paths}"
