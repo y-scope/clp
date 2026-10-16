@@ -117,11 +117,14 @@ public:
     [[nodiscard]] auto get_node_mask(mpt_node_id_t node_id) const -> NodeMask;
 
     /**
-     * Checks whether a schema node's value should be emitted.
-     * @param node_id The schema node ID to check.
+     * Checks whether a schema node's value should be emitted. In ReturnAllColumns mode only
+     * LogMessage nodes emit their value, since their reconstructed text covers every node nested
+     * within them. Otherwise a node emits its value when it is projected without `shape()` or
+     * `decompose()`.
+     * @param node The schema node to check.
      * @return Whether the node's value should be emitted.
      */
-    [[nodiscard]] auto should_emit_value(mpt_node_id_t node_id) const -> bool;
+    [[nodiscard]] auto should_emit_value(SchemaNode const& node) const -> bool;
 
     /**
      * Checks whether a LogMessage or ParentRule schema node has any projected descendant (i.e. a
@@ -130,6 +133,15 @@ public:
      * @return Whether at least one descendant leaf of the node is projected.
      */
     [[nodiscard]] auto has_projected_descendant(mpt_node_id_t node_id) const -> bool;
+
+    /**
+     * Checks whether the projection outputs anything within a LogMessage or ParentRule node besides
+     * the reconstructed text (i.e. `shape()` or `decompose()` applied to the node, or any column
+     * nested under it).
+     * @param node_id The LogMessage or ParentRule schema node ID to check.
+     * @return Whether the node has a nested projection.
+     */
+    [[nodiscard]] auto has_nested_projection(mpt_node_id_t node_id) const -> bool;
 
     /**
      * Resolves all columns for the purpose of projection. This key resolution implementation is
@@ -152,13 +164,6 @@ public:
      */
     [[nodiscard]] auto matches_node(mpt_node_id_t node_id) const -> bool {
         return Mode::ReturnAllColumns == m_projection_mode || m_matching_nodes.contains(node_id);
-    }
-
-    /**
-     * @return Whether the projection is in ReturnAllColumns mode.
-     */
-    [[nodiscard]] auto is_return_all_columns() const -> bool {
-        return Mode::ReturnAllColumns == m_projection_mode;
     }
 
 private:

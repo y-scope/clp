@@ -60,14 +60,24 @@ auto Projection::get_node_mask(mpt_node_id_t node_id) const -> NodeMask {
     return it->second;
 }
 
-auto Projection::should_emit_value(mpt_node_id_t node_id) const -> bool {
+auto Projection::should_emit_value(SchemaNode const& node) const -> bool {
+    if (Mode::ReturnAllColumns == m_projection_mode) {
+        return NodeType::LogMessage == node.get_type();
+    }
+    auto const node_id{node.get_id()};
     auto const mask{get_node_mask(node_id)};
-    return matches_node(node_id)
+    return m_matching_nodes.contains(node_id)
            && (mask.has(NodeMask::Mode::Value) || mask.has(NodeMask::Mode::Default));
 }
 
 auto Projection::has_projected_descendant(mpt_node_id_t node_id) const -> bool {
     return m_nodes_with_projected_descendants.contains(node_id);
+}
+
+auto Projection::has_nested_projection(mpt_node_id_t node_id) const -> bool {
+    return is_projected_as(node_id, NodeMask::Mode::Shape)
+           || is_projected_as(node_id, NodeMask::Mode::Decompose)
+           || has_projected_descendant(node_id);
 }
 
 auto Projection::add_projection(mpt_node_id_t node_id, NodeMask::Mode mode) -> void {

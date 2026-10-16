@@ -116,12 +116,11 @@ projection-only; it cannot be used as a filter.
 
 ### Output format
 
-A CLP+ log message (or parent rule match) is emitted as a bare string holding its reconstructed
-original text, unless something *inside* it is projected — `shape()` or `decompose()` on it, or a
-column nested under it. In that case it is emitted as a JSON object, and which sub-keys appear
-depends on what you project:
+A CLP+ log message (or parent rule match) is emitted as a JSON object whose fields each come from a
+projection. If its text is the only field, it is emitted as a bare string instead of an object.
 
-* `text` is the reconstructed original text.
+* `text` is the reconstructed original text. It is present when the message (or parent rule) itself
+  is projected, or when there is no projection.
 * `shape` is the log shape, or the rule shape when projected at a parent rule.
 * Leaf rule matches are one array per leaf rule, since a leaf rule may match several times per log
   message.
@@ -146,13 +145,18 @@ The examples below use a log message with the log shape
 | `message.block_id decompose(message.block_id)` | `{"message": {"block_id": [{"text": "...", "shape": "...", "num": [...], "gen_stamp": [...]}]}}`         |
 | `message decompose(message.block_id)`          | `{"message": {"text": "...", "block_id": [{"shape": "...", "num": [...], "gen_stamp": [...]}]}}`         |
 
-Two noteworthy details:
+Three noteworthy details:
 
 * **`decompose()` applies only where you put it.** `decompose(message.block_id)` outputs `block_id`
   and everything under it, but does not add `message.text` or `message.shape`, and does not output
   other parent rules in the log message. To get the text as well, project both, as in the last row.
 * **`decompose()` reaches all the way down.** Applied to a log message, it emits every leaf rule
   match at every nesting depth, cascading through nested parent rules.
+* **Output shape is decided per query, not per result.** Whether a message is a string or an object
+  depends on the columns you project, not on each event's contents. With
+  `message message.block_id`, an event that has no `block_id` match is still emitted as
+  `{"message": {"text": "..."}}`, so every result of a query has the same structure. (A projected
+  column that exists nowhere in the archive adds no field.)
 
 ### Examples
 

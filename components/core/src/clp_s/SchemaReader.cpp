@@ -979,8 +979,7 @@ auto SchemaReader::collect_scope_entries(
                 if (unordered_node_type_consumes_column(node.get_type())) {
                     bool const should_emit{
                             ancestor_decomposed
-                            || (m_projection && false == m_projection->is_return_all_columns()
-                                && m_projection->matches_node(cur_node_id))
+                            || (m_projection && m_projection->should_emit_value(node))
                             || (m_projection
                                 && m_projection->is_projected_as(
                                         scope_node_id,
@@ -1037,27 +1036,15 @@ auto SchemaReader::emit_parent_rule_arrays(
                 m_projection ? m_projection->get_node_mask(parent_rule_id)
                              : search::Projection::NodeMask{}
         };
-        bool const emit_text{
-                m_projection && false == m_projection->is_return_all_columns()
-                && m_projection->should_emit_value(parent_rule_id)
+        auto const& parent_rule_node{m_global_schema_tree->get_node(parent_rule_id)};
+        bool const emit_text{m_projection && m_projection->should_emit_value(parent_rule_node)};
+        bool const has_other_fields{
+                ancestor_decomposed
+                || (m_projection && m_projection->has_nested_projection(parent_rule_id))
         };
-        bool const has_projected_descendant{
-                m_projection && false == m_projection->is_return_all_columns()
-                && m_projection->has_projected_descendant(parent_rule_id)
-        };
-        bool const should_include{
-                ancestor_decomposed || emit_text
-                || parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)
-                || has_projected_descendant
-        };
-        if (false == should_include) {
+        if (false == emit_text && false == has_other_fields) {
             continue;
         }
-        bool const text_only{
-                emit_text && false == ancestor_decomposed
-                && false == parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)
-                && false == has_projected_descendant
-        };
 
         m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
         m_json_serializer.add_special_key(
@@ -1070,15 +1057,15 @@ auto SchemaReader::emit_parent_rule_arrays(
         auto const& occurrences{scope.parent_rule_occurrences.at(parent_rule_id)};
         for (size_t occurrence_idx{0}; occurrence_idx < occurrences.size(); ++occurrence_idx) {
             auto const& occurrence{occurrences.at(occurrence_idx)};
-            if (text_only) {
-                m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeValue);
-                m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(
+            if (false == has_other_fields) {
+                YSTDLIB_ERROR_HANDLING_TRYV(emit_reconstructed_text(
+                        JsonSerializer::Op::AddReconstructedLogShapeValue,
                         log_shape_id,
                         parent_rule_column_name,
                         occurrence.start_column_reader_idx,
                         occurrence.sub_schema,
                         occurrence_idx
-                )));
+                ));
                 continue;
             }
 
@@ -1086,14 +1073,14 @@ auto SchemaReader::emit_parent_rule_arrays(
 
             if (emit_text) {
                 m_json_serializer.add_special_key(cTextKey);
-                m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-                m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(
+                YSTDLIB_ERROR_HANDLING_TRYV(emit_reconstructed_text(
+                        JsonSerializer::Op::AddReconstructedLogShapeField,
                         log_shape_id,
                         parent_rule_column_name,
                         occurrence.start_column_reader_idx,
                         occurrence.sub_schema,
                         occurrence_idx
-                )));
+                ));
             }
 
             if (parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)) {
@@ -1199,24 +1186,27 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
     auto const column_start{record.column_reader_start};
     auto const schema{record.sub_schema};
 
-    auto const key_name{m_global_schema_tree->get_node(log_msg_id).get_key_name()};
+    auto const& log_msg_node{m_global_schema_tree->get_node(log_msg_id)};
+    auto const key_name{log_msg_node.get_key_name()};
 
     auto combined_mask{
             m_projection ? m_projection->get_node_mask(log_msg_id) : search::Projection::NodeMask{}
     };
 
-    bool const emit_text{m_projection && m_projection->should_emit_value(log_msg_id)};
+    bool const emit_text{m_projection && m_projection->should_emit_value(log_msg_node)};
     bool const has_shape{combined_mask.has(search::Projection::NodeMask::Mode::Shape)};
     bool const has_decompose{combined_mask.has(search::Projection::NodeMask::Mode::Decompose)};
-    bool const has_internal_projection{
-            has_shape || (m_projection && m_projection->has_projected_descendant(log_msg_id))
-    };
+    bool const has_other_fields{m_projection && m_projection->has_nested_projection(log_msg_id)};
 
-    if (m_extract_mode || (emit_text && false == has_internal_projection)) {
+    if (m_extract_mode || (emit_text && false == has_other_fields)) {
         m_json_serializer.add_special_key(key_name);
-        m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(
-                compile_shape(log_shape_id, "", column_start, schema, 0)
+        YSTDLIB_ERROR_HANDLING_TRYV(emit_reconstructed_text(
+                JsonSerializer::Op::AddReconstructedLogShapeField,
+                log_shape_id,
+                "",
+                column_start,
+                schema,
+                0
         ));
         auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(
                 emit_decomposed_scope(schema, log_msg_id, column_start, log_shape_id, has_decompose)
@@ -1229,9 +1219,13 @@ auto SchemaReader::generate_log_message_template(mpt_node_id_t log_msg_id)
 
     if (emit_text) {
         m_json_serializer.add_special_key(cTextKey);
-        m_json_serializer.add_op(JsonSerializer::Op::AddReconstructedLogShapeField);
-        m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(
-                compile_shape(log_shape_id, "", column_start, schema, 0)
+        YSTDLIB_ERROR_HANDLING_TRYV(emit_reconstructed_text(
+                JsonSerializer::Op::AddReconstructedLogShapeField,
+                log_shape_id,
+                "",
+                column_start,
+                schema,
+                0
         ));
     }
 
@@ -1321,6 +1315,25 @@ auto SchemaReader::compile_shape(
     }
 
     return compiled_shape;
+}
+
+auto SchemaReader::emit_reconstructed_text(
+        JsonSerializer::Op op,
+        clpp::log_shape_id_t log_shape_id,
+        std::string_view parent_rule_column_name,
+        size_t start_column_reader_idx,
+        SchemaView sub_schema,
+        size_t occurrence_idx
+) -> ystdlib::error_handling::Result<void> {
+    m_json_serializer.add_op(op);
+    m_reconstruction_targets.push_back(YSTDLIB_ERROR_HANDLING_TRYX(compile_shape(
+            log_shape_id,
+            parent_rule_column_name,
+            start_column_reader_idx,
+            sub_schema,
+            occurrence_idx
+    )));
+    return ystdlib::error_handling::success();
 }
 
 auto SchemaReader::reconstruct_compiled_shape(

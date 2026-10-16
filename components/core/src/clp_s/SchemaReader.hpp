@@ -459,12 +459,10 @@ private:
             -> size_t;
 
     /**
-     * Generates a JSON template for a LogMessage.
-     *
-     * The LogMessage is emitted as a bare reconstructed-text string when extracting, or when its
-     * value is projected and nothing inside it is (no `shape()`/`decompose()` on it and no
-     * projected descendant). Otherwise it is emitted as an object holding the projected `text`,
-     * `shape`, leaf arrays, and ParentRule arrays.
+     * Generates a JSON template for a LogMessage. Its possible fields are the reconstructed text
+     * (when the LogMessage itself is projected), its shape, and its leaf-rule and ParentRule
+     * arrays. The LogMessage is emitted as an object containig those fields, or as a bare text
+     * string when the text is its only field. Extraction always emits the bare text.
      * @param log_msg_id The LogMessage node ID.
      * @return A result containing the index of the next reader in m_columns after those consumed by
      * this object, or an error code indicating the failure:
@@ -536,6 +534,28 @@ private:
             SchemaView sub_schema,
             size_t occurrence_idx
     ) -> ystdlib::error_handling::Result<CompiledShape>;
+
+    /**
+     * Adds an op that outputs a node's reconstructed text, and registers the compiled shape the op
+     * reconstructs from.
+     * @param op `AddReconstructedLogShapeField` to output the text as a keyed field (the key must
+     * already be added), or `AddReconstructedLogShapeValue` to output it as a bare value.
+     * @param log_shape_id
+     * @param parent_rule_column_name
+     * @param start_column_reader_idx
+     * @param sub_schema
+     * @param occurrence_idx
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `compile_shape`'s return values.
+     */
+    [[nodiscard]] auto emit_reconstructed_text(
+            JsonSerializer::Op op,
+            clpp::log_shape_id_t log_shape_id,
+            std::string_view parent_rule_column_name,
+            size_t start_column_reader_idx,
+            SchemaView sub_schema,
+            size_t occurrence_idx
+    ) -> ystdlib::error_handling::Result<void>;
 
     /**
      * Visits every `ParentRule` unordered object contained in `schema`, recursing into nested
@@ -614,10 +634,10 @@ private:
 
     /**
      * Emits ParentRule arrays from the grouped occurrences in a `SchemaSpanContents`. For each
-     * ParentRule group, emits a JSON array with one element per occurrence. An occurrence is a bare
-     * reconstructed-text string when only the ParentRule's value is projected (no `shape()`/
-     * `decompose()` on it or an ancestor, and no projected descendant); otherwise it is an object
-     * containing the projected fields.
+     * ParentRule group, emits a JSON array with one element per occurrence. Each occurrence is an
+     * object of its projected fields — reconstructed text (when the ParentRule itself is
+     * projected), shape, and leaf-rule/ParentRule arrays — or a bare text string when the text is
+     * its only field.
      * @param scope The collected scope contents.
      * @param log_shape_id
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active.
