@@ -19,7 +19,7 @@ const WebuiPublicSettingsSchema = Type.Object({
         Type.Null(),
     ]),
     LogsInputType: Type.Enum(STORAGE_TYPE),
-    S3ScannerEnabled: Type.Boolean({default: false}),
+    S3ScannerEnabled: Type.Boolean(),
 
     MaxDatasetsPerQuery: Type.Union([
         Type.Integer({minimum: 1}),
@@ -94,7 +94,7 @@ const WebuiServerSettingsSchema = Type.Object({
 });
 
 const WebuiSettingsSchema = Type.Object({
-    public: WebuiPublicSettingsSchema,
+    public: Type.Omit(WebuiPublicSettingsSchema, ["S3ScannerEnabled"]),
     server: WebuiServerSettingsSchema,
 });
 

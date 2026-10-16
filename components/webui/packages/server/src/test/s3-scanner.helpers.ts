@@ -26,7 +26,6 @@ const enabledSettings = (): WebuiSettings => {
     const result = Value.Parse(WebuiSettingsSchema, raw);
     result.public.ClpStorageEngine = CLP_STORAGE_ENGINES.CLP_S;
     result.public.LogsInputType = STORAGE_TYPE.S3;
-    result.public.S3ScannerEnabled = true;
     result.server.LogIngestorUrl = "http://ingestor.internal:3002";
 
     return result;

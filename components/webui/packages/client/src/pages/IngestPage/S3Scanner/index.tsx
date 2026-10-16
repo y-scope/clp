@@ -37,8 +37,7 @@ const S3Scanner = () => {
     return (
         <DashboardCard title={"Create S3 Scanner"}>
             <Typography.Paragraph>
-                Continuously ingest objects under one S3 prefix using the deployment&apos;s AWS
-                access. Objects must be immutable, and new object keys must sort after earlier keys.
+                Continuously ingest logs from an S3 bucket and prefix.
             </Typography.Paragraph>
             <Form
                 disabled={isPending}

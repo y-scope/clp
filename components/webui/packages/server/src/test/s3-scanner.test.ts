@@ -5,7 +5,6 @@ import {
     STORAGE_TYPE,
 } from "@webui/common/config";
 import {DATASET_NAME_MAX_LEN} from "@webui/common/schemas/compression";
-import {isS3ScannerEnabled} from "@webui/common/schemas/ingestion";
 import fastify from "fastify";
 import {constants} from "http2";
 import tap from "tap";
@@ -112,29 +111,24 @@ tap.test("checks every deployment gate independently of AWS key presence", async
         true]) {
         for (const s3 of [false,
             true]) {
-            for (const configured of [false,
-                true]) {
-                for (const url of [null,
-                    "http://ingestor.internal:3002"]) {
-                    const configuration = enabledSettings();
-                    configuration.public.ClpStorageEngine = clpS ?
-                        CLP_STORAGE_ENGINES.CLP_S :
-                        CLP_STORAGE_ENGINES.CLP;
-                    configuration.public.LogsInputType = s3 ?
-                        STORAGE_TYPE.S3 :
-                        STORAGE_TYPE.FS;
-                    configuration.public.S3ScannerEnabled = configured;
-                    configuration.server.LogIngestorUrl = url;
-                    const app = appFor(t, send, configuration);
-                    const response = await app.inject({
-                        method: "POST", payload: input, url: "/scanner",
-                    });
-                    const enabled = clpS && s3 && configured && null !== url;
-                    t.equal(response.statusCode, enabled ?
-                        constants.HTTP_STATUS_OK :
-                        constants.HTTP_STATUS_SERVICE_UNAVAILABLE);
-                    t.equal(isS3ScannerEnabled(configuration.public), clpS && s3 && configured);
-                }
+            for (const url of [null,
+                "http://ingestor.internal:3002"]) {
+                const configuration = enabledSettings();
+                configuration.public.ClpStorageEngine = clpS ?
+                    CLP_STORAGE_ENGINES.CLP_S :
+                    CLP_STORAGE_ENGINES.CLP;
+                configuration.public.LogsInputType = s3 ?
+                    STORAGE_TYPE.S3 :
+                    STORAGE_TYPE.FS;
+                configuration.server.LogIngestorUrl = url;
+                const app = appFor(t, send, configuration);
+                const response = await app.inject({
+                    method: "POST", payload: input, url: "/scanner",
+                });
+                const enabled = clpS && s3 && null !== url;
+                t.equal(response.statusCode, enabled ?
+                    constants.HTTP_STATUS_OK :
+                    constants.HTTP_STATUS_SERVICE_UNAVAILABLE);
             }
         }
     }
@@ -255,4 +249,42 @@ tap.test("does not retry an unavailable or timed-out creation request", async (t
     t.equal(timedOutResponse.statusCode, constants.HTTP_STATUS_BAD_GATEWAY);
     t.ok(timedOut);
     t.equal(calls, 2);
+});
+
+tap.test("logs diagnostic details while returning a generic service error", async (t) => {
+    for (const [upstream, expected] of [
+        [new Error("connection refused"),
+            {type: "Error", message: "connection refused"}],
+        [new DOMException("request timed out", "TimeoutError"),
+            {message: "request timed out"}],
+        [new Response("private upstream details", {status: 500}),
+            {message: /500/}],
+        [new Response("not JSON"),
+            {type: "SyntaxError"}],
+        [Response.json({id: "1"}),
+            {message: "Invalid scanner creation response"}],
+    ] as const) {
+        const diagnostics: string[] = [];
+        const app = fastify({
+            logger: {
+                level: "error",
+                stream: {write: (message: string) => diagnostics.push(message)},
+            },
+        });
+
+        app.register(createS3ScannerRoutes(enabledSettings(), async () => {
+            if (upstream instanceof Error) {
+                throw upstream;
+            }
+
+            return upstream;
+        }), {prefix: "/scanner"});
+        t.teardown(() => app.close());
+        const response = await app.inject({method: "POST", payload: input, url: "/scanner"});
+        t.same(response.json(), {
+            error: "Could not confirm scanner creation. Check the ingestor before retrying.",
+        });
+        const diagnostic: unknown = JSON.parse(diagnostics[0] ?? "{}");
+        t.match(diagnostic, {err: expected});
+    }
 });

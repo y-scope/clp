@@ -1,5 +1,4 @@
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import {isS3ScannerEnabled} from "@webui/common/schemas/ingestion";
 
 import {settings} from "../settings";
 
@@ -8,7 +7,7 @@ const SETTINGS_LOGS_INPUT_TYPE = settings.LogsInputType;
 const SETTINGS_MAX_DATASETS_PER_QUERY = settings.MaxDatasetsPerQuery;
 const SETTINGS_PRESTO_MAX_NUM_SEARCH_RESULTS = settings.PrestoMaxNumSearchResults;
 const SETTINGS_STORAGE_ENGINE = settings.ClpStorageEngine;
-const SETTINGS_S3_SCANNER_ENABLED = isS3ScannerEnabled(settings);
+const SETTINGS_S3_SCANNER_ENABLED = settings.S3ScannerEnabled;
 const SETTINGS_QUERY_ENGINE = settings.ClpQueryEngine;
 
 /**

@@ -4,7 +4,10 @@ import {
 } from "@fastify/type-provider-typebox";
 import {Value} from "@sinclair/typebox/value";
 import {
-    isS3ScannerEnabled,
+    CLP_STORAGE_ENGINES,
+    STORAGE_TYPE,
+} from "@webui/common/config";
+import {
     S3ScannerCreationSchema,
     S3ScannerErrorSchema,
     S3ScannerJobSchema,
@@ -65,7 +68,9 @@ const createS3ScannerRoutes = (
         },
     }, async (request, reply) => {
         const ingestorUrl = configuration.server.LogIngestorUrl;
-        if (!isS3ScannerEnabled(configuration.public) || !ingestorUrl) {
+        if (!ingestorUrl ||
+            CLP_STORAGE_ENGINES.CLP_S !== configuration.public.ClpStorageEngine ||
+            STORAGE_TYPE.S3 !== configuration.public.LogsInputType) {
             return reply.code(constants.HTTP_STATUS_SERVICE_UNAVAILABLE).send({
                 error: DISABLED_ERROR,
             });
@@ -89,7 +94,7 @@ const createS3ScannerRoutes = (
                 return await reply.code(response.status).send({error: getInputError(body)});
             }
             if (constants.HTTP_STATUS_OK !== response.status) {
-                throw new Error("Unexpected scanner creation status");
+                throw new Error(`Unexpected scanner creation status: ${String(response.status)}`);
             }
             const result: unknown = JSON.parse(body);
             if (!Value.Check(S3ScannerJobSchema, result)) {
@@ -97,8 +102,8 @@ const createS3ScannerRoutes = (
             }
 
             return {id: result.id};
-        } catch {
-            request.log.error("Unable to confirm scanner creation with the log ingestor");
+        } catch (error: unknown) {
+            request.log.error(error, "Unable to confirm scanner creation with the log ingestor");
 
             return reply.code(constants.HTTP_STATUS_BAD_GATEWAY).send({
                 error: SERVICE_ERROR,

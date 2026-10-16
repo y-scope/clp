@@ -1,7 +1,6 @@
 import {Value} from "@sinclair/typebox/value";
 import {DATASET_NAME_MAX_LEN} from "@webui/common/schemas/compression";
 import {
-    isS3ScannerEnabled,
     S3ScannerCreationSchema,
     toS3ScannerConfig,
     validateS3ScannerInput,
@@ -48,11 +47,8 @@ tap.test("old settings disable scanners without a migration", (t) => {
     const configuration = enabledSettings();
     const legacyPublic: Partial<WebuiSettings["public"]> = {...configuration.public};
     const legacyServer: Partial<WebuiSettings["server"]> = {...configuration.server};
-    delete legacyPublic.S3ScannerEnabled;
     delete legacyServer.LogIngestorUrl;
     const parsed = Value.Parse(WebuiSettingsSchema, {public: legacyPublic, server: legacyServer});
-    t.equal(parsed.public.S3ScannerEnabled, false);
     t.equal(parsed.server.LogIngestorUrl, null);
-    t.notOk(isS3ScannerEnabled(parsed.public));
     t.end();
 });

@@ -4,13 +4,8 @@ import {
 } from "@sinclair/typebox";
 import {Value} from "@sinclair/typebox/value";
 
-import {
-    CLP_DEFAULT_DATASET_NAME,
-    CLP_STORAGE_ENGINES,
-    STORAGE_TYPE,
-} from "../config.js";
+import {CLP_DEFAULT_DATASET_NAME} from "../config.js";
 import {DatasetNameSchema} from "./compression.js";
-import type {WebuiPublicSettings} from "./settings.js";
 
 
 const requiredInputFields = {
@@ -36,18 +31,6 @@ const S3ScannerJobSchema = Type.Object({
 type S3ScannerJob = Static<typeof S3ScannerJobSchema>;
 
 const S3ScannerErrorSchema = Type.Object({error: Type.String()});
-
-/**
- * Checks the public deployment capability without requiring AWS credential fields.
- *
- * @param settings
- * @return Whether the deployment supports scanner submission.
- */
-const isS3ScannerEnabled = (settings: Pick<WebuiPublicSettings,
-    "ClpStorageEngine" | "LogsInputType" | "S3ScannerEnabled">): boolean => {
-    return CLP_STORAGE_ENGINES.CLP_S === settings.ClpStorageEngine &&
-        STORAGE_TYPE.S3 === settings.LogsInputType && settings.S3ScannerEnabled;
-};
 
 /**
  * Uses the request schema for the form's required S3 inputs.
@@ -90,7 +73,6 @@ const toS3ScannerConfig = (input: S3ScannerCreation) => ({
 
 
 export {
-    isS3ScannerEnabled,
     S3ScannerCreationSchema,
     S3ScannerErrorSchema,
     S3ScannerJobSchema,

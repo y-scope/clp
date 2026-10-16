@@ -5,7 +5,6 @@
 
         "LogsInputRootDir": "/",
         "LogsInputType": "fs",
-        "S3ScannerEnabled": false,
 
         "MaxDatasetsPerQuery": 10,
 
