@@ -34,7 +34,6 @@ public:
         AddLiteralField,
         AddConstantStringField,
         AddReconstructedLogShapeField,
-        AddReconstructedLogShapeValue,
     };
 
     static int64_t const cReservedLength = 4096;

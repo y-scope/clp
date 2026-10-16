@@ -527,10 +527,8 @@ private:
     ) -> ystdlib::error_handling::Result<CompiledShape>;
 
     /**
-     * Adds an op that outputs a node's reconstructed text, and registers the compiled shape the op
-     * reconstructs from.
-     * @param op `AddReconstructedLogShapeField` to output the text as a keyed field (the key must
-     * already be added), or `AddReconstructedLogShapeValue` to output it as a bare value.
+     * Adds an op that outputs a node's reconstructed text as a field (its key must already be
+     * added), and registers the compiled shape the op reconstructs from.
      * @param log_shape_id
      * @param parent_rule_column_name
      * @param start_column_reader_idx
@@ -540,7 +538,6 @@ private:
      * - Forwards `compile_shape`'s return values.
      */
     [[nodiscard]] auto emit_reconstructed_text(
-            JsonSerializer::Op op,
             clpp::log_shape_id_t log_shape_id,
             std::string_view parent_rule_column_name,
             size_t start_column_reader_idx,

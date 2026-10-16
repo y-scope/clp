@@ -35,7 +35,8 @@ public:
      * How records are projected.
      * - Default: no columns were projected. Every record is emitted in its default form: plain
      *   columns in full, and each LogMessage as its reconstructed text.
-     * - Explicit: only the projected columns are emitted.
+     * - Explicit: only the projected columns are emitted. LogMessage and ParentRule nodes are
+     *   emitted as objects whose fields each come from a projection.
      */
     enum class Mode : uint8_t {
         Default,
@@ -132,23 +133,6 @@ public:
     [[nodiscard]] auto should_emit_value(SchemaNode const& node) const -> bool;
 
     /**
-     * Checks whether a LogMessage or ParentRule schema node has any projected descendant (i.e. a
-     * column matched by some projection column is nested under this node).
-     * @param node_id The LogMessage or ParentRule schema node ID to check.
-     * @return Whether at least one descendant leaf of the node is projected.
-     */
-    [[nodiscard]] auto has_projected_descendant(mpt_node_id_t node_id) const -> bool;
-
-    /**
-     * Checks whether the projection outputs anything within a LogMessage or ParentRule node besides
-     * the reconstructed text (i.e. `shape()` or `decompose()` applied to the node, or any column
-     * nested under it).
-     * @param node_id The LogMessage or ParentRule schema node ID to check.
-     * @return Whether the node has a nested projection.
-     */
-    [[nodiscard]] auto has_nested_projection(mpt_node_id_t node_id) const -> bool;
-
-    /**
      * Resolves all columns for the purpose of projection. This key resolution implementation is
      * more limited than the one in schema matching. In particular, this version of key resolution
      * only allows resolving keys that do not contain wildcards and does not allow resolving to
@@ -170,6 +154,8 @@ public:
     [[nodiscard]] auto matches_node(mpt_node_id_t node_id) const -> bool {
         return Mode::Default == m_projection_mode || m_matching_nodes.contains(node_id);
     }
+
+    [[nodiscard]] auto get_mode() const -> Mode { return m_projection_mode; }
 
 private:
     // Types
@@ -220,7 +206,6 @@ private:
     std::vector<TargetColumn> m_columns;
     absl::flat_hash_set<mpt_node_id_t> m_matching_nodes;
     absl::flat_hash_map<mpt_node_id_t, NodeMask> m_node_projections;
-    absl::flat_hash_set<mpt_node_id_t> m_nodes_with_projected_descendants;
     Mode m_projection_mode{Mode::Default};
     bool m_allow_duplicate_columns{false};
 };

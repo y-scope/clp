@@ -8,7 +8,6 @@
 
 #include <fmt/format.h>
 
-#include <clp_s/archive_constants.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
@@ -70,16 +69,6 @@ auto Projection::should_emit_value(SchemaNode const& node) const -> bool {
            && (mask.has(NodeMask::Mode::Value) || mask.has(NodeMask::Mode::Default));
 }
 
-auto Projection::has_projected_descendant(mpt_node_id_t node_id) const -> bool {
-    return m_nodes_with_projected_descendants.contains(node_id);
-}
-
-auto Projection::has_nested_projection(mpt_node_id_t node_id) const -> bool {
-    return is_projected_as(node_id, NodeMask::Mode::Shape)
-           || is_projected_as(node_id, NodeMask::Mode::Decompose)
-           || has_projected_descendant(node_id);
-}
-
 auto Projection::add_projection(mpt_node_id_t node_id, NodeMask::Mode mode) -> void {
     auto [it, _]{m_node_projections.try_emplace(node_id)};
     it->second.set(mode);
@@ -122,24 +111,6 @@ auto Projection::resolve_columns(SchemaTree const& tree) -> void {
             static_cast<void>(
                     collect_decomposable_projections(tree, entry.m_matched_nodes, entry.m_mode)
             );
-        }
-    }
-
-    m_nodes_with_projected_descendants.clear();
-    if (Mode::Default == m_projection_mode) {
-        return;
-    }
-    for (auto node_id : m_matching_nodes) {
-        for (auto cur_id{tree.get_node(node_id).get_parent_id()}; constants::cRootNodeId != cur_id;
-             cur_id = tree.get_node(cur_id).get_parent_id())
-        {
-            auto const type{tree.get_node(cur_id).get_type()};
-            if (NodeType::ParentRule == type) {
-                m_nodes_with_projected_descendants.insert(cur_id);
-            } else if (NodeType::LogMessage == type) {
-                m_nodes_with_projected_descendants.insert(cur_id);
-                break;
-            }
         }
     }
 }

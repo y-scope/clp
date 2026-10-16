@@ -116,11 +116,12 @@ projection-only; it cannot be used as a filter.
 
 ### Output format
 
-A CLP+ log message (or parent rule match) is emitted as a JSON object whose fields each come from a
-projection. If its text is the only field, it is emitted as a bare string instead of an object.
+Without `--projection`, a CLP+ log message is emitted as its reconstructed original text. With a
+projection, each log message (or parent rule match) is emitted as a JSON object whose fields each
+come from a projection.
 
 * `text` is the reconstructed original text. It is present when the message (or parent rule) itself
-  is projected, or when there is no projection.
+  is projected.
 * `shape` is the log shape, or the rule shape when projected at a parent rule.
 * Leaf rule matches are one array per leaf rule, since a leaf rule may match several times per log
   message.
@@ -132,12 +133,12 @@ The examples below use a log message with the log shape
 | `--projection`                                 | Output                                                                                                   |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | *(omitted)*                                    | `{"message": "blk_1073746484_5660"}`                                                                     |
-| `message`                                      | `{"message": "blk_1073746484_5660"}`                                                                     |
+| `message`                                      | `{"message": {"text": "blk_1073746484_5660"}}`                                                           |
 | `shape(message)`                               | `{"message": {"shape": "blk_%block_id.num%_%block_id.gen_stamp%"}}`                                      |
 | `decompose(message)`                           | `{"message": {"shape": "...", "block_id": [{"num": [1073746484], "gen_stamp": [5660]}]}}`                |
 | `message shape(message)`                       | `{"message": {"text": "...", "shape": "..."}}`                                                           |
 | `message decompose(message)`                   | `{"message": {"text": "...", "shape": "...", "block_id": [...]}}`                                        |
-| `message.block_id`                             | `{"message": {"block_id": ["blk_1073746484_5660"]}}`                                                     |
+| `message.block_id`                             | `{"message": {"block_id": [{"text": "blk_1073746484_5660"}]}}`                                           |
 | `message.block_id.gen_stamp`                   | `{"message": {"block_id": [{"gen_stamp": [5660]}]}}`                                                     |
 | `message.block_id message.block_id.gen_stamp`  | `{"message": {"block_id": [{"text": "...", "gen_stamp": [5660]}]}}`                                      |
 | `shape(message.block_id)`                      | `{"message": {"block_id": [{"shape": "blk_%block_id.num%_%block_id.gen_stamp%"}]}}`                      |
@@ -152,11 +153,10 @@ Three noteworthy details:
   other parent rules in the log message. To get the text as well, project both, as in the last row.
 * **`decompose()` reaches all the way down.** Applied to a log message, it emits every leaf rule
   match at every nesting depth, cascading through nested parent rules.
-* **Output shape is decided per query, not per result.** Whether a message is a string or an object
-  depends on the columns you project, not on each event's contents. With
-  `message message.block_id`, an event that has no `block_id` match is still emitted as
-  `{"message": {"text": "..."}}`, so every result of a query has the same structure. (A projected
-  column that exists nowhere in the archive adds no field.)
+* **Fields an event doesn't have are omitted**, as with any `clp-s` projection, along with any
+  enclosing object that would otherwise be empty. With `message.block_id`, an event that has no
+  `block_id` match is emitted as `{}`. Parent rule arrays keep one element per match, so a match
+  that lacks a projected leaf rule is emitted as `{}` within the array.
 
 ### Examples
 
