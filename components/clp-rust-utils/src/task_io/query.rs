@@ -1,13 +1,13 @@
 //! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP query jobs.
 
 use std::num::NonZeroU32;
-use std::num::NonZeroU64;
 
 use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::job_config::SearchJobConfig;
+use crate::types::PositiveI64;
 
 /// `clp-s` options for a query job.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -32,7 +32,7 @@ pub struct ClpSQueryOption {
     /// The positive width, in milliseconds, of each count-by-time bucket. When set, the query
     /// groups all matching log events in the archive into time buckets and counts the events in
     /// each bucket, regardless of `max_num_results`.
-    pub count_by_time_bucket_size_millisecs: Option<NonZeroU64>,
+    pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
 
 impl TryFrom<&SearchJobConfig> for ClpSQueryOption {
@@ -44,9 +44,7 @@ impl TryFrom<&SearchJobConfig> for ClpSQueryOption {
             .as_ref()
             .and_then(|aggregation| aggregation.count_by_time_bucket_size)
             .map(|bucket_size| {
-                u64::try_from(bucket_size)
-                    .ok()
-                    .and_then(NonZeroU64::new)
+                PositiveI64::new(bucket_size)
                     .ok_or(QueryOptionError::InvalidCountByTimeBucketSize { bucket_size })
             })
             .transpose()?;
@@ -89,7 +87,6 @@ pub enum OutputHandle {
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU32;
-    use std::num::NonZeroU64;
 
     use non_empty_string::NonEmptyString;
     use serde::Deserialize;
@@ -99,6 +96,7 @@ mod tests {
     use super::OutputHandle;
     use super::QueryOptionError;
     use crate::job_config::QueryJobId;
+    use crate::types::PositiveI64;
     use crate::types::non_empty_string::ExpectedNonEmpty;
 
     /// Identifies the results produced by a timeline query task.
@@ -270,10 +268,8 @@ mod tests {
                         begin_timestamp_millisecs: begin,
                         end_timestamp_millisecs: end,
                         ignore_case: true,
-                        count_by_time_bucket_size_millisecs: width.map(|value| {
-                            NonZeroU64::new(u64::try_from(value).expect("positive width"))
-                                .expect("nonzero width")
-                        }),
+                        count_by_time_bucket_size_millisecs: width
+                            .map(|value| PositiveI64::new(value).expect("positive width")),
                     };
                     assert_eq!(actual, expected);
                 }
@@ -283,7 +279,7 @@ mod tests {
 
     #[test]
     fn timeline_bucket_width_round_trips_through_msgpack() {
-        for width in [None, NonZeroU64::new(1), NonZeroU64::new(60_000)] {
+        for width in [None, PositiveI64::new(1), PositiveI64::new(60_000)] {
             let expected = ClpSQueryOption {
                 query_string: NonEmptyString::from_static_str("*"),
                 max_num_results: None,
