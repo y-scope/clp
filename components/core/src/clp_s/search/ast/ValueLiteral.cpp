@@ -95,7 +95,7 @@ auto get_int_bounds(double v) -> std::optional<std::pair<int64_t, int64_t>> {
 }
 }  // namespace
 
-auto ValueLiteral::create(int64_t v) -> std::shared_ptr<Literal> {
+auto ValueLiteral::create_from_int(int64_t v) -> std::shared_ptr<Literal> {
     auto str{std::to_string(v)};
     auto const types{cIntegralTypes | LiteralType::TimestampT | get_string_types(str)};
     return std::shared_ptr<Literal>{new ValueLiteral{
@@ -107,7 +107,7 @@ auto ValueLiteral::create(int64_t v) -> std::shared_ptr<Literal> {
     }};
 }
 
-auto ValueLiteral::create(double v) -> std::shared_ptr<Literal> {
+auto ValueLiteral::create_from_float(double v) -> std::shared_ptr<Literal> {
     std::ostringstream ss;
     ss << v;
     auto str{ss.str()};
@@ -123,7 +123,7 @@ auto ValueLiteral::create(double v) -> std::shared_ptr<Literal> {
     };
 }
 
-auto ValueLiteral::create(bool v) -> std::shared_ptr<Literal> {
+auto ValueLiteral::create_from_bool(bool v) -> std::shared_ptr<Literal> {
     std::string str{v ? cTrueString : cFalseString};
     auto const types{LiteralType::BooleanT | get_string_types(str)};
     return std::shared_ptr<Literal>{
@@ -131,7 +131,7 @@ auto ValueLiteral::create(bool v) -> std::shared_ptr<Literal> {
     };
 }
 
-auto ValueLiteral::create(std::string_view v) -> std::shared_ptr<Literal> {
+auto ValueLiteral::create_from_string(std::string_view v) -> std::shared_ptr<Literal> {
     std::string str{v};
     literal_type_bitmask_t types{get_string_types(str)};
     std::optional<double> float_option;

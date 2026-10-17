@@ -387,10 +387,10 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
     constexpr value_float_t cRefFloat{0};
     constexpr value_bool_t cRefBool{false};
 
-    auto ref_str_literal{ValueLiteral::create("*" + std::string{cRefTestString} + "*")};
-    auto ref_bool_literal{ValueLiteral::create(cRefBool)};
-    auto ref_int_literal{ValueLiteral::create(cRefInt)};
-    auto ref_float_literal{ValueLiteral::create(cRefFloat)};
+    auto ref_str_literal{ValueLiteral::create_from_string("*" + std::string{cRefTestString} + "*")};
+    auto ref_bool_literal{ValueLiteral::create_from_bool(cRefBool)};
+    auto ref_int_literal{ValueLiteral::create_from_int(cRefInt)};
+    auto ref_float_literal{ValueLiteral::create_from_float(cRefFloat)};
     auto ref_timestamp_literal{TimestampLiteral::create(cRefInt)};
 
     REQUIRE_FALSE((nullptr == ref_str_literal));

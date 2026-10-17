@@ -155,7 +155,9 @@ public:
             throw std::runtime_error{"Invalid literal."};
         }
 
-        return ValueLiteral::create(clp::string_utils::clean_up_wildcard_search_string(token));
+        return ValueLiteral::create_from_string(
+                clp::string_utils::clean_up_wildcard_search_string(token)
+        );
     }
 
     std::any visitLiteral(KqlParser::LiteralContext* ctx) override {

@@ -19,17 +19,13 @@ namespace clp_s::search::ast {
 class ValueLiteral : public Literal {
 public:
     // Factory functions
-    [[nodiscard]] static auto create(int64_t v) -> std::shared_ptr<Literal>;
+    [[nodiscard]] static auto create_from_int(int64_t v) -> std::shared_ptr<Literal>;
 
-    [[nodiscard]] static auto create(double v) -> std::shared_ptr<Literal>;
+    [[nodiscard]] static auto create_from_float(double v) -> std::shared_ptr<Literal>;
 
-    [[nodiscard]] static auto create(bool v) -> std::shared_ptr<Literal>;
+    [[nodiscard]] static auto create_from_bool(bool v) -> std::shared_ptr<Literal>;
 
-    [[nodiscard]] static auto create(std::string_view v) -> std::shared_ptr<Literal>;
-
-    [[nodiscard]] static auto create(char const* v) -> std::shared_ptr<Literal> {
-        return create(std::string_view{v});
-    }
+    [[nodiscard]] static auto create_from_string(std::string_view v) -> std::shared_ptr<Literal>;
 
     // Delete copy and move constructors and assignment operators
     ValueLiteral(ValueLiteral const&) = delete;

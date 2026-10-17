@@ -82,8 +82,12 @@ void EvaluateRangeIndexFilters::evaluate_and_rewrite_filter(
         replacement_expr = ast::OrExpr::create();
 
         auto add_range_to_filter = [&](std::pair<size_t, size_t> const& range) {
-            auto begin_literal{ast::ValueLiteral::create(static_cast<int64_t>(range.first))};
-            auto end_literal{ast::ValueLiteral::create(static_cast<int64_t>(range.second))};
+            auto begin_literal{
+                    ast::ValueLiteral::create_from_int(static_cast<int64_t>(range.first))
+            };
+            auto end_literal{
+                    ast::ValueLiteral::create_from_int(static_cast<int64_t>(range.second))
+            };
             auto begin_filter{ast::FilterExpr::create(
                     log_event_idx_col,
                     ast::FilterOperation::GTE,
