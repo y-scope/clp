@@ -8,6 +8,7 @@ aws-config = { workspace = true }
 aws-sdk-s3 = { workspace = true }
 aws-sdk-sqs = { workspace = true }
 const_format = { workspace = true }
+mongodb = { workspace = true }
 non-empty-string = { workspace = true }
 num_enum = { workspace = true }
 opentelemetry = { workspace = true }
@@ -29,4 +30,5 @@ yaml_serde = { workspace = true }
 zstd = { workspace = true }
 
 [dev-dependencies]
+anyhow = { workspace = true }
 serde_json = { workspace = true }
