@@ -82,9 +82,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * [`Error::UnsupportedJobConfig`] if:
     ///   * The job carries an aggregation config.
     ///   * The job writes its results to files.
-    /// * [`Error::InvalidQueryJobConfig`] if:
-    ///   * The query string is empty.
-    ///   * The begin timestamp exceeds the end timestamp.
+    /// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
+    /// * Forwards [`ClpSQueryOption::try_from`]'s return values on failure.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -105,11 +104,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             ));
         }
 
-        let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
-            .map_err(|_| {
-                Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
-            })?;
-
+        let clp_s_query_option = ClpSQueryOption::try_from(&search_job_config)?;
         if let (Some(begin_timestamp), Some(end_timestamp)) = (
             search_job_config.begin_timestamp,
             search_job_config.end_timestamp,
@@ -124,14 +119,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .archive_selection_options
             .archive_retention_period_millisecs
             .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
-
-        let clp_s_query_option = ClpSQueryOption {
-            query_string,
-            max_num_results: search_job_config.max_num_results,
-            begin_timestamp_millisecs: search_job_config.begin_timestamp,
-            end_timestamp_millisecs: search_job_config.end_timestamp,
-            ignore_case: search_job_config.ignore_case,
-        };
 
         Ok(Self {
             context,

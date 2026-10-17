@@ -2,6 +2,7 @@
 
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::task_io::query::QueryOptionError;
 use spider_core::types::resource_group::ExternalResourceGroupCredentialsError;
 
 /// Errors returned by the query coordinator.
@@ -15,6 +16,9 @@ pub enum Error {
 
     #[error("invalid query job configuration: {0}")]
     InvalidQueryJobConfig(String),
+
+    #[error("invalid query options: {0}")]
+    QueryOption(#[from] QueryOptionError),
 
     #[error("invalid query job status transition from {from:?} to {to:?}")]
     InvalidQueryJobStatusTransition {
