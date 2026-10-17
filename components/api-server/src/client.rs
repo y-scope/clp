@@ -213,6 +213,7 @@ pub struct QueryConfig {
     /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
     /// search job, and its results are always buffered in `MongoDB`.
     #[serde(default)]
+    #[schema(minimum = 1)]
     pub count_by_time_bucket_size_millisecs: Option<i64>,
 }
 
@@ -930,6 +931,86 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
+
+    #[tokio::test]
+    async fn query_bucket_size_boundaries() -> anyhow::Result<()> {
+        use axum::body::Body;
+        use axum::http::Request;
+        use axum::http::StatusCode;
+        use http_body_util::BodyExt;
+        use tower::ServiceExt;
+
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .connect_lazy_with(sqlx::mysql::MySqlConnectOptions::new());
+        sql_pool.close().await;
+        let client = Client {
+            mongodb_client: mongodb::Client::with_options(
+                mongodb::options::ClientOptions::default(),
+            )?,
+            sql_pool,
+            config: Config::default(),
+        };
+        let app = crate::routes::from_client(client.clone())?;
+        for (width, expected_status) in [
+            (serde_json::json!(0), StatusCode::BAD_REQUEST),
+            (serde_json::json!(-1), StatusCode::BAD_REQUEST),
+            (serde_json::json!(i64::MIN), StatusCode::BAD_REQUEST),
+            (
+                serde_json::json!(i64::MAX.cast_unsigned() + 1),
+                StatusCode::UNPROCESSABLE_ENTITY,
+            ),
+            (
+                serde_json::json!(u64::MAX),
+                StatusCode::UNPROCESSABLE_ENTITY,
+            ),
+        ] {
+            let body = serde_json::json!({
+                "query_string": "*",
+                "count_by_time_bucket_size_millisecs": width,
+            });
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::post("/query")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body.to_string()))?,
+                )
+                .await?;
+            assert_eq!(response.status(), expected_status, "{body}");
+            assert_eq!(
+                response.headers()["content-type"],
+                "text/plain; charset=utf-8"
+            );
+            let response_body = response.into_body().collect().await?.to_bytes();
+            assert!(
+                std::str::from_utf8(&response_body)?
+                    .contains("count_by_time_bucket_size_millisecs"),
+                "{body}"
+            );
+        }
+        for width in [
+            None,
+            Some(serde_json::Value::Null),
+            Some(serde_json::json!(1)),
+            Some(serde_json::json!(i64::from(u32::MAX) + 1)),
+            Some(serde_json::json!(i64::MAX)),
+        ] {
+            let mut body = serde_json::json!({"query_string": "*"});
+            if let Some(width) = width {
+                body["count_by_time_bucket_size_millisecs"] = width;
+            }
+            let config = serde_json::from_value::<QueryConfig>(body.clone())?;
+            let error = client
+                .submit_query(config)
+                .await
+                .expect_err("pool is closed");
+            assert!(
+                matches!(error, ClientError::Sql(sqlx::Error::PoolClosed)),
+                "{body}: {error}"
+            );
+        }
+        Ok(())
+    }
 
     #[test]
     fn parse_job_status_pending_not_in_defaults() {
