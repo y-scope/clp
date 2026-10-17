@@ -257,7 +257,7 @@ fn build_clp_s_search_args_for_result_cache(
             |width| {
                 args.extend([
                     OsString::from("--count-by-time"),
-                    OsString::from(width.to_string()),
+                    OsString::from(width.get().to_string()),
                 ]);
                 format!("{query_job_id}-timeline")
             },
@@ -354,7 +354,6 @@ fn run_clp_s_search(
 mod tests {
     use std::ffi::OsString;
     use std::num::NonZeroU32;
-    use std::num::NonZeroU64;
     use std::path::Path;
     use std::path::PathBuf;
 
@@ -369,6 +368,7 @@ mod tests {
     use clp_rust_utils::task_io::query::ClpSQueryOption;
     use clp_rust_utils::task_io::query::OutputHandle;
     use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::PositiveI64;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
     use spider_core::types::id::JobId;
@@ -786,7 +786,7 @@ mod tests {
             begin_timestamp_millisecs: Some(-1),
             end_timestamp_millisecs: Some(120_000),
             ignore_case: true,
-            count_by_time_bucket_size_millisecs: NonZeroU64::new(60_000),
+            count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
             ..unbounded_query_option()
         };
         for max_num_results in [None, options.max_num_results] {
@@ -834,7 +834,7 @@ mod tests {
     fn timeline_search_preserves_s3_authentication_and_large_bucket_width() -> anyhow::Result<()> {
         let options = ClpSQueryOption {
             max_num_results: NonZeroU32::new(7),
-            count_by_time_bucket_size_millisecs: NonZeroU64::new(u64::MAX),
+            count_by_time_bucket_size_millisecs: PositiveI64::new(i64::MAX),
             ..unbounded_query_option()
         };
         let args = build_clp_s_search_args_for_result_cache(
@@ -851,7 +851,7 @@ mod tests {
             "s3",
             "level: \"ERROR\"",
             "--count-by-time",
-            "18446744073709551615",
+            "9223372036854775807",
             "results-cache",
             "--uri",
             "mongodb://localhost/results",
