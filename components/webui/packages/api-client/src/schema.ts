@@ -148,8 +148,8 @@ export interface components {
              */
             buffer_results_in_mongodb?: boolean;
             /**
-             * Format: int32
-             * @description The positive size of each time bucket (in milliseconds) for count-by-time aggregation.
+             * Format: int64
+             * @description The size of each time bucket (in milliseconds) for count-by-time aggregation.
              *     When set, the job is submitted as a count-by-time aggregation job instead of a plain
              *     search job, and its results are always buffered in `MongoDB`.
              */
@@ -248,7 +248,7 @@ export interface operations {
                     "application/json": components["schemas"]["QueryResultsUri"];
                 };
             };
-            /** @description The request body is not valid JSON or could not be read. */
+            /** @description The request body is not valid JSON, could not be read, or the count-by-time bucket size is not positive. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -275,7 +275,7 @@ export interface operations {
                     "text/plain": string;
                 };
             };
-            /** @description The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results and count_by_time_bucket_size_millisecs must be positive integers when non-null. */
+            /** @description The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results must be a positive integer when non-null, and count_by_time_bucket_size_millisecs must fit in a signed 64-bit integer when non-null. */
             422: {
                 headers: {
                     [name: string]: unknown;

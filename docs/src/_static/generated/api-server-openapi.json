@@ -71,7 +71,7 @@
             }
           },
           "400": {
-            "description": "The request body is not valid JSON or could not be read.",
+            "description": "The request body is not valid JSON, could not be read, or the count-by-time bucket size is not positive.",
             "content": {
               "text/plain": {
                 "schema": {
@@ -101,7 +101,7 @@
             }
           },
           "422": {
-            "description": "The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results and count_by_time_bucket_size_millisecs must be positive integers when non-null.",
+            "description": "The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results must be a positive integer when non-null, and count_by_time_bucket_size_millisecs must fit in a signed 64-bit integer when non-null.",
             "content": {
               "text/plain": {
                 "schema": {
@@ -389,8 +389,8 @@
               "integer",
               "null"
             ],
-            "format": "int32",
-            "description": "The positive size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`.",
+            "format": "int64",
+            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`.",
             "minimum": 1
           },
           "datasets": {

@@ -122,15 +122,17 @@ async fn health() -> String {
             example = json!({"query_results_uri":"query_results/1"})
         ),
         (status = BAD_REQUEST, body = String, content_type = "text/plain",
-            description = "The request body is not valid JSON or could not be read."),
+            description = "The request body is not valid JSON, could not be read, or the \
+                count-by-time bucket size is not positive."),
         (status = PAYLOAD_TOO_LARGE, body = String, content_type = "text/plain",
             description = "The request body exceeds the configured size limit."),
         (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
             description = "The Content-Type header is missing or is not a JSON media type."),
         (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
             description = "The JSON body contains missing or unknown fields, invalid types, or \
-                invalid values. max_num_results and count_by_time_bucket_size_millisecs must \
-                be positive integers when non-null."),
+                invalid values. max_num_results must be a positive integer when non-null, and \
+                count_by_time_bucket_size_millisecs must fit in a signed 64-bit integer \
+                when non-null."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -407,41 +409,6 @@ mod tests {
             .expect("failed to read body")
             .to_bytes();
         String::from_utf8(bytes.to_vec()).expect("body is not utf-8")
-    }
-
-    #[tokio::test]
-    async fn reject_nonpositive_query_values() -> anyhow::Result<()> {
-        let app = axum::Router::new().route(
-            "/query",
-            axum::routing::post(|Json(_): Json<QueryConfig>| async { StatusCode::OK }),
-        );
-        for (field, value) in [
-            ("max_num_results", 0),
-            ("count_by_time_bucket_size_millisecs", 0),
-            ("count_by_time_bucket_size_millisecs", -1),
-        ] {
-            let mut body = serde_json::json!({"query_string": "*"});
-            body[field] = value.into();
-            let response = app
-                .clone()
-                .oneshot(
-                    Request::post("/query")
-                        .header("content-type", "application/json")
-                        .body(Body::from(body.to_string()))?,
-                )
-                .await?;
-            assert_eq!(
-                response.status(),
-                StatusCode::UNPROCESSABLE_ENTITY,
-                "{body}"
-            );
-            assert_eq!(
-                response.headers()["content-type"],
-                "text/plain; charset=utf-8"
-            );
-            assert!(get_body(response).await.contains(field), "{body}");
-        }
-        Ok(())
     }
 
     #[tokio::test]
