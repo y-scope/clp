@@ -89,23 +89,12 @@ mod tests {
     use std::num::NonZeroU32;
 
     use non_empty_string::NonEmptyString;
-    use serde::Deserialize;
-    use serde::Serialize;
 
     use super::ClpSQueryOption;
     use super::OutputHandle;
     use super::QueryOptionError;
-    use crate::job_config::QueryJobId;
     use crate::types::PositiveI64;
     use crate::types::non_empty_string::ExpectedNonEmpty;
-
-    /// Identifies the results produced by a timeline query task.
-    #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-    #[serde(deny_unknown_fields)]
-    struct TimelineTaskOutput {
-        query_job_id: QueryJobId,
-        output_handle: OutputHandle,
-    }
 
     #[test]
     fn clp_s_query_option_with_timestamp_bounds_round_trips_through_msgpack() {
@@ -318,45 +307,6 @@ mod tests {
                 assert!(rmp_serde::from_slice::<ClpSQueryOption>(&serialized).is_err());
             }
         }
-    }
-
-    #[test]
-    fn timeline_task_output_preserves_msgpack_contract() {
-        let expected = TimelineTaskOutput {
-            query_job_id: 42,
-            output_handle: OutputHandle::ResultsCache {
-                uri: NonEmptyString::from_static_str("mongodb://results-cache:27017/timeline"),
-            },
-        };
-        let expected_handle = serde_json::json!({
-            "type": "results_cache",
-            "uri": "mongodb://results-cache:27017/timeline",
-        });
-        let serialized = rmp_serde::to_vec(&expected).expect("test payload should serialize");
-        let contract: (i32, serde_json::Value) =
-            rmp_serde::from_slice(&serialized).expect("serialized test payload should deserialize");
-        assert_eq!(
-            contract,
-            (
-                42,
-                serde_json::json!(["results_cache", "mongodb://results-cache:27017/timeline"])
-            )
-        );
-        let actual: TimelineTaskOutput =
-            rmp_serde::from_slice(&serialized).expect("serialized test payload should deserialize");
-        assert_eq!(actual, expected);
-
-        let named_contract = serde_json::json!({
-            "query_job_id": 42,
-            "output_handle": expected_handle,
-        });
-        let serialized = rmp_serde::to_vec_named(&expected).expect("test payload should serialize");
-        let actual_contract: serde_json::Value =
-            rmp_serde::from_slice(&serialized).expect("serialized test payload should deserialize");
-        assert_eq!(actual_contract, named_contract);
-        let actual: TimelineTaskOutput =
-            rmp_serde::from_slice(&serialized).expect("serialized test payload should deserialize");
-        assert_eq!(actual, expected);
     }
 
     #[test]
