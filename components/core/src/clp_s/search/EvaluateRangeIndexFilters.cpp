@@ -1,5 +1,6 @@
 #include "EvaluateRangeIndexFilters.hpp"
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -14,6 +15,7 @@
 #include "../../clp/ir/types.hpp"
 #include "../archive_constants.hpp"
 #include "../ArchiveReaderAdaptor.hpp"
+#include "../Utils.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/ConstantProp.hpp"
@@ -27,8 +29,82 @@
 using clp::ffi::ir_stream::search::evaluate_filter_against_literal_type_value_pair;
 
 namespace clp_s::search {
+namespace {
+/**
+ * @param ranges Sorted [begin, end) ranges of `log_event_idx`.
+ * @return An expression matching records whose `log_event_idx` falls within any of `ranges`, or
+ * `EmptyExpr` if `ranges` is empty.
+ */
+auto create_log_event_idx_range_filter(std::vector<std::pair<size_t, size_t>> const& ranges)
+        -> std::shared_ptr<ast::Expression>;
+
+auto create_log_event_idx_range_filter(std::vector<std::pair<size_t, size_t>> const& ranges)
+        -> std::shared_ptr<ast::Expression> {
+    if (ranges.empty()) {
+        return ast::EmptyExpr::create();
+    }
+
+    auto log_event_idx_col{ast::ColumnDescriptor::create_from_escaped_tokens(
+            {std::string{constants::cLogEventIdxName}},
+            constants::cDefaultNamespace
+    )};
+    log_event_idx_col->set_subtree_type(std::string{constants::cMetadataSubtreeType});
+    log_event_idx_col->set_matching_type(ast::LiteralType::IntegerT);
+    auto range_filters{ast::OrExpr::create()};
+
+    auto add_range_to_filter = [&](std::pair<size_t, size_t> const& range) {
+        auto begin_literal{ast::Integral::create_from_int(range.first)};
+        auto end_literal{ast::Integral::create_from_int(range.second)};
+        auto begin_filter{
+                ast::FilterExpr::create(log_event_idx_col, ast::FilterOperation::GTE, begin_literal)
+        };
+        auto end_filter{
+                ast::FilterExpr::create(log_event_idx_col, ast::FilterOperation::LT, end_literal)
+        };
+        auto range_filter{ast::AndExpr::create(begin_filter, end_filter)};
+        range_filter->copy_append(range_filters.get());
+    };
+
+    std::optional<std::pair<size_t, size_t>> cur_range;
+    for (auto const& range : ranges) {
+        if (false == cur_range.has_value()) {
+            cur_range.emplace(range);
+            continue;
+        }
+
+        if (cur_range.value().second == range.first) {
+            cur_range.value().second = range.second;
+            continue;
+        }
+
+        add_range_to_filter(cur_range.value());
+        cur_range.emplace(range);
+    }
+
+    if (cur_range.has_value()) {
+        add_range_to_filter(cur_range.value());
+    }
+    return range_filters;
+}
+}  // namespace
+
 auto EvaluateRangeIndexFilters::run(std::shared_ptr<ast::Expression>& expr)
         -> std::shared_ptr<ast::Expression> {
+    // Find the ranges that could match the whole expression before any filters get rewritten.
+    std::vector<std::pair<size_t, size_t>> matching_ranges;
+    bool is_decided_by_range_index{true};
+    for (auto const& range : m_range_index) {
+        auto const result{evaluate_expression(expr.get(), range.fields)};
+        if (EvaluatedValue::False == result) {
+            continue;
+        }
+        if (EvaluatedValue::Unknown == result) {
+            is_decided_by_range_index = false;
+        }
+        matching_ranges.emplace_back(range.start_index, range.end_index);
+    }
+    m_log_event_idx_ranges.clear();
+
     bool must_renormalize{false};
     std::vector<std::pair<ast::Expression*, std::optional<ast::OpList::iterator>>> work_list;
     work_list.emplace_back(expr.get(), std::nullopt);
@@ -50,6 +126,12 @@ auto EvaluateRangeIndexFilters::run(std::shared_ptr<ast::Expression>& expr)
     }
 
     if (must_renormalize) {
+        // If the range index alone decides the expression, it only needs to match the ranges.
+        if (is_decided_by_range_index) {
+            expr = create_log_event_idx_range_filter(matching_ranges);
+        }
+        m_log_event_idx_ranges = std::move(matching_ranges);
+
         ast::OrOfAndForm standardize_pass;
         expr = standardize_pass.run(expr);
         ast::ConstantProp constant_prop;
@@ -70,54 +152,7 @@ void EvaluateRangeIndexFilters::evaluate_and_rewrite_filter(
         }
     }
 
-    auto replacement_expr{ast::EmptyExpr::create()};
-    if (false == matching_ranges.empty()) {
-        auto log_event_idx_col{ast::ColumnDescriptor::create_from_escaped_tokens(
-                {std::string{constants::cLogEventIdxName}},
-                constants::cDefaultNamespace
-        )};
-        log_event_idx_col->set_subtree_type(std::string{constants::cMetadataSubtreeType});
-        log_event_idx_col->set_matching_type(ast::LiteralType::IntegerT);
-        replacement_expr = ast::OrExpr::create();
-
-        auto add_range_to_filter = [&](std::pair<size_t, size_t> const& range) {
-            auto begin_literal{ast::Integral::create_from_int(range.first)};
-            auto end_literal{ast::Integral::create_from_int(range.second)};
-            auto begin_filter{ast::FilterExpr::create(
-                    log_event_idx_col,
-                    ast::FilterOperation::GTE,
-                    begin_literal
-            )};
-            auto end_filter{ast::FilterExpr::create(
-                    log_event_idx_col,
-                    ast::FilterOperation::LT,
-                    end_literal
-            )};
-            auto range_filter{ast::AndExpr::create(begin_filter, end_filter)};
-            range_filter->copy_append(replacement_expr.get());
-        };
-
-        std::optional<std::pair<size_t, size_t>> cur_range;
-        for (auto const& matching_range : matching_ranges) {
-            if (false == cur_range.has_value()) {
-                cur_range.emplace(matching_range);
-                continue;
-            }
-
-            if (cur_range.value().second == matching_range.first) {
-                cur_range.value().second = matching_range.second;
-                continue;
-            }
-
-            add_range_to_filter(cur_range.value());
-            cur_range.emplace(matching_range);
-        }
-
-        if (cur_range.has_value()) {
-            add_range_to_filter(cur_range.value());
-        }
-    }
-
+    auto replacement_expr{create_log_event_idx_range_filter(matching_ranges)};
     if (false == parent_it.has_value()) {
         ast_root = replacement_expr;
     } else {
@@ -260,4 +295,43 @@ auto EvaluateRangeIndexFilters::evaluate_filter(
     }
     return false;
 }
+
+// NOLINTBEGIN(misc-no-recursion)
+auto EvaluateRangeIndexFilters::evaluate_expression(
+        ast::Expression* expr,
+        nlohmann::json const& fields
+) const -> EvaluatedValue {
+    if (auto* filter_expr = dynamic_cast<ast::FilterExpr*>(expr); nullptr != filter_expr) {
+        if (constants::cRangeIndexNamespace != filter_expr->get_column()->get_namespace()) {
+            return EvaluatedValue::Unknown;
+        }
+        return evaluate_filter(filter_expr, fields) ? EvaluatedValue::True : EvaluatedValue::False;
+    }
+
+    auto const is_and_expr{nullptr != dynamic_cast<ast::AndExpr*>(expr)};
+    if (false == is_and_expr && nullptr == dynamic_cast<ast::OrExpr*>(expr)) {
+        return EvaluatedValue::Unknown;
+    }
+
+    // An AND expression is decided by any false operand, and an OR expression by any true operand.
+    auto const deciding_value{is_and_expr ? EvaluatedValue::False : EvaluatedValue::True};
+    auto result{is_and_expr ? EvaluatedValue::True : EvaluatedValue::False};
+    for (auto const& op : expr->get_op_list()) {
+        auto const op_result{evaluate_expression(static_cast<ast::Expression*>(op.get()), fields)};
+        if (deciding_value == op_result) {
+            result = op_result;
+            break;
+        }
+        if (EvaluatedValue::Unknown == op_result) {
+            result = EvaluatedValue::Unknown;
+        }
+    }
+
+    if (EvaluatedValue::Unknown == result || false == expr->is_inverted()) {
+        return result;
+    }
+    return EvaluatedValue::True == result ? EvaluatedValue::False : EvaluatedValue::True;
+}
+
+// NOLINTEND(misc-no-recursion)
 }  // namespace clp_s::search

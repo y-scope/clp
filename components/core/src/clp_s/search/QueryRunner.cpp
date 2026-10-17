@@ -114,6 +114,8 @@ void QueryRunner::init(SchemaReader* reader, std::vector<BaseColumnReader*> cons
 
 auto QueryRunner::prepare_filter(SchemaReader& reader) -> FilterClass& {
     m_column_scan.reset();
+    m_reader = &reader;
+    m_cur_log_event_idx_range = m_log_event_idx_ranges.cbegin();
     if (EvaluatedValue::Unknown != m_expression_value) {
         return *this;
     }
@@ -156,8 +158,28 @@ std::string& QueryRunner::get_cached_decompressed_unstructured_array(int32_t col
 
 bool QueryRunner::filter(uint64_t cur_message) {
     m_cur_message = cur_message;
+    if (false == in_log_event_idx_ranges()) {
+        return false;
+    }
     m_extracted_unstructured_arrays.clear();
     return evaluate(m_expr.get(), m_schema);
+}
+
+auto QueryRunner::in_log_event_idx_ranges() -> bool {
+    if (m_log_event_idx_ranges.empty() || false == m_archive_reader->has_log_order()) {
+        return true;
+    }
+
+    // Records in a table are stored in log order, so ranges before the current record can be
+    // skipped for the rest of the table.
+    auto const log_event_idx{static_cast<size_t>(m_reader->get_next_log_event_idx())};
+    while (m_log_event_idx_ranges.cend() != m_cur_log_event_idx_range
+           && log_event_idx >= m_cur_log_event_idx_range->second)
+    {
+        ++m_cur_log_event_idx_range;
+    }
+    return m_log_event_idx_ranges.cend() != m_cur_log_event_idx_range
+           && log_event_idx >= m_cur_log_event_idx_range->first;
 }
 
 bool QueryRunner::evaluate(Expression* expr, int32_t schema) {

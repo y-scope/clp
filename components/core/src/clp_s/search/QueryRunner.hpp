@@ -49,12 +49,14 @@ public:
             std::shared_ptr<SchemaMatch> const& match,
             std::shared_ptr<ast::Expression> const& expr,
             std::shared_ptr<ArchiveReader> const& archive_reader,
-            bool ignore_case
+            bool ignore_case,
+            std::vector<std::pair<size_t, size_t>> log_event_idx_ranges = {}
     )
             : m_archive_reader(archive_reader),
               m_expr(expr),
               m_match(match),
               m_ignore_case(ignore_case),
+              m_log_event_idx_ranges(std::move(log_event_idx_ranges)),
               m_schema_tree(m_archive_reader->get_schema_tree()),
               m_var_dict(m_archive_reader->get_variable_dictionary()),
               m_log_dict(m_archive_reader->get_log_type_dictionary()),
@@ -126,6 +128,8 @@ private:
     std::shared_ptr<ast::Expression> m_expr;
     std::shared_ptr<SchemaMatch> m_match;
     bool m_ignore_case;
+    std::vector<std::pair<size_t, size_t>> m_log_event_idx_ranges;
+    std::vector<std::pair<size_t, size_t>>::const_iterator m_cur_log_event_idx_range;
 
     // variables for the current schema being filtered
     int32_t m_schema{-1};
@@ -191,6 +195,11 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
+
+    /**
+     * @return Whether the current message could fall within `m_log_event_idx_ranges`.
+     */
+    auto in_log_event_idx_ranges() -> bool;
 
     /**
      * Evaluates a wildcard filter expression
