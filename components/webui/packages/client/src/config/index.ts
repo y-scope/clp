@@ -7,6 +7,7 @@ const SETTINGS_LOGS_INPUT_TYPE = settings.LogsInputType;
 const SETTINGS_MAX_DATASETS_PER_QUERY = settings.MaxDatasetsPerQuery;
 const SETTINGS_PRESTO_MAX_NUM_SEARCH_RESULTS = settings.PrestoMaxNumSearchResults;
 const SETTINGS_STORAGE_ENGINE = settings.ClpStorageEngine;
+const SETTINGS_S3_SCANNER_ENABLED = settings.S3ScannerEnabled;
 const SETTINGS_QUERY_ENGINE = settings.ClpQueryEngine;
 
 /**
@@ -21,6 +22,7 @@ export {
     SETTINGS_MAX_DATASETS_PER_QUERY,
     SETTINGS_PRESTO_MAX_NUM_SEARCH_RESULTS,
     SETTINGS_QUERY_ENGINE,
+    SETTINGS_S3_SCANNER_ENABLED,
     SETTINGS_STORAGE_ENGINE,
     STREAM_TYPE,
 };

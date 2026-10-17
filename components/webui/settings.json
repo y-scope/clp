@@ -20,6 +20,7 @@
     },
     "server": {
         "ApiServerUrl": "http://localhost:3001",
+        "LogIngestorUrl": null,
 
         "SqlDbHost": "localhost",
         "SqlDbName": "clp-db",

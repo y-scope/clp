@@ -931,6 +931,17 @@ class BaseController(ABC):
         if self._clp_config.query_scheduler is not None:
             max_datasets_per_query = self._clp_config.query_scheduler.max_datasets_per_query
 
+        log_ingestor_url = None
+        if (
+            self._clp_config.package.storage_engine == StorageEngine.CLP_S
+            and self._clp_config.logs_input.type == StorageType.S3
+            and container_clp_config.log_ingestor is not None
+        ):
+            log_ingestor_url = (
+                f"http://{container_clp_config.log_ingestor.host}"
+                f":{container_clp_config.log_ingestor.port}"
+            )
+
         public_settings_updates = {
             "ClpQueryEngine": self._clp_config.webui.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
@@ -949,6 +960,7 @@ class BaseController(ABC):
         }
 
         server_settings_updates = {
+            "LogIngestorUrl": log_ingestor_url,
             "ApiServerUrl": (
                 f"http://{container_clp_config.api_server.host}"
                 f":{container_clp_config.api_server.port}"
