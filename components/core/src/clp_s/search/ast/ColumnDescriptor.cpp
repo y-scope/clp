@@ -14,6 +14,7 @@
 #include <clp_s/Defs.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/search/ast/Literal.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s::search::ast {
 namespace {
@@ -138,7 +139,6 @@ auto ColumnDescriptor::get_bound_node_id() const -> mpt_node_id_t {
     if (false == m_resolution.bound_node_id.has_value()) {
         throw OperationFailed(
                 ErrorCodeNotInit,
-                // NOLINTNEXTLINE(misc-include-cleaner)
                 __FILENAME__,
                 __LINE__,
                 "Column \"" + to_string() + "\" is not bound to an MPT node."
