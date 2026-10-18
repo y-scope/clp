@@ -86,6 +86,7 @@ enum class NodeType : uint8_t {
         case NodeType::Unknown:
             return false;
     }
+    return false;
 }
 
 /**
