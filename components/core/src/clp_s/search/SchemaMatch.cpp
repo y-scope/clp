@@ -1110,8 +1110,8 @@ auto SchemaMatch::build_leaf_filters(
         std::unordered_set<int32_t> const& matched_schema_ids,
         bool is_inverted
 ) -> std::optional<std::vector<std::shared_ptr<ast::Expression>>> {
-    auto const rule_names{clpp::split_qualified_name(leaf.m_qualified_name)};
-    auto leaf_cols{resolve_leaf_rule_descriptors(column, decomposition_root, rule_names)};
+    auto const rule_name{clpp::split_qualified_name(leaf.m_qualified_name)};
+    auto leaf_cols{resolve_leaf_rule_descriptors(column, decomposition_root, rule_name)};
     if (false == leaf_cols.has_value()) {
         return std::nullopt;
     }
