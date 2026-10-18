@@ -44,18 +44,17 @@ public:
     };
 
     /**
-     * Per-schema-node projection mask tracking which output modes are active for a given schema
-     * node.
+     * The set of output modes active for a MPT node.
      */
-    class NodeMask {
+    class NodeModes {
     public:
         // Types
         /**
-         * Output modes for a projected schema node.
+         * Output modes for a projected MPT node.
          * - Default: no explicit output mode set (the node is implicitly projected if matched).
-         * - Value: emit the schema node's value.
-         * - Shape: emit the schema node's shape.
-         * - Decompose: (implies Shape) emit the schema node's leaf values and shape.
+         * - Value: emit the MPT node's value.
+         * - Shape: emit the MPT node's shape.
+         * - Decompose: (implies Shape) emit the MPT node's leaf values and shape.
          */
         enum class Mode : uint8_t {
             Default = 0,
@@ -65,25 +64,32 @@ public:
         };
 
         // Methods
-        [[nodiscard]] auto has(Mode mode) const -> bool {
+        /**
+         * @param mode
+         * @return Whether `mode` is active.
+         */
+        [[nodiscard]] auto contains(Mode mode) const -> bool {
             if (Mode::Default == mode) {
-                return m_mask == 0;
+                return 0 == m_modes;
             }
-            return (m_mask & static_cast<uint8_t>(mode)) != 0;
+            return (m_modes & static_cast<uint8_t>(mode)) != 0;
         }
 
-        auto merge(NodeMask const& other) -> void { m_mask |= other.m_mask; }
-
-        auto set(Mode mode) -> void {
-            m_mask |= static_cast<uint8_t>(mode);
+        /**
+         * Adds `mode`, keeping any modes already active. Adding `Mode::Decompose` also adds
+         * `Mode::Shape`.
+         * @param mode
+         */
+        auto add(Mode mode) -> void {
+            m_modes |= static_cast<uint8_t>(mode);
             if (Mode::Decompose == mode) {
-                m_mask |= static_cast<uint8_t>(Mode::Shape);
+                m_modes |= static_cast<uint8_t>(Mode::Shape);
             }
         }
 
     private:
         // Data members
-        uint8_t m_mask{0};
+        uint8_t m_modes{0};
     };
 
     // Constructors
@@ -114,14 +120,14 @@ public:
      * @param mode The projection mode to test.
      * @return Whether the node has the requested projection mode.
      */
-    [[nodiscard]] auto is_projected_as(mpt_node_id_t node_id, NodeMask::Mode mode) const -> bool;
+    [[nodiscard]] auto is_projected_as(mpt_node_id_t node_id, NodeModes::Mode mode) const -> bool;
 
     /**
-     * Gets the projection mask for a given schema node.
+     * Gets the projected output modes for a given schema node.
      * @param node_id The schema node ID to look up.
-     * @return The node's projection mask, or an empty mask if the node has no projections.
+     * @return The node's modes, or no modes if the node has no projections.
      */
-    [[nodiscard]] auto get_node_mask(mpt_node_id_t node_id) const -> NodeMask;
+    [[nodiscard]] auto get_node_modes(mpt_node_id_t node_id) const -> NodeModes;
 
     /**
      * Checks whether a schema node's value should be emitted. In the Default mode only
@@ -162,13 +168,13 @@ private:
     // Types
     struct TargetColumn {
         // Constructors
-        TargetColumn(std::shared_ptr<ast::ColumnDescriptor> column, NodeMask::Mode mode)
+        TargetColumn(std::shared_ptr<ast::ColumnDescriptor> column, NodeModes::Mode mode)
                 : m_column(std::move(column)),
                   m_mode(mode) {}
 
         // Data members
         std::shared_ptr<ast::ColumnDescriptor> m_column;
-        NodeMask::Mode m_mode;
+        NodeModes::Mode m_mode;
         std::vector<mpt_node_id_t> m_matched_nodes;
     };
 
@@ -187,7 +193,7 @@ private:
      * @param node_id
      * @param mode
      */
-    auto add_projection(mpt_node_id_t node_id, NodeMask::Mode mode) -> void;
+    auto add_projection(mpt_node_id_t node_id, NodeModes::Mode mode) -> void;
 
     /**
      * Records `mode` as the projection mode of every decomposable node among a resolved column's
@@ -200,13 +206,13 @@ private:
     [[nodiscard]] auto collect_decomposable_projections(
             SchemaTree const& tree,
             std::vector<mpt_node_id_t> const& matched_nodes,
-            NodeMask::Mode mode
+            NodeModes::Mode mode
     ) -> bool;
 
     // Data members
     std::vector<TargetColumn> m_columns;
     absl::flat_hash_set<mpt_node_id_t> m_matching_nodes;
-    absl::flat_hash_map<mpt_node_id_t, NodeMask> m_node_projections;
+    absl::flat_hash_map<mpt_node_id_t, NodeModes> m_node_projections;
     Mode m_projection_mode{Mode::Default};
     bool m_allow_duplicate_columns{false};
 };

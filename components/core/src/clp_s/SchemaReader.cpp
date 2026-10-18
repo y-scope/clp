@@ -949,7 +949,7 @@ auto SchemaReader::collect_scope_entries(
                             || (m_projection
                                 && m_projection->is_projected_as(
                                         scope_node_id,
-                                        search::Projection::NodeMask::Mode::Decompose
+                                        search::Projection::NodeModes::Mode::Decompose
                                 ))
                     };
                     if (should_emit) {
@@ -998,16 +998,16 @@ auto SchemaReader::emit_parent_rule_arrays(
         bool ancestor_decomposed
 ) -> ystdlib::error_handling::Result<void> {
     for (auto const parent_rule_id : scope.parent_rule_insertion_order) {
-        auto const parent_rule_mask{
-                m_projection ? m_projection->get_node_mask(parent_rule_id)
-                             : search::Projection::NodeMask{}
+        auto const parent_rule_modes{
+                m_projection ? m_projection->get_node_modes(parent_rule_id)
+                             : search::Projection::NodeModes{}
         };
         auto const& parent_rule_node{m_global_schema_tree->get_node(parent_rule_id)};
         auto const& occurrences{scope.parent_rule_occurrences.at(parent_rule_id)};
         bool const emit_text{m_projection && m_projection->should_emit_value(parent_rule_node)};
         bool const emit_parent_rule{
                 emit_text || ancestor_decomposed
-                || parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)
+                || parent_rule_modes.contains(search::Projection::NodeModes::Mode::Shape)
                 || (m_projection
                     && std::ranges::any_of(occurrences, [&](auto const& occurrence) -> bool {
                            return contains_projected_node(occurrence.sub_schema, *m_projection);
@@ -1038,7 +1038,7 @@ auto SchemaReader::emit_parent_rule_arrays(
                 ));
             }
 
-            if (parent_rule_mask.has(search::Projection::NodeMask::Mode::Shape)) {
+            if (parent_rule_modes.contains(search::Projection::NodeModes::Mode::Shape)) {
                 YSTDLIB_ERROR_HANDLING_TRYX(emit_parent_rule_shape_substring(
                         log_shape_id,
                         parent_rule_column_name,
@@ -1052,7 +1052,9 @@ auto SchemaReader::emit_parent_rule_arrays(
                     occurrence.start_column_reader_idx,
                     log_shape_id,
                     ancestor_decomposed
-                            || parent_rule_mask.has(search::Projection::NodeMask::Mode::Decompose)
+                            || parent_rule_modes.contains(
+                                    search::Projection::NodeModes::Mode::Decompose
+                            )
             ));
 
             m_json_serializer.add_op(JsonSerializer::Op::EndObject);
@@ -1156,9 +1158,9 @@ auto SchemaReader::generate_structurized_text_template(mpt_node_id_t structurize
         return column_start + count_column_consuming_entries(schema, *m_global_schema_tree);
     }
 
-    auto const mask{m_projection->get_node_mask(structurized_text_id)};
-    bool const has_shape{mask.has(search::Projection::NodeMask::Mode::Shape)};
-    bool const has_decompose{mask.has(search::Projection::NodeMask::Mode::Decompose)};
+    auto const modes{m_projection->get_node_modes(structurized_text_id)};
+    bool const has_shape{modes.contains(search::Projection::NodeModes::Mode::Shape)};
+    bool const has_decompose{modes.contains(search::Projection::NodeModes::Mode::Decompose)};
 
     m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
     m_json_serializer.add_special_key(key_name);

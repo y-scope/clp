@@ -1,13 +1,14 @@
 #include "Projection.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include <fmt/format.h>
 
+#include <clp_s/Defs.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
@@ -29,29 +30,29 @@ auto Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) -> vo
         }
     }
 
-    auto const mode{[&]() -> NodeMask::Mode {
+    auto const mode{[&]() -> NodeModes::Mode {
         switch (column->get_function()) {
             case ast::ColumnDescriptor::Function::Shape:
-                return NodeMask::Mode::Shape;
+                return NodeModes::Mode::Shape;
             case ast::ColumnDescriptor::Function::Decompose:
-                return NodeMask::Mode::Decompose;
+                return NodeModes::Mode::Decompose;
             case ast::ColumnDescriptor::Function::None:
             default:
-                return NodeMask::Mode::Value;
+                return NodeModes::Mode::Value;
         }
     }()};
-    m_columns.emplace_back(TargetColumn{std::move(column), mode});
+    m_columns.emplace_back(std::move(column), mode);
 }
 
-auto Projection::is_projected_as(mpt_node_id_t node_id, NodeMask::Mode mode) const -> bool {
+auto Projection::is_projected_as(mpt_node_id_t node_id, NodeModes::Mode mode) const -> bool {
     auto it{m_node_projections.find(node_id)};
     if (m_node_projections.end() == it) {
         return false;
     }
-    return it->second.has(mode);
+    return it->second.contains(mode);
 }
 
-auto Projection::get_node_mask(mpt_node_id_t node_id) const -> NodeMask {
+auto Projection::get_node_modes(mpt_node_id_t node_id) const -> NodeModes {
     auto it{m_node_projections.find(node_id)};
     if (m_node_projections.end() == it) {
         return {};
@@ -64,20 +65,20 @@ auto Projection::should_emit_value(SchemaNode const& node) const -> bool {
         return NodeType::StructurizedText == node.get_type();
     }
     auto const node_id{node.get_id()};
-    auto const mask{get_node_mask(node_id)};
+    auto const modes{get_node_modes(node_id)};
     return m_matching_nodes.contains(node_id)
-           && (mask.has(NodeMask::Mode::Value) || mask.has(NodeMask::Mode::Default));
+           && (modes.contains(NodeModes::Mode::Value) || modes.contains(NodeModes::Mode::Default));
 }
 
-auto Projection::add_projection(mpt_node_id_t node_id, NodeMask::Mode mode) -> void {
+auto Projection::add_projection(mpt_node_id_t node_id, NodeModes::Mode mode) -> void {
     auto [it, _]{m_node_projections.try_emplace(node_id)};
-    it->second.set(mode);
+    it->second.add(mode);
 }
 
 auto Projection::collect_decomposable_projections(
         SchemaTree const& tree,
         std::vector<mpt_node_id_t> const& matched_nodes,
-        NodeMask::Mode mode
+        NodeModes::Mode mode
 ) -> bool {
     bool found_decomposable_node{false};
     for (auto node_id : matched_nodes) {
@@ -92,7 +93,7 @@ auto Projection::collect_decomposable_projections(
 auto Projection::resolve_columns(SchemaTree const& tree) -> void {
     for (auto& entry : m_columns) {
         entry.m_matched_nodes = resolve_column(tree, *entry.m_column);
-        if (NodeMask::Mode::Decompose == entry.m_mode || NodeMask::Mode::Shape == entry.m_mode) {
+        if (NodeModes::Mode::Decompose == entry.m_mode || NodeModes::Mode::Shape == entry.m_mode) {
             if (false
                 == collect_decomposable_projections(tree, entry.m_matched_nodes, entry.m_mode))
             {
@@ -134,12 +135,12 @@ auto Projection::resolve_column(SchemaTree const& tree, ast::ColumnDescriptor& c
      * what we need.
      */
 
-    auto cur_node_id = tree.get_object_subtree_node_id_for_namespace(column.get_namespace());
+    auto cur_node_id{tree.get_object_subtree_node_id_for_namespace(column.get_namespace())};
     if (-1 == cur_node_id) {
         return {};
     }
     std::vector<int32_t> matching_nodes_for_column;
-    auto it = column.descriptor_begin();
+    auto it{column.descriptor_begin()};
     while (it != column.descriptor_end()) {
         auto matched_any{false};
         auto cur_it{it};
