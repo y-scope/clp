@@ -58,11 +58,17 @@ Usage:
 * `--flavour clpp` enables CLP+. The default flavour, `clp-s`, produces a regular `clp-s` archive.
 * `--parsing-specification <spec-path>` is the [parsing specification](parsing-spec) used to parse
   log messages.
-* All standard `clp-s c` options still apply. For a complete list, run `./clp-s c --help`.
+* All standard `clp-s c` options still apply, except `--no-retain-float-format`. For a complete
+  list, run `./clp-s c --help`.
 
 :::{note}
 `--parsing-specification` is required by, and only valid with, `--flavour clpp`. Supplying it
 without `--flavour clpp`, or `--flavour clpp` without it, is an error.
+:::
+
+:::{note}
+CLP+ always retains the original format of floats so that log messages can be reconstructed
+exactly. Supplying `--no-retain-float-format` with `--flavour clpp` is an error.
 :::
 
 ### Examples

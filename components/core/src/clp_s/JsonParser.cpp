@@ -237,7 +237,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_max_document_size(option.max_document_size),
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
-          m_retain_float_format(option.retain_float_format) {
+          m_retain_float_format(option.retain_float_format || ClpFlavour::Clpp == option.flavour) {
     if (false == m_timestamp_key.empty()) {
         if (false
             == clp_s::search::ast::tokenize_column_descriptor(
@@ -1682,26 +1682,20 @@ auto JsonParser::try_add_float_value(
         return std::nullopt;
     }
 
-    if (m_retain_float_format) {
-        auto const float_format_result{get_float_encoding(lexeme)};
-        if (false == float_format_result.has_error()
-            && round_trip_is_identical(lexeme, double_value, float_format_result.value()))
-        {
-            auto const node_id{
-                    m_archive_writer->add_node(parent_node_id, NodeType::FormattedFloat, rule_name)
-            };
-            m_current_parsed_message.add_unordered_value(double_value, float_format_result.value());
-            return node_id;
-        }
+    auto const float_format_result{get_float_encoding(lexeme)};
+    if (false == float_format_result.has_error()
+        && round_trip_is_identical(lexeme, double_value, float_format_result.value()))
+    {
         auto const node_id{
-                m_archive_writer->add_node(parent_node_id, NodeType::DictionaryFloat, rule_name)
+                m_archive_writer->add_node(parent_node_id, NodeType::FormattedFloat, rule_name)
         };
-        m_current_parsed_message.add_unordered_value(std::string{lexeme});
+        m_current_parsed_message.add_unordered_value(double_value, float_format_result.value());
         return node_id;
     }
-
-    auto const node_id{m_archive_writer->add_node(parent_node_id, NodeType::Float, rule_name)};
-    m_current_parsed_message.add_unordered_value(double_value);
+    auto const node_id{
+            m_archive_writer->add_node(parent_node_id, NodeType::DictionaryFloat, rule_name)
+    };
+    m_current_parsed_message.add_unordered_value(std::string{lexeme});
     return node_id;
 }
 }  // namespace clp_s

@@ -30,6 +30,12 @@
 #include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
+/**
+ * Options for `JsonParser`.
+ *
+ * `retain_float_format` is treated as `true` whenever `flavour` is `ClpFlavour::Clpp`, since the
+ * clpp flavour must reconstruct unstructured text exactly.
+ */
 struct JsonParserOption {
     std::vector<std::pair<Path, std::string>> input_paths_and_canonical_filenames;
     std::string timestamp_key;
@@ -246,17 +252,14 @@ private:
     ) -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Attempts to parse a string lexeme as a float and add it to the current parsed message
-     * with the appropriate schema node type (Float, FormattedFloat, or DictionaryFloat).
-     *
-     * Respects m_retain_float_format for format preservation, falling back to plain Float
-     * when format preservation is not requested or the format can't be preserved.
-     *
+     * Attempts to parse a string lexeme as a float and add it to the current parsed message,
+     * retaining the lexeme's original format. Adds a `FormattedFloat` node when the format can be
+     * encoded losslessly and a `DictionaryFloat` node otherwise.
      * @param lexeme The string to parse as a float.
      * @param parent_node_id The parent schema tree node ID.
      * @param rule_name The rule name for the schema tree node key.
-     * @return The schema node ID of the added float node, or std::nullopt if the lexeme
-     *         cannot be parsed as a float.
+     * @return The schema node ID of the added float node.
+     * @return std::nullopt if the lexeme cannot be parsed as a float.
      */
     auto try_add_float_value(
             std::string_view lexeme,

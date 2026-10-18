@@ -424,7 +424,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "no-retain-float-format",
                     po::bool_switch(&m_no_retain_float_format),
-                    "Do not store extra information to losslessly decompress floats."
+                    "Do not store extra information to losslessly decompress floats. Not"
+                    " supported by the clpp flavour."
             )(
                     "normalize-paths",
                     po::bool_switch(&normalize_file_paths),
@@ -628,6 +629,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     );
                 }
                 m_parsing_spec_path.emplace(get_path_object_for_raw_path(parsing_spec_path));
+                if (m_no_retain_float_format) {
+                    throw std::invalid_argument(
+                            "--no-retain-float-format is not supported when --flavour is clpp"
+                    );
+                }
             } else if (false == parsing_spec_path.empty()) {
                 throw std::invalid_argument(
                         "--parsing-specification is only valid when --flavour is clpp"

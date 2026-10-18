@@ -274,16 +274,12 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
             is_clpp ? std::make_optional(get_heuristic_parsing_spec_path()) : std::nullopt
     };
 
-    // clpp requires retain_float_format for the extracted output of unstructured text to exactly
-    // match the original input.
-    auto const retain_float_format{is_clpp};
-
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
                     get_test_input_local_path(cTestEndToEndInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
                     std::nullopt,
-                    retain_float_format,
+                    false,
                     single_file_archive,
                     structurize_arrays,
                     parsing_spec_path
