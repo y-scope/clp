@@ -5,8 +5,6 @@ set(
     CLP_S_AST_SOURCES
     AndExpr.cpp
     AndExpr.hpp
-    BooleanLiteral.cpp
-    BooleanLiteral.hpp
     ColumnDescriptor.cpp
     ColumnDescriptor.hpp
     ConstantProp.cpp
@@ -22,13 +20,9 @@ set(
     FilterExpr.cpp
     FilterExpr.hpp
     FilterOperation.hpp
-    Integral.cpp
-    Integral.hpp
     Literal.hpp
     NarrowTypes.cpp
     NarrowTypes.hpp
-    NullLiteral.cpp
-    NullLiteral.hpp
     OrExpr.cpp
     OrExpr.hpp
     OrOfAndForm.cpp
@@ -37,10 +31,10 @@ set(
     SearchUtils.hpp
     SetTimestampLiteralPrecision.cpp
     SetTimestampLiteralPrecision.hpp
-    StringLiteral.cpp
-    StringLiteral.hpp
     Transformation.hpp
     Value.hpp
+    ValueLiteral.cpp
+    ValueLiteral.hpp
 )
 
 set(
