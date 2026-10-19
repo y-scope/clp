@@ -378,7 +378,12 @@ public:
 private:
     // Types
     /**
-     * A leaf column targeted for decomposed output.
+     * A leaf column selected for output as part of a decomposed StructurizedText or ParentRule
+     * scope, with the reader it is read from:
+     * @var node_id The leaf's node ID in the global schema tree.
+     * @var reader_idx Index of the leaf's column reader in `m_columns`.
+     * @var name The leaf's key name, used as the key of its output array.
+     * @var type The leaf's node type, which selects the serializer op used to output its value.
      */
     struct DecompositionTarget {
         mpt_node_id_t node_id{-1};
@@ -531,8 +536,9 @@ private:
     ) -> ystdlib::error_handling::Result<CompiledShape>;
 
     /**
-     * Adds an op that outputs a node's reconstructed text as a field (its key must already be
-     * added), and registers the compiled shape the op reconstructs from.
+     * Adds the serializer op that outputs a node's reconstructed text as a field (its key must
+     * already be added), and registers the compiled shape the op reconstructs from in
+     * `m_reconstruction_targets`.
      * @param log_shape_id
      * @param parent_rule_column_name
      * @param start_column_reader_idx
@@ -541,7 +547,7 @@ private:
      * @return A void result on success, or an error code indicating the failure:
      * - Forwards `compile_shape`'s return values.
      */
-    [[nodiscard]] auto emit_reconstructed_text(
+    [[nodiscard]] auto add_reconstructed_text_op(
             clpp::log_shape_id_t log_shape_id,
             std::string_view parent_rule_column_name,
             size_t start_column_reader_idx,
@@ -550,36 +556,38 @@ private:
     ) -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Emits the shape constant string field.
+     * Adds the serializer op that outputs a StructurizedText's log shape as a constant `shape`
+     * string field.
      * @param log_shape_id The log shape ID.
      * @return A void result on success, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if the shape dictionary is not available.
      */
-    [[nodiscard]] auto emit_log_shape(clpp::log_shape_id_t log_shape_id)
+    [[nodiscard]] auto add_log_shape_field_op(clpp::log_shape_id_t log_shape_id)
             -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Emits the shape substring for a specific occurrence of a ParentRule within a
-     * StructurizedText's shape.
+     * Adds the serializer op that outputs, as a constant `shape` string field, the substring of a
+     * StructurizedText's log shape covering a specific occurrence of a ParentRule.
      * @param log_shape_id The log shape ID.
      * @param parent_rule_column_name The column name of the ParentRule.
-     * @param occurrence_idx The index of the ParentRule occurrence to emit the shape of.
+     * @param occurrence_idx The index of the ParentRule occurrence to output the shape of.
      * @return A void result on success, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Failure if the shape dictionary or parent rule shapes are not available.
      */
-    [[nodiscard]] auto emit_parent_rule_shape_substring(
+    [[nodiscard]] auto add_parent_rule_shape_field_op(
             clpp::log_shape_id_t log_shape_id,
             std::string_view parent_rule_column_name,
             size_t occurrence_idx
     ) -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Sorts, groups by column name, and emits leaf entries as JSON array fields.
-     * @param entries The leaf entries to emit (sorted in-place).
+     * Adds the serializer ops that output leaf entries as JSON array fields, one array per column
+     * name, and appends each entry's column reader to `m_reordered_columns` in output order.
+     * @param entries The leaf entries to output (sorted by name in-place).
      * @return A void result on success, or an error code indicating the failure:
      * - ClppErrorCodeEnum::Unsupported if an unsupported column type is encountered.
      */
-    [[nodiscard]] auto emit_grouped_leaf_entries(std::vector<DecompositionTarget>& entries)
+    [[nodiscard]] auto add_grouped_leaf_array_ops(std::vector<DecompositionTarget>& entries)
             -> ystdlib::error_handling::Result<void>;
 
     /**
@@ -601,41 +609,40 @@ private:
     ) -> SchemaSpanContents;
 
     /**
-     * Emits ParentRule arrays from the grouped occurrences in a `SchemaSpanContents`. For each
-     * ParentRule group, emits a JSON array with one element per occurrence. Each occurrence is an
-     * object of its projected fields — reconstructed text (when the ParentRule itself is
-     * projected), shape, and leaf-rule/ParentRule arrays — or a bare text string when the text is
-     * its only field.
+     * Adds the serializer ops that output the ParentRule arrays for the grouped occurrences in a
+     * `SchemaSpanContents`. Each projected ParentRule group is output as a JSON array with one
+     * object per occurrence, containing that occurrence's projected fields: reconstructed text
+     * (when the ParentRule itself is projected), shape, and leaf-rule/ParentRule arrays.
      * @param scope The collected scope contents.
      * @param log_shape_id
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active.
      * @return A void result on success, or an error code indicating the failure:
-     * - Forwards `emit_parent_rule_shape_substring`'s return values.
-     * - Forwards `emit_decomposed_scope`'s return values.
+     * - Forwards `add_parent_rule_shape_field_op`'s return values.
+     * - Forwards `add_decomposed_scope_ops`'s return values.
      */
-    [[nodiscard]] auto emit_parent_rule_arrays(
+    [[nodiscard]] auto add_parent_rule_array_ops(
             SchemaSpanContents const& scope,
             clpp::log_shape_id_t log_shape_id,
             bool ancestor_decomposed
     ) -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Emits the decomposed content of a decomposable sub-schema as direct leaf rule arrays and
-     * nested ParentRule objects. The ParentRule objects contain their direct leaf arrays and other
-     * nested ParentRule objects.
+     * Adds the serializer ops that output the decomposed content of a decomposable sub-schema as
+     * direct leaf rule arrays and nested ParentRule arrays. Each ParentRule occurrence object
+     * contains its own direct leaf arrays and nested ParentRule arrays.
      * @param schema The sub-schema to walk.
      * @param scope_node_id The node ID of the owning decomposable scope.
      * @param column_idx The index of this scope's first column reader in `m_columns`.
      * @param log_shape_id
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active,
-     * causing all leaves and child ParentRules to be emitted regardless of individual projection
+     * causing all leaves and child ParentRules to be output regardless of individual projection
      * checks.
      * @return The column index past the last consumed column in this scope, or an error code
      * indicating the failure:
-     * - Forwards `emit_grouped_leaf_entries`'s return values.
-     * - Forwards `emit_parent_rule_arrays`'s return values.
+     * - Forwards `add_grouped_leaf_array_ops`'s return values.
+     * - Forwards `add_parent_rule_array_ops`'s return values.
      */
-    [[nodiscard]] auto emit_decomposed_scope(
+    [[nodiscard]] auto add_decomposed_scope_ops(
             SchemaView schema,
             mpt_node_id_t scope_node_id,
             size_t column_idx,

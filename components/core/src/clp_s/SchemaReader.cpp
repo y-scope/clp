@@ -898,7 +898,7 @@ void SchemaReader::generate_json_template(int32_t id) {
     }
 }
 
-auto SchemaReader::emit_parent_rule_shape_substring(
+auto SchemaReader::add_parent_rule_shape_field_op(
         clpp::log_shape_id_t log_shape_id,
         std::string_view parent_rule_column_name,
         size_t occurrence_idx
@@ -919,7 +919,7 @@ auto SchemaReader::emit_parent_rule_shape_substring(
     return ystdlib::error_handling::success();
 }
 
-auto SchemaReader::emit_log_shape(clpp::log_shape_id_t log_shape_id)
+auto SchemaReader::add_log_shape_field_op(clpp::log_shape_id_t log_shape_id)
         -> ystdlib::error_handling::Result<void> {
     if (nullptr == m_log_shape_dict) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
@@ -992,7 +992,7 @@ auto SchemaReader::collect_scope_entries(
     return scope;
 }
 
-auto SchemaReader::emit_parent_rule_arrays(
+auto SchemaReader::add_parent_rule_array_ops(
         SchemaSpanContents const& scope,
         clpp::log_shape_id_t log_shape_id,
         bool ancestor_decomposed
@@ -1029,7 +1029,7 @@ auto SchemaReader::emit_parent_rule_arrays(
 
             if (emit_text) {
                 m_json_serializer.add_special_key(cTextKey);
-                YSTDLIB_ERROR_HANDLING_TRYV(emit_reconstructed_text(
+                YSTDLIB_ERROR_HANDLING_TRYV(add_reconstructed_text_op(
                         log_shape_id,
                         parent_rule_column_name,
                         occurrence.start_column_reader_idx,
@@ -1039,14 +1039,14 @@ auto SchemaReader::emit_parent_rule_arrays(
             }
 
             if (parent_rule_modes.contains(search::Projection::NodeModes::Mode::Shape)) {
-                YSTDLIB_ERROR_HANDLING_TRYX(emit_parent_rule_shape_substring(
+                YSTDLIB_ERROR_HANDLING_TRYX(add_parent_rule_shape_field_op(
                         log_shape_id,
                         parent_rule_column_name,
                         occurrence_idx
                 ));
             }
 
-            std::ignore = YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
+            std::ignore = YSTDLIB_ERROR_HANDLING_TRYX(add_decomposed_scope_ops(
                     occurrence.sub_schema,
                     parent_rule_id,
                     occurrence.start_column_reader_idx,
@@ -1065,7 +1065,7 @@ auto SchemaReader::emit_parent_rule_arrays(
     return ystdlib::error_handling::success();
 }
 
-auto SchemaReader::emit_decomposed_scope(
+auto SchemaReader::add_decomposed_scope_ops(
         SchemaView schema,
         mpt_node_id_t scope_node_id,
         size_t column_idx,
@@ -1073,12 +1073,14 @@ auto SchemaReader::emit_decomposed_scope(
         bool ancestor_decomposed
 ) -> ystdlib::error_handling::Result<size_t> {
     auto scope{collect_scope_entries(schema, scope_node_id, column_idx, ancestor_decomposed)};
-    YSTDLIB_ERROR_HANDLING_TRYV(emit_grouped_leaf_entries(scope.entries));
-    YSTDLIB_ERROR_HANDLING_TRYV(emit_parent_rule_arrays(scope, log_shape_id, ancestor_decomposed));
+    YSTDLIB_ERROR_HANDLING_TRYV(add_grouped_leaf_array_ops(scope.entries));
+    YSTDLIB_ERROR_HANDLING_TRYV(
+            add_parent_rule_array_ops(scope, log_shape_id, ancestor_decomposed)
+    );
     return scope.next_column_reader_idx;
 }
 
-auto SchemaReader::emit_grouped_leaf_entries(std::vector<DecompositionTarget>& entries)
+auto SchemaReader::add_grouped_leaf_array_ops(std::vector<DecompositionTarget>& entries)
         -> ystdlib::error_handling::Result<void> {
     std::stable_sort(entries.begin(), entries.end(), [](auto const& a, auto const& b) -> bool {
         return a.name < b.name;
@@ -1153,7 +1155,7 @@ auto SchemaReader::generate_structurized_text_template(mpt_node_id_t structurize
     if (emit_bare_text) {
         m_json_serializer.add_special_key(key_name);
         YSTDLIB_ERROR_HANDLING_TRYV(
-                emit_reconstructed_text(log_shape_id, "", column_start, schema, 0)
+                add_reconstructed_text_op(log_shape_id, "", column_start, schema, 0)
         );
         return column_start + count_column_consuming_entries(schema, *m_global_schema_tree);
     }
@@ -1168,17 +1170,17 @@ auto SchemaReader::generate_structurized_text_template(mpt_node_id_t structurize
     if (m_projection->should_emit_value(structurized_text_node)) {
         m_json_serializer.add_special_key(cTextKey);
         YSTDLIB_ERROR_HANDLING_TRYV(
-                emit_reconstructed_text(log_shape_id, "", column_start, schema, 0)
+                add_reconstructed_text_op(log_shape_id, "", column_start, schema, 0)
         );
     }
 
     if (has_shape) {
-        if (auto const result{emit_log_shape(log_shape_id)}; result.has_error()) {
+        if (auto const result{add_log_shape_field_op(log_shape_id)}; result.has_error()) {
             return result.error();
         }
     }
 
-    auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(emit_decomposed_scope(
+    auto const column_idx{YSTDLIB_ERROR_HANDLING_TRYX(add_decomposed_scope_ops(
             schema,
             structurized_text_id,
             column_start,
@@ -1264,7 +1266,7 @@ auto SchemaReader::compile_shape(
     return compiled_shape;
 }
 
-auto SchemaReader::emit_reconstructed_text(
+auto SchemaReader::add_reconstructed_text_op(
         clpp::log_shape_id_t log_shape_id,
         std::string_view parent_rule_column_name,
         size_t start_column_reader_idx,
