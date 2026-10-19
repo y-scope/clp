@@ -8,7 +8,7 @@
 //! | PENDING            | NULL        | NULL            | New jobs awaiting dispatch.     |
 //! | PENDING            | NULL        | NOT NULL        | Dispatched, not yet submitted.  |
 //! | RUNNING            | NOT NULL    | NOT NULL        | Submitted to Spider.            |
-//! | `CANCEL_REQUESTED` | ANY         | ANY             | Requested to cancel.            |
+//! | CANCEL_REQUESTED   | ANY         | ANY             | Requested to cancel.            |
 //! | CANCELLING         | NOT NULL    | NOT NULL        | Cancellation relayed to Spider. |
 //!
 //! NOTE:
@@ -16,7 +16,7 @@
 //! * These are the only legal states for a job that hasn't terminated.
 //! * A non-NULL `dispatch_time` indicates that the coordinator has picked up the job and granted it
 //!   permission to run under the concurrency limit.
-//! * `CANCEL_REQUESTED` is non-terminal and is reachable from both PENDING and RUNNING.
+//! * CANCEL_REQUESTED is non-terminal and is reachable from both PENDING and RUNNING.
 //! * CANCELLING is non-terminal and is reachable only from `CANCEL_REQUESTED`.
 
 use std::num::NonZeroU64;
@@ -41,6 +41,7 @@ use spider_core::types::id::ResourceGroupId;
 use spider_core::types::resource_group::ExternalResourceGroupCredentials;
 use tokio::select;
 use tokio::sync::Semaphore;
+use tokio::task::JoinHandle;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Endpoint;
@@ -62,6 +63,7 @@ pub struct Coordinator {
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
+    cancellation_monitor_handle: JoinHandle<()>,
     job_handler_sem: Arc<Semaphore>,
 }
 
@@ -145,6 +147,14 @@ impl Coordinator {
         });
 
         let cancellation_token = CancellationToken::new();
+        let job_polling_interval =
+            Duration::from_millis(coordinator_config.job_polling_interval_millisecs.get());
+
+        let cancellation_monitor =
+            CancellationMonitor::new(db_pool.clone(), spider_client.clone(), job_polling_interval);
+        cancellation_monitor.sweep_unsubmitted_jobs().await?;
+        let cancellation_monitor_handle =
+            tokio::spawn(cancellation_monitor.run(cancellation_token.clone()));
 
         let coordinator = Self {
             resource_group_id,
@@ -155,18 +165,16 @@ impl Coordinator {
                 uri: results_cache_config.uri(),
             },
             is_first_fetch: true,
-            job_polling_interval: Duration::from_millis(
-                coordinator_config.job_polling_interval_millisecs.get(),
-            ),
+            job_polling_interval,
             cancellation_token: cancellation_token.clone(),
+            cancellation_monitor_handle,
             job_handler_sem: Arc::new(Semaphore::new(max_concurrent_jobs)),
         };
-        coordinator
-            .create_cancellation_monitor()
-            .sweep_unsubmitted_jobs()
-            .await?;
 
-        coordinator.recover_submitted_jobs().await?;
+        coordinator
+            .recover_submitted_jobs()
+            .await
+            .inspect_err(|_| cancellation_token.cancel())?;
 
         Ok((coordinator, cancellation_token))
     }
@@ -187,6 +195,7 @@ impl Coordinator {
         for SubmittedJob {
             id: job_id,
             spider_job_id,
+            status,
             search_job_config,
             job_creation_timestamp_millisecs,
         } in self.fetch_submitted_jobs().await?
@@ -194,6 +203,7 @@ impl Coordinator {
             tracing::info!(
                 job_id = % job_id,
                 spider_job_id = % spider_job_id,
+                status = ? status,
                 "Recovering a previously submitted job."
             );
             let Ok(job_handle) = QueryJobHandle::new(
@@ -237,11 +247,9 @@ impl Coordinator {
     /// * Forwards [`Self::schedule_new_jobs`]'s return values on failure.
     /// * Forwards [`Self::mark_jobs_dispatched`]'s return values on failure.
     pub async fn run(mut self) -> Result<(), Error> {
+        const CANCELLATION_MONITOR_JOIN_TIMEOUT: Duration = Duration::from_secs(10);
+
         let cancellation_token = self.cancellation_token.clone();
-        let cancellation_monitor_handle = tokio::spawn(
-            self.create_cancellation_monitor()
-                .run(cancellation_token.clone()),
-        );
 
         loop {
             let now = Instant::now();
@@ -273,24 +281,21 @@ impl Coordinator {
         }
 
         tracing::info!("Coordinator shutting down.");
-        if let Err(e) = cancellation_monitor_handle.await {
-            tracing::error!(error = % e, "Failed to join the cancellation monitor.");
+        match tokio::time::timeout(
+            CANCELLATION_MONITOR_JOIN_TIMEOUT,
+            self.cancellation_monitor_handle,
+        )
+        .await
+        {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                tracing::error!(error = % e, "Failed to join the cancellation monitor.");
+            }
+            Err(_) => {
+                tracing::error!("Timed out joining the cancellation monitor.");
+            }
         }
         Ok(())
-    }
-
-    /// Creates a [`CancellationMonitor`] from the coordinator's database pool, Spider client, and
-    /// job polling interval.
-    ///
-    /// # Returns
-    ///
-    /// A newly created [`CancellationMonitor`].
-    fn create_cancellation_monitor(&self) -> CancellationMonitor<SpiderClient> {
-        CancellationMonitor::new(
-            self.db_pool.clone(),
-            self.spider_client.clone(),
-            self.job_polling_interval,
-        )
     }
 
     /// Marks the query job identified by `job_id` as [`QueryJobStatus::Failed`].
@@ -526,9 +531,10 @@ impl Coordinator {
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_submitted_jobs(&self) -> Result<Vec<SubmittedJob>, Error> {
         const QUERY: &str = formatcp!(
-            "SELECT `id`, `spider_id`, `job_config`, CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 \
-             AS SIGNED) AS `job_creation_timestamp_millisecs` FROM `{table}` WHERE `type` = ? AND \
-             `status` IN (?, ?, ?) AND `spider_id` IS NOT NULL;",
+            "SELECT `id`, `spider_id`, `status`, `job_config`, \
+             CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 AS SIGNED) AS \
+             `job_creation_timestamp_millisecs` FROM `{table}` WHERE `type` = ? AND `status` IN \
+             (?, ?, ?) AND `spider_id` IS NOT NULL;",
             table = QUERY_JOBS_TABLE_NAME,
         );
 
@@ -571,6 +577,7 @@ impl Coordinator {
             recovery_context.push(SubmittedJob {
                 id: row.id,
                 spider_job_id: row.spider_job_id,
+                status: row.status,
                 search_job_config,
                 job_creation_timestamp_millisecs: row.job_creation_timestamp_millisecs,
             });
@@ -587,6 +594,7 @@ const MILLISECS_PER_MINUTE: NonZeroU64 =
 struct SubmittedJob {
     id: QueryJobId,
     spider_job_id: SpiderJobId,
+    status: QueryJobStatus,
     search_job_config: SearchJobConfig,
     job_creation_timestamp_millisecs: i64,
 }
@@ -606,6 +614,7 @@ struct SubmittedJobRowProjection {
     id: QueryJobId,
     #[sqlx(rename = "spider_id")]
     spider_job_id: SpiderJobId,
+    status: QueryJobStatus,
     #[sqlx(rename = "job_config")]
     serialized_search_job_config: Vec<u8>,
     job_creation_timestamp_millisecs: i64,

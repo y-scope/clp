@@ -1,4 +1,4 @@
-//! The monitor that relays query job cancellations requested through the API server to Spider.
+//! The monitor that processes query job cancellation requests made through the API server.
 
 use std::time::Duration;
 
@@ -7,6 +7,7 @@ use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryJobType;
 use const_format::formatcp;
+use spider_client::error::ClientError;
 use spider_core::types::id::JobId as SpiderJobId;
 use sqlx::MySqlPool;
 use tokio_util::sync::CancellationToken;
@@ -14,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 use crate::Error;
 use crate::query_job_submitter::QueryJobSubmitter;
 
-/// Relays the cancellation of query jobs in [`QueryJobStatus::CancelRequested`] to Spider.
+/// Processes the cancellation requests of query jobs in [`QueryJobStatus::CancelRequested`].
 ///
 /// # Type Parameters
 ///
@@ -50,14 +51,14 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
         loop {
             let result = select! {
                 () = cancellation_token.cancelled() => break,
-                result = self.relay_next_cancellation() => result,
+                result = self.process_next_cancellation_request() => result,
             };
 
-            let has_relayed = result.unwrap_or_else(|e| {
-                tracing::error!(error = % e, "Failed to relay a query job cancellation.");
+            let cancellation_processed = result.unwrap_or_else(|e| {
+                tracing::error!(error = % e, "Failed to process a query job cancellation request.");
                 false
             });
-            if has_relayed {
+            if cancellation_processed {
                 continue;
             }
 
@@ -109,24 +110,24 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
         Ok(())
     }
 
-    /// Relays the cancellation of the oldest query job in [`QueryJobStatus::CancelRequested`], if
-    /// any.
+    /// Processes the cancellation request of the oldest query job in
+    /// [`QueryJobStatus::CancelRequested`], if any.
     ///
     /// # Returns
     ///
-    /// Whether a cancellation was relayed on success.
+    /// Whether a cancellation request was processed on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`Self::fetch_next_cancel_requested_job`]'s return values on failure.
-    /// * Forwards [`Self::relay_cancellation`]'s return values on failure.
-    async fn relay_next_cancellation(&self) -> Result<bool, Error> {
+    /// * Forwards [`Self::process_cancellation_request`]'s return values on failure.
+    async fn process_next_cancellation_request(&self) -> Result<bool, Error> {
         let Some(job) = self.fetch_next_cancel_requested_job().await? else {
             return Ok(false);
         };
-        self.relay_cancellation(job).await?;
+        self.process_cancellation_request(job).await?;
         Ok(true)
     }
 
@@ -156,28 +157,69 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
             .await?)
     }
 
-    /// Relays the cancellation of `job` to Spider.
+    /// Processes the cancellation request of `job`.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`Self::cancel_unsubmitted_job`]'s return values on failure.
-    /// * Forwards [`QueryJobSubmitter::cancel_query_job`]'s return values on failure.
-    /// * Forwards [`Self::transition_from_cancel_requested`]'s return values on failure.
-    async fn relay_cancellation(&self, job: CancelRequestedJobRowProjection) -> Result<(), Error> {
+    /// * Forwards [`Self::relay_cancellation_to_spider`]'s return values on failure.
+    async fn process_cancellation_request(
+        &self,
+        job: CancelRequestedJobRowProjection,
+    ) -> Result<(), Error> {
         let Some(spider_job_id) = job.spider_job_id else {
             return self.cancel_unsubmitted_job(job.id).await;
         };
+        self.relay_cancellation_to_spider(job.id, spider_job_id)
+            .await
+    }
 
-        self.job_submitter.cancel_query_job(spider_job_id).await?;
+    /// Relays the cancellation of the query job identified by `query_job_id` to its Spider job
+    /// identified by `spider_job_id`, and transitions the query job to
+    /// [`QueryJobStatus::Cancelling`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`QueryJobSubmitter::cancel_query_job`]'s return values on failure, except
+    ///   [`Error::SpiderClient`] with [`ClientError::JobNotFound`], which indicates the Spider job
+    ///   doesn't exist and fails the query job instead.
+    /// * Forwards [`Self::transition_from_cancel_requested`]'s return values on failure.
+    async fn relay_cancellation_to_spider(
+        &self,
+        query_job_id: QueryJobId,
+        spider_job_id: SpiderJobId,
+    ) -> Result<(), Error> {
+        const SPIDER_JOB_NOT_FOUND_MESSAGE: &str = "The query job's Spider job was not found.";
+
+        match self.job_submitter.cancel_query_job(spider_job_id).await {
+            Ok(()) => {}
+            Err(Error::SpiderClient(ClientError::JobNotFound)) => {
+                tracing::error!(
+                    query_job_id = % query_job_id,
+                    spider_job_id = % spider_job_id,
+                    "The query job's Spider job was not found. Failing the query job.",
+                );
+                return self
+                    .transition_from_cancel_requested(
+                        query_job_id,
+                        QueryJobStatus::Failed,
+                        Some(SPIDER_JOB_NOT_FOUND_MESSAGE),
+                    )
+                    .await;
+            }
+            Err(e) => return Err(e),
+        }
         tracing::info!(
-            query_job_id = % job.id,
+            query_job_id = % query_job_id,
             spider_job_id = % spider_job_id,
             "Relayed the query job cancellation to Spider.",
         );
 
-        self.transition_from_cancel_requested(job.id, QueryJobStatus::Cancelling, None)
+        self.transition_from_cancel_requested(query_job_id, QueryJobStatus::Cancelling, None)
             .await
     }
 
