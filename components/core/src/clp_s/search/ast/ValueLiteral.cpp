@@ -12,9 +12,9 @@
 #include <tuple>
 #include <utility>
 
-#include "FilterOperation.hpp"
-#include "Literal.hpp"
-#include "SearchUtils.hpp"
+#include <clp_s/search/ast/FilterOperation.hpp>
+#include <clp_s/search/ast/Literal.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
 
 namespace clp_s::search::ast {
 namespace {
