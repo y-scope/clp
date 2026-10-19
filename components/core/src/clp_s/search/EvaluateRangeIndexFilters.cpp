@@ -9,6 +9,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <clp_s/search/ast/ValueLiteral.hpp>
+
 #include "../../clp/ffi/EncodedTextAst.hpp"
 #include "../../clp/ffi/ir_stream/search/utils.hpp"
 #include "../../clp/ffi/Value.hpp"
@@ -23,7 +25,6 @@
 #include "ast/FilterExpr.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/OrOfAndForm.hpp"
-#include "ast/ValueLiteral.hpp"
 
 using clp::ffi::ir_stream::search::evaluate_filter_against_literal_type_value_pair;
 

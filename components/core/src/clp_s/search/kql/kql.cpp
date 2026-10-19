@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
+#include <clp_s/search/ast/ValueLiteral.hpp>
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
 
 #include "../../archive_constants.hpp"
@@ -20,7 +21,6 @@
 #include "../ast/OrExpr.hpp"
 #include "../ast/SearchUtils.hpp"
 #include "../ast/TimestampLiteral.hpp"
-#include "../ast/ValueLiteral.hpp"
 #include "KqlBaseVisitor.h"
 #include "KqlLexer.h"
 #include "KqlParser.h"
