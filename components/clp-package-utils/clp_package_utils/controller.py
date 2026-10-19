@@ -940,6 +940,7 @@ class BaseController(ABC):
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "LogsInputRootDir": logs_input_root_dir,
             "LogsInputType": self._clp_config.logs_input.type,
+            "S3ScannerEnabled": is_log_ingestor_enabled(container_clp_config),
             "MaxDatasetsPerQuery": max_datasets_per_query,
             "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "SqlDbClpArchivesTableName": archives_table_name,

@@ -5,10 +5,6 @@ import {fileURLToPath} from "node:url";
 import {Value} from "@sinclair/typebox/value";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import {
-    CLP_STORAGE_ENGINES,
-    STORAGE_TYPE,
-} from "@webui/common/config";
 import {WebuiSettingsSchema} from "@webui/common/schemas/settings";
 import {defineConfig} from "vite";
 
@@ -42,15 +38,8 @@ export default defineConfig({
                             readFileSync(path.join(webuiRoot, "settings.json"), "utf8")
                         );
                         const settings = Value.Parse(WebuiSettingsSchema, rawSettings);
-                        const s3ScannerEnabled =
-                            CLP_STORAGE_ENGINES.CLP_S === settings.public.ClpStorageEngine &&
-                            STORAGE_TYPE.S3 === settings.public.LogsInputType &&
-                            null !== settings.server.LogIngestorUrl;
-
                         res.setHeader("Content-Type", "application/json");
-                        res.end(JSON.stringify({
-                            ...settings.public, S3ScannerEnabled: s3ScannerEnabled,
-                        }));
+                        res.end(JSON.stringify(settings.public));
                     } catch {
                         res.statusCode = 500;
                         res.end(JSON.stringify({error: "Failed to load WebUI settings."}));

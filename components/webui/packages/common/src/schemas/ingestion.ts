@@ -4,7 +4,6 @@ import {
 } from "@sinclair/typebox";
 import {Value} from "@sinclair/typebox/value";
 
-import {CLP_DEFAULT_DATASET_NAME} from "../config.js";
 import {DatasetNameSchema} from "./compression.js";
 
 
@@ -30,8 +29,6 @@ const S3ScannerJobSchema = Type.Object({
 
 type S3ScannerJob = Static<typeof S3ScannerJobSchema>;
 
-const S3ScannerErrorSchema = Type.Object({error: Type.String()});
-
 /**
  * Uses the request schema for the form's required S3 inputs.
  *
@@ -54,29 +51,9 @@ const validateS3ScannerInput = (
     }[field];
 };
 
-/**
- * Maps allowed form values to the existing log-ingestor request contract.
- *
- * @param input
- * @return A scanner config using native defaults for omitted tuning fields.
- */
-const toS3ScannerConfig = (input: S3ScannerCreation) => ({
-    bucket_name: input.bucket,
-    dataset: input.dataset || CLP_DEFAULT_DATASET_NAME,
-    key_prefix: input.keyPrefix,
-    region: input.region,
-    ...(!input.unstructured && input.timestampKey ?
-        {timestamp_key: input.timestampKey} :
-        {}),
-    unstructured: input.unstructured ?? false,
-});
-
-
 export {
     S3ScannerCreationSchema,
-    S3ScannerErrorSchema,
     S3ScannerJobSchema,
-    toS3ScannerConfig,
     validateS3ScannerInput,
 };
 export type {

@@ -17,8 +17,8 @@ const submitS3Scanner = async (payload: S3ScannerCreation): Promise<S3ScannerJob
 
         return data;
     } catch (error: unknown) {
-        if (isAxiosError<{error?: string}>(error) && error.response?.data.error) {
-            throw new Error(error.response.data.error);
+        if (isAxiosError<{message?: string}>(error) && error.response?.data.message) {
+            throw new Error(error.response.data.message);
         }
 
         throw new Error("Could not confirm scanner creation. Check the ingestor before retrying.");

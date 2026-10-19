@@ -302,6 +302,7 @@ data:
         "LogsInputRootDir": null,
         {{- end }}
         "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
+        "S3ScannerEnabled": {{ $s3ScannerEnabled }},
 
         {{- if .Values.clpConfig.query_scheduler }}
         {{- with .Values.clpConfig.query_scheduler.max_datasets_per_query }}
