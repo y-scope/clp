@@ -111,14 +111,39 @@ std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_descriptors(
     );
 }
 
+ColumnDescriptor::ColumnDescriptor(ColumnDescriptor const& other)
+        : m_descriptors{other.m_descriptors},
+          m_unresolved_tokens{other.m_unresolved_tokens},
+          m_namespace{other.m_namespace},
+          m_flags{other.m_flags},
+          m_unresolved_descriptors{other.m_unresolved_descriptors},
+          m_pure_wildcard{other.m_pure_wildcard},
+          m_subtree_type{other.m_subtree_type},
+          m_function{other.m_function},
+          m_bound_node_id{other.m_bound_node_id},
+          m_leaf_position{other.m_leaf_position},
+          m_is_decomposed_leaf{other.m_is_decomposed_leaf} {}
+
 auto ColumnDescriptor::copy() const -> std::shared_ptr<ColumnDescriptor> {
-    return std::make_shared<ColumnDescriptor>(*this);
+    std::shared_ptr<ColumnDescriptor> copied{new ColumnDescriptor{*this}};
+    copied->m_resolved_nodes = m_resolved_nodes;
+    return copied;
 }
 
-auto ColumnDescriptor::fork() const -> std::shared_ptr<ColumnDescriptor> {
-    auto forked{copy()};
-    forked->m_resolution = {};
-    return forked;
+auto ColumnDescriptor::copy_unbound() const -> std::shared_ptr<ColumnDescriptor> {
+    std::shared_ptr<ColumnDescriptor> unbound{new ColumnDescriptor{*this}};
+    unbound->m_bound_node_id.reset();
+    unbound->m_leaf_position.reset();
+    unbound->m_is_decomposed_leaf = false;
+    return unbound;
+}
+
+auto ColumnDescriptor::copy_bound_to(mpt_node_id_t node_id, LiteralType type) const
+        -> std::shared_ptr<ColumnDescriptor> {
+    std::shared_ptr<ColumnDescriptor> bound{new ColumnDescriptor{*this}};
+    bound->m_bound_node_id = node_id;
+    bound->m_flags = type;
+    return bound;
 }
 
 auto ColumnDescriptor::bind_as_decomposed_leaf(
@@ -126,17 +151,17 @@ auto ColumnDescriptor::bind_as_decomposed_leaf(
         size_t leaf_position,
         std::unordered_set<int32_t> const& schema_ids
 ) -> void {
-    m_resolution = {};
-    m_resolution.is_decomposed_leaf = true;
-    m_resolution.bound_node_id = node_id;
-    m_resolution.leaf_position = leaf_position;
+    m_is_decomposed_leaf = true;
+    m_bound_node_id = node_id;
+    m_leaf_position = leaf_position;
+    m_resolved_nodes = {};
     for (int32_t const schema_id : schema_ids) {
-        m_resolution.schema_to_node_id.emplace(schema_id, node_id);
+        m_resolved_nodes.schema_to_node_id.emplace(schema_id, node_id);
     }
 }
 
 auto ColumnDescriptor::get_bound_node_id() const -> mpt_node_id_t {
-    if (false == m_resolution.bound_node_id.has_value()) {
+    if (false == m_bound_node_id.has_value()) {
         throw OperationFailed(
                 ErrorCodeNotInit,
                 __FILENAME__,
@@ -144,7 +169,7 @@ auto ColumnDescriptor::get_bound_node_id() const -> mpt_node_id_t {
                 "Column \"" + to_string() + "\" is not bound to an MPT node."
         );
     }
-    return m_resolution.bound_node_id.value();
+    return m_bound_node_id.value();
 }
 
 auto ColumnDescriptor::to_string() const -> std::string {
@@ -188,11 +213,11 @@ void ColumnDescriptor::print() const {
     if (Function::None != m_function) {
         os << "function=" << function_to_str(get_function()) << ", ";
     }
-    if (m_resolution.leaf_position.has_value()) {
-        os << "leaf_position=" << m_resolution.leaf_position.value() << ", ";
+    if (m_leaf_position.has_value()) {
+        os << "leaf_position=" << m_leaf_position.value() << ", ";
     }
-    if (m_resolution.bound_node_id.has_value()) {
-        os << "bound_node_id=" << m_resolution.bound_node_id.value() << ", ";
+    if (m_bound_node_id.has_value()) {
+        os << "bound_node_id=" << m_bound_node_id.value() << ", ";
     }
     os << "namespace=\"" << m_namespace << "\", tokens=[";
     for (auto it = m_descriptors.begin(); it != m_descriptors.end();) {
@@ -211,12 +236,10 @@ void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {
 }
 
 bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
-    return m_resolution.bound_node_id == rhs.m_resolution.bound_node_id
-           && m_descriptors == rhs.m_descriptors && m_flags == rhs.m_flags
-           && m_function == rhs.m_function
-           && m_resolution.leaf_position == rhs.m_resolution.leaf_position
-           && m_namespace == rhs.m_namespace && m_pure_wildcard == rhs.m_pure_wildcard
-           && m_subtree_type == rhs.m_subtree_type
+    return m_bound_node_id == rhs.m_bound_node_id && m_descriptors == rhs.m_descriptors
+           && m_flags == rhs.m_flags && m_function == rhs.m_function
+           && m_leaf_position == rhs.m_leaf_position && m_namespace == rhs.m_namespace
+           && m_pure_wildcard == rhs.m_pure_wildcard && m_subtree_type == rhs.m_subtree_type
            && m_unresolved_descriptors == rhs.m_unresolved_descriptors
            && m_unresolved_tokens == rhs.m_unresolved_tokens;
 }

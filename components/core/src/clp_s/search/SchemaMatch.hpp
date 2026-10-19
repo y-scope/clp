@@ -42,10 +42,11 @@ public:
     std::shared_ptr<ast::Expression> run(std::shared_ptr<ast::Expression>& expr) override;
 
     /**
-     * @param schema
-     * @return The query for a given schema
+     * Hands the per-schema expressions built by `run` over to the caller, leaving none behind.
+     * @return The expression to evaluate against each matched schema, keyed by schema ID.
      */
-    std::shared_ptr<ast::Expression> get_query_for_schema(int32_t schema);
+    [[nodiscard]] auto release_schema_expressions()
+            -> std::map<int32_t, std::shared_ptr<ast::Expression>>;
 
     /**
      * Checks if a schema has been matched
@@ -507,7 +508,7 @@ private:
     std::unordered_map<ast::Expression*, std::unordered_set<int32_t>> m_expression_to_schemas;
     std::unordered_set<int32_t> m_matched_schema_ids;
     std::unordered_set<int32_t> m_array_search_schema_ids;
-    std::map<int32_t, std::shared_ptr<ast::Expression>> m_schema_to_query;
+    std::map<int32_t, std::shared_ptr<ast::Expression>> m_schema_to_expression;
 
     std::unordered_map<int32_t, std::set<int32_t>> m_schema_to_searched_columns;
     std::shared_ptr<ArchiveReader> m_archive_reader;
@@ -527,7 +528,7 @@ private:
      * recorded according to the column:
      * - fully resolved column: each matched leaf node is appended to `leaf_node_ids` for the
      *   caller to resolve;
-     * - column with wildcard tokens: matches are recorded in the column's resolution state, from
+     * - column with wildcard tokens: matches are recorded in the column's resolved nodes, from
      *   which the caller expands the column over the matched nodes;
      * - fully resolved column reaching an unstructured array: the remaining tokens are stored on
      *   the column and the array node is appended to `leaf_node_ids`.
@@ -611,20 +612,60 @@ private:
     );
 
     /**
-     * Splits an expression into one copy per schema it searches against. In each copy, a filter's
-     * column is bound to the schema's node for that column and narrowed to the node's type. Two
-     * kinds of operands are left as-is because `QueryRunner` evaluates them as constants:
-     * - a NEXISTS filter in a schema lacking its column (there is no node to bind to);
-     * - a `NarrowSchemasExpr`, which is only handed to the schemas it holds for.
+     * Splits an expression into one expression per schema it searches against. Each filter is
+     * split by `split_filter_for_schema`; a `NarrowSchemasExpr` becomes the constant true in every
+     * schema it holds for.
      * @param expr
-     * @param queries Receives the copy of `expr` for each schema ID.
+     * @param schema_expressions Receives the expression for each schema ID.
      * @param relevant_schemas The schemas `expr` searches against.
      */
     void split_expression_by_schema(
             std::shared_ptr<ast::Expression> const& expr,
-            std::map<int32_t, std::shared_ptr<ast::Expression>>& queries,
+            std::map<int32_t, std::shared_ptr<ast::Expression>>& schema_expressions,
             std::unordered_set<int32_t> const& relevant_schemas
     );
+
+    /**
+     * Splits a filter for one schema: the copy's column is bound to the schema's node for that
+     * column and matches only the node's type. The column is left unbound when the schema has no
+     * such node, i.e. for a pure wildcard column or a NEXISTS filter on an absent column.
+     * Records `schema_id` in `m_array_search_schema_ids` when the filter searches an unstructured
+     * array in that schema.
+     * @param filter
+     * @param schema_id
+     * @return The copy of `filter` to evaluate against `schema_id`.
+     */
+    [[nodiscard]] auto split_filter_for_schema(ast::FilterExpr const& filter, int32_t schema_id)
+            -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Appends `operand` to the `AndExpr` for `schema_id` in `schema_expressions`, creating the
+     * `AndExpr` if absent.
+     * @param schema_expressions The per-schema expressions being built.
+     * @param schema_id
+     * @param operand
+     * @param inverted Whether a newly created `AndExpr` is inverted.
+     */
+    static auto append_to_and(
+            std::map<int32_t, std::shared_ptr<ast::Expression>>& schema_expressions,
+            int32_t schema_id,
+            std::shared_ptr<ast::Expression> const& operand,
+            bool inverted
+    ) -> void;
+
+    /**
+     * Appends `operand` to the `OrExpr` for `schema_id` in `schema_expressions`. An absent
+     * expression becomes `operand` itself; an expression that is not an `OrExpr` is first wrapped
+     * in one.
+     * @param schema_expressions The per-schema expressions being built.
+     * @param schema_id
+     * @param operand
+     */
+    static auto append_to_or(
+            std::map<int32_t, std::shared_ptr<ast::Expression>>& schema_expressions,
+            int32_t schema_id,
+            std::shared_ptr<ast::Expression> const& operand
+    ) -> void;
 };
 }  // namespace clp_s::search
 

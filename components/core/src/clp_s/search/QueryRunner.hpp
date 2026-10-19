@@ -57,6 +57,7 @@ public:
             : m_archive_reader(archive_reader),
               m_expr(expr),
               m_match(match),
+              m_schema_expressions(match->release_schema_expressions()),
               m_ignore_case(ignore_case),
               m_schema_tree(m_archive_reader->get_schema_tree()),
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
@@ -127,6 +128,8 @@ private:
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<ast::Expression> m_expr;
     std::shared_ptr<SchemaMatch> m_match;
+    // The expression to evaluate against each matched schema, keyed by schema ID.
+    std::map<int32_t, std::shared_ptr<ast::Expression>> m_schema_expressions;
     bool m_ignore_case;
 
     // variables for the current schema being filtered

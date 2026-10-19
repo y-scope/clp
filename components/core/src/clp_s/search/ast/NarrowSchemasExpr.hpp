@@ -14,8 +14,8 @@ namespace clp_s::search::ast {
  *
  * Only `SchemaMatch` creates this expression, to narrow the schemas an enclosing expression can
  * match to a set it has already computed (e.g. the schemas whose log shape satisfies a query).
- * `SchemaMatch` resolves it while splitting the query by schema, so by the time a per-schema
- * query is evaluated the expression is a constant and is propagated out.
+ * `SchemaMatch` resolves it while splitting the query by schema, so no per-schema query contains
+ * one.
  */
 class NarrowSchemasExpr : public Expression {
 public:

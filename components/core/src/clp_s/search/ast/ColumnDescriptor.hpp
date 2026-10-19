@@ -132,10 +132,12 @@ DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors);
  * A column bound to a leaf node within a StructurizedText may additionally be pinned to one of that
  * StructurizedText's leaf rule placeholder positions.
  *
- * Column resolution records its results, including the binding and pin above, on the column in a
- * `ResolutionState`. `copy()` carries the results along, so a copy stands for the same logical
- * column; `fork()` discards them, so the fork stands for a new logical column (e.g. one of several
- * MPT nodes a column was split over).
+ * Column resolution records the nodes it matches on the column as `ResolvedNodes`, which are only
+ * read during resolution. `copy()` keeps them, so the copy stands for the same logical column. The
+ * other copying methods drop them, so their copies stand for new logical columns:
+ * - `copy_unbound()`: an unbound copy, e.g. to resolve against another MPT node.
+ * - `copy_bound_to()`: a copy bound to a given MPT node, e.g. the column as resolved for one
+ *   schema.
  */
 class ColumnDescriptor : public Literal {
 public:
@@ -162,20 +164,13 @@ public:
     };
 
     /**
-     * The results of resolving a column against an archive's MPT and schemas.
+     * The MPT nodes a logical column matched when resolved against an archive.
      */
-    struct ResolutionState {
+    struct ResolvedNodes {
         // The MPT node this column resolves to in each schema that contains it.
         std::map<int32_t, mpt_node_id_t> schema_to_node_id;
         // For a column with wildcard tokens: the MPT nodes its token path matched.
         std::set<mpt_node_id_t> wildcard_node_ids;
-        // Whether this column is a leaf rule column created by query decomposition.
-        bool is_decomposed_leaf{false};
-        // The single MPT node this column has been bound to, if any.
-        std::optional<mpt_node_id_t> bound_node_id;
-        // For a column bound to a leaf node within a StructurizedText: the leaf rule placeholder
-        // position this column is pinned to, if any.
-        std::optional<size_t> leaf_position;
     };
 
     /**
@@ -255,16 +250,23 @@ public:
     }
 
     /**
-     * Deep copy of this ColumnDescriptor, including its resolution state. The copy represents the
-     * same logical column (needed for OrOfAndForm distribution and per-schema splitting).
+     * @return A copy of this column, including its resolved nodes.
      */
     [[nodiscard]] auto copy() const -> std::shared_ptr<ColumnDescriptor>;
 
     /**
-     * Copies this ColumnDescriptor as a new logical column that diverges from this point: the
-     * copy's resolution state is cleared.
+     * @return A copy of this column without its resolved nodes, bound node and leaf position.
      */
-    [[nodiscard]] auto fork() const -> std::shared_ptr<ColumnDescriptor>;
+    [[nodiscard]] auto copy_unbound() const -> std::shared_ptr<ColumnDescriptor>;
+
+    /**
+     * @param node_id The MPT node to bind the copy to.
+     * @param type The type of `node_id`.
+     * @return A copy of this column without its resolved nodes, bound to `node_id` and matching
+     * only `type`. The copy keeps this column's leaf position.
+     */
+    [[nodiscard]] auto copy_bound_to(mpt_node_id_t node_id, LiteralType type) const
+            -> std::shared_ptr<ColumnDescriptor>;
 
     /**
      * Get iterators to this Column's list of descriptors
@@ -380,14 +382,14 @@ public:
     }
 
     /**
-     * @return This column's resolution state.
+     * @return The nodes this column resolved to.
      */
-    [[nodiscard]] auto resolution() -> ResolutionState& { return m_resolution; }
+    [[nodiscard]] auto resolved_nodes() -> ResolvedNodes& { return m_resolved_nodes; }
 
     /**
-     * @return This column's resolution state.
+     * @return The nodes this column resolved to.
      */
-    [[nodiscard]] auto resolution() const -> ResolutionState const& { return m_resolution; }
+    [[nodiscard]] auto resolved_nodes() const -> ResolvedNodes const& { return m_resolved_nodes; }
 
     auto get_subtree_type() const -> std::optional<std::string> const& { return m_subtree_type; }
 
@@ -410,13 +412,13 @@ public:
      * @return std::nullopt if the column matches any occurrence of its MPT node.
      */
     [[nodiscard]] auto get_leaf_position() const -> std::optional<size_t> {
-        return m_resolution.leaf_position;
+        return m_leaf_position;
     }
 
     /**
      * @return Whether this column is bound to an MPT node.
      */
-    [[nodiscard]] auto is_bound() const -> bool { return m_resolution.bound_node_id.has_value(); }
+    [[nodiscard]] auto is_bound() const -> bool { return m_bound_node_id.has_value(); }
 
     /**
      * @return The MPT node this column is bound to.
@@ -425,19 +427,17 @@ public:
     [[nodiscard]] auto get_bound_node_id() const -> mpt_node_id_t;
 
     /**
-     * Binds this column to `node_id`, bypassing token matching.
-     * @param node_id An MPT node ID.
+     * @return Whether this column is a leaf rule column created by query decomposition.
      */
-    auto set_bound_node_id(mpt_node_id_t node_id) -> void { m_resolution.bound_node_id = node_id; }
+    [[nodiscard]] auto is_decomposed_leaf() const -> bool { return m_is_decomposed_leaf; }
 
     /**
-     * Replaces this column's resolution state, binding it to `node_id` as a leaf rule column
-     * created by query decomposition, pinned to `leaf_position` and mapped to exactly `schema_ids`.
-     * The schemas are chosen by shape matching rather than by which schemas contain `node_id`, so
-     * column resolution leaves the mapping untouched.
+     * Makes this column a leaf rule column created by query decomposition: bound to `node_id` at
+     * leaf position `leaf_position`, and resolved to `node_id` in exactly `schema_ids`. The schemas
+     * are chosen by shape matching rather than by which schemas contain `node_id`, so column
+     * resolution leaves the mapping untouched.
      * @param node_id The MPT node to bind this column to.
-     * @param leaf_position The StructurizedText-relative leaf placeholder position to pin this
-     * column to.
+     * @param leaf_position The StructurizedText-relative leaf placeholder position of this column.
      * @param schema_ids The schemas to map this column to.
      */
     auto bind_as_decomposed_leaf(
@@ -456,7 +456,13 @@ private:
     bool m_pure_wildcard{false};  // true if column is single wildcard
     std::optional<std::string> m_subtree_type;  // optional subtree type to resolve against
     Function m_function{Function::None};
-    ResolutionState m_resolution;
+    // The single MPT node this column has been bound to, if any.
+    std::optional<mpt_node_id_t> m_bound_node_id;
+    // For a column bound to a leaf node within a StructurizedText: the leaf rule placeholder
+    // position this column is pinned to, if any.
+    std::optional<size_t> m_leaf_position;
+    bool m_is_decomposed_leaf{false};
+    ResolvedNodes m_resolved_nodes;
 
     // Constructors
     explicit ColumnDescriptor(
@@ -470,6 +476,13 @@ private:
             std::string_view descriptor_namespace,
             Function function
     );
+
+    /**
+     * Copies `other` except for its resolved nodes, which are left empty. Use the public copying
+     * methods instead, which state what they copy.
+     * @param other
+     */
+    ColumnDescriptor(ColumnDescriptor const& other);
 
     /**
      * Scan the list of descriptors to check if they contain wildcards and

@@ -11,11 +11,12 @@
 #include <fmt/compile.h>
 #include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/Defs.hpp>
 #include <clp_s/Schema.hpp>
-#include <clp_s/search/ast/NarrowSchemasExpr.hpp>
+#include <clp_s/search/ast/EmptyExpr.hpp>
 
 #include "../../clp/Defs.h"
 #include "../../clp/GrepCore.hpp"
@@ -106,11 +107,12 @@ void QueryRunner::global_init() {
 }
 
 auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
+    PROFILE_SCOPE("schema_init");
     m_expr_clp_query.clear();
     m_expr_var_match_map.clear();
     m_wildcard_to_searched_basic_columns.clear();
     m_wildcard_columns.clear();
-    m_expr = m_match->get_query_for_schema(schema_id)->copy();
+    m_expr = m_schema_expressions.at(schema_id);
     m_schema = schema_id;
     populate_searched_wildcard_columns(m_expr);
 
@@ -1215,8 +1217,8 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             return expr->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
         }
         return EvaluatedValue::Unknown;
-    } else if (std::dynamic_pointer_cast<ast::NarrowSchemasExpr>(expr)) {
-        return EvaluatedValue::True;
+    } else if (auto const constant{ast::EmptyExpr::as_constant(*expr)}; constant.has_value()) {
+        return constant.value() ? EvaluatedValue::True : EvaluatedValue::False;
     } else if (auto filter = std::dynamic_pointer_cast<FilterExpr>(expr)) {
         if ((filter->get_operation() == FilterOperation::EXISTS
              || filter->get_operation() == FilterOperation::NEXISTS)
