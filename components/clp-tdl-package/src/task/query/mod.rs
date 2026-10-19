@@ -22,7 +22,9 @@ mod search;
 ///
 /// # Errors
 ///
-/// [`TdlError::ExecutionError`] if [`search::search`] fails.
+/// Returns an error if:
+///
+/// * [`TdlError::ExecutionError`] if [`search::search`] fails.
 ///
 /// # Panics
 ///
@@ -62,6 +64,8 @@ pub(crate) fn clp_s_search_task(
 /// Publishes the timeline histogram after all archive tasks complete successfully.
 ///
 /// # Errors
+///
+/// Returns an error if:
 ///
 /// * [`TdlError::ExecutionError`] if graph outputs are absent or
 ///   [`commit::commit_timeline_results`] fails.

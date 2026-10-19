@@ -21,6 +21,8 @@ impl Bucket {
     ///
     /// # Errors
     ///
+    /// Returns an error if:
+    ///
     /// * [`Error::InvalidSourceContribution`] if the aggregate flags invalid source contributions.
     /// * [`Error::CountOverflow`] if the sum of valid source counts overflows a BSON integer.
     /// * [`Error::NegativeCount`] if the count is negative.
@@ -70,6 +72,8 @@ impl Bucket {
 /// The integer on success.
 ///
 /// # Errors
+///
+/// Returns an error if:
 ///
 /// * [`Error::MissingField`] if the field is absent.
 /// * [`Error::NonIntegerField`] if the field does not contain a BSON integer.

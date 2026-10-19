@@ -11,6 +11,8 @@ use mongodb::options::ClientOptions;
 ///
 /// # Errors
 ///
+/// Returns an error if:
+///
 /// * [`anyhow::Error`] if the URI has no database or requests unacknowledged writes.
 /// * Forwards [`ClientOptions::parse`]'s return values on failure.
 pub(super) async fn parse_results_cache_uri(uri: &str) -> anyhow::Result<ClientOptions> {

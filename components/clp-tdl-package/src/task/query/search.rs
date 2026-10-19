@@ -117,7 +117,9 @@ enum ArchiveSelector {
 ///
 /// # Errors
 ///
-/// Forwards [`run_clp_s_search`]'s return values on failure.
+/// Returns an error if:
+///
+/// * Forwards [`run_clp_s_search`]'s return values on failure.
 fn run_clp_s_search_with_optional_timeline(
     clp_s_bin: &Path,
     archive_selector: &ArchiveSelector,

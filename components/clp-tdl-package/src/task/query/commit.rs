@@ -26,6 +26,8 @@ use crate::task::query::results_cache::parse_results_cache_uri;
 ///
 /// # Errors
 ///
+/// Returns an error if:
+///
 /// * [`anyhow::Error`] if outputs are absent, have inconsistent destinations, lack the expected
 ///   timeline collection, specify an unsupported output handler, or lack a URI database.
 /// * Forwards [`parse_results_cache_uri`]'s return values on failure.
@@ -82,6 +84,8 @@ pub(super) async fn commit_timeline_results(outputs: &[QueryTaskOutput]) -> anyh
 /// query and its archive inputs must remain immutable throughout retries.
 ///
 /// # Errors
+///
+/// Returns an error if:
 ///
 /// * Forwards [`aggregate_source_contributions`]'s return values on failure.
 /// * Forwards [`TryStreamExt::try_next`]'s return values on failure.

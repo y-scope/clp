@@ -19,7 +19,9 @@ use super::COMMIT_MARKER_ID;
 ///
 /// # Errors
 ///
-/// Forwards [`Collection::aggregate`]'s return values on failure.
+/// Returns an error if:
+///
+/// * Forwards [`Collection::aggregate`]'s return values on failure.
 pub async fn aggregate_source_contributions(
     collection: &Collection<Document>,
 ) -> mongodb::error::Result<mongodb::Cursor<Document>> {
