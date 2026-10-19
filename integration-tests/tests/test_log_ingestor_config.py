@@ -1,5 +1,7 @@
 """Tests the distinction between host-published and internal ingestor addresses."""
 
+import pytest
+from clp_package_utils.general import is_log_ingestor_enabled
 from clp_py_utils.clp_config import ClpConfig, LOG_INGESTOR_COMPONENT_NAME, LogIngestor
 
 
@@ -26,3 +28,23 @@ def test_disabled_log_ingestor_remains_disabled_in_container_config() -> None:
     config.transform_for_container()
 
     assert config.log_ingestor is None
+
+
+@pytest.mark.parametrize(
+    ("s3_input", "configured", "expected"),
+    [(False, False, False), (False, True, False), (True, False, False), (True, True, True)],
+)
+def test_log_ingestor_enablement(s3_input: bool, configured: bool, expected: bool) -> None:
+    """Only configured ingestors with S3 input are enabled; filesystem input stays valid."""
+    config = ClpConfig.model_validate(
+        {
+            "logs_input": (
+                {"type": "s3", "aws_authentication": {"type": "default"}}
+                if s3_input
+                else {"type": "fs"}
+            ),
+            "log_ingestor": {} if configured else None,
+        }
+    )
+
+    assert is_log_ingestor_enabled(config) == expected
