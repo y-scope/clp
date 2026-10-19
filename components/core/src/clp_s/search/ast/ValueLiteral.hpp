@@ -30,7 +30,7 @@ public:
     // Delete copy constructor and assignment operator
     ValueLiteral(ValueLiteral const&) = delete;
     auto operator=(ValueLiteral const&) -> ValueLiteral& = delete;
-    
+
     // Delete move constructor and assignment operator
     ValueLiteral(ValueLiteral&&) = delete;
     auto operator=(ValueLiteral&&) -> ValueLiteral& = delete;
