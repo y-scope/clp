@@ -1,17 +1,16 @@
 //! The commit worker that publishes a compression job's archives to CLP's metadata store.
 
 use anyhow::Context;
-use clp_rust_utils::clp_config::package::credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
 use clp_rust_utils::dataset::resolve_dataset_name;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
-use secrecy::SecretString;
 use spider_core::types::id::JobId;
 
 use crate::common::spider_task_executor_config;
+use crate::task::utils::db_credentials_from_env;
 
 /// Publishes a compression job's archives and marks it succeeded.
 ///
@@ -215,30 +214,4 @@ async fn mark_job_succeeded(
     }
 
     Ok(())
-}
-
-/// Reads the CLP DB credentials from `CLP_DB_USER` and `CLP_DB_PASS` environment variables.
-///
-/// # Returns
-///
-/// The CLP DB credentials.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Either env var is unset or not valid Unicode.
-fn db_credentials_from_env() -> anyhow::Result<credentials::Database> {
-    const CLP_DB_USER_ENV_VAR: &str = "CLP_DB_USER";
-    const CLP_DB_PASS_ENV_VAR: &str = "CLP_DB_PASS";
-    let user = std::env::var(CLP_DB_USER_ENV_VAR).with_context(|| {
-        format!("failed to read the `{CLP_DB_USER_ENV_VAR}` environment variable")
-    })?;
-    let password = std::env::var(CLP_DB_PASS_ENV_VAR).with_context(|| {
-        format!("failed to read the `{CLP_DB_PASS_ENV_VAR}` environment variable")
-    })?;
-    Ok(credentials::Database {
-        user,
-        password: SecretString::from(password),
-    })
 }

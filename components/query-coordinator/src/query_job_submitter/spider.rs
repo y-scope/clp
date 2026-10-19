@@ -179,9 +179,7 @@ fn build_query_task_graph(
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("NonEmptyString")?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("OutputHandle")?),
             ],
-            outputs: vec![DataTypeDescriptor::Value(
-                ValueTypeDescriptor::struct_from_name("QueryTaskOutput")?,
-            )],
+            outputs: vec![],
             input_sources: None,
         })?;
         inputs.append_shared_task_input(query_job_id_input)?;

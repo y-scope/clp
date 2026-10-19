@@ -3,8 +3,9 @@
 use std::time::Instant;
 
 use anyhow::Context;
-use clp_rust_utils::task_io::query::OutputHandle;
-use clp_rust_utils::task_io::query::QueryTaskOutput;
+use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
+use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
+use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::timeline::Bucket;
 use clp_rust_utils::timeline::COMMIT_MARKER_ID;
 use clp_rust_utils::timeline::aggregate_source_contributions;
@@ -17,8 +18,10 @@ use mongodb::options::ReadConcern;
 use mongodb::options::ReadPreference;
 use mongodb::options::ReplaceOneModel;
 use mongodb::options::SelectionCriteria;
+use spider_core::types::id::JobId;
 
 use crate::task::query::results_cache::parse_results_cache_uri;
+use crate::task::utils::db_credentials_from_env;
 
 /// Reduces successful archive contributions and publishes the completed histogram.
 ///
@@ -28,34 +31,37 @@ use crate::task::query::results_cache::parse_results_cache_uri;
 ///
 /// Returns an error if:
 ///
-/// * [`anyhow::Error`] if outputs are absent, have inconsistent destinations, lack the expected
-///   timeline collection, specify an unsupported output handler, or lack a URI database.
+/// * [`anyhow::Error`] if no query job is associated with `spider_job_id` or the results-cache URI
+///   has no database.
+/// * Forwards [`db_credentials_from_env`]'s return values on failure.
+/// * Forwards [`create_clp_db_mysql_pool`]'s return values on failure.
+/// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
 /// * Forwards [`parse_results_cache_uri`]'s return values on failure.
 /// * Forwards [`Client::with_options`]'s return values on failure.
 /// * Forwards [`publish_timeline_buckets`]'s return values on failure.
-pub(super) async fn commit_timeline_results(outputs: &[QueryTaskOutput]) -> anyhow::Result<()> {
-    let output = outputs
-        .first()
-        .context("timeline commit received no task outputs")?;
-    if outputs.iter().any(|candidate| candidate != output) {
-        anyhow::bail!("timeline task outputs have inconsistent result destinations");
-    }
-    let collection_name = output
-        .timeline_collection
-        .as_ref()
-        .context("timeline commit requires a timeline collection")?;
-    if collection_name.as_str() != format!("{}-timeline", output.query_job_id) {
-        anyhow::bail!("timeline collection does not match its query job ID");
-    }
-    let OutputHandle::ResultsCache { uri } = &output.output_handle else {
-        anyhow::bail!("timeline commit requires results-cache output");
-    };
+pub(super) async fn commit_timeline_results(
+    spider_job_id: JobId,
+    config: &SpiderTaskExecutorConfig,
+) -> anyhow::Result<()> {
+    let pool = create_clp_db_mysql_pool(&config.database, &db_credentials_from_env()?, 1)
+        .await
+        .context("failed to create the CLP DB connection pool")?;
+    let query_job_id: QueryJobId =
+        sqlx::query_scalar("SELECT id FROM query_jobs WHERE spider_id = ?")
+            .bind(spider_job_id.get())
+            .fetch_optional(&pool)
+            .await
+            .context("failed to look up the CLP query job")?
+            .with_context(|| {
+                format!(
+                    "no CLP query job found for spider job {}",
+                    spider_job_id.get()
+                )
+            })?;
+    let collection_name = format!("{query_job_id}-timeline");
     let started = Instant::now();
-    tracing::info!(
-        query_job_id = output.query_job_id,
-        "Started timeline commit."
-    );
-    let mut options = parse_results_cache_uri(uri.as_str()).await?;
+    tracing::info!(query_job_id, "Started timeline commit.");
+    let mut options = parse_results_cache_uri(config.results_cache.uri().as_str()).await?;
     options.selection_criteria = Some(SelectionCriteria::ReadPreference(ReadPreference::Primary));
     // A majority read can omit acknowledged w=1 contributions even on the primary.
     options.read_concern = Some(ReadConcern::local());
@@ -70,7 +76,7 @@ pub(super) async fn commit_timeline_results(outputs: &[QueryTaskOutput]) -> anyh
         .collection(collection_name.as_str());
     publish_timeline_buckets(&collection).await?;
     tracing::info!(
-        query_job_id = output.query_job_id,
+        query_job_id,
         elapsed_seconds = started.elapsed().as_secs_f64(),
         "Completed timeline commit."
     );
@@ -128,109 +134,4 @@ async fn publish_timeline_buckets(collection: &Collection<Document>) -> anyhow::
         .upsert(true)
         .await?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use clp_rust_utils::task_io::query::OutputHandle;
-    use clp_rust_utils::task_io::query::QueryTaskOutput;
-    use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
-    use non_empty_string::NonEmptyString;
-
-    use super::commit_timeline_results;
-
-    /// # Returns
-    ///
-    /// An archive output identifying the timeline destination for query job 42.
-    fn timeline_output() -> QueryTaskOutput {
-        QueryTaskOutput {
-            query_job_id: 42,
-            output_handle: OutputHandle::ResultsCache {
-                uri: NonEmptyString::from_static_str("mongodb://localhost/results"),
-            },
-            timeline_collection: Some(NonEmptyString::from_static_str("42-timeline")),
-        }
-    }
-
-    #[tokio::test]
-    async fn rejects_empty_archive_outputs() -> anyhow::Result<()> {
-        let error = commit_timeline_results(&[])
-            .await
-            .expect_err("commit requires archive outputs");
-        assert_eq!(
-            error.to_string(),
-            "timeline commit received no task outputs"
-        );
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn rejects_inconsistent_archive_destinations() -> anyhow::Result<()> {
-        let output = timeline_output();
-        for different_output in [
-            QueryTaskOutput {
-                query_job_id: 43,
-                ..output.clone()
-            },
-            QueryTaskOutput {
-                output_handle: OutputHandle::ResultsCache {
-                    uri: NonEmptyString::from_static_str("mongodb://localhost/other"),
-                },
-                ..output.clone()
-            },
-            QueryTaskOutput {
-                timeline_collection: None,
-                ..output.clone()
-            },
-            QueryTaskOutput {
-                timeline_collection: Some(NonEmptyString::from_static_str("43-timeline")),
-                ..output.clone()
-            },
-        ] {
-            let error = commit_timeline_results(&[output.clone(), different_output])
-                .await
-                .expect_err("conflicting destinations must be rejected before publication");
-            assert_eq!(
-                error.to_string(),
-                "timeline task outputs have inconsistent result destinations"
-            );
-        }
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn rejects_missing_or_incorrect_timeline_collection() -> anyhow::Result<()> {
-        for collection in [None, Some("42"), Some("43-timeline")] {
-            let output = QueryTaskOutput {
-                timeline_collection: collection.map(NonEmptyString::from_static_str),
-                ..timeline_output()
-            };
-            let error = commit_timeline_results(&[output])
-                .await
-                .expect_err("commit requires the query job's timeline collection");
-            let expected = if collection.is_none() {
-                "timeline commit requires a timeline collection"
-            } else {
-                "timeline collection does not match its query job ID"
-            };
-            assert_eq!(error.to_string(), expected);
-        }
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn rejects_file_output() -> anyhow::Result<()> {
-        let output = QueryTaskOutput {
-            output_handle: OutputHandle::File,
-            ..timeline_output()
-        };
-        let error = commit_timeline_results(&[output])
-            .await
-            .expect_err("commit requires results-cache output");
-        assert_eq!(
-            error.to_string(),
-            "timeline commit requires results-cache output"
-        );
-        Ok(())
-    }
 }

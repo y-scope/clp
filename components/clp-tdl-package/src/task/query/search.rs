@@ -35,6 +35,7 @@ use crate::task::utils::s3_credential_env;
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
 /// * `output_handle` is not [`OutputHandle::ResultsCache`]. The current implementation only
 ///   supports result cache output streaming.
+/// * Timeline results target a different results cache than the worker's configured results cache.
 /// * Forwards [`parse_results_cache_uri`]'s return values on failure.
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search_with_optional_timeline`]'s return values on failure.
@@ -53,6 +54,13 @@ pub(super) fn search(
     let OutputHandle::ResultsCache { uri } = output_handle else {
         anyhow::bail!("unsupported query output handler");
     };
+    if clp_s_query_option
+        .count_by_time_bucket_size_millisecs
+        .is_some()
+        && *uri != config.results_cache.uri()
+    {
+        anyhow::bail!("timeline search must use the worker's configured results cache");
+    }
 
     runtime().block_on(parse_results_cache_uri(uri.as_str()))?;
     let dataset = resolve_dataset_name(dataset);
@@ -757,6 +765,37 @@ mod tests {
         .expect_err("the file output handler is unsupported");
 
         assert!(error.to_string().contains("unsupported"));
+    }
+
+    #[test]
+    fn timeline_search_rejects_mismatched_results_cache() -> anyhow::Result<()> {
+        let config = SpiderTaskExecutorConfig {
+            package: Package {
+                storage_engine: StorageEngine::ClpS,
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let options = ClpSQueryOption {
+            count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
+            ..unbounded_query_option()
+        };
+        let error = search(
+            &task_context(),
+            &config,
+            42,
+            &options,
+            ARCHIVE_ID.parse::<ArchiveId>()?,
+            None,
+            &OutputHandle::ResultsCache {
+                uri: NonEmptyString::from_static_str("mongodb://localhost/other-results"),
+            },
+        )
+        .expect_err("timeline destination must match the commit worker configuration");
+        assert_eq!(
+            error.to_string(),
+            "timeline search must use the worker's configured results cache"
+        );
+        Ok(())
     }
 
     #[test]
