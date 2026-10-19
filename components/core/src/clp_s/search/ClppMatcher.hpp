@@ -162,7 +162,7 @@ private:
      * @param rule_name A parent rule name, or empty to match the entire log shape.
      * @param shape_query A wildcard pattern, or std::nullopt to match every shape.
      * @param on_match Invoked for every matching occurrence.
-     * @throw Propagates `ArchiveReader::get_parent_rule_shapes`'s exceptions.
+     * @throw Propagates `ArchiveReader::get_parent_rule_shapes_array`'s exceptions.
      */
     template <OccurrenceMatchHandlerReq OnMatch>
     auto for_each_matching_occurrence(
@@ -208,7 +208,7 @@ auto ClppMatcher::for_each_matching_occurrence(
             continue;
         }
         for (auto const& parent_match :
-             m_archive_reader->get_parent_rule_shapes().at(log_shape_id).get())
+             m_archive_reader->get_parent_rule_shapes_array().get(log_shape_id))
         {
             if (rule_name != parent_match.m_name) {
                 continue;

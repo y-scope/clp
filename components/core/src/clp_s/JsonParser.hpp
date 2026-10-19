@@ -78,12 +78,6 @@ public:
     [[nodiscard]] auto store() -> std::vector<ArchiveStats>;
 
 private:
-    // Types
-    struct Clpp {
-        log_surgeon::Parser log_surgeon_parser;
-        std::string parsing_spec_str;
-    };
-
     // Methods
     /**
      * Parses JSON input and ingests it into the current archive, splitting the archive if it grows
@@ -267,12 +261,6 @@ private:
             std::string_view rule_name
     ) -> std::optional<mpt_node_id_t>;
 
-    /**
-     * @return The parsing specification text to persist into the archive, or std::nullopt when CLP+
-     * is not in use.
-     */
-    [[nodiscard]] auto get_parsing_spec_str() const -> std::optional<std::string_view>;
-
     // Data members
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
@@ -301,7 +289,7 @@ private:
 
     std::vector<ArchiveStats> m_archive_stats;
 
-    std::optional<Clpp> m_clpp;
+    std::optional<log_surgeon::Parser> m_log_surgeon_parser;
 };
 }  // namespace clp_s
 

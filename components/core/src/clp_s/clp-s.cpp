@@ -431,12 +431,12 @@ auto output_log_shape_stats(
     if (auto const log_shape_dict{archive_reader.get_log_shape_dictionary()};
         nullptr != log_shape_dict)
     {
-        auto const& shape_stats{archive_reader.get_log_shape_stats()};
-        for (clpp::log_shape_id_t i{0}; i < shape_stats.size(); ++i) {
+        auto const& stats_array{archive_reader.get_log_shape_stats_array()};
+        for (clpp::log_shape_id_t i{0}; i < stats_array.size(); ++i) {
             nlohmann::json entry{
                     {"archive_id", archive_id},
                     {"id", i},
-                    {"count", shape_stats.at(i).get_count()},
+                    {"count", stats_array.get(i).count},
                     {"shape", log_shape_dict->get_entry(i).get_value()}
             };
             output_handler.write(entry.dump());

@@ -26,7 +26,7 @@
 #include <clp_s/SchemaTree.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
-#include <clpp/LogShapeStat.hpp>
+#include <clpp/LogShapeStats.hpp>
 #include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
@@ -252,9 +252,9 @@ auto ArchiveReader::ensure_section_readable(std::string_view section) -> void {
         } else if (constants::cArchiveArrayDictFile == prior) {
             get_array_dictionary();
         } else if (constants::cArchiveParentRuleShapesFile == prior) {
-            get_parent_rule_shapes();
+            get_parent_rule_shapes_array();
         } else if (constants::cArchiveLogShapeStatsFile == prior) {
-            get_log_shape_stats();
+            get_log_shape_stats_array();
         } else if (constants::cArchiveParsingSpecFile == prior) {
             std::ignore = read_parsing_spec();
         } else {
@@ -305,36 +305,36 @@ auto ArchiveReader::get_array_dictionary() -> std::shared_ptr<LogTypeDictionaryR
     return m_array_dict;
 }
 
-auto ArchiveReader::get_log_shape_stats() -> clpp::LogShapeStatArray const& {
+auto ArchiveReader::get_log_shape_stats_array() -> clpp::LogShapeStatsArray const& {
     if (false == m_clpp.has_value()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
-    if (false == m_clpp->log_shape_stats.has_value()) {
+    if (false == m_clpp->log_shape_stats_array.has_value()) {
         ensure_section_readable(constants::cArchiveLogShapeStatsFile);
         m_read_sections.emplace(constants::cArchiveLogShapeStatsFile);
-        auto result{read_log_shape_stats()};
+        auto result{read_log_shape_stats_array()};
         if (result.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
-        m_clpp->log_shape_stats = result.value();
+        m_clpp->log_shape_stats_array = result.value();
     }
-    return m_clpp->log_shape_stats.value();
+    return m_clpp->log_shape_stats_array.value();
 }
 
-auto ArchiveReader::get_parent_rule_shapes() -> clpp::ParentRuleShapesArray const& {
+auto ArchiveReader::get_parent_rule_shapes_array() -> clpp::ParentRuleShapesArray const& {
     if (false == m_clpp.has_value()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
-    if (false == m_clpp->parent_rule_shapes.has_value()) {
+    if (false == m_clpp->parent_rule_shapes_array.has_value()) {
         ensure_section_readable(constants::cArchiveParentRuleShapesFile);
         m_read_sections.emplace(constants::cArchiveParentRuleShapesFile);
-        auto result{read_parent_rule_shapes()};
+        auto result{read_parent_rule_shapes_array()};
         if (result.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
-        m_clpp->parent_rule_shapes = result.value();
+        m_clpp->parent_rule_shapes_array = result.value();
     }
-    return m_clpp->parent_rule_shapes.value();
+    return m_clpp->parent_rule_shapes_array.value();
 }
 
 void ArchiveReader::open_packed_streams() {
@@ -556,8 +556,8 @@ void ArchiveReader::initialize_schema_reader(
             m_id_to_schema_metadata[schema_id].num_messages(),
             should_marshal_records,
             m_clpp.has_value() ? m_clpp->log_shape_dict.get() : nullptr,
-            m_clpp.has_value() && m_clpp->parent_rule_shapes.has_value()
-                    ? &m_clpp->parent_rule_shapes.value()
+            m_clpp.has_value() && m_clpp->parent_rule_shapes_array.has_value()
+                    ? &m_clpp->parent_rule_shapes_array.value()
                     : nullptr,
             m_options.m_extract_mode
     );
@@ -623,11 +623,11 @@ void ArchiveReader::close() {
     m_var_dict->close();
     if (m_clpp.has_value()) {
         m_clpp->log_shape_dict->close();
-        if (m_clpp->log_shape_stats) {
-            m_clpp->log_shape_stats->clear();
+        if (m_clpp->log_shape_stats_array) {
+            m_clpp->log_shape_stats_array->clear();
         }
-        if (m_clpp->parent_rule_shapes) {
-            m_clpp->parent_rule_shapes->clear();
+        if (m_clpp->parent_rule_shapes_array) {
+            m_clpp->parent_rule_shapes_array->clear();
         }
     } else {
         m_log_dict->close();
@@ -661,21 +661,33 @@ std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_
     return m_stream_buffer;
 }
 
-auto ArchiveReader::read_log_shape_stats()
-        -> ystdlib::error_handling::Result<clpp::LogShapeStatArray> {
+template <SectionReaderReq ReadContentsFn>
+auto ArchiveReader::read_compressed_section(
+        std::string_view section_name,
+        ReadContentsFn const& read_contents
+) -> ystdlib::error_handling::Result<void> {
     constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
-    auto reader{m_archive_reader_adaptor->checkout_reader_for_section(
-            constants::cArchiveLogShapeStatsFile
-    )};
+    auto reader{m_archive_reader_adaptor->checkout_reader_for_section(section_name)};
     ZstdDecompressor decompressor{};
     decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
 
-    clpp::LogShapeStatArray stats;
-    YSTDLIB_ERROR_HANDLING_TRYX(stats.decompress(decompressor));
+    auto const result{read_contents(decompressor)};
 
     decompressor.close();
-    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveLogShapeStatsFile);
-    return stats;
+    m_archive_reader_adaptor->checkin_reader_for_section(section_name);
+    return result;
+}
+
+auto ArchiveReader::read_log_shape_stats_array()
+        -> ystdlib::error_handling::Result<clpp::LogShapeStatsArray> {
+    clpp::LogShapeStatsArray stats_array;
+    YSTDLIB_ERROR_HANDLING_TRYV(read_compressed_section(
+            constants::cArchiveLogShapeStatsFile,
+            [&](ZstdDecompressor& decompressor) -> ystdlib::error_handling::Result<void> {
+                return stats_array.decompress(decompressor);
+            }
+    ));
+    return stats_array;
 }
 
 auto ArchiveReader::read_parsing_spec() -> ystdlib::error_handling::Result<std::string> {
@@ -687,20 +699,15 @@ auto ArchiveReader::read_parsing_spec() -> ystdlib::error_handling::Result<std::
     return ReaderUtils::read_parsing_spec(*m_archive_reader_adaptor);
 }
 
-auto ArchiveReader::read_parent_rule_shapes()
+auto ArchiveReader::read_parent_rule_shapes_array()
         -> ystdlib::error_handling::Result<clpp::ParentRuleShapesArray> {
-    constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
-    auto reader{m_archive_reader_adaptor->checkout_reader_for_section(
-            constants::cArchiveParentRuleShapesFile
-    )};
-    ZstdDecompressor decompressor{};
-    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
-
-    clpp::ParentRuleShapesArray shapes;
-    YSTDLIB_ERROR_HANDLING_TRYX(shapes.decompress(decompressor));
-
-    decompressor.close();
-    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveParentRuleShapesFile);
-    return shapes;
+    clpp::ParentRuleShapesArray shapes_array;
+    YSTDLIB_ERROR_HANDLING_TRYV(read_compressed_section(
+            constants::cArchiveParentRuleShapesFile,
+            [&](ZstdDecompressor& decompressor) -> ystdlib::error_handling::Result<void> {
+                return shapes_array.decompress(decompressor);
+            }
+    ));
+    return shapes_array;
 }
 }  // namespace clp_s

@@ -185,7 +185,7 @@ public:
      *
      * Parent rule `log_surgeon::Match` ranges are positions into the log message, which is not
      * escaped. To build the parent rule shapes we map each parent rule's [start, end) range into
-     * the escaped shape's positions and collect them into the returned ParentRuleShapes.
+     * the escaped shape's positions and collect them in document order.
      *
      * Because placeholders are used for leaf rule matches and the leaf matches appear in document
      * order within the event's matches, the i-th leaf corresponds to the i-th placeholder in the
@@ -194,6 +194,7 @@ public:
      * @param event The log event containing all matches and the message text.
      * @return A result containing the parent rule shapes or an error code indicating the failure:
      * - ClppErrorCodeEnum::Corrupt if there is a mismatch between segments and leaf matches.
+     * - ClppErrorCodeEnum::OutOfBounds if a shape's position or size exceeds `cMaxShapeSize`.
      * - Forwards `segments` return values.
      */
     [[nodiscard]] auto build_parent_rule_shapes(log_surgeon::LogEvent const& event) const
@@ -246,10 +247,13 @@ public:
             }
             auto const start{map_message_to_shape_pos(match.range.start)};
             auto const end{map_message_to_shape_pos(match.range.end)};
-            parent_shapes.emplace_parent_rule_shape(
+            if (start > cMaxShapeSize || (end - start) > cMaxShapeSize) {
+                return ClppErrorCode{ClppErrorCodeEnum::OutOfBounds};
+            }
+            parent_shapes.emplace_back(
                     match.get_fully_qualified_name(),
-                    start,
-                    end - start
+                    static_cast<shape_size_t>(start),
+                    static_cast<shape_size_t>(end - start)
             );
         }
         return parent_shapes;
@@ -269,13 +273,13 @@ public:
      * (including when fewer than `occurrence_idx + 1` occurrences exist).
      */
     [[nodiscard]] auto narrow_to_parent_rule(
-            clpp::ParentRuleShapes const& parent_rule_shapes,
+            ParentRuleShapes const& parent_rule_shapes,
             std::string_view parent_rule_column_name,
             size_t occurrence_idx
     ) const -> TextShape<std::string_view> {
         auto const log_shape{view()};
         size_t seen{0};
-        for (auto const& match : parent_rule_shapes.get()) {
+        for (auto const& match : parent_rule_shapes) {
             if (match.m_name != parent_rule_column_name) {
                 continue;
             }

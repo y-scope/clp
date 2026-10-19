@@ -980,7 +980,7 @@ auto SchemaMatch::read_dictionaries_for_schema(SchemaView const& schema) -> void
                 if (NodeType::StructurizedText == obj.type) {
                     m_archive_reader->get_log_shape_dictionary();
                 } else if (NodeType::ParentRule == obj.type) {
-                    m_archive_reader->get_parent_rule_shapes();
+                    m_archive_reader->get_parent_rule_shapes_array();
                 }
                 read_dictionaries_for_schema(obj.sub_schema);
                 return false;

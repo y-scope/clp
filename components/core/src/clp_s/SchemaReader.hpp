@@ -151,7 +151,7 @@ public:
      * @param num_messages
      * @param should_marshal_records
      * @param log_shape_dict
-     * @param parent_rule_shapes
+     * @param parent_rule_shapes_array
      * @param extract_mode
      */
     void reset(
@@ -162,7 +162,7 @@ public:
             uint64_t num_messages,
             bool should_marshal_records,
             LogShapeDictionaryReader const* log_shape_dict,
-            clpp::ParentRuleShapesArray const* parent_rule_shapes,
+            clpp::ParentRuleShapesArray const* parent_rule_shapes_array,
             bool extract_mode = false
     ) {
         m_schema_id = schema_id;
@@ -188,7 +188,7 @@ public:
         m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
         m_log_shape_dict = log_shape_dict;
-        m_parent_rule_shapes = parent_rule_shapes;
+        m_parent_rule_shapes_array = parent_rule_shapes_array;
         m_extract_mode = extract_mode;
     }
 
@@ -692,7 +692,7 @@ private:
     std::unordered_map<mpt_node_id_t, size_t> m_structurized_text_column_starts;
     std::vector<CompiledShape> m_reconstruction_targets;
     LogShapeDictionaryReader const* m_log_shape_dict;
-    clpp::ParentRuleShapesArray const* m_parent_rule_shapes;
+    clpp::ParentRuleShapesArray const* m_parent_rule_shapes_array;
     bool m_extract_mode{false};
 };
 }  // namespace clp_s

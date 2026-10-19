@@ -1,6 +1,7 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <concepts>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -29,7 +30,7 @@
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryWriter.hpp>
 #include <clpp/Defs.hpp>
-#include <clpp/LogShapeStat.hpp>
+#include <clpp/LogShapeStats.hpp>
 #include <clpp/ParentRuleShapes.hpp>
 #include <clpp/TextShape.hpp>
 
@@ -44,6 +45,7 @@ struct ArchiveWriterOption {
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
     ClpFlavour flavour{ClpFlavour::Clps};
+    std::string parsing_spec;
 };
 
 class ArchiveStats {
@@ -155,18 +157,16 @@ public:
     /**
      * Opens the archive writer
      * @param option
+     * @throws OperationFailed (ErrorCodeBadParam) if using CLP+ and `option.parsing_spec` is empty.
      */
     void open(ArchiveWriterOption const& option);
 
     /**
      * Closes the archive writer.
-     * @param parsing_spec_str The parsing specification text to persist into the archive. Must be
-     * non-empty if using CLP+, otherwise it is ignored.
      * @param is_split Whether the last file ingested into the archive is split.
      * @return Statistics for the newly-written archive.
      */
-    [[nodiscard]] auto
-    close(std::optional<std::string_view> parsing_spec_str, bool is_split = false) -> ArchiveStats;
+    [[nodiscard]] auto close(bool is_split = false) -> ArchiveStats;
 
     /**
      * Appends a message to the archive writer
@@ -263,10 +263,11 @@ public:
 
     /**
      * @return The total size of the encoded (uncompressed) data written to the archive. This
-     * reflects the size of the data after encoding but before compression.
+     * reflects the size of the dictionaries, encoded messages, and (for CLP+) the log shape stats,
+     * parent rule shapes, and parsing specification after encoding but before compression.
      * TODO: Add the size of schema tree, schema map and timestamp dictionary
      */
-    size_t get_data_size();
+    [[nodiscard]] auto get_data_size() const -> size_t;
 
     /**
      * Adds a metadata key value pair to the current range in the range index, opening a range if no
@@ -315,15 +316,24 @@ public:
     auto update_log_shape_dict(clpp::TextShape<std::string> const& log_shape)
             -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>>;
 
-    auto update_parent_rule_shapes(clpp::ParentRuleShapes& shapes)
+    /**
+     * Records the parent rule shapes for the most recently added log shape. Must be called exactly
+     * once for every new log shape reported by `update_log_shape_dict`.
+     * @param shapes
+     * @return Success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Unsupported if the archive isn't clpp-flavour.
+     * @throws Forwards `clpp::ParentRuleShapesArray::add_log_shape`'s exceptions.
+     */
+    auto update_parent_rule_shapes(clpp::ParentRuleShapes shapes)
             -> ystdlib::error_handling::Result<void>;
 
 private:
     // Types
     struct Clpp {
         std::shared_ptr<VariableDictionaryWriter> log_shape_dict;
-        clpp::LogShapeStatArray log_shape_stats;
-        clpp::ParentRuleShapesArray parent_rule_shapes;
+        std::string parsing_spec;
+        clpp::LogShapeStatsArray log_shape_stats_array;
+        clpp::ParentRuleShapesArray parent_rule_shapes_array;
     };
 
     // Methods
@@ -343,29 +353,37 @@ private:
     [[nodiscard]] std::pair<size_t, size_t> store_tables();
 
     /**
-     * Compresses, stores, and clears the log shape statistics. The stats are not cleared if the
-     * result is an error.
-     * @return A result containing the compressed size in bytes or an error code indicating the
-     * failure:
-     * - clpp::ClppErrorCodeEnum::Unsupported if not using CLP+.
+     * Compresses, stores, and clears the log shape statistics.
+     * @param clpp
+     * @return The compressed size in bytes.
      */
-    [[nodiscard]] auto close_log_shape_stats() -> ystdlib::error_handling::Result<size_t>;
+    [[nodiscard]] auto close_log_shape_stats(Clpp& clpp) -> size_t;
 
     /**
-     * Compresses, stores, and clears the parent rule shapes. The stats are not cleared if the
-     * result is an error.
-     * @return A result containing the compressed size in bytes or an error code indicating the
-     * failure:
-     * - clpp::ClppErrorCodeEnum::Unsupported if not using CLP+.
+     * Compresses, stores, and clears the parent rule shapes.
+     * @param clpp
+     * @return The compressed size in bytes.
      */
-    [[nodiscard]] auto close_parent_rule_shapes() -> ystdlib::error_handling::Result<size_t>;
+    [[nodiscard]] auto close_parent_rule_shapes(Clpp& clpp) -> size_t;
 
     /**
      * Compresses and stores the parsing specification to the archive.
-     * @param parsing_spec_str
+     * @param parsing_spec
      * @return The compressed size in bytes.
      */
-    [[nodiscard]] auto store_parsing_spec(std::string_view parsing_spec_str) -> size_t;
+    [[nodiscard]] auto store_parsing_spec(std::string_view parsing_spec) -> size_t;
+
+    /**
+     * Creates a Zstd-compressed file in the archive directory and writes its contents.
+     * @tparam WriteContentsFn Invocable with a `ZstdCompressor&`.
+     * @param file_name The file's name relative to the archive directory.
+     * @param write_contents Writes the file's uncompressed contents to the given compressor.
+     * @return The compressed size in bytes.
+     */
+    template <std::invocable<ZstdCompressor&> WriteContentsFn>
+    [[nodiscard]] auto
+    store_compressed_file(std::string_view file_name, WriteContentsFn const& write_contents)
+            -> size_t;
 
     /**
      * Writes the archive to a single file

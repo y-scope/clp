@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -28,10 +29,17 @@
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryReader.hpp>
 #include <clpp/Defs.hpp>
-#include <clpp/LogShapeStat.hpp>
+#include <clpp/LogShapeStats.hpp>
 #include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
+/**
+ * Requirement for a callable that reads the uncompressed contents of an archive section.
+ */
+template <typename T>
+concept SectionReaderReq
+        = std::is_invocable_r_v<ystdlib::error_handling::Result<void>, T, ZstdDecompressor&>;
+
 class ArchiveReader {
 public:
     class OperationFailed : public TraceableException {
@@ -91,10 +99,11 @@ public:
     auto ensure_section_readable(std::string_view section) -> void;
 
     /**
-     * Reads the log type statistics from the archive.
-     * @return
+     * Reads the log shape statistics from the archive.
+     * @return The log shape statistics, or an error code indicating the failure:
+     * - Forwards `clpp::LogShapeStatsArray::decompress`'s return values on failure.
      */
-    auto read_log_shape_stats() -> ystdlib::error_handling::Result<clpp::LogShapeStatArray>;
+    auto read_log_shape_stats_array() -> ystdlib::error_handling::Result<clpp::LogShapeStatsArray>;
 
     /**
      * Reads the parsing specification from the archive.
@@ -171,9 +180,9 @@ public:
         return m_archive_reader_adaptor->get_header();
     }
 
-    auto get_log_shape_stats() -> clpp::LogShapeStatArray const&;
+    auto get_log_shape_stats_array() -> clpp::LogShapeStatsArray const&;
 
-    auto get_parent_rule_shapes() -> clpp::ParentRuleShapesArray const&;
+    auto get_parent_rule_shapes_array() -> clpp::ParentRuleShapesArray const&;
 
     /**
      * Writes decoded messages to a file.
@@ -243,8 +252,8 @@ private:
     // Types
     struct Clpp {
         std::shared_ptr<LogShapeDictionaryReader> log_shape_dict;
-        std::optional<clpp::LogShapeStatArray> log_shape_stats;
-        std::optional<clpp::ParentRuleShapesArray> parent_rule_shapes;
+        std::optional<clpp::LogShapeStatsArray> log_shape_stats_array;
+        std::optional<clpp::ParentRuleShapesArray> parent_rule_shapes_array;
     };
 
     // Methods
@@ -332,12 +341,23 @@ private:
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
 
     /**
-     * Reads the log type metadata from the archive.
-     * @return The read log type metadata array, or an error code indicating the failure:
-     * - Forwards `Array::decompress`'s return values on failure.
-     * @throws
+     * Reads the parent rule shapes from the archive.
+     * @return The parent rule shapes, or an error code indicating the failure:
+     * - Forwards `clpp::ParentRuleShapesArray::decompress`'s return values on failure.
+     * @throws Forwards `clpp::ParentRuleShapesArray::decompress`'s exceptions.
      */
-    auto read_parent_rule_shapes() -> ystdlib::error_handling::Result<clpp::ParentRuleShapesArray>;
+    auto read_parent_rule_shapes_array()
+            -> ystdlib::error_handling::Result<clpp::ParentRuleShapesArray>;
+
+    /**
+     * Opens a Zstd-compressed section of the archive and reads its contents.
+     * @param section_name
+     * @param read_contents Reads the section's uncompressed contents from the given decompressor.
+     * @return Forwards `read_contents`'s return values.
+     */
+    template <SectionReaderReq ReadContentsFn>
+    auto read_compressed_section(std::string_view section_name, ReadContentsFn const& read_contents)
+            -> ystdlib::error_handling::Result<void>;
 
     // Data members
     bool m_is_open;

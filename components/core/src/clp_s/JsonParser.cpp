@@ -276,9 +276,6 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.authoritative_timestamp_namespace = m_timestamp_namespace;
     m_archive_options.flavour = option.flavour;
 
-    m_archive_writer = std::make_unique<ArchiveWriter>();
-    m_archive_writer->open(m_archive_options);
-
     if (ClpFlavour::Clpp == option.flavour) {
         if (false == option.parsing_spec_path.has_value()) {
             SPDLOG_ERROR("A parsing specification is required for the clpp flavour.");
@@ -289,8 +286,12 @@ JsonParser::JsonParser(JsonParserOption const& option)
         if (parser.has_error()) {
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
-        m_clpp.emplace(std::move(parser.value().first), std::move(parser.value().second));
+        m_log_surgeon_parser.emplace(std::move(parser.value().first));
+        m_archive_options.parsing_spec = std::move(parser.value().second);
     }
+
+    m_archive_writer = std::make_unique<ArchiveWriter>();
+    m_archive_writer->open(m_archive_options);
 }
 
 void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id) {
@@ -409,7 +410,7 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             }
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
-                if (m_clpp.has_value()) {
+                if (m_log_surgeon_parser.has_value()) {
                     if (auto const result{
                                 parse_unstructured_text(node_id_stack.top(), cur_key, value)
                         };
@@ -528,7 +529,7 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             }
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
-                if (m_clpp.has_value()) {
+                if (m_log_surgeon_parser.has_value()) {
                     if (auto const result{parse_unstructured_text(parent_node_id, "", value)};
                         result.has_error())
                     {
@@ -730,7 +731,7 @@ void JsonParser::parse_line(
 
                 std::string_view value = line.get_string(true);
                 if (value.find(' ') != std::string::npos) {
-                    if (m_clpp.has_value()) {
+                    if (m_log_surgeon_parser.has_value()) {
                         if (auto const result{
                                     parse_unstructured_text(node_id_stack.top(), cur_key, value)
                             };
@@ -822,7 +823,7 @@ bool JsonParser::ingest() {
                         "Direct ingestion of unstructured log-text is not supported from input {}",
                         path.path
                 );
-                std::ignore = m_archive_writer->close(get_parsing_spec_str());
+                std::ignore = m_archive_writer->close();
                 return false;
             case FileType::Unknown: {
                 if (false == nested_readers.empty()
@@ -833,7 +834,7 @@ bool JsonParser::ingest() {
                 {
                     close_nested_readers(nested_readers);
                     SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
-                    std::ignore = m_archive_writer->close(get_parsing_spec_str());
+                    std::ignore = m_archive_writer->close();
                     return false;
                 }
 
@@ -879,7 +880,7 @@ bool JsonParser::ingest() {
                     close_nested_readers(nested_readers);
                 }
                 SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
-                std::ignore = m_archive_writer->close(get_parsing_spec_str());
+                std::ignore = m_archive_writer->close();
                 return false;
             }
         }
@@ -889,7 +890,7 @@ bool JsonParser::ingest() {
             || (false == nested_readers.empty()
                 && NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get())))
         {
-            std::ignore = m_archive_writer->close(get_parsing_spec_str());
+            std::ignore = m_archive_writer->close();
             return false;
         }
     }
@@ -967,7 +968,7 @@ auto JsonParser::ingest_json(
         return true;
     };
     if (false == initialize_fields_for_archive()) {
-        std::ignore = m_archive_writer->close(get_parsing_spec_str());
+        std::ignore = m_archive_writer->close();
         return false;
     }
     auto update_fields_after_archive_split = [&]() { ++file_split_number; };
@@ -1552,20 +1553,13 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
     m_archive_writer->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
 }
 
-auto JsonParser::get_parsing_spec_str() const -> std::optional<std::string_view> {
-    if (false == m_clpp.has_value()) {
-        return std::nullopt;
-    }
-    return m_clpp->parsing_spec_str;
-}
-
 auto JsonParser::store() -> std::vector<ArchiveStats> {
-    m_archive_stats.emplace_back(m_archive_writer->close(get_parsing_spec_str()));
+    m_archive_stats.emplace_back(m_archive_writer->close());
     return std::move(m_archive_stats);
 }
 
 void JsonParser::split_archive() {
-    m_archive_stats.emplace_back(m_archive_writer->close(get_parsing_spec_str(), true));
+    m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
 }
@@ -1578,11 +1572,11 @@ auto JsonParser::parse_unstructured_text(
     auto const structurized_text_node_id{
             m_archive_writer->add_node(parent_node_id, NodeType::StructurizedText, field_key)
     };
-    if (false == m_clpp.has_value()) {
+    if (false == m_log_surgeon_parser.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Unsupported};
     }
     size_t parser_pos{0};
-    auto const event{m_clpp->log_surgeon_parser.next_event(field_value, &parser_pos)};
+    auto const event{m_log_surgeon_parser->next_event(field_value, &parser_pos)};
     if (false == event.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
@@ -1664,8 +1658,9 @@ auto JsonParser::parse_unstructured_text(
     };
 
     if (new_log_shape) {
-        auto parent_shapes{YSTDLIB_ERROR_HANDLING_TRYX(log_shape.build_parent_rule_shapes(*event))};
-        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_parent_rule_shapes(parent_shapes));
+        YSTDLIB_ERROR_HANDLING_TRYV(m_archive_writer->update_parent_rule_shapes(
+                YSTDLIB_ERROR_HANDLING_TRYX(log_shape.build_parent_rule_shapes(*event))
+        ));
     }
 
     m_current_schema.end_structurized_text(structurized_text_obj, log_shape_id);

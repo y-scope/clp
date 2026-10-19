@@ -903,12 +903,12 @@ auto SchemaReader::emit_parent_rule_shape_substring(
         std::string_view parent_rule_column_name,
         size_t occurrence_idx
 ) -> ystdlib::error_handling::Result<void> {
-    if (nullptr == m_log_shape_dict || nullptr == m_parent_rule_shapes) {
+    if (nullptr == m_log_shape_dict || nullptr == m_parent_rule_shapes_array) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::Failure};
     }
     clpp::TextShape<std::string_view> const log_shape{m_log_shape_dict->get_value(log_shape_id)};
     auto const parent_rule_shape{log_shape.narrow_to_parent_rule(
-            m_parent_rule_shapes->at(log_shape_id),
+            m_parent_rule_shapes_array->get(log_shape_id),
             parent_rule_column_name,
             occurrence_idx
     )};
@@ -1207,10 +1207,10 @@ auto SchemaReader::compile_shape(
         if (false == log_shape.empty()) {
             if (parent_rule_column_name.empty()) {
                 shape_to_scan = log_shape.view();
-            } else if (nullptr != m_parent_rule_shapes) {
+            } else if (nullptr != m_parent_rule_shapes_array) {
                 shape_to_scan = log_shape
                                         .narrow_to_parent_rule(
-                                                m_parent_rule_shapes->at(log_shape_id),
+                                                m_parent_rule_shapes_array->get(log_shape_id),
                                                 parent_rule_column_name,
                                                 occurrence_idx
                                         )

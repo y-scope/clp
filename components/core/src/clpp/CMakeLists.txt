@@ -1,14 +1,13 @@
 if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         add_library(
                 clpp_core
-                Array.hpp
                 Defs.hpp
                 ErrorCode.cpp
                 ErrorCode.hpp
                 Interpretation.cpp
                 Interpretation.hpp
-                LogShapeStat.cpp
-                LogShapeStat.hpp
+                LogShapeStats.cpp
+                LogShapeStats.hpp
                 ParentRuleShapes.cpp
                 ParentRuleShapes.hpp
                 TextShape.hpp
