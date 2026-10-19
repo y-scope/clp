@@ -17,6 +17,7 @@ use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryJobType;
 use clp_rust_utils::job_config::SearchJobConfig;
+use clp_rust_utils::types::PositiveI64;
 use futures::Stream;
 use futures::StreamExt;
 use pin_project_lite::pin_project;
@@ -213,8 +214,8 @@ pub struct QueryConfig {
     /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
     /// search job, and its results are always buffered in `MongoDB`.
     #[serde(default)]
-    #[schema(minimum = 1)]
-    pub count_by_time_bucket_size_millisecs: Option<i64>,
+    #[schema(value_type = Option<i64>, minimum = 1)]
+    pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
@@ -288,19 +289,10 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidInput`] if `count_by_time_bucket_size_millisecs` is set and is `<=
-    ///   0`.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
-        if let Some(bucket_size) = count_by_time_bucket_size
-            && bucket_size <= 0
-        {
-            return Err(ClientError::InvalidInput(
-                "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
-            ));
-        }
         let mut search_job_config: SearchJobConfig = query_config.into();
         if search_job_config.datasets.is_none() {
             search_job_config.datasets = match self.config.package.storage_engine {
@@ -310,7 +302,7 @@ impl Client {
         }
         if let Some(bucket_size) = count_by_time_bucket_size {
             search_job_config.aggregation_config = Some(AggregationConfig {
-                count_by_time_bucket_size: Some(bucket_size),
+                count_by_time_bucket_size: Some(bucket_size.get()),
                 ..AggregationConfig::default()
             });
             // Aggregation results are always buffered in MongoDB.
@@ -951,18 +943,12 @@ mod tests {
             config: Config::default(),
         };
         let app = crate::routes::from_client(client.clone())?;
-        for (width, expected_status) in [
-            (serde_json::json!(0), StatusCode::BAD_REQUEST),
-            (serde_json::json!(-1), StatusCode::BAD_REQUEST),
-            (serde_json::json!(i64::MIN), StatusCode::BAD_REQUEST),
-            (
-                serde_json::json!(i64::MAX.cast_unsigned() + 1),
-                StatusCode::UNPROCESSABLE_ENTITY,
-            ),
-            (
-                serde_json::json!(u64::MAX),
-                StatusCode::UNPROCESSABLE_ENTITY,
-            ),
+        for width in [
+            serde_json::json!(0),
+            serde_json::json!(-1),
+            serde_json::json!(i64::MIN),
+            serde_json::json!(i64::MAX.cast_unsigned() + 1),
+            serde_json::json!(u64::MAX),
         ] {
             let body = serde_json::json!({
                 "query_string": "*",
@@ -976,7 +962,11 @@ mod tests {
                         .body(Body::from(body.to_string()))?,
                 )
                 .await?;
-            assert_eq!(response.status(), expected_status, "{body}");
+            assert_eq!(
+                response.status(),
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{body}"
+            );
             assert_eq!(
                 response.headers()["content-type"],
                 "text/plain; charset=utf-8"

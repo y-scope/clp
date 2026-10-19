@@ -122,8 +122,7 @@ async fn health() -> String {
             example = json!({"query_results_uri":"query_results/1"})
         ),
         (status = BAD_REQUEST, body = String, content_type = "text/plain",
-            description = "The request body is not valid JSON, could not be read, or the \
-                count-by-time bucket size is not positive."),
+            description = "The request body is not valid JSON or could not be read."),
         (status = PAYLOAD_TOO_LARGE, body = String, content_type = "text/plain",
             description = "The request body exceeds the configured size limit."),
         (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
@@ -131,7 +130,7 @@ async fn health() -> String {
         (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
             description = "The JSON body contains missing or unknown fields, invalid types, or \
                 invalid values. max_num_results must be a positive integer when non-null, and \
-                count_by_time_bucket_size_millisecs must fit in a signed 64-bit integer \
+                count_by_time_bucket_size_millisecs must be a positive signed 64-bit integer \
                 when non-null."),
         (status = INTERNAL_SERVER_ERROR)
     )

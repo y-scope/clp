@@ -248,7 +248,7 @@ export interface operations {
                     "application/json": components["schemas"]["QueryResultsUri"];
                 };
             };
-            /** @description The request body is not valid JSON, could not be read, or the count-by-time bucket size is not positive. */
+            /** @description The request body is not valid JSON or could not be read. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -275,7 +275,7 @@ export interface operations {
                     "text/plain": string;
                 };
             };
-            /** @description The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results must be a positive integer when non-null, and count_by_time_bucket_size_millisecs must fit in a signed 64-bit integer when non-null. */
+            /** @description The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results must be a positive integer when non-null, and count_by_time_bucket_size_millisecs must be a positive signed 64-bit integer when non-null. */
             422: {
                 headers: {
                     [name: string]: unknown;
