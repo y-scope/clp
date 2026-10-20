@@ -23,6 +23,17 @@ const S3ScannerCreationSchema = Type.Object({
 
 type S3ScannerCreation = Static<typeof S3ScannerCreationSchema>;
 
+const S3ScannerConfigSchema = Type.Object({
+    bucket_name: requiredInputFields.bucket,
+    dataset: Type.Optional(DatasetNameSchema),
+    key_prefix: requiredInputFields.keyPrefix,
+    region: requiredInputFields.region,
+    timestamp_key: Type.Optional(Type.String({minLength: 1})),
+    unstructured: Type.Optional(Type.Boolean()),
+}, {additionalProperties: false});
+
+type S3ScannerConfig = Static<typeof S3ScannerConfigSchema>;
+
 const S3ScannerJobSchema = Type.Object({
     id: Type.Integer({minimum: 1, maximum: Number.MAX_SAFE_INTEGER}),
 });
@@ -52,10 +63,11 @@ const validateS3ScannerInput = (
 };
 
 export {
+    S3ScannerConfigSchema,
     S3ScannerCreationSchema,
     S3ScannerJobSchema,
     validateS3ScannerInput,
 };
 export type {
-    S3ScannerCreation, S3ScannerJob,
+    S3ScannerConfig, S3ScannerCreation, S3ScannerJob,
 };
