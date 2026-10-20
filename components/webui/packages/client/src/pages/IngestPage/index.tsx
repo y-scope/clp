@@ -1,8 +1,8 @@
 import {STORAGE_TYPE} from "@webui/common/config";
 
 import {
+    SETTINGS_LOG_INGESTOR_ENABLED,
     SETTINGS_LOGS_INPUT_TYPE,
-    SETTINGS_S3_SCANNER_ENABLED,
 } from "../../config";
 import Compress from "./Compress";
 import Details from "./Details";
@@ -27,7 +27,7 @@ const IngestPage = () => {
                     <Compress/>
                 </div>
             )}
-            {SETTINGS_S3_SCANNER_ENABLED && (
+            {STORAGE_TYPE.S3 === SETTINGS_LOGS_INPUT_TYPE && SETTINGS_LOG_INGESTOR_ENABLED && (
                 <div className={styles["fullRow"] || ""}>
                     <S3Scanner/>
                 </div>

@@ -51,11 +51,6 @@ can start up to five minutes after the scanner discovers an object.
 You can explore all available endpoints and their schemas at the
 [Swagger UI `log-ingestor` page][swagger-ui-all].
 
-:::{note}
-Currently, requests to `log-ingestor` must be sent directly to the `log-ingestor` service. Requests
-will be routed through CLP's [API server](./guides-using-the-api-server.md) in a future release.
-:::
-
 ### Fault tolerance
 
 `log-ingestor` is designed to tolerate unexpected crashes or restarts without losing information

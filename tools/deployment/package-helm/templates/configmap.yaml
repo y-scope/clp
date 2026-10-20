@@ -1,4 +1,4 @@
-{{- $s3ScannerEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
+{{- $logIngestorEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
     (eq .Values.clpConfig.logs_input.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
 apiVersion: "v1"
 kind: "ConfigMap"
@@ -302,7 +302,7 @@ data:
         "LogsInputRootDir": null,
         {{- end }}
         "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
-        "S3ScannerEnabled": {{ $s3ScannerEnabled }},
+        "LogIngestorEnabled": {{ $logIngestorEnabled }},
 
         {{- if .Values.clpConfig.query_scheduler }}
         {{- with .Values.clpConfig.query_scheduler.max_datasets_per_query }}
@@ -328,7 +328,7 @@ data:
       },
       "server": {
         "ApiServerUrl": "http://{{ include "clp.fullname" . }}-api-server:3001",
-        {{- if $s3ScannerEnabled }}
+        {{- if $logIngestorEnabled }}
         "LogIngestorUrl": "http://{{ include "clp.fullname" . }}-log-ingestor:3002",
         {{- else }}
         "LogIngestorUrl": null,

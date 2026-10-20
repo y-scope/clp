@@ -14,12 +14,12 @@ const WebuiPublicSettingsSchema = Type.Object({
     ClpQueryEngine: Type.Enum(CLP_QUERY_ENGINES),
     ClpStorageEngine: Type.Enum(CLP_STORAGE_ENGINES),
 
+    LogIngestorEnabled: Type.Boolean({default: false}),
     LogsInputRootDir: Type.Union([
         Type.String(),
         Type.Null(),
     ]),
     LogsInputType: Type.Enum(STORAGE_TYPE),
-    S3ScannerEnabled: Type.Boolean({default: false}),
 
     MaxDatasetsPerQuery: Type.Union([
         Type.Integer({minimum: 1}),
