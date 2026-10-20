@@ -2,7 +2,6 @@
 
 use std::cmp::Reverse;
 use std::collections::HashSet;
-use std::num::NonZeroU32;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
@@ -80,9 +79,11 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::InvalidQueryJobConfig`] if:
-    ///   * The query string is empty.
-    ///   * The begin timestamp exceeds the end timestamp.
+    /// * [`Error::UnsupportedJobConfig`] if:
+    ///   * The job carries an aggregation config.
+    ///   * The job writes its results to files.
+    /// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
+    /// * Forwards [`ClpSQueryOption::try_from`]'s return values on failure.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -92,11 +93,18 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         output_handle: OutputHandle,
         job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
-        let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
-            .map_err(|_| {
-                Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
-            })?;
+        if search_job_config.aggregation_config.is_some() {
+            return Err(Error::UnsupportedJobConfig(
+                "aggregation jobs are not supported".to_owned(),
+            ));
+        }
+        if search_job_config.write_to_file {
+            return Err(Error::UnsupportedJobConfig(
+                "writing query results to files is not supported".to_owned(),
+            ));
+        }
 
+        let clp_s_query_option = ClpSQueryOption::try_from(&search_job_config)?;
         if let (Some(begin_timestamp), Some(end_timestamp)) = (
             search_job_config.begin_timestamp,
             search_job_config.end_timestamp,
@@ -111,14 +119,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .archive_selection_options
             .archive_retention_period_millisecs
             .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
-
-        let clp_s_query_option = ClpSQueryOption {
-            query_string,
-            max_num_results: NonZeroU32::new(search_job_config.max_num_results),
-            begin_timestamp_millisecs: search_job_config.begin_timestamp,
-            end_timestamp_millisecs: search_job_config.end_timestamp,
-            ignore_case: search_job_config.ignore_case,
-        };
 
         Ok(Self {
             context,
@@ -509,9 +509,9 @@ impl ArchiveSelector<'_> {
     ///
     /// This method validates and deduplicates the job's requested datasets, then retrieves from the
     /// CLP database the metadata of the archives matching the query, ordered by descending archive
-    /// end timestamp, and attaches an execution policy derived from each archive's size to its
-    /// task. Archives that end before the job's archive retention lower bound, if any, are
-    /// excluded.
+    /// end timestamp, and attaches an execution policy derived from each archive's uncompressed
+    /// size to its task. Archives that end before the job's archive retention lower bound, if any,
+    /// are excluded.
     ///
     /// # Returns
     ///
@@ -540,7 +540,8 @@ impl ArchiveSelector<'_> {
         Ok(selected_archives
             .into_iter()
             .map(|archive| {
-                let execution_policy = self.compute_query_task_execution_policy(archive.size);
+                let execution_policy =
+                    self.compute_query_task_execution_policy(archive.uncompressed_size);
                 (archive, execution_policy)
             })
             .collect())
@@ -664,7 +665,7 @@ impl ArchiveSelector<'_> {
             .db_config
             .archives_table_name(Some(dataset.as_str()));
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT `id`, `size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
+            "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
         ));
         if let Some(end_timestamp) = self.search_job_config.end_timestamp {
             query_builder
@@ -691,14 +692,14 @@ impl ArchiveSelector<'_> {
             .map(|row| ArchiveMetadata {
                 id: row.id,
                 dataset: Some(dataset.clone()),
-                size: row.size,
+                uncompressed_size: row.uncompressed_size,
                 end_timestamp: row.end_timestamp,
             })
             .collect())
     }
 
-    /// Derives the execution policy of the query task that searches an archive of `archive_size`
-    /// bytes.
+    /// Derives the execution policy of the query task that searches an archive whose uncompressed
+    /// size is `archive_uncompressed_size` bytes.
     ///
     /// The soft timeout is an aggressive estimate of the task's execution time, whereas the hard
     /// timeout is a conservative deadline that assumes the entire archive is extracted.
@@ -706,7 +707,10 @@ impl ArchiveSelector<'_> {
     /// # Returns
     ///
     /// The query task's execution policy.
-    fn compute_query_task_execution_policy(&self, archive_size: u64) -> ExecutionPolicy {
+    fn compute_query_task_execution_policy(
+        &self,
+        archive_uncompressed_size: u64,
+    ) -> ExecutionPolicy {
         const BYTES_PER_MIB: u64 = 1024 * 1024;
         const SOFT_TIMEOUT_MILLISECS_PER_MIB: u64 = 10;
         const HARD_TIMEOUT_MILLISECS_PER_MIB: u64 = 2 * 1000;
@@ -717,10 +721,12 @@ impl ArchiveSelector<'_> {
         /// The maximum timeout accepted by Spider, in milliseconds (24 hours).
         const MAX_TIMEOUT_MILLISECS: u64 = 1000 * 60 * 60 * 24;
 
-        let hard_timeout_ms = (archive_size.saturating_mul(HARD_TIMEOUT_MILLISECS_PER_MIB)
+        let hard_timeout_ms = (archive_uncompressed_size
+            .saturating_mul(HARD_TIMEOUT_MILLISECS_PER_MIB)
             / BYTES_PER_MIB)
             .clamp(MIN_TIMEOUT_MILLISECS + 1, MAX_TIMEOUT_MILLISECS);
-        let soft_timeout_ms = (archive_size.saturating_mul(SOFT_TIMEOUT_MILLISECS_PER_MIB)
+        let soft_timeout_ms = (archive_uncompressed_size
+            .saturating_mul(SOFT_TIMEOUT_MILLISECS_PER_MIB)
             / BYTES_PER_MIB)
             .clamp(MIN_TIMEOUT_MILLISECS, hard_timeout_ms - 1);
 
@@ -743,6 +749,6 @@ impl ArchiveSelector<'_> {
 struct ArchiveRowProjection {
     id: ArchiveId,
     #[sqlx(try_from = "i64")]
-    size: u64,
+    uncompressed_size: u64,
     end_timestamp: i64,
 }

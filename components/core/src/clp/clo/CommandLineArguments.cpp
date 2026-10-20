@@ -388,8 +388,7 @@ auto CommandLineArguments::parse_search_arguments(
             "The number of documents to insert into MongoDB per batch"
     )(
             "max-num-results,m",
-            po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
-                    default_value(m_max_num_results),
+            po::value<uint64_t>()->value_name("NUM"),
             "The maximum number of results to output"
     );
     // clang-format on
@@ -691,6 +690,9 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
         throw invalid_argument("batch-size cannot be 0.");
     }
 
+    if (0 != parsed_options.count("max-num-results")) {
+        m_max_num_results.emplace(parsed_options["max-num-results"].as<uint64_t>());
+    }
     if (0 == m_max_num_results) {
         throw invalid_argument("max-num-results cannot be 0.");
     }

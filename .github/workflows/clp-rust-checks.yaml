@@ -12,6 +12,7 @@ on:
       - "components/clp-tdl-package/**"
       - "components/compression-coordinator/**"
       - "components/log-ingestor/**"
+      - "components/query-coordinator/**"
       - "taskfile.yaml"
       - "taskfiles/**"
       - "tools/scripts/localstack/**"
