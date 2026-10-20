@@ -10,7 +10,7 @@ import subprocess
 import time
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, cast
+from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
@@ -36,7 +36,6 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     LOG_INGESTOR_COMPONENT_NAME,
-    LogIngestor,
     MCP_SERVER_COMPONENT_NAME,
     OTEL_COLLECTOR_COMPONENT_NAME,
     QUERY_COORDINATOR_COMPONENT_NAME,
@@ -845,10 +844,10 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = LOG_INGESTOR_COMPONENT_NAME
-        if not is_log_ingestor_enabled(self._clp_config):
+        if self._clp_config.log_ingestor is None or not is_log_ingestor_enabled(self._clp_config):
             logger.info("%s is not enabled, skipping environment setup...", component_name)
             return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
-        log_ingestor = cast("LogIngestor", self._clp_config.log_ingestor)
+        log_ingestor = self._clp_config.log_ingestor
         logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -928,10 +927,10 @@ class BaseController(ABC):
         if self._clp_config.query_scheduler is not None:
             max_datasets_per_query = self._clp_config.query_scheduler.max_datasets_per_query
 
-        log_ingestor = cast("LogIngestor", container_clp_config.log_ingestor)
+        log_ingestor = container_clp_config.log_ingestor
         log_ingestor_url = (
             f"http://{log_ingestor.host}:{log_ingestor.port}"
-            if is_log_ingestor_enabled(container_clp_config)
+            if log_ingestor is not None and is_log_ingestor_enabled(container_clp_config)
             else None
         )
 
