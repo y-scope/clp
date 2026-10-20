@@ -260,38 +260,42 @@ public:
     }
 
     /**
-     * Narrows this shape to a single occurrence of a parent rule.
+     * Narrows this shape to the occurrence of a parent rule identified by its leaf position and
+     * placeholder count.
      *
-     * Occurrences of `parent_rule_column_name` are considered in document order (the order in which
-     * `parent_rule_shapes` collects them), so the i-th occurrence here corresponds to the i-th
-     * occurrence of the rule in any schema walk of the same shape.
+     * A parent rule occurrence with no leaf matches has a shape but no placeholders, so occurrences
+     * are identified by leaf position and placeholder count rather than by index, which skips over
+     * such occurrences.
      *
      * @param parent_rule_shapes All parent rule shapes contained in this shape.
      * @param parent_rule_column_name The qualified name of the parent rule to narrow to.
-     * @param occurrence_idx The index of the parent rule occurrence to narrow to.
-     * @return A TextShape view of the parent rule occurrence, or an empty view on failure
-     * (including when fewer than `occurrence_idx + 1` occurrences exist).
+     * @param leaf_position The position of the occurrence's first leaf placeholder among all of
+     * this shape's placeholders.
+     * @param num_placeholders The number of leaf placeholders in the occurrence.
+     * @return A TextShape view of the matching in-bounds parent rule occurrence, or an empty view
+     * if none exists.
      */
     [[nodiscard]] auto narrow_to_parent_rule(
             ParentRuleShapes const& parent_rule_shapes,
             std::string_view parent_rule_column_name,
-            size_t occurrence_idx
+            size_t leaf_position,
+            size_t num_placeholders
     ) const -> TextShape<std::string_view> {
         auto const log_shape{view()};
-        size_t seen{0};
         for (auto const& match : parent_rule_shapes) {
-            if (match.m_name != parent_rule_column_name) {
-                continue;
-            }
-            if (seen++ != occurrence_idx) {
-                continue;
-            }
-            if (match.m_start < log_shape.size()
-                && match.m_start + match.m_size <= log_shape.size())
+            auto const match_end{static_cast<size_t>(match.m_start) + match.m_size};
+            if (match.m_name != parent_rule_column_name || match.m_start >= log_shape.size()
+                || match_end > log_shape.size())
             {
-                return TextShape<std::string_view>{log_shape.substr(match.m_start, match.m_size)};
+                continue;
             }
-            return {};
+            auto const first_leaf_position{count_placeholders_before(match.m_start)};
+            if (first_leaf_position != leaf_position
+                || count_placeholders_before(match_end) - first_leaf_position != num_placeholders)
+            {
+                continue;
+            }
+            return TextShape<std::string_view>{log_shape.substr(match.m_start, match.m_size)};
         }
         return {};
     }

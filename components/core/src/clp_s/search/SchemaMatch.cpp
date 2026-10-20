@@ -961,36 +961,31 @@ void SchemaMatch::add_searched_column_to_schema(int32_t schema, int32_t column) 
 }
 
 auto SchemaMatch::read_dictionaries_for_schema(SchemaView const& schema) -> void {
-    schema.visit_entries(
-            [&](mpt_node_id_t node_id) -> bool {
-                switch (m_tree->get_node(node_id).get_type()) {
-                    case NodeType::DictionaryFloat:
-                    case NodeType::VarString:
-                        m_archive_reader->get_variable_dictionary();
-                        break;
-                    case NodeType::ClpString:
-                        m_archive_reader->get_variable_dictionary();
-                        m_archive_reader->get_log_type_dictionary();
-                        break;
-                    case NodeType::UnstructuredArray:
-                        m_archive_reader->get_variable_dictionary();
-                        m_archive_reader->get_array_dictionary();
-                        break;
-                    default:
-                        break;
-                }
-                return false;
-            },
-            [&](UnorderedObject const& obj) -> bool {
-                if (NodeType::StructurizedText == obj.type) {
-                    m_archive_reader->get_log_shape_dictionary();
-                } else if (NodeType::ParentRule == obj.type) {
-                    m_archive_reader->get_parent_rule_shapes_array();
-                }
-                read_dictionaries_for_schema(obj.sub_schema);
-                return false;
-            }
-    );
+    static_cast<void>(schema.any_node_id<true>([&](mpt_node_id_t node_id) -> bool {
+        switch (m_tree->get_node(node_id).get_type()) {
+            case NodeType::DictionaryFloat:
+            case NodeType::VarString:
+                m_archive_reader->get_variable_dictionary();
+                break;
+            case NodeType::ClpString:
+                m_archive_reader->get_variable_dictionary();
+                m_archive_reader->get_log_type_dictionary();
+                break;
+            case NodeType::UnstructuredArray:
+                m_archive_reader->get_variable_dictionary();
+                m_archive_reader->get_array_dictionary();
+                break;
+            case NodeType::StructurizedText:
+                m_archive_reader->get_log_shape_dictionary();
+                break;
+            case NodeType::ParentRule:
+                m_archive_reader->get_parent_rule_shapes_array();
+                break;
+            default:
+                break;
+        }
+        return false;
+    }));
 }
 
 auto SchemaMatch::release_schema_expressions() -> std::map<int32_t, std::shared_ptr<Expression>> {

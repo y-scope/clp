@@ -4,6 +4,7 @@ over structurized log messages, projection output structure, and value encoding 
 """
 
 from collections.abc import Iterator, Sequence
+from pathlib import Path
 from typing import Any, Final, NamedTuple
 
 import pytest
@@ -13,6 +14,7 @@ from tests.binary_tests.clp_s_utils import (
     build_search_cmd,
     clpp_archive_for,
     ClppArchive,
+    compress,
     search,
 )
 from tests.utils.classes import (
@@ -682,4 +684,124 @@ def test_clpp_encoding_decompose(
         )
         assert all(isinstance(value, float) for value in float_fallback), (
             f"Expected `float_fallback` leaves to be native floats, got: {float_fallback}"
+        )
+
+
+class _ParentRuleScenario(NamedTuple):
+    """
+    A single-event clpp archive built from a custom parsing specification, and the `message` object
+    each projection of it is expected to produce.
+    """
+
+    parsing_spec: str  # The parsing specification's contents.
+    message: str  # The event's `message` field.
+    expected_messages: list[tuple[str, Any]]  # (space-separated projections, expected `message`).
+
+
+# Two `g` occurrences each contain one `inner` occurrence, with different shapes (`key=int_value`
+# vs `key:str_value`): the second `inner` must get its own shape and text, not the first's.
+_NESTED_INNER_SHAPES: Final[list[str]] = [
+    "%g.inner.key%=%g.inner.int_value%",
+    "%g.inner.key%:%g.inner.str_value%",
+]
+_NESTED_INNER_LEAVES: Final[list[MatchT]] = [
+    {"key": ["first"], "int_value": [11]},
+    {"key": ["second"], "str_value": ["xy"]},
+]
+_NESTED_SCENARIO: Final[_ParentRuleScenario] = _ParentRuleScenario(
+    parsing_spec=(
+        'delimiters: " \\t\\r\\n"\n'
+        "\n"
+        '!txt: "[\\w_-]+"\n'
+        "\n"
+        'g: "^\\[(?<inner>(?<key>(?<txt>))=(?<int_value>-?\\d+))\\]$"\n'
+        'g: "^\\[(?<inner>(?<key>(?<txt>)):(?<str_value>(?<txt>)))\\]$"\n'
+        "\n"
+        'word: "^(?<word>(?<txt>))$"\n'
+    ),
+    message="wrap [first=11] [second:xy]",
+    expected_messages=[
+        (
+            "decompose(message)",
+            {
+                "shape": "%word.word% " + " ".join(f"[{shape}]" for shape in _NESTED_INNER_SHAPES),
+                "word": [{"word": ["wrap"]}],
+                "g": [{"inner": [leaves]} for leaves in _NESTED_INNER_LEAVES],
+            },
+        ),
+        (
+            "message.g.inner",
+            {"g": [{"inner": [{"text": text}]} for text in ["first=11", "second:xy"]]},
+        ),
+        (
+            "shape(message.g.inner)",
+            {"g": [{"inner": [{"shape": shape}]} for shape in _NESTED_INNER_SHAPES]},
+        ),
+        (
+            "decompose(message.g)",
+            {
+                "g": [
+                    {"shape": f"[{shape}]", "inner": [leaves]}
+                    for shape, leaves in zip(
+                        _NESTED_INNER_SHAPES, _NESTED_INNER_LEAVES, strict=True
+                    )
+                ]
+            },
+        ),
+    ],
+)
+
+# The first `g` occurrence matches with no leaves (`v` is optional), so only the second appears in
+# the decomposed output and it must get its own shape and text, not the first's.
+_ZERO_LEAF_SCENARIO: Final[_ParentRuleScenario] = _ParentRuleScenario(
+    parsing_spec='delimiters: " \\t\\r\\n"\n\ng: "^\\[(?<inner>x(?<v>\\d+)?)\\]$"\n',
+    message="[x] [x5]",
+    expected_messages=[
+        (
+            "decompose(message)",
+            {"shape": "[x] [x%g.inner.v%]", "g": [{"inner": [{"v": [5]}]}]},
+        ),
+        ("message.g.inner", {"g": [{"inner": [{"text": "x5"}]}]}),
+        ("shape(message.g.inner)", {"g": [{"inner": [{"shape": "x%g.inner.v%"}]}]}),
+        ("message.g shape(message.g)", {"g": [{"text": "[x5]", "shape": "[x%g.inner.v%]"}]}),
+    ],
+)
+
+
+@pytest.mark.clpp
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        pytest.param(_NESTED_SCENARIO, id="nested_repeated_rule"),
+        pytest.param(_ZERO_LEAF_SCENARIO, id="zero_leaf_occurrence"),
+    ],
+)
+def test_clpp_projection_parent_rule_occurrence_shapes(
+    clp_core_path_config: ClpCorePathConfig,
+    tmp_path: Path,
+    scenario: _ParentRuleScenario,
+) -> None:
+    """
+    Validates that each parent rule occurrence's projected text and shape are its own, even when
+    same-named occurrences have different shapes or an occurrence has no leaf matches.
+
+    :param clp_core_path_config:
+    :param tmp_path:
+    :param scenario:
+    """
+    spec_path = tmp_path / "parsing-spec.txt"
+    spec_path.write_text(scenario.parsing_spec)
+    log_path = tmp_path / "event.log"
+    log_path.write_text(f'{{"message":"{scenario.message}"}}\n')
+    archive_path = tmp_path / "archives"
+    compress(clp_core_path_config, archive_path, log_path, parsing_spec_path=spec_path)
+
+    query = "message: *"
+    for projection, expected_message in scenario.expected_messages:
+        results = search(clp_core_path_config, archive_path, query, projection.split())
+        assert len(results) == 1, f"Query '{query}' expected 1 result, got {len(results)}."
+        assert results[0].get("message") == expected_message, (
+            f"Projection '{projection}' produced unexpected output.\n"
+            f"  Expected: {expected_message!r}\n"
+            f"  Actual:   {results[0].get('message')!r}"
         )

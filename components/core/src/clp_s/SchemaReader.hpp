@@ -10,7 +10,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
@@ -27,6 +26,7 @@
 #include <clpp/Defs.hpp>
 #include <clpp/ErrorCode.hpp>
 #include <clpp/ParentRuleShapes.hpp>
+#include <clpp/TextShape.hpp>
 
 namespace clp_s {
 class SchemaReader;
@@ -114,19 +114,6 @@ public:
         size_t m_uncompressed_size{0};
     };
 
-    /**
-     * A shape compiled into segments for fast per-message reconstruction.
-     *
-     * Each segment is either:
-     * - A `std::string` containing text that is safe to append to the output buffer (JSON-escaped
-     *   and literal % unescaped).
-     * - A `BaseColumnReader*` used to extract the value for that placeholder in the shape.
-     */
-    struct CompiledShape {
-        using Segment = std::variant<std::string, BaseColumnReader*>;
-        std::vector<Segment> segments;
-    };
-
     // Constructor
     SchemaReader() = default;
 
@@ -183,7 +170,6 @@ public:
         m_structurized_text_column_starts.clear();
         m_local_schema_tree.clear();
         m_json_serializer.clear();
-        m_reconstruction_targets.clear();
         m_global_schema_tree = std::move(schema_tree);
         m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
@@ -215,13 +201,13 @@ public:
      * they are directly under the same parent. This means it is not possible to store each match in
      * the map as they have the same key.
      *
-     * @param column_reader_start
+     * @param start_column_reader_idx Index in `m_columns` of the object's first column reader.
      * @param subtree_root
      * @param sub_schema The object's sub-schema.
      * @param log_shape_id The object's log shape ID (present for `StructurizedText` objects).
      */
     auto mark_unordered_object(
-            size_t column_reader_start,
+            size_t start_column_reader_idx,
             mpt_node_id_t subtree_root,
             SchemaView sub_schema,
             std::optional<clpp::log_shape_id_t> log_shape_id
@@ -233,13 +219,13 @@ public:
      * marshalled, since search needs it to resolve leaf filters pinned to a leaf rule placeholder
      * position.
      * @param structurized_text_id The `StructurizedText` root node ID.
-     * @param column_reader_start The index of the object's first column reader.
+     * @param start_column_reader_idx Index in `m_columns` of the object's first column reader.
      */
     auto set_structurized_text_column_start(
             mpt_node_id_t structurized_text_id,
-            size_t column_reader_start
+            size_t start_column_reader_idx
     ) -> void {
-        m_structurized_text_column_starts.emplace(structurized_text_id, column_reader_start);
+        m_structurized_text_column_starts.emplace(structurized_text_id, start_column_reader_idx);
     }
 
     /**
@@ -334,6 +320,9 @@ public:
 
     /**
      * Initializes all internal data structures required to serialize records.
+     * @throws std::runtime_error if generating the serializer ops fails.
+     * @throws std::out_of_range if the schema consumes more column readers than `m_columns` holds
+     * (corrupt archive).
      */
     void initialize_serializer();
 
@@ -351,13 +340,6 @@ public:
     }
 
     int32_t get_schema_id() const { return m_schema_id; }
-
-    /**
-     * @param sub_schema
-     * @return the first column ID found in the given sub-schema, or -1 if the sub-schema contains
-     * no columns
-     */
-    [[nodiscard]] static auto get_first_column_in_span(SchemaView sub_schema) -> mpt_node_id_t;
 
     /**
      * @return the timestamp found in the row pointed to by m_cur_message
@@ -380,48 +362,48 @@ private:
     /**
      * A leaf column selected for output as part of a decomposed StructurizedText or ParentRule
      * scope, with the reader it is read from:
-     * @var node_id The leaf's node ID in the global schema tree.
      * @var reader_idx Index of the leaf's column reader in `m_columns`.
      * @var name The leaf's key name, used as the key of its output array.
      * @var type The leaf's node type, which selects the serializer op used to output its value.
      */
     struct DecompositionTarget {
-        mpt_node_id_t node_id{-1};
         size_t reader_idx{};
         std::string_view name;
         NodeType type{NodeType::Unknown};
     };
 
     /**
-     * Records the sub-schema and starting column index for a single occurrence of a ParentRule
-     * within its parent scope.
+     * A single occurrence of a ParentRule within its parent scope:
+     * @var sub_schema The occurrence's sub-schema.
+     * @var start_column_reader_idx Index in `m_columns` of the occurrence's first column reader.
+     * @var end_column_reader_idx Index in `m_columns` one past the occurrence's last column reader.
      */
     struct ParentRuleOccurrence {
         SchemaView sub_schema;
         size_t start_column_reader_idx{0};
+        size_t end_column_reader_idx{0};
     };
 
     /**
-     * A marked unordered object: its starting column index, sub-schema, and log shape ID (present
-     * for `StructurizedText` objects).
+     * A marked unordered object:
+     * @var start_column_reader_idx Index in `m_columns` of the object's first column reader.
+     * @var sub_schema The object's sub-schema.
+     * @var log_shape_id The object's log shape ID (present for `StructurizedText` objects).
      */
     struct MarkedUnorderedObject {
-        size_t column_reader_start{0};
+        size_t start_column_reader_idx{0};
         SchemaView sub_schema;
         std::optional<clpp::log_shape_id_t> log_shape_id;
     };
 
     /**
      * Content collected from a single walk of a sub-schema during decomposed output generation:
-     * @var next_column_reader_idx Index into `m_columns` after consuming all of the sub-schema's
-     * columns.
      * @var entries The direct leaf entries collected from this sub-schema.
      * @var parent_rule_insertion_order ParentRule node IDs in first-seen order.
      * @var parent_rule_occurrences Maps each ParentRule node ID to its occurrences, in document
      * order.
      */
     struct SchemaSpanContents {
-        size_t next_column_reader_idx{0};
         std::vector<DecompositionTarget> entries;
         std::vector<mpt_node_id_t> parent_rule_insertion_order;
         absl::flat_hash_map<mpt_node_id_t, std::vector<ParentRuleOccurrence>>
@@ -438,48 +420,168 @@ private:
     void generate_local_tree(int32_t global_id);
 
     /**
-     * Generates a json template
-     * @param id
+     * Generates the serializer ops for the subtree of the local schema tree rooted at `id`.
+     * @param id The local schema tree node ID.
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `generate_structured_array_template`'s return values.
+     * - Forwards `generate_structurized_text_template`'s return values.
      */
-    void generate_json_template(int32_t id);
+    [[nodiscard]] auto generate_json_template(int32_t id) -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Generates a json template for a structurized array
-     * @param array_root_id
-     * @param column_start the index of the first reader in m_columns belonging to this array
-     * @param schema
-     * @return the index of the next reader in m_columns after those consumed by this array
+     * Generates the serializer ops for a structurized array.
+     * @param array_root_id The array's node ID in the global schema tree.
+     * @param start_column_reader_idx Index in `m_columns` of the array's first column reader.
+     * @param sub_schema The array's sub-schema.
+     * @return A result containing the index in `m_columns` one past the array's last column reader,
+     * or an error code indicating the failure:
+     * - Forwards `generate_array_nested_object_template`'s return values.
      */
-    auto generate_structured_array_template(
+    [[nodiscard]] auto generate_structured_array_template(
             int32_t array_root_id,
-            size_t column_start,
+            size_t start_column_reader_idx,
             SchemaView sub_schema
-    ) -> size_t;
+    ) -> ystdlib::error_handling::Result<size_t>;
 
     /**
-     * Generates a json template for a structured object
-     * @param id
-     * @param column_start the index of the first reader in m_columns belonging to this object
-     * @param schema
-     * @return the index of the next reader in m_columns after those consumed by this object
+     * Generates the serializer ops for an unordered object nested in a structurized array: a nested
+     * array, a nested object, or a `StructurizedText` emitted as an unnamed text value.
+     * @param obj The nested unordered object.
+     * @param array_root_id The enclosing array's node ID in the global schema tree.
+     * @param start_column_reader_idx Index in `m_columns` of `obj`'s first column reader.
+     * @return A result containing the index in `m_columns` one past `obj`'s last column reader, or
+     * an error code indicating the failure:
+     * - ClppErrorCodeEnum::Corrupt if `obj` has an unexpected type, no node IDs, or (for a
+     *   `StructurizedText`) no log shape ID.
+     * - Forwards `get_log_shape`'s return values.
+     * - Forwards `scope_column_readers`' return values.
+     * - Forwards `JsonSerializer::add_reconstructed_text_value_op`'s return values.
+     * - Forwards `generate_structured_array_template`'s return values.
+     * - Forwards `generate_structured_object_template`'s return values.
      */
-    auto generate_structured_object_template(int32_t id, size_t column_start, SchemaView sub_schema)
+    [[nodiscard]] auto generate_array_nested_object_template(
+            UnorderedObject const& obj,
+            int32_t array_root_id,
+            size_t start_column_reader_idx
+    ) -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Generates the serializer ops for a structured object nested in a structurized array.
+     * @param object_root The object's node ID in the global schema tree.
+     * @param start_column_reader_idx Index in `m_columns` of the object's first column reader.
+     * @param sub_schema The object's sub-schema.
+     * @return A result containing the index in `m_columns` one past the object's last column
+     * reader, or an error code indicating the failure:
+     * - Forwards `generate_object_nested_object_template`'s return values.
+     */
+    [[nodiscard]] auto generate_structured_object_template(
+            int32_t object_root,
+            size_t start_column_reader_idx,
+            SchemaView sub_schema
+    ) -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Generates the serializer ops for an unordered object nested in an object that is itself
+     * nested in a structurized array. Nested plain objects are flattened into the enclosing
+     * object's sub-schema, so `obj` is either a nested array or a `StructurizedText` emitted as a
+     * text field.
+     * @param obj The nested unordered object.
+     * @param object_root The enclosing object's node ID in the global schema tree.
+     * @param cur_root The node ID whose children the previous field was emitted under; updated to
+     * the node ID whose children the next field should be emitted under.
+     * @param path_to_intersection Scratch buffer for `find_intersection_and_fix_brackets`.
+     * @param start_column_reader_idx Index in `m_columns` of `obj`'s first column reader.
+     * @return A result containing the index in `m_columns` one past `obj`'s last column reader, or
+     * an error code indicating the failure:
+     * - ClppErrorCodeEnum::Corrupt if `obj` has an unexpected type, no node IDs, or (for a
+     *   `StructurizedText`) no log shape ID.
+     * - Forwards `get_log_shape`'s return values.
+     * - Forwards `scope_column_readers`' return values.
+     * - Forwards `JsonSerializer::add_reconstructed_text_field_op`'s return values.
+     * - Forwards `generate_structured_array_template`'s return values.
+     */
+    [[nodiscard]] auto generate_object_nested_object_template(
+            UnorderedObject const& obj,
+            int32_t object_root,
+            int32_t& cur_root,
+            std::vector<int32_t>& path_to_intersection,
+            size_t start_column_reader_idx
+    ) -> ystdlib::error_handling::Result<size_t>;
+
+    /**
+     * Counts the column readers consumed by a scope, including entries within nested unordered
+     * objects.
+     * @param start_column_reader_idx Index in `m_columns` of a scope's first column reader.
+     * @param sub_schema The scope's sub-schema.
+     * @return Index in `m_columns` one past the scope's last column reader.
+     */
+    [[nodiscard]] auto
+    compute_end_column_reader_idx(size_t start_column_reader_idx, SchemaView sub_schema) const
             -> size_t;
 
     /**
-     * Generates a JSON template for a StructurizedText. Its possible fields are the reconstructed
-     * text (when the StructurizedText itself is projected), its shape, and its leaf-rule and
-     * ParentRule arrays. The StructurizedText is emitted as an object containing those fields, or
-     * as a bare text string when the text is its only field. Extraction always emits the bare
-     * text.
-     * @param structurized_text_id The StructurizedText node ID.
-     * @return A result containing the index of the next reader in m_columns after those consumed by
-     * this object, or an error code indicating the failure:
-     * - ClppErrorCodeEnum::Failure if the capture has no register IDs or the positions are invalid.
-     * - ClppErrorCodeEnum::Unsupported if an unsupported or unexpected column type is found.
+     * Slices `m_columns` to the readers consumed by one scope. The returned span references
+     * `m_columns` and is invalidated by any operation that modifies `m_columns`.
+     * @param start_column_reader_idx Index in `m_columns` of a scope's first column reader.
+     * @param end_column_reader_idx Index in `m_columns` one past the scope's last column reader.
+     * @return A result containing the column readers consumed by the scope, or an error code
+     * indicating the failure:
+     * - ClppErrorCodeEnum::Corrupt if the range is inverted or exceeds `m_columns`.
      */
-    auto generate_structurized_text_template(mpt_node_id_t structurized_text_id)
-            -> ystdlib::error_handling::Result<size_t>;
+    [[nodiscard]] auto
+    scope_column_readers(size_t start_column_reader_idx, size_t end_column_reader_idx) const
+            -> ystdlib::error_handling::Result<std::span<BaseColumnReader* const>>;
+
+    /**
+     * Looks up a StructurizedText's shape in the log shape dictionary.
+     * @param log_shape_id A StructurizedText's log shape ID.
+     * @return A result containing the log shape, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Failure if the log shape dictionary is not available.
+     * - ClppErrorCodeEnum::Corrupt if `log_shape_id` is out of range.
+     * The shape views `m_log_shape_dict`'s storage and is valid only while the dictionary is.
+     */
+    [[nodiscard]] auto get_log_shape(clpp::log_shape_id_t log_shape_id) const
+            -> ystdlib::error_handling::Result<clpp::TextShape<std::string_view>>;
+
+    /**
+     * Looks up a log shape narrowed to one ParentRule occurrence.
+     * @param log_shape_id The log shape ID of the StructurizedText containing the ParentRule.
+     * @param parent_rule_column_name The column name of the ParentRule.
+     * @param leaf_position The position of the occurrence's first leaf placeholder among the
+     * StructurizedText's placeholders.
+     * @param num_placeholders The number of leaf placeholders in the occurrence.
+     * @return A result containing the log shape narrowed to the ParentRule occurrence, or an error
+     * code indicating the failure:
+     * - ClppErrorCodeEnum::Failure if the log shape dictionary or parent rule shapes are not
+     *   available.
+     * - ClppErrorCodeEnum::Corrupt if `log_shape_id` is out of range or the occurrence is not
+     *   found in the log shape.
+     * The shape views `m_log_shape_dict`'s storage and is valid only while the dictionary is.
+     */
+    [[nodiscard]] auto get_parent_rule_shape(
+            clpp::log_shape_id_t log_shape_id,
+            std::string_view parent_rule_column_name,
+            size_t leaf_position,
+            size_t num_placeholders
+    ) const -> ystdlib::error_handling::Result<clpp::TextShape<std::string_view>>;
+
+    /**
+     * Generates the serializer ops for a StructurizedText. Its possible fields are the
+     * reconstructed text (when the StructurizedText itself is projected), its shape, and its
+     * leaf-rule and ParentRule arrays. The StructurizedText is emitted as an object containing
+     * those fields, or as a bare text string when the text is its only field. Extraction always
+     * emits the bare text.
+     * @param structurized_text_id The StructurizedText node ID.
+     * @return A void result on success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Failure if the StructurizedText was not marked.
+     * - ClppErrorCodeEnum::Corrupt if the StructurizedText has no log shape ID.
+     * - Forwards `get_log_shape`'s return values.
+     * - Forwards `scope_column_readers`' return values.
+     * - Forwards `JsonSerializer::add_reconstructed_text_field_op`'s return values.
+     * - Forwards `add_decomposed_scope_ops`'s return values.
+     */
+    [[nodiscard]] auto generate_structurized_text_template(mpt_node_id_t structurized_text_id)
+            -> ystdlib::error_handling::Result<void>;
 
     /**
      * Finds the common root of the subtree containing cur_root and next_root, and adds brackets
@@ -511,76 +613,6 @@ private:
     );
 
     /**
-     * Compiles a shape into a `CompiledShape` for per-message reconstruction.
-     *
-     * Parses the shape, unescapes literal %'s, escapes JSON characters, and resolves each
-     * `%column_name%` placeholder to its corresponding column reader. This allows reconstructing
-     * each message to be done in a single pass with no repeated work.
-     *
-     * @param log_shape_id The log shape ID of the owning StructurizedText scope.
-     * @param parent_rule_column_name The column name of the ParentRule to narrow the shape to,
-     * or empty to reconstruct the full StructurizedText shape.
-     * @param start_column_reader_idx Index in `m_columns`.
-     * @param sub_schema The sub-schema to iterate for column values.
-     * @param occurrence_idx The index of the `parent_rule_column_name` occurrence to narrow to
-     * (ignored when `parent_rule_column_name` is empty).
-     * @return A result containing the fully-compiled shape or an error code indicating the failure:
-     * - Forwards `segments` return values.
-     */
-    [[nodiscard]] auto compile_shape(
-            clpp::log_shape_id_t log_shape_id,
-            std::string_view parent_rule_column_name,
-            size_t start_column_reader_idx,
-            SchemaView sub_schema,
-            size_t occurrence_idx
-    ) -> ystdlib::error_handling::Result<CompiledShape>;
-
-    /**
-     * Adds the serializer op that outputs a node's reconstructed text as a field (its key must
-     * already be added), and registers the compiled shape the op reconstructs from in
-     * `m_reconstruction_targets`.
-     * @param log_shape_id
-     * @param parent_rule_column_name
-     * @param start_column_reader_idx
-     * @param sub_schema
-     * @param occurrence_idx
-     * @return A void result on success, or an error code indicating the failure:
-     * - Forwards `compile_shape`'s return values.
-     */
-    [[nodiscard]] auto add_reconstructed_text_op(
-            clpp::log_shape_id_t log_shape_id,
-            std::string_view parent_rule_column_name,
-            size_t start_column_reader_idx,
-            SchemaView sub_schema,
-            size_t occurrence_idx
-    ) -> ystdlib::error_handling::Result<void>;
-
-    /**
-     * Adds the serializer op that outputs a StructurizedText's log shape as a constant `shape`
-     * string field.
-     * @param log_shape_id The log shape ID.
-     * @return A void result on success, or an error code indicating the failure:
-     * - ClppErrorCodeEnum::Failure if the shape dictionary is not available.
-     */
-    [[nodiscard]] auto add_log_shape_field_op(clpp::log_shape_id_t log_shape_id)
-            -> ystdlib::error_handling::Result<void>;
-
-    /**
-     * Adds the serializer op that outputs, as a constant `shape` string field, the substring of a
-     * StructurizedText's log shape covering a specific occurrence of a ParentRule.
-     * @param log_shape_id The log shape ID.
-     * @param parent_rule_column_name The column name of the ParentRule.
-     * @param occurrence_idx The index of the ParentRule occurrence to output the shape of.
-     * @return A void result on success, or an error code indicating the failure:
-     * - ClppErrorCodeEnum::Failure if the shape dictionary or parent rule shapes are not available.
-     */
-    [[nodiscard]] auto add_parent_rule_shape_field_op(
-            clpp::log_shape_id_t log_shape_id,
-            std::string_view parent_rule_column_name,
-            size_t occurrence_idx
-    ) -> ystdlib::error_handling::Result<void>;
-
-    /**
      * Adds the serializer ops that output leaf entries as JSON array fields, one array per column
      * name, and appends each entry's column reader to `m_reordered_columns` in output order.
      * @param entries The leaf entries to output (sorted by name in-place).
@@ -592,21 +624,23 @@ private:
 
     /**
      * Walks a sub-schema, collecting direct leaf entries and ParentRule occurrences (grouped by
-     * parent-rule node ID, with insertion order preserved), while advancing the column index past
-     * all column-consuming entries including those inside nested scopes.
+     * parent-rule node ID, with insertion order preserved), assigning each its column reader
+     * indices in `m_columns`.
      * @param schema The sub-schema to walk.
      * @param scope_node_id The node ID of the owning decomposable scope.
-     * @param start_column_reader_idx The index of this scope's first column reader in `m_columns`.
+     * @param start_column_reader_idx Index in `m_columns` of this scope's first column reader.
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active,
      * causing all direct leaves to be collected regardless of individual projection checks.
-     * @return The collected scope contents.
+     * @return A result containing the collected scope contents, or an error code indicating the
+     * failure:
+     * - ClppErrorCodeEnum::Corrupt if a ParentRule object has no node ID.
      */
     [[nodiscard]] auto collect_scope_entries(
             SchemaView schema,
             mpt_node_id_t scope_node_id,
             size_t start_column_reader_idx,
             bool ancestor_decomposed
-    ) -> SchemaSpanContents;
+    ) -> ystdlib::error_handling::Result<SchemaSpanContents>;
 
     /**
      * Adds the serializer ops that output the ParentRule arrays for the grouped occurrences in a
@@ -615,15 +649,48 @@ private:
      * (when the ParentRule itself is projected), shape, and leaf-rule/ParentRule arrays.
      * @param scope The collected scope contents.
      * @param log_shape_id
+     * @param structurized_text_column_start Index in `m_columns` of the enclosing
+     * StructurizedText's first column reader.
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active.
      * @return A void result on success, or an error code indicating the failure:
-     * - Forwards `add_parent_rule_shape_field_op`'s return values.
-     * - Forwards `add_decomposed_scope_ops`'s return values.
+     * - Forwards `add_parent_rule_occurrence_ops`'s return values.
      */
     [[nodiscard]] auto add_parent_rule_array_ops(
             SchemaSpanContents const& scope,
             clpp::log_shape_id_t log_shape_id,
+            size_t structurized_text_column_start,
             bool ancestor_decomposed
+    ) -> ystdlib::error_handling::Result<void>;
+
+    /**
+     * Adds the serializer ops that output one ParentRule occurrence's projected fields
+     * (reconstructed text and/or narrowed shape) and its decomposed content. The occurrence's
+     * shape is located by its leaf position and placeholder count, computed from its column
+     * reader range relative to `structurized_text_column_start`.
+     * @param parent_rule_id The ParentRule's node ID.
+     * @param occurrence The occurrence to emit.
+     * @param parent_rule_column_name The ParentRule's column name.
+     * @param log_shape_id The log shape ID of the enclosing StructurizedText.
+     * @param structurized_text_column_start Index in `m_columns` of the enclosing
+     * StructurizedText's first column reader.
+     * @param emit_text Whether the occurrence's reconstructed text is projected.
+     * @param emit_shape Whether the occurrence's narrowed shape is projected.
+     * @param decompose_children Whether the occurrence's content is decomposed.
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `get_parent_rule_shape`'s return values.
+     * - Forwards `scope_column_readers`' return values.
+     * - Forwards `JsonSerializer::add_reconstructed_text_field_op`'s return values.
+     * - Forwards `add_decomposed_scope_ops`'s return values.
+     */
+    [[nodiscard]] auto add_parent_rule_occurrence_ops(
+            mpt_node_id_t parent_rule_id,
+            ParentRuleOccurrence const& occurrence,
+            std::string_view parent_rule_column_name,
+            clpp::log_shape_id_t log_shape_id,
+            size_t structurized_text_column_start,
+            bool emit_text,
+            bool emit_shape,
+            bool decompose_children
     ) -> ystdlib::error_handling::Result<void>;
 
     /**
@@ -632,41 +699,26 @@ private:
      * contains its own direct leaf arrays and nested ParentRule arrays.
      * @param schema The sub-schema to walk.
      * @param scope_node_id The node ID of the owning decomposable scope.
-     * @param column_idx The index of this scope's first column reader in `m_columns`.
+     * @param start_column_reader_idx Index in `m_columns` of this scope's first column reader.
      * @param log_shape_id
+     * @param structurized_text_column_start Index in `m_columns` of the enclosing
+     * StructurizedText's first column reader.
      * @param ancestor_decomposed Whether an ancestor scope has Decomposed projection active,
      * causing all leaves and child ParentRules to be output regardless of individual projection
      * checks.
-     * @return The column index past the last consumed column in this scope, or an error code
-     * indicating the failure:
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `collect_scope_entries`'s return values.
      * - Forwards `add_grouped_leaf_array_ops`'s return values.
      * - Forwards `add_parent_rule_array_ops`'s return values.
      */
     [[nodiscard]] auto add_decomposed_scope_ops(
             SchemaView schema,
             mpt_node_id_t scope_node_id,
-            size_t column_idx,
+            size_t start_column_reader_idx,
             clpp::log_shape_id_t log_shape_id,
+            size_t structurized_text_column_start,
             bool ancestor_decomposed
-    ) -> ystdlib::error_handling::Result<size_t>;
-
-    /**
-     * Reconstructs the original raw log text for a single message by walking the compiled
-     * shape and writing into the output buffer.
-     *
-     * std::string segments are pre-escaped and appended to the buffer. BaseColumnReader segments
-     * extract and JSON-escape the column value into the buffer. The entire output is wrapped in a
-     * single pair of JSON quotes.
-     *
-     * @param shape The compiled shape.
-     * @param message_index The index of the message to reconstruct.
-     * @param buffer The output buffer to write into.
-     */
-    auto reconstruct_compiled_shape(
-            CompiledShape const& shape,
-            uint64_t message_index,
-            std::string& buffer
-    ) -> void;
+    ) -> ystdlib::error_handling::Result<void>;
 
     // Data members
     int32_t m_schema_id;
@@ -697,9 +749,8 @@ private:
     std::map<int32_t, MarkedUnorderedObject> m_global_id_to_unordered_object;
     // Keyed by the `StructurizedText` root's schema-tree node ID.
     std::unordered_map<mpt_node_id_t, size_t> m_structurized_text_column_starts;
-    std::vector<CompiledShape> m_reconstruction_targets;
-    LogShapeDictionaryReader const* m_log_shape_dict;
-    clpp::ParentRuleShapesArray const* m_parent_rule_shapes_array;
+    LogShapeDictionaryReader const* m_log_shape_dict{nullptr};
+    clpp::ParentRuleShapesArray const* m_parent_rule_shapes_array{nullptr};
     bool m_extract_mode{false};
 };
 }  // namespace clp_s

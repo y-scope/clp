@@ -306,6 +306,8 @@ private:
      * @param search_root_id The node ID whose subtree is searched for the object's matching subtree
      * root.
      * @return The resolved schema-tree node ID.
+     * @throws OperationFailed with ErrorCodeCorrupt if the object has no metadata root and its
+     * sub-schema contains no node IDs.
      */
     [[nodiscard]] auto
     resolve_unordered_object_root(UnorderedObject const& obj, int32_t search_root_id)

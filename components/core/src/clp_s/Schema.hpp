@@ -7,8 +7,10 @@
 #include <optional>
 #include <span>
 #include <utility>
+#include <variant>
 #include <vector>
 
+#include <clp_s/Defs.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clpp/Defs.hpp>
 
@@ -18,13 +20,41 @@ struct UnorderedObject;
 /**
  * A read-only view over a sequence of schema entries.
  *
- * Each top-level entry is either an MPT node ID or the delimiter of an unordered object.
- * `visit_entries` iterates these entries and decodes unordered objects into `UnorderedObject`s.
- * `any_node_id` and `for_each_node_id` visit every MPT node ID, recursing into unordered-object
- * sub-schemas.
+ * Each top-level entry is either an MPT node ID or the delimiter of an unordered object. Iterating
+ * the view yields each top-level entry as an `Entry`, with unordered objects decoded into
+ * `UnorderedObject`s. `any_node_id` and `for_each_node_id` visit every MPT node ID at any nesting
+ * depth in a single flat scan.
  */
 class SchemaView {
 public:
+    // Types
+    /**
+     * A top-level entry of a view: a plain MPT node ID or a decoded unordered object.
+     */
+    using Entry = std::variant<mpt_node_id_t, UnorderedObject>;
+
+    /**
+     * Iterator over a view's top-level entries. Advancing past an unordered object skips its entire
+     * content (metadata and sub-schema).
+     */
+    class EntryIterator {
+    public:
+        // Constructors
+        EntryIterator(SchemaView const& view, size_t idx) : m_view{&view}, m_idx{idx} {}
+
+        // Methods
+        [[nodiscard]] auto operator*() const -> Entry;
+
+        auto operator++() -> EntryIterator&;
+
+        [[nodiscard]] auto operator==(EntryIterator const& rhs) const -> bool = default;
+
+    private:
+        // Data members
+        SchemaView const* m_view;
+        size_t m_idx;
+    };
+
     // Static methods
     /**
      * Encodes a NodeType as a schema entry to delimit an unordered object using bithacks.
@@ -39,18 +69,24 @@ public:
     explicit SchemaView(std::span<int32_t const> schema) : m_schema{schema} {}
 
     // Methods
+    [[nodiscard]] auto begin() const -> EntryIterator { return {*this, 0}; }
+
+    [[nodiscard]] auto end() const -> EntryIterator { return {*this, m_schema.size()}; }
+
     /**
-     * Invokes `predicate` on every MPT node ID in this view, recursing into unordered object
-     * sub-schemas, until the predicate returns true.
+     * Invokes `predicate` on every MPT node ID in this view, including those within nested
+     * unordered-object sub-schemas, until the predicate returns true.
+     * @tparam include_object_roots Whether to also invoke `predicate` on the root node IDs stored
+     * as unordered-object metadata.
      * @param predicate A callable accepting a `mpt_node_id_t` and returning a bool.
      * @return Whether the predicate returned true for any node ID.
      */
-    template <typename Predicate>
+    template <bool include_object_roots = false, typename Predicate>
     [[nodiscard]] auto any_node_id(Predicate const& predicate) const -> bool;
 
     /**
-     * Invokes `callback` on every MPT node ID in this view, recursing into unordered-object
-     * sub-schemas.
+     * Invokes `callback` on every plain MPT node ID in this view, including those within nested
+     * unordered-object sub-schemas.
      * @param callback A callable accepting a single `mpt_node_id_t`.
      */
     template <typename Callback>
@@ -62,18 +98,13 @@ public:
     }
 
     /**
-     * Visits each entry of this view, stopping early if a visitor returns true.
-     *
-     * Plain MPT node IDs are passed to `visit_node`. Delimiter entries are decoded into
-     * `UnorderedObject`s and passed to `visit_object`, which is responsible for recursing into
-     * the sub-schema if desired.
-     * @param visit_node Invoked with each plain MPT node ID.
-     * @param visit_object Invoked with each decoded unordered object.
-     * @return Whether any visitor returned true.
+     * Finds the first MPT node ID in this view, descending into nested `Object` and
+     * `StructurizedArray` sub-schemas. For `StructurizedText` and `ParentRule` objects the root
+     * node ID stored in their metadata is returned.
+     * @return The first MPT node ID.
+     * @return std::nullopt if the view contains no node IDs.
      */
-    template <typename NodeVisitor, typename ObjectVisitor>
-    auto visit_entries(NodeVisitor const& visit_node, ObjectVisitor const& visit_object) const
-            -> bool;
+    [[nodiscard]] auto first_node_id() const -> std::optional<mpt_node_id_t>;
 
     /**
      * Collects every `StructurizedText` unordered object in this view, recursing into other
@@ -145,7 +176,10 @@ private:
  *  - enclosing ParentRule node's MPT node ID
  */
 struct UnorderedObject {
-    // Static methods
+    // Offsets of each metadata entry from the first entry after an unordered object's delimiter.
+    static constexpr size_t cRootNodeIdMetadataOffset{0};
+    static constexpr size_t cLogShapeIdMetadataOffset{1};
+
     /**
      * @return The number of leading metadata entries in an unordered object of the given type.
      */
@@ -160,7 +194,15 @@ struct UnorderedObject {
         }
     }
 
-    // Data members
+    /**
+     * @param type The unordered object's node type.
+     * @return Whether an unordered object of the given type stores its MPT root node ID as
+     * metadata.
+     */
+    [[nodiscard]] static constexpr auto has_root_node_id_metadata(NodeType type) -> bool {
+        return 0 < get_num_metadata_entries(type);
+    }
+
     NodeType type;
     // Total number of entries (metadata + sub-schema) this object occupies after its delimiter.
     size_t length;
@@ -170,28 +212,52 @@ struct UnorderedObject {
     SchemaView sub_schema;
 };
 
-template <typename Predicate>
-auto SchemaView::any_node_id(Predicate const& predicate) const -> bool {
-    return visit_entries(predicate, [&](UnorderedObject const& obj) -> bool {
-        return obj.sub_schema.any_node_id(predicate);
-    });
+inline auto SchemaView::EntryIterator::operator*() const -> Entry {
+    if (auto obj{m_view->decode_unordered_object(m_idx)}) {
+        return *obj;
+    }
+    return m_view->m_schema[m_idx];
 }
 
-template <typename NodeVisitor, typename ObjectVisitor>
-auto
-SchemaView::visit_entries(NodeVisitor const& visit_node, ObjectVisitor const& visit_object) const
-        -> bool {
+inline auto SchemaView::EntryIterator::operator++() -> EntryIterator& {
+    auto const entry{m_view->m_schema[m_idx]};
+    size_t const stride{
+            is_unordered_object(entry) ? 1 + static_cast<size_t>(get_unordered_object_length(entry))
+                                       : 1
+    };
+    m_idx = std::min(m_idx + stride, m_view->m_schema.size());
+    return *this;
+}
+
+inline auto SchemaView::first_node_id() const -> std::optional<mpt_node_id_t> {
+    std::optional<mpt_node_id_t> first_node_id;
+    static_cast<void>(any_node_id<true>([&](mpt_node_id_t node_id) -> bool {
+        first_node_id = node_id;
+        return true;
+    }));
+    return first_node_id;
+}
+
+template <bool include_object_roots, typename Predicate>
+auto SchemaView::any_node_id(Predicate const& predicate) const -> bool {
     for (size_t i{0}; i < m_schema.size(); ++i) {
-        if (auto const obj{decode_unordered_object(i)}) {
-            if (visit_object(*obj)) {
+        auto const entry{m_schema[i]};
+        if (false == is_unordered_object(entry)) {
+            if (predicate(entry)) {
                 return true;
             }
-            i += obj->length;
             continue;
         }
-        if (visit_node(m_schema[i])) {
-            return true;
+        auto const type{get_unordered_object_type(entry)};
+        if constexpr (include_object_roots) {
+            auto const root_node_id_idx{i + 1 + UnorderedObject::cRootNodeIdMetadataOffset};
+            if (UnorderedObject::has_root_node_id_metadata(type)
+                && root_node_id_idx < m_schema.size() && predicate(m_schema[root_node_id_idx]))
+            {
+                return true;
+            }
         }
+        i += UnorderedObject::get_num_metadata_entries(type);
     }
     return false;
 }
@@ -199,20 +265,20 @@ SchemaView::visit_entries(NodeVisitor const& visit_node, ObjectVisitor const& vi
 inline auto SchemaView::find_structurized_texts() const
         -> std::vector<std::pair<mpt_node_id_t, clpp::log_shape_id_t>> {
     std::vector<std::pair<mpt_node_id_t, clpp::log_shape_id_t>> texts;
-    visit_entries(
-            [](mpt_node_id_t) -> bool { return false; },
-            [&](UnorderedObject const& obj) -> bool {
-                if (NodeType::StructurizedText == obj.type) {
-                    if (obj.node_id.has_value() && obj.log_shape_id.has_value()) {
-                        texts.emplace_back(obj.node_id.value(), obj.log_shape_id.value());
-                    }
-                    return false;
-                }
-                auto const nested_texts{obj.sub_schema.find_structurized_texts()};
-                texts.insert(texts.end(), nested_texts.begin(), nested_texts.end());
-                return false;
+    for (size_t i{0}; i < m_schema.size(); ++i) {
+        auto const obj{decode_unordered_object(i)};
+        if (false == obj.has_value()) {
+            continue;
+        }
+        if (NodeType::StructurizedText == obj->type) {
+            if (obj->node_id.has_value() && obj->log_shape_id.has_value()) {
+                texts.emplace_back(obj->node_id.value(), obj->log_shape_id.value());
             }
-    );
+            i += obj->length;
+            continue;
+        }
+        i += UnorderedObject::get_num_metadata_entries(obj->type);
+    }
     return texts;
 }
 
@@ -222,18 +288,23 @@ inline auto SchemaView::decode_unordered_object(size_t i) const -> std::optional
         return std::nullopt;
     }
     auto const type{get_unordered_object_type(entry)};
-    auto const length{static_cast<size_t>(get_unordered_object_length(entry))};
+    auto const length{std::min(
+            static_cast<size_t>(get_unordered_object_length(entry)),
+            m_schema.size() - i - 1
+    )};
     auto const content{m_schema.subspan(i + 1, length)};
     auto const num_metadata_entries{UnorderedObject::get_num_metadata_entries(type)};
     std::optional<mpt_node_id_t> node_id;
     std::optional<clpp::log_shape_id_t> log_shape_id;
     if (content.size() >= num_metadata_entries) {
         auto const metadata{content.first(num_metadata_entries)};
-        if (false == metadata.empty()) {
-            node_id = metadata[0];
+        if (UnorderedObject::cRootNodeIdMetadataOffset < metadata.size()) {
+            node_id = metadata[UnorderedObject::cRootNodeIdMetadataOffset];
         }
-        if (metadata.size() >= 2) {
-            log_shape_id = static_cast<clpp::log_shape_id_t>(metadata[1]);
+        if (UnorderedObject::cLogShapeIdMetadataOffset < metadata.size()) {
+            log_shape_id = static_cast<clpp::log_shape_id_t>(
+                    metadata[UnorderedObject::cLogShapeIdMetadataOffset]
+            );
         }
     }
     return UnorderedObject{
