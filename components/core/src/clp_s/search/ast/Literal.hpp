@@ -77,6 +77,8 @@ public:
                 return "null";
             case LiteralType::TimestampT:
                 return "timestamp";
+            case LiteralType::ClppDecomposeT:
+                return "clppdecompose";
             default:
                 return "errtype";
         }

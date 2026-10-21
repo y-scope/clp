@@ -270,6 +270,32 @@ def test_clpp_search_no_match(
     assert len(results) == 0, f"Query '{query}' expected 0 results, got {len(results)}."
 
 
+@pytest.mark.clpp
+@pytest.mark.parametrize("query", ["message < abcdef", "NOT message < abcdef"])
+def test_clpp_search_logically_false(
+    clp_core_path_config: ClpCorePathConfig,
+    clpp_archive: ClppArchive,
+    query: str,
+) -> None:
+    """
+    Validates that a query no column type can satisfy is rejected as logically false before schema
+    matching, including on a StructurizedText column (which requires a string operand).
+
+    :param clp_core_path_config:
+    :param clpp_archive:
+    :param query: A range query whose operand can't be a number or a string under the operation.
+    """
+    search_cmd = build_search_cmd(clp_core_path_config, clpp_archive.path, query)
+    action = ClpAction.from_cmd(search_cmd)
+    assert 0 != action.completed_proc.returncode, (
+        f"Query '{query}' should have failed but exited 0.\n"
+        f"stderr: {action.completed_proc.stderr!r}"
+    )
+    assert "is logically false" in action.completed_proc.stderr, (
+        f"Query '{query}' did not produce expected error.\nstderr: {action.completed_proc.stderr!r}"
+    )
+
+
 class _NegationCase(NamedTuple):
     """
     A query's negation results are the results of `scope_query` minus the events matching the

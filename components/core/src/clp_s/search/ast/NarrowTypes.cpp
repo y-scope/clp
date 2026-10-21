@@ -61,6 +61,9 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
                 narrowed_var_string = true;
                 column->remove_matching_type(LiteralType::VarStringT);
             }
+            if (narrowed_clp_string && narrowed_var_string) {
+                column->remove_matching_type(LiteralType::ClppDecomposeT);
+            }
             if (false == literal->as_int(tmpint, op)) {
                 if (false == literal->has_wildcard()) {
                     column->remove_matching_type(LiteralType::IntegerT);

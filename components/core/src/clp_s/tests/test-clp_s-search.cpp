@@ -16,6 +16,7 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <clp_s/search/ast/SearchUtils.hpp>
 #include <clpp/Interpretation.hpp>
 
 #include "../src/clp_s/archive_constants.hpp"
@@ -239,6 +240,32 @@ auto search_clpp(
 }
 }  // namespace
 
+// Tests that query preprocessing reduces a query to an empty expression when no column type can
+// satisfy a filter, so that the search terminates before any archive is opened. In particular, a
+// filter whose operand can't be interpreted as a string must also rule out StructurizedText and
+// ParentRule columns, since matching against those requires a string operand.
+TEST_CASE("clp-s-search-preprocess-logically-false", "[clp-s][search]") {
+    auto const [query, is_logically_false] = GENERATE(
+            std::pair{R"aa(pid < abcdef)aa", true},
+            std::pair{R"aa(NOT pid < abcdef)aa", true},
+            std::pair{R"aa(pid >= "12 34")aa", true},
+            std::pair{R"aa(msg > "foo")aa", true},
+            std::pair{R"aa(pid < abcdef AND pid > 1000)aa", true},
+            std::pair{R"aa(pid: abcdef)aa", false},
+            std::pair{R"aa(pid: "ab cd")aa", false},
+            std::pair{R"aa(pid > 1000)aa", false},
+            std::pair{R"aa(pid < abcdef OR pid > 1000)aa", false}
+    );
+    CAPTURE(query);
+
+    auto query_stream{std::istringstream{query}};
+    auto expr{clp_s::search::kql::parse_kql_expression(query_stream)};
+    REQUIRE(nullptr != expr);
+    expr = clp_s::search::ast::preprocess_query(expr);
+    REQUIRE(is_logically_false
+            == (nullptr != std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(expr)));
+}
+
 TEST_CASE("clp-s-search", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
             {R"aa(NOT a: b)aa", {0}},
@@ -301,7 +328,6 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
             {R"aa(var_string: *)aa", {9}},
             {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
             {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}},
-            {R"aa(msg > "foo")aa", {}},
             {R"aa(msg: *)aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT msg: *)aa", {0, 7, 8, 9, 10, 11, 12, 13}},
             {R"aa(shape(msg): *)aa", {1, 2, 3, 4, 5, 6}},
