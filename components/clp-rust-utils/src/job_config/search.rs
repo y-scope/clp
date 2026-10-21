@@ -61,9 +61,10 @@ pub enum QueryJobStatus {
     Running = 1,
     Succeeded = 2,
     Failed = 3,
-    Cancelling = 4,
-    Cancelled = 5,
-    Killed = 6,
+    CancelRequested = 4,
+    Cancelling = 5,
+    Cancelled = 6,
+    Killed = 7,
 }
 
 impl QueryJobStatus {
