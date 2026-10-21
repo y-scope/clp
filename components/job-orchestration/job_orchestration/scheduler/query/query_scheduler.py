@@ -437,7 +437,7 @@ def fetch_new_query_jobs(db_conn) -> list:
 @exception_default_value(default=[])
 def fetch_cancelling_search_jobs(db_conn) -> list:
     """
-    Fetches search jobs with status=CANCELLING from the database.
+    Fetches search jobs with status=CANCEL_REQUESTED from the database.
     :param db_conn:
     :return: The cancelling search jobs on success. An empty list if an exception occurs while
     interacting with the database.
@@ -447,7 +447,7 @@ def fetch_cancelling_search_jobs(db_conn) -> list:
             f"""
             SELECT {QUERY_JOBS_TABLE_NAME}.id as job_id
             FROM {QUERY_JOBS_TABLE_NAME}
-            WHERE {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.CANCELLING}
+            WHERE {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.CANCEL_REQUESTED}
             AND {QUERY_JOBS_TABLE_NAME}.type={QueryJobType.SEARCH_OR_AGGREGATION}
             """
         )
@@ -547,7 +547,7 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                     QUERY_JOBS_TABLE_NAME,
                     job_id,
                     QueryJobStatus.CANCELLED,
-                    QueryJobStatus.CANCELLING,
+                    QueryJobStatus.CANCEL_REQUESTED,
                     **set_job_or_task_status_kwargs,
                 ):
                     logger.info("Cancelled job.")
@@ -1066,7 +1066,7 @@ async def handle_finished_search_job(
             raise NotImplementedError(error_msg)
 
     # We set the status regardless of the job's previous status to handle the case where the
-    # job is cancelled (status = CANCELLING) while we're in this method.
+    # job is cancelled (status = CANCEL_REQUESTED) while we're in this method.
     duration = (datetime.datetime.now() - job.start_time).total_seconds()
     if set_job_or_task_status(
         db_conn,
