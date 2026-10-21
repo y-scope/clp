@@ -131,7 +131,7 @@ async fn query(
     tracing::info!("Submitting query: {:?}", query_config);
     let query_job_id = match client.submit_query(query_config).await {
         Ok(id) => {
-            tracing::info!("Submitted query with query job ID: {}", id);
+            tracing::info!("Submitted query job ID: {}", id);
             id
         }
         Err(err) => {
