@@ -108,10 +108,19 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
          * Really the issue is that we have multiple string types. Technically similar logic applies
          * for the date string column types, but we don't allow string matches against them so we
          * don't have to worry about supporting that here.
+         *
+         * The rewrite doesn't apply to:
+         * - The pure wildcard column `*`: it resolves to every node in a schema, so the existence
+         *   of one node of the other string type says nothing about the values of the others.
+         *   Schema matching has a dedicated negated expansion for pure wildcard filters instead.
+         * - shape() columns: a shape is a template string that is neither a clp string nor a
+         *   variable string, and the EXISTS column would be pinned to a single string type that can
+         *   never resolve to the StructurizedText or ParentRule node a shape() column requires.
          */
         if (((filter->is_inverted() && FilterOperation::EQ == op)
              || (false == filter->is_inverted() && FilterOperation::NEQ == op))
-            && matches_var_and_clp_string && narrowed_clp_string != narrowed_var_string)
+            && matches_var_and_clp_string && narrowed_clp_string != narrowed_var_string
+            && false == column->is_pure_wildcard() && false == column->is_shape_query())
         {
             auto exists_column_type
                     = narrowed_clp_string ? LiteralType::ClpStringT : LiteralType::VarStringT;
@@ -124,6 +133,12 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
             // of UUIDs) then we only need to transform one filter expression within the parent
             // OR/AND into an OR with the necessary EXISTS condition. Splitting each filter into an
             // OR could result in a much larger AST than necessary and slow down Schema Matching.
+            // In particular, an AND with N OR children is expanded by OrOfAndForm into the
+            // cartesian product of the children, i.e. 2^N AND clauses.
+            //
+            // TODO: Under an AND parent this is unsound: AND(OR(A, E), B) requires B to hold in
+            // schemas where only E holds, but B's narrowed column doesn't resolve there. The
+            // correct rewrite is OR(AND(A, B), E) at the AND level.
             auto it = std::find_if(
                     m_local_exists_descriptors.begin(),
                     m_local_exists_descriptors.end(),

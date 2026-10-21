@@ -340,9 +340,10 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
 // just one of them, with the per-node filters combined so that the original query's semantics are
 // preserved.
 //
-// In the test input, `msg` is a StructurizedText node (idx 0), an Integer node (idx 1) and an
-// UnstructuredArray node (idx 5), and `nested.msg` is a StructurizedText node (idx 3) and an
-// Integer node (idx 4); idx 2 has no `msg` at all. The cases cover:
+// In the test input, `msg` is a StructurizedText node (idx 0 and idx 7), an Integer node (idx 1),
+// an UnstructuredArray node (idx 5) and a VarString node (idx 6), and `nested.msg` is a
+// StructurizedText node (idx 3) and an Integer node (idx 4); idx 2 has no `msg` at all. The cases
+// cover:
 // - Value filters, which hold if the value at any matched node matches (`msg: *`, `msg: 42`,
 //   `msg: 2`, `msg: "Msg 0*"`).
 // - Inverted value filters, which still require the key to be present (`NOT msg: "Msg 0*"`,
@@ -352,22 +353,36 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
 // - Wildcard paths resolving to nodes at different depths (`*.msg: *`, `*.msg: 7`).
 // - shape() filters, which only target the decomposable node (`shape(msg): *`,
 //   `NOT shape(msg): "xxx"`).
+// - Inverted string filters whose operand can only be one of the two string types, which
+//   `NarrowTypes::narrow()` rewrites into an OR with an EXISTS on the other string type. The
+//   VarString `msg` at idx 6 must survive `NOT msg: "Msg 0*"`, and `NOT *: <value>` must not be
+//   rewritten at all (`NOT *: "Msg 0*"`, `NOT *: "two words"`).
+//
+// TODO: `NOT (msg: "Msg 0*" OR msg: "Msg 1*")` should return {1, 5, 6, 7} but drops idx 6 because
+// `NarrowTypes::narrow()` emits a single EXISTS for all siblings under the normalized AND.
 TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
-            {R"aa(msg: *)aa", {0, 1, 5}},
+            {R"aa(msg: *)aa", {0, 1, 5, 6, 7}},
             {R"aa(NOT msg: *)aa", {2, 3, 4}},
-            {R"aa(*.msg: *)aa", {0, 1, 3, 4, 5}},
+            {R"aa(*.msg: *)aa", {0, 1, 3, 4, 5, 6, 7}},
             {R"aa(NOT *.msg: *)aa", {2}},
-            {R"aa(shape(msg): *)aa", {0}},
-            {R"aa(NOT shape(msg): "xxx")aa", {0}},
+            {R"aa(shape(msg): *)aa", {0, 7}},
+            {R"aa(NOT shape(msg): "xxx")aa", {0, 7}},
+            {R"aa(msg: plain)aa", {6}},
     };
     std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
             {R"aa(msg: 42)aa", {1}},
             {R"aa(msg: 2)aa", {5}},
             {R"aa(msg: "Msg 0*")aa", {0}},
-            {R"aa(NOT msg: "Msg 0*")aa", {1, 5}},
-            {R"aa(NOT msg: 42)aa", {0, 5}},
+            {R"aa(NOT msg: "Msg 0*")aa", {1, 5, 6, 7}},
+            {R"aa(NOT msg: 42)aa", {0, 5, 6, 7}},
+            {R"aa(NOT msg: plain)aa", {0, 5, 7}},
+            {R"aa(NOT msg: "two words")aa", {0, 5, 6}},
             {R"aa(*.msg: 7)aa", {4}},
+            {R"aa(NOT *.msg: "Msg 0*")aa", {1, 3, 4, 5, 6, 7}},
+            {R"aa(NOT *: "Msg 0*")aa", {1, 2, 3, 4, 5, 6, 7}},
+            {R"aa(NOT *: plain)aa", {0, 1, 2, 3, 4, 5, 7}},
+            {R"aa(NOT *: "two words")aa", {0, 1, 2, 3, 4, 5, 6}},
     };
     auto const single_file_archive = GENERATE(true, false);
 

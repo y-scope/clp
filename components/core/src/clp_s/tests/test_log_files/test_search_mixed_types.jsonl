@@ -4,3 +4,5 @@
 {"idx": 3, "nested": {"msg": "Msg 3: Abc"}}
 {"idx": 4, "nested": {"msg": 7}}
 {"idx": 5, "msg": [1, 2]}
+{"idx": 6, "msg": "plain"}
+{"idx": 7, "msg": "two words"}
