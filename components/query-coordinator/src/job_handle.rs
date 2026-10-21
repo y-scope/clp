@@ -244,7 +244,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                         spider_job_id = % spider_job_id,
                         error = % e,
                         "Failed to cancel the Spider job after failing to start the query job.",
-                    )
+                    );
                 });
             return Err(start_error);
         }

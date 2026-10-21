@@ -123,12 +123,12 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::fetch_next_cancel_requested_job`]'s return values on failure.
-    /// * Forwards [`Self::process_cancellation_request`]'s return values on failure.
+    /// * Forwards [`Self::cancel`]'s return values on failure.
     async fn process_next_cancellation_request(&self) -> Result<bool, Error> {
         let Some(job) = self.fetch_next_cancel_requested_job().await? else {
             return Ok(false);
         };
-        self.process_cancellation_request(job).await?;
+        self.cancel(job).await?;
         Ok(true)
     }
 
@@ -166,10 +166,7 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
     ///
     /// * Forwards [`Self::cancel_unsubmitted_job`]'s return values on failure.
     /// * Forwards [`Self::relay_cancellation_to_spider`]'s return values on failure.
-    async fn process_cancellation_request(
-        &self,
-        job: CancelRequestedJobRowProjection,
-    ) -> Result<(), Error> {
+    async fn cancel(&self, job: CancelRequestedJobRowProjection) -> Result<(), Error> {
         let Some(spider_job_id) = job.spider_job_id else {
             return self.cancel_unsubmitted_job(job.id).await;
         };
