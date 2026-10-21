@@ -274,8 +274,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No cancellable query job with the given ID was found. */
+            /** @description No query job with the given ID was found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The query job with the given ID has already terminated. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
