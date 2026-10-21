@@ -220,6 +220,14 @@ pub struct QueryConfig {
 
 impl From<QueryConfig> for SearchJobConfig {
     fn from(value: QueryConfig) -> Self {
+        let aggregation_config = value
+            .count_by_time_bucket_size_millisecs
+            .map(|bucket_size| AggregationConfig {
+                count_by_time_bucket_size: Some(bucket_size.get()),
+                ..AggregationConfig::default()
+            });
+        // Aggregation results are always buffered in MongoDB.
+        let write_to_file = aggregation_config.is_none() && !value.buffer_results_in_mongodb;
         Self {
             datasets: value.datasets,
             query_string: value.query_string,
@@ -227,7 +235,8 @@ impl From<QueryConfig> for SearchJobConfig {
             begin_timestamp: value.time_range_begin_millisecs,
             end_timestamp: value.time_range_end_millisecs,
             ignore_case: value.ignore_case,
-            write_to_file: !value.buffer_results_in_mongodb,
+            aggregation_config,
+            write_to_file,
             ..Default::default()
         }
     }
@@ -292,21 +301,12 @@ impl Client {
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
-        let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
         let mut search_job_config: SearchJobConfig = query_config.into();
         if search_job_config.datasets.is_none() {
             search_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
                 StorageEngine::ClpS => Some(vec!["default".to_owned()]),
             }
-        }
-        if let Some(bucket_size) = count_by_time_bucket_size {
-            search_job_config.aggregation_config = Some(AggregationConfig {
-                count_by_time_bucket_size: Some(bucket_size.get()),
-                ..AggregationConfig::default()
-            });
-            // Aggregation results are always buffered in MongoDB.
-            search_job_config.write_to_file = false;
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
@@ -966,6 +966,36 @@ mod tests {
                 config: Config::default(),
             }
         }
+    }
+
+    #[test]
+    fn query_config_conversion_preserves_aggregation_output() -> anyhow::Result<()> {
+        for (bucket_size, buffer_results_in_mongodb, expected_write_to_file) in [
+            (None, false, true),
+            (None, true, false),
+            (Some(1_i64), false, false),
+            (Some(1_i64), true, false),
+            (Some(i64::MAX), false, false),
+            (Some(i64::MAX), true, false),
+        ] {
+            let query_config = serde_json::from_value::<QueryConfig>(serde_json::json!({
+                "query_string": "*",
+                "count_by_time_bucket_size_millisecs": bucket_size,
+                "buffer_results_in_mongodb": buffer_results_in_mongodb,
+            }))?;
+            let config = SearchJobConfig::from(query_config);
+            let expected_aggregation = bucket_size.map(|size| AggregationConfig {
+                count_by_time_bucket_size: Some(size),
+                ..AggregationConfig::default()
+            });
+            assert_eq!(config.aggregation_config, expected_aggregation);
+            assert_eq!(
+                config.write_to_file, expected_write_to_file,
+                "bucket_size={bucket_size:?}, \
+                 buffer_results_in_mongodb={buffer_results_in_mongodb}"
+            );
+        }
+        Ok(())
     }
 
     #[tokio::test]
