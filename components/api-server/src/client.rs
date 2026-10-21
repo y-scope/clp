@@ -946,7 +946,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn query_bucket_size_boundaries() -> anyhow::Result<()> {
+    async fn query_numeric_boundaries() -> anyhow::Result<()> {
         use axum::body::Body;
         use axum::http::Request;
         use axum::http::StatusCode;
@@ -964,17 +964,30 @@ mod tests {
             config: Config::default(),
         };
         let app = crate::routes::from_client(client.clone())?;
-        for width in [
-            serde_json::json!(0),
-            serde_json::json!(-1),
-            serde_json::json!(i64::MIN),
-            serde_json::json!(i64::MAX.cast_unsigned() + 1),
-            serde_json::json!(u64::MAX),
+        for (field, value) in [
+            ("count_by_time_bucket_size_millisecs", serde_json::json!(0)),
+            ("count_by_time_bucket_size_millisecs", serde_json::json!(-1)),
+            (
+                "count_by_time_bucket_size_millisecs",
+                serde_json::json!(i64::MIN),
+            ),
+            (
+                "count_by_time_bucket_size_millisecs",
+                serde_json::json!(i64::MAX.cast_unsigned() + 1),
+            ),
+            (
+                "count_by_time_bucket_size_millisecs",
+                serde_json::json!(u64::MAX),
+            ),
+            ("max_num_results", serde_json::json!(0)),
+            ("max_num_results", serde_json::json!(-1)),
+            (
+                "max_num_results",
+                serde_json::json!(u64::from(u32::MAX) + 1),
+            ),
         ] {
-            let body = serde_json::json!({
-                "query_string": "*",
-                "count_by_time_bucket_size_millisecs": width,
-            });
+            let mut body = serde_json::json!({"query_string": "*"});
+            body[field] = value;
             let response = app
                 .clone()
                 .oneshot(
@@ -994,8 +1007,7 @@ mod tests {
             );
             let response_body = response.into_body().collect().await?.to_bytes();
             assert!(
-                std::str::from_utf8(&response_body)?
-                    .contains("count_by_time_bucket_size_millisecs"),
+                std::str::from_utf8(&response_body)?.contains(field),
                 "{body}"
             );
         }
