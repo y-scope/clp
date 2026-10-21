@@ -433,7 +433,7 @@ impl Client {
     /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
-    pub async fn cancel_search_job(&self, search_job_id: u64) -> Result<(), ClientError> {
+    pub async fn cancel_query_job(&self, search_job_id: u64) -> Result<(), ClientError> {
         let mut tx = self.sql_pool.begin().await?;
         let Some(status) = sqlx::query_scalar::<_, QueryJobStatus>(&format!(
             "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ? FOR UPDATE"
