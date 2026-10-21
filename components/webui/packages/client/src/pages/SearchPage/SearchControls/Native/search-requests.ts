@@ -101,7 +101,7 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
                 payload.maxNumResults ?? SEARCH_STATE_DEFAULT.submittedMaxNumResults
             );
             console.debug(
-                "Search jobs created - ",
+                "Query jobs created - ",
                 "Search job ID:",
                 searchJobId,
                 "Aggregation job ID:",
