@@ -98,7 +98,10 @@
             "description": "The cancellation request was submitted successfully."
           },
           "404": {
-            "description": "No cancellable query job with the given ID was found."
+            "description": "No query job with the given ID was found."
+          },
+          "409": {
+            "description": "The query job with the given ID has already terminated."
           },
           "500": {
             "description": ""

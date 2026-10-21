@@ -427,8 +427,8 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::SearchJobNotFound`] if the job doesn't exist or is not in a cancellable
-    ///   state.
+    /// * [`ClientError::SearchJobNotFound`] if the job doesn't exist.
+    /// * [`ClientError::QueryJobAlreadyTerminated`] if the job has already terminated.
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
     /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
@@ -461,7 +461,7 @@ impl Client {
             QueryJobStatus::Succeeded
             | QueryJobStatus::Failed
             | QueryJobStatus::Cancelled
-            | QueryJobStatus::Killed => Err(ClientError::SearchJobNotFound(search_job_id)),
+            | QueryJobStatus::Killed => Err(ClientError::QueryJobAlreadyTerminated(search_job_id)),
         }
     }
 

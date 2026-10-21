@@ -237,7 +237,11 @@ async fn query_results(
         ),
         (
             status = NOT_FOUND,
-            description = "No cancellable query job with the given ID was found."
+            description = "No query job with the given ID was found."
+        ),
+        (
+            status = CONFLICT,
+            description = "The query job with the given ID has already terminated."
         ),
         (status = INTERNAL_SERVER_ERROR)
     )
@@ -326,6 +330,8 @@ enum HandlerError {
     InternalServer,
     #[error("Not found")]
     NotFound,
+    #[error("Conflict")]
+    Conflict,
     #[error("Bad request: {0}")]
     BadRequest(String),
 }
@@ -340,6 +346,7 @@ impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
             ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
             ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
                 Self::BadRequest(format!("{err}"))
             }
@@ -353,6 +360,7 @@ impl IntoResponse for HandlerError {
     fn into_response(self) -> axum::response::Response {
         match self {
             Self::NotFound => StatusCode::NOT_FOUND.into_response(),
+            Self::Conflict => StatusCode::CONFLICT.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
         }

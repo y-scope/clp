@@ -31,6 +31,9 @@ pub enum ClientError {
     #[error("Search job not found: {0}")]
     SearchJobNotFound(u64),
 
+    #[error("query job already terminated: {0}")]
+    QueryJobAlreadyTerminated(u64),
+
     #[error("Invalid dataset name")]
     InvalidDatasetName,
 
