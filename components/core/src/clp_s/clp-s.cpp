@@ -36,6 +36,7 @@
 #include <clp/type_utils.hpp>
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/FilterExpr.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/search/SearchTelemetry.hpp>
 #include <clp_s/search/TelemetryContext.hpp>
 

@@ -39,7 +39,7 @@ public:
         std::string collection;
         std::string dataset;
         uint64_t batch_size{1000};
-        uint64_t max_num_results{1000};
+        std::optional<uint64_t> max_num_results;
     };
 
     struct FileOutputHandlerOptions {

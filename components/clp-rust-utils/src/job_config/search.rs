@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
 use serde::Deserialize;
@@ -27,7 +29,7 @@ pub struct AggregationConfig {
 pub struct SearchJobConfig {
     pub datasets: Option<Vec<String>>,
     pub query_string: String,
-    pub max_num_results: u32,
+    pub max_num_results: Option<NonZeroU32>,
     pub begin_timestamp: Option<i64>,
     pub end_timestamp: Option<i64>,
     pub ignore_case: bool,
@@ -59,9 +61,10 @@ pub enum QueryJobStatus {
     Running = 1,
     Succeeded = 2,
     Failed = 3,
-    Cancelling = 4,
-    Cancelled = 5,
-    Killed = 6,
+    CancelRequested = 4,
+    Cancelling = 5,
+    Cancelled = 6,
+    Killed = 7,
 }
 
 impl QueryJobStatus {

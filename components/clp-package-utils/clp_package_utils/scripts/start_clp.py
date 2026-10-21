@@ -22,6 +22,7 @@ from clp_package_utils.general import (
     set_yaml_key,
     validate_and_load_compression_coordinator_credentials_file,
     validate_and_load_db_credentials_file,
+    validate_and_load_query_coordinator_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_output_storage_config,
@@ -101,6 +102,7 @@ def main(
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
         if CompressionOrchestration.SPIDER == clp_config.package.scheduler:
             validate_and_load_compression_coordinator_credentials_file(clp_config, clp_home, True)
+            validate_and_load_query_coordinator_credentials_file(clp_config, clp_home, True)
         clp_config.validate_logs_input_config(True)
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)

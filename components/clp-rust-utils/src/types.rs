@@ -2,6 +2,7 @@
 
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::num::NonZeroU64;
 use std::str::FromStr;
 
 use serde::Deserialize;
@@ -79,6 +80,58 @@ pub struct ParseArchiveIdError {
     source: uuid::Error,
 }
 
+/// A strictly positive `i64`, in the range `[1, i64::MAX]`.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(try_from = "NonZeroU64", into = "i64")]
+pub struct PositiveI64 {
+    value: i64,
+}
+
+impl PositiveI64 {
+    /// # Returns
+    ///
+    /// The wrapped value if `value` is positive, or `None` otherwise.
+    #[must_use]
+    pub const fn new(value: i64) -> Option<Self> {
+        if value > 0 {
+            Some(Self { value })
+        } else {
+            None
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The wrapped value.
+    #[must_use]
+    pub const fn get(self) -> i64 {
+        self.value
+    }
+}
+
+impl TryFrom<NonZeroU64> for PositiveI64 {
+    type Error = PositiveI64OverflowError;
+
+    fn try_from(value: NonZeroU64) -> Result<Self, Self::Error> {
+        let converted =
+            i64::try_from(value.get()).map_err(|_| PositiveI64OverflowError { value })?;
+        Ok(Self { value: converted })
+    }
+}
+
+impl From<PositiveI64> for i64 {
+    fn from(value: PositiveI64) -> Self {
+        value.value
+    }
+}
+
+/// An error returned when a [`NonZeroU64`] exceeds `i64::MAX`.
+#[derive(Debug, thiserror::Error)]
+#[error("{value} exceeds i64::MAX")]
+pub struct PositiveI64OverflowError {
+    value: NonZeroU64,
+}
+
 pub mod non_empty_string {
     use non_empty_string::NonEmptyString;
 
@@ -114,9 +167,9 @@ pub mod non_empty_string {
 
 #[cfg(test)]
 mod tests {
-    //! Tests for parsing and storing archive IDs.
+    use std::num::NonZeroU64;
 
-    use super::ArchiveId;
+    use super::*;
 
     #[test]
     fn archive_id_encodes_as_mysql_text() {
@@ -164,6 +217,62 @@ mod tests {
                 error.to_string().contains(&format!("{value:?}")),
                 "parse error should include the invalid archive ID"
             );
+        }
+    }
+
+    #[test]
+    fn positive_i64_new_accepts_only_positive_values() {
+        for value in [1, i64::MAX] {
+            let positive = PositiveI64::new(value).expect("positive value should be accepted");
+            assert_eq!(positive.get(), value);
+        }
+        for value in [0, -1, i64::MIN] {
+            assert_eq!(PositiveI64::new(value), None);
+        }
+    }
+
+    #[test]
+    fn positive_i64_try_from_non_zero_u64_rejects_values_above_i64_max() {
+        for value in [1, i64::MAX] {
+            let non_zero = NonZeroU64::new(value.cast_unsigned()).expect("value should be nonzero");
+            let positive =
+                PositiveI64::try_from(non_zero).expect("value within range should convert");
+            assert_eq!(positive.get(), value);
+        }
+        for value in [i64::MAX.cast_unsigned() + 1, u64::MAX] {
+            let non_zero = NonZeroU64::new(value).expect("value should be nonzero");
+            let error = PositiveI64::try_from(non_zero)
+                .expect_err("value above i64::MAX should be rejected");
+            assert_eq!(error.value, non_zero);
+            assert_eq!(error.to_string(), format!("{value} exceeds i64::MAX"));
+        }
+    }
+
+    #[test]
+    fn positive_i64_round_trips_as_msgpack_integer() {
+        for value in [1, i64::MAX] {
+            let positive = PositiveI64::new(value).expect("positive value should be accepted");
+            let serialized = rmp_serde::to_vec(&positive).expect("positive i64 should serialize");
+            assert_eq!(
+                serialized,
+                rmp_serde::to_vec(&value).expect("i64 should serialize")
+            );
+            let deserialized = rmp_serde::from_slice::<PositiveI64>(&serialized)
+                .expect("positive i64 should deserialize");
+            assert_eq!(deserialized, positive);
+        }
+    }
+
+    #[test]
+    fn positive_i64_msgpack_deserialization_rejects_out_of_range_values() {
+        for serialized in [
+            rmp_serde::to_vec(&0_i64),
+            rmp_serde::to_vec(&-1_i64),
+            rmp_serde::to_vec(&(i64::MAX.cast_unsigned() + 1)),
+        ] {
+            let serialized = serialized.expect("integer should serialize");
+            rmp_serde::from_slice::<PositiveI64>(&serialized)
+                .expect_err("out-of-range integer should be rejected");
         }
     }
 }

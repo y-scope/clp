@@ -16,21 +16,18 @@
 
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 #include <clp_s/search/ast/Expression.hpp>
-#include <clp_s/search/ast/Integral.hpp>
 #include <clp_s/search/ast/Literal.hpp>
+#include <clp_s/search/ast/ValueLiteral.hpp>
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
 
 #include "../../archive_constants.hpp"
 #include "../antlr_common/ErrorListener.hpp"
 #include "../ast/AndExpr.hpp"
-#include "../ast/BooleanLiteral.hpp"
 #include "../ast/ColumnDescriptor.hpp"
 #include "../ast/FilterExpr.hpp"
 #include "../ast/FilterOperation.hpp"
-#include "../ast/NullLiteral.hpp"
 #include "../ast/OrExpr.hpp"
 #include "../ast/SearchUtils.hpp"
-#include "../ast/StringLiteral.hpp"
 #include "../ast/TimestampLiteral.hpp"
 #include "KqlBaseVisitor.h"
 #include "KqlLexer.h"
@@ -40,18 +37,15 @@ using namespace antlr4;
 using clp_s::search::antlr_common::ErrorListener;
 
 using clp_s::search::ast::AndExpr;
-using clp_s::search::ast::BooleanLiteral;
 using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::DescriptorList;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
-using clp_s::search::ast::Integral;
 using clp_s::search::ast::Literal;
-using clp_s::search::ast::NullLiteral;
 using clp_s::search::ast::OrExpr;
-using clp_s::search::ast::StringLiteral;
 using clp_s::search::ast::TimestampLiteral;
+using clp_s::search::ast::ValueLiteral;
 
 namespace clp_s::search::kql {
 using generated::KqlBaseVisitor;
@@ -271,15 +265,9 @@ public:
             throw std::runtime_error{"Invalid literal."};
         }
 
-        if (auto ret = Integral::create_from_string(token)) {
-            return ret;
-        } else if (auto ret = BooleanLiteral::create_from_string(token)) {
-            return ret;
-        } else if (auto ret = NullLiteral::create_from_string(token)) {
-            return ret;
-        } else {
-            return StringLiteral::create(clp::string_utils::clean_up_wildcard_search_string(token));
-        }
+        return ValueLiteral::create_from_string(
+                clp::string_utils::clean_up_wildcard_search_string(token)
+        );
     }
 
     std::any visitLiteral(KqlParser::LiteralContext* ctx) override {

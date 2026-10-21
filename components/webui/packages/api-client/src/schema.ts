@@ -160,9 +160,9 @@ export interface components {
             ignore_case?: boolean;
             /**
              * Format: int32
-             * @description The maximum number of results to return. Set to `0` for no limit.
+             * @description The maximum number of results to return. Omit for no limit.
              */
-            max_num_results?: number;
+            max_num_results?: number | null;
             /** @description The search query as a KQL string. */
             query_string: string;
             /**
@@ -226,7 +226,6 @@ export interface operations {
                  *       "time_range_begin_millisecs": 0,
                  *       "time_range_end_millisecs": 17356896,
                  *       "ignore_case": true,
-                 *       "max_num_results": 0,
                  *       "buffer_results_in_mongodb": true,
                  *       "count_by_time_bucket_size_millisecs": null
                  *     }

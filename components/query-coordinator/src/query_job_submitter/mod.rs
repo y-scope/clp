@@ -27,8 +27,8 @@ pub struct ArchiveMetadata {
     /// The archive's dataset, or `None` for the default dataset.
     pub dataset: Option<NonEmptyString>,
 
-    /// The archive's compressed size in bytes.
-    pub size: u64,
+    /// The archive's uncompressed size in bytes.
+    pub uncompressed_size: u64,
 
     /// The archive's end timestamp in Unix epoch milliseconds.
     pub end_timestamp: i64,
@@ -101,4 +101,18 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         spider_job_id: JobId,
         poll_interval: Duration,
     ) -> Result<QueryJobOutcome, Error>;
+
+    /// Idempotently cancels the job identified by `spider_job_id`.
+    ///
+    /// Safe to call regardless of whether the job is not-yet-started, already running, or already
+    /// terminal.
+    ///
+    /// # Parameters
+    ///
+    /// * `spider_job_id` - The job to cancel.
+    ///
+    /// # Errors
+    ///
+    /// Implementations must document their error conditions.
+    async fn cancel_query_job(&self, spider_job_id: JobId) -> Result<(), Error>;
 }

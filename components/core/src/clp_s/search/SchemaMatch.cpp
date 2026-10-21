@@ -37,7 +37,7 @@
 #include <clp_s/search/ast/NarrowSchemasExpr.hpp>
 #include <clp_s/search/ast/OrExpr.hpp>
 #include <clp_s/search/ast/OrOfAndForm.hpp>
-#include <clp_s/search/ast/StringLiteral.hpp>
+#include <clp_s/search/ast/ValueLiteral.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 
@@ -83,10 +83,10 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
 /**
  * @param filter
  * @return `filter`'s operand converted to a string.
- * @return std::nullopt if the filter has no operand or the conversion is unsupported.
+ * @return std::nullopt if the filter has no operand or the operand isn't a string under the
+ * filter's operation.
  */
-[[nodiscard]] auto operand_as_var_string(ast::FilterExpr const& filter)
-        -> std::optional<std::string>;
+[[nodiscard]] auto operand_as_string(ast::FilterExpr const& filter) -> std::optional<std::string>;
 
 /**
  * @param filter
@@ -138,21 +138,23 @@ auto is_expandable_over_decomposable_nodes(
         return false;
     }
     if (filter.is_inverted()) {
-        return FilterOperation::EXISTS != op && operand_as_var_string(filter).has_value();
+        return FilterOperation::EXISTS != op && operand_as_string(filter).has_value();
     }
     return true;
 }
 
-auto operand_as_var_string(ast::FilterExpr const& filter) -> std::optional<std::string> {
+auto operand_as_string(ast::FilterExpr const& filter) -> std::optional<std::string> {
     auto const operand{filter.get_operand()};
     if (nullptr == operand) {
         return std::nullopt;
     }
     std::string query;
-    if (false == operand->as_var_string(query, filter.get_operation())) {
-        return std::nullopt;
+    if (operand->as_var_string(query, filter.get_operation())
+        || operand->as_clp_string(query, filter.get_operation()))
+    {
+        return query;
     }
-    return query;
+    return std::nullopt;
 }
 
 auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool {
@@ -1119,7 +1121,7 @@ auto SchemaMatch::build_leaf_filters(
     filters.reserve(leaf_cols->size());
     for (auto& [leaf_col, node_id] : leaf_cols.value()) {
         leaf_col->bind_as_decomposed_leaf(node_id, leaf.m_leaf_position, matched_schema_ids);
-        auto leaf_literal{ast::StringLiteral::create(leaf.m_query)};
+        auto leaf_literal{ast::ValueLiteral::create_from_string(leaf.m_query)};
         filters.emplace_back(
                 FilterExpr::create(leaf_col, FilterOperation::EQ, leaf_literal, is_inverted)
         );
@@ -1330,7 +1332,7 @@ auto SchemaMatch::build_decomposable_node_filter(
         );
     }
 
-    auto const operand_query{operand_as_var_string(filter)};
+    auto const operand_query{operand_as_string(filter)};
     if (false == operand_query.has_value()) {
         return nullptr;
     }
