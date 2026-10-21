@@ -28,8 +28,8 @@ pub enum ClientError {
     #[error("api_server configuration is missing")]
     ConfigIsNone,
 
-    #[error("Search job not found: {0}")]
-    SearchJobNotFound(u64),
+    #[error("query job not found: {0}")]
+    QueryJobNotFound(u64),
 
     #[error("query job already terminated: {0}")]
     QueryJobAlreadyTerminated(u64),
