@@ -234,14 +234,18 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         );
 
         if let Err(start_error) = self.start(spider_job_id, persisted_num_tasks).await {
-            if let Err(cancel_error) = self.job_submitter.cancel_query_job(spider_job_id).await {
-                tracing::warn!(
-                    query_job_id = % self.query_job_id,
-                    spider_job_id = % spider_job_id,
-                    error = % cancel_error,
-                    "Failed to cancel the Spider job after failing to start the query job.",
-                );
-            }
+            let _ = self
+                .job_submitter
+                .cancel_query_job(spider_job_id)
+                .await
+                .inspect_err(|e| {
+                    tracing::warn!(
+                        query_job_id = % self.query_job_id,
+                        spider_job_id = % spider_job_id,
+                        error = % e,
+                        "Failed to cancel the Spider job after failing to start the query job.",
+                    )
+                });
             return Err(start_error);
         }
         Ok(spider_job_id)
