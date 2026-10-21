@@ -66,38 +66,38 @@ void kqlParserInitialize() {
     }
   );
   static const int32_t serializedATNSegment[] = {
-  	4,1,14,111,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,
+  	4,1,14,110,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,
   	7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,1,0,1,0,1,0,1,1,1,
   	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,44,8,1,1,1,1,1,
   	1,1,5,1,49,8,1,10,1,12,1,52,9,1,1,2,1,2,1,2,3,2,57,8,2,1,3,1,3,1,3,1,
   	3,3,3,63,8,3,1,4,1,4,1,4,1,4,1,4,3,4,70,8,4,1,5,1,5,1,5,1,5,1,5,1,6,1,
-  	6,3,6,79,8,6,1,7,1,7,1,8,1,8,3,8,85,8,8,1,9,1,9,1,10,1,10,3,10,91,8,10,
-  	1,10,5,10,94,8,10,10,10,12,10,97,9,10,1,10,1,10,1,11,1,11,1,11,1,11,3,
-  	11,105,8,11,1,11,1,11,1,12,1,12,1,12,0,1,2,13,0,2,4,6,8,10,12,14,16,18,
-  	20,22,24,0,3,1,0,8,9,1,0,8,10,1,0,11,12,111,0,26,1,0,0,0,2,43,1,0,0,0,
-  	4,56,1,0,0,0,6,58,1,0,0,0,8,64,1,0,0,0,10,71,1,0,0,0,12,78,1,0,0,0,14,
-  	80,1,0,0,0,16,84,1,0,0,0,18,86,1,0,0,0,20,88,1,0,0,0,22,100,1,0,0,0,24,
-  	108,1,0,0,0,26,27,3,2,1,0,27,28,5,0,0,1,28,1,1,0,0,0,29,30,6,1,-1,0,30,
-  	31,3,12,6,0,31,32,5,1,0,0,32,33,5,2,0,0,33,34,3,2,1,0,34,35,5,3,0,0,35,
-  	44,1,0,0,0,36,37,5,4,0,0,37,38,3,2,1,0,38,39,5,5,0,0,39,44,1,0,0,0,40,
-  	41,5,10,0,0,41,44,3,2,1,3,42,44,3,4,2,0,43,29,1,0,0,0,43,36,1,0,0,0,43,
-  	40,1,0,0,0,43,42,1,0,0,0,44,50,1,0,0,0,45,46,10,2,0,0,46,47,7,0,0,0,47,
-  	49,3,2,1,3,48,45,1,0,0,0,49,52,1,0,0,0,50,48,1,0,0,0,50,51,1,0,0,0,51,
-  	3,1,0,0,0,52,50,1,0,0,0,53,57,3,6,3,0,54,57,3,8,4,0,55,57,3,18,9,0,56,
-  	53,1,0,0,0,56,54,1,0,0,0,56,55,1,0,0,0,57,5,1,0,0,0,58,59,3,12,6,0,59,
-  	62,5,13,0,0,60,63,3,22,11,0,61,63,3,24,12,0,62,60,1,0,0,0,62,61,1,0,0,
-  	0,63,7,1,0,0,0,64,65,3,12,6,0,65,69,5,1,0,0,66,70,3,20,10,0,67,70,3,22,
+  	6,3,6,79,8,6,1,7,1,7,1,8,1,8,1,8,1,9,1,9,1,10,1,10,3,10,90,8,10,1,10,
+  	5,10,93,8,10,10,10,12,10,96,9,10,1,10,1,10,1,11,1,11,1,11,1,11,3,11,104,
+  	8,11,1,11,1,11,1,12,1,12,1,12,0,1,2,13,0,2,4,6,8,10,12,14,16,18,20,22,
+  	24,0,3,1,0,8,9,1,0,8,10,1,0,11,12,109,0,26,1,0,0,0,2,43,1,0,0,0,4,56,
+  	1,0,0,0,6,58,1,0,0,0,8,64,1,0,0,0,10,71,1,0,0,0,12,78,1,0,0,0,14,80,1,
+  	0,0,0,16,82,1,0,0,0,18,85,1,0,0,0,20,87,1,0,0,0,22,99,1,0,0,0,24,107,
+  	1,0,0,0,26,27,3,2,1,0,27,28,5,0,0,1,28,1,1,0,0,0,29,30,6,1,-1,0,30,31,
+  	3,12,6,0,31,32,5,1,0,0,32,33,5,2,0,0,33,34,3,2,1,0,34,35,5,3,0,0,35,44,
+  	1,0,0,0,36,37,5,4,0,0,37,38,3,2,1,0,38,39,5,5,0,0,39,44,1,0,0,0,40,41,
+  	5,10,0,0,41,44,3,2,1,3,42,44,3,4,2,0,43,29,1,0,0,0,43,36,1,0,0,0,43,40,
+  	1,0,0,0,43,42,1,0,0,0,44,50,1,0,0,0,45,46,10,2,0,0,46,47,7,0,0,0,47,49,
+  	3,2,1,3,48,45,1,0,0,0,49,52,1,0,0,0,50,48,1,0,0,0,50,51,1,0,0,0,51,3,
+  	1,0,0,0,52,50,1,0,0,0,53,57,3,6,3,0,54,57,3,8,4,0,55,57,3,18,9,0,56,53,
+  	1,0,0,0,56,54,1,0,0,0,56,55,1,0,0,0,57,5,1,0,0,0,58,59,3,12,6,0,59,62,
+  	5,13,0,0,60,63,3,22,11,0,61,63,3,24,12,0,62,60,1,0,0,0,62,61,1,0,0,0,
+  	63,7,1,0,0,0,64,65,3,12,6,0,65,69,5,1,0,0,66,70,3,20,10,0,67,70,3,22,
   	11,0,68,70,3,24,12,0,69,66,1,0,0,0,69,67,1,0,0,0,69,68,1,0,0,0,70,9,1,
   	0,0,0,71,72,5,12,0,0,72,73,5,4,0,0,73,74,3,14,7,0,74,75,5,5,0,0,75,11,
   	1,0,0,0,76,79,3,10,5,0,77,79,3,24,12,0,78,76,1,0,0,0,78,77,1,0,0,0,79,
-  	13,1,0,0,0,80,81,3,24,12,0,81,15,1,0,0,0,82,85,3,10,5,0,83,85,3,24,12,
-  	0,84,82,1,0,0,0,84,83,1,0,0,0,85,17,1,0,0,0,86,87,3,24,12,0,87,19,1,0,
-  	0,0,88,90,5,4,0,0,89,91,7,1,0,0,90,89,1,0,0,0,90,91,1,0,0,0,91,95,1,0,
-  	0,0,92,94,3,24,12,0,93,92,1,0,0,0,94,97,1,0,0,0,95,93,1,0,0,0,95,96,1,
-  	0,0,0,96,98,1,0,0,0,97,95,1,0,0,0,98,99,5,5,0,0,99,21,1,0,0,0,100,101,
-  	5,6,0,0,101,104,5,11,0,0,102,103,5,7,0,0,103,105,5,11,0,0,104,102,1,0,
-  	0,0,104,105,1,0,0,0,105,106,1,0,0,0,106,107,5,5,0,0,107,23,1,0,0,0,108,
-  	109,7,2,0,0,109,25,1,0,0,0,10,43,50,56,62,69,78,84,90,95,104
+  	13,1,0,0,0,80,81,3,24,12,0,81,15,1,0,0,0,82,83,3,10,5,0,83,84,5,0,0,1,
+  	84,17,1,0,0,0,85,86,3,24,12,0,86,19,1,0,0,0,87,89,5,4,0,0,88,90,7,1,0,
+  	0,89,88,1,0,0,0,89,90,1,0,0,0,90,94,1,0,0,0,91,93,3,24,12,0,92,91,1,0,
+  	0,0,93,96,1,0,0,0,94,92,1,0,0,0,94,95,1,0,0,0,95,97,1,0,0,0,96,94,1,0,
+  	0,0,97,98,5,5,0,0,98,21,1,0,0,0,99,100,5,6,0,0,100,103,5,11,0,0,101,102,
+  	5,7,0,0,102,104,5,11,0,0,103,101,1,0,0,0,103,104,1,0,0,0,104,105,1,0,
+  	0,0,105,106,5,5,0,0,106,23,1,0,0,0,107,108,7,2,0,0,108,25,1,0,0,0,9,43,
+  	50,56,62,69,78,89,94,103
   };
   staticData->serializedATN = antlr4::atn::SerializedATNView(serializedATNSegment, sizeof(serializedATNSegment) / sizeof(serializedATNSegment[0]));
 
@@ -877,8 +877,8 @@ KqlParser::Function_callContext* KqlParser::Projection_columnContext::function_c
   return getRuleContext<KqlParser::Function_callContext>(0);
 }
 
-KqlParser::LiteralContext* KqlParser::Projection_columnContext::literal() {
-  return getRuleContext<KqlParser::LiteralContext>(0);
+tree::TerminalNode* KqlParser::Projection_columnContext::EOF() {
+  return getToken(KqlParser::EOF, 0);
 }
 
 
@@ -906,26 +906,11 @@ KqlParser::Projection_columnContext* KqlParser::projection_column() {
     exitRule();
   });
   try {
-    setState(84);
-    _errHandler->sync(this);
-    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 6, _ctx)) {
-    case 1: {
-      enterOuterAlt(_localctx, 1);
-      setState(82);
-      function_call();
-      break;
-    }
-
-    case 2: {
-      enterOuterAlt(_localctx, 2);
-      setState(83);
-      literal();
-      break;
-    }
-
-    default:
-      break;
-    }
+    enterOuterAlt(_localctx, 1);
+    setState(82);
+    function_call();
+    setState(83);
+    match(KqlParser::EOF);
    
   }
   catch (RecognitionException &e) {
@@ -973,7 +958,7 @@ KqlParser::Value_expressionContext* KqlParser::value_expression() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(86);
+    setState(85);
     literal();
    
   }
@@ -1039,15 +1024,15 @@ KqlParser::List_of_valuesContext* KqlParser::list_of_values() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(88);
+    setState(87);
     match(KqlParser::T__3);
-    setState(90);
+    setState(89);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if ((((_la & ~ 0x3fULL) == 0) &&
       ((1ULL << _la) & 1792) != 0)) {
-      setState(89);
+      setState(88);
       antlrcpp::downCast<List_of_valuesContext *>(_localctx)->condition = _input->LT(1);
       _la = _input->LA(1);
       if (!((((_la & ~ 0x3fULL) == 0) &&
@@ -1059,20 +1044,20 @@ KqlParser::List_of_valuesContext* KqlParser::list_of_values() {
         consume();
       }
     }
-    setState(95);
+    setState(94);
     _errHandler->sync(this);
     _la = _input->LA(1);
     while (_la == KqlParser::QUOTED_STRING
 
     || _la == KqlParser::UNQUOTED_LITERAL) {
-      setState(92);
+      setState(91);
       antlrcpp::downCast<List_of_valuesContext *>(_localctx)->literalContext = literal();
       antlrcpp::downCast<List_of_valuesContext *>(_localctx)->literals.push_back(antlrcpp::downCast<List_of_valuesContext *>(_localctx)->literalContext);
-      setState(97);
+      setState(96);
       _errHandler->sync(this);
       _la = _input->LA(1);
     }
-    setState(98);
+    setState(97);
     match(KqlParser::T__4);
    
   }
@@ -1126,21 +1111,21 @@ KqlParser::Timestamp_expressionContext* KqlParser::timestamp_expression() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(100);
+    setState(99);
     match(KqlParser::T__5);
-    setState(101);
+    setState(100);
     antlrcpp::downCast<Timestamp_expressionContext *>(_localctx)->timestamp = match(KqlParser::QUOTED_STRING);
-    setState(104);
+    setState(103);
     _errHandler->sync(this);
 
     _la = _input->LA(1);
     if (_la == KqlParser::T__6) {
-      setState(102);
+      setState(101);
       match(KqlParser::T__6);
-      setState(103);
+      setState(102);
       antlrcpp::downCast<Timestamp_expressionContext *>(_localctx)->pattern = match(KqlParser::QUOTED_STRING);
     }
-    setState(106);
+    setState(105);
     match(KqlParser::T__4);
    
   }
@@ -1194,7 +1179,7 @@ KqlParser::LiteralContext* KqlParser::literal() {
   });
   try {
     enterOuterAlt(_localctx, 1);
-    setState(108);
+    setState(107);
     _la = _input->LA(1);
     if (!(_la == KqlParser::QUOTED_STRING
 

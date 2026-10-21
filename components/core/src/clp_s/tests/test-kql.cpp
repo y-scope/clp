@@ -380,7 +380,6 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
     SECTION("Projection columns carry their function") {
         auto const [column_str, expected_function] = GENERATE(
                 std::make_pair("key", ColumnDescriptor::Function::None),
-                std::make_pair("\"key\"", ColumnDescriptor::Function::None),
                 std::make_pair("shape(key)", ColumnDescriptor::Function::Shape),
                 std::make_pair("shape(\"key\")", ColumnDescriptor::Function::Shape),
                 std::make_pair("decompose(key)", ColumnDescriptor::Function::Decompose)
@@ -393,8 +392,63 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(key_token == *column->descriptor_begin());
     }
 
-    SECTION("Unknown projection functions are rejected") {
-        auto const* column_str = GENERATE("bogus(key)", "shape()", "shape(a, b)");
+    SECTION("Bare projection columns are taken literally as a whole") {
+        auto const [column_str, expected_tokens] = GENERATE(
+                std::make_pair("my key", vector<string>{"my key"}),
+                std::make_pair("my key extra", vector<string>{"my key extra"}),
+                std::make_pair("\"my key\"", vector<string>{"\"my key\""}),
+                std::make_pair("a.b", vector<string>{"a", "b"}),
+                std::make_pair("a\\.b", vector<string>{"a.b"}),
+                std::make_pair("foo\\(bar\\)", vector<string>{"foo(bar)"}),
+                std::make_pair("shape(key", vector<string>{"shape(key"}),
+                std::make_pair("(key)", vector<string>{"(key)"})
+        );
+        auto column{parse_projection_column(column_str)};
+        REQUIRE(nullptr != column);
+        REQUIRE(ColumnDescriptor::Function::None == column->get_function());
+        REQUIRE(expected_tokens.size() == column->get_descriptor_list().size());
+        auto token_it{column->descriptor_begin()};
+        for (auto const& expected_token : expected_tokens) {
+            auto const expected{
+                    DescriptorToken::create_descriptor_from_escaped_token(expected_token)
+            };
+            REQUIRE(expected == *token_it);
+            ++token_it;
+        }
+    }
+
+    SECTION("Projection function arguments follow KQL column syntax") {
+        auto const [column_str, expected_tokens] = GENERATE(
+                std::make_pair("shape(\"my key\")", vector<string>{"my key"}),
+                std::make_pair("shape(a.b)", vector<string>{"a", "b"}),
+                std::make_pair("shape(a\\.b)", vector<string>{"a.b"}),
+                std::make_pair("decompose( \"a.b\" )", vector<string>{"a", "b"})
+        );
+        auto column{parse_projection_column(column_str)};
+        REQUIRE(nullptr != column);
+        REQUIRE(ColumnDescriptor::Function::None != column->get_function());
+        REQUIRE(expected_tokens.size() == column->get_descriptor_list().size());
+        auto token_it{column->descriptor_begin()};
+        for (auto const& expected_token : expected_tokens) {
+            auto const expected{
+                    DescriptorToken::create_descriptor_from_escaped_token(expected_token)
+            };
+            REQUIRE(expected == *token_it);
+            ++token_it;
+        }
+    }
+
+    SECTION("Malformed projection function calls are rejected") {
+        auto const* column_str = GENERATE(
+                "bogus(key)",
+                "shape()",
+                "shape(a, b)",
+                "shape(my key)",
+                "shape(key) extra)",
+                "shape(key))",
+                "shape((key))",
+                "shape(key)(key)"
+        );
         REQUIRE(nullptr == parse_projection_column(column_str));
     }
 

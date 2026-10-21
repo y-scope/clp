@@ -1,6 +1,9 @@
 #include "kql.hpp"
 
+#include <algorithm>
 #include <any>
+#include <cctype>
+#include <exception>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -68,6 +71,16 @@ namespace {
         -> std::shared_ptr<ColumnDescriptor>;
 
 /**
+ * Checks whether a projection column string has the syntax of a function call, i.e. an identifier
+ * immediately followed by `(` and ending with `)`. Whether the identifier names a valid function is
+ * left to the parser.
+ *
+ * @param column_str The projection column string.
+ * @return Whether `column_str` looks like a function call.
+ */
+[[nodiscard]] auto has_function_call_syntax(std::string_view column_str) -> bool;
+
+/**
  * Tokenizes a column name string into a ColumnDescriptor.
  *
  * @param column_text The raw column text (possibly quoted).
@@ -78,6 +91,15 @@ namespace {
         std::string const& column_text,
         ColumnDescriptor::Function function = ColumnDescriptor::Function::None
 ) -> std::shared_ptr<ColumnDescriptor>;
+
+/**
+ * Parses a projection column of the form `function(column)` with the KQL parser.
+ *
+ * @param column_str The projection column string.
+ * @return A ColumnDescriptor carrying the function on success, nullptr on failure.
+ */
+[[nodiscard]] auto parse_projection_function_call(std::string_view column_str)
+        -> std::shared_ptr<ColumnDescriptor>;
 
 auto extract_filter_column(std::any const& parsed) -> std::shared_ptr<ColumnDescriptor> {
     if (false == parsed.has_value()) {
@@ -96,6 +118,27 @@ auto extract_filter_column(std::any const& parsed) -> std::shared_ptr<ColumnDesc
             return nullptr;
     }
     return nullptr;
+}
+
+auto has_function_call_syntax(std::string_view column_str) -> bool {
+    auto const is_identifier_char{[](char c) -> bool {
+        return '_' == c || (0 != std::isalnum(static_cast<unsigned char>(c)));
+    }};
+    if (column_str.empty() || ')' != column_str.back()) {
+        return false;
+    }
+    auto const first_char{column_str.front()};
+    if (0 != std::isdigit(static_cast<unsigned char>(first_char))
+        || false == is_identifier_char(first_char))
+    {
+        return false;
+    }
+    auto const open_paren_pos{column_str.find('(')};
+    if (std::string_view::npos == open_paren_pos) {
+        return false;
+    }
+    auto const identifier{column_str.substr(0, open_paren_pos)};
+    return std::ranges::all_of(identifier, is_identifier_char);
 }
 
 auto parse_column_literal(std::string const& column_text, ColumnDescriptor::Function function)
@@ -283,14 +326,7 @@ public:
     }
 
     std::any visitProjection_column(KqlParser::Projection_columnContext* ctx) override {
-        if (nullptr != ctx->function_call()) {
-            return ctx->function_call()->accept(this);
-        }
-        auto column{parse_column_literal(unquote_string(ctx->literal()->getText()))};
-        if (nullptr == column) {
-            return std::any{};
-        }
-        return column;
+        return ctx->function_call()->accept(this);
     }
 
     std::any visitNestedQuery(KqlParser::NestedQueryContext* ctx) override {
@@ -430,6 +466,43 @@ public:
         return base;
     }
 };
+
+auto parse_projection_function_call(std::string_view column_str)
+        -> std::shared_ptr<ColumnDescriptor> {
+    ErrorListener lexer_error_listener;
+    ErrorListener parser_error_listener;
+
+    ANTLRInputStream input(std::string{column_str});
+    KqlLexer lexer(&input);
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(&lexer_error_listener);
+    CommonTokenStream tokens(&lexer);
+    KqlParser parser(&tokens);
+    parser.removeErrorListeners();
+    parser.addErrorListener(&parser_error_listener);
+    KqlParser::Projection_columnContext* tree{parser.projection_column()};
+
+    if (lexer_error_listener.error()) {
+        SPDLOG_ERROR("Lexer error: {}", lexer_error_listener.message());
+        return nullptr;
+    }
+    if (parser_error_listener.error()) {
+        SPDLOG_ERROR("Parser error: {}", parser_error_listener.message());
+        return nullptr;
+    }
+
+    ParseTreeVisitor visitor;
+    try {
+        auto const parsed{visitor.visitProjection_column(tree)};
+        if (false == parsed.has_value()) {
+            return nullptr;
+        }
+        return std::any_cast<std::shared_ptr<ColumnDescriptor>>(parsed);
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("parse_projection_column exception: {}", e.what());
+        return nullptr;
+    }
+}
 }  // namespace
 
 std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
@@ -463,36 +536,9 @@ std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
 }
 
 auto parse_projection_column(std::string_view column_str) -> std::shared_ptr<ColumnDescriptor> {
-    ErrorListener lexer_error_listener;
-    ErrorListener parser_error_listener;
-
-    ANTLRInputStream input(std::string{column_str});
-    KqlLexer lexer(&input);
-    lexer.removeErrorListeners();
-    lexer.addErrorListener(&lexer_error_listener);
-    CommonTokenStream tokens(&lexer);
-    KqlParser parser(&tokens);
-    parser.removeErrorListeners();
-    parser.addErrorListener(&parser_error_listener);
-    KqlParser::Projection_columnContext* tree{parser.projection_column()};
-
-    if (lexer_error_listener.error()) {
-        SPDLOG_ERROR("Lexer error: {}", lexer_error_listener.message());
-        return {};
+    if (has_function_call_syntax(column_str)) {
+        return parse_projection_function_call(column_str);
     }
-    if (parser_error_listener.error()) {
-        SPDLOG_ERROR("Parser error: {}", parser_error_listener.message());
-        return {};
-    }
-
-    ParseTreeVisitor visitor;
-    try {
-        return std::any_cast<std::shared_ptr<ColumnDescriptor>>(
-                visitor.visitProjection_column(tree)
-        );
-    } catch (std::exception const& e) {
-        SPDLOG_ERROR("parse_projection_column exception: {}", e.what());
-        return {};
-    }
+    return parse_column_literal(std::string{column_str});
 }
 }  // namespace clp_s::search::kql

@@ -243,7 +243,7 @@ public:
     Projection_columnContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     Function_callContext *function_call();
-    LiteralContext *literal();
+    antlr4::tree::TerminalNode *EOF();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;

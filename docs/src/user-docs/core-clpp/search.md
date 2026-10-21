@@ -115,6 +115,37 @@ Both require a log message or parent rule column, and both produce the error sho
 [above](#matching-rule-shapes-with-shape) when applied to a leaf rule. `decompose()` is
 projection-only; it cannot be used as a filter.
 
+### Column syntax
+
+Single-quoting each `--projection` argument is recommended so the shell passes it through
+unchanged.
+
+A plain column is written as a key path, without any KQL quoting — spaces are part of the name:
+
+```shell
+--projection 'my key'      # the key "my key"
+--projection 'a.b'         # the key "b" nested in "a"
+--projection 'a\.b'        # the key "a.b"
+```
+
+Inside `shape(...)` or `decompose(...)`, the column is written exactly as it would be in a query,
+so names containing spaces or special characters are double-quoted:
+
+```shell
+--projection 'shape(message)'
+--projection 'shape("my key")'
+--projection 'message' 'decompose("message.my field")'
+```
+
+An argument shaped like a function call that doesn't parse (unknown function, unquoted space,
+trailing text) is an error. To project a plain column whose own name looks like a function call,
+escape the parenthesis: `'foo\(bar\)'`.
+
+:::{warning}
+Avoid double-quoting at the shell. `"shape("my key")"` is split by the shell into `shape(my` and
+`key")`, and no quotes reach `clp-s`.
+:::
+
 ### Output format
 
 Without `--projection`, a CLP+ log message is emitted as its reconstructed original text. With a

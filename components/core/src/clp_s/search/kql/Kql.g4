@@ -38,8 +38,7 @@ column_literal
     ;
 
 projection_column
-    : function_call
-    | literal
+    : function_call EOF
     ;
 
 value_expression

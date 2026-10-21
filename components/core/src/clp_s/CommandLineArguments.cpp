@@ -834,8 +834,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     ->multitoken()
                     ->value_name("COLUMN_A COLUMN_B ..."),
                 "Project only the given set of columns for matching results. This option must be"
-                " specified after all positional options. Values that are objects or structured"
-                " arrays are currently unsupported."
+                " specified after all positional options. Single-quoting each column is"
+                " recommended; see documentation for column syntax. Values that are objects or"
+                " structured arrays are currently unsupported."
             )(
                 "auth",
                 po::value<std::string>(&auth)
