@@ -179,60 +179,6 @@ impl Coordinator {
         Ok((coordinator, cancellation_token))
     }
 
-    /// Spawns a detached handle to drive each query job that a previous coordinator instance had
-    /// already submitted to Spider.
-    ///
-    /// A job whose handle cannot be constructed is logged and skipped.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`Self::fetch_submitted_jobs`]'s return values on failure.
-    async fn recover_submitted_jobs(&self) -> Result<(), Error> {
-        // NOTE: The current implementation does not enforce concurrency limits for recovered jobs
-        // since they were already submitted to Spider. See #2472.
-        for SubmittedJob {
-            id: job_id,
-            spider_job_id,
-            status,
-            search_job_config,
-            job_creation_timestamp_millisecs,
-        } in self.fetch_submitted_jobs().await?
-        {
-            tracing::info!(
-                job_id = % job_id,
-                spider_job_id = % spider_job_id,
-                status = ? status,
-                "Recovering a previously submitted job."
-            );
-            let Ok(job_handle) = QueryJobHandle::new(
-                self.job_handle_context.clone(),
-                job_id,
-                self.spider_client.clone(),
-                self.resource_group_id,
-                search_job_config,
-                self.output_handle.clone(),
-                job_creation_timestamp_millisecs,
-            )
-            .inspect_err(|e| {
-                tracing::error!(
-                    error = % e,
-                    job_id = % job_id,
-                    "Failed to create the query job handle for recovery. Skipping."
-                );
-            }) else {
-                continue;
-            };
-            tokio::spawn(async move {
-                // `QueryJobHandle::recover` already logs and persists its own failures.
-                let _ = job_handle.recover(spider_job_id).await;
-            });
-        }
-
-        Ok(())
-    }
-
     /// Runs the coordinator's poll loop until cancelled.
     ///
     /// On each iteration, this method fetches the pending query jobs, spawns a detached handle to
@@ -307,20 +253,22 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
+    /// * Forwards [`Self::fetch_submitted_jobs`]'s return values on failure.
     async fn recover_submitted_jobs(&self) -> Result<(), Error> {
         // NOTE: The current implementation does not enforce concurrency limits for recovered jobs
         // since they were already submitted to Spider. See #2472.
         for SubmittedJob {
             id: job_id,
             spider_job_id,
+            status,
             search_job_config,
             job_creation_timestamp_millisecs,
-        } in self.fetch_submitted_running_jobs().await?
+        } in self.fetch_submitted_jobs().await?
         {
             tracing::info!(
                 job_id = % job_id,
                 spider_job_id = % spider_job_id,
+                status = ? status,
                 "Recovering a previously submitted job."
             );
             let job_handle = match QueryJobHandle::new(
