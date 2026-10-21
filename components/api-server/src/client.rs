@@ -14,9 +14,9 @@ use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::job_config::AggregationConfig;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
+use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryJobType;
-use clp_rust_utils::job_config::SearchJobConfig;
 use futures::Stream;
 use futures::StreamExt;
 use pin_project_lite::pin_project;
@@ -216,7 +216,7 @@ pub struct QueryConfig {
     pub count_by_time_bucket_size_millisecs: Option<i64>,
 }
 
-impl From<QueryConfig> for SearchJobConfig {
+impl From<QueryConfig> for QueryJobConfig {
     fn from(value: QueryConfig) -> Self {
         Self {
             datasets: value.datasets,
@@ -300,7 +300,7 @@ impl Client {
                 "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
             ));
         }
-        let mut query_job_config: SearchJobConfig = query_config.into();
+        let mut query_job_config: QueryJobConfig = query_config.into();
         if query_job_config.datasets.is_none() {
             query_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
@@ -489,7 +489,7 @@ impl Client {
         Ok(QueryJobStatus::try_from(status)?)
     }
 
-    async fn get_job_config(&self, query_job_id: u64) -> Result<SearchJobConfig, ClientError> {
+    async fn get_job_config(&self, query_job_id: u64) -> Result<QueryJobConfig, ClientError> {
         let row = sqlx::query(&format!(
             "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
         ))
