@@ -300,27 +300,27 @@ impl Client {
                 "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
             ));
         }
-        let mut search_job_config: SearchJobConfig = query_config.into();
-        if search_job_config.datasets.is_none() {
-            search_job_config.datasets = match self.config.package.storage_engine {
+        let mut query_job_config: SearchJobConfig = query_config.into();
+        if query_job_config.datasets.is_none() {
+            query_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
                 StorageEngine::ClpS => Some(vec!["default".to_owned()]),
             }
         }
         if let Some(bucket_size) = count_by_time_bucket_size {
-            search_job_config.aggregation_config = Some(AggregationConfig {
+            query_job_config.aggregation_config = Some(AggregationConfig {
                 count_by_time_bucket_size: Some(bucket_size),
                 ..AggregationConfig::default()
             });
             // Aggregation results are always buffered in MongoDB.
-            search_job_config.write_to_file = false;
+            query_job_config.write_to_file = false;
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
         let query_result = sqlx::query(&format!(
             "INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (?, ?)"
         ))
-        .bind(rmp_serde::to_vec_named(&search_job_config)?)
+        .bind(rmp_serde::to_vec_named(&query_job_config)?)
         .bind(query_job_type_i32)
         .execute(&self.sql_pool)
         .await?;
@@ -927,7 +927,7 @@ where
 ///
 /// Returns an error if:
 ///
-/// * [`ClientError::InvalidSearchJobConfig`] if the limit cannot be represented as a [`usize`].
+/// * [`ClientError::InvalidQueryJobConfig`] if the limit cannot be represented as a [`usize`].
 fn limit_result_stream<StreamType: Stream<Item = Result<String, ClientError>>>(
     stream: StreamType,
     max_num_results: Option<NonZeroU32>,
@@ -936,7 +936,7 @@ fn limit_result_stream<StreamType: Stream<Item = Result<String, ClientError>>>(
         .map(|limit| usize::try_from(limit.get()))
         .transpose()
         .map_err(|_| {
-            ClientError::InvalidSearchJobConfig(
+            ClientError::InvalidQueryJobConfig(
                 "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
             )
         })?;

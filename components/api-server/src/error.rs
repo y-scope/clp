@@ -43,8 +43,8 @@ pub enum ClientError {
     #[error("Dataset not found: {0}")]
     DatasetNotFound(String),
 
-    #[error("Invalid search job config: {0}")]
-    InvalidSearchJobConfig(String),
+    #[error("invalid query job config: {0}")]
+    InvalidQueryJobConfig(String),
 
     #[error(transparent)]
     Telemetry(#[from] opentelemetry_otlp::ExporterBuildError),
