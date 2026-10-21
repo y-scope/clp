@@ -3,7 +3,7 @@ pub use clp_io_config::*;
 
 mod compression;
 pub mod ingestion;
-mod search;
+mod query;
 
 pub use compression::*;
-pub use search::*;
+pub use query::*;
