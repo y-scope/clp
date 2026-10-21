@@ -49,17 +49,18 @@ impl<SubmitterType: QueryJobSubmitter> CancellationMonitor<SubmitterType> {
         use tokio::select;
 
         loop {
-            let result = select! {
+            select! {
                 () = cancellation_token.cancelled() => break,
-                result = self.process_next_cancellation_request() => result,
-            };
-
-            let cancellation_processed = result.unwrap_or_else(|e| {
-                tracing::error!(error = % e, "Failed to process a query job cancellation request.");
-                false
-            });
-            if cancellation_processed {
-                continue;
+                result = self.process_next_cancellation_request() => match result {
+                    Ok(true) => continue,
+                    Ok(false) => {}
+                    Err(e) => {
+                        tracing::error!(
+                            error = % e,
+                            "Failed to process a query job cancellation request."
+                        );
+                    }
+                },
             }
 
             if tokio::time::timeout(self.polling_interval, cancellation_token.cancelled())
