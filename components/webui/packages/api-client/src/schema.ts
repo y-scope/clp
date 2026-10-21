@@ -37,7 +37,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/query/{search_job_id}": {
+    "/query/{query_job_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -54,7 +54,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/query_results/{search_job_id}": {
+    "/query_results/{query_job_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -261,7 +261,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                search_job_id: number;
+                query_job_id: number;
             };
             cookie?: never;
         };
@@ -315,7 +315,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                search_job_id: number;
+                query_job_id: number;
             };
             cookie?: never;
         };

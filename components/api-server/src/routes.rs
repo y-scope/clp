@@ -172,7 +172,7 @@ struct QueryResultsParams {
 
 #[utoipa::path(
     get,
-    path = "/query_results/{search_job_id}",
+    path = "/query_results/{query_job_id}",
     description = "Streams the results of a previously submitted query as Server-Sent Events \
         (SSE).",
     params(QueryResultsParams),
@@ -228,7 +228,7 @@ async fn query_results(
 
 #[utoipa::path(
     delete,
-    path = "/query/{search_job_id}",
+    path = "/query/{query_job_id}",
     description = "Cancels a previously submitted query job.",
     responses(
         (

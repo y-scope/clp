@@ -44,8 +44,8 @@ const cancelQuery = async (searchJobId: number): Promise<void> => {
     console.log("Cancelling query job:", searchJobId);
 
     // eslint-disable-next-line new-cap
-    const {response} = await apiClient.DELETE("/query/{search_job_id}", {
-        params: {path: {search_job_id: searchJobId}},
+    const {response} = await apiClient.DELETE("/query/{query_job_id}", {
+        params: {path: {query_job_id: searchJobId}},
     });
 
     if (false === response.ok) {
