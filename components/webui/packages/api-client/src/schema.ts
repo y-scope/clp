@@ -139,7 +139,7 @@ export interface components {
              */
             uncompressed_size_bytes: number;
         };
-        /** @description Defines the request configuration for submitting a search query. */
+        /** @description Defines the request configuration for submitting a query. */
         QueryConfig: {
             /**
              * @description Whether to buffer search results in `MongoDB`.
