@@ -251,7 +251,7 @@ async fn cancel_query(
     Path(search_job_id): Path<u64>,
 ) -> Result<StatusCode, HandlerError> {
     tracing::info!("Cancelling search job ID: {}", search_job_id);
-    match client.cancel_search_job(search_job_id).await {
+    match client.cancel_query_job(search_job_id).await {
         Ok(()) => {
             tracing::info!(
                 "Successfully submitted cancellation request for search job ID: {}",
