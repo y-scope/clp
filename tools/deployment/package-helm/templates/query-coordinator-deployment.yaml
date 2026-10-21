@@ -8,10 +8,6 @@ metadata:
     app.kubernetes.io/component: "query-coordinator"
 spec:
   replicas: 1
-  # Terminate the old pod before starting a new one, since two coordinators running concurrently
-  # can dispatch the same query job.
-  strategy:
-    type: "Recreate"
   selector:
     matchLabels:
       {{- include "clp.selectorLabels" . | nindent 6 }}
