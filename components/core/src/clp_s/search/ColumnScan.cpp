@@ -576,13 +576,19 @@ auto ColumnScan::build_filter(
     auto const node_id{column->get_bound_node_id()};
     auto const& operand = filter->get_operand();
     bool const is_positional{column->get_leaf_position().has_value()};
-    auto const& basic{
-            is_positional ? find_readers(positional_readers.basic, filter)
-                          : find_readers(basic_readers, node_id)
+    auto const get_basic_readers{
+            [&positional_readers, &basic_readers, filter, node_id, is_positional]()
+                    -> std::vector<BaseColumnReader*> const& {
+                return is_positional ? find_readers(positional_readers.basic, filter)
+                                     : find_readers(basic_readers, node_id);
+            }
     };
-    auto const& var_string{
-            is_positional ? find_readers(positional_readers.var_string, filter)
-                          : find_readers(var_string_readers, node_id)
+    auto const get_var_string_readers{
+            [&positional_readers, &var_string_readers, filter, node_id, is_positional]()
+                    -> std::vector<VariableStringColumnReader*> const& {
+                return is_positional ? find_readers(positional_readers.var_string, filter)
+                                     : find_readers(var_string_readers, node_id);
+            }
     };
 
     switch (column->get_literal_type()) {
@@ -591,14 +597,24 @@ auto ColumnScan::build_filter(
             if (false == operand->as_int(operand_value, operation)) {
                 return bitmap;
             }
-            return build_basic_filter(m_num_messages, basic, operation, operand_value);
+            return build_basic_filter(
+                    m_num_messages,
+                    get_basic_readers(),
+                    operation,
+                    operand_value
+            );
         }
         case LiteralType::FloatT: {
             double operand_value{};
             if (false == operand->as_float(operand_value, operation)) {
                 return bitmap;
             }
-            return build_basic_filter(m_num_messages, basic, operation, operand_value);
+            return build_basic_filter(
+                    m_num_messages,
+                    get_basic_readers(),
+                    operation,
+                    operand_value
+            );
         }
         case LiteralType::BooleanT: {
             bool operand_value{};
@@ -607,7 +623,7 @@ auto ColumnScan::build_filter(
             }
             return build_basic_filter(
                     m_num_messages,
-                    basic,
+                    get_basic_readers(),
                     operation,
                     static_cast<uint8_t>(operand_value)
             );
@@ -624,7 +640,12 @@ auto ColumnScan::build_filter(
         }
         case LiteralType::VarStringT: {
             auto const* matching_vars = var_matches.at(filter);
-            return build_var_string_filter(m_num_messages, var_string, operation, *matching_vars);
+            return build_var_string_filter(
+                    m_num_messages,
+                    get_var_string_readers(),
+                    operation,
+                    *matching_vars
+            );
         }
         case LiteralType::TimestampT: {
             int64_t operand_value{};

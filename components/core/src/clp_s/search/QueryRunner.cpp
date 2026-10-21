@@ -445,21 +445,26 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
     auto const node_id{column->get_bound_node_id()};
     auto literal = expr->get_operand();
     bool const is_positional{column->get_leaf_position().has_value()};
-    auto& basic_readers{
-            is_positional ? m_positional_readers.basic.try_emplace(expr).first->second
-                          : m_basic_readers.try_emplace(node_id).first->second
+    auto const get_basic_readers{
+            [this, expr, node_id, is_positional]() -> std::vector<BaseColumnReader*>& {
+                return is_positional ? m_positional_readers.basic.try_emplace(expr).first->second
+                                     : m_basic_readers.try_emplace(node_id).first->second;
+            }
     };
-    auto& var_string_readers{
-            is_positional ? m_positional_readers.var_string.try_emplace(expr).first->second
-                          : m_var_string_readers.try_emplace(node_id).first->second
+    auto const get_var_string_readers{
+            [this, expr, node_id, is_positional]() -> std::vector<VariableStringColumnReader*>& {
+                return is_positional
+                               ? m_positional_readers.var_string.try_emplace(expr).first->second
+                               : m_var_string_readers.try_emplace(node_id).first->second;
+            }
     };
     clp::Query* q = nullptr;
     std::unordered_set<int64_t>* matching_vars = nullptr;
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
-            return evaluate_int_filter(expr->get_operation(), basic_readers, literal);
+            return evaluate_int_filter(expr->get_operation(), get_basic_readers(), literal);
         case LiteralType::FloatT:
-            return evaluate_float_filter(expr->get_operation(), basic_readers, literal);
+            return evaluate_float_filter(expr->get_operation(), get_basic_readers(), literal);
         case LiteralType::ClpStringT:
             q = m_expr_clp_query.at(expr);
             return evaluate_clp_string_filter(
@@ -471,11 +476,11 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
             matching_vars = m_expr_var_match_map.at(expr);
             return evaluate_var_string_filter(
                     expr->get_operation(),
-                    var_string_readers,
+                    get_var_string_readers(),
                     matching_vars
             );
         case LiteralType::BooleanT:
-            return evaluate_bool_filter(expr->get_operation(), basic_readers, literal);
+            return evaluate_bool_filter(expr->get_operation(), get_basic_readers(), literal);
         case LiteralType::ArrayT:
             return evaluate_array_filter(
                     expr->get_operation(),
