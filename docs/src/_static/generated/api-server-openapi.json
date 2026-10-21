@@ -76,14 +76,14 @@
         }
       }
     },
-    "/query/{search_job_id}": {
+    "/query/{query_job_id}": {
       "delete": {
         "tags": [],
         "description": "Cancels a previously submitted query job.",
         "operationId": "cancel_query",
         "parameters": [
           {
-            "name": "search_job_id",
+            "name": "query_job_id",
             "in": "path",
             "required": true,
             "schema": {
@@ -109,7 +109,7 @@
         }
       }
     },
-    "/query_results/{search_job_id}": {
+    "/query_results/{query_job_id}": {
       "get": {
         "tags": [],
         "description": "Streams the results of a previously submitted query as Server-Sent Events (SSE).",
@@ -134,7 +134,7 @@
             }
           },
           {
-            "name": "search_job_id",
+            "name": "query_job_id",
             "in": "path",
             "required": true,
             "schema": {
