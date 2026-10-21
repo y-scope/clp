@@ -386,6 +386,55 @@ mod tests {
 
     use super::*;
 
+    #[tokio::test]
+    async fn query_rejects_invalid_numeric_fields() -> anyhow::Result<()> {
+        let app = from_client(Client::new_with_closed_sql_pool().await)?;
+        for (field, value) in [
+            ("count_by_time_bucket_size_millisecs", serde_json::json!(0)),
+            ("count_by_time_bucket_size_millisecs", serde_json::json!(-1)),
+            (
+                "count_by_time_bucket_size_millisecs",
+                serde_json::json!(i64::MIN),
+            ),
+            (
+                "count_by_time_bucket_size_millisecs",
+                serde_json::json!(i64::MAX.cast_unsigned() + 1),
+            ),
+            (
+                "count_by_time_bucket_size_millisecs",
+                serde_json::json!(u64::MAX),
+            ),
+            ("max_num_results", serde_json::json!(0)),
+            ("max_num_results", serde_json::json!(-1)),
+            (
+                "max_num_results",
+                serde_json::json!(u64::from(u32::MAX) + 1),
+            ),
+        ] {
+            let mut body = serde_json::json!({"query_string": "*"});
+            body[field] = value;
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::post("/query")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body.to_string()))?,
+                )
+                .await?;
+            assert_eq!(
+                response.status(),
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{body}"
+            );
+            assert_eq!(
+                response.headers()["content-type"],
+                "text/plain; charset=utf-8"
+            );
+            assert!(get_body(response).await.contains(field), "{body}");
+        }
+        Ok(())
+    }
+
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
     /// status integer codes on success. No real database is needed.

@@ -945,72 +945,32 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test]
-    async fn query_numeric_boundaries() -> anyhow::Result<()> {
-        use axum::body::Body;
-        use axum::http::Request;
-        use axum::http::StatusCode;
-        use http_body_util::BodyExt;
-        use tower::ServiceExt;
-
-        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
-            .connect_lazy_with(sqlx::mysql::MySqlConnectOptions::new());
-        sql_pool.close().await;
-        let client = Client {
-            mongodb_client: mongodb::Client::with_options(
-                mongodb::options::ClientOptions::default(),
-            )?,
-            sql_pool,
-            config: Config::default(),
-        };
-        let app = crate::routes::from_client(client.clone())?;
-        for (field, value) in [
-            ("count_by_time_bucket_size_millisecs", serde_json::json!(0)),
-            ("count_by_time_bucket_size_millisecs", serde_json::json!(-1)),
-            (
-                "count_by_time_bucket_size_millisecs",
-                serde_json::json!(i64::MIN),
-            ),
-            (
-                "count_by_time_bucket_size_millisecs",
-                serde_json::json!(i64::MAX.cast_unsigned() + 1),
-            ),
-            (
-                "count_by_time_bucket_size_millisecs",
-                serde_json::json!(u64::MAX),
-            ),
-            ("max_num_results", serde_json::json!(0)),
-            ("max_num_results", serde_json::json!(-1)),
-            (
-                "max_num_results",
-                serde_json::json!(u64::from(u32::MAX) + 1),
-            ),
-        ] {
-            let mut body = serde_json::json!({"query_string": "*"});
-            body[field] = value;
-            let response = app
-                .clone()
-                .oneshot(
-                    Request::post("/query")
-                        .header("content-type", "application/json")
-                        .body(Body::from(body.to_string()))?,
+    impl Client {
+        /// # Returns
+        ///
+        /// A client with default configuration and a closed SQL pool.
+        ///
+        /// # Panics
+        ///
+        /// Panics if constructing a MongoDB client with default options fails.
+        pub(crate) async fn new_with_closed_sql_pool() -> Self {
+            let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+                .connect_lazy_with(sqlx::mysql::MySqlConnectOptions::new());
+            sql_pool.close().await;
+            Self {
+                mongodb_client: mongodb::Client::with_options(
+                    mongodb::options::ClientOptions::default(),
                 )
-                .await?;
-            assert_eq!(
-                response.status(),
-                StatusCode::UNPROCESSABLE_ENTITY,
-                "{body}"
-            );
-            assert_eq!(
-                response.headers()["content-type"],
-                "text/plain; charset=utf-8"
-            );
-            let response_body = response.into_body().collect().await?.to_bytes();
-            assert!(
-                std::str::from_utf8(&response_body)?.contains(field),
-                "{body}"
-            );
+                .expect("default mongodb client options should be valid"),
+                sql_pool,
+                config: Config::default(),
+            }
         }
+    }
+
+    #[tokio::test]
+    async fn submit_query_accepts_valid_bucket_sizes() -> anyhow::Result<()> {
+        let client = Client::new_with_closed_sql_pool().await;
         for width in [
             None,
             Some(serde_json::Value::Null),
