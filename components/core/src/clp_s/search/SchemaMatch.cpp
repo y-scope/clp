@@ -925,29 +925,19 @@ auto SchemaMatch::append_to_or(
 auto SchemaMatch::split_filter_for_schema(ast::FilterExpr const& filter, int32_t schema_id)
         -> std::shared_ptr<ast::Expression> {
     auto const& column{*filter.get_column()};
-    if (column.is_pure_wildcard()) {
-        if (column.matches_type(LiteralType::ArrayT)
-            && false == m_array_search_schema_ids.contains(schema_id)
-            && (*m_schemas)[schema_id].get_view().any_node_id([&](mpt_node_id_t node_id) -> bool {
-                   return NodeType::UnstructuredArray == m_tree->get_node(node_id).get_type();
-               }))
-        {
-            m_array_search_schema_ids.insert(schema_id);
-        }
-        return copy_filter_with_column(column.copy_unbound(), filter);
-    }
-
     auto const& schema_to_node_id{column.resolved_nodes().schema_to_node_id};
     auto const node_id_it{schema_to_node_id.find(schema_id)};
     if (schema_to_node_id.end() == node_id_it) {
         return copy_filter_with_column(column.copy_unbound(), filter);
     }
     auto const node_id{node_id_it->second};
-    auto const literal_type{SchemaNode::node_to_literal_type(m_tree->get_node(node_id).get_type())};
-    if (LiteralType::ArrayT == literal_type) {
-        m_array_search_schema_ids.insert(schema_id);
-    }
-    return copy_filter_with_column(column.copy_bound_to(node_id, literal_type), filter);
+    return copy_filter_with_column(
+            column.copy_bound_to(
+                    node_id,
+                    SchemaNode::node_to_literal_type(m_tree->get_node(node_id).get_type())
+            ),
+            filter
+    );
 }
 
 bool SchemaMatch::schema_matched(int32_t schema_id) {

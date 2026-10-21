@@ -507,7 +507,6 @@ private:
             m_column_to_descriptor;
     std::unordered_map<ast::Expression*, std::unordered_set<int32_t>> m_expression_to_schemas;
     std::unordered_set<int32_t> m_matched_schema_ids;
-    std::unordered_set<int32_t> m_array_search_schema_ids;
     std::map<int32_t, std::shared_ptr<ast::Expression>> m_schema_to_expression;
 
     std::unordered_map<int32_t, std::set<int32_t>> m_schema_to_searched_columns;
@@ -629,8 +628,6 @@ private:
      * Splits a filter for one schema: the copy's column is bound to the schema's node for that
      * column and matches only the node's type. The column is left unbound when the schema has no
      * such node, i.e. for a pure wildcard column or a NEXISTS filter on an absent column.
-     * Records `schema_id` in `m_array_search_schema_ids` when the filter searches an unstructured
-     * array in that schema.
      * @param filter
      * @param schema_id
      * @return The copy of `filter` to evaluate against `schema_id`.
