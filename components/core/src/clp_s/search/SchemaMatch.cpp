@@ -635,64 +635,6 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
                 }
             }
         }
-    } else if (auto or_expr{std::dynamic_pointer_cast<OrExpr>(cur)}) {
-        for (auto it{or_expr->op_begin()}; it != or_expr->op_end(); ++it) {
-            auto sub_expr{std::static_pointer_cast<Expression>(*it)};
-            auto new_expr{intersect_schemas(sub_expr)};
-            if (new_expr != sub_expr) {
-                *it = new_expr;
-            }
-        }
-
-        std::set<int32_t> or_schemas;
-        std::set<ColumnDescriptor*> or_columns;
-        for (auto const& op : or_expr->get_op_list()) {
-            auto sub_expr{std::dynamic_pointer_cast<Expression>(op)};
-            if (nullptr == sub_expr) {
-                continue;
-            }
-            if (auto it{m_expression_to_schemas.find(sub_expr.get())};
-                m_expression_to_schemas.end() != it)
-            {
-                for (int32_t schema_id : it->second) {
-                    or_schemas.insert(schema_id);
-                }
-            }
-            if (auto filter{std::dynamic_pointer_cast<FilterExpr>(op)}) {
-                auto* col{filter->get_column().get()};
-                if (false == col->is_pure_wildcard()) {
-                    or_columns.insert(col);
-                }
-            }
-        }
-
-        if (or_schemas.empty()) {
-            return EmptyExpr::create(cur->get_parent());
-        }
-
-        for (int32_t schema_id : or_schemas) {
-            m_expression_to_schemas[cur.get()].insert(schema_id);
-        }
-
-        for (auto* column : or_columns) {
-            if (column->is_pure_wildcard()) {
-                continue;
-            }
-            column->set_matching_types(compute_candidate_types(*column, or_schemas));
-        }
-
-        for (int32_t schema : or_schemas) {
-            m_matched_schema_ids.insert(schema);
-            for (auto const* column : or_columns) {
-                if (column->is_pure_wildcard()) {
-                    continue;
-                }
-                auto const& schema_to_node_id{column->resolved_nodes().schema_to_node_id};
-                if (auto const it{schema_to_node_id.find(schema)}; schema_to_node_id.end() != it) {
-                    m_schema_to_searched_columns[schema].insert(it->second);
-                }
-            }
-        }
     } else if (cur->has_only_expression_operands()) {
         for (auto it = cur->op_begin(); it != cur->op_end(); it++) {
             auto sub_expr = std::static_pointer_cast<Expression>(*it);
@@ -721,53 +663,9 @@ auto SchemaMatch::intersect_and_sub_expr(
     // need to check for them here
     for (auto it = cur->op_begin(); it != cur->op_end(); it++) {
         if (auto sub_expr = std::dynamic_pointer_cast<Expression>(*it)) {
-            if (auto or_expr{std::dynamic_pointer_cast<OrExpr>(sub_expr)}) {
-                std::set<int32_t> or_schemas;
-                for (auto const& or_op : or_expr->get_op_list()) {
-                    if (auto or_narrowing{std::dynamic_pointer_cast<ast::NarrowSchemasExpr>(or_op)})
-                    {
-                        or_schemas.merge(get_narrowed_schemas(*or_narrowing));
-                    } else if (auto or_filter{std::dynamic_pointer_cast<FilterExpr>(or_op)}) {
-                        auto* or_col{or_filter->get_column().get()};
-                        if (or_col->is_pure_wildcard()) {
-                            for (auto const& schema_it : *m_schemas) {
-                                or_schemas.insert(schema_it.first);
-                            }
-                        } else {
-                            for (auto const& [schema_id, _] :
-                                 or_col->resolved_nodes().schema_to_node_id)
-                            {
-                                or_schemas.insert(schema_id);
-                            }
-                        }
-                        if (FilterOperation::EXISTS != or_filter->get_operation()
-                            && FilterOperation::NEXISTS != or_filter->get_operation())
-                        {
-                            columns.insert(or_col);
-                        }
-                    }
-                }
-
-                if (first) {
-                    common_schema = or_schemas;
-                } else {
-                    std::set<int32_t> intersection;
-                    for (int32_t schema : common_schema) {
-                        if (or_schemas.contains(schema)) {
-                            intersection.insert(schema);
-                        }
-                    }
-                    common_schema = intersection;
-                }
-                first = false;
-                if (common_schema.empty()) {
-                    break;
-                }
-            } else {
-                first &= intersect_and_sub_expr(sub_expr, common_schema, columns, first);
-                if (false == first && common_schema.empty()) {
-                    break;
-                }
+            first &= intersect_and_sub_expr(sub_expr, common_schema, columns, first);
+            if (false == first && common_schema.empty()) {
+                break;
             }
         } else if (auto column = std::dynamic_pointer_cast<ColumnDescriptor>(*it)) {
             FilterOperation op = std::static_pointer_cast<FilterExpr>(cur)->get_operation();
