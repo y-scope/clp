@@ -22,6 +22,7 @@ class QueryJobStatus(IntEnum):
     RUNNING = auto()
     SUCCEEDED = auto()
     FAILED = auto()
+    CANCEL_REQUESTED = auto()
     CANCELLING = auto()
     CANCELLED = auto()
     KILLED = auto()
