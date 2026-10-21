@@ -149,12 +149,12 @@ auto operand_as_string(ast::FilterExpr const& filter) -> std::optional<std::stri
         return std::nullopt;
     }
     std::string query;
-    if (operand->as_var_string(query, filter.get_operation())
-        || operand->as_clp_string(query, filter.get_operation()))
+    if (false == operand->as_var_string(query, filter.get_operation())
+        && false == operand->as_clp_string(query, filter.get_operation()))
     {
-        return query;
+        return std::nullopt;
     }
-    return std::nullopt;
+    return query;
 }
 
 auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool {
