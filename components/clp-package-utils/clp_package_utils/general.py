@@ -755,6 +755,11 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
         )
 
 
+def is_log_ingestor_enabled(clp_config: ClpConfig) -> bool:
+    """Return whether the deployment has a configured ingestor and S3 log input."""
+    return clp_config.log_ingestor is not None and clp_config.logs_input.type == StorageType.S3
+
+
 def validate_retention_config(clp_config: ClpConfig) -> None:
     clp_query_engine = clp_config.webui.query_engine
     if is_retention_period_configured(clp_config) and clp_query_engine == QueryEngine.PRESTO:
