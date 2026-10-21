@@ -109,7 +109,7 @@ public:
 
     virtual bool as_any(FilterOperation op) { return false; }
 
-    [[nodiscard]] virtual bool has_wildcards() { return false; }
+    [[nodiscard]] virtual auto has_wildcard() const -> bool { return false; }
 };
 }  // namespace clp_s::search::ast
 

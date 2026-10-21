@@ -62,12 +62,12 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
                 column->remove_matching_type(LiteralType::VarStringT);
             }
             if (false == literal->as_int(tmpint, op)) {
-                if (false == literal->has_wildcards()) {
+                if (false == literal->has_wildcard()) {
                     column->remove_matching_type(LiteralType::IntegerT);
                 }
             }
             if (false == literal->as_float(tmpdouble, op)) {
-                if (false == literal->has_wildcards()) {
+                if (false == literal->has_wildcard()) {
                     column->remove_matching_type(LiteralType::FloatT);
                 }
             }

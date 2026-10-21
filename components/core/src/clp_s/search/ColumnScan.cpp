@@ -444,7 +444,7 @@ auto ColumnScan::can_build_filter(
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
         case LiteralType::FloatT:
-            return false == filter->get_operand()->has_wildcards();
+            return false == filter->get_operand()->has_wildcard();
         case LiteralType::TimestampT:
             return true;
         case LiteralType::BooleanT:

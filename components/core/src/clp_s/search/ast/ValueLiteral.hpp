@@ -71,7 +71,7 @@ public:
 
     auto as_any(FilterOperation op) -> bool override;
 
-    [[nodiscard]] auto has_wildcards() -> bool override;
+    [[nodiscard]] auto has_wildcard() const -> bool override;
 
 private:
     // Constructor

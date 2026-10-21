@@ -516,7 +516,7 @@ bool QueryRunner::evaluate_int_filter(
         return true;
     }
 
-    if (operand->has_wildcards()) {
+    if (operand->has_wildcard()) {
         return evaluate_numeric_wildcard_filter<int64_t>(op, operand, readers, m_cur_message);
     }
 
@@ -562,7 +562,7 @@ bool QueryRunner::evaluate_float_filter(
         return true;
     }
 
-    if (operand->has_wildcards()) {
+    if (operand->has_wildcard()) {
         return evaluate_numeric_wildcard_filter<double>(op, operand, readers, m_cur_message);
     }
 
