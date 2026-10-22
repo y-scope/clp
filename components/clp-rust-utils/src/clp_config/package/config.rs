@@ -9,9 +9,13 @@ use serde::Deserialize;
 
 use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
+use crate::dataset::DatasetName;
 use crate::dataset::resolve_dataset_name;
 use crate::types::ArchiveId;
 use crate::types::non_empty_string::ExpectedNonEmpty;
+
+/// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`. Must be kept in sync.
+pub const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -140,8 +144,8 @@ impl Default for ClpDbNames {
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
-/// * `table_prefix` is a fixed constant mirroring `CLP_METADATA_TABLE_PREFIX` (`"clp_"`) and is
-///   excluded from (de)serialization.
+/// * `table_prefix` is fixed to [`CLP_METADATA_TABLE_PREFIX`] and is excluded from
+///   (de)serialization.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Database {
@@ -155,8 +159,6 @@ pub struct Database {
 
 impl Default for Database {
     fn default() -> Self {
-        /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`.
-        const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
         Self {
             host: "localhost".to_owned(),
             port: 3306,
@@ -171,11 +173,11 @@ impl Database {
     ///
     /// The archives table name (`<prefix><dataset>_archives`).
     #[must_use]
-    pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
+    pub fn archives_table_name(&self, dataset: Option<&DatasetName>) -> String {
         format!(
             "{}{}_archives",
             self.table_prefix,
-            resolve_dataset_name(dataset)
+            resolve_dataset_name(dataset.map(DatasetName::as_str))
         )
     }
 
@@ -183,11 +185,11 @@ impl Database {
     ///
     /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
     #[must_use]
-    pub fn column_metadata_table_name(&self, dataset: Option<&str>) -> String {
+    pub fn column_metadata_table_name(&self, dataset: Option<&DatasetName>) -> String {
         format!(
             "{}{}_column_metadata",
             self.table_prefix,
-            resolve_dataset_name(dataset)
+            resolve_dataset_name(dataset.map(DatasetName::as_str))
         )
     }
 

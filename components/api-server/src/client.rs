@@ -11,6 +11,7 @@ use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::clp_config::package::credentials::Credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::AggregationConfig;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
@@ -741,7 +742,7 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
+    /// * [`ClientError::InvalidDatasetName`] if `dataset_name` isn't a valid [`DatasetName`].
     /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
     pub async fn get_timestamp_column_names(
@@ -754,10 +755,13 @@ impl Client {
         // MySQL error number for "Table doesn't exist".
         const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
-        if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
-            return Err(ClientError::InvalidDatasetName);
-        }
-        let table_name = format!("clp_{dataset_name}_column_metadata");
+        let dataset = dataset_name
+            .parse::<DatasetName>()
+            .map_err(|_| ClientError::InvalidDatasetName)?;
+        let table_name = self
+            .config
+            .database
+            .column_metadata_table_name(Some(&dataset));
         let names: Vec<String> =
             sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
                 .bind(TIMESTAMP_NODE_TYPE)
@@ -971,5 +975,22 @@ mod tests {
         };
         let result = ValidatedCompressionUsageParams::try_from(params);
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn get_timestamp_column_names_rejects_invalid_dataset_name() -> anyhow::Result<()> {
+        let client = Client {
+            mongodb_client: mongodb::Client::with_uri_str("mongodb://localhost:27017").await?,
+            sql_pool: sqlx::mysql::MySqlPoolOptions::new()
+                .connect_lazy("mysql://localhost/clp-db")?,
+            config: Config::default(),
+        };
+
+        let result = client.get_timestamp_column_names("bad-name").await;
+        assert!(
+            matches!(result, Err(ClientError::InvalidDatasetName)),
+            "unexpected result: {result:?}"
+        );
+        Ok(())
     }
 }
