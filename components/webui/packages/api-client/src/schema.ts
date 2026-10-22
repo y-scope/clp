@@ -281,7 +281,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The query job with the given ID has already terminated. */
+            /** @description The query job with the given ID has terminated without being cancelled. */
             409: {
                 headers: {
                     [name: string]: unknown;

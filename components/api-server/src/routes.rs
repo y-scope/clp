@@ -241,7 +241,7 @@ async fn query_results(
         ),
         (
             status = CONFLICT,
-            description = "The query job with the given ID has already terminated."
+            description = "The query job with the given ID has terminated without being cancelled."
         ),
         (status = INTERNAL_SERVER_ERROR)
     )

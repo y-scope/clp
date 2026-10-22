@@ -428,7 +428,8 @@ impl Client {
     /// Returns an error if:
     ///
     /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
-    /// * [`ClientError::QueryJobAlreadyTerminated`] if the job has already terminated.
+    /// * [`ClientError::QueryJobAlreadyTerminated`] if the job has already succeeded, failed, or
+    ///   been killed.
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
     /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
@@ -457,11 +458,12 @@ impl Client {
                 tx.commit().await?;
                 Ok(())
             }
-            QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling => Ok(()),
-            QueryJobStatus::Succeeded
-            | QueryJobStatus::Failed
-            | QueryJobStatus::Cancelled
-            | QueryJobStatus::Killed => Err(ClientError::QueryJobAlreadyTerminated(query_job_id)),
+            QueryJobStatus::CancelRequested
+            | QueryJobStatus::Cancelling
+            | QueryJobStatus::Cancelled => Ok(()),
+            QueryJobStatus::Succeeded | QueryJobStatus::Failed | QueryJobStatus::Killed => {
+                Err(ClientError::QueryJobAlreadyTerminated(query_job_id))
+            }
         }
     }
 
