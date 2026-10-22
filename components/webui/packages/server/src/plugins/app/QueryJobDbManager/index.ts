@@ -75,7 +75,7 @@ class QueryJobDbManager {
     async cancelJob (jobId: number): Promise<void> {
         await this.#sqlPool.query(
             `UPDATE ${this.#tableName}
-             SET ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${QUERY_JOB_STATUS.CANCELLING}
+             SET ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${QUERY_JOB_STATUS.CANCEL_REQUESTED}
              WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
              AND ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
              IN (${QUERY_JOB_STATUS.PENDING}, ${QUERY_JOB_STATUS.RUNNING})`,

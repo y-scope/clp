@@ -101,4 +101,18 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         spider_job_id: JobId,
         poll_interval: Duration,
     ) -> Result<QueryJobOutcome, Error>;
+
+    /// Idempotently cancels the job identified by `spider_job_id`.
+    ///
+    /// Safe to call regardless of whether the job is not-yet-started, already running, or already
+    /// terminal.
+    ///
+    /// # Parameters
+    ///
+    /// * `spider_job_id` - The job to cancel.
+    ///
+    /// # Errors
+    ///
+    /// Implementations must document their error conditions.
+    async fn cancel_query_job(&self, spider_job_id: JobId) -> Result<(), Error>;
 }
