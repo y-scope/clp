@@ -6,7 +6,7 @@ use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::job_config::SearchJobConfig;
+use crate::job_config::QueryJobConfig;
 use crate::types::PositiveI64;
 
 /// `clp-s` options for a query job.
@@ -35,10 +35,10 @@ pub struct ClpSQueryOption {
     pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
 
-impl TryFrom<&SearchJobConfig> for ClpSQueryOption {
+impl TryFrom<&QueryJobConfig> for ClpSQueryOption {
     type Error = QueryOptionError;
 
-    fn try_from(config: &SearchJobConfig) -> Result<Self, Self::Error> {
+    fn try_from(config: &QueryJobConfig) -> Result<Self, Self::Error> {
         let bucket_size = config
             .aggregation_config
             .as_ref()
@@ -60,7 +60,7 @@ impl TryFrom<&SearchJobConfig> for ClpSQueryOption {
     }
 }
 
-/// Invalid options in a search job configuration.
+/// Invalid options in a query job configuration.
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
 pub enum QueryOptionError {
     #[error("query string must not be empty")]
@@ -153,9 +153,9 @@ mod tests {
     #[test]
     fn invalid_aggregation_config_is_rejected() {
         use crate::job_config::AggregationConfig;
-        use crate::job_config::SearchJobConfig;
+        use crate::job_config::QueryJobConfig;
 
-        let base = SearchJobConfig {
+        let base = QueryJobConfig {
             query_string: "*".to_owned(),
             max_num_results: NonZeroU32::new(7),
             ..Default::default()
@@ -183,7 +183,7 @@ mod tests {
                 QueryOptionError::InvalidCountByTimeBucketSize { bucket_size: -1 },
             ),
         ] {
-            let config = SearchJobConfig {
+            let config = QueryJobConfig {
                 aggregation_config: Some(aggregation),
                 ..base.clone()
             };
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn empty_query_is_rejected() {
-        let config = crate::job_config::SearchJobConfig::default();
+        let config = crate::job_config::QueryJobConfig::default();
         assert_eq!(
             ClpSQueryOption::try_from(&config),
             Err(QueryOptionError::EmptyQuery)
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn ordinary_search_preserves_aggregation_and_timestamp_behavior() {
-        let config = crate::job_config::SearchJobConfig {
+        let config = crate::job_config::QueryJobConfig {
             query_string: "*".to_owned(),
             max_num_results: NonZeroU32::new(7),
             begin_timestamp: Some(1),
@@ -222,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn persisted_search_config_converts_supported_options() {
+    fn persisted_query_job_config_converts_supported_options() {
         for width in [None, Some(1_i64), Some(i64::MAX)] {
             for max_num_results in [None, NonZeroU32::new(7)] {
                 for (begin, end) in [
@@ -246,7 +246,7 @@ mod tests {
                     });
                     let serialized =
                         rmp_serde::to_vec(&persisted).expect("test payload should serialize");
-                    let config: crate::job_config::SearchJobConfig =
+                    let config: crate::job_config::QueryJobConfig =
                         rmp_serde::from_slice(&serialized)
                             .expect("serialized test payload should deserialize");
                     let actual = ClpSQueryOption::try_from(&config)

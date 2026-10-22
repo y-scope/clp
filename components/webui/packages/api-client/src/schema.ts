@@ -37,7 +37,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/query/{search_job_id}": {
+    "/query/{query_job_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -54,7 +54,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/query_results/{search_job_id}": {
+    "/query_results/{query_job_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -139,7 +139,7 @@ export interface components {
              */
             uncompressed_size_bytes: number;
         };
-        /** @description Defines the request configuration for submitting a search query. */
+        /** @description Defines the request configuration for submitting a query. */
         QueryConfig: {
             /**
              * @description Whether to buffer search results in `MongoDB`.
@@ -261,7 +261,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                search_job_id: number;
+                query_job_id: number;
             };
             cookie?: never;
         };
@@ -274,8 +274,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No cancellable query job with the given ID was found. */
+            /** @description No query job with the given ID was found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The query job with the given ID has already terminated. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -308,7 +315,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                search_job_id: number;
+                query_job_id: number;
             };
             cookie?: never;
         };

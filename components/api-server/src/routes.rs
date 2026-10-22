@@ -129,9 +129,9 @@ async fn query(
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
     tracing::info!("Submitting query: {:?}", query_config);
-    let search_job_id = match client.submit_query(query_config).await {
+    let query_job_id = match client.submit_query(query_config).await {
         Ok(id) => {
-            tracing::info!("Submitted query with search job ID: {}", id);
+            tracing::info!("Submitted query job ID: {}", id);
             id
         }
         Err(err) => {
@@ -139,7 +139,7 @@ async fn query(
             return Err(err.into());
         }
     };
-    let uri = format!("query_results/{search_job_id}");
+    let uri = format!("query_results/{query_job_id}");
     Ok(Json(QueryResultsUri {
         query_results_uri: uri,
     }))
@@ -172,7 +172,7 @@ struct QueryResultsParams {
 
 #[utoipa::path(
     get,
-    path = "/query_results/{search_job_id}",
+    path = "/query_results/{query_job_id}",
     description = "Streams the results of a previously submitted query as Server-Sent Events \
         (SSE).",
     params(QueryResultsParams),
@@ -190,25 +190,25 @@ struct QueryResultsParams {
 )]
 async fn query_results(
     State(client): State<Client>,
-    Path(search_job_id): Path<u64>,
+    Path(query_job_id): Path<u64>,
     Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
-    tracing::info!("Fetching results for search job ID: {}", search_job_id);
+    tracing::info!("Fetching results for query job ID: {}", query_job_id);
     let results_stream = match client
-        .fetch_results(search_job_id, params.raw_docs, params.sorted)
+        .fetch_results(query_job_id, params.raw_docs, params.sorted)
         .await
     {
         Ok(stream) => {
             tracing::info!(
-                "Successfully initiated result stream for search job ID {}",
-                search_job_id
+                "Successfully initiated result stream for query job ID {}",
+                query_job_id
             );
             stream
         }
         Err(err) => {
             tracing::error!(
-                "Failed to fetch results for search job ID {}: {:?}",
-                search_job_id,
+                "Failed to fetch results for query job ID {}: {:?}",
+                query_job_id,
                 err
             );
             return Err(err.into());
@@ -228,7 +228,7 @@ async fn query_results(
 
 #[utoipa::path(
     delete,
-    path = "/query/{search_job_id}",
+    path = "/query/{query_job_id}",
     description = "Cancels a previously submitted query job.",
     responses(
         (
@@ -237,30 +237,30 @@ async fn query_results(
         ),
         (
             status = NOT_FOUND,
-            description = "No cancellable query job with the given ID was found."
+            description = "No query job with the given ID was found."
+        ),
+        (
+            status = CONFLICT,
+            description = "The query job with the given ID has already terminated."
         ),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
 async fn cancel_query(
     State(client): State<Client>,
-    Path(search_job_id): Path<u64>,
+    Path(query_job_id): Path<u64>,
 ) -> Result<StatusCode, HandlerError> {
-    tracing::info!("Cancelling search job ID: {}", search_job_id);
-    match client.cancel_search_job(search_job_id).await {
+    tracing::info!("Cancelling query job ID: {}", query_job_id);
+    match client.cancel_query_job(query_job_id).await {
         Ok(()) => {
             tracing::info!(
-                "Successfully submitted cancellation request for search job ID: {}",
-                search_job_id
+                "Successfully submitted cancellation request for query job ID: {}",
+                query_job_id
             );
             Ok(StatusCode::OK)
         }
         Err(err) => {
-            tracing::error!(
-                "Failed to cancel search job ID {}: {:?}",
-                search_job_id,
-                err
-            );
+            tracing::error!("Failed to cancel query job ID {}: {:?}", query_job_id, err);
             Err(err.into())
         }
     }
@@ -326,6 +326,8 @@ enum HandlerError {
     InternalServer,
     #[error("Not found")]
     NotFound,
+    #[error("Conflict")]
+    Conflict,
     #[error("Bad request: {0}")]
     BadRequest(String),
 }
@@ -339,7 +341,8 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::QueryJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
             ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
                 Self::BadRequest(format!("{err}"))
             }
@@ -353,6 +356,7 @@ impl IntoResponse for HandlerError {
     fn into_response(self) -> axum::response::Response {
         match self {
             Self::NotFound => StatusCode::NOT_FOUND.into_response(),
+            Self::Conflict => StatusCode::CONFLICT.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
         }
