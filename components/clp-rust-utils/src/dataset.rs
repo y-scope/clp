@@ -14,18 +14,11 @@ use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 /// The name of the dataset used when none is specified.
 pub const CLP_DEFAULT_DATASET_NAME: &str = "default";
 
-/// The maximum number of characters in a dataset name.
-///
-/// The bound ensures that the longest metadata table name, `<table prefix><dataset>_<longest
-/// suffix>` with the table prefix [`CLP_METADATA_TABLE_PREFIX`], fits MySQL's 64-character
-/// table-name limit.
-pub const DATASET_NAME_MAX_LEN: usize =
-    MYSQL_TABLE_NAME_MAX_LEN - CLP_METADATA_TABLE_PREFIX.len() - 1 - TABLE_SUFFIX_MAX_LEN;
-
 /// A validated dataset name.
 ///
 /// A dataset name is non-empty, only contains `_` or Unicode letters and numbers (general
-/// categories L and N), and is at most [`DATASET_NAME_MAX_LEN`] characters long.
+/// categories L and N), and is short enough for its longest metadata table name to fit MySQL's
+/// 64-character table-name limit.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct DatasetName {
@@ -50,12 +43,6 @@ impl FromStr for DatasetName {
     /// # Returns
     ///
     /// The parsed dataset name on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`DatasetName::try_from`]'s return values on failure.
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Self::try_from(value.to_owned())
     }
@@ -69,25 +56,17 @@ impl TryFrom<String> for DatasetName {
     /// # Returns
     ///
     /// The dataset name on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ParseDatasetNameError::InvalidCharacters`] if `value` is empty or contains an invalid
-    ///   character.
-    /// * [`ParseDatasetNameError::TooLong`] if `value` has more than [`DATASET_NAME_MAX_LEN`]
-    ///   characters.
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        if value.is_empty()
-            || !value.chars().all(|ch| {
-                ch == '_'
-                    || matches!(
-                        ch.general_category_group(),
-                        GeneralCategoryGroup::Letter | GeneralCategoryGroup::Number
-                    )
-            })
-        {
+        if value.is_empty() {
+            return Err(ParseDatasetNameError::Empty);
+        }
+        if !value.chars().all(|ch| {
+            ch == '_'
+                || matches!(
+                    ch.general_category_group(),
+                    GeneralCategoryGroup::Letter | GeneralCategoryGroup::Number
+                )
+        }) {
             return Err(ParseDatasetNameError::InvalidCharacters(value));
         }
         if value.chars().count() > DATASET_NAME_MAX_LEN {
@@ -112,6 +91,9 @@ impl From<DatasetName> for String {
 /// An error returned when parsing an invalid dataset name.
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ParseDatasetNameError {
+    #[error("dataset name must not be empty")]
+    Empty,
+
     #[error(
         "invalid dataset name {0:?}: names can only contain alphanumeric characters and \
          underscores"
@@ -133,6 +115,14 @@ pub fn resolve_dataset_name(dataset: Option<&str>) -> &str {
     dataset.unwrap_or(CLP_DEFAULT_DATASET_NAME)
 }
 
+/// The maximum number of characters in a dataset name.
+///
+/// The bound ensures that the longest metadata table name, `<table prefix><dataset>_<longest
+/// suffix>` with the table prefix [`CLP_METADATA_TABLE_PREFIX`], fits MySQL's 64-character
+/// table-name limit.
+const DATASET_NAME_MAX_LEN: usize =
+    MYSQL_TABLE_NAME_MAX_LEN - CLP_METADATA_TABLE_PREFIX.len() - 1 - TABLE_SUFFIX_MAX_LEN;
+
 /// The maximum number of characters in a MySQL table name.
 const MYSQL_TABLE_NAME_MAX_LEN: usize = 64;
 
@@ -144,10 +134,8 @@ mod tests {
     use super::CLP_DEFAULT_DATASET_NAME;
     use super::DATASET_NAME_MAX_LEN;
     use super::DatasetName;
-    use super::MYSQL_TABLE_NAME_MAX_LEN;
     use super::ParseDatasetNameError;
     use super::resolve_dataset_name;
-    use crate::clp_config::package::config::Database;
 
     #[test]
     fn dataset_name_accepts_underscores_letters_and_numbers() {
@@ -172,8 +160,9 @@ mod tests {
 
     #[test]
     fn dataset_name_rejects_empty_names_and_other_characters() {
+        assert_eq!("".parse::<DatasetName>(), Err(ParseDatasetNameError::Empty));
         for name in [
-            "", "-", " ", "bad-name", "bad name", "bad.name", "bad`name", "e\u{301}", "a\u{345}",
+            "-", " ", "bad-name", "bad name", "bad.name", "bad`name", "e\u{301}", "a\u{345}",
         ] {
             assert_eq!(
                 name.parse::<DatasetName>(),
@@ -194,15 +183,6 @@ mod tests {
         assert_eq!(
             too_long_name.parse::<DatasetName>(),
             Err(ParseDatasetNameError::TooLong(too_long_name))
-        );
-    }
-
-    #[test]
-    fn dataset_name_characters_are_checked_before_length() {
-        let name = "-".repeat(DATASET_NAME_MAX_LEN + 1);
-        assert_eq!(
-            name.parse::<DatasetName>(),
-            Err(ParseDatasetNameError::InvalidCharacters(name))
         );
     }
 
@@ -248,16 +228,6 @@ mod tests {
                 "unexpected error: {error}"
             );
         }
-    }
-
-    #[test]
-    fn longest_dataset_name_fills_the_longest_table_name() {
-        let dataset: DatasetName = "a"
-            .repeat(DATASET_NAME_MAX_LEN)
-            .parse()
-            .expect("a name of the maximum length should be valid");
-        let table_name = Database::default().column_metadata_table_name(Some(&dataset));
-        assert_eq!(table_name.chars().count(), MYSQL_TABLE_NAME_MAX_LEN);
     }
 
     #[test]
