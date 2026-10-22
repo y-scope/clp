@@ -198,9 +198,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                 self.compression_job_id,
                 self.resource_group_id,
                 self.clp_s_compression_option.clone(),
-                self.dataset
-                    .as_ref()
-                    .map(|dataset| dataset.as_str().to_owned()),
+                self.dataset.clone(),
                 input_sources,
                 self.spider_option.commit_task_execution_policy.clone(),
             )
@@ -614,6 +612,7 @@ mod tests {
     use clp_rust_utils::clp_config::AwsAuthentication;
     use clp_rust_utils::clp_config::S3Config;
     use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::ClpIoConfig;
     use clp_rust_utils::job_config::CompressionJobId;
     use clp_rust_utils::job_config::InputConfig;
@@ -643,7 +642,7 @@ mod tests {
             _compression_job_id: CompressionJobId,
             _resource_group_id: ResourceGroupId,
             _clp_s_option: ClpSCompressionOption,
-            _dataset: Option<String>,
+            _dataset: Option<DatasetName>,
             _input_sources: Vec<(S3InputSource, ExecutionPolicy)>,
             _commit_task_execution_policy: ExecutionPolicy,
         ) -> Result<SpiderJobId, Error> {

@@ -171,7 +171,7 @@ fn build_query_task_graph(
                     "ClpSQueryOption",
                 )?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                    "Option<NonEmptyString>",
+                    "Option<DatasetName>",
                 )?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("NonEmptyString")?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("OutputHandle")?),

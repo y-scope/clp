@@ -712,7 +712,7 @@ impl ArchiveSelector<'_> {
             .into_iter()
             .map(|row| ArchiveMetadata {
                 id: row.id,
-                dataset: Some(dataset.clone().into()),
+                dataset: Some(dataset.clone()),
                 uncompressed_size: row.uncompressed_size,
                 end_timestamp: row.end_timestamp,
             })

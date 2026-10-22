@@ -4,24 +4,32 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::str::FromStr;
 
-use non_empty_string::NonEmptyString;
+use serde::Deserialize;
+use serde::Serialize;
 use unicode_properties::GeneralCategoryGroup;
 use unicode_properties::UnicodeGeneralCategory;
 
 use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 
-/// The default dataset name (mirror of `clp_py_utils.clp_config.CLP_DEFAULT_DATASET_NAME`).
+/// The name of the dataset used when none is specified.
 pub const CLP_DEFAULT_DATASET_NAME: &str = "default";
 
-/// The maximum number of characters in a dataset name, as derived in
-/// `clp_package_utils.general.validate_dataset_name`.
+/// The maximum number of characters in a dataset name.
+///
+/// The bound ensures that the longest metadata table name, `<table prefix><dataset>_<longest
+/// suffix>` with the table prefix [`CLP_METADATA_TABLE_PREFIX`], fits MySQL's 64-character
+/// table-name limit.
 pub const DATASET_NAME_MAX_LEN: usize =
     MYSQL_TABLE_NAME_MAX_LEN - CLP_METADATA_TABLE_PREFIX.len() - 1 - TABLE_SUFFIX_MAX_LEN;
 
-/// A dataset name accepted by `clp_package_utils.general.validate_dataset_name`.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+/// A validated dataset name.
+///
+/// A dataset name is non-empty, only contains `_` or Unicode letters and numbers (general
+/// categories L and N), and is at most [`DATASET_NAME_MAX_LEN`] characters long.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(try_from = "String", into = "String")]
 pub struct DatasetName {
-    value: NonEmptyString,
+    value: String,
 }
 
 impl DatasetName {
@@ -29,7 +37,7 @@ impl DatasetName {
     ///
     /// The dataset name as a string slice.
     #[must_use]
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         self.value.as_str()
     }
 }
@@ -37,8 +45,7 @@ impl DatasetName {
 impl FromStr for DatasetName {
     type Err = ParseDatasetNameError;
 
-    /// Creates a dataset name from `value` if `clp_package_utils.general.validate_dataset_name`
-    /// accepts it.
+    /// Creates a dataset name from `value` if it is a valid [`DatasetName`].
     ///
     /// # Returns
     ///
@@ -48,29 +55,45 @@ impl FromStr for DatasetName {
     ///
     /// Returns an error if:
     ///
+    /// * Forwards [`DatasetName::try_from`]'s return values on failure.
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::try_from(value.to_owned())
+    }
+}
+
+impl TryFrom<String> for DatasetName {
+    type Error = ParseDatasetNameError;
+
+    /// Creates a dataset name from `value` if it is a valid [`DatasetName`].
+    ///
+    /// # Returns
+    ///
+    /// The dataset name on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
     /// * [`ParseDatasetNameError::InvalidCharacters`] if `value` is empty or contains an invalid
     ///   character.
     /// * [`ParseDatasetNameError::TooLong`] if `value` has more than [`DATASET_NAME_MAX_LEN`]
     ///   characters.
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let Ok(non_empty_value) = NonEmptyString::from_str(value) else {
-            return Err(ParseDatasetNameError::InvalidCharacters(value.to_owned()));
-        };
-        if !value.chars().all(|ch| {
-            ch == '_'
-                || matches!(
-                    ch.general_category_group(),
-                    GeneralCategoryGroup::Letter | GeneralCategoryGroup::Number
-                )
-        }) {
-            return Err(ParseDatasetNameError::InvalidCharacters(value.to_owned()));
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.is_empty()
+            || !value.chars().all(|ch| {
+                ch == '_'
+                    || matches!(
+                        ch.general_category_group(),
+                        GeneralCategoryGroup::Letter | GeneralCategoryGroup::Number
+                    )
+            })
+        {
+            return Err(ParseDatasetNameError::InvalidCharacters(value));
         }
         if value.chars().count() > DATASET_NAME_MAX_LEN {
-            return Err(ParseDatasetNameError::TooLong(value.to_owned()));
+            return Err(ParseDatasetNameError::TooLong(value));
         }
-        Ok(Self {
-            value: non_empty_value,
-        })
+        Ok(Self { value })
     }
 }
 
@@ -80,7 +103,7 @@ impl Display for DatasetName {
     }
 }
 
-impl From<DatasetName> for NonEmptyString {
+impl From<DatasetName> for String {
     fn from(dataset: DatasetName) -> Self {
         dataset.value
     }
@@ -110,10 +133,10 @@ pub fn resolve_dataset_name(dataset: Option<&str>) -> &str {
     dataset.unwrap_or(CLP_DEFAULT_DATASET_NAME)
 }
 
-/// Mirror of `clp_py_utils.clp_metadata_db_utils.MYSQL_TABLE_NAME_MAX_LEN`. Must be kept in sync.
+/// The maximum number of characters in a MySQL table name.
 const MYSQL_TABLE_NAME_MAX_LEN: usize = 64;
 
-/// Mirror of `clp_py_utils.clp_metadata_db_utils.TABLE_SUFFIX_MAX_LEN`. Must be kept in sync.
+/// The length of the longest metadata table name suffix.
 const TABLE_SUFFIX_MAX_LEN: usize = "column_metadata".len();
 
 #[cfg(test)]
@@ -127,7 +150,7 @@ mod tests {
     use crate::clp_config::package::config::Database;
 
     #[test]
-    fn dataset_name_accepts_names_allowed_by_the_python_cli() {
+    fn dataset_name_accepts_underscores_letters_and_numbers() {
         for name in [
             "default",
             "my_dataset_01",
@@ -148,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn dataset_name_rejects_characters_rejected_by_the_python_cli() {
+    fn dataset_name_rejects_empty_names_and_other_characters() {
         for name in [
             "", "-", " ", "bad-name", "bad name", "bad.name", "bad`name", "e\u{301}", "a\u{345}",
         ] {
@@ -181,6 +204,50 @@ mod tests {
             name.parse::<DatasetName>(),
             Err(ParseDatasetNameError::InvalidCharacters(name))
         );
+    }
+
+    #[test]
+    fn dataset_name_encodes_in_msgpack_as_a_string() {
+        const NAME: &str = "my_dataset";
+        let dataset: DatasetName = NAME.parse().expect("name should be a valid dataset name");
+
+        assert_eq!(
+            rmp_serde::to_vec(&dataset).expect("dataset name should serialize"),
+            rmp_serde::to_vec(NAME).expect("string should serialize")
+        );
+        assert_eq!(
+            rmp_serde::to_vec(&Some(dataset.clone())).expect("dataset name should serialize"),
+            rmp_serde::to_vec(&Some(NAME.to_owned())).expect("string should serialize")
+        );
+        assert_eq!(
+            rmp_serde::to_vec(&None::<DatasetName>).expect("`None` should serialize"),
+            rmp_serde::to_vec(&None::<String>).expect("`None` should serialize")
+        );
+
+        let serialized = rmp_serde::to_vec(NAME).expect("string should serialize");
+        let deserialized: DatasetName =
+            rmp_serde::from_slice(&serialized).expect("dataset name should deserialize");
+        assert_eq!(deserialized, dataset);
+    }
+
+    #[test]
+    fn dataset_name_msgpack_deserialization_rejects_invalid_names() {
+        for name in [
+            String::new(),
+            "bad-name".to_owned(),
+            "a".repeat(DATASET_NAME_MAX_LEN + 1),
+        ] {
+            let serialized = rmp_serde::to_vec(&name).expect("string should serialize");
+            let error = rmp_serde::from_slice::<DatasetName>(&serialized)
+                .expect_err("an invalid dataset name should fail to deserialize");
+            let parse_error = name
+                .parse::<DatasetName>()
+                .expect_err("name should be an invalid dataset name");
+            assert!(
+                error.to_string().contains(&parse_error.to_string()),
+                "unexpected error: {error}"
+            );
+        }
     }
 
     #[test]

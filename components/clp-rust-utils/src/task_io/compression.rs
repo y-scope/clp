@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::clp_config::AwsAuthentication;
+use crate::dataset::DatasetName;
 use crate::types::ArchiveId;
 
 /// `clp-s` tuning and engine options for a compression job.
@@ -29,7 +30,7 @@ pub struct S3InputSource {
 /// Output of a compression task.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompressionTaskOutput {
-    pub dataset: Option<String>,
+    pub dataset: Option<DatasetName>,
     pub archives: Vec<ArchiveMetadata>,
 }
 
@@ -41,4 +42,59 @@ pub struct ArchiveMetadata {
     pub end_timestamp: i64,
     pub size: i64,
     pub uncompressed_size: i64,
+}
+
+#[cfg(test)]
+mod tests {
+    use serde::Serialize;
+
+    use super::ArchiveMetadata;
+    use super::CompressionTaskOutput;
+
+    #[derive(Serialize)]
+    struct UntypedCompressionTaskOutput {
+        dataset: Option<String>,
+        archives: Vec<ArchiveMetadata>,
+    }
+
+    #[test]
+    fn compression_task_output_deserialization_validates_the_dataset() {
+        let archives = vec![ArchiveMetadata {
+            id: "018e90e5-8b2a-4a61-a2fc-cac799936caf"
+                .parse()
+                .expect("valid UUID should parse"),
+            begin_timestamp: 0,
+            end_timestamp: 1,
+            size: 1,
+            uncompressed_size: 1,
+        }];
+
+        let serialized = rmp_serde::to_vec(&UntypedCompressionTaskOutput {
+            dataset: Some("my_dataset".to_owned()),
+            archives: archives.clone(),
+        })
+        .expect("compression task output should serialize");
+        let output: CompressionTaskOutput = rmp_serde::from_slice(&serialized)
+            .expect("compression task output with a valid dataset should deserialize");
+        assert_eq!(
+            output,
+            CompressionTaskOutput {
+                dataset: Some(
+                    "my_dataset"
+                        .parse()
+                        .expect("name should be a valid dataset name")
+                ),
+                archives: archives.clone(),
+            }
+        );
+
+        let serialized = rmp_serde::to_vec(&UntypedCompressionTaskOutput {
+            dataset: Some("bad-name".to_owned()),
+            archives,
+        })
+        .expect("compression task output should serialize");
+        rmp_serde::from_slice::<CompressionTaskOutput>(&serialized).expect_err(
+            "compression task output with an invalid dataset should fail to deserialize",
+        );
+    }
 }

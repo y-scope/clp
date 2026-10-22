@@ -15,6 +15,7 @@ use clp_rust_utils::clp_config::S3Config;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::dataset::resolve_dataset_name;
 use clp_rust_utils::s3::create_new_client;
 use clp_rust_utils::s3::generate_s3_url;
@@ -56,7 +57,7 @@ pub(super) fn compress(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
     clp_s_option: &ClpSCompressionOption,
-    dataset: Option<String>,
+    dataset: Option<DatasetName>,
     input_source: S3InputSource,
 ) -> anyhow::Result<CompressionTaskOutput> {
     let clp_home = clp_home();
@@ -98,9 +99,10 @@ pub(super) fn compress(
     let credential_env = s3_credential_env(&runtime, input_region, &aws_authentication)?;
 
     let s3_config = extract_s3_output_config(config)?;
+    let dataset_name = dataset.as_ref().map(DatasetName::as_str);
     let archive_dir = config
         .abs_archive_output_staging(clp_home)
-        .join(resolve_dataset_name(dataset.as_deref()));
+        .join(resolve_dataset_name(dataset_name));
 
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let indexer_bin = clp_binary_path(clp_home, "indexer");
@@ -131,7 +133,7 @@ pub(super) fn compress(
                 bucket: bucket.clone(),
                 key: config
                     .archive_output
-                    .dataset_archive_object_key(dataset.as_deref(), &archive.id)
+                    .dataset_archive_object_key(dataset_name, &archive.id)
                     .into_inner(),
                 indexer_bin: indexer_bin.clone(),
                 database: config.database.clone(),
@@ -234,7 +236,7 @@ struct ArchiveFinisher {
     key: String,
     indexer_bin: PathBuf,
     database: Database,
-    dataset: Option<String>,
+    dataset: Option<DatasetName>,
     local_path: PathBuf,
     archive_id: ArchiveId,
 }
@@ -263,7 +265,12 @@ impl ArchiveFinisher {
 
         let index_path = local_path.clone();
         let index = tokio::task::spawn_blocking(move || {
-            run_indexer(&indexer_bin, &database, dataset.as_deref(), &index_path)
+            run_indexer(
+                &indexer_bin,
+                &database,
+                dataset.as_ref().map(DatasetName::as_str),
+                &index_path,
+            )
         });
         let (upload_result, index_result) = tokio::join!(
             upload_file_to_s3(&client, &bucket, &key, &local_path),

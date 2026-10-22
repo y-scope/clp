@@ -1,5 +1,6 @@
 //! The compression tasks: the `#[task]` wrappers Spider invokes and their implementations.
 
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::CompressionTaskOutput;
 use clp_rust_utils::task_io::compression::S3InputSource;
@@ -14,7 +15,7 @@ mod compress;
 pub(crate) fn s3_compress_task(
     ctx: TaskContext,
     clp_s_option: ClpSCompressionOption,
-    dataset: Option<String>,
+    dataset: Option<DatasetName>,
     input_source: S3InputSource,
 ) -> Result<CompressionTaskOutput, TdlError> {
     compress::compress(

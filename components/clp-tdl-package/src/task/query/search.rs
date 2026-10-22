@@ -12,6 +12,7 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::dataset::resolve_dataset_name;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::s3::generate_s3_url;
@@ -46,7 +47,7 @@ pub(super) fn search(
     query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
     archive_id: ArchiveId,
-    dataset: Option<&str>,
+    dataset: Option<&DatasetName>,
     output_handle: &OutputHandle,
 ) -> anyhow::Result<()> {
     if StorageEngine::ClpS != config.package.storage_engine {
@@ -56,7 +57,7 @@ pub(super) fn search(
         anyhow::bail!("unsupported query output handler");
     };
 
-    let dataset = resolve_dataset_name(dataset);
+    let dataset = resolve_dataset_name(dataset.map(DatasetName::as_str));
 
     tracing::info!(
         job_id = % ctx.job_id,

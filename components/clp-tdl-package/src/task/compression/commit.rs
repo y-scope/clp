@@ -1,7 +1,5 @@
 //! The commit worker that publishes a compression job's archives to CLP's metadata store.
 
-use std::str::FromStr;
-
 use anyhow::Context;
 use clp_rust_utils::clp_config::package::credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
@@ -31,7 +29,6 @@ use crate::common::spider_task_executor_config;
 /// * No CLP compression job exists for `spider_job_id`.
 /// * The CLP compression job is in a state other than [`CompressionJobStatus::Running`] or
 ///   [`CompressionJobStatus::Succeeded`].
-/// * Forwards [`DatasetName::from_str`]'s return values on failure.
 /// * Forwards [`db_credentials_from_env`]'s return values on failure.
 /// * Forwards [`create_clp_db_mysql_pool`]'s return values on failure.
 /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
@@ -42,7 +39,7 @@ use crate::common::spider_task_executor_config;
 /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
 pub(super) async fn commit(
     spider_job_id: JobId,
-    dataset: Option<String>,
+    dataset: Option<DatasetName>,
     archives: Vec<ArchiveMetadata>,
 ) -> anyhow::Result<()> {
     tracing::info!(
@@ -55,11 +52,9 @@ pub(super) async fn commit(
     let total_uncompressed_size: i64 = archives.iter().map(|a| a.uncompressed_size).sum();
     let total_compressed_size: i64 = archives.iter().map(|a| a.size).sum();
 
-    // The dataset is interpolated into the table name (it cannot be bound), so guard against SQL
-    // injection by parsing it into a validated dataset name.
-    let dataset = dataset.as_deref().map(DatasetName::from_str).transpose()?;
-
     let config = spider_task_executor_config();
+    // The dataset is interpolated into the table name (it cannot be bound). This is safe from SQL
+    // injection because a `DatasetName` only contains underscores, letters, and numbers.
     let archives_table = config.database.archives_table_name(dataset.as_ref());
 
     let pool = create_clp_db_mysql_pool(&config.database, &db_credentials_from_env()?, 1)
@@ -239,35 +234,4 @@ fn db_credentials_from_env() -> anyhow::Result<credentials::Database> {
         user,
         password: SecretString::from(password),
     })
-}
-
-#[cfg(test)]
-mod tests {
-    //! Tests for the commit task's input validation.
-
-    use clp_rust_utils::dataset::ParseDatasetNameError;
-    use clp_rust_utils::task_io::compression::ArchiveMetadata;
-    use spider_core::types::id::JobId;
-
-    use super::commit;
-
-    #[tokio::test]
-    async fn commit_rejects_invalid_dataset_name() -> anyhow::Result<()> {
-        let archive = ArchiveMetadata {
-            id: "018e90e5-8b2a-4a61-a2fc-cac799936caf".parse()?,
-            begin_timestamp: 0,
-            end_timestamp: 1,
-            size: 1,
-            uncompressed_size: 1,
-        };
-
-        let error = commit(JobId::default(), Some("bad-name".to_owned()), vec![archive])
-            .await
-            .expect_err("an invalid dataset name should be rejected");
-        assert!(
-            error.downcast_ref::<ParseDatasetNameError>().is_some(),
-            "unexpected error: {error:?}"
-        );
-        Ok(())
-    }
 }
