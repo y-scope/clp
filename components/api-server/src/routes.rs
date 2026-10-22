@@ -386,7 +386,7 @@ mod tests {
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
     /// status integer codes on success. No real database is needed.
-    fn test_app() -> axum::Router {
+    fn compression_usage_test_app() -> axum::Router {
         axum::Router::new().route(
             "/usage/compression",
             get(|Query(params): Query<CompressionUsageParams>| async move {
@@ -423,8 +423,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn reject_begin_greater_than_end() {
-        let app = test_app();
+    async fn reject_begin_greater_than_end() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -432,19 +432,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=200&\
                          time_range_end_millisecs=100",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(body.contains("time_range_begin_millisecs must be <= time_range_end_millisecs"));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_unknown_job_status() {
-        let app = test_app();
+    async fn reject_unknown_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -452,19 +451,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=UNKNOWN",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(body.contains("Unknown job_status: UNKNOWN"));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_lowercase_job_status() {
-        let app = test_app();
+    async fn accept_lowercase_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -472,19 +470,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=succeeded",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2]"); // succeeded → 2
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_valid_params_with_defaults() {
-        let app = test_app();
+    async fn accept_valid_params_with_defaults() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -492,19 +489,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2,3,4]"); // SUCCEEDED, FAILED, KILLED
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_comma_separated_job_status() {
-        let app = test_app();
+    async fn accept_comma_separated_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -512,19 +508,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=SUCCEEDED,RUNNING",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2,1]"); // SUCCEEDED, RUNNING
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_spaces_around_commas() {
-        let app = test_app();
+    async fn accept_spaces_around_commas() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -532,19 +527,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=SUCCEEDED%2C+FAILED",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2,3]"); // SUCCEEDED, FAILED
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_trailing_comma() {
-        let app = test_app();
+    async fn accept_trailing_comma() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -552,19 +546,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=SUCCEEDED,",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2]"); // trailing comma ignored
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_single_job_status() {
-        let app = test_app();
+    async fn accept_single_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -572,39 +565,37 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=KILLED",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[4]");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_missing_time_range_begin_millisecs() {
-        let app = test_app();
+    async fn reject_missing_time_range_begin_millisecs() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
                     .uri("/usage/compression?time_range_end_millisecs=100")
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("time_range_begin_millisecs") || body.contains("deserialize"),
             "expected error about missing time_range_begin_millisecs, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_empty_job_status() {
-        let app = test_app();
+    async fn reject_empty_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -612,22 +603,21 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("at least one valid status"),
             "expected error about empty job_status, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_zero_limit() {
-        let app = test_app();
+    async fn reject_zero_limit() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -635,22 +625,21 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&limit=0",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("limit must be > 0"),
             "expected error about limit, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_negative_limit() {
-        let app = test_app();
+    async fn reject_negative_limit() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -658,22 +647,21 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&limit=-1",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("limit must be > 0"),
             "expected error about limit, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_duplicate_job_status() {
-        let app = test_app();
+    async fn reject_duplicate_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -681,17 +669,16 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=SUCCEEDED,SUCCEEDED",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("Duplicate job_status"),
             "expected error about duplicate job_status, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
