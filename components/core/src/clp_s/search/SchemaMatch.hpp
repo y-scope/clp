@@ -611,6 +611,18 @@ private:
     );
 
     /**
+     * Determines whether a NEXISTS filter on `column` can hold for records of `schema_id`: either
+     * the schema has no node for the column, or the column resolved to an unstructured array in
+     * the schema with tokens left unresolved, so the array must be scanned for the remaining keys.
+     * @param column
+     * @param schema_id
+     * @return Whether `schema_id` must be searched for the NEXISTS filter.
+     */
+    [[nodiscard]] auto
+    is_nexists_candidate_schema(ast::ColumnDescriptor const& column, int32_t schema_id) const
+            -> bool;
+
+    /**
      * Splits an expression into one expression per schema it searches against. Each filter is
      * split by `split_filter_for_schema`; a `NarrowSchemasExpr` becomes the constant true in every
      * schema it holds for.

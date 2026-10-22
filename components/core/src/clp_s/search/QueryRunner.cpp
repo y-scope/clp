@@ -695,14 +695,27 @@ bool QueryRunner::evaluate_array_filter(
     auto obj = m_array_parser.iterate(value);
     simdjson::ondemand::array array = obj.get_array();
 
+    if (FilterOperation::NEXISTS == op) {
+        m_maybe_string = false;
+        m_maybe_number = false;
+        return false
+               == evaluate_array_filter_array(
+                       array,
+                       FilterOperation::EXISTS,
+                       unresolved_tokens,
+                       0,
+                       operand
+               );
+    }
+
     // pre-evaluate whether we can match strings or numbers to eliminate
     // duplicate effort on every item
-    m_maybe_string = !(op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS)
+    m_maybe_string = op != FilterOperation::EXISTS
                      && (operand->as_var_string(m_array_search_string, op)
                          || operand->as_clp_string(m_array_search_string, op));
     double tmp_double;
     int64_t tmp_int;
-    m_maybe_number = !(op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS)
+    m_maybe_number = op != FilterOperation::EXISTS
                      && (operand->as_float(tmp_double, op) || operand->as_int(tmp_int, op));
 
     return evaluate_array_filter_array(array, op, unresolved_tokens, 0, operand);
@@ -1229,7 +1242,8 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
              || filter->get_operation() == FilterOperation::NEXISTS)
             && (!filter->get_column()->has_unresolved_tokens()
                 || filter->get_column()->is_pure_wildcard()
-                || !filter->get_column()->matches_exactly(LiteralType::ArrayT)))
+                || !filter->get_column()->matches_exactly(LiteralType::ArrayT)
+                || false == filter->get_column()->is_bound()))
         {
             // semantics of previous passes means that EXISTS and NEXISTS are
             // trivially matching

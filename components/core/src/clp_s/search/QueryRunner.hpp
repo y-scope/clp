@@ -304,12 +304,13 @@ private:
     ) -> bool;
 
     /**
-     * Evaluates an array filter expression
+     * Evaluates an array filter expression against an unstructured array. A NEXISTS filter holds
+     * when no element of the array contains the path given by `unresolved_tokens`.
      * @param op
      * @param unresolved_tokens
      * @param value
      * @param operand
-     * @return true if the expression evaluates to true, false otherwise
+     * @return Whether the expression evaluates to true.
      */
     auto evaluate_array_filter(
             ast::FilterOperation op,

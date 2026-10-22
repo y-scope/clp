@@ -277,6 +277,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "Msg 6: \tAbc123")aa", {6}},
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(arr.b > 1000)aa", {7, 8}},
+            {R"aa(NOT arr.b: *)aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13}},
+            {R"aa(NOT arr.a: *)aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13}},
             {R"aa(var_string: *)aa", {9}},
             {R"aa(clp_string: *)aa", {9}},
             {fmt::format(

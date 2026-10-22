@@ -628,10 +628,14 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
             m_matched_schema_ids.insert(schema);
 
             for (auto const* column : columns) {
-                if (false == column->is_pure_wildcard()) {
-                    m_schema_to_searched_columns[schema].insert(
-                            column->resolved_nodes().schema_to_node_id.at(schema)
-                    );
+                if (column->is_pure_wildcard()) {
+                    continue;
+                }
+                auto const& schema_to_node_id{column->resolved_nodes().schema_to_node_id};
+                if (auto const node_id_it{schema_to_node_id.find(schema)};
+                    schema_to_node_id.end() != node_id_it)
+                {
+                    m_schema_to_searched_columns[schema].insert(node_id_it->second);
                 }
             }
         }
@@ -694,19 +698,15 @@ auto SchemaMatch::intersect_and_sub_expr(
                 return false;
             } else if (first /*&& op == FilterOperation::NEXISTS */) {
                 for (auto& schema : *m_schemas) {
-                    if (0 == cur_schemas.count(schema.first)) {
+                    if (is_nexists_candidate_schema(*column, schema.first)) {
                         common_schema.insert(schema.first);
                     }
                 }
                 return false;
             } else if (op == FilterOperation::NEXISTS) {
-                std::set<int32_t> intersection;
-                for (int32_t schema : common_schema) {
-                    if (0 == cur_schemas.count(schema)) {
-                        intersection.insert(schema);
-                    }
-                }
-                common_schema = intersection;
+                std::erase_if(common_schema, [&](int32_t const schema_id) -> bool {
+                    return false == is_nexists_candidate_schema(*column, schema_id);
+                });
             } else {
                 std::set<int32_t> intersection;
                 for (int32_t schema : common_schema) {
@@ -719,6 +719,19 @@ auto SchemaMatch::intersect_and_sub_expr(
         }
     }
     return first;
+}
+
+auto SchemaMatch::is_nexists_candidate_schema(
+        ast::ColumnDescriptor const& column,
+        int32_t schema_id
+) const -> bool {
+    auto const& schema_to_node_id{column.resolved_nodes().schema_to_node_id};
+    auto const node_id_it{schema_to_node_id.find(schema_id)};
+    if (schema_to_node_id.end() == node_id_it) {
+        return true;
+    }
+    return column.has_unresolved_tokens()
+           && NodeType::UnstructuredArray == m_tree->get_node(node_id_it->second).get_type();
 }
 
 auto SchemaMatch::compute_candidate_types(
