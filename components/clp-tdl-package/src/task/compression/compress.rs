@@ -16,7 +16,6 @@ use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::dataset::DatasetName;
-use clp_rust_utils::dataset::resolve_dataset_name;
 use clp_rust_utils::s3::create_new_client;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
@@ -57,7 +56,7 @@ pub(super) fn compress(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
     clp_s_option: &ClpSCompressionOption,
-    dataset: Option<DatasetName>,
+    dataset: DatasetName,
     input_source: S3InputSource,
 ) -> anyhow::Result<CompressionTaskOutput> {
     let clp_home = clp_home();
@@ -99,10 +98,9 @@ pub(super) fn compress(
     let credential_env = s3_credential_env(&runtime, input_region, &aws_authentication)?;
 
     let s3_config = extract_s3_output_config(config)?;
-    let dataset_name = dataset.as_ref().map(DatasetName::as_str);
     let archive_dir = config
         .abs_archive_output_staging(clp_home)
-        .join(resolve_dataset_name(dataset_name));
+        .join(dataset.as_str());
 
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let indexer_bin = clp_binary_path(clp_home, "indexer");
@@ -133,7 +131,7 @@ pub(super) fn compress(
                 bucket: bucket.clone(),
                 key: config
                     .archive_output
-                    .dataset_archive_object_key(dataset_name, &archive.id)
+                    .dataset_archive_object_key(&dataset, &archive.id)
                     .into_inner(),
                 indexer_bin: indexer_bin.clone(),
                 database: config.database.clone(),
@@ -236,7 +234,7 @@ struct ArchiveFinisher {
     key: String,
     indexer_bin: PathBuf,
     database: Database,
-    dataset: Option<DatasetName>,
+    dataset: DatasetName,
     local_path: PathBuf,
     archive_id: ArchiveId,
 }
@@ -265,12 +263,7 @@ impl ArchiveFinisher {
 
         let index_path = local_path.clone();
         let index = tokio::task::spawn_blocking(move || {
-            run_indexer(
-                &indexer_bin,
-                &database,
-                dataset.as_ref().map(DatasetName::as_str),
-                &index_path,
-            )
+            run_indexer(&indexer_bin, &database, &dataset, &index_path)
         });
         let (upload_result, index_result) = tokio::join!(
             upload_file_to_s3(&client, &bucket, &key, &local_path),
@@ -582,7 +575,7 @@ async fn upload_file_to_s3(
 /// The ordered `indexer` arguments.
 fn build_indexer_args(
     database: &Database,
-    dataset: Option<&str>,
+    dataset: &DatasetName,
     archive_path: &Path,
 ) -> Vec<OsString> {
     vec![
@@ -597,7 +590,7 @@ fn build_indexer_args(
         OsString::from(&database.names.clp),
         OsString::from("--db-table-prefix"),
         OsString::from(&database.table_prefix),
-        OsString::from(resolve_dataset_name(dataset)),
+        OsString::from(dataset.as_str()),
         archive_path.as_os_str().to_os_string(),
     ]
 }
@@ -617,7 +610,7 @@ fn build_indexer_args(
 fn run_indexer(
     indexer_bin: &Path,
     database: &Database,
-    dataset: Option<&str>,
+    dataset: &DatasetName,
     archive_path: &Path,
 ) -> anyhow::Result<()> {
     let status = Command::new(indexer_bin)
@@ -824,6 +817,7 @@ mod tests {
     use clp_rust_utils::clp_config::AwsAuthentication;
     use clp_rust_utils::clp_config::package::config::ClpDbNames;
     use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::task_io::compression::ArchiveMetadata;
     use clp_rust_utils::task_io::compression::ClpSCompressionOption;
     use clp_rust_utils::task_io::compression::S3InputSource;
@@ -1013,7 +1007,11 @@ mod tests {
         };
 
         assert_eq!(
-            build_indexer_args(&database, None, Path::new("/archives/abc")),
+            build_indexer_args(
+                &database,
+                &DatasetName::default(),
+                Path::new("/archives/abc")
+            ),
             vec![
                 OsString::from("--db-type"),
                 OsString::from("mysql"),

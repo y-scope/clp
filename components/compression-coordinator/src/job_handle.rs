@@ -48,7 +48,7 @@ pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
 
     input_config: InputConfig,
     clp_s_compression_option: ClpSCompressionOption,
-    dataset: Option<DatasetName>,
+    dataset: DatasetName,
     target_archive_size: u64,
 
     spider_option: Arc<SpiderOption>,
@@ -85,16 +85,13 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         else {
             return Err(Error::UnsupportedInputConfig);
         };
-        let dataset = s3_object_metadata_config
-            .dataset
-            .as_ref()
-            .map(|dataset_name| {
-                dataset_name
-                    .as_str()
-                    .parse::<DatasetName>()
-                    .map_err(|_| Error::InvalidDataset(dataset_name.as_str().to_owned()))
-            })
-            .transpose()?;
+        let dataset = match &s3_object_metadata_config.dataset {
+            Some(dataset_name) => dataset_name
+                .as_str()
+                .parse::<DatasetName>()
+                .map_err(|_| Error::InvalidDataset(dataset_name.to_string()))?,
+            None => DatasetName::default(),
+        };
 
         let output_config = clp_io_config.output;
         let clp_s_compression_option = ClpSCompressionOption {
@@ -395,10 +392,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::MetadataTableCreation`] if either table cannot be created.
     async fn upsert_metadata_tables(&self) -> Result<(), Error> {
-        let archives_table = self.db_config.archives_table_name(self.dataset.as_ref());
-        let column_metadata_table = self
-            .db_config
-            .column_metadata_table_name(self.dataset.as_ref());
+        let archives_table = self.db_config.archives_table_name(&self.dataset);
+        let column_metadata_table = self.db_config.column_metadata_table_name(&self.dataset);
 
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS `{archives_table}` (
@@ -642,7 +637,7 @@ mod tests {
             _compression_job_id: CompressionJobId,
             _resource_group_id: ResourceGroupId,
             _clp_s_option: ClpSCompressionOption,
-            _dataset: Option<DatasetName>,
+            _dataset: DatasetName,
             _input_sources: Vec<(S3InputSource, ExecutionPolicy)>,
             _commit_task_execution_policy: ExecutionPolicy,
         ) -> Result<SpiderJobId, Error> {

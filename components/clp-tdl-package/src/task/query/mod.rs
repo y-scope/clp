@@ -16,7 +16,7 @@ pub(crate) fn clp_s_search_task(
     ctx: TaskContext,
     query_job_id: QueryJobId,
     clp_s_query_option: ClpSQueryOption,
-    dataset: Option<DatasetName>,
+    dataset: DatasetName,
     archive_id: ArchiveId,
     output_handle: OutputHandle,
 ) -> Result<(), TdlError> {
@@ -26,7 +26,7 @@ pub(crate) fn clp_s_search_task(
         query_job_id,
         &clp_s_query_option,
         archive_id,
-        dataset.as_ref(),
+        &dataset,
         &output_handle,
     )
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))

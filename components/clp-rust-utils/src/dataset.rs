@@ -33,6 +33,22 @@ impl DatasetName {
     pub const fn as_str(&self) -> &str {
         self.value.as_str()
     }
+
+    /// # Returns
+    ///
+    /// Whether the dataset name is [`CLP_DEFAULT_DATASET_NAME`].
+    #[must_use]
+    pub fn is_default(&self) -> bool {
+        self.value == CLP_DEFAULT_DATASET_NAME
+    }
+}
+
+impl Default for DatasetName {
+    fn default() -> Self {
+        Self {
+            value: CLP_DEFAULT_DATASET_NAME.to_owned(),
+        }
+    }
 }
 
 impl FromStr for DatasetName {
@@ -76,6 +92,14 @@ impl TryFrom<String> for DatasetName {
     }
 }
 
+impl TryFrom<Option<String>> for DatasetName {
+    type Error = ParseDatasetNameError;
+
+    fn try_from(value: Option<String>) -> Result<Self, Self::Error> {
+        value.map_or_else(|| Ok(Self::default()), Self::try_from)
+    }
+}
+
 impl Display for DatasetName {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         self.value.fmt(formatter)
@@ -107,14 +131,6 @@ pub enum ParseDatasetNameError {
     TooLong(String),
 }
 
-/// # Returns
-///
-/// `dataset` when set, otherwise the `CLP_S` default dataset name [`CLP_DEFAULT_DATASET_NAME`].
-#[must_use]
-pub fn resolve_dataset_name(dataset: Option<&str>) -> &str {
-    dataset.unwrap_or(CLP_DEFAULT_DATASET_NAME)
-}
-
 /// The maximum number of characters in a dataset name.
 ///
 /// The bound ensures that the longest metadata table name, `<table prefix><dataset>_<longest
@@ -135,7 +151,6 @@ mod tests {
     use super::DATASET_NAME_MAX_LEN;
     use super::DatasetName;
     use super::ParseDatasetNameError;
-    use super::resolve_dataset_name;
 
     #[test]
     fn dataset_name_accepts_underscores_letters_and_numbers() {
@@ -195,14 +210,6 @@ mod tests {
             rmp_serde::to_vec(&dataset).expect("dataset name should serialize"),
             rmp_serde::to_vec(NAME).expect("string should serialize")
         );
-        assert_eq!(
-            rmp_serde::to_vec(&Some(dataset.clone())).expect("dataset name should serialize"),
-            rmp_serde::to_vec(&Some(NAME.to_owned())).expect("string should serialize")
-        );
-        assert_eq!(
-            rmp_serde::to_vec(&None::<DatasetName>).expect("`None` should serialize"),
-            rmp_serde::to_vec(&None::<String>).expect("`None` should serialize")
-        );
 
         let serialized = rmp_serde::to_vec(NAME).expect("string should serialize");
         let deserialized: DatasetName =
@@ -231,12 +238,45 @@ mod tests {
     }
 
     #[test]
-    fn resolve_dataset_name_passes_through_some() {
-        assert_eq!(resolve_dataset_name(Some("mydataset")), "mydataset");
+    fn dataset_name_from_option_defaults_none_and_validates_some() {
+        assert_eq!(
+            DatasetName::try_from(None).map(String::from),
+            Ok(CLP_DEFAULT_DATASET_NAME.to_owned())
+        );
+        assert_eq!(
+            DatasetName::try_from(Some("my_dataset".to_owned())).map(String::from),
+            Ok("my_dataset".to_owned())
+        );
+        assert_eq!(
+            DatasetName::try_from(Some("bad-name".to_owned())),
+            Err(ParseDatasetNameError::InvalidCharacters(
+                "bad-name".to_owned()
+            ))
+        );
     }
 
     #[test]
-    fn resolve_dataset_name_defaults_none_to_default() {
-        assert_eq!(resolve_dataset_name(None), CLP_DEFAULT_DATASET_NAME);
+    fn is_default_is_true_only_for_the_default_dataset_name() {
+        assert!(DatasetName::default().is_default());
+        assert!(
+            CLP_DEFAULT_DATASET_NAME
+                .parse::<DatasetName>()
+                .expect("the default name should be a valid dataset name")
+                .is_default()
+        );
+        assert!(
+            !"my_dataset"
+                .parse::<DatasetName>()
+                .expect("name should be a valid dataset name")
+                .is_default()
+        );
+    }
+
+    #[test]
+    fn default_dataset_name_encodes_in_msgpack_as_the_default_string() {
+        assert_eq!(
+            rmp_serde::to_vec(&DatasetName::default()).expect("dataset name should serialize"),
+            rmp_serde::to_vec(CLP_DEFAULT_DATASET_NAME).expect("string should serialize")
+        );
     }
 }

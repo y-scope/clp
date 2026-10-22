@@ -30,7 +30,7 @@ pub struct S3InputSource {
 /// Output of a compression task.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompressionTaskOutput {
-    pub dataset: Option<DatasetName>,
+    pub dataset: DatasetName,
     pub archives: Vec<ArchiveMetadata>,
 }
 
@@ -53,7 +53,7 @@ mod tests {
 
     #[derive(Serialize)]
     struct UntypedCompressionTaskOutput {
-        dataset: Option<String>,
+        dataset: String,
         archives: Vec<ArchiveMetadata>,
     }
 
@@ -70,7 +70,7 @@ mod tests {
         }];
 
         let serialized = rmp_serde::to_vec(&UntypedCompressionTaskOutput {
-            dataset: Some("my_dataset".to_owned()),
+            dataset: "my_dataset".to_owned(),
             archives: archives.clone(),
         })
         .expect("compression task output should serialize");
@@ -79,17 +79,15 @@ mod tests {
         assert_eq!(
             output,
             CompressionTaskOutput {
-                dataset: Some(
-                    "my_dataset"
-                        .parse()
-                        .expect("name should be a valid dataset name")
-                ),
+                dataset: "my_dataset"
+                    .parse()
+                    .expect("name should be a valid dataset name"),
                 archives: archives.clone(),
             }
         );
 
         let serialized = rmp_serde::to_vec(&UntypedCompressionTaskOutput {
-            dataset: Some("bad-name".to_owned()),
+            dataset: "bad-name".to_owned(),
             archives,
         })
         .expect("compression task output should serialize");

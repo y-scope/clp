@@ -60,7 +60,7 @@ pub trait S3CompressionJobSubmitter: Clone + Send + Sync {
         compression_job_id: CompressionJobId,
         resource_group_id: ResourceGroupId,
         clp_s_option: ClpSCompressionOption,
-        dataset: Option<DatasetName>,
+        dataset: DatasetName,
         input_sources: Vec<(S3InputSource, ExecutionPolicy)>,
         commit_task_execution_policy: ExecutionPolicy,
     ) -> Result<JobId, Error>;

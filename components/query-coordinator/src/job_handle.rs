@@ -684,7 +684,7 @@ impl ArchiveSelector<'_> {
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_archives(&self, dataset: &DatasetName) -> Result<Vec<ArchiveMetadata>, Error> {
-        let archives_table = self.context.db_config.archives_table_name(Some(dataset));
+        let archives_table = self.context.db_config.archives_table_name(dataset);
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
             "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
         ));
@@ -712,7 +712,7 @@ impl ArchiveSelector<'_> {
             .into_iter()
             .map(|row| ArchiveMetadata {
                 id: row.id,
-                dataset: Some(dataset.clone()),
+                dataset: dataset.clone(),
                 uncompressed_size: row.uncompressed_size,
                 end_timestamp: row.end_timestamp,
             })

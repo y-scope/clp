@@ -24,8 +24,8 @@ pub struct ArchiveMetadata {
     /// The archive's ID.
     pub id: ArchiveId,
 
-    /// The archive's dataset, or `None` for the default dataset.
-    pub dataset: Option<DatasetName>,
+    /// The archive's dataset.
+    pub dataset: DatasetName,
 
     /// The archive's uncompressed size in bytes.
     pub uncompressed_size: u64,

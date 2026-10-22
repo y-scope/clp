@@ -758,10 +758,7 @@ impl Client {
         let dataset = dataset_name
             .parse::<DatasetName>()
             .map_err(|_| ClientError::InvalidDatasetName)?;
-        let table_name = self
-            .config
-            .database
-            .column_metadata_table_name(Some(&dataset));
+        let table_name = self.config.database.column_metadata_table_name(&dataset);
         let names: Vec<String> =
             sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
                 .bind(TIMESTAMP_NODE_TYPE)

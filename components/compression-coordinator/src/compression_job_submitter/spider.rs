@@ -44,7 +44,7 @@ impl S3CompressionJobSubmitter for SpiderClient {
         compression_job_id: CompressionJobId,
         resource_group_id: ResourceGroupId,
         clp_s_option: ClpSCompressionOption,
-        dataset: Option<DatasetName>,
+        dataset: DatasetName,
         input_sources: Vec<(S3InputSource, ExecutionPolicy)>,
         commit_task_execution_policy: ExecutionPolicy,
     ) -> Result<JobId, Error> {
@@ -77,7 +77,7 @@ impl S3CompressionJobSubmitter for SpiderClient {
                         "ClpSCompressionOption",
                     )?),
                     DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        "Option<DatasetName>",
+                        "DatasetName",
                     )?),
                     DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
                         "S3InputSource",

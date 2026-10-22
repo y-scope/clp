@@ -10,7 +10,6 @@ use serde::Deserialize;
 use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
 use crate::dataset::DatasetName;
-use crate::dataset::resolve_dataset_name;
 use crate::types::ArchiveId;
 use crate::types::non_empty_string::ExpectedNonEmpty;
 
@@ -173,24 +172,16 @@ impl Database {
     ///
     /// The archives table name (`<prefix><dataset>_archives`).
     #[must_use]
-    pub fn archives_table_name(&self, dataset: Option<&DatasetName>) -> String {
-        format!(
-            "{}{}_archives",
-            self.table_prefix,
-            resolve_dataset_name(dataset.map(DatasetName::as_str))
-        )
+    pub fn archives_table_name(&self, dataset: &DatasetName) -> String {
+        format!("{}{dataset}_archives", self.table_prefix)
     }
 
     /// # Returns
     ///
     /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
     #[must_use]
-    pub fn column_metadata_table_name(&self, dataset: Option<&DatasetName>) -> String {
-        format!(
-            "{}{}_column_metadata",
-            self.table_prefix,
-            resolve_dataset_name(dataset.map(DatasetName::as_str))
-        )
+    pub fn column_metadata_table_name(&self, dataset: &DatasetName) -> String {
+        format!("{}{dataset}_column_metadata", self.table_prefix)
     }
 
     /// # Returns
@@ -385,15 +376,15 @@ impl ArchiveOutput {
     /// # Returns
     ///
     /// The dataset's storage base (`s3_config.key_prefix` for S3, `directory` for `Fs`) joined with
-    /// `dataset`, where a `None` dataset resolves to `default`.
+    /// `dataset`.
     #[must_use]
-    pub fn dataset_archive_storage_directory(&self, dataset: Option<&str>) -> String {
+    pub fn dataset_archive_storage_directory(&self, dataset: &DatasetName) -> String {
         let base = match &self.storage {
             ArchiveOutputStorage::Fs { directory } => directory.as_str(),
             ArchiveOutputStorage::S3 { s3_config, .. } => s3_config.key_prefix.as_str(),
         };
         Path::new(base)
-            .join(resolve_dataset_name(dataset))
+            .join(dataset.as_str())
             .to_string_lossy()
             .into_owned()
     }
@@ -402,8 +393,7 @@ impl ArchiveOutput {
     ///
     /// # Returns
     ///
-    /// The dataset's archive storage directory joined with `archive_id`, where a `None` dataset
-    /// resolves to `default`.
+    /// The dataset's archive storage directory joined with `archive_id`.
     ///
     /// # Panics
     ///
@@ -412,7 +402,7 @@ impl ArchiveOutput {
     #[must_use]
     pub fn dataset_archive_object_key(
         &self,
-        dataset: Option<&str>,
+        dataset: &DatasetName,
         archive_id: &ArchiveId,
     ) -> NonEmptyString {
         NonEmptyString::from_string(format!(
@@ -629,6 +619,7 @@ mod tests {
     use super::Database;
     use super::LogsInput;
     use super::SpiderTaskExecutorConfig;
+    use crate::dataset::DatasetName;
 
     #[test]
     fn deserialize_logs_input_s3_config() {
@@ -716,13 +707,16 @@ mod tests {
             },
             ..ArchiveOutput::default()
         };
+        let dataset: DatasetName = "mydataset"
+            .parse()
+            .expect("name should be a valid dataset name");
 
         assert_eq!(
-            archive_output.dataset_archive_storage_directory(Some("mydataset")),
+            archive_output.dataset_archive_storage_directory(&dataset),
             "/var/data/archives/mydataset"
         );
         assert_eq!(
-            archive_output.dataset_archive_storage_directory(None),
+            archive_output.dataset_archive_storage_directory(&DatasetName::default()),
             "/var/data/archives/default"
         );
     }
@@ -749,13 +743,16 @@ mod tests {
             },
             ..ArchiveOutput::default()
         };
+        let dataset: DatasetName = "mydataset"
+            .parse()
+            .expect("name should be a valid dataset name");
 
         assert_eq!(
-            archive_output.dataset_archive_storage_directory(Some("mydataset")),
+            archive_output.dataset_archive_storage_directory(&dataset),
             "prefix/mydataset"
         );
         assert_eq!(
-            archive_output.dataset_archive_storage_directory(None),
+            archive_output.dataset_archive_storage_directory(&DatasetName::default()),
             "prefix/default"
         );
     }
@@ -785,16 +782,19 @@ mod tests {
             },
             ..ArchiveOutput::default()
         };
+        let dataset: DatasetName = "mydataset"
+            .parse()
+            .expect("name should be a valid dataset name");
 
         assert_eq!(
             archive_output
-                .dataset_archive_object_key(None, &archive_id)
+                .dataset_archive_object_key(&DatasetName::default(), &archive_id)
                 .as_str(),
             format!("LIB1/default/{ARCHIVE_ID}")
         );
         assert_eq!(
             archive_output
-                .dataset_archive_object_key(Some("mydataset"), &archive_id)
+                .dataset_archive_object_key(&dataset, &archive_id)
                 .as_str(),
             format!("LIB1/mydataset/{ARCHIVE_ID}")
         );
