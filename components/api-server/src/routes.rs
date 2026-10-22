@@ -366,13 +366,22 @@ impl IntoResponse for HandlerError {
 #[cfg(test)]
 mod tests {
     use axum::body::Body;
+    use axum::http::Method;
     use axum::http::Request;
     use axum::http::StatusCode;
+    use axum::routing::delete;
     use axum::routing::get;
+    use clp_rust_utils::job_config::QueryJobStatus;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     use super::*;
+    use crate::client::should_request_cancellation;
+
+    #[derive(Deserialize)]
+    struct JobStatusParams {
+        status: QueryJobStatus,
+    }
 
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
@@ -385,6 +394,21 @@ mod tests {
                 let codes: Vec<i32> = validated.job_statuses.into_iter().map(i32::from).collect();
                 Ok::<_, HandlerError>(axum::Json(codes))
             }),
+        )
+    }
+
+    /// Builds a minimal Axum app that resolves query job cancellation requests via
+    /// [`should_request_cancellation`] for the job status given in the query params, and returns
+    /// [`StatusCode::OK`] on success. No real database is needed.
+    fn cancel_query_test_app() -> axum::Router {
+        axum::Router::new().route(
+            "/query/{query_job_id}",
+            delete(
+                |Path(query_job_id): Path<u64>, Query(params): Query<JobStatusParams>| async move {
+                    should_request_cancellation(query_job_id, params.status)?;
+                    Ok::<_, HandlerError>(StatusCode::OK)
+                },
+            ),
         )
     }
 
@@ -668,5 +692,53 @@ mod tests {
             body.contains("Duplicate job_status"),
             "expected error about duplicate job_status, got: {body}"
         );
+    }
+
+    #[tokio::test]
+    async fn cancel_query_returns_conflict_if_job_terminated() -> anyhow::Result<()> {
+        for status in ["Succeeded", "Failed", "Killed"] {
+            let response = cancel_query_test_app()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::DELETE)
+                        .uri(format!("/query/1?status={status}"))
+                        .body(Body::empty())?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::CONFLICT, "status: {status}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cancel_query_returns_ok_if_cancellation_already_requested() -> anyhow::Result<()> {
+        for status in ["CancelRequested", "Cancelling", "Cancelled"] {
+            let response = cancel_query_test_app()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::DELETE)
+                        .uri(format!("/query/1?status={status}"))
+                        .body(Body::empty())?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::OK, "status: {status}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cancel_query_returns_ok_if_job_pending_or_running() -> anyhow::Result<()> {
+        for status in ["Pending", "Running"] {
+            let response = cancel_query_test_app()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::DELETE)
+                        .uri(format!("/query/1?status={status}"))
+                        .body(Body::empty())?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::OK, "status: {status}");
+        }
+        Ok(())
     }
 }
