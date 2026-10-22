@@ -3,23 +3,21 @@
 //! The coordinator is responsible for the query jobs in the `query_jobs` table that are in one of
 //! the following states:
 //!
-//! | `status`   | `spider_id` | `dispatch_time` | Description                                   |
-//! |------------|-------------|-----------------|-----------------------------------------------|
-//! | PENDING    | NULL        | NULL            | New jobs awaiting dispatch.                   |
-//! | PENDING    | NULL        | NOT NULL        | Jobs dispatched, not yet submitted to Spider. |
-//! | RUNNING    | NOT NULL    | NOT NULL        | Jobs submitted to Spider.                     |
-//! | CANCELLING | ANY         | ANY             | Jobs the API server has requested to cancel.  |
+//! | `status`             | `spider_id` | `dispatch_time` | Description                     |
+//! |----------------------|-------------|-----------------|---------------------------------|
+//! | `PENDING`            | NULL        | NULL            | New jobs awaiting dispatch.     |
+//! | `PENDING`            | NULL        | NOT NULL        | Dispatched, not yet submitted.  |
+//! | `RUNNING`            | NOT NULL    | NOT NULL        | Submitted to Spider.            |
+//! | `CANCEL_REQUESTED`   | ANY         | ANY             | Requested to cancel.            |
+//! | `CANCELLING`         | NOT NULL    | NOT NULL        | Cancellation relayed to Spider. |
 //!
 //! NOTE:
 //!
 //! * These are the only legal states for a job that hasn't terminated.
 //! * A non-NULL `dispatch_time` indicates that the coordinator has picked up the job and granted it
 //!   permission to run under the concurrency limit.
-//! * CANCELLING is non-terminal and is reachable from both PENDING and RUNNING.
-//!
-//! TODO: Handle CANCELLING jobs in the coordinator: a background coroutine that cancels the Spider
-//! job of any job sitting in CANCELLING, and a restart sweep that drives CANCELLING jobs to
-//! CANCELLED.
+//! * `CANCEL_REQUESTED` is non-terminal and is reachable from both `PENDING` and `RUNNING`.
+//! * `CANCELLING` is non-terminal and is reachable only from `CANCEL_REQUESTED`.
 
 use std::num::NonZeroU64;
 use std::sync::Arc;
@@ -43,11 +41,13 @@ use spider_core::types::id::ResourceGroupId;
 use spider_core::types::resource_group::ExternalResourceGroupCredentials;
 use tokio::select;
 use tokio::sync::Semaphore;
+use tokio::task::JoinHandle;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Endpoint;
 
 use crate::Error;
+use crate::cancellation_monitor::CancellationMonitor;
 use crate::job_handle::ArchiveSelectionOptions;
 use crate::job_handle::QueryJobHandle;
 use crate::job_handle::QueryJobHandleContext;
@@ -63,6 +63,7 @@ pub struct Coordinator {
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
+    cancellation_monitor_handle: JoinHandle<()>,
     job_handler_sem: Arc<Semaphore>,
 }
 
@@ -70,8 +71,8 @@ impl Coordinator {
     /// Factory function.
     ///
     /// On construction, this recovers query jobs that a previous coordinator instance had already
-    /// submitted to Spider (those still [`QueryJobStatus::Running`] with a Spider job ID) by
-    /// spawning a detached handle to drive each one to completion.
+    /// submitted to Spider (those still non-terminal with a Spider job ID) by spawning a detached
+    /// handle to drive each one to completion.
     ///
     /// # Returns
     ///
@@ -89,6 +90,7 @@ impl Coordinator {
     /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
     /// * Forwards [`ExternalResourceGroupCredentials::from_env`]'s return values on failure.
     /// * Forwards [`SpiderClient::add_or_verify_resource_group`]'s return values on failure.
+    /// * Forwards [`CancellationMonitor::sweep_unsubmitted_jobs`]'s return values on failure.
     /// * Forwards [`Self::recover_submitted_jobs`]'s return values on failure.
     pub async fn new(
         coordinator_config: &CoordinatorConfig,
@@ -145,6 +147,14 @@ impl Coordinator {
         });
 
         let cancellation_token = CancellationToken::new();
+        let job_polling_interval =
+            Duration::from_millis(coordinator_config.job_polling_interval_millisecs.get());
+
+        let cancellation_monitor =
+            CancellationMonitor::new(db_pool.clone(), spider_client.clone(), job_polling_interval);
+        cancellation_monitor.sweep_unsubmitted_jobs().await?;
+        let cancellation_monitor_handle =
+            tokio::spawn(cancellation_monitor.run(cancellation_token.clone()));
 
         let coordinator = Self {
             resource_group_id,
@@ -155,14 +165,16 @@ impl Coordinator {
                 uri: results_cache_config.uri(),
             },
             is_first_fetch: true,
-            job_polling_interval: Duration::from_millis(
-                coordinator_config.job_polling_interval_millisecs.get(),
-            ),
+            job_polling_interval,
             cancellation_token: cancellation_token.clone(),
+            cancellation_monitor_handle,
             job_handler_sem: Arc::new(Semaphore::new(max_concurrent_jobs)),
         };
 
-        coordinator.recover_submitted_jobs().await?;
+        coordinator
+            .recover_submitted_jobs()
+            .await
+            .inspect_err(|_| cancellation_token.cancel())?;
 
         Ok((coordinator, cancellation_token))
     }
@@ -181,7 +193,10 @@ impl Coordinator {
     /// * Forwards [`Self::schedule_new_jobs`]'s return values on failure.
     /// * Forwards [`Self::mark_jobs_dispatched`]'s return values on failure.
     pub async fn run(mut self) -> Result<(), Error> {
+        const CANCELLATION_MONITOR_JOIN_TIMEOUT: Duration = Duration::from_secs(10);
+
         let cancellation_token = self.cancellation_token.clone();
+
         loop {
             let now = Instant::now();
 
@@ -212,6 +227,20 @@ impl Coordinator {
         }
 
         tracing::info!("Coordinator shutting down.");
+        match tokio::time::timeout(
+            CANCELLATION_MONITOR_JOIN_TIMEOUT,
+            self.cancellation_monitor_handle,
+        )
+        .await
+        {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                tracing::error!(error = % e, "Failed to join the cancellation monitor.");
+            }
+            Err(_) => {
+                tracing::error!("Timed out joining the cancellation monitor.");
+            }
+        }
         Ok(())
     }
 
@@ -224,20 +253,22 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
+    /// * Forwards [`Self::fetch_submitted_jobs`]'s return values on failure.
     async fn recover_submitted_jobs(&self) -> Result<(), Error> {
         // NOTE: The current implementation does not enforce concurrency limits for recovered jobs
         // since they were already submitted to Spider. See #2472.
         for SubmittedJob {
             id: job_id,
             spider_job_id,
+            status,
             search_job_config,
             job_creation_timestamp_millisecs,
-        } in self.fetch_submitted_running_jobs().await?
+        } in self.fetch_submitted_jobs().await?
         {
             tracing::info!(
                 job_id = % job_id,
                 spider_job_id = % spider_job_id,
+                status = ? status,
                 "Recovering a previously submitted job."
             );
             let job_handle = match QueryJobHandle::new(
@@ -479,33 +510,37 @@ impl Coordinator {
         Ok(rows)
     }
 
-    /// Fetches jobs that are still in [`QueryJobStatus::Running`] and were previously submitted by
-    /// the query coordinator.
+    /// Fetches jobs that were previously submitted to Spider by the query coordinator and are still
+    /// in [`QueryJobStatus::Running`], [`QueryJobStatus::CancelRequested`], or
+    /// [`QueryJobStatus::Cancelling`].
     ///
-    /// A running job whose config cannot be deserialized is marked [`QueryJobStatus::Failed`] and
+    /// A submitted job whose config cannot be deserialized is marked [`QueryJobStatus::Failed`] and
     /// skipped.
     ///
     /// # Returns
     ///
-    /// A vector of [`SubmittedJob`]s on success, each represents a running query job to recover.
+    /// A vector of [`SubmittedJob`]s on success, each represents a submitted query job to recover.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_submitted_running_jobs(&self) -> Result<Vec<SubmittedJob>, Error> {
+    async fn fetch_submitted_jobs(&self) -> Result<Vec<SubmittedJob>, Error> {
         const QUERY: &str = formatcp!(
-            "SELECT `id`, `spider_id`, `job_config`, CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 \
-             AS SIGNED) AS `job_creation_timestamp_millisecs` FROM `{table}` WHERE `type` = ? AND \
-             `status` = ? AND `spider_id` IS NOT NULL;",
+            "SELECT `id`, `spider_id`, `status`, `job_config`, \
+             CAST(UNIX_TIMESTAMP(`creation_time`) * 1000 AS SIGNED) AS \
+             `job_creation_timestamp_millisecs` FROM `{table}` WHERE `type` = ? AND `status` IN \
+             (?, ?, ?) AND `spider_id` IS NOT NULL;",
             table = QUERY_JOBS_TABLE_NAME,
         );
 
         let mut recovery_context = Vec::new();
-        for row in sqlx::query_as::<_, RunningJobRowProjection>(QUERY)
+        for row in sqlx::query_as::<_, SubmittedJobRowProjection>(QUERY)
             .bind(QueryJobType::SearchOrAggregation)
             .bind(QueryJobStatus::Running)
+            .bind(QueryJobStatus::CancelRequested)
+            .bind(QueryJobStatus::Cancelling)
             .fetch_all(&self.db_pool)
             .await?
         {
@@ -517,7 +552,7 @@ impl Coordinator {
                     tracing::error!(
                         error = % e,
                         job_id = % row.id,
-                        "Failed to deserialize search job config of a running job. The database \
+                        "Failed to deserialize search job config of a submitted job. The database \
                          might be corrupted. Skipping."
                     );
                     self.mark_job_failed(
@@ -531,6 +566,7 @@ impl Coordinator {
             recovery_context.push(SubmittedJob {
                 id: row.id,
                 spider_job_id: row.spider_job_id,
+                status: row.status,
                 search_job_config,
                 job_creation_timestamp_millisecs: row.job_creation_timestamp_millisecs,
             });
@@ -547,6 +583,7 @@ const MILLISECS_PER_MINUTE: NonZeroU64 =
 struct SubmittedJob {
     id: QueryJobId,
     spider_job_id: SpiderJobId,
+    status: QueryJobStatus,
     search_job_config: SearchJobConfig,
     job_creation_timestamp_millisecs: i64,
 }
@@ -560,12 +597,13 @@ struct PendingJobRowProjection {
     job_creation_timestamp_millisecs: i64,
 }
 
-/// A projection of the columns read from a [`QueryJobStatus::Running`] query job row.
+/// A projection of the columns read from a query job row that was submitted to Spider.
 #[derive(Debug, sqlx::FromRow)]
-struct RunningJobRowProjection {
+struct SubmittedJobRowProjection {
     id: QueryJobId,
     #[sqlx(rename = "spider_id")]
     spider_job_id: SpiderJobId,
+    status: QueryJobStatus,
     #[sqlx(rename = "job_config")]
     serialized_search_job_config: Vec<u8>,
     job_creation_timestamp_millisecs: i64,
