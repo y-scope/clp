@@ -1,0 +1,108 @@
+name: "clp-image-manifest-checks"
+
+on:
+  pull_request:
+    paths: &monitored_paths
+      - ".github/actions/create-image-multiarch-manifest/**"
+      - ".github/workflows/clp-image-manifest-checks.yaml"
+  push:
+    branches: ["main"]
+    paths: *monitored_paths
+  workflow_dispatch:
+
+permissions:
+  contents: "read"
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  cancel-in-progress: true
+
+jobs:
+  publish-manifest:
+    runs-on: "ubuntu-24.04"
+    timeout-minutes: 10
+    services:
+      registry:
+        image: "registry:3.1.2"
+        ports:
+          - "5000/tcp"
+    steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: "Set test image name"
+        shell: "bash"
+        run: |-
+          repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
+          echo "TEST_IMAGE=127.0.0.1:${{job.services.registry.ports['5000']}}/\
+          ${repository}/manifest-test" >> "$GITHUB_ENV"
+
+      - name: "Publish platform fixtures"
+        shell: "bash"
+        run: |-
+          for arch in amd64 arm64; do
+            docker build --provenance=false --platform "linux/$arch" \
+              --tag "$TEST_IMAGE:test-$arch" - <<'DOCKERFILE'
+          FROM scratch
+          LABEL fixture=initial
+          DOCKERFILE
+            for tag in test secondary; do
+              docker tag "$TEST_IMAGE:test-$arch" "$TEST_IMAGE:$tag-$arch"
+              docker push "$TEST_IMAGE:$tag-$arch"
+            done
+          done
+
+      - name: "Leave a stale local manifest"
+        shell: "bash"
+        run: |-
+          docker manifest create --amend --insecure "$TEST_IMAGE:test" "$TEST_IMAGE:test-amd64"
+
+      - name: "Publish manifests with stale local state"
+        uses: "./.github/actions/create-image-multiarch-manifest"
+        with: &manifest_inputs
+          image_registry: "127.0.0.1:${{job.services.registry.ports['5000']}}"
+          image_registry_username: "test"
+          image_registry_password: "test"
+          image_name: "manifest-test"
+          docker_metadata_action_tags: |-
+            type=raw,value=test
+            type=raw,value=secondary
+
+      - name: "Verify published platforms and digests"
+        shell: "bash"
+        run: &verify_manifests |-
+          for tag in test secondary; do
+            amd64=$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' \
+              "$TEST_IMAGE:$tag-amd64")
+            arm64=$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' \
+              "$TEST_IMAGE:$tag-arm64")
+            docker buildx imagetools inspect --raw "$TEST_IMAGE:$tag" \
+              | jq --exit-status --arg amd64 "$amd64" --arg arm64 "$arm64" '
+                [.manifests[] | {digest, platform: (.platform | {os, architecture})}]
+                | sort_by(.platform.architecture) == [
+                  {digest: $amd64, platform: {os: "linux", architecture: "amd64"}},
+                  {digest: $arm64, platform: {os: "linux", architecture: "arm64"}}
+                ]'
+          done
+
+      - name: "Replace the amd64 fixtures"
+        shell: "bash"
+        run: |-
+          docker build --provenance=false --platform linux/amd64 \
+            --tag "$TEST_IMAGE:test-amd64" - <<'DOCKERFILE'
+          FROM scratch
+          LABEL fixture=updated
+          DOCKERFILE
+          for tag in test secondary; do
+            docker tag "$TEST_IMAGE:test-amd64" "$TEST_IMAGE:$tag-amd64"
+            docker push "$TEST_IMAGE:$tag-amd64"
+          done
+
+      - name: "Publish manifests again"
+        uses: "./.github/actions/create-image-multiarch-manifest"
+        with: *manifest_inputs
+
+      - name: "Verify replacement platforms and digests"
+        shell: "bash"
+        run: *verify_manifests
