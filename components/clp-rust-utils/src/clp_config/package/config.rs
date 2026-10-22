@@ -653,9 +653,7 @@ mod tests {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
-                crate::clp_config::AwsAuthentication::Default => {
-                    panic!("Expected credentials, got `default`")
-                }
+                other => panic!("expected credentials, got {other:?}"),
             },
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }
@@ -683,6 +681,48 @@ mod tests {
             }
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }
+    }
+
+    #[test]
+    fn deserialize_stream_output_s3_named_profile_config() {
+        use non_empty_string::NonEmptyString;
+
+        use super::Config;
+        use super::StreamOutputStorage;
+        use crate::clp_config::AwsAuthentication;
+
+        const PROFILE: &str = "test-profile";
+
+        let config_json = serde_json::json!({
+            "stream_output": {
+                "storage": {
+                    "type": "s3",
+                    "staging_directory": "/var/data/staged-streams",
+                    "s3_config": {
+                        "bucket": "test-bucket",
+                        "key_prefix": "streams/",
+                        "aws_authentication": {
+                            "type": "profile",
+                            "profile": PROFILE,
+                        }
+                    }
+                }
+            }
+        });
+
+        let deserialized = serde_json::from_value::<Config>(config_json)
+            .expect("failed to deserialize `Config` from JSON");
+
+        let StreamOutputStorage::S3 { s3_config, .. } = deserialized.stream_output.storage else {
+            panic!("expected S3 stream output storage");
+        };
+        assert_eq!(
+            s3_config.aws_authentication,
+            AwsAuthentication::Profile {
+                profile: NonEmptyString::try_from(PROFILE.to_owned())
+                    .expect("profile name is non-empty"),
+            }
+        );
     }
 
     #[test]

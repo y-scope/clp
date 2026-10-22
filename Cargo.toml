@@ -18,6 +18,7 @@ anyhow = "1.0.104"
 async-stream = "0.3.6"
 async-trait = "0.1.92"
 aws-config = "1.10.1"
+aws-runtime = "1.9.1"
 aws-sdk-s3 = "1.141.0"
 aws-sdk-sqs = "1.105.0"
 axum = { version = "0.8.9", features = ["json"] }
@@ -47,6 +48,7 @@ sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
 strsim = "0.11.1"
 strum = "0.28.0"
 strum_macros = "0.28.0"
+tempfile = "3.27.0"
 thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "time"] }
 tokio-util = "0.7.19"

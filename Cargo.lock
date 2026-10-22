@@ -958,6 +958,7 @@ name = "clp-rust-utils"
 version = "0.13.1-dev"
 dependencies = [
  "aws-config",
+ "aws-runtime",
  "aws-sdk-s3",
  "aws-sdk-sqs",
  "const_format",
@@ -973,7 +974,9 @@ dependencies = [
  "serde_json",
  "sqlx",
  "strum",
+ "tempfile",
  "thiserror",
+ "tokio",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
