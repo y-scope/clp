@@ -1,8 +1,10 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <concepts>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -11,10 +13,13 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include <clp/Defs.h>
 #include <clp/streaming_archive/Constants.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/DictionaryWriter.hpp>
 #include <clp_s/ParsedMessage.hpp>
 #include <clp_s/RangeIndexWriter.hpp>
@@ -24,6 +29,10 @@
 #include <clp_s/SchemaWriter.hpp>
 #include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TimestampDictionaryWriter.hpp>
+#include <clpp/Defs.hpp>
+#include <clpp/LogShapeStats.hpp>
+#include <clpp/ParentRuleShapes.hpp>
+#include <clpp/TextShape.hpp>
 
 namespace clp_s {
 struct ArchiveWriterOption {
@@ -35,6 +44,8 @@ struct ArchiveWriterOption {
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
+    ClpFlavour flavour{ClpFlavour::Clps};
+    std::string parsing_spec;
 };
 
 class ArchiveStats {
@@ -146,6 +157,7 @@ public:
     /**
      * Opens the archive writer
      * @param option
+     * @throws OperationFailed (ErrorCodeBadParam) if using CLP+ and `option.parsing_spec` is empty.
      */
     void open(ArchiveWriterOption const& option);
 
@@ -172,7 +184,8 @@ public:
      * @param key
      * @return the node id
      */
-    int32_t add_node(int parent_node_id, NodeType type, std::string_view key);
+    auto add_node(mpt_node_id_t parent_node_id, NodeType type, std::string_view key)
+            -> mpt_node_id_t;
 
     /**
      * Checks if a leaf key with a given parent node id matches the authoritative timestamp column.
@@ -250,10 +263,11 @@ public:
 
     /**
      * @return The total size of the encoded (uncompressed) data written to the archive. This
-     * reflects the size of the data after encoding but before compression.
+     * reflects the size of the dictionaries, encoded messages, and (for CLP+) the log shape stats,
+     * parent rule shapes, and parsing specification after encoding but before compression.
      * TODO: Add the size of schema tree, schema map and timestamp dictionary
      */
-    size_t get_data_size();
+    [[nodiscard]] auto get_data_size() const -> size_t;
 
     /**
      * Adds a metadata key value pair to the current range in the range index, opening a range if no
@@ -288,7 +302,41 @@ public:
         return rc;
     }
 
+    /**
+     * Updates the log shape dictionary for the given log shape, adding it to the dictionary if
+     * necessary.
+     * @param log_shape
+     * @return A result containing a pair or the error code indicating the failure:
+     * The pair:
+     * - The log shape ID.
+     * - True if the log shape is a new entry in the dictionary, false otherwise.
+     * The possible error codes:
+     * - ClppErrorCodeEnum::Unsupported if the archive isn't clpp-flavour.
+     */
+    auto update_log_shape_dict(clpp::TextShape<std::string> const& log_shape)
+            -> ystdlib::error_handling::Result<std::pair<clpp::log_shape_id_t, bool>>;
+
+    /**
+     * Records the parent rule shapes for the most recently added log shape. Must be called exactly
+     * once for every new log shape reported by `update_log_shape_dict`.
+     * @param shapes
+     * @return Success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Unsupported if the archive isn't clpp-flavour.
+     * @throws Forwards `clpp::ParentRuleShapesArray::add_log_shape`'s exceptions.
+     */
+    auto update_parent_rule_shapes(clpp::ParentRuleShapes shapes)
+            -> ystdlib::error_handling::Result<void>;
+
 private:
+    // Types
+    struct Clpp {
+        std::shared_ptr<VariableDictionaryWriter> log_shape_dict;
+        std::string parsing_spec;
+        clpp::LogShapeStatsArray log_shape_stats_array;
+        clpp::ParentRuleShapesArray parent_rule_shapes_array;
+    };
+
+    // Methods
     /**
      * Initializes the schema writer
      * @param writer
@@ -303,6 +351,39 @@ private:
      *         - The size of the compressed tables in bytes.
      */
     [[nodiscard]] std::pair<size_t, size_t> store_tables();
+
+    /**
+     * Compresses, stores, and clears the log shape statistics.
+     * @param clpp
+     * @return The compressed size in bytes.
+     */
+    [[nodiscard]] auto close_log_shape_stats(Clpp& clpp) -> size_t;
+
+    /**
+     * Compresses, stores, and clears the parent rule shapes.
+     * @param clpp
+     * @return The compressed size in bytes.
+     */
+    [[nodiscard]] auto close_parent_rule_shapes(Clpp& clpp) -> size_t;
+
+    /**
+     * Compresses and stores the parsing specification to the archive.
+     * @param parsing_spec
+     * @return The compressed size in bytes.
+     */
+    [[nodiscard]] auto store_parsing_spec(std::string_view parsing_spec) -> size_t;
+
+    /**
+     * Creates a Zstd-compressed file in the archive directory and writes its contents.
+     * @tparam WriteContentsFn Invocable with a `ZstdCompressor&`.
+     * @param file_name The file's name relative to the archive directory.
+     * @param write_contents Writes the file's uncompressed contents to the given compressor.
+     * @return The compressed size in bytes.
+     */
+    template <std::invocable<ZstdCompressor&> WriteContentsFn>
+    [[nodiscard]] auto
+    store_compressed_file(std::string_view file_name, WriteContentsFn const& write_contents)
+            -> size_t;
 
     /**
      * Writes the archive to a single file
@@ -338,6 +419,7 @@ private:
 
     static constexpr size_t cReadBlockSize = 4 * 1024;
 
+    // Data members
     size_t m_encoded_message_size{};
     size_t m_uncompressed_size{};
     size_t m_compressed_size{};
@@ -375,6 +457,8 @@ private:
 
     RangeIndexWriter m_range_index_writer;
     bool m_range_open{false};
+
+    std::optional<Clpp> m_clpp;
 };
 }  // namespace clp_s
 

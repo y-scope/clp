@@ -5,12 +5,16 @@
 #include <iostream>
 #include <optional>
 #include <string_view>
+#include <utility>
 #include <variant>
 
 #include <boost/program_options.hpp>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/Defs.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 
 #include "../clp/type_utils.hpp"
@@ -24,6 +28,10 @@ namespace {
 // Authorization method constants
 constexpr std::string_view cNoAuth{"none"};
 constexpr std::string_view cS3Auth{"s3"};
+
+// Flavour constants
+constexpr std::string_view cClpsFlavourName{"clp-s"};
+constexpr std::string_view cClppFlavourName{"clpp"};
 
 // Output handler constants
 constexpr std::string_view cFileOutputHandlerName{"file"};
@@ -68,6 +76,14 @@ auto parse_subcommand_options(
         std::vector<std::string> const& options,
         po::variables_map& parsed_options
 ) -> void;
+
+/**
+ * Parses a clp flavour name.
+ * @param flavour_name
+ * @return The corresponding flavour.
+ * @throws std::invalid_argument if the flavour name is unknown.
+ */
+auto parse_flavour(std::string_view flavour_name) -> ClpFlavour;
 
 /**
  * Read a list of newline-delimited paths from a file and put them into a vector passed by reference
@@ -243,6 +259,23 @@ auto get_max_tokens_for_option(
     return std::nullopt;
 }
 
+auto parse_flavour(std::string_view flavour_name) -> ClpFlavour {
+    if (cClpsFlavourName == flavour_name) {
+        return ClpFlavour::Clps;
+    }
+    if (cClppFlavourName == flavour_name) {
+        return ClpFlavour::Clpp;
+    }
+    throw std::invalid_argument(
+            fmt::format(
+                    R"(Invalid flavour "{}"; expected "{}" or "{}")",
+                    flavour_name,
+                    cClpsFlavourName,
+                    cClppFlavourName
+            )
+    );
+}
+
 auto parse_subcommand_options(
         po::options_description const& options_description,
         std::vector<std::string> const& options,
@@ -391,7 +424,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "no-retain-float-format",
                     po::bool_switch(&m_no_retain_float_format),
-                    "Do not store extra information to losslessly decompress floats."
+                    "Do not store extra information to losslessly decompress floats. Not"
+                    " supported by the clpp flavour."
             )(
                     "normalize-paths",
                     po::bool_switch(&normalize_file_paths),
@@ -430,12 +464,30 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
+            po::options_description flavour_options("Flavour options");
+            std::string flavour_name{cClpsFlavourName};
+            std::string parsing_spec_path{};
+            flavour_options.add_options()(
+                    "flavour",
+                    po::value<std::string>(&flavour_name)
+                            ->value_name("FLAVOUR")
+                            ->default_value(flavour_name),
+                    "The flavour of CLP to compress with (clp-s | clpp). clpp parses unstructured"
+                    " log messages into structured fields using a parsing specification."
+            )(
+                    "parsing-specification",
+                    po::value<std::string>(&parsing_spec_path)->value_name("PATH"),
+                    "Path to a log-surgeon parsing specification. Required by, and only valid with,"
+                    " the clpp flavour. See documentation for details."
+            );
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("input-paths", -1);
 
             po::options_description all_compression_options;
             all_compression_options.add(compression_options);
+            all_compression_options.add(flavour_options);
             all_compression_options.add(compression_positional_options);
 
             std::vector<std::string> unrecognized_options
@@ -461,6 +513,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(compression_options);
+                visible_options.add(flavour_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
@@ -567,6 +620,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
+
+            m_flavour = parse_flavour(flavour_name);
+            if (ClpFlavour::Clpp == m_flavour) {
+                if (parsing_spec_path.empty()) {
+                    throw std::invalid_argument(
+                            "--parsing-specification is required when --flavour is clpp"
+                    );
+                }
+                m_parsing_spec_path.emplace(get_path_object_for_raw_path(parsing_spec_path));
+                if (m_no_retain_float_format) {
+                    throw std::invalid_argument(
+                            "--no-retain-float-format is not supported when --flavour is clpp"
+                    );
+                }
+            } else if (false == parsing_spec_path.empty()) {
+                throw std::invalid_argument(
+                        "--parsing-specification is only valid when --flavour is clpp"
+                );
+            }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;
@@ -750,7 +822,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "enable-telemetry",
                 po::bool_switch(&m_enable_telemetry),
                 "Publish search telemetry to the OpenTelemetry endpoint specified in the"
-                " CLP_TELEMETRY_ENDPOINT environment variable"
+                " CLP_TELEMETRY_ENDPOINT environment variable. Set CLP_TELEMETRY_ENDPOINT=ostream"
+                " to print telemetry to stderr instead of sending it to an OTLP collector"
             )(
                 "archive-id",
                 po::value<std::string>(&archive_id)->value_name("ID"),
@@ -761,8 +834,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     ->multitoken()
                     ->value_name("COLUMN_A COLUMN_B ..."),
                 "Project only the given set of columns for matching results. This option must be"
-                " specified after all positional options. Values that are objects or structured"
-                " arrays are currently unsupported."
+                " specified after all positional options. Single-quoting each column is"
+                " recommended; see documentation for column syntax. Values that are objects or"
+                " structured arrays are currently unsupported."
             )(
                 "auth",
                 po::value<std::string>(&auth)

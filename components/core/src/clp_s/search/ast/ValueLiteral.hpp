@@ -42,11 +42,17 @@ public:
     void print() const override;
 
     // Methods implementing Literal
-    auto matches_type(LiteralType type) -> bool override { return 0 != (m_types & type); }
+    [[nodiscard]] auto matches_type(LiteralType type) const -> bool override {
+        return 0 != (m_types & type);
+    }
 
-    auto matches_any(literal_type_bitmask_t mask) -> bool override { return 0 != (m_types & mask); }
+    [[nodiscard]] auto matches_any(literal_type_bitmask_t mask) const -> bool override {
+        return 0 != (m_types & mask);
+    }
 
-    auto matches_exactly(literal_type_bitmask_t mask) -> bool override { return m_types == mask; }
+    [[nodiscard]] auto matches_exactly(literal_type_bitmask_t mask) const -> bool override {
+        return m_types == mask;
+    }
 
     // Methods overriding Literal
     auto as_clp_string(std::string& ret, FilterOperation op) -> bool override;
@@ -65,6 +71,8 @@ public:
 
     auto as_any(FilterOperation op) -> bool override;
 
+    [[nodiscard]] auto has_wildcard() const -> bool override;
+
 private:
     // Constructor
     ValueLiteral(
@@ -78,14 +86,14 @@ private:
               m_string{std::move(string_value)},
               m_float_option{float_option},
               m_bool_option{bool_option},
-              m_int_bounds_option{int_bounds_option} {}
+              m_int_bounds_option{std::move(int_bounds_option)} {}
 
     // Data members
     literal_type_bitmask_t m_types{};
     std::string m_string;
-    std::optional<double> m_float_option{};
-    std::optional<bool> m_bool_option{};
-    std::optional<std::pair<int64_t, int64_t>> m_int_bounds_option{};
+    std::optional<double> m_float_option;
+    std::optional<bool> m_bool_option;
+    std::optional<std::pair<int64_t, int64_t>> m_int_bounds_option;
 };
 }  // namespace clp_s::search::ast
 

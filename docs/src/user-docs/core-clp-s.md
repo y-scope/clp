@@ -36,6 +36,10 @@ Usage:
       exists.
     * For more information on usage with S3, see our
       [dedicated guide](guides-using-object-storage/index).
+  * `--flavour <clp-s|clpp>` selects the archive flavour (default `clp-s`). `clpp` parses
+    unstructured text fields into queryable parts and requires `--parsing-specification`; see
+    [CLP+](core-clpp/index). Decompression and search detect the flavour from the archive, so they
+    take no corresponding option.
 
 For a complete list of options, run `./clp-s c --help`.
 
@@ -112,6 +116,16 @@ Usage:
 * `kql-query` is a [KQL](reference-json-search-syntax) query.
 * `options` allow you to specify things like a specific archive (from within `archives-path`, if it
   is a directory) to search (`--archive-id <archive-id>`).
+  * `--projection '<column>' ...` outputs only the given columns. It must come after all positional
+    arguments. Each column is written as a plain key path (single-quoting is recommended); no KQL
+    quoting is needed, even for keys containing spaces:
+
+    ```shell
+    ./clp-s s /mnt/data/archives1 '*' --projection 'my key' 'a.b' 'a\.b'
+    ```
+
+    projects the key `my key`, the key `b` nested in `a`, and the key `a.b`. CLP+ archives also
+    accept [`shape()` and `decompose()`](core-clpp/search.md#column-syntax).
   * For a complete list, run `./clp-s s --help`
 
 ### Examples

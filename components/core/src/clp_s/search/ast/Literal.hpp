@@ -23,7 +23,8 @@ enum LiteralType : uint32_t {
     ArrayT = 1 << 5,
     NullT = 1 << 6,
     TimestampT = 1 << 7,
-    TypesEnd = 1 << 8,
+    ClppDecomposeT = 1 << 8,
+    TypesEnd = 1 << 9,
     UnknownT = ((uint32_t)1) << 31
 };
 
@@ -47,11 +48,11 @@ public:
      * Strict checks for type matching against a given literal type.
      * @return true if the check succeeds
      */
-    virtual bool matches_type(LiteralType type) = 0;
+    [[nodiscard]] virtual auto matches_type(LiteralType type) const -> bool = 0;
 
-    virtual bool matches_any(literal_type_bitmask_t mask) = 0;
+    [[nodiscard]] virtual auto matches_any(literal_type_bitmask_t mask) const -> bool = 0;
 
-    virtual bool matches_exactly(literal_type_bitmask_t mask) = 0;
+    [[nodiscard]] virtual auto matches_exactly(literal_type_bitmask_t mask) const -> bool = 0;
 
     /**
      * Convert LiteralType enum values to strings . Only used for printing.
@@ -76,6 +77,8 @@ public:
                 return "null";
             case LiteralType::TimestampT:
                 return "timestamp";
+            case LiteralType::ClppDecomposeT:
+                return "clppdecompose";
             default:
                 return "errtype";
         }
@@ -107,6 +110,8 @@ public:
     virtual bool as_timestamp() { return false; }
 
     virtual bool as_any(FilterOperation op) { return false; }
+
+    [[nodiscard]] virtual auto has_wildcard() const -> bool { return false; }
 };
 }  // namespace clp_s::search::ast
 

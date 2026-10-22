@@ -1,16 +1,23 @@
 #ifndef CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 #define CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 
+#include <cstddef>
+#include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "../../ErrorCode.hpp"
-#include "../../TraceableException.hpp"
+#include <clp_s/Defs.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/search/ast/Literal.hpp>
+#include <clp_s/TraceableException.hpp>
+
 #include "Literal.hpp"
 
 namespace clp_s::search::ast {
@@ -110,15 +117,91 @@ using DescriptorList = std::vector<DescriptorToken>;
 DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors);
 
 /**
- * Class representing a Column in the Search AST. The Column is specified
- * by a list of DescriptorTokens which may be wildcards.
+ * Class representing a Column in the Search AST. The Column is specified by a list of
+ * DescriptorTokens which may be wildcards.
  *
- * Currently only pure wildcard DescriptorTokens are supported -- some descriptor
- * in the list of descriptors can be a wildcard, but individual descriptors can not mix
- * wildcards with other characters.
+ * Currently only pure wildcard DescriptorTokens are supported -- some descriptor in the list of
+ * descriptors can be a wildcard, but individual descriptors can not mix wildcards with other
+ * characters.
+ *
+ * A column starts unbound: its token path is matched against the MPT during column resolution. A
+ * column is bound once it targets a single MPT node; its token path is then no longer matched, and
+ * evaluation uses the bound node to locate column readers. Every column other than a pure wildcard
+ * is bound before evaluation.
+ *
+ * A column bound to a leaf node within a StructurizedText may additionally be pinned to one of that
+ * StructurizedText's leaf rule placeholder positions.
+ *
+ * Column resolution records the nodes it matches on the column as `ResolvedNodes`, which are only
+ * read during resolution. `copy()` keeps them, so the copy stands for the same logical column. The
+ * other copying methods drop them, so their copies stand for new logical columns:
+ * - `copy_unbound()`: an unbound copy, e.g. to resolve against another MPT node.
+ * - `copy_bound_to()`: a copy bound to a given MPT node, e.g. the column as resolved for one
+ *   schema.
  */
 class ColumnDescriptor : public Literal {
 public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(
+                ErrorCode error_code,
+                char const* const filename,
+                int line_number,
+                std::string message
+        )
+                : TraceableException(error_code, filename, line_number),
+                  m_message(std::move(message)) {}
+
+        // Methods
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return m_message.c_str();
+        }
+
+    private:
+        std::string m_message;
+    };
+
+    /**
+     * The MPT nodes a logical column matched when resolved against an archive.
+     */
+    struct ResolvedNodes {
+        // The MPT node this column resolves to in each schema that contains it.
+        std::map<int32_t, mpt_node_id_t> schema_to_node_id;
+        // For a column with wildcard tokens: the MPT nodes its token path matched.
+        std::set<mpt_node_id_t> wildcard_node_ids;
+    };
+
+    /**
+     * The query function applied to a column, e.g. `shape(column)`. A function changes how the
+     * column resolves and how it is matched or projected:
+     * - None: a plain column with no special rules.
+     * - Shape: the column must resolve to decomposable nodes; filters match against and projections
+     *   emit the node's shape rather than its value.
+     * - Decompose: (projection only) emit `Shape` and the node's and decomposed leaf values.
+     */
+    enum class Function : uint8_t {
+        None,
+        Shape,
+        Decompose,
+    };
+
+    /**
+     * @param function_name The name of a function as written in a query.
+     * @return The `Function` named `function_name`.
+     * @return std::nullopt if `function_name` doesn't name a function.
+     */
+    [[nodiscard]] static auto str_to_function(std::string_view function_name)
+            -> std::optional<Function>;
+
+    /**
+     * @param function
+     * @return The name of `function` as written in a query, or an empty string for
+     * `Function::None`.
+     */
+    [[nodiscard]] static auto function_to_str(Function function) -> std::string_view;
+
     /**
      * Creates a ColumnDescriptor literal from a list of escaped tokens.
      *
@@ -130,22 +213,26 @@ public:
      *
      * @param token(s) the escaped token or list of escaped tokens making up the descriptor
      * @param descriptor_namespace
+     * @param function The function applied to the column.
      * @return A ColumnDescriptor literal
      */
     static std::shared_ptr<ColumnDescriptor> create_from_escaped_tokens(
             std::vector<std::string> const& tokens,
-            std::string_view descriptor_namespace
+            std::string_view descriptor_namespace,
+            Function function = Function::None
     );
 
     /**
      * Create a ColumnDescriptor literal from a list of already-parsed DescriptorToken.
      * @param descriptors the list of parsed DescriptorToken
      * @param descriptor_namespace
+     * @param function The function applied to the column.
      * @return A ColumnDescriptor literal
      */
     static std::shared_ptr<ColumnDescriptor> create_from_descriptors(
             DescriptorList const& descriptors,
-            std::string_view descriptor_namespace
+            std::string_view descriptor_namespace,
+            Function function = Function::None
     );
 
     /**
@@ -163,10 +250,23 @@ public:
     }
 
     /**
-     * Deep copy of this ColumnDescriptor
-     * @return A deep copy of this Column descriptor
+     * @return A copy of this column, including its resolved nodes.
      */
-    std::shared_ptr<ColumnDescriptor> copy();
+    [[nodiscard]] auto copy() const -> std::shared_ptr<ColumnDescriptor>;
+
+    /**
+     * @return A copy of this column without its resolved nodes, bound node and leaf position.
+     */
+    [[nodiscard]] auto copy_unbound() const -> std::shared_ptr<ColumnDescriptor>;
+
+    /**
+     * @param node_id The MPT node to bind the copy to.
+     * @param type The type of `node_id`.
+     * @return A copy of this column without its resolved nodes, bound to `node_id` and matching
+     * only `type`. The copy keeps this column's leaf position.
+     */
+    [[nodiscard]] auto copy_bound_to(mpt_node_id_t node_id, LiteralType type) const
+            -> std::shared_ptr<ColumnDescriptor>;
 
     /**
      * Get iterators to this Column's list of descriptors
@@ -215,17 +315,6 @@ public:
     void remove_matching_type(LiteralType type) { m_flags &= ~type; }
 
     /**
-     * @return the CLJ column Id this Column represents. Garbage value if it was never set.
-     */
-    int32_t get_column_id() const { return m_id; }
-
-    /**
-     * Set the CLJ column Id this column represents
-     * @param id the CLJ column Id to set this column to
-     */
-    void set_column_id(int32_t id) { m_id = id; }
-
-    /**
      * Get the list of unresolved tokens used for array search
      * @return the list of unresolved tokens
      * FIXME: should be reference?
@@ -248,10 +337,9 @@ public:
     literal_type_bitmask_t get_matching_types() const { return m_flags; }
 
     /**
-     * Whether the list of Descriptor's contains any wildcards
-     * @return true if the descriptor contains any wildcards that need to be resolved
+     * @return Whether the descriptor list contains any wildcard tokens.
      */
-    bool is_unresolved_descriptor() const { return m_unresolved_descriptors; }
+    auto is_unresolved_descriptor() const -> bool { return m_unresolved_descriptors; }
 
     /**
      * Whether this Column is a single wildcard
@@ -259,16 +347,27 @@ public:
      */
     bool is_pure_wildcard() const { return m_pure_wildcard; }
 
+    /**
+     * @return The dotted column name built from this column's JSON-escaped tokens.
+     */
+    [[nodiscard]] auto to_string() const -> std::string;
+
     // Methods inherited from Value
     void print() const override;
 
     // Methods inherited from Literal
     // ColumnDescriptor can implicitly match several different types at the same time.
-    bool matches_type(LiteralType type) override { return m_flags & type; }
+    [[nodiscard]] auto matches_type(LiteralType type) const -> bool override {
+        return m_flags & type;
+    }
 
-    bool matches_any(literal_type_bitmask_t mask) override { return m_flags & mask; }
+    [[nodiscard]] auto matches_any(literal_type_bitmask_t mask) const -> bool override {
+        return m_flags & mask;
+    }
 
-    bool matches_exactly(literal_type_bitmask_t mask) override { return m_flags == mask; }
+    [[nodiscard]] auto matches_exactly(literal_type_bitmask_t mask) const -> bool override {
+        return m_flags == mask;
+    }
 
     /**
      * Equal to operator to allow comparison between two column descriptors.
@@ -282,26 +381,108 @@ public:
         m_namespace = descriptor_namespace;
     }
 
+    /**
+     * @return The nodes this column resolved to.
+     */
+    [[nodiscard]] auto resolved_nodes() -> ResolvedNodes& { return m_resolved_nodes; }
+
+    /**
+     * @return The nodes this column resolved to.
+     */
+    [[nodiscard]] auto resolved_nodes() const -> ResolvedNodes const& { return m_resolved_nodes; }
+
     auto get_subtree_type() const -> std::optional<std::string> const& { return m_subtree_type; }
 
     auto set_subtree_type(std::optional<std::string> subtree_type) {
         m_subtree_type = std::move(subtree_type);
     }
 
+    /**
+     * @return The function applied to this column.
+     */
+    [[nodiscard]] auto get_function() const -> Function { return m_function; }
+
+    /**
+     * @return Whether this column is the argument of a `shape()` function.
+     */
+    [[nodiscard]] auto is_shape_query() const -> bool { return Function::Shape == m_function; }
+
+    /**
+     * @return The leaf placeholder position this column is pinned to by decomposition.
+     * @return std::nullopt if the column matches any occurrence of its MPT node.
+     */
+    [[nodiscard]] auto get_leaf_position() const -> std::optional<size_t> {
+        return m_leaf_position;
+    }
+
+    /**
+     * @return Whether this column is bound to an MPT node.
+     */
+    [[nodiscard]] auto is_bound() const -> bool { return m_bound_node_id.has_value(); }
+
+    /**
+     * @return The MPT node this column is bound to.
+     * @throws OperationFailed if this column is unbound.
+     */
+    [[nodiscard]] auto get_bound_node_id() const -> mpt_node_id_t;
+
+    /**
+     * @return Whether this column is a leaf rule column created by query decomposition.
+     */
+    [[nodiscard]] auto is_decomposed_leaf() const -> bool { return m_is_decomposed_leaf; }
+
+    /**
+     * Makes this column a leaf rule column created by query decomposition: bound to `node_id` at
+     * leaf position `leaf_position`, and resolved to `node_id` in exactly `schema_ids`. The schemas
+     * are chosen by shape matching rather than by which schemas contain `node_id`, so column
+     * resolution leaves the mapping untouched.
+     * @param node_id The MPT node to bind this column to.
+     * @param leaf_position The StructurizedText-relative leaf placeholder position of this column.
+     * @param schema_ids The schemas to map this column to.
+     */
+    auto bind_as_decomposed_leaf(
+            mpt_node_id_t node_id,
+            size_t leaf_position,
+            std::unordered_set<int32_t> const& schema_ids
+    ) -> void;
+
 private:
+    // Data members
     DescriptorList m_descriptors;  // list of descriptors describing the column
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
     std::string m_namespace;
-    literal_type_bitmask_t m_flags;  // set of types this column can match
-    int32_t m_id;  // unambiguous CLJ column id this column represents. May be unset.
-    bool m_unresolved_descriptors;  // true if contains wildcards
-    bool m_pure_wildcard;  // true if column is single wildcard
+    literal_type_bitmask_t m_flags{cAllTypes};  // set of types this column can match
+    bool m_unresolved_descriptors{false};  // true if contains wildcards
+    bool m_pure_wildcard{false};  // true if column is single wildcard
     std::optional<std::string> m_subtree_type;  // optional subtree type to resolve against
+    Function m_function{Function::None};
+    // The single MPT node this column has been bound to, if any.
+    std::optional<mpt_node_id_t> m_bound_node_id;
+    // For a column bound to a leaf node within a StructurizedText: the leaf rule placeholder
+    // position this column is pinned to, if any.
+    std::optional<size_t> m_leaf_position;
+    bool m_is_decomposed_leaf{false};
+    ResolvedNodes m_resolved_nodes;
 
     // Constructors
-    explicit ColumnDescriptor(std::vector<std::string> const&, std::string_view);
+    explicit ColumnDescriptor(
+            std::vector<std::string> const& tokens,
+            std::string_view descriptor_namespace,
+            Function function
+    );
 
-    explicit ColumnDescriptor(DescriptorList const&, std::string_view);
+    explicit ColumnDescriptor(
+            DescriptorList descriptors,
+            std::string_view descriptor_namespace,
+            Function function
+    );
+
+    /**
+     * Copies `other` except for its resolved nodes, which are left empty. Use the public copying
+     * methods instead, which state what they copy.
+     * @param other
+     */
+    ColumnDescriptor(ColumnDescriptor const& other);
 
     /**
      * Scan the list of descriptors to check if they contain wildcards and

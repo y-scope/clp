@@ -2,6 +2,7 @@
 #define CLP_S_SEARCH_OUTPUT_HPP
 
 #include <map>
+#include <optional>
 #include <set>
 #include <stack>
 #include <string>
@@ -18,6 +19,7 @@
 #include "ast/Expression.hpp"
 #include "OutputHandler.hpp"
 #include "QueryRunner.hpp"
+#include "ReaderInterface.hpp"
 #include "SchemaMatch.hpp"
 
 namespace clp_s::search {

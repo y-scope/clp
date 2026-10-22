@@ -234,4 +234,8 @@ auto ValueLiteral::as_null(FilterOperation op) -> bool {
 auto ValueLiteral::as_any(FilterOperation op) -> bool {
     return is_equality_op(op) && cMatchAnyString == m_string;
 }
+
+auto ValueLiteral::has_wildcard() const -> bool {
+    return has_unescaped_wildcards(m_string);
+}
 }  // namespace clp_s::search::ast

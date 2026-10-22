@@ -1,0 +1,8 @@
+{"idx": 0, "msg": "Msg 0: Abc"}
+{"idx": 1, "msg": 42}
+{"idx": 2, "other": "x"}
+{"idx": 3, "nested": {"msg": "Msg 3: Abc"}}
+{"idx": 4, "nested": {"msg": 7}}
+{"idx": 5, "msg": [1, 2]}
+{"idx": 6, "msg": "plain"}
+{"idx": 7, "msg": "two words"}

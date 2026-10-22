@@ -1,0 +1,12 @@
+{
+    "dataset_name": "json_multimsg",
+    "unstructured": false,
+    "timestamp_key": "@timestamp",
+    "begin_ts": 1679976000000,
+    "end_ts": 1679976004000,
+    "logs_subdir": "logs",
+    "file_names": [
+        "multimsg-0.log"
+    ],
+    "single_match_wildcard_query": "\"message\":\"*solo field*\""
+}
