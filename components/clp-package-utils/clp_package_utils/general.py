@@ -27,6 +27,7 @@ from clp_py_utils.clp_config import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
+    QUERY_RESOURCE_GROUP_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -523,7 +524,8 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
         SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME: {
-            COMPRESSION_RESOURCE_GROUP_NAME: secrets.token_urlsafe(16)
+            COMPRESSION_RESOURCE_GROUP_NAME: secrets.token_urlsafe(16),
+            QUERY_RESOURCE_GROUP_NAME: secrets.token_urlsafe(16),
         },
     }
 
@@ -554,6 +556,13 @@ def validate_and_load_compression_coordinator_credentials_file(
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
     clp_config.compression_coordinator.load_credentials_from_file(clp_config.credentials_file_path)
+
+
+def validate_and_load_query_coordinator_credentials_file(
+    clp_config: ClpConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
+    validate_credentials_file_path(clp_config, clp_home, generate_default_file)
+    clp_config.query_coordinator.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_db_credentials_file(
@@ -744,6 +753,11 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
             f"Invalid dataset name: `{dataset_name}`. Names can only be a maximum of"
             f" {dataset_name_max_len} characters long."
         )
+
+
+def is_log_ingestor_enabled(clp_config: ClpConfig) -> bool:
+    """Return whether the deployment has a configured ingestor and S3 log input."""
+    return clp_config.log_ingestor is not None and clp_config.logs_input.type == StorageType.S3
 
 
 def validate_retention_config(clp_config: ClpConfig) -> None:

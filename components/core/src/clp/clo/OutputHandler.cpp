@@ -50,7 +50,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         string const& uri,
         string const& collection,
         uint64_t batch_size,
-        uint64_t max_num_results
+        std::optional<uint64_t> max_num_results
 )
         : m_batch_size(batch_size),
           m_max_num_results(max_num_results) {
@@ -73,7 +73,18 @@ ErrorCode ResultsCacheOutputHandler::add_result(
 ) {
     auto const timestamp = encoded_message.get_ts_in_milli();
     auto const log_event_ix = encoded_message.get_log_event_ix();
-    if (m_latest_results.size() < m_max_num_results) {
+    if (false == m_max_num_results.has_value()) {
+        return append_result(
+                QueryResult{
+                        orig_file_path,
+                        orig_file_id,
+                        log_event_ix,
+                        timestamp,
+                        decompressed_message
+                }
+        );
+    }
+    if (m_latest_results.size() < m_max_num_results.value()) {
         m_latest_results.emplace(
                 std::make_unique<QueryResult>(
                         orig_file_path,
@@ -100,63 +111,65 @@ ErrorCode ResultsCacheOutputHandler::add_result(
 }
 
 ErrorCode ResultsCacheOutputHandler::flush() {
-    size_t count = 0;
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
         m_latest_results.pop();
-
-        try {
-            m_results.emplace_back(
-                    std::move(
-                            bsoncxx::builder::basic::make_document(
-                                    bsoncxx::builder::basic::kvp(
-                                            cResultsCacheKeys::SearchOutput::Id,
-                                            bsoncxx::builder::basic::make_document(
-                                                    bsoncxx::builder::basic::kvp(
-                                                            cResultsCacheKeys::SearchOutput::
-                                                                    OrigFileId,
-                                                            result.orig_file_id
-                                                    ),
-                                                    bsoncxx::builder::basic::kvp(
-                                                            cResultsCacheKeys::SearchOutput::
-                                                                    LogEventIdx,
-                                                            result.log_event_ix
-                                                    )
-                                            )
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            cResultsCacheKeys::SearchOutput::OrigFilePath,
-                                            std::move(result.orig_file_path)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            cResultsCacheKeys::SearchOutput::Timestamp,
-                                            result.timestamp
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            cResultsCacheKeys::SearchOutput::Message,
-                                            std::move(result.decompressed_message)
-                                    )
-                            )
-                    )
-            );
-        } catch (mongocxx::exception const& e) {
-            SPDLOG_ERROR("Failed to build search result - {}", e.what());
-            return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
-        }
-
-        count++;
-        if (count == m_batch_size) {
-            if (false == insert_results()) {
-                return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
-            }
-            count = 0;
+        if (auto const error_code{append_result(std::move(result))};
+            ErrorCode_Success != error_code)
+        {
+            return error_code;
         }
     }
 
     if (false == m_results.empty() && false == insert_results()) {
-        return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
+        return ErrorCode_Failure_DB_Bulk_Write;
     }
-    return ErrorCode::ErrorCode_Success;
+    return ErrorCode_Success;
+}
+
+auto ResultsCacheOutputHandler::append_result(QueryResult result) -> ErrorCode {
+    try {
+        m_results.emplace_back(
+                std::move(
+                        bsoncxx::builder::basic::make_document(
+                                bsoncxx::builder::basic::kvp(
+                                        cResultsCacheKeys::SearchOutput::Id,
+                                        bsoncxx::builder::basic::make_document(
+                                                bsoncxx::builder::basic::kvp(
+                                                        cResultsCacheKeys::SearchOutput::OrigFileId,
+                                                        result.orig_file_id
+                                                ),
+                                                bsoncxx::builder::basic::kvp(
+                                                        cResultsCacheKeys::SearchOutput::
+                                                                LogEventIdx,
+                                                        result.log_event_ix
+                                                )
+                                        )
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        cResultsCacheKeys::SearchOutput::OrigFilePath,
+                                        std::move(result.orig_file_path)
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        cResultsCacheKeys::SearchOutput::Timestamp,
+                                        result.timestamp
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        cResultsCacheKeys::SearchOutput::Message,
+                                        std::move(result.decompressed_message)
+                                )
+                        )
+                )
+        );
+    } catch (mongocxx::exception const& e) {
+        SPDLOG_ERROR("Failed to build search result - {}", e.what());
+        return ErrorCode_Failure_DB_Bulk_Write;
+    }
+
+    if (m_results.size() >= m_batch_size && false == insert_results()) {
+        return ErrorCode_Failure_DB_Bulk_Write;
+    }
+    return ErrorCode_Success;
 }
 
 auto ResultsCacheOutputHandler::insert_results() -> bool {

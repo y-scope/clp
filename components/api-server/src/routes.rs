@@ -111,7 +111,6 @@ async fn health() -> String {
             "time_range_begin_millisecs": 0,
             "time_range_end_millisecs": 17_356_896,
             "ignore_case": true,
-            "max_num_results": 0,
             "buffer_results_in_mongodb": true,
             "count_by_time_bucket_size_millisecs": null
         })),

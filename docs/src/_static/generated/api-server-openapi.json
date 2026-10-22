@@ -49,7 +49,6 @@
                 "time_range_begin_millisecs": 0,
                 "time_range_end_millisecs": 17356896,
                 "ignore_case": true,
-                "max_num_results": 0,
                 "buffer_results_in_mongodb": true,
                 "count_by_time_bucket_size_millisecs": null
               }
@@ -341,10 +340,13 @@
             "description": "Whether the string match should be case-insensitive."
           },
           "max_num_results": {
-            "type": "integer",
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int32",
-            "description": "The maximum number of results to return. Set to `0` for no limit.",
-            "minimum": 0
+            "description": "The maximum number of results to return. Omit for no limit.",
+            "minimum": 1
           },
           "query_string": {
             "type": "string",
