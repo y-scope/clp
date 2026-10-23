@@ -743,7 +743,8 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
+    /// * [`ClientError::DatasetNotFound`] if the dataset doesn't exist.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
     pub async fn get_timestamp_column_names(
         &self,
@@ -752,25 +753,28 @@ impl Client {
         // Must be kept in sync with `NodeType::Timestamp` in
         // `components/core/src/clp_s/SchemaTree.hpp`.
         const TIMESTAMP_NODE_TYPE: i8 = 14;
-        // MySQL error number for "Table doesn't exist".
-        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
-        let table_name = self.config.database.column_metadata_table_name();
-        let names: Vec<String> =
-            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
-                .bind(TIMESTAMP_NODE_TYPE)
-                .fetch_all(&self.sql_pool)
-                .await
-                .map_err(|err| {
-                    if let sqlx::Error::Database(db_err) = &err
-                        && let Some(mysql_err) =
-                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
-                    {
-                        return ClientError::DatasetNotFound(dataset.clone());
-                    }
-                    err.into()
-                })?;
+        // NOTE: The dataset is resolved separately so that an unknown dataset can be distinguished
+        // from a known one that has no timestamp columns.
+        let datasets_table = self.config.database.datasets_table_name();
+        let dataset_id: Option<u16> = sqlx::query_scalar(&format!(
+            "SELECT id FROM `{datasets_table}` WHERE name = ? AND is_deleted = FALSE"
+        ))
+        .bind(dataset)
+        .fetch_optional(&self.sql_pool)
+        .await?;
+        let Some(dataset_id) = dataset_id else {
+            return Err(ClientError::DatasetNotFound(dataset.clone()));
+        };
+
+        let column_metadata_table = self.config.database.column_metadata_table_name();
+        let names: Vec<String> = sqlx::query_scalar(&format!(
+            "SELECT name FROM `{column_metadata_table}` WHERE dataset_id = ? AND type = ?"
+        ))
+        .bind(dataset_id)
+        .bind(TIMESTAMP_NODE_TYPE)
+        .fetch_all(&self.sql_pool)
+        .await?;
 
         Ok(names)
     }
