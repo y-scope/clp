@@ -386,8 +386,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::MetadataTableCreation`] if either table cannot be created.
     async fn upsert_metadata_tables(&self) -> Result<(), Error> {
-        let archives_table = self.db_config.archives_table_name(&self.dataset);
-        let column_metadata_table = self.db_config.column_metadata_table_name(&self.dataset);
+        let archives_table = self.db_config.archives_table_name();
+        let column_metadata_table = self.db_config.column_metadata_table_name();
 
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS `{archives_table}` (

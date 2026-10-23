@@ -170,23 +170,31 @@ impl Default for Database {
 impl Database {
     /// # Returns
     ///
-    /// The archives table name (`<prefix><dataset>_archives`).
+    /// The archives table name (`<prefix>archives`).
     #[must_use]
-    pub fn archives_table_name(&self, dataset: &DatasetName) -> String {
-        format!("{}{dataset}_archives", self.table_prefix)
+    pub fn archives_table_name(&self) -> String {
+        format!("{}archives", self.table_prefix)
     }
 
     /// # Returns
     ///
-    /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
+    /// The long span archives table name (`<prefix>long_span_archives`).
     #[must_use]
-    pub fn column_metadata_table_name(&self, dataset: &DatasetName) -> String {
-        format!("{}{dataset}_column_metadata", self.table_prefix)
+    pub fn long_span_archives_table_name(&self) -> String {
+        format!("{}long_span_archives", self.table_prefix)
     }
 
     /// # Returns
     ///
-    /// The datasets table name `<prefix>datasets`.
+    /// The column-metadata table name (`<prefix>column_metadata`).
+    #[must_use]
+    pub fn column_metadata_table_name(&self) -> String {
+        format!("{}column_metadata", self.table_prefix)
+    }
+
+    /// # Returns
+    ///
+    /// The datasets table name ()`<prefix>datasets`).
     #[must_use]
     pub fn datasets_table_name(&self) -> String {
         format!("{}datasets", self.table_prefix)
