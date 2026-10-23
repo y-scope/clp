@@ -47,6 +47,7 @@ pub struct FsInputConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path_prefix_to_remove: Option<NonEmptyString>,
     pub timestamp_key: Option<NonEmptyString>,
+    #[serde(default)]
     pub unstructured: bool,
 }
 
@@ -59,6 +60,7 @@ pub struct S3InputConfig {
     pub keys: Option<Vec<NonEmptyString>>,
     pub dataset: DatasetName,
     pub timestamp_key: Option<NonEmptyString>,
+    #[serde(default)]
     pub unstructured: bool,
 }
 
@@ -71,6 +73,7 @@ pub struct S3ObjectMetadataInputConfig {
     pub s3_object_metadata_ids: Vec<S3ObjectMetadataId>,
     pub dataset: DatasetName,
     pub timestamp_key: Option<NonEmptyString>,
+    #[serde(default)]
     pub unstructured: bool,
 }
 
