@@ -7,6 +7,8 @@ use serde::Serialize;
 use strum::EnumString;
 use utoipa::ToSchema;
 
+use crate::dataset::DatasetName;
+
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 
 pub type QueryJobId = i32;
@@ -27,7 +29,7 @@ pub struct AggregationConfig {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
-    pub datasets: Option<Vec<String>>,
+    pub datasets: Option<Vec<DatasetName>>,
     pub query_string: String,
     pub max_num_results: Option<NonZeroU32>,
     pub begin_timestamp: Option<i64>,

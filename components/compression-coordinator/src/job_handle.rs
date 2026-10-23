@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
-use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -48,7 +48,7 @@ pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
 
     input_config: InputConfig,
     clp_s_compression_option: ClpSCompressionOption,
-    dataset: Option<String>,
+    dataset: DatasetName,
     target_archive_size: u64,
 
     spider_option: Arc<SpiderOption>,
@@ -68,7 +68,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::UnsupportedInputConfig`] if `clp_io_config`'s input config is not an
     ///   [`InputConfig::S3ObjectMetadataInputConfig`].
-    /// * [`Error::InvalidDataset`] if the configured dataset name is not a valid dataset name.
     pub fn new(
         db_pool: MySqlPool,
         db_config: Database,
@@ -85,12 +84,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         else {
             return Err(Error::UnsupportedInputConfig);
         };
-        let dataset: Option<String> = s3_object_metadata_config.dataset.clone().map(String::from);
-        if let Some(dataset_name) = dataset.as_ref()
-            && !VALID_DATASET_NAME_REGEX.is_match(dataset_name)
-        {
-            return Err(Error::InvalidDataset(dataset_name.clone()));
-        }
+        let dataset = s3_object_metadata_config.dataset.clone();
 
         let output_config = clp_io_config.output;
         let clp_s_compression_option = ClpSCompressionOption {
@@ -391,10 +385,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::MetadataTableCreation`] if either table cannot be created.
     async fn upsert_metadata_tables(&self) -> Result<(), Error> {
-        let archives_table = self.db_config.archives_table_name(self.dataset.as_deref());
-        let column_metadata_table = self
-            .db_config
-            .column_metadata_table_name(self.dataset.as_deref());
+        let archives_table = self.db_config.archives_table_name(&self.dataset);
+        let column_metadata_table = self.db_config.column_metadata_table_name(&self.dataset);
 
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS `{archives_table}` (
