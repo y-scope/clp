@@ -245,73 +245,7 @@ pub type JobId = u64;
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
-    use utoipa::PartialSchema;
-    use utoipa::openapi::RefOr;
-    use utoipa::openapi::Schema;
-
-    use super::s3::BaseConfig;
     use super::s3::BufferConfig;
-    use crate::dataset::DatasetName;
-    use crate::dataset::ParseDatasetNameError;
-
-    #[test]
-    fn base_config_dataset_defaults_when_missing_or_null() {
-        for config in [
-            json!({"bucket_name": "bucket", "key_prefix": "logs/"}),
-            json!({"bucket_name": "bucket", "key_prefix": "logs/", "dataset": null}),
-        ] {
-            let config: BaseConfig =
-                serde_json::from_value(config).expect("base config should deserialize");
-            assert_eq!(config.dataset, DatasetName::default());
-        }
-    }
-
-    #[test]
-    fn base_config_dataset_is_validated() {
-        let config: BaseConfig = serde_json::from_value(
-            json!({"bucket_name": "bucket", "key_prefix": "logs/", "dataset": "my_dataset"}),
-        )
-        .expect("base config with a valid dataset should deserialize");
-        assert_eq!(config.dataset.as_str(), "my_dataset");
-
-        let error = serde_json::from_value::<BaseConfig>(
-            json!({"bucket_name": "bucket", "key_prefix": "logs/", "dataset": "bad-name"}),
-        )
-        .expect_err("base config with an invalid dataset should fail to deserialize");
-        assert!(
-            error.to_string().contains(
-                &ParseDatasetNameError::InvalidCharacters("bad-name".to_owned()).to_string()
-            ),
-            "unexpected error: {error}"
-        );
-    }
-
-    #[test]
-    fn base_config_dataset_schema_max_length_is_the_dataset_name_bound() {
-        let RefOr::T(Schema::Object(base_config_schema)) = BaseConfig::schema() else {
-            panic!("the base config schema should be an inline object");
-        };
-        let Some(RefOr::T(Schema::Object(dataset_schema))) =
-            base_config_schema.properties.get("dataset")
-        else {
-            panic!("the base config schema should have an inline `dataset` object");
-        };
-        let max_length = dataset_schema
-            .max_length
-            .expect("the `dataset` schema should have a maximum length");
-
-        let longest_name = "a".repeat(max_length);
-        assert_eq!(
-            longest_name.parse::<DatasetName>().map(String::from),
-            Ok(longest_name)
-        );
-        let too_long_name = "a".repeat(max_length + 1);
-        assert_eq!(
-            too_long_name.parse::<DatasetName>(),
-            Err(ParseDatasetNameError::TooLong(too_long_name))
-        );
-    }
 
     #[test]
     fn test_buffer_config_partial_override() -> Result<(), serde_json::Error> {

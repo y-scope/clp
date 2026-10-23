@@ -16,6 +16,10 @@ use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 /// A dataset name is non-empty, only contains `_` or Unicode letters and numbers (general
 /// categories L and N), and is short enough for its longest metadata table name to fit MySQL's
 /// 64-character table-name limit.
+///
+/// A dataset name serializes as a plain string. It deserializes from a string, validated by the
+/// same rules as its [`FromStr`] implementation, or from a `null` or missing value, which gives the
+/// default dataset name ([`DatasetName::default_name`]).
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(try_from = "Option<String>", into = "String")]
 pub struct DatasetName {
@@ -202,18 +206,25 @@ mod tests {
 
     #[test]
     fn dataset_name_encodes_in_msgpack_as_a_string() {
-        const NAME: &str = "my_dataset";
-        let dataset: DatasetName = NAME.parse().expect("name should be a valid dataset name");
+        for (dataset, name) in [
+            (
+                "my_dataset"
+                    .parse()
+                    .expect("name should be a valid dataset name"),
+                "my_dataset",
+            ),
+            (DatasetName::default(), "default"),
+        ] {
+            let serialized = rmp_serde::to_vec(name).expect("string should serialize");
+            assert_eq!(
+                rmp_serde::to_vec(&dataset).expect("dataset name should serialize"),
+                serialized
+            );
 
-        assert_eq!(
-            rmp_serde::to_vec(&dataset).expect("dataset name should serialize"),
-            rmp_serde::to_vec(NAME).expect("string should serialize")
-        );
-
-        let serialized = rmp_serde::to_vec(NAME).expect("string should serialize");
-        let deserialized: DatasetName =
-            rmp_serde::from_slice(&serialized).expect("dataset name should deserialize");
-        assert_eq!(deserialized, dataset);
+            let deserialized: DatasetName =
+                rmp_serde::from_slice(&serialized).expect("dataset name should deserialize");
+            assert_eq!(deserialized, dataset);
+        }
     }
 
     #[test]
@@ -229,10 +240,7 @@ mod tests {
             let parse_error = name
                 .parse::<DatasetName>()
                 .expect_err("name should be an invalid dataset name");
-            assert!(
-                error.to_string().contains(&parse_error.to_string()),
-                "unexpected error: {error}"
-            );
+            assert_eq!(error.to_string(), parse_error.to_string());
         }
     }
 
@@ -250,13 +258,25 @@ mod tests {
     }
 
     #[test]
-    fn absent_defaulted_dataset_name_field_deserializes_as_the_default() {
+    fn absent_dataset_name_field_deserializes_as_the_default() {
         #[derive(Debug, Deserialize, PartialEq)]
-        struct Config {
+        struct DefaultedConfig {
             #[serde(default)]
             dataset: DatasetName,
         }
 
+        #[derive(Debug, Deserialize, PartialEq)]
+        struct Config {
+            dataset: DatasetName,
+        }
+
+        assert_eq!(
+            serde_json::from_str::<DefaultedConfig>("{}")
+                .expect("an empty defaulted config should deserialize"),
+            DefaultedConfig {
+                dataset: DatasetName::default()
+            }
+        );
         assert_eq!(
             serde_json::from_str::<Config>("{}").expect("an empty config should deserialize"),
             Config {
@@ -297,14 +317,6 @@ mod tests {
                 .parse::<DatasetName>()
                 .expect("name should be a valid dataset name")
                 .is_default()
-        );
-    }
-
-    #[test]
-    fn default_dataset_name_encodes_in_msgpack_as_the_default_string() {
-        assert_eq!(
-            rmp_serde::to_vec(&DatasetName::default()).expect("dataset name should serialize"),
-            rmp_serde::to_vec(DatasetName::default_name()).expect("string should serialize")
         );
     }
 }
