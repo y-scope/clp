@@ -123,7 +123,7 @@ void TimestampEntry::read_from_file(ZstdDecompressor& decompressor) {
     }
 }
 
-EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, double timestamp) {
+auto TimestampEntry::evaluate_filter(FilterOperation op, double timestamp) const -> EvaluatedValue {
     if (op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS) {
         return EvaluatedValue::Unknown;
     }
@@ -182,7 +182,8 @@ EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, double timest
     }
 }
 
-EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, epochtime_t timestamp) {
+auto TimestampEntry::evaluate_filter(FilterOperation op, epochtime_t timestamp) const
+        -> EvaluatedValue {
     if (op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS) {
         return EvaluatedValue::Unknown;
     }

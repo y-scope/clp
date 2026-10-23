@@ -7,7 +7,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <utility>
 
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
@@ -53,6 +52,8 @@ public:
      * @return A pair containing:
      * - The timestamp in epoch nanoseconds.
      * - The pattern ID corresponding to the timestamp format.
+     * @throws OperationFailed if `node_id` doesn't match the node ID of timestamps previously
+     * ingested in the current file split.
      */
     [[nodiscard]] auto ingest_string_timestamp(
             std::string_view key,
@@ -69,6 +70,8 @@ public:
      * @return A pair containing:
      * - The timestamp in epoch nanoseconds.
      * - The pattern ID corresponding to the timestamp format.
+     * @throws OperationFailed if `node_id` doesn't match the node ID of timestamps previously
+     * ingested in the current file split.
      */
     [[nodiscard]] auto
     ingest_numeric_json_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
@@ -82,6 +85,8 @@ public:
      * @return A pair containing:
      * - The timestamp in epoch nanoseconds.
      * - The pattern ID corresponding to the timestamp format.
+     * @throws OperationFailed if `node_id` doesn't match the node ID of timestamps previously
+     * ingested in the current file split.
      */
     [[nodiscard]] auto ingest_unknown_precision_epoch_timestamp(
             std::string_view key,
@@ -115,6 +120,8 @@ public:
 private:
     /**
      * Merges time ranges for the current file split with the archive's time range.
+     * @throws OperationFailed if the file split's timestamp column node ID doesn't match the
+     * archive's timestamp column node ID.
      */
     auto merge_file_split_time_range() -> void;
 
@@ -125,8 +132,9 @@ private:
             m_numeric_pattern_to_id;
     uint64_t m_next_id{};
 
-    std::unordered_map<int32_t, TimestampEntry> m_file_split_column_id_to_range;
-    std::unordered_map<int32_t, TimestampEntry> m_archive_column_id_to_range;
+    // Pairs of timestamp column node ID and the column's time range.
+    std::optional<std::pair<int32_t, TimestampEntry>> m_file_split_timestamp_entry;
+    std::optional<std::pair<int32_t, TimestampEntry>> m_archive_timestamp_entry;
 
     std::string m_generated_pattern;
     std::vector<timestamp_parser::TimestampPattern> m_quoted_timestamp_patterns;

@@ -84,13 +84,15 @@ public:
     void read_from_file(ZstdDecompressor& decompressor);
 
     /**
-     * Check if a timestamp is in the range of this TimestampEntry
+     * Checks if a timestamp is in the range of this TimestampEntry
      * @param op
      * @param timestamp
-     * @return
+     * @return Whether the timestamp could possibly be in the range of this TimestampEntry.
      */
-    EvaluatedValue evaluate_filter(clp_s::search::ast::FilterOperation op, double timestamp);
-    EvaluatedValue evaluate_filter(clp_s::search::ast::FilterOperation op, epochtime_t timestamp);
+    auto evaluate_filter(clp_s::search::ast::FilterOperation op, double timestamp) const
+            -> EvaluatedValue;
+    auto evaluate_filter(clp_s::search::ast::FilterOperation op, epochtime_t timestamp) const
+            -> EvaluatedValue;
 
     auto get_key_name() const -> std::string const& { return m_key_name; }
 
