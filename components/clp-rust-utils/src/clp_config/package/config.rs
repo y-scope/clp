@@ -194,7 +194,7 @@ impl Database {
 
     /// # Returns
     ///
-    /// The datasets table name ()`<prefix>datasets`).
+    /// The datasets table name (`<prefix>datasets`).
     #[must_use]
     pub fn datasets_table_name(&self) -> String {
         format!("{}datasets", self.table_prefix)

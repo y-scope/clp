@@ -15,8 +15,6 @@ use spider_core::types::id::JobId;
 
 use crate::common::spider_task_executor_config;
 
-/// Archives whose timestamp range exceeds this are also recorded in the long-span archives table.
-///
 /// Mirror of `clp_py_utils.clp_metadata_db_utils.LONG_SPAN_THRESHOLD_MILLIS`.
 const LONG_SPAN_THRESHOLD_MILLIS: i64 = 24 * 60 * 60 * 1000;
 
@@ -130,7 +128,7 @@ pub(super) async fn commit(
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+/// * Forwards [`register_dataset_in_db`]'s return values on failure.
 async fn register_dataset(
     tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
     config: &clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig,
@@ -161,19 +159,14 @@ async fn insert_archives(
     archives: &[ArchiveMetadata],
 ) -> anyhow::Result<()> {
     for archives in archives.chunks(1000) {
-        let uuids: Vec<Vec<u8>> = archives
-            .iter()
-            .map(|archive| archive.id.as_bytes().to_vec())
-            .collect();
-
         let mut builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
             "INSERT INTO `{archives_table}` (dataset_id, uuid, timestamp_range_begin_millis, \
              timestamp_range_end_millis, num_uncompressed_bytes, num_compressed_bytes, \
              creation_time_millis) "
         ));
-        builder.push_values(archives.iter().zip(&uuids), |mut row, (archive, uuid)| {
+        builder.push_values(archives, |mut row, archive| {
             row.push_bind(dataset_id)
-                .push_bind(uuid.clone())
+                .push_bind(archive.id.as_bytes().as_slice())
                 .push_bind(archive.begin_timestamp)
                 .push_bind(archive.end_timestamp)
                 .push_bind(archive.uncompressed_size)
@@ -186,19 +179,17 @@ async fn insert_archives(
             .await
             .with_context(|| format!("failed to insert archives into `{archives_table}`"))?;
 
-        let long_span_uuids: Vec<&Vec<u8>> = archives
+        let long_span_archives: Vec<&ArchiveMetadata> = archives
             .iter()
-            .zip(&uuids)
-            .filter(|(archive, _)| {
+            .filter(|archive| {
                 LONG_SPAN_THRESHOLD_MILLIS < archive.end_timestamp - archive.begin_timestamp
             })
-            .map(|(_, uuid)| uuid)
             .collect();
-        if long_span_uuids.is_empty() {
+        if long_span_archives.is_empty() {
             continue;
         }
 
-        let placeholders = vec!["?"; long_span_uuids.len()].join(", ");
+        let placeholders = vec!["?"; long_span_archives.len()].join(", ");
         let statement = format!(
             "INSERT INTO `{long_span_archives_table}` (dataset_id, timestamp_range_begin_millis, \
              timestamp_range_end_millis, archive_id) SELECT dataset_id, \
@@ -206,8 +197,8 @@ async fn insert_archives(
              WHERE `dataset_id` = ? AND `uuid` IN ({placeholders})"
         );
         let mut query = sqlx::query(&statement).bind(dataset_id);
-        for uuid in long_span_uuids {
-            query = query.bind(uuid.clone());
+        for archive in long_span_archives {
+            query = query.bind(archive.id.as_bytes().as_slice());
         }
         query.execute(&mut **tx).await.with_context(|| {
             format!("failed to insert archives into `{long_span_archives_table}`")

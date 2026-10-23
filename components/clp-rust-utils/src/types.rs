@@ -37,7 +37,7 @@ impl ArchiveId {
     ///
     /// A reference to the archive ID's underlying UUID bytes.
     #[must_use]
-    pub const fn as_bytes(&self) -> &[u8; 16] {
+    pub const fn as_bytes(&self) -> &UuidBytes {
         self.value.as_bytes()
     }
 }

@@ -754,18 +754,14 @@ impl Client {
         // `components/core/src/clp_s/SchemaTree.hpp`.
         const TIMESTAMP_NODE_TYPE: i8 = 14;
 
-        // NOTE: The dataset is resolved separately so that an unknown dataset can be distinguished
-        // from a known one that has no timestamp columns.
         let datasets_table = self.config.database.datasets_table_name();
-        let dataset_id: Option<u16> = sqlx::query_scalar(&format!(
+        let dataset_id: u16 = sqlx::query_scalar(&format!(
             "SELECT id FROM `{datasets_table}` WHERE name = ? AND is_deleted = FALSE"
         ))
         .bind(dataset)
         .fetch_optional(&self.sql_pool)
-        .await?;
-        let Some(dataset_id) = dataset_id else {
-            return Err(ClientError::DatasetNotFound(dataset.clone()));
-        };
+        .await?
+        .ok_or_else(|| ClientError::DatasetNotFound(dataset.clone()))?;
 
         let column_metadata_table = self.config.database.column_metadata_table_name();
         let names: Vec<String> = sqlx::query_scalar(&format!(

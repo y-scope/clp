@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
 
     let dataset_option = Arc::new(compression_coordinator::job_handle::DatasetOption {
         datasets_table: config.database.datasets_table_name(),
-        archive_output: config.archive_output.clone(),
+        archive_output: config.archive_output,
     });
 
     let db_pool = create_clp_db_mysql_pool(

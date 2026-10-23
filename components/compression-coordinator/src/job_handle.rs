@@ -174,9 +174,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
 
     /// Submits the compression job to Spider and waits for it to reach a terminal state.
     ///
-    /// The job's dataset is registered before submission so that the indexer, which runs during
-    /// compression, can resolve the dataset's ID.
-    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -221,11 +218,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     }
 
     /// Registers the job's dataset in the CLP database.
-    ///
-    /// This runs before the job's tasks are submitted, because the `clp-s` indexer resolves the
-    /// dataset's ID during compression, whereas the commit task only registers it once every
-    /// compression task has finished. The registration is idempotent, so the commit task's own
-    /// registration is unaffected.
     ///
     /// # Errors
     ///
