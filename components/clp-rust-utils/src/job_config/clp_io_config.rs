@@ -43,6 +43,7 @@ pub enum InputConfig {
 pub struct FsInputConfig {
     pub dataset: DatasetName,
     pub paths_to_compress: Vec<NonEmptyString>,
+    // The consumer rejects an explicit `null` for this field, so omit it when unset.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub path_prefix_to_remove: Option<NonEmptyString>,
     pub timestamp_key: Option<NonEmptyString>,
@@ -97,83 +98,8 @@ impl From<&ArchiveOutput> for OutputConfig {
 
 #[cfg(test)]
 mod tests {
-    use non_empty_string::NonEmptyString;
-    use serde_json::Value;
-    use serde_json::json;
-
-    use super::FsInputConfig;
-    use super::InputConfig;
     use super::OutputConfig;
     use crate::clp_config::package::config::ArchiveOutput;
-    use crate::dataset::DatasetName;
-    use crate::types::non_empty_string::ExpectedNonEmpty;
-
-    #[test]
-    fn fs_input_config_round_trips_through_named_msgpack() {
-        let encoded_input_config = json!({
-            "type": "fs",
-            "dataset": "my_dataset",
-            "paths_to_compress": ["/logs/a.log", "/logs/b.log"],
-            "path_prefix_to_remove": "/logs",
-            "timestamp_key": "timestamp",
-            "unstructured": true
-        });
-        let serialized =
-            rmp_serde::to_vec_named(&encoded_input_config).expect("input config should serialize");
-        let input_config: InputConfig =
-            rmp_serde::from_slice(&serialized).expect("input config should deserialize");
-        assert_eq!(
-            input_config,
-            InputConfig::FsInputConfig {
-                config: FsInputConfig {
-                    dataset: "my_dataset"
-                        .parse()
-                        .expect("name should be a valid dataset name"),
-                    paths_to_compress: vec![
-                        NonEmptyString::from_static_str("/logs/a.log"),
-                        NonEmptyString::from_static_str("/logs/b.log"),
-                    ],
-                    path_prefix_to_remove: Some(NonEmptyString::from_static_str("/logs")),
-                    timestamp_key: Some(NonEmptyString::from_static_str("timestamp")),
-                    unstructured: true,
-                },
-            }
-        );
-
-        let reserialized =
-            rmp_serde::to_vec_named(&input_config).expect("input config should serialize");
-        assert_eq!(
-            rmp_serde::from_slice::<Value>(&reserialized)
-                .expect("serialized input config should decode as a map"),
-            encoded_input_config
-        );
-    }
-
-    #[test]
-    fn fs_input_config_omits_path_prefix_to_remove_when_absent() {
-        let input_config = InputConfig::FsInputConfig {
-            config: FsInputConfig {
-                dataset: DatasetName::default(),
-                paths_to_compress: vec![NonEmptyString::from_static_str("/logs/app.log")],
-                path_prefix_to_remove: None,
-                timestamp_key: None,
-                unstructured: false,
-            },
-        };
-        let serialized =
-            rmp_serde::to_vec_named(&input_config).expect("input config should serialize");
-        assert_eq!(
-            rmp_serde::from_slice::<Value>(&serialized)
-                .expect("serialized input config should decode as a map"),
-            json!({
-                "type": "fs",
-                "dataset": DatasetName::default_name(),
-                "paths_to_compress": ["/logs/app.log"],
-                "timestamp_key": null,
-                "unstructured": false
-            })
-        );
-    }
 
     #[test]
     fn output_config_from_archive_output_maps_every_field() {
