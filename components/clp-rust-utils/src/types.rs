@@ -20,6 +20,16 @@ pub struct ArchiveId {
     value: uuid::Uuid,
 }
 
+impl ArchiveId {
+    /// # Returns
+    ///
+    /// A reference to the archive ID's underlying UUID bytes.
+    #[must_use]
+    pub const fn as_bytes(&self) -> &[u8; 16] {
+        self.value.as_bytes()
+    }
+}
+
 impl FromStr for ArchiveId {
     type Err = ParseArchiveIdError;
 
