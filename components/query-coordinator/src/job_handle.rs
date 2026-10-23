@@ -647,7 +647,7 @@ impl ArchiveSelector<'_> {
         ));
         let mut separated_datasets = query_builder.separated(", ");
         for dataset in datasets {
-            separated_datasets.push_bind(dataset.as_str());
+            separated_datasets.push_bind(dataset);
         }
         query_builder.push(")");
 

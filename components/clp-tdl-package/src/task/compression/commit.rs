@@ -124,7 +124,7 @@ async fn register_dataset(
         "INSERT INTO `{datasets_table}` (name, archive_storage_directory) VALUES (?, ?) ON \
          DUPLICATE KEY UPDATE archive_storage_directory = VALUES(archive_storage_directory)"
     ))
-    .bind(dataset.as_str())
+    .bind(dataset)
     .bind(&archive_storage_directory)
     .execute(&mut **tx)
     .await

@@ -6,6 +6,11 @@ use std::str::FromStr;
 
 use serde::Deserialize;
 use serde::Serialize;
+use sqlx::MySql;
+use sqlx::encode::IsNull;
+use sqlx::error::BoxDynError;
+use sqlx::mysql::MySqlTypeInfo;
+use sqlx::mysql::MySqlValueRef;
 use unicode_properties::GeneralCategoryGroup;
 use unicode_properties::UnicodeGeneralCategory;
 
@@ -20,6 +25,9 @@ use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 /// A dataset name serializes as a plain string. It deserializes from a string, validated by the
 /// same rules as its [`FromStr`] implementation, or from a `null` or missing value, which gives the
 /// default dataset name ([`DatasetName::default_name`]).
+///
+/// A dataset name binds to and decodes from MySQL as a string, validated on decode by the same
+/// rules.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(try_from = "Option<String>", into = "String")]
 pub struct DatasetName {
@@ -105,6 +113,29 @@ impl Display for DatasetName {
     }
 }
 
+impl sqlx::Type<MySql> for DatasetName {
+    fn type_info() -> MySqlTypeInfo {
+        <str as sqlx::Type<MySql>>::type_info()
+    }
+
+    fn compatible(ty: &MySqlTypeInfo) -> bool {
+        <str as sqlx::Type<MySql>>::compatible(ty)
+    }
+}
+
+impl sqlx::Encode<'_, MySql> for DatasetName {
+    fn encode_by_ref(&self, buf: &mut Vec<u8>) -> Result<IsNull, BoxDynError> {
+        <&str as sqlx::Encode<MySql>>::encode(self.as_str(), buf)
+    }
+}
+
+impl<'decode> sqlx::Decode<'decode, MySql> for DatasetName {
+    fn decode(value: MySqlValueRef<'decode>) -> Result<Self, BoxDynError> {
+        let value = <&str as sqlx::Decode<MySql>>::decode(value)?;
+        value.parse::<Self>().map_err(Into::into)
+    }
+}
+
 impl From<DatasetName> for String {
     fn from(dataset: DatasetName) -> Self {
         dataset.value
@@ -150,6 +181,8 @@ const TABLE_SUFFIX_MAX_LEN: usize = "column_metadata".len();
 #[cfg(test)]
 mod tests {
     use serde::Deserialize;
+    use sqlx::MySql;
+    use sqlx::encode::IsNull;
 
     use super::DATASET_NAME_MAX_LEN;
     use super::DatasetName;
@@ -241,6 +274,32 @@ mod tests {
                 .parse::<DatasetName>()
                 .expect_err("name should be an invalid dataset name");
             assert_eq!(error.to_string(), parse_error.to_string());
+        }
+    }
+
+    #[test]
+    fn dataset_name_encodes_in_mysql_as_a_string() {
+        for (dataset, name) in [
+            (
+                "my_dataset"
+                    .parse()
+                    .expect("name should be a valid dataset name"),
+                "my_dataset",
+            ),
+            (DatasetName::default(), "default"),
+        ] {
+            let mut encoded = Vec::new();
+            let is_null =
+                <DatasetName as sqlx::Encode<MySql>>::encode_by_ref(&dataset, &mut encoded)
+                    .expect("dataset name should encode");
+            assert!(matches!(is_null, IsNull::No));
+
+            let mut expected = Vec::new();
+            let expected_is_null =
+                <&str as sqlx::Encode<MySql>>::encode_by_ref(&name, &mut expected)
+                    .expect("string should encode");
+            assert!(matches!(expected_is_null, IsNull::No));
+            assert_eq!(encoded, expected);
         }
     }
 
