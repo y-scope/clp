@@ -11,9 +11,6 @@ use unicode_properties::UnicodeGeneralCategory;
 
 use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 
-/// The name of the dataset used when none is specified.
-pub const CLP_DEFAULT_DATASET_NAME: &str = "default";
-
 /// A validated dataset name.
 ///
 /// A dataset name is non-empty, only contains `_` or Unicode letters and numbers (general
@@ -28,6 +25,14 @@ pub struct DatasetName {
 impl DatasetName {
     /// # Returns
     ///
+    /// The name of the dataset used when none is specified.
+    #[must_use]
+    pub const fn default_name() -> &'static str {
+        CLP_DEFAULT_DATASET_NAME
+    }
+
+    /// # Returns
+    ///
     /// The dataset name as a string slice.
     #[must_use]
     pub const fn as_str(&self) -> &str {
@@ -36,17 +41,17 @@ impl DatasetName {
 
     /// # Returns
     ///
-    /// Whether the dataset name is [`CLP_DEFAULT_DATASET_NAME`].
+    /// Whether the dataset name is [`DatasetName::default_name`].
     #[must_use]
     pub fn is_default(&self) -> bool {
-        self.value == CLP_DEFAULT_DATASET_NAME
+        self.value == Self::default_name()
     }
 }
 
 impl Default for DatasetName {
     fn default() -> Self {
         Self {
-            value: CLP_DEFAULT_DATASET_NAME.to_owned(),
+            value: Self::default_name().to_owned(),
         }
     }
 }
@@ -54,11 +59,6 @@ impl Default for DatasetName {
 impl FromStr for DatasetName {
     type Err = ParseDatasetNameError;
 
-    /// Creates a dataset name from `value` if it is a valid [`DatasetName`].
-    ///
-    /// # Returns
-    ///
-    /// The parsed dataset name on success.
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Self::try_from(value.to_owned())
     }
@@ -67,11 +67,6 @@ impl FromStr for DatasetName {
 impl TryFrom<String> for DatasetName {
     type Error = ParseDatasetNameError;
 
-    /// Creates a dataset name from `value` if it is a valid [`DatasetName`].
-    ///
-    /// # Returns
-    ///
-    /// The dataset name on success.
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.is_empty() {
             return Err(ParseDatasetNameError::Empty);
@@ -131,6 +126,9 @@ pub enum ParseDatasetNameError {
     TooLong(String),
 }
 
+/// The name of the dataset used when none is specified.
+const CLP_DEFAULT_DATASET_NAME: &str = "default";
+
 /// The maximum number of characters in a dataset name.
 ///
 /// The bound ensures that the longest metadata table name, `<table prefix><dataset>_<longest
@@ -147,7 +145,6 @@ const TABLE_SUFFIX_MAX_LEN: usize = "column_metadata".len();
 
 #[cfg(test)]
 mod tests {
-    use super::CLP_DEFAULT_DATASET_NAME;
     use super::DATASET_NAME_MAX_LEN;
     use super::DatasetName;
     use super::ParseDatasetNameError;
@@ -241,7 +238,7 @@ mod tests {
     fn dataset_name_from_option_defaults_none_and_validates_some() {
         assert_eq!(
             DatasetName::try_from(None).map(String::from),
-            Ok(CLP_DEFAULT_DATASET_NAME.to_owned())
+            Ok(DatasetName::default_name().to_owned())
         );
         assert_eq!(
             DatasetName::try_from(Some("my_dataset".to_owned())).map(String::from),
@@ -259,7 +256,7 @@ mod tests {
     fn is_default_is_true_only_for_the_default_dataset_name() {
         assert!(DatasetName::default().is_default());
         assert!(
-            CLP_DEFAULT_DATASET_NAME
+            DatasetName::default_name()
                 .parse::<DatasetName>()
                 .expect("the default name should be a valid dataset name")
                 .is_default()
@@ -276,7 +273,7 @@ mod tests {
     fn default_dataset_name_encodes_in_msgpack_as_the_default_string() {
         assert_eq!(
             rmp_serde::to_vec(&DatasetName::default()).expect("dataset name should serialize"),
-            rmp_serde::to_vec(CLP_DEFAULT_DATASET_NAME).expect("string should serialize")
+            rmp_serde::to_vec(DatasetName::default_name()).expect("string should serialize")
         );
     }
 }
