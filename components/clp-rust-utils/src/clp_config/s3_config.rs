@@ -1,7 +1,6 @@
 use aws_config::Region;
 use aws_config::profile::ProfileFileCredentialsProvider;
 use aws_config::provider_config::ProviderConfig;
-use aws_runtime::env_config::file::EnvConfigFiles;
 use aws_sdk_s3::config::Credentials;
 use aws_sdk_s3::config::SharedCredentialsProvider;
 use non_empty_string::NonEmptyString;
@@ -51,25 +50,6 @@ impl AwsAuthentication {
     ///   that the default AWS SDK credential provider chain should be used.
     #[must_use]
     pub fn credentials_provider(&self, region: &str) -> Option<SharedCredentialsProvider> {
-        self.credentials_provider_with_provider_config(
-            region,
-            ProviderConfig::default(),
-            EnvConfigFiles::default(),
-        )
-    }
-
-    /// Creates the credentials provider that AWS clients should install for this authentication
-    /// method, resolving named profiles from `profile_files` through `provider_config`.
-    ///
-    /// # Returns
-    ///
-    /// See [`AwsAuthentication::credentials_provider`].
-    fn credentials_provider_with_provider_config(
-        &self,
-        region: &str,
-        provider_config: ProviderConfig,
-        profile_files: EnvConfigFiles,
-    ) -> Option<SharedCredentialsProvider> {
         match self {
             Self::Credentials { credentials } => {
                 Some(SharedCredentialsProvider::new(Credentials::new(
@@ -82,9 +62,11 @@ impl AwsAuthentication {
             }
             Self::Profile { profile } => Some(SharedCredentialsProvider::new(
                 ProfileFileCredentialsProvider::builder()
-                    .configure(&provider_config.with_region(Some(Region::new(region.to_owned()))))
+                    .configure(
+                        &ProviderConfig::default()
+                            .with_region(Some(Region::new(region.to_owned()))),
+                    )
                     .profile_name(profile.as_str())
-                    .profile_files(profile_files)
                     .build(),
             )),
             Self::Default | Self::EnvVars => None,
@@ -103,38 +85,12 @@ pub struct AwsCredentials {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
-    use aws_config::provider_config::ProviderConfig;
-    use aws_runtime::env_config::file::EnvConfigFileKind;
-    use aws_runtime::env_config::file::EnvConfigFiles;
     use aws_sdk_s3::config::ProvideCredentials;
     use non_empty_string::NonEmptyString;
 
     use super::AwsAuthentication;
     use super::AwsCredentials;
     use crate::aws::AWS_DEFAULT_REGION;
-
-    /// Writes the given credentials and config files into `dir`.
-    ///
-    /// # Returns
-    ///
-    /// The profile files that resolve profiles from the written files.
-    ///
-    /// # Panics
-    ///
-    /// Panics if either file can't be written.
-    fn write_profile_files(dir: &Path, credentials: &[&str], config: &[&str]) -> EnvConfigFiles {
-        let credentials_file = dir.join("credentials");
-        let config_file = dir.join("config");
-        std::fs::write(&credentials_file, credentials.join("\n"))
-            .expect("failed to write credentials file");
-        std::fs::write(&config_file, config.join("\n")).expect("failed to write config file");
-        EnvConfigFiles::builder()
-            .with_file(EnvConfigFileKind::Credentials, &credentials_file)
-            .with_file(EnvConfigFileKind::Config, &config_file)
-            .build()
-    }
 
     #[test]
     fn profile_authentication_deserializes_with_null_credentials() {
@@ -178,46 +134,6 @@ mod tests {
     fn profile_authentication_without_profile_is_rejected() {
         serde_json::from_value::<AwsAuthentication>(serde_json::json!({"type": "profile"}))
             .expect_err("profile authentication without a profile must be rejected");
-    }
-
-    #[tokio::test]
-    async fn profile_authentication_resolves_named_profile_keys() {
-        const PROFILE: &str = "explicit";
-        const ACCESS_KEY_ID: &str = "profile-access";
-        const SECRET_ACCESS_KEY: &str = "profile-secret";
-
-        let profile_dir = tempfile::tempdir().expect("failed to create profile directory");
-        let profile_files = write_profile_files(
-            profile_dir.path(),
-            &[
-                "[default]",
-                "aws_access_key_id = default-access",
-                "aws_secret_access_key = default-secret",
-                &format!("[{PROFILE}]"),
-                &format!("aws_access_key_id = {ACCESS_KEY_ID}"),
-                &format!("aws_secret_access_key = {SECRET_ACCESS_KEY}"),
-            ],
-            &[],
-        );
-        let auth = AwsAuthentication::Profile {
-            profile: NonEmptyString::new(PROFILE.to_owned())
-                .expect("profile name must be non-empty"),
-        };
-
-        let credentials = auth
-            .credentials_provider_with_provider_config(
-                AWS_DEFAULT_REGION,
-                ProviderConfig::default(),
-                profile_files,
-            )
-            .expect("profile authentication must install a credentials provider")
-            .provide_credentials()
-            .await
-            .expect("failed to resolve named profile credentials");
-
-        assert_eq!(credentials.access_key_id(), ACCESS_KEY_ID);
-        assert_eq!(credentials.secret_access_key(), SECRET_ACCESS_KEY);
-        assert_eq!(credentials.session_token(), None);
     }
 
     #[tokio::test]
