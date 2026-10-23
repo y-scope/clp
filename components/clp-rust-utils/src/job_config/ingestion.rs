@@ -5,6 +5,8 @@ pub mod s3 {
     use thiserror::Error;
     use utoipa::ToSchema;
 
+    use crate::dataset::DatasetName;
+
     #[derive(Error, Debug)]
     pub enum ConfigError {
         #[error("Invalid `num_concurrent_listener_tasks`: {0}")]
@@ -61,10 +63,15 @@ pub mod s3 {
         #[schema(value_type = String, min_length = 1)]
         pub endpoint_url: Option<NonEmptyString>,
 
-        /// The dataset to ingest into. Defaults to `None` (which uses the default dataset).
+        /// The dataset to ingest into. Defaults to the default dataset.
         #[serde(default)]
-        #[schema(value_type = String, min_length = 1)]
-        pub dataset: Option<NonEmptyString>,
+        #[schema(
+            value_type = String,
+            min_length = 1,
+            max_length = 44,
+            default = DatasetName::default_name
+        )]
+        pub dataset: DatasetName,
 
         /// The optional key for extracting timestamps from object metadata. Defaults to `None`.
         #[serde(default)]
