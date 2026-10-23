@@ -20,7 +20,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::CompressionCoordinator as CoordinatorConfig;
-use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
 use clp_rust_utils::clp_config::package::config::Spider as SpiderConfig;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
@@ -48,7 +47,6 @@ pub struct Coordinator {
     resource_group_id: ResourceGroupId,
     spider_client: SpiderClient,
     db_pool: sqlx::MySqlPool,
-    db_config: DatabaseConfig,
     spider_option: Arc<SpiderOption>,
     is_first_fetch: bool,
     job_polling_interval: Duration,
@@ -84,7 +82,6 @@ impl Coordinator {
         coordinator_config: &CoordinatorConfig,
         spider_config: &SpiderConfig,
         db_pool: sqlx::MySqlPool,
-        db_config: DatabaseConfig,
     ) -> Result<(Self, CancellationToken), Error> {
         let max_concurrent_jobs = coordinator_config.max_concurrent_jobs.get();
         if max_concurrent_jobs > Semaphore::MAX_PERMITS {
@@ -145,7 +142,6 @@ impl Coordinator {
             resource_group_id,
             spider_client,
             db_pool,
-            db_config,
             spider_option,
             is_first_fetch: true,
             job_polling_interval: Duration::from_millis(
@@ -387,7 +383,6 @@ impl Coordinator {
     ) -> Result<S3CompressionJobHandle<SpiderClient>, Error> {
         let result = S3CompressionJobHandle::new(
             self.db_pool.clone(),
-            self.db_config.clone(),
             job_id,
             self.spider_client.clone(),
             self.resource_group_id,

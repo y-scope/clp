@@ -27,13 +27,6 @@ pub enum Error {
     #[error("invalid endpoint: {0}")]
     InvalidEndpoint(String),
 
-    #[error("failed to create metadata table `{table}`: {source}")]
-    MetadataTableCreation {
-        table: String,
-        #[source]
-        source: sqlx::Error,
-    },
-
     #[error("missing S3 object metadata {id} for ingestion job {ingestion_job_id}")]
     MissingS3ObjectMetadata {
         ingestion_job_id: IngestionJobId,
