@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 use clap::Parser;
@@ -74,6 +75,11 @@ async fn main() -> anyhow::Result<()> {
         anyhow::anyhow!(ERROR_MESSAGE)
     })?;
 
+    let dataset_option = Arc::new(compression_coordinator::job_handle::DatasetOption {
+        datasets_table: config.database.datasets_table_name(),
+        archive_output: config.archive_output.clone(),
+    });
+
     let db_pool = create_clp_db_mysql_pool(
         &config.database,
         &credentials.database,
@@ -86,6 +92,7 @@ async fn main() -> anyhow::Result<()> {
         compression_coordinator::coordination::Coordinator::new(
             &coordinator_config,
             &spider_config,
+            dataset_option,
             db_pool,
         )
         .await?;
