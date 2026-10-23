@@ -12,7 +12,7 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
-use clp_rust_utils::dataset::resolve_dataset_name;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
@@ -46,7 +46,7 @@ pub(super) fn search(
     query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
     archive_id: ArchiveId,
-    dataset: Option<&str>,
+    dataset: &DatasetName,
     output_handle: &OutputHandle,
 ) -> anyhow::Result<()> {
     if StorageEngine::ClpS != config.package.storage_engine {
@@ -55,8 +55,6 @@ pub(super) fn search(
     let OutputHandle::ResultsCache { uri } = output_handle else {
         anyhow::bail!("unsupported query output handler");
     };
-
-    let dataset = resolve_dataset_name(dataset);
 
     tracing::info!(
         job_id = % ctx.job_id,
@@ -87,7 +85,7 @@ pub(super) fn search(
         clp_s_query_option,
         uri.as_str(),
         query_job_id,
-        dataset,
+        dataset.as_str(),
     );
     run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
 
@@ -133,14 +131,16 @@ fn resolve_archive_input(
     runtime: &tokio::runtime::Handle,
     clp_home: &Path,
     config: &SpiderTaskExecutorConfig,
-    dataset: &str,
+    dataset: &DatasetName,
     archive_id: ArchiveId,
 ) -> anyhow::Result<(ArchiveSelector, Vec<(&'static str, String)>)> {
     let s3_config = match &config.archive_output.storage {
         ArchiveOutputStorage::Fs { .. } => {
             return Ok((
                 ArchiveSelector::Directory {
-                    path: config.abs_archive_output_staging(clp_home).join(dataset),
+                    path: config
+                        .abs_archive_output_staging(clp_home)
+                        .join(dataset.as_str()),
                     archive_id,
                 },
                 Vec::new(),
@@ -151,7 +151,7 @@ fn resolve_archive_input(
 
     let object_key = config
         .archive_output
-        .dataset_archive_object_key(Some(dataset), &archive_id);
+        .dataset_archive_object_key(dataset, &archive_id);
     let url = generate_s3_url(
         s3_config.endpoint_url.as_ref().map(NonEmptyString::as_str),
         s3_config.region_code.as_ref().map(NonEmptyString::as_str),
@@ -304,6 +304,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::Package;
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::task_io::query::ClpSQueryOption;
     use clp_rust_utils::task_io::query::OutputHandle;
     use clp_rust_utils::types::ArchiveId;
@@ -569,7 +570,7 @@ mod tests {
             runtime.handle(),
             Path::new("/clp"),
             &config,
-            "ds1",
+            &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
@@ -595,7 +596,7 @@ mod tests {
             runtime.handle(),
             Path::new("/clp"),
             &config,
-            "ds1",
+            &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
@@ -628,7 +629,7 @@ mod tests {
             runtime.handle(),
             Path::new("/clp"),
             &config,
-            "ds1",
+            &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
         let args = build_clp_s_search_args_for_result_cache(
@@ -657,7 +658,7 @@ mod tests {
             runtime.handle(),
             Path::new("/clp"),
             &config,
-            "ds1",
+            &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
@@ -687,7 +688,7 @@ mod tests {
             42,
             &unbounded_query_option(),
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-            None,
+            &DatasetName::default(),
             &OutputHandle::File,
         )
         .expect_err("the file output handler is unsupported");
@@ -706,7 +707,7 @@ mod tests {
             42,
             &unbounded_query_option(),
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-            None,
+            &DatasetName::default(),
             &OutputHandle::ResultsCache {
                 uri: NonEmptyString::from_static_str(
                     "mongodb://results-cache:27017/clp-query-results",

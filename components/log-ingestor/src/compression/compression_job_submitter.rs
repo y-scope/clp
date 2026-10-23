@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use clp_rust_utils::clp_config::AwsAuthentication;
 use clp_rust_utils::clp_config::S3Config;
 use clp_rust_utils::clp_config::package::config::ArchiveOutput;
-use clp_rust_utils::dataset::CLP_DEFAULT_DATASET_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -12,8 +11,6 @@ use clp_rust_utils::job_config::OutputConfig;
 use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
 use clp_rust_utils::job_config::ingestion::s3::BaseConfig;
 use clp_rust_utils::s3::S3ObjectMetadataId;
-use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
-use non_empty_string::NonEmptyString;
 
 use crate::compression::BufferSubmitter;
 use crate::ingestion_job_manager::ClpCompressionState;
@@ -72,13 +69,7 @@ impl CompressionJobSubmitter {
             },
             ingestion_job_id,
             s3_object_metadata_ids: vec![],
-            // NOTE: Workaround for #1735
-            dataset: Some(
-                ingestion_job_config
-                    .dataset
-                    .clone()
-                    .unwrap_or_else(|| NonEmptyString::from_static_str(CLP_DEFAULT_DATASET_NAME)),
-            ),
+            dataset: ingestion_job_config.dataset.clone(),
             timestamp_key: ingestion_job_config.timestamp_key.clone(),
             unstructured: ingestion_job_config.unstructured,
         };

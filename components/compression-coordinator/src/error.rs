@@ -24,9 +24,6 @@ pub enum Error {
     #[error("invalid configuration: {0}")]
     InvalidConfiguration(String),
 
-    #[error("invalid dataset: {0}")]
-    InvalidDataset(String),
-
     #[error("invalid endpoint: {0}")]
     InvalidEndpoint(String),
 

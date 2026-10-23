@@ -38,7 +38,7 @@ fn test_clp_io_config_serialization() -> Result<(), Box<dyn Error>> {
                 s3_config,
                 ingestion_job_id: 1,
                 s3_object_metadata_ids: vec![],
-                dataset: Some(NonEmptyString::from_static_str("test-dataset")),
+                dataset: "test_dataset".parse()?,
                 timestamp_key: Some(NonEmptyString::from_static_str("timestamp")),
                 unstructured: false,
             },
@@ -68,7 +68,7 @@ fn test_clp_io_config_serialization() -> Result<(), Box<dyn Error>> {
         },
         "ingestion_job_id": 1,
         "s3_object_metadata_ids": [],
-        "dataset": "test-dataset",
+        "dataset": "test_dataset",
         "timestamp_key": "timestamp",
         "unstructured": false
       },

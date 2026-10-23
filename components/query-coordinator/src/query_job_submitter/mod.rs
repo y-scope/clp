@@ -5,11 +5,11 @@ mod spider;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
-use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
 use spider_core::task::ExecutionPolicy;
@@ -24,8 +24,8 @@ pub struct ArchiveMetadata {
     /// The archive's ID.
     pub id: ArchiveId,
 
-    /// The archive's dataset, or `None` for the default dataset.
-    pub dataset: Option<NonEmptyString>,
+    /// The archive's dataset.
+    pub dataset: DatasetName,
 
     /// The archive's uncompressed size in bytes.
     pub uncompressed_size: u64,
