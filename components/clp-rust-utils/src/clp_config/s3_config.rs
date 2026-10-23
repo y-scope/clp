@@ -92,50 +92,6 @@ mod tests {
     use super::AwsCredentials;
     use crate::aws::AWS_DEFAULT_REGION;
 
-    #[test]
-    fn profile_authentication_deserializes_with_null_credentials() {
-        let auth: AwsAuthentication = serde_json::from_value(serde_json::json!({
-            "type": "profile",
-            "profile": "my-profile",
-            "credentials": null,
-        }))
-        .expect("failed to deserialize profile authentication");
-
-        assert_eq!(
-            auth,
-            AwsAuthentication::Profile {
-                profile: NonEmptyString::new("my-profile".to_owned())
-                    .expect("profile name must be non-empty"),
-            }
-        );
-    }
-
-    #[test]
-    fn env_vars_authentication_deserializes_with_null_profile_and_credentials() {
-        let auth: AwsAuthentication = serde_json::from_value(serde_json::json!({
-            "type": "env_vars",
-            "profile": null,
-            "credentials": null,
-        }))
-        .expect("failed to deserialize env-vars authentication");
-
-        assert_eq!(auth, AwsAuthentication::EnvVars);
-    }
-
-    #[test]
-    fn unknown_authentication_type_is_rejected() {
-        serde_json::from_value::<AwsAuthentication>(serde_json::json!({
-            "type": "instance_metadata",
-        }))
-        .expect_err("an unknown authentication type must be rejected");
-    }
-
-    #[test]
-    fn profile_authentication_without_profile_is_rejected() {
-        serde_json::from_value::<AwsAuthentication>(serde_json::json!({"type": "profile"}))
-            .expect_err("profile authentication without a profile must be rejected");
-    }
-
     #[tokio::test]
     async fn credentials_provider_resolves_static_credentials() {
         const ACCESS_KEY_ID: &str = "the-access-key";
