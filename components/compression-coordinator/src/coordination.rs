@@ -22,6 +22,7 @@ use std::time::Duration;
 use clp_rust_utils::clp_config::package::config::CompressionCoordinator as CoordinatorConfig;
 use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
 use clp_rust_utils::clp_config::package::config::Spider as SpiderConfig;
+use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -238,7 +239,7 @@ impl Coordinator {
         const QUERY: &str = formatcp!(
             "UPDATE `{table}` SET `status` = ?, `status_msg` = ?, `update_time` = \
              CURRENT_TIMESTAMP() WHERE `id` = ?;",
-            table = COMPRESSION_JOB_TABLE_NAME,
+            table = COMPRESSION_JOBS_TABLE_NAME,
         );
         tracing::info!(job_id = % job_id, "Failing the compression job.");
         if let Err(e) = sqlx::query(QUERY)
@@ -351,7 +352,7 @@ impl Coordinator {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
                 "UPDATE `{table}` SET `dispatch_time` = COALESCE(`dispatch_time`, \
                  CURRENT_TIMESTAMP()) WHERE `id` IN (",
-                table = COMPRESSION_JOB_TABLE_NAME,
+                table = COMPRESSION_JOBS_TABLE_NAME,
             ));
             let mut separated_ids = query_builder.separated(", ");
             for job_id in chunk {
@@ -448,12 +449,12 @@ impl Coordinator {
         const FIRST_FETCH_QUERY: &str = formatcp!(
             "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? AND `dispatch_time` IS \
              NOT NULL ORDER BY `id` ASC;",
-            table = COMPRESSION_JOB_TABLE_NAME,
+            table = COMPRESSION_JOBS_TABLE_NAME,
         );
         const SUBSEQUENT_FETCH_QUERY: &str = formatcp!(
             "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? AND `dispatch_time` IS \
              NULL ORDER BY `id` ASC LIMIT ?;",
-            table = COMPRESSION_JOB_TABLE_NAME,
+            table = COMPRESSION_JOBS_TABLE_NAME,
         );
 
         let query = if self.is_first_fetch {
@@ -499,7 +500,7 @@ impl Coordinator {
         const QUERY: &str = formatcp!(
             "SELECT `id`, `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
              `spider_id` IS NOT NULL;",
-            table = COMPRESSION_JOB_TABLE_NAME,
+            table = COMPRESSION_JOBS_TABLE_NAME,
         );
 
         let mut recovery_context = Vec::new();
@@ -532,8 +533,6 @@ impl Coordinator {
         Ok(recovery_context)
     }
 }
-
-const COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 
 /// A projection of the columns read from a [`CompressionJobStatus::Pending`] compression job row.
 #[derive(Debug, sqlx::FromRow)]
