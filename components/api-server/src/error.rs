@@ -2,6 +2,7 @@
 
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
+use clp_rust_utils::dataset::DatasetName;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
@@ -31,14 +32,11 @@ pub enum ClientError {
     #[error("Search job not found: {0}")]
     SearchJobNotFound(u64),
 
-    #[error("Invalid dataset name")]
-    InvalidDatasetName,
-
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
     #[error("Dataset not found: {0}")]
-    DatasetNotFound(String),
+    DatasetNotFound(DatasetName),
 
     #[error("Invalid search job config: {0}")]
     InvalidSearchJobConfig(String),

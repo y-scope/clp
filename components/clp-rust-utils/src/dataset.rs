@@ -17,7 +17,7 @@ use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 /// categories L and N), and is short enough for its longest metadata table name to fit MySQL's
 /// 64-character table-name limit.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(try_from = "String", into = "String")]
+#[serde(try_from = "Option<String>", into = "String")]
 pub struct DatasetName {
     value: String,
 }
@@ -145,6 +145,8 @@ const TABLE_SUFFIX_MAX_LEN: usize = "column_metadata".len();
 
 #[cfg(test)]
 mod tests {
+    use serde::Deserialize;
+
     use super::DATASET_NAME_MAX_LEN;
     use super::DatasetName;
     use super::ParseDatasetNameError;
@@ -232,6 +234,35 @@ mod tests {
                 "unexpected error: {error}"
             );
         }
+    }
+
+    #[test]
+    fn null_dataset_name_deserializes_as_the_default() {
+        let nil = rmp_serde::to_vec(&None::<String>).expect("nil should serialize");
+        assert_eq!(
+            rmp_serde::from_slice::<DatasetName>(&nil).expect("msgpack nil should deserialize"),
+            DatasetName::default()
+        );
+        assert_eq!(
+            serde_json::from_str::<DatasetName>("null").expect("JSON `null` should deserialize"),
+            DatasetName::default()
+        );
+    }
+
+    #[test]
+    fn absent_defaulted_dataset_name_field_deserializes_as_the_default() {
+        #[derive(Debug, Deserialize, PartialEq)]
+        struct Config {
+            #[serde(default)]
+            dataset: DatasetName,
+        }
+
+        assert_eq!(
+            serde_json::from_str::<Config>("{}").expect("an empty config should deserialize"),
+            Config {
+                dataset: DatasetName::default()
+            }
+        );
     }
 
     #[test]

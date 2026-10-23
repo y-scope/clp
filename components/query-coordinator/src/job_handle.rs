@@ -592,7 +592,6 @@ impl ArchiveSelector<'_> {
     /// * [`Error::InvalidQueryJobConfig`] if:
     ///   * The job doesn't request any datasets, since clp-text queries aren't supported.
     ///   * The job's requested datasets are empty.
-    ///   * A dataset name isn't a valid [`DatasetName`].
     ///   * The number of distinct datasets exceeds
     ///     [`ArchiveSelectionOptions::max_datasets_per_query`].
     fn deduplicate_and_validate_requested_datasets(&self) -> Result<HashSet<DatasetName>, Error> {
@@ -608,14 +607,7 @@ impl ArchiveSelector<'_> {
             ));
         }
 
-        let datasets = requested_datasets
-            .iter()
-            .map(|dataset| {
-                dataset.parse::<DatasetName>().map_err(|_| {
-                    Error::InvalidQueryJobConfig(format!("invalid dataset name `{dataset}`"))
-                })
-            })
-            .collect::<Result<HashSet<_>, _>>()?;
+        let datasets: HashSet<DatasetName> = requested_datasets.iter().cloned().collect();
 
         if let Some(max_datasets_per_query) = self
             .context
@@ -776,9 +768,12 @@ struct ArchiveRowProjection {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+    use std::num::NonZeroUsize;
     use std::time::Duration;
 
     use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::SearchJobConfig;
     use sqlx::mysql::MySqlPoolOptions;
 
@@ -789,7 +784,7 @@ mod tests {
     use crate::Error;
 
     #[tokio::test]
-    async fn invalid_requested_dataset_is_an_invalid_query_job_config() {
+    async fn duplicate_requested_datasets_count_once_toward_max_datasets_per_query() {
         let context = QueryJobHandleContext {
             db_pool: MySqlPoolOptions::new()
                 .connect_lazy("mysql://localhost/clp-db")
@@ -797,31 +792,40 @@ mod tests {
             db_config: Database::default(),
             archive_selection_options: ArchiveSelectionOptions {
                 archive_retention_period_millisecs: None,
-                max_datasets_per_query: None,
+                max_datasets_per_query: NonZeroUsize::new(1),
             },
             spider_option: SpiderOption {
                 poll_interval: Duration::from_secs(1),
                 query_task_max_retry: 0,
             },
         };
-        let search_job_config = SearchJobConfig {
-            datasets: Some(vec!["default".to_owned(), "bad-name".to_owned()]),
-            ..SearchJobConfig::default()
-        };
-        let archive_selector = ArchiveSelector {
-            context: &context,
-            search_job_config: &search_job_config,
-            archive_end_ts_lower_bound_millisecs: None,
+        let other_dataset: DatasetName = "other"
+            .parse()
+            .expect("name should be a valid dataset name");
+        let select_datasets = |datasets| {
+            let search_job_config = SearchJobConfig {
+                datasets: Some(datasets),
+                ..SearchJobConfig::default()
+            };
+            ArchiveSelector {
+                context: &context,
+                search_job_config: &search_job_config,
+                archive_end_ts_lower_bound_millisecs: None,
+            }
+            .deduplicate_and_validate_requested_datasets()
         };
 
-        let error = archive_selector
-            .deduplicate_and_validate_requested_datasets()
-            .expect_err("an invalid dataset name should be rejected");
+        assert_eq!(
+            select_datasets(vec![DatasetName::default(), DatasetName::default()])
+                .expect("duplicate datasets should count once"),
+            HashSet::from([DatasetName::default()])
+        );
+        let error = select_datasets(vec![DatasetName::default(), other_dataset])
+            .expect_err("two distinct datasets should exceed the limit");
         assert!(
             matches!(
                 &error,
-                Error::InvalidQueryJobConfig(message)
-                    if message == "invalid dataset name `bad-name`"
+                Error::InvalidQueryJobConfig(message) if message.contains("max_datasets_per_query")
             ),
             "unexpected error: {error:?}"
         );

@@ -314,6 +314,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use clp_rust_utils::clp_config::AwsAuthentication;
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::OutputConfig;
     use clp_rust_utils::job_config::S3InputConfig;
     use non_empty_string::NonEmptyString;
@@ -339,7 +340,7 @@ mod tests {
                 config: S3InputConfig {
                     s3_config,
                     keys: None,
-                    dataset: None,
+                    dataset: DatasetName::default(),
                     timestamp_key: None,
                     unstructured: false,
                 },

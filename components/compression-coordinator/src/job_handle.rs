@@ -68,7 +68,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::UnsupportedInputConfig`] if `clp_io_config`'s input config is not an
     ///   [`InputConfig::S3ObjectMetadataInputConfig`].
-    /// * [`Error::InvalidDataset`] if the configured dataset name is not a valid [`DatasetName`].
     pub fn new(
         db_pool: MySqlPool,
         db_config: Database,
@@ -85,13 +84,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         else {
             return Err(Error::UnsupportedInputConfig);
         };
-        let dataset = match &s3_object_metadata_config.dataset {
-            Some(dataset_name) => dataset_name
-                .as_str()
-                .parse::<DatasetName>()
-                .map_err(|_| Error::InvalidDataset(dataset_name.to_string()))?,
-            None => DatasetName::default(),
-        };
+        let dataset = s3_object_metadata_config.dataset.clone();
 
         let output_config = clp_io_config.output;
         let clp_s_compression_option = ClpSCompressionOption {
@@ -596,118 +589,4 @@ struct S3ObjectMetadataRow {
     bucket: String,
     key: String,
     size: u64,
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-    use std::time::Duration;
-
-    use async_trait::async_trait;
-    use clp_rust_utils::clp_config::AwsAuthentication;
-    use clp_rust_utils::clp_config::S3Config;
-    use clp_rust_utils::clp_config::package::config::Database;
-    use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::job_config::ClpIoConfig;
-    use clp_rust_utils::job_config::CompressionJobId;
-    use clp_rust_utils::job_config::InputConfig;
-    use clp_rust_utils::job_config::OutputConfig;
-    use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
-    use clp_rust_utils::task_io::compression::ClpSCompressionOption;
-    use clp_rust_utils::task_io::compression::S3InputSource;
-    use non_empty_string::NonEmptyString;
-    use spider_core::task::ExecutionPolicy;
-    use spider_core::types::id::JobId as SpiderJobId;
-    use spider_core::types::id::ResourceGroupId;
-    use sqlx::mysql::MySqlPoolOptions;
-
-    use super::S3CompressionJobHandle;
-    use super::SpiderOption;
-    use crate::Error;
-    use crate::compression_job_submitter::CompressionJobOutcome;
-    use crate::compression_job_submitter::S3CompressionJobSubmitter;
-
-    #[derive(Clone)]
-    struct UnreachableSubmitter;
-
-    #[async_trait]
-    impl S3CompressionJobSubmitter for UnreachableSubmitter {
-        async fn submit_s3_compression_job(
-            &self,
-            _compression_job_id: CompressionJobId,
-            _resource_group_id: ResourceGroupId,
-            _clp_s_option: ClpSCompressionOption,
-            _dataset: DatasetName,
-            _input_sources: Vec<(S3InputSource, ExecutionPolicy)>,
-            _commit_task_execution_policy: ExecutionPolicy,
-        ) -> Result<SpiderJobId, Error> {
-            unreachable!("the job handle is never run")
-        }
-
-        async fn run_s3_compression_job_to_completion(
-            &self,
-            _spider_job_id: SpiderJobId,
-            _initial_poll_backoff: Duration,
-            _max_poll_backoff: Duration,
-        ) -> Result<CompressionJobOutcome, Error> {
-            unreachable!("the job handle is never run")
-        }
-    }
-
-    #[tokio::test]
-    async fn invalid_configured_dataset_is_an_invalid_dataset() {
-        let non_empty_string = |value: &str| {
-            NonEmptyString::try_from(value).expect("test string literals are non-empty")
-        };
-        let clp_io_config = ClpIoConfig {
-            input: InputConfig::S3ObjectMetadataInputConfig {
-                config: S3ObjectMetadataInputConfig {
-                    s3_config: S3Config {
-                        bucket: non_empty_string("test-bucket"),
-                        region_code: None,
-                        key_prefix: non_empty_string("logs/"),
-                        endpoint_url: None,
-                        aws_authentication: AwsAuthentication::Default,
-                    },
-                    ingestion_job_id: 1,
-                    s3_object_metadata_ids: vec![1],
-                    dataset: Some(non_empty_string("bad-name")),
-                    timestamp_key: None,
-                    unstructured: false,
-                },
-            },
-            output: OutputConfig {
-                target_archive_size: 1024,
-                target_dictionaries_size: 1024,
-                target_encoded_file_size: 1024,
-                target_segment_size: 1024,
-                compression_level: 3,
-            },
-        };
-
-        let result = S3CompressionJobHandle::new(
-            MySqlPoolOptions::new()
-                .connect_lazy("mysql://localhost/clp-db")
-                .expect("the database URL should be valid"),
-            Database::default(),
-            1,
-            UnreachableSubmitter,
-            ResourceGroupId::default(),
-            clp_io_config,
-            Arc::new(SpiderOption {
-                compression_task_max_retry: 0,
-                commit_task_execution_policy: ExecutionPolicy::default(),
-                initial_poll_backoff: Duration::from_secs(1),
-                max_poll_backoff: Duration::from_secs(1),
-            }),
-        );
-
-        let Err(error) = result else {
-            panic!("an invalid dataset name should be rejected");
-        };
-        assert!(
-            matches!(&error, Error::InvalidDataset(dataset) if dataset == "bad-name"),
-            "unexpected error: {error:?}"
-        );
-    }
 }

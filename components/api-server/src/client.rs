@@ -185,7 +185,8 @@ pub struct QueryConfig {
 
     /// The datasets to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
-    pub datasets: Option<Vec<String>>,
+    #[schema(value_type = Option<Vec<String>>)]
+    pub datasets: Option<Vec<DatasetName>>,
 
     /// The maximum number of results to return. Omit for no limit.
     #[serde(default)]
@@ -305,7 +306,7 @@ impl Client {
         if search_job_config.datasets.is_none() {
             search_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some(vec!["default".to_owned()]),
+                StorageEngine::ClpS => Some(vec![DatasetName::default()]),
             }
         }
         if let Some(bucket_size) = count_by_time_bucket_size {
@@ -742,12 +743,11 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidDatasetName`] if `dataset_name` isn't a valid [`DatasetName`].
     /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
     pub async fn get_timestamp_column_names(
         &self,
-        dataset_name: &str,
+        dataset: &DatasetName,
     ) -> Result<Vec<String>, ClientError> {
         // Must be kept in sync with `NodeType::Timestamp` in
         // `components/core/src/clp_s/SchemaTree.hpp`.
@@ -755,10 +755,7 @@ impl Client {
         // MySQL error number for "Table doesn't exist".
         const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
-        let dataset = dataset_name
-            .parse::<DatasetName>()
-            .map_err(|_| ClientError::InvalidDatasetName)?;
-        let table_name = self.config.database.column_metadata_table_name(&dataset);
+        let table_name = self.config.database.column_metadata_table_name(dataset);
         let names: Vec<String> =
             sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
                 .bind(TIMESTAMP_NODE_TYPE)
@@ -770,7 +767,7 @@ impl Client {
                             db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
                         && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
                     {
-                        return ClientError::DatasetNotFound(dataset_name.to_owned());
+                        return ClientError::DatasetNotFound(dataset.clone());
                     }
                     err.into()
                 })?;
@@ -865,6 +862,33 @@ impl Client {
             .api_server
             .as_ref()
             .expect("api_server configuration is missing")
+    }
+}
+
+#[cfg(test)]
+impl Client {
+    /// Factory function.
+    ///
+    /// Creates a client for `config` whose `MySQL` and `MongoDB` connections are only established
+    /// on first use.
+    ///
+    /// # Returns
+    ///
+    /// A newly created [`Client`] instance on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`mongodb::Client::with_uri_str`]'s return values on failure.
+    /// * Forwards [`sqlx::pool::PoolOptions::connect_lazy`]'s return values on failure.
+    pub(crate) async fn connect_lazy(config: Config) -> Result<Self, ClientError> {
+        Ok(Self {
+            mongodb_client: mongodb::Client::with_uri_str("mongodb://localhost:27017").await?,
+            sql_pool: sqlx::mysql::MySqlPoolOptions::new()
+                .connect_lazy("mysql://localhost/clp-db")?,
+            config,
+        })
     }
 }
 
@@ -972,22 +996,5 @@ mod tests {
         };
         let result = ValidatedCompressionUsageParams::try_from(params);
         assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn get_timestamp_column_names_rejects_invalid_dataset_name() -> anyhow::Result<()> {
-        let client = Client {
-            mongodb_client: mongodb::Client::with_uri_str("mongodb://localhost:27017").await?,
-            sql_pool: sqlx::mysql::MySqlPoolOptions::new()
-                .connect_lazy("mysql://localhost/clp-db")?,
-            config: Config::default(),
-        };
-
-        let result = client.get_timestamp_column_names("bad-name").await;
-        assert!(
-            matches!(result, Err(ClientError::InvalidDatasetName)),
-            "unexpected result: {result:?}"
-        );
-        Ok(())
     }
 }

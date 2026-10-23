@@ -8,6 +8,7 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::dataset::DatasetName;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -266,9 +267,15 @@ async fn cancel_query(
     }
 }
 
+/// Path parameters for the timestamp column names endpoint.
+#[derive(Deserialize)]
+struct TimestampColumnNamesPath {
+    dataset_name: DatasetName,
+}
+
 async fn get_timestamp_column_names(
     State(client): State<Client>,
-    Path(dataset_name): Path<String>,
+    Path(TimestampColumnNamesPath { dataset_name }): Path<TimestampColumnNamesPath>,
 ) -> Result<Json<Vec<String>>, HandlerError> {
     let names = client
         .get_timestamp_column_names(&dataset_name)
@@ -340,9 +347,7 @@ impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
             ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
-            ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
-                Self::BadRequest(format!("{err}"))
-            }
+            ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
             _ => Self::InternalServer,
         }
     }
@@ -365,6 +370,7 @@ mod tests {
     use axum::http::Request;
     use axum::http::StatusCode;
     use axum::routing::get;
+    use clp_rust_utils::clp_config::package::config::Config;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
@@ -392,6 +398,28 @@ mod tests {
             .expect("failed to read body")
             .to_bytes();
         String::from_utf8(bytes.to_vec()).expect("body is not utf-8")
+    }
+
+    #[tokio::test]
+    async fn timestamp_column_names_route_rejects_invalid_dataset_name() -> anyhow::Result<()> {
+        let app = from_client(Client::connect_lazy(Config::default()).await?)?;
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/column_metadata/bad-name/timestamp")
+                    .body(Body::empty())?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = get_body(response).await;
+        let parse_error = "bad-name"
+            .parse::<DatasetName>()
+            .expect_err("name should be an invalid dataset name");
+        assert!(
+            body.contains(&parse_error.to_string()),
+            "unexpected body: {body}"
+        );
+        Ok(())
     }
 
     #[tokio::test]

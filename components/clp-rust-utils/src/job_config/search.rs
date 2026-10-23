@@ -7,6 +7,8 @@ use serde::Serialize;
 use strum::EnumString;
 use utoipa::ToSchema;
 
+use crate::dataset::DatasetName;
+
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 
 pub type QueryJobId = i32;
@@ -27,7 +29,7 @@ pub struct AggregationConfig {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
-    pub datasets: Option<Vec<String>>,
+    pub datasets: Option<Vec<DatasetName>>,
     pub query_string: String,
     pub max_num_results: Option<NonZeroU32>,
     pub begin_timestamp: Option<i64>,
@@ -99,4 +101,42 @@ pub enum QueryJobType {
     SearchOrAggregation = 0,
     ExtractIr = 1,
     ExtractJson = 2,
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::SearchJobConfig;
+    use crate::dataset::DatasetName;
+
+    #[test]
+    fn search_job_config_datasets_are_validated() {
+        let deserialize_datasets = |config| {
+            serde_json::from_value::<SearchJobConfig>(config).map(|config| config.datasets)
+        };
+
+        assert_eq!(
+            deserialize_datasets(json!({}))
+                .expect("search job config without datasets should deserialize"),
+            None
+        );
+        assert_eq!(
+            deserialize_datasets(json!({"datasets": null}))
+                .expect("search job config with null datasets should deserialize"),
+            None
+        );
+        assert_eq!(
+            deserialize_datasets(json!({"datasets": ["default", "my_dataset"]}))
+                .expect("search job config with valid datasets should deserialize"),
+            Some(vec![
+                DatasetName::default(),
+                "my_dataset"
+                    .parse()
+                    .expect("name should be a valid dataset name"),
+            ])
+        );
+        deserialize_datasets(json!({"datasets": ["default", "bad-name"]}))
+            .expect_err("search job config with an invalid dataset should fail to deserialize");
+    }
 }
