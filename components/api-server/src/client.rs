@@ -755,7 +755,7 @@ impl Client {
         // MySQL error number for "Table doesn't exist".
         const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
-        let table_name = self.config.database.column_metadata_table_name(dataset);
+        let table_name = self.config.database.column_metadata_table_name();
         let names: Vec<String> =
             sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
                 .bind(TIMESTAMP_NODE_TYPE)
