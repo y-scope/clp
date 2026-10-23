@@ -3,7 +3,9 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
+use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::MySql;
@@ -11,8 +13,6 @@ use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::mysql::MySqlTypeInfo;
 use sqlx::mysql::MySqlValueRef;
-use unicode_properties::GeneralCategoryGroup;
-use unicode_properties::UnicodeGeneralCategory;
 
 use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 
@@ -80,18 +80,16 @@ impl TryFrom<String> for DatasetName {
     type Error = ParseDatasetNameError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
+        // MySQL identifiers can only contain characters in the Basic Multilingual Plane.
+        const VALID_CHARACTERS_PATTERN: &str = r"\A[\p{L}\p{N}_&&\x{0000}-\x{FFFF}]+\z";
+
+        static VALID_CHARACTERS_REGEX: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(VALID_CHARACTERS_PATTERN).expect("invalid regex pattern"));
+
         if value.is_empty() {
             return Err(ParseDatasetNameError::Empty);
         }
-        if !value.chars().all(|ch| {
-            // MySQL identifiers can only contain characters in the Basic Multilingual Plane.
-            ch <= '\u{FFFF}'
-                && (ch == '_'
-                    || matches!(
-                        ch.general_category_group(),
-                        GeneralCategoryGroup::Letter | GeneralCategoryGroup::Number
-                    ))
-        }) {
+        if !VALID_CHARACTERS_REGEX.is_match(&value) {
             return Err(ParseDatasetNameError::InvalidCharacters(value));
         }
         if value.chars().count() > DATASET_NAME_MAX_LEN {

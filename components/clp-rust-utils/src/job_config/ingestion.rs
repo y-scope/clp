@@ -65,7 +65,12 @@ pub mod s3 {
 
         /// The dataset to ingest into. Defaults to the default dataset.
         #[serde(default)]
-        #[schema(value_type = String, min_length = 1, max_length = 44, default = "default")]
+        #[schema(
+            value_type = String,
+            min_length = 1,
+            max_length = 44,
+            default = DatasetName::default_name
+        )]
         pub dataset: DatasetName,
 
         /// The optional key for extracting timestamps from object metadata. Defaults to `None`.

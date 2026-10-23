@@ -23,7 +23,6 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-subscriber = { workspace = true }
-unicode-properties = { workspace = true }
 utoipa = { workspace = true }
 uuid = { workspace = true }
 yaml_serde = { workspace = true }

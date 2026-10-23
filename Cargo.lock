@@ -977,7 +977,6 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
- "unicode-properties",
  "utoipa",
  "uuid",
  "yaml_serde",

@@ -56,7 +56,6 @@ tower-http = { version = "0.7.0", features = ["cors"] }
 tracing = "0.1.44"
 tracing-appender = "0.2.5"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt", "json", "std"] }
-unicode-properties = { version = "0.1.4", default-features = false, features = ["general-category"] }
 url = "2.5.8"
 utoipa = "5.5.0"
 utoipa-axum = "0.2.0"
