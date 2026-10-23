@@ -428,9 +428,10 @@ impl Client {
     /// Returns an error if:
     ///
     /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
+    /// * [`ClientError::QueryJobAlreadyTerminated`] if the job has already succeeded, failed, or
+    ///   been killed.
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
     /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
-    /// * Forwards [`should_request_cancellation`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
     pub async fn cancel_query_job(&self, query_job_id: u64) -> Result<(), ClientError> {
@@ -445,17 +446,23 @@ impl Client {
             return Err(ClientError::QueryJobNotFound(query_job_id));
         };
 
-        if should_request_cancellation(query_job_id, status)? {
-            sqlx::query(&format!(
-                "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ?"
-            ))
-            .bind(QueryJobStatus::CancelRequested)
-            .bind(query_job_id)
-            .execute(&mut *tx)
-            .await?;
-            tx.commit().await?;
+        match Cancellability::from_status(status) {
+            Cancellability::Cancellable => {
+                sqlx::query(&format!(
+                    "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ?"
+                ))
+                .bind(QueryJobStatus::CancelRequested)
+                .bind(query_job_id)
+                .execute(&mut *tx)
+                .await?;
+                tx.commit().await?;
+                Ok(())
+            }
+            Cancellability::CancellationRequested => Ok(()),
+            Cancellability::NotCancellable => {
+                Err(ClientError::QueryJobAlreadyTerminated(query_job_id))
+            }
         }
-        Ok(())
     }
 
     /// Retrieves the status of a previously submitted query job.
@@ -906,29 +913,27 @@ where
     }
 }
 
-/// Decides whether a cancellation should be requested for a query job in the given status.
-///
-/// # Returns
-///
-/// Whether the job's status should be updated to [`QueryJobStatus::CancelRequested`] on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`ClientError::QueryJobAlreadyTerminated`] if the job has already succeeded, failed, or been
-///   killed.
-pub(crate) const fn should_request_cancellation(
-    query_job_id: u64,
-    status: QueryJobStatus,
-) -> Result<bool, ClientError> {
-    match status {
-        QueryJobStatus::Pending | QueryJobStatus::Running => Ok(true),
-        QueryJobStatus::CancelRequested
-        | QueryJobStatus::Cancelling
-        | QueryJobStatus::Cancelled => Ok(false),
-        QueryJobStatus::Succeeded | QueryJobStatus::Failed | QueryJobStatus::Killed => {
-            Err(ClientError::QueryJobAlreadyTerminated(query_job_id))
+/// The cancellability of a query job, derived from its status.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Cancellability {
+    Cancellable,
+    CancellationRequested,
+    NotCancellable,
+}
+
+impl Cancellability {
+    /// # Returns
+    ///
+    /// The cancellability of a query job in the given status.
+    pub(crate) const fn from_status(status: QueryJobStatus) -> Self {
+        match status {
+            QueryJobStatus::Pending | QueryJobStatus::Running => Self::Cancellable,
+            QueryJobStatus::CancelRequested
+            | QueryJobStatus::Cancelling
+            | QueryJobStatus::Cancelled => Self::CancellationRequested,
+            QueryJobStatus::Succeeded | QueryJobStatus::Failed | QueryJobStatus::Killed => {
+                Self::NotCancellable
+            }
         }
     }
 }

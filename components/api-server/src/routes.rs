@@ -376,7 +376,7 @@ mod tests {
     use tower::ServiceExt;
 
     use super::*;
-    use crate::client::should_request_cancellation;
+    use crate::client::Cancellability;
 
     #[derive(Deserialize)]
     struct JobStatusParams {
@@ -398,15 +398,21 @@ mod tests {
     }
 
     /// Builds a minimal Axum app that resolves query job cancellation requests via
-    /// [`should_request_cancellation`] for the job status given in the query params, and returns
+    /// [`Cancellability::from_status`] for the job status given in the query params, and returns
     /// [`StatusCode::OK`] on success. No real database is needed.
     fn cancel_query_test_app() -> axum::Router {
         axum::Router::new().route(
             "/query/{query_job_id}",
             delete(
                 |Path(query_job_id): Path<u64>, Query(params): Query<JobStatusParams>| async move {
-                    should_request_cancellation(query_job_id, params.status)?;
-                    Ok::<_, HandlerError>(StatusCode::OK)
+                    match Cancellability::from_status(params.status) {
+                        Cancellability::Cancellable | Cancellability::CancellationRequested => {
+                            Ok(StatusCode::OK)
+                        }
+                        Cancellability::NotCancellable => Err(HandlerError::from(
+                            ClientError::QueryJobAlreadyTerminated(query_job_id),
+                        )),
+                    }
                 },
             ),
         )
