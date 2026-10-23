@@ -52,8 +52,6 @@ pub(super) async fn commit(
     let total_compressed_size: i64 = archives.iter().map(|a| a.size).sum();
 
     let config = spider_task_executor_config();
-    // The dataset is interpolated into the table name (it cannot be bound). This is safe from SQL
-    // injection because a `DatasetName` only contains underscores, letters, and numbers.
     let archives_table = config.database.archives_table_name();
 
     let pool = create_clp_db_mysql_pool(&config.database, &db_credentials_from_env()?, 1)
