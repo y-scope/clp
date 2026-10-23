@@ -176,8 +176,6 @@ pub async fn register_dataset(
     archive_storage_path: &str,
     dataset: &DatasetName,
 ) -> Result<u64, sqlx::Error> {
-    // NOTE: `LAST_INSERT_ID(id)` sets the statement's insert ID to the existing row's ID when the
-    // dataset is already registered, so the ID can be read back without a second query.
     let query_result = sqlx::query(&format!(
         "INSERT INTO `{datasets_table}` (name, archive_storage_path) VALUES (?, ?) ON DUPLICATE \
          KEY UPDATE id = LAST_INSERT_ID(id), archive_storage_path = VALUES(archive_storage_path)"
