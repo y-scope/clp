@@ -19,8 +19,8 @@ use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 /// A validated dataset name.
 ///
 /// A dataset name is non-empty, only contains `_` or Unicode letters and numbers (general
-/// categories L and N), and is short enough for its longest metadata table name to fit MySQL's
-/// 64-character table-name limit.
+/// categories L and N) in the Basic Multilingual Plane, and is short enough for its longest
+/// metadata table name to fit MySQL's 64-character table-name limit.
 ///
 /// A dataset name serializes as a plain string. It deserializes from a string, validated by the
 /// same rules as its [`FromStr`] implementation, or from a `null` or missing value, which gives the
@@ -84,11 +84,13 @@ impl TryFrom<String> for DatasetName {
             return Err(ParseDatasetNameError::Empty);
         }
         if !value.chars().all(|ch| {
-            ch == '_'
-                || matches!(
-                    ch.general_category_group(),
-                    GeneralCategoryGroup::Letter | GeneralCategoryGroup::Number
-                )
+            // MySQL identifiers can only contain characters in the Basic Multilingual Plane.
+            ch <= '\u{FFFF}'
+                && (ch == '_'
+                    || matches!(
+                        ch.general_category_group(),
+                        GeneralCategoryGroup::Letter | GeneralCategoryGroup::Number
+                    ))
         }) {
             return Err(ParseDatasetNameError::InvalidCharacters(value));
         }
@@ -149,8 +151,8 @@ pub enum ParseDatasetNameError {
     Empty,
 
     #[error(
-        "invalid dataset name {0:?}: names can only contain alphanumeric characters and \
-         underscores"
+        "invalid dataset name {0:?}: names can only contain underscores and alphanumeric \
+         characters in the Basic Multilingual Plane"
     )]
     InvalidCharacters(String),
 
@@ -213,7 +215,15 @@ mod tests {
     fn dataset_name_rejects_empty_names_and_other_characters() {
         assert_eq!("".parse::<DatasetName>(), Err(ParseDatasetNameError::Empty));
         for name in [
-            "-", " ", "bad-name", "bad name", "bad.name", "bad`name", "e\u{301}", "a\u{345}",
+            "-",
+            " ",
+            "bad-name",
+            "bad name",
+            "bad.name",
+            "bad`name",
+            "e\u{301}",
+            "a\u{345}",
+            "𝒜_logs",
         ] {
             assert_eq!(
                 name.parse::<DatasetName>(),
