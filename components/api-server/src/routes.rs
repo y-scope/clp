@@ -268,6 +268,12 @@ async fn cancel_query(
 }
 
 /// Path parameters for the timestamp column names endpoint.
+///
+/// # NOTE
+///
+/// * [`DatasetName`] deserializes through `Option<String>`, and axum's top-level path deserializer
+///   doesn't support optional values, so extracting `Path<DatasetName>` directly fails for every
+///   request. Deserializing the dataset name as a struct field avoids this.
 #[derive(Deserialize)]
 struct TimestampColumnNamesPath {
     dataset_name: DatasetName,
