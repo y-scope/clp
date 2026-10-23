@@ -52,11 +52,17 @@ public:
               m_column_ids{node_id} {}
 
     /**
-     * Ingest a timestamp potentially adjusting the start and end bounds for this
-     * TimestampEntry.
+     * Ingests a nanosecond precision timestamp, potentially adjusting the start and end bounds for
+     * this TimestampEntry.
      * @param timestamp the timestamp to be ingested
      */
     void ingest_timestamp(epochtime_t timestamp);
+
+    /**
+     * Ingests a millisecond precision timestamp, potentially adjusting the start and end bounds for
+     * this TimestampEntry.
+     */
+    void ingest_millisecond_timestamp(epochtime_t millisecond_timestamp);
 
     /**
      * Write the timestamp entry to a buffered stream.
@@ -78,15 +84,17 @@ public:
     void read_from_file(ZstdDecompressor& decompressor);
 
     /**
-     * Check if a timestamp is in the range of this TimestampEntry
+     * Checks if a timestamp is in the range of this TimestampEntry
      * @param op
      * @param timestamp
-     * @return
+     * @return Whether the timestamp could possibly be in the range of this TimestampEntry.
      */
-    EvaluatedValue evaluate_filter(clp_s::search::ast::FilterOperation op, double timestamp);
-    EvaluatedValue evaluate_filter(clp_s::search::ast::FilterOperation op, epochtime_t timestamp);
+    auto evaluate_filter(clp_s::search::ast::FilterOperation op, double timestamp) const
+            -> EvaluatedValue;
+    auto evaluate_filter(clp_s::search::ast::FilterOperation op, epochtime_t timestamp) const
+            -> EvaluatedValue;
 
-    std::string get_key_name() const { return m_key_name; }
+    auto get_key_name() const -> std::string const& { return m_key_name; }
 
     std::unordered_set<int32_t> const& get_column_ids() const { return m_column_ids; }
 

@@ -3,10 +3,10 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <utility>
 
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
@@ -52,6 +52,8 @@ public:
      * @return A pair containing:
      * - The timestamp in epoch nanoseconds.
      * - The pattern ID corresponding to the timestamp format.
+     * @throws OperationFailed if `node_id` doesn't match the node ID of timestamps previously
+     * ingested in the current file split.
      */
     [[nodiscard]] auto ingest_string_timestamp(
             std::string_view key,
@@ -68,6 +70,8 @@ public:
      * @return A pair containing:
      * - The timestamp in epoch nanoseconds.
      * - The pattern ID corresponding to the timestamp format.
+     * @throws OperationFailed if `node_id` doesn't match the node ID of timestamps previously
+     * ingested in the current file split.
      */
     [[nodiscard]] auto
     ingest_numeric_json_timestamp(std::string_view key, int32_t node_id, std::string_view timestamp)
@@ -81,6 +85,8 @@ public:
      * @return A pair containing:
      * - The timestamp in epoch nanoseconds.
      * - The pattern ID corresponding to the timestamp format.
+     * @throws OperationFailed if `node_id` doesn't match the node ID of timestamps previously
+     * ingested in the current file split.
      */
     [[nodiscard]] auto ingest_unknown_precision_epoch_timestamp(
             std::string_view key,
@@ -91,19 +97,34 @@ public:
     /**
      * @return The beginning of this archive's time range as milliseconds since the UNIX epoch
      */
-    epochtime_t get_begin_timestamp() const;
+    [[nodiscard]] auto get_begin_timestamp() -> epochtime_t;
 
     /**
      * @return The end of this archive's time range as milliseconds since the UNIX epoch
      */
-    epochtime_t get_end_timestamp() const;
+    [[nodiscard]] auto get_end_timestamp() -> epochtime_t;
 
     /**
      * Clears and resets all internal state.
      */
     void clear();
 
+    /**
+     * Closes the current file split, resetting the accumulated time ranges for the next file split.
+     * @return An option containing a pair representing the start and end timestamp of the closed
+     * file split as milliseconds since the UNIX epoch.
+     */
+    [[nodiscard]] auto close_current_file_split()
+            -> std::optional<std::pair<epochtime_t, epochtime_t>>;
+
 private:
+    /**
+     * Merges time ranges for the current file split with the archive's time range.
+     * @throws OperationFailed if the file split's timestamp column node ID doesn't match the
+     * archive's timestamp column node ID.
+     */
+    auto merge_file_split_time_range() -> void;
+
     // Variables
     std::vector<std::pair<timestamp_parser::TimestampPattern, uint64_t>>
             m_string_pattern_and_id_pairs;
@@ -111,7 +132,9 @@ private:
             m_numeric_pattern_to_id;
     uint64_t m_next_id{};
 
-    std::unordered_map<int32_t, TimestampEntry> m_column_id_to_range;
+    // Pairs of timestamp column node ID and the column's time range.
+    std::optional<std::pair<int32_t, TimestampEntry>> m_file_split_timestamp_entry;
+    std::optional<std::pair<int32_t, TimestampEntry>> m_archive_timestamp_entry;
 
     std::string m_generated_pattern;
     std::vector<timestamp_parser::TimestampPattern> m_quoted_timestamp_patterns;
