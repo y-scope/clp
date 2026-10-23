@@ -16,6 +16,7 @@ use clp_rust_utils::job_config::SearchJobConfig;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::UuidBytes;
 use const_format::formatcp;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
@@ -677,24 +678,31 @@ impl ArchiveSelector<'_> {
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_archives(&self, dataset: &DatasetName) -> Result<Vec<ArchiveMetadata>, Error> {
         let archives_table = self.context.db_config.archives_table_name();
+        let datasets_table = self.context.db_config.datasets_table_name();
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
+            "SELECT `archives`.`uuid`, `archives`.`num_uncompressed_bytes`, \
+             `archives`.`timestamp_range_end_millis` FROM `{archives_table}` AS `archives` JOIN \
+             `{datasets_table}` AS `datasets` ON `archives`.`dataset_id` = `datasets`.`id` WHERE \
+             CAST(`datasets`.`name` AS BINARY) = "
         ));
+        query_builder
+            .push_bind(dataset)
+            .push(" AND `archives`.`is_deleted` = FALSE");
         if let Some(end_timestamp) = self.search_job_config.end_timestamp {
             query_builder
-                .push(" AND `begin_timestamp` <= ")
+                .push(" AND `archives`.`timestamp_range_begin_millis` <= ")
                 .push_bind(end_timestamp);
         }
         if let Some(begin_timestamp) = self.search_job_config.begin_timestamp {
             query_builder
-                .push(" AND `end_timestamp` >= ")
+                .push(" AND `archives`.`timestamp_range_end_millis` >= ")
                 .push_bind(begin_timestamp);
         }
         if let Some(lower_bound) = self.archive_end_ts_lower_bound_millisecs {
             query_builder
-                .push(" AND (`end_timestamp` >= ")
+                .push(" AND (`archives`.`timestamp_range_end_millis` >= ")
                 .push_bind(lower_bound)
-                .push(" OR `end_timestamp` = 0)");
+                .push(" OR `archives`.`timestamp_range_end_millis` = 0)");
         }
 
         Ok(query_builder
@@ -703,10 +711,10 @@ impl ArchiveSelector<'_> {
             .await?
             .into_iter()
             .map(|row| ArchiveMetadata {
-                id: row.id,
+                id: ArchiveId::from_bytes(row.uuid),
                 dataset: dataset.clone(),
-                uncompressed_size: row.uncompressed_size,
-                end_timestamp: row.end_timestamp,
+                uncompressed_size: row.num_uncompressed_bytes,
+                end_timestamp: row.timestamp_range_end_millis,
             })
             .collect())
     }
@@ -754,16 +762,16 @@ impl ArchiveSelector<'_> {
     }
 }
 
-/// Columns projected from an archives table.
+/// Columns projected from the archives table.
 ///
-/// [`ArchiveMetadata`] can't be decoded directly from a row since the dataset is encoded in the
-/// archives table's name rather than stored in a column.
+/// [`ArchiveMetadata`] can't be decoded directly from a row since the archives table stores the
+/// dataset's ID rather than its name, and the archive's UUID as raw bytes.
 #[derive(sqlx::FromRow)]
 struct ArchiveRowProjection {
-    id: ArchiveId,
-    #[sqlx(try_from = "i64")]
-    uncompressed_size: u64,
-    end_timestamp: i64,
+    #[sqlx(try_from = "Vec<u8>")]
+    uuid: UuidBytes,
+    num_uncompressed_bytes: u64,
+    timestamp_range_end_millis: i64,
 }
 
 #[cfg(test)]
