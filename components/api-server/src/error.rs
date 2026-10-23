@@ -28,8 +28,11 @@ pub enum ClientError {
     #[error("api_server configuration is missing")]
     ConfigIsNone,
 
-    #[error("Search job not found: {0}")]
-    SearchJobNotFound(u64),
+    #[error("query job not found: {0}")]
+    QueryJobNotFound(u64),
+
+    #[error("query job already terminated: {0}")]
+    QueryJobAlreadyTerminated(u64),
 
     #[error("Invalid dataset name")]
     InvalidDatasetName,
@@ -40,8 +43,8 @@ pub enum ClientError {
     #[error("Dataset not found: {0}")]
     DatasetNotFound(String),
 
-    #[error("Invalid search job config: {0}")]
-    InvalidSearchJobConfig(String),
+    #[error("invalid query job config: {0}")]
+    InvalidQueryJobConfig(String),
 
     #[error(transparent)]
     Telemetry(#[from] opentelemetry_otlp::ExporterBuildError),
