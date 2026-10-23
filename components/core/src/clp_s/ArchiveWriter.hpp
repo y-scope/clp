@@ -295,7 +295,7 @@ public:
      * @return An option containing a pair representing the start and end timestamp of the closed
      * file split as milliseconds since the UNIX epoch.
      */
-    auto close_current_file_split_time_range()
+    [[nodiscard]] auto close_current_file_split_time_range()
             -> std::optional<std::pair<epochtime_t, epochtime_t>> {
         return m_timestamp_dict.close_current_file_split();
     }

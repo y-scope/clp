@@ -14,6 +14,7 @@
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <fmt/format.h>
+#include <nlohmann/json.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
@@ -828,14 +829,14 @@ auto JsonParser::ingest_json(
         }
 
         if (auto const rc = m_archive_writer->add_field_to_current_range(
-                    std::string{constants::range_index::cFileNumUncompressedBytes},
+                    std::string{constants::range_index::cNumUncompressedBytes},
                     split_size
             );
             ErrorCodeSuccess != rc)
         {
             SPDLOG_ERROR(
                     "Failed to add metadata field \"{}\" ({})",
-                    constants::range_index::cFileNumUncompressedBytes,
+                    constants::range_index::cNumUncompressedBytes,
                     static_cast<int64_t>(rc)
             );
             return false;
@@ -1075,14 +1076,14 @@ auto JsonParser::ingest_kvir(
         }
 
         if (auto const rc = m_archive_writer->add_field_to_current_range(
-                    std::string{constants::range_index::cFileNumUncompressedBytes},
+                    std::string{constants::range_index::cNumUncompressedBytes},
                     split_size
             );
             ErrorCodeSuccess != rc)
         {
             SPDLOG_ERROR(
                     "Failed to add metadata field \"{}\" ({})",
-                    constants::range_index::cFileNumUncompressedBytes,
+                    constants::range_index::cNumUncompressedBytes,
                     static_cast<int64_t>(rc)
             );
             return false;

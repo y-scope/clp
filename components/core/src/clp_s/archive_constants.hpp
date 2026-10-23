@@ -42,7 +42,7 @@ namespace range_index {
 constexpr std::string_view cFilename{"_filename"};
 constexpr std::string_view cFileSplitNumber{"_file_split_number"};
 constexpr std::string_view cArchiveCreatorId{"_archive_creator_id"};
-constexpr std::string_view cFileNumUncompressedBytes{"_num_uncompressed_bytes"};
+constexpr std::string_view cNumUncompressedBytes{"_num_uncompressed_bytes"};
 constexpr std::string_view cTimestampRangeBeginMillis{"_timestamp_range_begin_millis"};
 constexpr std::string_view cTimestampRangeEndMillis{"_timestamp_range_end_millis"};
 }  // namespace range_index
