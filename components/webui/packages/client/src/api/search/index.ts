@@ -37,19 +37,19 @@ const submitQuery = async (queryConfig: QueryConfig): Promise<number> => {
 /**
  * Cancels a previously submitted query job on the API server.
  *
- * @param searchJobId
+ * @param queryJobId
  * @throws {Error} If the request fails.
  */
-const cancelQuery = async (searchJobId: number): Promise<void> => {
-    console.log("Cancelling query job:", searchJobId);
+const cancelQuery = async (queryJobId: number): Promise<void> => {
+    console.log("Cancelling query job:", queryJobId);
 
     // eslint-disable-next-line new-cap
-    const {response} = await apiClient.DELETE("/query/{search_job_id}", {
-        params: {path: {search_job_id: searchJobId}},
+    const {response} = await apiClient.DELETE("/query/{query_job_id}", {
+        params: {path: {query_job_id: queryJobId}},
     });
 
     if (false === response.ok) {
-        throw new Error(`Failed to cancel query job ${searchJobId}: HTTP ${response.status}`);
+        throw new Error(`Failed to cancel query job ${queryJobId}: HTTP ${response.status}`);
     }
 };
 

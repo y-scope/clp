@@ -116,14 +116,14 @@
         }
       }
     },
-    "/query/{search_job_id}": {
+    "/query/{query_job_id}": {
       "delete": {
         "tags": [],
         "description": "Cancels a previously submitted query job.",
         "operationId": "cancel_query",
         "parameters": [
           {
-            "name": "search_job_id",
+            "name": "query_job_id",
             "in": "path",
             "required": true,
             "schema": {
@@ -138,7 +138,7 @@
             "description": "The cancellation request was submitted successfully."
           },
           "400": {
-            "description": "The search job ID is invalid.",
+            "description": "The query job ID is invalid.",
             "content": {
               "text/plain": {
                 "schema": {
@@ -148,7 +148,10 @@
             }
           },
           "404": {
-            "description": "No cancellable query job with the given ID was found."
+            "description": "No query job with the given ID was found."
+          },
+          "409": {
+            "description": "The query job with the given ID has terminated without being cancelled."
           },
           "500": {
             "description": ""
@@ -156,7 +159,7 @@
         }
       }
     },
-    "/query_results/{search_job_id}": {
+    "/query_results/{query_job_id}": {
       "get": {
         "tags": [],
         "description": "Streams the results of a previously submitted query as Server-Sent Events (SSE).",
@@ -181,7 +184,7 @@
             }
           },
           {
-            "name": "search_job_id",
+            "name": "query_job_id",
             "in": "path",
             "required": true,
             "schema": {
@@ -204,7 +207,7 @@
             }
           },
           "400": {
-            "description": "The search job ID or query parameters are invalid.",
+            "description": "The query job ID or query parameters are invalid.",
             "content": {
               "text/plain": {
                 "schema": {

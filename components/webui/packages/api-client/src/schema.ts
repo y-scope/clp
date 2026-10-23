@@ -37,7 +37,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/query/{search_job_id}": {
+    "/query/{query_job_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -54,7 +54,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/query_results/{search_job_id}": {
+    "/query_results/{query_job_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -297,7 +297,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                search_job_id: number;
+                query_job_id: number;
             };
             cookie?: never;
         };
@@ -310,7 +310,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The search job ID is invalid. */
+            /** @description The query job ID is invalid. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -319,8 +319,15 @@ export interface operations {
                     "text/plain": string;
                 };
             };
-            /** @description No cancellable query job with the given ID was found. */
+            /** @description No query job with the given ID was found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The query job with the given ID has terminated without being cancelled. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -353,7 +360,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                search_job_id: number;
+                query_job_id: number;
             };
             cookie?: never;
         };
@@ -369,7 +376,7 @@ export interface operations {
                     "text/event-stream": string;
                 };
             };
-            /** @description The search job ID or query parameters are invalid. */
+            /** @description The query job ID or query parameters are invalid. */
             400: {
                 headers: {
                     [name: string]: unknown;
