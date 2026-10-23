@@ -1,6 +1,3 @@
-use aws_config::Region;
-use aws_config::profile::ProfileFileCredentialsProvider;
-use aws_config::provider_config::ProviderConfig;
 use aws_sdk_s3::config::Credentials;
 use aws_sdk_s3::config::SharedCredentialsProvider;
 use non_empty_string::NonEmptyString;
@@ -17,7 +14,7 @@ pub struct S3Config {
     pub aws_authentication: AwsAuthentication,
 }
 
-/// Mirror of `clp_py_utils.clp_config.AwsAuthType`. Must be kept in sync.
+/// An enum representing AWS authentication methods.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AwsAuthentication {
@@ -27,15 +24,6 @@ pub enum AwsAuthentication {
 
     #[serde(rename = "credentials")]
     Credentials { credentials: AwsCredentials },
-
-    /// Uses the named profile from the shared AWS config and credentials files.
-    #[serde(rename = "profile")]
-    Profile { profile: NonEmptyString },
-
-    /// Uses the standard AWS credential environment variables, resolved through the default AWS
-    /// SDK credential provider chain.
-    #[serde(rename = "env_vars")]
-    EnvVars,
 }
 
 impl AwsAuthentication {
@@ -44,12 +32,11 @@ impl AwsAuthentication {
     ///
     /// # Returns
     ///
-    /// * The credentials provider for [`AwsAuthentication::Credentials`] and
-    ///   [`AwsAuthentication::Profile`].
-    /// * `None` for [`AwsAuthentication::Default`] and [`AwsAuthentication::EnvVars`], indicating
-    ///   that the default AWS SDK credential provider chain should be used.
+    /// * A static credentials provider for [`AwsAuthentication::Credentials`].
+    /// * `None` for [`AwsAuthentication::Default`], indicating that the default AWS SDK credential
+    ///   provider chain should be used.
     #[must_use]
-    pub fn credentials_provider(&self, region: &str) -> Option<SharedCredentialsProvider> {
+    pub fn credentials_provider(&self) -> Option<SharedCredentialsProvider> {
         match self {
             Self::Credentials { credentials } => {
                 Some(SharedCredentialsProvider::new(Credentials::new(
@@ -60,16 +47,7 @@ impl AwsAuthentication {
                     "clp-credentials-provider",
                 )))
             }
-            Self::Profile { profile } => Some(SharedCredentialsProvider::new(
-                ProfileFileCredentialsProvider::builder()
-                    .configure(
-                        &ProviderConfig::default()
-                            .with_region(Some(Region::new(region.to_owned()))),
-                    )
-                    .profile_name(profile.as_str())
-                    .build(),
-            )),
-            Self::Default | Self::EnvVars => None,
+            Self::Default => None,
         }
     }
 }
@@ -86,14 +64,12 @@ pub struct AwsCredentials {
 #[cfg(test)]
 mod tests {
     use aws_sdk_s3::config::ProvideCredentials;
-    use non_empty_string::NonEmptyString;
 
     use super::AwsAuthentication;
     use super::AwsCredentials;
-    use crate::aws::AWS_DEFAULT_REGION;
 
     #[tokio::test]
-    async fn credentials_provider_resolves_static_credentials() {
+    async fn credentials_provider_is_static_for_credentials_and_absent_for_default() {
         const ACCESS_KEY_ID: &str = "the-access-key";
         const SECRET_ACCESS_KEY: &str = "the-secret-key";
         const SESSION_TOKEN: &str = "the-session-token";
@@ -107,7 +83,7 @@ mod tests {
         };
 
         let credentials = auth
-            .credentials_provider(AWS_DEFAULT_REGION)
+            .credentials_provider()
             .expect("static credentials must install a credentials provider")
             .provide_credentials()
             .await
@@ -116,22 +92,11 @@ mod tests {
         assert_eq!(credentials.access_key_id(), ACCESS_KEY_ID);
         assert_eq!(credentials.secret_access_key(), SECRET_ACCESS_KEY);
         assert_eq!(credentials.session_token(), Some(SESSION_TOKEN));
-    }
 
-    #[test]
-    fn credentials_provider_is_absent_only_for_default_chain_authentication() {
-        let profile = AwsAuthentication::Profile {
-            profile: NonEmptyString::new("test-profile".to_owned())
-                .expect("profile name must be non-empty"),
-        };
-
-        assert!(profile.credentials_provider(AWS_DEFAULT_REGION).is_some());
-        for auth in [AwsAuthentication::Default, AwsAuthentication::EnvVars] {
-            let provider = auth.credentials_provider(AWS_DEFAULT_REGION);
-            assert!(
-                provider.is_none(),
-                "expected no credentials provider for {auth:?}, got {provider:?}"
-            );
-        }
+        let default_provider = AwsAuthentication::Default.credentials_provider();
+        assert!(
+            default_provider.is_none(),
+            "expected no credentials provider for `default`, got {default_provider:?}"
+        );
     }
 }

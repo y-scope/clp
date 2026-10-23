@@ -653,7 +653,9 @@ mod tests {
                     assert_eq!(credentials.access_key_id, ACCESS_KEY_ID);
                     assert_eq!(credentials.secret_access_key, SECRET_ACCESS_KEY);
                 }
-                other => panic!("expected credentials, got {other:?}"),
+                crate::clp_config::AwsAuthentication::Default => {
+                    panic!("Expected credentials, got `default`")
+                }
             },
             LogsInput::Fs { .. } => panic!("Expected S3"),
         }

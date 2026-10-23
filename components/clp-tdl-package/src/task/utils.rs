@@ -47,7 +47,7 @@ pub(super) fn s3_credential_env(
     /// The env var holding the AWS session token.
     const AWS_SESSION_TOKEN_ENV_VAR: &str = "AWS_SESSION_TOKEN";
 
-    let provider = match auth.credentials_provider(region) {
+    let provider = match auth.credentials_provider() {
         Some(provider) => provider,
         None => runtime
             .block_on(
