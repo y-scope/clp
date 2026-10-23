@@ -11,6 +11,7 @@ use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::clp_config::package::credentials::Credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::AggregationConfig;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
@@ -185,7 +186,8 @@ pub struct QueryConfig {
 
     /// The datasets to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
-    pub datasets: Option<Vec<String>>,
+    #[schema(value_type = Option<Vec<String>>)]
+    pub datasets: Option<Vec<DatasetName>>,
 
     /// The maximum number of results to return. Omit for no limit.
     #[serde(default)]
@@ -305,7 +307,7 @@ impl Client {
         if query_job_config.datasets.is_none() {
             query_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some(vec!["default".to_owned()]),
+                StorageEngine::ClpS => Some(vec![DatasetName::default()]),
             }
         }
 
@@ -734,12 +736,11 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
     /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
     /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
     pub async fn get_timestamp_column_names(
         &self,
-        dataset_name: &str,
+        dataset: &DatasetName,
     ) -> Result<Vec<String>, ClientError> {
         // Must be kept in sync with `NodeType::Timestamp` in
         // `components/core/src/clp_s/SchemaTree.hpp`.
@@ -747,10 +748,7 @@ impl Client {
         // MySQL error number for "Table doesn't exist".
         const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
-        if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
-            return Err(ClientError::InvalidDatasetName);
-        }
-        let table_name = format!("clp_{dataset_name}_column_metadata");
+        let table_name = self.config.database.column_metadata_table_name(dataset);
         let names: Vec<String> =
             sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
                 .bind(TIMESTAMP_NODE_TYPE)
@@ -762,7 +760,7 @@ impl Client {
                             db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
                         && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
                     {
-                        return ClientError::DatasetNotFound(dataset_name.to_owned());
+                        return ClientError::DatasetNotFound(dataset.clone());
                     }
                     err.into()
                 })?;
@@ -857,6 +855,33 @@ impl Client {
             .api_server
             .as_ref()
             .expect("api_server configuration is missing")
+    }
+}
+
+#[cfg(test)]
+impl Client {
+    /// Factory function.
+    ///
+    /// Creates a client for `config` whose `MySQL` and `MongoDB` connections are only established
+    /// on first use.
+    ///
+    /// # Returns
+    ///
+    /// A newly created [`Client`] instance on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`mongodb::Client::with_uri_str`]'s return values on failure.
+    /// * Forwards [`sqlx::pool::PoolOptions::connect_lazy`]'s return values on failure.
+    pub(crate) async fn connect_lazy(config: Config) -> Result<Self, ClientError> {
+        Ok(Self {
+            mongodb_client: mongodb::Client::with_uri_str("mongodb://localhost:27017").await?,
+            sql_pool: sqlx::mysql::MySqlPoolOptions::new()
+                .connect_lazy("mysql://localhost/clp-db")?,
+            config,
+        })
     }
 }
 
