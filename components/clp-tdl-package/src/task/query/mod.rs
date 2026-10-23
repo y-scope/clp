@@ -1,10 +1,10 @@
 //! The query tasks: the `#[task]` wrappers Spider invokes and their implementations.
 
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
-use non_empty_string::NonEmptyString;
 use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
 use spider_tdl::task;
@@ -29,7 +29,7 @@ pub(crate) fn clp_s_search_task(
     ctx: TaskContext,
     query_job_id: QueryJobId,
     clp_s_query_option: ClpSQueryOption,
-    dataset: Option<NonEmptyString>,
+    dataset: DatasetName,
     archive_id: ArchiveId,
     output_handle: OutputHandle,
 ) -> Result<(), TdlError> {
@@ -39,7 +39,7 @@ pub(crate) fn clp_s_search_task(
         query_job_id,
         &clp_s_query_option,
         archive_id,
-        dataset.as_ref().map(NonEmptyString::as_str),
+        &dataset,
         &output_handle,
     )
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))

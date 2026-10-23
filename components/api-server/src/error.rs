@@ -2,6 +2,7 @@
 
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
+use clp_rust_utils::dataset::DatasetName;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
@@ -34,14 +35,11 @@ pub enum ClientError {
     #[error("query job already terminated: {0}")]
     QueryJobAlreadyTerminated(u64),
 
-    #[error("Invalid dataset name")]
-    InvalidDatasetName,
-
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
     #[error("Dataset not found: {0}")]
-    DatasetNotFound(String),
+    DatasetNotFound(DatasetName),
 
     #[error("invalid query job config: {0}")]
     InvalidQueryJobConfig(String),

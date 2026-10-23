@@ -2,8 +2,7 @@
 
 use anyhow::Context;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
-use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
-use clp_rust_utils::dataset::resolve_dataset_name;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
@@ -25,7 +24,6 @@ use crate::task::utils::db_credentials_from_env;
 /// Returns an error if:
 ///
 /// * `archives` is empty.
-/// * `dataset` is not a valid dataset name.
 /// * No CLP compression job exists for `spider_job_id`.
 /// * The CLP compression job is in a state other than [`CompressionJobStatus::Running`] or
 ///   [`CompressionJobStatus::Succeeded`].
@@ -39,7 +37,7 @@ use crate::task::utils::db_credentials_from_env;
 /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
 pub(super) async fn commit(
     spider_job_id: JobId,
-    dataset: Option<String>,
+    dataset: &DatasetName,
     archives: Vec<ArchiveMetadata>,
 ) -> anyhow::Result<()> {
     tracing::info!(
@@ -53,15 +51,9 @@ pub(super) async fn commit(
     let total_compressed_size: i64 = archives.iter().map(|a| a.size).sum();
 
     let config = spider_task_executor_config();
-
-    // The dataset is interpolated into the table name (it cannot be bound), so guard against SQL
-    // injection by validating it against the allowed-name pattern.
-    if let Some(dataset) = dataset.as_deref()
-        && !VALID_DATASET_NAME_REGEX.is_match(dataset)
-    {
-        anyhow::bail!("invalid dataset name: {dataset}");
-    }
-    let archives_table = config.database.archives_table_name(dataset.as_deref());
+    // The dataset is interpolated into the table name (it cannot be bound). This is safe from SQL
+    // injection because a `DatasetName` only contains underscores, letters, and numbers.
+    let archives_table = config.database.archives_table_name(dataset);
 
     let pool = create_clp_db_mysql_pool(&config.database, &db_credentials_from_env()?, 1)
         .await
@@ -95,7 +87,7 @@ pub(super) async fn commit(
         anyhow::bail!("CLP compression job {id} is no longer running; refusing to commit");
     }
 
-    register_dataset(&mut tx, config, dataset.as_deref()).await?;
+    register_dataset(&mut tx, config, dataset).await?;
     insert_archives(&mut tx, &archives_table, &archives).await?;
     mark_job_succeeded(&mut tx, id, total_uncompressed_size, total_compressed_size).await?;
 
@@ -110,8 +102,8 @@ pub(super) async fn commit(
     Ok(())
 }
 
-/// Idempotently registers `dataset` (defaulting a missing one to the `CLP_S` default) in the
-/// `datasets` table, recording its archive storage directory.
+/// Idempotently registers `dataset` in the `datasets` table, recording its archive storage
+/// directory.
 ///
 /// # Errors
 ///
@@ -121,7 +113,7 @@ pub(super) async fn commit(
 async fn register_dataset(
     tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
     config: &clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig,
-    dataset: Option<&str>,
+    dataset: &DatasetName,
 ) -> anyhow::Result<()> {
     let datasets_table = config.database.datasets_table_name();
     let archive_storage_directory = config
@@ -131,7 +123,7 @@ async fn register_dataset(
         "INSERT INTO `{datasets_table}` (name, archive_storage_directory) VALUES (?, ?) ON \
          DUPLICATE KEY UPDATE archive_storage_directory = VALUES(archive_storage_directory)"
     ))
-    .bind(resolve_dataset_name(dataset))
+    .bind(dataset)
     .bind(&archive_storage_directory)
     .execute(&mut **tx)
     .await

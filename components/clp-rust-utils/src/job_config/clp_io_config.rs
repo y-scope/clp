@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::clp_config::S3Config;
+use crate::dataset::DatasetName;
 use crate::job_config::ingestion::JobId as IngestionJobId;
 use crate::s3::S3ObjectMetadataId;
 
@@ -37,7 +38,7 @@ pub struct S3InputConfig {
     pub s3_config: S3Config,
 
     pub keys: Option<Vec<NonEmptyString>>,
-    pub dataset: Option<NonEmptyString>,
+    pub dataset: DatasetName,
     pub timestamp_key: Option<NonEmptyString>,
     pub unstructured: bool,
 }
@@ -49,7 +50,7 @@ pub struct S3ObjectMetadataInputConfig {
 
     pub ingestion_job_id: IngestionJobId,
     pub s3_object_metadata_ids: Vec<S3ObjectMetadataId>,
-    pub dataset: Option<NonEmptyString>,
+    pub dataset: DatasetName,
     pub timestamp_key: Option<NonEmptyString>,
     pub unstructured: bool,
 }
