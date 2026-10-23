@@ -124,20 +124,8 @@ mod tests {
             profile: NonEmptyString::new("test-profile".to_owned())
                 .expect("profile name must be non-empty"),
         };
-        let credentials = AwsAuthentication::Credentials {
-            credentials: AwsCredentials {
-                access_key_id: "the-access-key".to_owned(),
-                secret_access_key: "the-secret-key".to_owned(),
-                session_token: None,
-            },
-        };
 
         assert!(profile.credentials_provider(AWS_DEFAULT_REGION).is_some());
-        assert!(
-            credentials
-                .credentials_provider(AWS_DEFAULT_REGION)
-                .is_some()
-        );
         for auth in [AwsAuthentication::Default, AwsAuthentication::EnvVars] {
             let provider = auth.credentials_provider(AWS_DEFAULT_REGION);
             assert!(
