@@ -359,13 +359,16 @@ TEST_CASE("clp-s-network-output-handler-peer-closes-early", "[clp-s][network-out
                      0
              ))
     );
+    // The failure is sticky, so `finish` doesn't send a trailer that skips the lost result.
     REQUIRE((ErrorCode::ErrorCodeFailureNetwork == handler->finish()));
     REQUIRE((1 == socket_pair.get_num_connections()));
 }
 
 TEST_CASE("clp-s-network-output-handler-connection-failure", "[clp-s][network-output-handler]") {
+    size_t num_connection_attempts{0};
     NetworkOutputHandler handler{
-            []() -> int {
+            [&]() -> int {
+                ++num_connection_attempts;
                 errno = ECONNREFUSED;
                 return -1;
             },
@@ -378,4 +381,12 @@ TEST_CASE("clp-s-network-output-handler-connection-failure", "[clp-s][network-ou
             (ErrorCode::ErrorCodeFailureNetwork
              == handler.write(message, make_timestamp(0), cArchiveId, 0))
     );
+
+    // The failure is sticky: later calls return the same error without connecting again.
+    REQUIRE(
+            (ErrorCode::ErrorCodeFailureNetwork
+             == handler.write(message, make_timestamp(1), cArchiveId, 1))
+    );
+    REQUIRE((ErrorCode::ErrorCodeFailureNetwork == handler.finish()));
+    REQUIRE((1 == num_connection_attempts));
 }

@@ -106,6 +106,9 @@ private:
  * After sending the trailer, the handler shuts down the write side of the connection and waits for
  * the destination's acknowledgement, `[num_results]` encoded as `0x91 0xcf` followed by the count
  * as a big-endian u64.
+ *
+ * Failures are sticky: once a method fails, the handler sends nothing more, and every later call
+ * returns the same error.
  */
 class NetworkOutputHandler : public ::clp_s::search::OutputHandler {
 public:
@@ -173,7 +176,8 @@ public:
      * @param archive_id
      * @param log_event_idx Unused.
      * @return ErrorCodeSuccess on success.
-     * @return ErrorCodeFailureNetwork if connecting or sending to the network destination fails.
+     * @return The error of an earlier failure, if any.
+     * @return Forwards `send_result`'s return values otherwise.
      */
     [[nodiscard]] auto write(
             std::string_view message,
@@ -185,7 +189,8 @@ public:
     /**
      * Unsupported, since every result must carry its timestamp and archive ID.
      * @param message
-     * @return ErrorCodeUnsupported unconditionally.
+     * @return The error of an earlier failure, if any.
+     * @return ErrorCodeUnsupported otherwise.
      */
     [[nodiscard]] auto write(std::string_view message) -> ErrorCode override;
 
@@ -194,14 +199,42 @@ public:
      * Sends the trailer, shuts down the write side of the connection, and waits for the network
      * destination to acknowledge the results. Does nothing if no result was written.
      * @return ErrorCodeSuccess on success.
-     * @return ErrorCodeFailureNetwork if sending the trailer, shutting down the connection, or
-     * receiving the acknowledgement fails, or if the acknowledgement is malformed or doesn't count
-     * the number of results sent.
+     * @return The error of an earlier failure, if any.
+     * @return Forwards `send_trailer_and_receive_ack`'s return values otherwise.
      */
     [[nodiscard]] auto finish() -> ErrorCode override;
 
 private:
     // Methods
+    /**
+     * Connects to the network destination.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if connecting fails.
+     */
+    [[nodiscard]] auto connect() -> ErrorCode;
+
+    /**
+     * Sends a result to the network destination, connecting to it and sending the handshake first
+     * if this is the first result.
+     * @param message
+     * @param timestamp
+     * @param archive_id
+     * @return ErrorCodeSuccess on success.
+     * @return Forwards `connect`'s and `send_buffer`'s return values on failure.
+     */
+    [[nodiscard]] auto
+    send_result(std::string_view message, epochtime_t timestamp, std::string_view archive_id)
+            -> ErrorCode;
+
+    /**
+     * Sends the trailer, shuts down the write side of the connection, waits for the network
+     * destination's acknowledgement, and then closes the connection.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if shutting down the connection fails.
+     * @return Forwards `send_buffer`'s and `receive_ack`'s return values on any other failure.
+     */
+    [[nodiscard]] auto send_trailer_and_receive_ack() -> ErrorCode;
+
     /**
      * Sends the serialized messages in the buffer to the network destination, and then clears the
      * buffer.
@@ -228,6 +261,7 @@ private:
     uint64_t m_num_results_sent{};
     int m_socket_fd{-1};
     msgpack::sbuffer m_buffer;
+    ErrorCode m_error_code{ErrorCodeSuccess};
 };
 
 /**

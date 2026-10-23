@@ -121,18 +121,67 @@ auto NetworkOutputHandler::write(
         string_view archive_id,
         [[maybe_unused]] int64_t log_event_idx
 ) -> ErrorCode {
+    if (ErrorCodeSuccess == m_error_code) {
+        m_error_code = send_result(message, timestamp, archive_id);
+    }
+    return m_error_code;
+}
+
+auto NetworkOutputHandler::write([[maybe_unused]] string_view message) -> ErrorCode {
+    if (ErrorCodeSuccess == m_error_code) {
+        SPDLOG_ERROR("The network output handler requires each result's metadata.");
+        m_error_code = ErrorCodeUnsupported;
+    }
+    return m_error_code;
+}
+
+auto NetworkOutputHandler::finish() -> ErrorCode {
+    if (ErrorCodeSuccess == m_error_code && -1 != m_socket_fd) {
+        m_error_code = send_trailer_and_receive_ack();
+    }
+    return m_error_code;
+}
+
+auto NetworkOutputHandler::connect() -> ErrorCode {
+    m_socket_fd = m_connector();
+    if (-1 == m_socket_fd) {
+        auto const error{std::error_code{errno, std::generic_category()}};
+        SPDLOG_ERROR(
+                "Failed to connect to {} - ({}) {}",
+                m_destination,
+                error.value(),
+                error.message()
+        );
+        return ErrorCodeFailureNetwork;
+    }
+
+#if !defined(MSG_NOSIGNAL) && defined(SO_NOSIGPIPE)
+    // Without `MSG_NOSIGNAL`, `try_send` can't stop a send to a closed peer from raising `SIGPIPE`,
+    // so disable the signal on the socket instead.
+    int const enable{1};
+    if (0 != setsockopt(m_socket_fd, SOL_SOCKET, SO_NOSIGPIPE, &enable, sizeof(enable))) {
+        auto const error{std::error_code{errno, std::generic_category()}};
+        SPDLOG_ERROR(
+                "Failed to disable SIGPIPE on the connection to {} - ({}) {}",
+                m_destination,
+                error.value(),
+                error.message()
+        );
+        return ErrorCodeFailureNetwork;
+    }
+#endif
+    return ErrorCodeSuccess;
+}
+
+auto NetworkOutputHandler::send_result(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id
+) -> ErrorCode {
     msgpack::packer<msgpack::sbuffer> packer{m_buffer};
     if (-1 == m_socket_fd) {
-        m_socket_fd = m_connector();
-        if (-1 == m_socket_fd) {
-            auto const error{std::error_code{errno, std::generic_category()}};
-            SPDLOG_ERROR(
-                    "Failed to connect to {} - ({}) {}",
-                    m_destination,
-                    error.value(),
-                    error.message()
-            );
-            return ErrorCodeFailureNetwork;
+        if (auto const error_code{connect()}; ErrorCodeSuccess != error_code) {
+            return error_code;
         }
         packer.pack_array(cNumHandshakeFields);
         packer.pack_uint8(cProtocolVersion);
@@ -151,16 +200,7 @@ auto NetworkOutputHandler::write(
     return ErrorCodeSuccess;
 }
 
-auto NetworkOutputHandler::write([[maybe_unused]] string_view message) -> ErrorCode {
-    SPDLOG_ERROR("The network output handler requires each result's metadata.");
-    return ErrorCodeUnsupported;
-}
-
-auto NetworkOutputHandler::finish() -> ErrorCode {
-    if (-1 == m_socket_fd) {
-        return ErrorCodeSuccess;
-    }
-
+auto NetworkOutputHandler::send_trailer_and_receive_ack() -> ErrorCode {
     msgpack::packer<msgpack::sbuffer> packer{m_buffer};
     packer.pack_array(cNumTrailerFields);
     packer.pack_uint64(m_num_results_sent);
