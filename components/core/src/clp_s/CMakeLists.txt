@@ -558,12 +558,19 @@ if(CLP_BUILD_TESTING)
                 filter/tests/test-clp_s-bitmap_view.cpp
                 filter/tests/test-clp_s-bloom_filter.cpp
                 filter/tests/test-clp_s-xxhash.cpp
+                MongoDBUtils.cpp
+                MongoDBUtils.hpp
+                OutputHandlerImpl.cpp
+                OutputHandlerImpl.hpp
+                ResultsCacheUtils.cpp
+                ResultsCacheUtils.hpp
                 tests/clp_s_test_utils.cpp
                 tests/clp_s_test_utils.hpp
                 tests/test-FloatFormatEncoding.cpp
                 tests/test-clp_s-delta-encode-log-order.cpp
                 tests/test-clp_s-end_to_end.cpp
                 tests/test-clp_s-ffi_sfa_reader.cpp
+                tests/test-clp_s-network_output_handler.cpp
                 tests/test-clp_s-range_index.cpp
                 tests/test-clp_s-search.cpp
                 tests/test-kql.cpp

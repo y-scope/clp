@@ -1,6 +1,7 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -48,6 +49,8 @@ public:
     struct NetworkOutputHandlerOptions {
         std::string host;
         int port{};
+        std::string session_token;
+        uint64_t task_idx{};
     };
 
     struct ReducerOutputHandlerOptions {
