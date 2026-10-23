@@ -1,10 +1,10 @@
 #include "QueryRunner.hpp"
 
-#include <array>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <string>
-#include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -14,6 +14,7 @@
 #include <utils/profiling/ScopedProfiler.hpp>
 
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/ColumnReader.hpp>
 #include <clp_s/Defs.hpp>
 #include <clp_s/Schema.hpp>
 #include <clp_s/search/ast/EmptyExpr.hpp>
@@ -52,9 +53,18 @@ using clp_s::search::ast::OrExpr;
 namespace clp_s::search {
 namespace {
 /**
- * Wildcard fallback for numeric columns. Converts each value to string via `fmt::format_to_n` and
- * matches against the query pattern. Uses `fmt::format("{:.17g}", value)` for doubles to avoid both
- * rounding false negatives and trailing-zero false positives.
+ * Evaluates a filter with a wildcard operand against numeric columns by matching the pattern
+ * against each value's text. Readers that retain the value's original text (`FormattedFloat`,
+ * `DictionaryFloat`) contribute that text; other readers contribute fmt's shortest round-trip
+ * representation, i.e. the shortest decimal string that parses back to the same value. For doubles
+ * this avoids both binary-noise digits (`0.1` -> `0.10000000000000001`) and trailing zeros
+ * (`3000.000000`).
+ * @tparam T The numeric type held by `readers`.
+ * @param op
+ * @param operand
+ * @param readers
+ * @param cur_message
+ * @return Whether the filter holds for any reader.
  */
 template <typename T>
 auto evaluate_numeric_wildcard_filter(
@@ -75,24 +85,24 @@ auto evaluate_numeric_wildcard_filter(
     if (false == operand->as_var_string(query_string, op)) {
         return false;
     }
+    std::string value_string;
     for (BaseColumnReader* reader : readers) {
-        auto const value{std::get<T>(reader->extract_value(cur_message))};
-
-        constexpr size_t cNumericConversionBufferSize{64};
-        std::array<char, cNumericConversionBufferSize> buf{};
-        auto result = [&]() -> auto {
-            if constexpr (std::is_floating_point_v<T>) {
-                return fmt::format_to_n(buf.begin(), buf.size(), FMT_COMPILE("{:.17g}"), value);
-            }
-            return fmt::format_to_n(buf.begin(), buf.size(), FMT_COMPILE("{}"), value);
-        }();
-
-        if (result.size > buf.size()) {
-            continue;
+        value_string.clear();
+        if (std::is_floating_point_v<T>
+            && (NodeType::FormattedFloat == reader->get_type()
+                || NodeType::DictionaryFloat == reader->get_type()))
+        {
+            reader->extract_string_value_into_buffer(cur_message, value_string);
+        } else {
+            fmt::format_to(
+                    std::back_inserter(value_string),
+                    FMT_COMPILE("{}"),
+                    std::get<T>(reader->extract_value(cur_message))
+            );
         }
-
-        std::string_view const value_sv{buf.data(), result.size};
-        bool const matched{clp::string_utils::wildcard_match_unsafe(value_sv, query_string, false)};
+        bool const matched{
+                clp::string_utils::wildcard_match_unsafe(value_string, query_string, false)
+        };
         if ((ast::FilterOperation::EQ == op) == matched) {
             return true;
         }

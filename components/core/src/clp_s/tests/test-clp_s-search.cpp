@@ -439,10 +439,17 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
             {R"aa(formattedFloatValue: 1e-16)aa", {6, 7}},
             {R"aa(formattedFloatValue > 0.00)aa", {6, 7, 8, 9, 10, 11, 12}},
             {R"aa(formattedFloatValue > 5000.000000000001)aa", {12}},
+            {R"aa(formattedFloatValue > 100.0)aa", {9, 10, 11, 12}},
+            {R"aa(formattedFloatValue > 1e2)aa", {9, 10, 11, 12}},
             {R"aa(formattedFloatValue < 0.00 AND formattedFloatValue >= -0.01)aa", {1, 2}},
             {R"aa(idx: 0 AND NOT formattedFloatValue: -1000.0)aa", {}},
             {R"aa(msg: "xxx" AND formattedFloatValue: 3000.0)aa", {}},
-            {R"aa(msg: "xxx" OR formattedFloatValue: 3000.0)aa", {0, 9}}
+            {R"aa(msg: "xxx" OR formattedFloatValue: 3000.0)aa", {0, 9}},
+            {R"aa(formattedFloatValue: *E3)aa", {0, 9, 11, 12}},
+            {R"aa(formattedFloatValue: 0.000000E*)aa", {3, 4, 5}},
+            {R"aa(formattedFloatValue: 2.0*)aa", {8}},
+            {R"aa(formattedFloatValue: *1.000000E-*)aa", {1, 2, 6}},
+            {R"aa(NOT formattedFloatValue: *E*)aa", {7, 8}}
     };
     auto single_file_archive = GENERATE(true, false);
 
@@ -467,6 +474,35 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
     std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
     REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
     REQUIRE_NOTHROW(search(expr, false, {0}));
+}
+
+TEST_CASE("clp-s-search-unformatted-float-wildcard", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(formattedFloatValue: 1e-1*)aa", {6, 7}},
+            {R"aa(formattedFloatValue: *.000000000001)aa", {11}},
+            {R"aa(formattedFloatValue: -0.0*)aa", {1}},
+            {R"aa(formattedFloatValue: *000)aa", {0, 9, 10}},
+            {R"aa(NOT formattedFloatValue: *e*)aa", {0, 1, 3, 4, 5, 8, 9, 10, 11, 12}}
+    };
+    auto single_file_archive{GENERATE(true, false)};
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchFormattedFloatFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::nullopt,
+                    false,
+                    single_file_archive,
+                    false
+            )
+    );
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
 }
 
 TEST_CASE("clp-s-search-float-timestamp", "[clp-s][search]") {
