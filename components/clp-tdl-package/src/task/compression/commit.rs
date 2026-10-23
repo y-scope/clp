@@ -4,6 +4,7 @@ use anyhow::Context;
 use clp_rust_utils::clp_config::package::credentials;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::dataset::register_dataset as register_dataset_in_db;
 use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -139,18 +140,9 @@ async fn register_dataset(
     let archive_storage_path = config
         .archive_output
         .dataset_archive_storage_directory(dataset);
-    // NOTE: `LAST_INSERT_ID(id)` sets the statement's insert ID to the existing row's ID when the
-    // dataset is already registered, so the ID can be read back without a second query.
-    let query_result = sqlx::query(&format!(
-        "INSERT INTO `{datasets_table}` (name, archive_storage_path) VALUES (?, ?) ON DUPLICATE \
-         KEY UPDATE id = LAST_INSERT_ID(id), archive_storage_path = VALUES(archive_storage_path)"
-    ))
-    .bind(dataset)
-    .bind(&archive_storage_path)
-    .execute(&mut **tx)
-    .await
-    .with_context(|| format!("failed to register dataset in `{datasets_table}`"))?;
-    Ok(query_result.last_insert_id())
+    register_dataset_in_db(tx, &datasets_table, &archive_storage_path, dataset)
+        .await
+        .with_context(|| format!("failed to register dataset in `{datasets_table}`"))
 }
 
 /// Inserts every archive's metadata into `archives_table`, and records those whose timestamp range

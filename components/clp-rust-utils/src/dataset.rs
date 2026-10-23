@@ -158,6 +158,37 @@ pub enum ParseDatasetNameError {
     TooLong(String),
 }
 
+/// Idempotently registers `dataset` in `datasets_table`, recording `archive_storage_path` as its
+/// archive storage path.
+///
+/// # Returns
+///
+/// The dataset's ID.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+pub async fn register_dataset(
+    tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
+    datasets_table: &str,
+    archive_storage_path: &str,
+    dataset: &DatasetName,
+) -> Result<u64, sqlx::Error> {
+    // NOTE: `LAST_INSERT_ID(id)` sets the statement's insert ID to the existing row's ID when the
+    // dataset is already registered, so the ID can be read back without a second query.
+    let query_result = sqlx::query(&format!(
+        "INSERT INTO `{datasets_table}` (name, archive_storage_path) VALUES (?, ?) ON DUPLICATE \
+         KEY UPDATE id = LAST_INSERT_ID(id), archive_storage_path = VALUES(archive_storage_path)"
+    ))
+    .bind(dataset)
+    .bind(archive_storage_path)
+    .execute(&mut **tx)
+    .await?;
+    Ok(query_result.last_insert_id())
+}
+
 /// The name of the dataset used when none is specified.
 const CLP_DEFAULT_DATASET_NAME: &str = "default";
 

@@ -3,7 +3,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use clp_rust_utils::clp_config::package::config::ArchiveOutput;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::dataset::register_dataset;
 use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
@@ -34,6 +36,12 @@ pub struct SpiderOption {
     pub max_poll_backoff: Duration,
 }
 
+/// Everything needed to register a compression job's dataset before its tasks are submitted.
+pub struct DatasetOption {
+    pub datasets_table: String,
+    pub archive_output: ArchiveOutput,
+}
+
 /// Handles the asynchronous submission of an S3 compression job and the retrieval of its result.
 ///
 /// # Type Parameters
@@ -51,6 +59,7 @@ pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
     target_archive_size: u64,
 
     spider_option: Arc<SpiderOption>,
+    dataset_option: Arc<DatasetOption>,
 }
 
 impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterType> {
@@ -74,6 +83,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         resource_group_id: ResourceGroupId,
         clp_io_config: ClpIoConfig,
         spider_option: Arc<SpiderOption>,
+        dataset_option: Arc<DatasetOption>,
     ) -> Result<Self, Error> {
         let input_config = clp_io_config.input;
         let InputConfig::S3ObjectMetadataInputConfig {
@@ -106,6 +116,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             dataset,
             target_archive_size: output_config.target_archive_size,
             spider_option,
+            dataset_option,
         })
     }
 
@@ -163,16 +174,22 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
 
     /// Submits the compression job to Spider and waits for it to reach a terminal state.
     ///
+    /// The job's dataset is registered before submission so that the indexer, which runs during
+    /// compression, can resolve the dataset's ID.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
+    /// * Forwards [`Self::register_dataset`]'s return values on failure.
     /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
     /// * Forwards [`S3CompressionJobSubmitter::submit_s3_compression_job`]'s return values on
     ///   failure.
     /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     async fn submit_and_wait(&self) -> Result<(), Error> {
+        self.register_dataset().await?;
+
         let input_sources = self.prepare_task_inputs().await?;
         let num_tasks = input_sources.len();
 
@@ -201,6 +218,38 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         );
 
         self.to_completion(spider_job_id).await
+    }
+
+    /// Registers the job's dataset in the CLP database.
+    ///
+    /// This runs before the job's tasks are submitted, because the `clp-s` indexer resolves the
+    /// dataset's ID during compression, whereas the commit task only registers it once every
+    /// compression task has finished. The registration is idempotent, so the commit task's own
+    /// registration is unaffected.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`register_dataset`]'s return values on failure.
+    /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
+    async fn register_dataset(&self) -> Result<(), Error> {
+        let archive_storage_path = self
+            .dataset_option
+            .archive_output
+            .dataset_archive_storage_directory(&self.dataset);
+        let mut tx = self.db_pool.begin().await?;
+        register_dataset(
+            &mut tx,
+            &self.dataset_option.datasets_table,
+            &archive_storage_path,
+            &self.dataset,
+        )
+        .await?;
+        tx.commit().await?;
+
+        Ok(())
     }
 
     /// Reports a compression job failure.

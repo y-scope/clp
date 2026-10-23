@@ -40,6 +40,7 @@ use tokio_util::sync::CancellationToken;
 use tonic::transport::Endpoint;
 
 use crate::Error;
+use crate::job_handle::DatasetOption;
 use crate::job_handle::S3CompressionJobHandle;
 use crate::job_handle::SpiderOption;
 
@@ -49,6 +50,7 @@ pub struct Coordinator {
     spider_client: SpiderClient,
     db_pool: sqlx::MySqlPool,
     spider_option: Arc<SpiderOption>,
+    dataset_option: Arc<DatasetOption>,
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
@@ -82,6 +84,7 @@ impl Coordinator {
     pub async fn new(
         coordinator_config: &CoordinatorConfig,
         spider_config: &SpiderConfig,
+        dataset_option: Arc<DatasetOption>,
         db_pool: sqlx::MySqlPool,
     ) -> Result<(Self, CancellationToken), Error> {
         let max_concurrent_jobs = coordinator_config.max_concurrent_jobs.get();
@@ -144,6 +147,7 @@ impl Coordinator {
             spider_client,
             db_pool,
             spider_option,
+            dataset_option,
             is_first_fetch: true,
             job_polling_interval: Duration::from_millis(
                 coordinator_config.job_polling_interval_millisecs.get(),
@@ -389,6 +393,7 @@ impl Coordinator {
             self.resource_group_id,
             clp_io_config,
             self.spider_option.clone(),
+            self.dataset_option.clone(),
         );
 
         if let Err(e) = &result {
