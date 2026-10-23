@@ -180,8 +180,26 @@ class ExternalAction:
             err_msg = f"Cannot create '{type(self).__name__}' object: `cmd` list is empty."
             raise ValueError(err_msg)
 
+        self.log_file_path = self._build_log_file_path()
+
         self.completed_proc = self._run_subprocess()
-        self._log_action_summary_to_file()
+        self._log_action_summary_to_file(
+            stdout=self.completed_proc.stdout,
+            stderr=self.completed_proc.stderr,
+            returncode=self.completed_proc.returncode,
+            notes=None,
+        )
+
+        log_msg = (
+            f"Subprocess '{self.exe_name}' returned. Subprocess log written to file:"
+            f" '{self.log_file_path}'"
+        )
+        logger.info(log_msg)
+
+    @property
+    def exe_name(self) -> str:
+        """:return: The command name of the executable being run."""
+        return Path(self.cmd[0]).name
 
     def get_output(self) -> str:
         """:return: The combined stdout and stderr from the completed subprocess."""
@@ -199,8 +217,7 @@ class ExternalAction:
         :raise pytest.fail: If the subprocess times out.
         :raise pytest.fail: If the subprocess fails to start.
         """
-        exe_name = Path(self.cmd[0]).name
-        log_msg = f"Running '{exe_name}' subprocess. Command: {self.cmd}"
+        log_msg = f"Running '{self.exe_name}' subprocess. Command: {self.cmd}"
         logger.info(log_msg)
 
         try:
@@ -211,59 +228,77 @@ class ExternalAction:
                 check=False,
                 text=True,
             )
-        except subprocess.TimeoutExpired:
-            err_msg = f"Subprocess '{exe_name}' timed out after {DEFAULT_CMD_TIMEOUT_SECONDS}s."
+        except subprocess.TimeoutExpired as e:
+            err = f"Subprocess '{self.exe_name}' timed out after {DEFAULT_CMD_TIMEOUT_SECONDS}s."
+            self._log_action_summary_to_file(
+                stdout=e.stdout.decode("utf-8", errors="replace") if e.stdout else None,
+                stderr=e.stderr.decode("utf-8", errors="replace") if e.stderr else None,
+                returncode=None,
+                notes=err,
+            )
+
+            err_msg = f"{err} Subprocess log written to file: '{self.log_file_path}'"
             logger.exception(err_msg)
             pytest.fail(err_msg)
         except OSError as e:
-            err_msg = f"Subprocess '{exe_name}' failed to start: {e}"
+            err = (
+                f"Subprocess '{self.exe_name}' failed to start due to an OSError: "
+                f"[Errno {e.errno}] {e.strerror or e} (path: {e.filename})."
+            )
+            self._log_action_summary_to_file(
+                stdout=None,
+                stderr=None,
+                returncode=None,
+                notes=err,
+            )
+
+            err_msg = f"{err} Subprocess log written to file: '{self.log_file_path}'"
             logger.exception(err_msg)
             pytest.fail(err_msg)
 
-    def _log_action_summary_to_file(self) -> None:
-        """Logs a summary of the external action execution to a unique file."""
+    def _build_log_file_path(self) -> Path:
+        """:return: A unique path for this action's log file."""
         now = datetime.datetime.now()  # noqa: DTZ005
         test_run_id = now.strftime("%Y-%m-%d-%H-%M-%S-%f")[:-3]
-        self.log_file_path = (
-            get_test_log_dir() / "subprocess_output" / f"{Path(self.cmd[0]).name}_{test_run_id}.log"
-        )
+        return get_test_log_dir() / "subprocess_output" / f"{self.exe_name}_{test_run_id}.log"
 
-        completed_proc = self.completed_proc
-        stdout_content = completed_proc.stdout or "(empty)"
-        stderr_content = completed_proc.stderr or "(empty)"
+    def _log_action_summary_to_file(
+        self, stdout: str | None, stderr: str | None, returncode: int | None, notes: str | None
+    ) -> None:
+        """Logs a summary of the external action execution to a unique file."""
+        now = datetime.datetime.now()  # noqa: DTZ005
 
-        if not stdout_content.endswith("\n"):
-            stdout_content += "\n"
-        if not stderr_content.endswith("\n"):
-            stderr_content += "\n"
+        stdout_formatted = stdout or "(empty)"
+        stderr_formatted = stderr or "(empty)"
+
+        if not stdout_formatted.endswith("\n"):
+            stdout_formatted += "\n"
+        if not stderr_formatted.endswith("\n"):
+            stderr_formatted += "\n"
 
         sep = "-" * 32
         summary_lines = [
             "SUBPROCESS RUN SUMMARY\n",
             f"{sep}\n",
             f"Timestamp at completion : {now.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}\n",
-            f"Command                 : {completed_proc.args}\n",
-            f"Return Code             : {completed_proc.returncode}\n",
+            f"Command                 : {self.cmd}\n",
+            f"Return Code             : {returncode}\n",
+            f"Notes                   : {notes}\n",
             "\n\n",
             "captured stdout\n",
             f"{sep}\n",
-            stdout_content,
+            stdout_formatted,
             "\n",
             "\n\n",
             "captured stderr\n",
             f"{sep}\n",
-            stderr_content,
+            stderr_formatted,
             "\n",
         ]
 
         self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
         with self.log_file_path.open("w", encoding="utf-8") as log_file:
             log_file.writelines(summary_lines)
-
-        log_msg = (
-            f"Subprocess returned. stdout and stderr written to log file: '{self.log_file_path}'"
-        )
-        logger.info(log_msg)
 
 
 @dataclass
