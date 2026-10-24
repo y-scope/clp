@@ -1,4 +1,7 @@
+mod webui;
+
 use axum::Json;
+use axum::extract::FromRef;
 use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
@@ -8,7 +11,6 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
-use clp_rust_utils::dataset::DatasetName;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -28,6 +30,28 @@ use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
 use crate::client::ValidatedCompressionUsageParams;
+use crate::webui_client::WebuiClient;
+
+/// Shared application state passed to all route handlers.
+#[derive(Clone)]
+pub struct AppState {
+    /// Client for search query orchestration.
+    pub client: Client,
+    /// Client for the operations that back the `WebUI`'s routes.
+    pub webui_client: WebuiClient,
+}
+
+impl FromRef<AppState> for Client {
+    fn from_ref(state: &AppState) -> Self {
+        state.client.clone()
+    }
+}
+
+impl FromRef<AppState> for WebuiClient {
+    fn from_ref(state: &AppState) -> Self {
+        state.webui_client.clone()
+    }
+}
 
 /// Factory method to create an Axum router configured with all API routes.
 ///
@@ -39,29 +63,34 @@ use crate::client::ValidatedCompressionUsageParams;
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`OpenApi::to_json`]'s return values on failure.
-pub fn from_client(client: Client) -> Result<axum::Router, serde_json::Error> {
-    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+/// * Forwards [`utoipa::openapi::OpenApi::to_json`]'s return values on failure.
+pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error> {
+    let (public_routes, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
         .routes(routes!(health))
         .routes(routes!(query))
         .routes(routes!(query_results))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
-        .route(
-            "/column_metadata/{dataset_name}/timestamp",
-            get(get_timestamp_column_names),
-        )
-        .with_state(client)
         .split_for_parts();
     let api_json = api.to_json()?;
-    let router = router
+    let public_routes = public_routes
         .route(
             "/openapi.json",
             get(|| async { (StatusCode::OK, api_json) }),
         )
         .layer(CorsLayer::new().allow_origin(Any));
-    Ok(router)
+    let (webui_routes, _) = webui::router().split_for_parts();
+    Ok(public_routes.merge(webui_routes).with_state(state))
+}
+
+/// The `OpenAPI` document of the public routes and the routes that back the `WebUI`.
+pub struct WebUiApiDoc;
+
+impl OpenApi for WebUiApiDoc {
+    fn openapi() -> utoipa::openapi::OpenApi {
+        ApiDoc::openapi().merge_from(webui::api_doc())
+    }
 }
 
 // `utoipa::OpenApi` triggers `clippy::needless_for_each`
@@ -267,36 +296,6 @@ async fn cancel_query(
     }
 }
 
-/// Path parameters for the timestamp column names endpoint.
-///
-/// # NOTE
-///
-/// * [`DatasetName`] deserializes through `Option<String>`, and axum's top-level path deserializer
-///   doesn't support optional values, so extracting `Path<DatasetName>` directly fails for every
-///   request. Deserializing the dataset name as a struct field avoids this.
-#[derive(Deserialize)]
-struct TimestampColumnNamesPath {
-    dataset_name: DatasetName,
-}
-
-async fn get_timestamp_column_names(
-    State(client): State<Client>,
-    Path(TimestampColumnNamesPath { dataset_name }): Path<TimestampColumnNamesPath>,
-) -> Result<Json<Vec<String>>, HandlerError> {
-    let names = client
-        .get_timestamp_column_names(&dataset_name)
-        .await
-        .map_err(|err| {
-            tracing::error!(
-                "Failed to get timestamp column names for dataset '{}': {:?}",
-                dataset_name,
-                err
-            );
-            HandlerError::from(err)
-        })?;
-    Ok(Json(names))
-}
-
 #[utoipa::path(
     get,
     path = "/usage/compression",
@@ -343,6 +342,8 @@ enum HandlerError {
     Conflict,
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Gateway timeout: {0}")]
+    GatewayTimeout(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -356,7 +357,10 @@ impl From<ClientError> for HandlerError {
         match err {
             ClientError::QueryJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
             ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
-            ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
+            ClientError::InvalidDatasetName(_) | ClientError::InvalidInput(_) => {
+                Self::BadRequest(format!("{err}"))
+            }
+            ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(err.to_string()),
             _ => Self::InternalServer,
         }
     }
@@ -370,6 +374,7 @@ impl IntoResponse for HandlerError {
             Self::Conflict => StatusCode::CONFLICT.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
         }
     }
 }
@@ -377,18 +382,27 @@ impl IntoResponse for HandlerError {
 #[cfg(test)]
 mod tests {
     use axum::body::Body;
+    use axum::http::HeaderValue;
     use axum::http::Method;
     use axum::http::Request;
     use axum::http::StatusCode;
+    use axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN;
+    use axum::http::header::CONTENT_TYPE;
+    use axum::http::header::ORIGIN;
     use axum::routing::delete;
     use axum::routing::get;
+    use clp_rust_utils::clp_config::package::config::ApiServer;
     use clp_rust_utils::clp_config::package::config::Config;
+    use clp_rust_utils::clp_config::package::config::Package;
+    use clp_rust_utils::clp_config::package::config::StorageEngine;
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::QueryJobStatus;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     use super::*;
     use crate::client::Cancellability;
+    use crate::webui_client::StreamFileExtractionSettings;
 
     #[derive(Deserialize)]
     struct JobStatusParams {
@@ -430,6 +444,38 @@ mod tests {
         )
     }
 
+    /// Builds the application router for the CLP-S storage engine, with clients whose `MySQL` and
+    /// `MongoDB` connections are only established on first use.
+    async fn clp_s_app_with_lazy_clients() -> axum::Router {
+        let config = Config {
+            package: Package {
+                storage_engine: StorageEngine::ClpS,
+            },
+            ..Config::default()
+        };
+        let mongodb_client = mongodb::Client::with_uri_str("mongodb://localhost:27017")
+            .await
+            .expect("the MongoDB URI should be valid");
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .connect_lazy("mysql://localhost/clp-db")
+            .expect("the MySQL URI should be valid");
+        let stream_file_extraction = StreamFileExtractionSettings::from_config(
+            &ApiServer::default(),
+            &config.stream_output.storage,
+        )
+        .await;
+        from_app_state(AppState {
+            client: Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone()),
+            webui_client: WebuiClient::new(
+                config,
+                sql_pool,
+                mongodb_client,
+                stream_file_extraction,
+            ),
+        })
+        .expect("the OpenAPI document should serialize")
+    }
+
     async fn get_body(response: axum::response::Response) -> String {
         let bytes = response
             .into_body()
@@ -441,12 +487,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn webui_routes_do_not_allow_unrelated_browser_origins() -> anyhow::Result<()> {
+        let app = clp_s_app_with_lazy_clients().await;
+
+        let public_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .header(ORIGIN, "https://unrelated.example")
+                    .body(Body::empty())?,
+            )
+            .await?;
+        assert_eq!(public_response.status(), StatusCode::OK);
+        assert_eq!(
+            public_response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN),
+            Some(&HeaderValue::from_static("*"))
+        );
+
+        let webui_response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/metadata/time_range")
+                    .header(ORIGIN, "https://unrelated.example")
+                    .body(Body::empty())?,
+            )
+            .await?;
+        assert_eq!(webui_response.status(), StatusCode::OK);
+        assert_eq!(
+            webui_response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN),
+            None
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dataset_scoped_metadata_routes_reject_invalid_dataset_names() -> anyhow::Result<()> {
+        let app = clp_s_app_with_lazy_clients().await;
+        let parse_error = "invalid-name"
+            .parse::<DatasetName>()
+            .expect_err("name should be an invalid dataset name");
+        for uri in [
+            "/metadata/time_range?dataset=logs,invalid-name",
+            "/metadata/query_speed?dataset=logs,invalid-name&search_job_id=1",
+        ] {
+            let response = app
+                .clone()
+                .oneshot(Request::builder().uri(uri).body(Body::empty())?)
+                .await?;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST, "uri: {uri}");
+            let body = get_body(response).await;
+            assert_eq!(body, parse_error.to_string(), "uri: {uri}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn timestamp_column_names_route_rejects_invalid_dataset_name() -> anyhow::Result<()> {
-        let app = from_client(Client::connect_lazy(Config::default()).await?)?;
+        let app = clp_s_app_with_lazy_clients().await;
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/column_metadata/bad-name/timestamp")
+                    .uri("/metadata/column_metadata/bad-name/timestamp")
                     .body(Body::empty())?,
             )
             .await?;
@@ -458,6 +560,96 @@ mod tests {
         assert!(
             body.contains(&parse_error.to_string()),
             "unexpected body: {body}"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn stream_file_extraction_rejects_invalid_requests() -> anyhow::Result<()> {
+        const ARCHIVE_ID: &str = "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11";
+
+        let app = clp_s_app_with_lazy_clients().await;
+        let invalid_dataset_error = "bad-name"
+            .parse::<DatasetName>()
+            .expect_err("name should be an invalid dataset name")
+            .to_string();
+        for (body, expected) in [
+            (
+                serde_json::json!({
+                    "dataset": "bad-name",
+                    "extract_job_type": "ExtractJson",
+                    "log_event_idx": 0,
+                    "stream_id": ARCHIVE_ID,
+                }),
+                invalid_dataset_error.as_str(),
+            ),
+            (
+                serde_json::json!({
+                    "dataset": null,
+                    "extract_job_type": "ExtractIr",
+                    "log_event_idx": 0,
+                    "stream_id": "",
+                }),
+                "stream_id must not be empty",
+            ),
+            (
+                serde_json::json!({
+                    "extract_job_type": "SearchOrAggregation",
+                    "log_event_idx": 0,
+                    "stream_id": ARCHIVE_ID,
+                }),
+                "extract_job_type must be `ExtractIr` or `ExtractJson`",
+            ),
+            (
+                serde_json::json!({
+                    "extract_job_type": "ExtractIr",
+                    "log_event_idx": -1,
+                    "stream_id": "orig-file",
+                }),
+                "log_event_idx must not be negative",
+            ),
+            (
+                serde_json::json!({
+                    "extract_job_type": "ExtractJson",
+                    "log_event_idx": 0,
+                    "stream_id": "not-an-archive-id",
+                }),
+                "invalid archive ID \"not-an-archive-id\"",
+            ),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::POST)
+                        .uri("/stream_files/extract")
+                        .header(CONTENT_TYPE, "application/json")
+                        .body(Body::from(body.to_string()))?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST, "body: {body}");
+            let response_body = get_body(response).await;
+            assert!(
+                response_body.contains(expected),
+                "body: {body}, unexpected response body: {response_body}"
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn stream_extraction_timeout_returns_gateway_timeout_with_plain_text_body()
+    -> anyhow::Result<()> {
+        let response =
+            HandlerError::from(ClientError::StreamExtractionTimeout(1800)).into_response();
+        assert_eq!(response.status(), StatusCode::GATEWAY_TIMEOUT);
+        assert_eq!(
+            response.headers().get(CONTENT_TYPE),
+            Some(&HeaderValue::from_static("text/plain; charset=utf-8"))
+        );
+        assert_eq!(
+            get_body(response).await,
+            "Stream extraction timed out after 1800 seconds"
         );
         Ok(())
     }
