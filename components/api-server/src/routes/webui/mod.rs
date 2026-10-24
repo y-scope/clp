@@ -16,7 +16,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().merge(metadata::router())
 }
 
-/// Records unexpected failures without logging request payloads or stored configuration.
+/// Logs `error` if it's an unexpected failure of `operation`, rather than an invalid request.
 fn log_unexpected_error(operation: &str, error: &ClientError) {
     let kind = match error {
         ClientError::Sql(_) => "sql",
@@ -27,5 +27,5 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         ClientError::TaskJoin(_) => "background_task",
         _ => return,
     };
-    tracing::error!(operation, kind, "WebUI API request failed.");
+    tracing::error!(operation, kind, error = ? error, "WebUI API request failed.");
 }
