@@ -500,8 +500,8 @@ mod tests {
             .parse::<DatasetName>()
             .expect_err("name should be an invalid dataset name");
         for uri in [
-            "/metadata/time_range?dataset=logs,invalid-name",
-            "/metadata/query_speed?dataset=logs,invalid-name&query_job_id=1",
+            "/metadata/time_range?datasets=logs,invalid-name",
+            "/metadata/query_speed?datasets=logs,invalid-name&query_job_id=1",
         ] {
             let response = app
                 .clone()

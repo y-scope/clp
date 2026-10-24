@@ -46,7 +46,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
 #[into_params(parameter_in = Query)]
 struct DatasetsParams {
     /// Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.
-    #[serde(rename = "dataset", default, deserialize_with = "deserialize_datasets")]
+    #[serde(default, deserialize_with = "deserialize_datasets")]
     #[param(value_type = Option<String>)]
     datasets: Vec<DatasetName>,
 }
@@ -56,7 +56,7 @@ struct DatasetsParams {
 #[into_params(parameter_in = Query)]
 struct QuerySpeedParams {
     /// Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.
-    #[serde(rename = "dataset", default, deserialize_with = "deserialize_datasets")]
+    #[serde(default, deserialize_with = "deserialize_datasets")]
     #[param(value_type = Option<String>)]
     datasets: Vec<DatasetName>,
     /// The query job ID whose scan speed should be computed.
@@ -101,7 +101,7 @@ async fn datasets(
     get,
     path = "/metadata/time_range",
     description = "Gets the earliest and latest log entry timestamps across the given \
-        datasets. For the CLP storage engine, the `dataset` parameter is ignored. Returns \
+        datasets. For the CLP storage engine, the `datasets` parameter is ignored. Returns \
         `null` when no archives exist yet.",
     params(DatasetsParams),
     responses(
@@ -281,7 +281,7 @@ mod tests {
     fn dataset_names_are_trimmed_deduplicated_and_kept_in_first_seen_order() -> anyhow::Result<()> {
         let expected: Vec<DatasetName> = vec!["logs".parse()?, "other".parse()?];
         assert_eq!(
-            extract_datasets("/metadata/time_range?dataset=%20logs,%20other,logs,%20,other%20")?,
+            extract_datasets("/metadata/time_range?datasets=%20logs,%20other,logs,%20,other%20")?,
             expected
         );
         Ok(())
@@ -292,7 +292,7 @@ mod tests {
         let parse_error = "invalid-name"
             .parse::<DatasetName>()
             .expect_err("name should be an invalid dataset name");
-        let result = extract_datasets("/metadata/time_range?dataset=logs,invalid-name");
+        let result = extract_datasets("/metadata/time_range?datasets=logs,invalid-name");
         assert!(
             matches!(
                 &result,
