@@ -11,7 +11,6 @@ use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::serde::ZstdMsgpack;
 use serde::Deserialize;
 use serde::Serialize;
-use sqlx::Row;
 use utoipa::ToSchema;
 
 use super::WebuiClient;
@@ -72,36 +71,8 @@ pub struct CompressionMetadata {
     pub clp_config: serde_json::Value,
 }
 
-impl TryFrom<sqlx::mysql::MySqlRow> for CompressionMetadata {
-    type Error = ClientError;
-
-    fn try_from(row: sqlx::mysql::MySqlRow) -> Result<Self, Self::Error> {
-        let clp_config: &[u8] = row.try_get("clp_config")?;
-        let clp_config = compression_metadata_config(ZstdMsgpack::deserialize(clp_config)?);
-        Ok(Self {
-            id: row.try_get("id")?,
-            status: row.try_get("status")?,
-            status_msg: row.try_get("status_msg")?,
-            start_time: row
-                .try_get::<Option<DateTime<Utc>>, _>("start_time")
-                .ok()
-                .flatten()
-                .map(|time| time.to_rfc3339()),
-            update_time: row
-                .try_get::<Option<DateTime<Utc>>, _>("update_time")
-                .ok()
-                .flatten()
-                .map_or_else(String::new, |time| time.to_rfc3339()),
-            duration: row.try_get("duration")?,
-            uncompressed_size: row.try_get("uncompressed_size")?,
-            compressed_size: row.try_get("compressed_size")?,
-            clp_config,
-        })
-    }
-}
-
 /// Aggregated space-savings statistics.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct SpaceSavings {
     /// Total uncompressed size of all archives, in bytes.
     pub total_uncompressed_size: i64,
@@ -109,20 +80,9 @@ pub struct SpaceSavings {
     pub total_compressed_size: i64,
 }
 
-impl TryFrom<sqlx::mysql::MySqlRow> for SpaceSavings {
-    type Error = sqlx::Error;
-
-    fn try_from(row: sqlx::mysql::MySqlRow) -> Result<Self, Self::Error> {
-        Ok(Self {
-            total_uncompressed_size: row.try_get("total_uncompressed_size")?,
-            total_compressed_size: row.try_get("total_compressed_size")?,
-        })
-    }
-}
-
 /// Ingestion details statistics. The whole value is `None` when no data has been ingested
 /// yet.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct IngestionDetails {
     /// Earliest log entry timestamp (epoch milliseconds).
     pub begin_timestamp: i64,
@@ -134,22 +94,9 @@ pub struct IngestionDetails {
     pub num_messages: i64,
 }
 
-impl TryFrom<sqlx::mysql::MySqlRow> for IngestionDetails {
-    type Error = sqlx::Error;
-
-    fn try_from(row: sqlx::mysql::MySqlRow) -> Result<Self, Self::Error> {
-        Ok(Self {
-            begin_timestamp: row.try_get("begin_timestamp")?,
-            end_timestamp: row.try_get("end_timestamp")?,
-            num_files: row.try_get("num_files")?,
-            num_messages: row.try_get("num_messages")?,
-        })
-    }
-}
-
 /// Query-speed statistics for a query job. The whole value is `None` until the job has
 /// scanned archives and finished (its duration is recorded only on completion).
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct QuerySpeed {
     /// Total uncompressed size of the archives the job scanned, in bytes.
     pub bytes: f64,
@@ -157,36 +104,14 @@ pub struct QuerySpeed {
     pub duration: f64,
 }
 
-impl TryFrom<sqlx::mysql::MySqlRow> for QuerySpeed {
-    type Error = sqlx::Error;
-
-    fn try_from(row: sqlx::mysql::MySqlRow) -> Result<Self, Self::Error> {
-        Ok(Self {
-            bytes: row.try_get("bytes")?,
-            duration: row.try_get("duration")?,
-        })
-    }
-}
-
 /// Earliest and latest log entry timestamps across the selected datasets. The whole value
 /// is `None` when no archives exist yet (or, for CLP-S, when no datasets were selected).
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct TimeRange {
     /// Earliest log entry timestamp (epoch milliseconds).
     pub begin_timestamp: i64,
     /// Latest log entry timestamp (epoch milliseconds).
     pub end_timestamp: i64,
-}
-
-impl TryFrom<sqlx::mysql::MySqlRow> for TimeRange {
-    type Error = sqlx::Error;
-
-    fn try_from(row: sqlx::mysql::MySqlRow) -> Result<Self, Self::Error> {
-        Ok(Self {
-            begin_timestamp: row.try_get("begin_timestamp")?,
-            end_timestamp: row.try_get("end_timestamp")?,
-        })
-    }
 }
 
 impl WebuiClient {
@@ -223,7 +148,7 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure.
     pub async fn get_time_range(
         &self,
         datasets: &[DatasetName],
@@ -252,8 +177,10 @@ impl WebuiClient {
                 )
             }
         };
-        let row = sqlx::query(&sql).fetch_one(&self.sql_pool).await?;
-        Ok(TimeRange::try_from(row).ok())
+        let row = sqlx::query_as::<_, TimeRangeRowProjection>(&sql)
+            .fetch_one(&self.sql_pool)
+            .await?;
+        Ok(row.into_time_range())
     }
 
     /// Fetches aggregated space-savings statistics across all datasets.
@@ -268,8 +195,7 @@ impl WebuiClient {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::get_dataset_names`]'s return values on failure.
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
-    /// * Forwards [`SpaceSavings::try_from`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure.
     pub async fn get_space_savings(&self) -> Result<SpaceSavings, ClientError> {
         let database = &self.config.database;
         let sql = match self.config.package.storage_engine {
@@ -301,8 +227,10 @@ impl WebuiClient {
                 )
             }
         };
-        let row = sqlx::query(&sql).fetch_one(&self.sql_pool).await?;
-        Ok(SpaceSavings::try_from(row)?)
+        let space_savings = sqlx::query_as::<_, SpaceSavings>(&sql)
+            .fetch_one(&self.sql_pool)
+            .await?;
+        Ok(space_savings)
     }
 
     /// Fetches ingestion details (timestamp range, file count, message count) across all
@@ -317,7 +245,7 @@ impl WebuiClient {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::get_dataset_names`]'s return values on failure.
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure.
     pub async fn get_ingestion_details(&self) -> Result<Option<IngestionDetails>, ClientError> {
         let database = &self.config.database;
         let sql = match self.config.package.storage_engine {
@@ -360,8 +288,10 @@ impl WebuiClient {
                 )
             }
         };
-        let row = sqlx::query(&sql).fetch_one(&self.sql_pool).await?;
-        Ok(IngestionDetails::try_from(row).ok())
+        let row = sqlx::query_as::<_, IngestionDetailsRowProjection>(&sql)
+            .fetch_one(&self.sql_pool)
+            .await?;
+        Ok(row.into_ingestion_details())
     }
 
     /// Fetches the query speed (total uncompressed bytes scanned and job duration) for a query job
@@ -378,7 +308,7 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_optional`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_optional`]'s return values on failure.
     pub async fn get_query_speed(
         &self,
         datasets: &[DatasetName],
@@ -410,14 +340,11 @@ impl WebuiClient {
              CAST(totals.total_uncompressed_bytes AS DOUBLE) AS bytes, qj.duration AS duration \
              FROM `{QUERY_JOBS_TABLE_NAME}` qj JOIN totals ON totals.job_id = qj.id"
         );
-        let Some(row) = sqlx::query(&sql)
+        let row = sqlx::query_as::<_, QuerySpeedRowProjection>(&sql)
             .bind(query_job_id)
             .fetch_optional(&self.sql_pool)
-            .await?
-        else {
-            return Ok(None);
-        };
-        Ok(QuerySpeed::try_from(row).ok())
+            .await?;
+        Ok(row.and_then(QuerySpeedRowProjection::into_query_speed))
     }
 
     /// Fetches the timestamp column names for a given dataset (CLP-S only).
@@ -475,12 +402,12 @@ impl WebuiClient {
     /// Returns an error if:
     ///
     /// * [`ClientError::TaskJoin`] if the task decoding the rows panics.
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     /// * Forwards [`CompressionMetadata::try_from`]'s return values on failure.
     pub async fn get_compression_metadata(&self) -> Result<Vec<CompressionMetadata>, ClientError> {
         const QUERY_LIMIT: i64 = 1000;
 
-        let rows = sqlx::query(&format!(
+        let rows = sqlx::query_as::<_, CompressionMetadataRowProjection>(&format!(
             "SELECT id, status, status_msg, start_time, update_time, duration, uncompressed_size, \
              compressed_size, clp_config FROM `{COMPRESSION_JOBS_TABLE_NAME}` ORDER BY id DESC \
              LIMIT ?"
@@ -494,6 +421,122 @@ impl WebuiClient {
                 .collect()
         })
         .await?
+    }
+}
+
+/// A projection of a compression job row, with its CLP IO config still serialized.
+#[derive(Debug, sqlx::FromRow)]
+struct CompressionMetadataRowProjection {
+    id: i64,
+    status: i32,
+    status_msg: String,
+    start_time: Option<DateTime<Utc>>,
+    update_time: DateTime<Utc>,
+    duration: Option<f64>,
+    uncompressed_size: i64,
+    compressed_size: i64,
+    clp_config: Vec<u8>,
+}
+
+impl TryFrom<CompressionMetadataRowProjection> for CompressionMetadata {
+    type Error = ClientError;
+
+    fn try_from(row: CompressionMetadataRowProjection) -> Result<Self, Self::Error> {
+        let clp_config = compression_metadata_config(ZstdMsgpack::deserialize(&row.clp_config)?);
+        Ok(Self {
+            id: row.id,
+            status: row.status,
+            status_msg: row.status_msg,
+            start_time: row.start_time.map(|time| time.to_rfc3339()),
+            update_time: row.update_time.to_rfc3339(),
+            duration: row.duration,
+            uncompressed_size: row.uncompressed_size,
+            compressed_size: row.compressed_size,
+            clp_config,
+        })
+    }
+}
+
+/// A projection of the earliest and latest log entry timestamps aggregated over archives. Both are
+/// `NULL` when there are no archives to aggregate.
+#[derive(Debug, sqlx::FromRow)]
+struct TimeRangeRowProjection {
+    begin_timestamp: Option<i64>,
+    end_timestamp: Option<i64>,
+}
+
+impl TimeRangeRowProjection {
+    /// Converts the projection into a [`TimeRange`].
+    ///
+    /// # Returns
+    ///
+    /// The time range, or `None` if either timestamp is `NULL`.
+    const fn into_time_range(self) -> Option<TimeRange> {
+        let (Some(begin_timestamp), Some(end_timestamp)) =
+            (self.begin_timestamp, self.end_timestamp)
+        else {
+            return None;
+        };
+        Some(TimeRange {
+            begin_timestamp,
+            end_timestamp,
+        })
+    }
+}
+
+/// A projection of the ingestion details aggregated over archives and files. The timestamps are
+/// `NULL` when there are no archives to aggregate.
+#[derive(Debug, sqlx::FromRow)]
+struct IngestionDetailsRowProjection {
+    begin_timestamp: Option<i64>,
+    end_timestamp: Option<i64>,
+    num_files: i64,
+    num_messages: i64,
+}
+
+impl IngestionDetailsRowProjection {
+    /// Converts the projection into an [`IngestionDetails`].
+    ///
+    /// # Returns
+    ///
+    /// The ingestion details, or `None` if either timestamp is `NULL`.
+    const fn into_ingestion_details(self) -> Option<IngestionDetails> {
+        let (Some(begin_timestamp), Some(end_timestamp)) =
+            (self.begin_timestamp, self.end_timestamp)
+        else {
+            return None;
+        };
+        Some(IngestionDetails {
+            begin_timestamp,
+            end_timestamp,
+            num_files: self.num_files,
+            num_messages: self.num_messages,
+        })
+    }
+}
+
+/// A projection of a query job's scanned bytes and duration. The duration is `NULL` until the job
+/// finishes.
+#[derive(Debug, sqlx::FromRow)]
+struct QuerySpeedRowProjection {
+    bytes: f64,
+    duration: Option<f64>,
+}
+
+impl QuerySpeedRowProjection {
+    /// Converts the projection into a [`QuerySpeed`].
+    ///
+    /// # Returns
+    ///
+    /// The query speed, or `None` if the duration is `NULL`.
+    const fn into_query_speed(self) -> Option<QuerySpeed> {
+        let Some(duration) = self.duration else {
+            return None;
+        };
+        Some(QuerySpeed {
+            bytes: self.bytes,
+            duration,
+        })
     }
 }
 
@@ -552,7 +595,83 @@ fn union_all(selects: impl Iterator<Item = String>) -> String {
 #[cfg(test)]
 mod tests {
     use super::CompressionMetadataDisplayConfig;
+    use super::IngestionDetails;
+    use super::IngestionDetailsRowProjection;
+    use super::QuerySpeed;
+    use super::QuerySpeedRowProjection;
+    use super::TimeRange;
+    use super::TimeRangeRowProjection;
     use super::compression_metadata_config;
+
+    #[test]
+    fn time_range_is_none_unless_both_timestamps_are_present() {
+        for (begin_timestamp, end_timestamp) in [(None, None), (Some(1), None), (None, Some(2))] {
+            let row = TimeRangeRowProjection {
+                begin_timestamp,
+                end_timestamp,
+            };
+            assert_eq!(row.into_time_range(), None);
+        }
+        let row = TimeRangeRowProjection {
+            begin_timestamp: Some(1),
+            end_timestamp: Some(2),
+        };
+        assert_eq!(
+            row.into_time_range(),
+            Some(TimeRange {
+                begin_timestamp: 1,
+                end_timestamp: 2,
+            })
+        );
+    }
+
+    #[test]
+    fn ingestion_details_is_none_unless_both_timestamps_are_present() {
+        for (begin_timestamp, end_timestamp) in [(None, None), (Some(1), None), (None, Some(2))] {
+            let row = IngestionDetailsRowProjection {
+                begin_timestamp,
+                end_timestamp,
+                num_files: 0,
+                num_messages: 0,
+            };
+            assert_eq!(row.into_ingestion_details(), None);
+        }
+        let row = IngestionDetailsRowProjection {
+            begin_timestamp: Some(1),
+            end_timestamp: Some(2),
+            num_files: 3,
+            num_messages: 4,
+        };
+        assert_eq!(
+            row.into_ingestion_details(),
+            Some(IngestionDetails {
+                begin_timestamp: 1,
+                end_timestamp: 2,
+                num_files: 3,
+                num_messages: 4,
+            })
+        );
+    }
+
+    #[test]
+    fn query_speed_is_none_until_the_duration_is_recorded() {
+        let row = QuerySpeedRowProjection {
+            bytes: 1024.0,
+            duration: None,
+        };
+        assert_eq!(row.into_query_speed(), None);
+        let row = QuerySpeedRowProjection {
+            bytes: 1024.0,
+            duration: Some(2.0),
+        };
+        assert_eq!(
+            row.into_query_speed(),
+            Some(QuerySpeed {
+                bytes: 1024.0,
+                duration: 2.0,
+            })
+        );
+    }
 
     #[test]
     fn compression_history_omits_storage_credentials() -> anyhow::Result<()> {
