@@ -80,8 +80,7 @@ pub struct SpaceSavings {
     pub total_compressed_size: i64,
 }
 
-/// Ingestion details statistics. The whole value is `None` when no data has been ingested
-/// yet.
+/// Ingestion details statistics. The whole value is `None` when no data has been ingested yet.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct IngestionDetails {
     /// Earliest log entry timestamp (epoch milliseconds).
@@ -94,8 +93,8 @@ pub struct IngestionDetails {
     pub num_messages: i64,
 }
 
-/// Query-speed statistics for a query job. The whole value is `None` until the job has
-/// scanned archives and finished (its duration is recorded only on completion).
+/// Query-speed statistics for a query job. The whole value is `None` until the job has scanned
+/// archives and finished (its duration is recorded only on completion).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct QuerySpeed {
     /// Total uncompressed size of the archives the job scanned, in bytes.
@@ -104,8 +103,8 @@ pub struct QuerySpeed {
     pub duration: f64,
 }
 
-/// Earliest and latest log entry timestamps across the selected datasets. The whole value
-/// is `None` when no archives exist yet (or, for CLP-S, when no datasets were selected).
+/// Earliest and latest log entry timestamps across the selected datasets. The whole value is `None`
+/// when no archives exist yet (or, for CLP-S, when no datasets were selected).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct TimeRange {
     /// Earliest log entry timestamp (epoch milliseconds).
@@ -233,8 +232,7 @@ impl WebuiClient {
         Ok(space_savings)
     }
 
-    /// Fetches ingestion details (timestamp range, file count, message count) across all
-    /// datasets.
+    /// Fetches ingestion details (timestamp range, file count, message count) across all datasets.
     ///
     /// # Returns
     ///
@@ -301,8 +299,8 @@ impl WebuiClient {
     ///
     /// # Returns
     ///
-    /// The query-speed statistics on success, or `None` when the job hasn't scanned any archives
-    /// or hasn't finished yet (or, for CLP-S, when `datasets` is empty).
+    /// The query-speed statistics on success, or `None` when the job hasn't scanned any archives or
+    /// hasn't finished yet (or, for CLP-S, when `datasets` is empty).
     ///
     /// # Errors
     ///

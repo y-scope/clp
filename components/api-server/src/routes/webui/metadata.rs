@@ -100,9 +100,9 @@ async fn datasets(
 #[utoipa::path(
     get,
     path = "/metadata/time_range",
-    description = "Gets the earliest and latest log entry timestamps across the given \
-        datasets. For the CLP storage engine, the `datasets` parameter is ignored. Returns \
-        `null` when no archives exist yet.",
+    description = "Gets the earliest and latest log entry timestamps across the given datasets. \
+        For the CLP storage engine, the `datasets` parameter is ignored. Returns `null` when no \
+        archives exist yet.",
     params(DatasetsParams),
     responses(
         (status = OK, body = Option<TimeRange>),
@@ -124,8 +124,8 @@ async fn time_range(
 #[utoipa::path(
     get,
     path = "/metadata/space_savings",
-    description = "Gets aggregated space-savings statistics (total uncompressed and \
-        compressed sizes) across all datasets.",
+    description = "Gets aggregated space-savings statistics (total uncompressed and compressed \
+        sizes) across all datasets.",
     responses(
         (status = OK, body = SpaceSavings),
         (status = INTERNAL_SERVER_ERROR)
@@ -144,8 +144,8 @@ async fn space_savings(
 #[utoipa::path(
     get,
     path = "/metadata/ingestion_details",
-    description = "Gets ingestion details (timestamp range, file count, message count) \
-        across all datasets. Returns `null` when no data has been ingested yet.",
+    description = "Gets ingestion details (timestamp range, file count, message count) across all \
+        datasets. Returns `null` when no data has been ingested yet.",
     responses(
         (status = OK, body = Option<IngestionDetails>),
         (status = INTERNAL_SERVER_ERROR)
@@ -164,9 +164,9 @@ async fn ingestion_details(
 #[utoipa::path(
     get,
     path = "/metadata/query_speed",
-    description = "Gets the query speed (total uncompressed bytes scanned and job duration) \
-        for a query job across the given datasets. Returns `null` when the job hasn't \
-        scanned any archives or hasn't finished yet.",
+    description = "Gets the query speed (total uncompressed bytes scanned and job duration) for a \
+        query job across the given datasets. Returns `null` when the job hasn't scanned any \
+        archives or hasn't finished yet.",
     params(QuerySpeedParams),
     responses(
         (status = OK, body = Option<QuerySpeed>),
@@ -211,8 +211,8 @@ async fn timestamp_column_names(
 #[utoipa::path(
     get,
     path = "/metadata/compression_jobs",
-    description = "Gets recent compression-job metadata (most recent first), with the \
-        decoded CLP IO config for each job.",
+    description = "Gets recent compression-job metadata (most recent first), with the decoded CLP \
+        IO config for each job.",
     responses(
         (status = OK, body = Vec<CompressionMetadata>),
         (status = INTERNAL_SERVER_ERROR)
