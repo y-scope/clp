@@ -36,20 +36,17 @@ jobs:
         shell: "bash"
         run: "task codegen:webui-generate-api-client-schema"
 
-      - name: "Check if the generated API client files are the latest"
+      - name: "Check if the generated schema is the latest"
         shell: "bash"
         run: |-
-          generated_paths=(
-            "components/webui/packages/api-client/openapi.json"
-            "components/webui/packages/api-client/src/schema.ts"
-          )
-          stale_files="$(git status --porcelain -- "${generated_paths[@]}")"
+          schema_path="components/webui/packages/api-client/src/schema.ts"
+          stale_files="$(git status --porcelain "${schema_path}")"
           if [[ -n "${stale_files}" ]]; then
             echo >&2 "ERROR: The following generated files are out of date:"
             echo >&2 "${stale_files}"
             echo >&2 ""
             echo >&2 "Please run 'task codegen:webui-generate-api-client-schema' locally and" \
               "commit the updated files."
-            git diff >&2 -- "${generated_paths[@]}"
+            git diff >&2 "${schema_path}"
             exit 1
           fi

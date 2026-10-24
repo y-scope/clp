@@ -84,15 +84,6 @@ pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error
     Ok(public_routes.merge(webui_routes).with_state(state))
 }
 
-/// The `OpenAPI` document of the public routes and the routes that back the `WebUI`.
-pub struct WebUiApiDoc;
-
-impl OpenApi for WebUiApiDoc {
-    fn openapi() -> utoipa::openapi::OpenApi {
-        ApiDoc::openapi().merge_from(webui::api_doc())
-    }
-}
-
 // `utoipa::OpenApi` triggers `clippy::needless_for_each`
 #[allow(clippy::needless_for_each)]
 mod api_doc {

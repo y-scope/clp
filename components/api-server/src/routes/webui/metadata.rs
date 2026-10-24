@@ -17,9 +17,6 @@ use crate::error::ClientError;
 use crate::routes::AppState;
 use crate::routes::HandlerError;
 use crate::webui_client::CompressionMetadata;
-use crate::webui_client::CompressionMetadataDisplayConfig;
-use crate::webui_client::CompressionMetadataDisplayInput;
-use crate::webui_client::CompressionMetadataDisplayOutput;
 use crate::webui_client::IngestionDetails;
 use crate::webui_client::QuerySpeed;
 use crate::webui_client::SpaceSavings;
@@ -41,31 +38,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(timestamp_column_names))
         .routes(routes!(compression_metadata))
 }
-
-/// The `OpenAPI` document of the metadata routes.
-#[derive(utoipa::OpenApi)]
-#[openapi(
-    paths(
-        datasets,
-        time_range,
-        space_savings,
-        ingestion_details,
-        query_speed,
-        timestamp_column_names,
-        compression_metadata,
-    ),
-    components(schemas(
-        CompressionMetadata,
-        CompressionMetadataDisplayConfig,
-        CompressionMetadataDisplayInput,
-        CompressionMetadataDisplayOutput,
-        IngestionDetails,
-        QuerySpeed,
-        SpaceSavings,
-        TimeRange,
-    ))
-)]
-pub(super) struct ApiDoc;
 
 /// Query parameters for the dataset-scoped metadata endpoints.
 #[derive(Deserialize, IntoParams)]

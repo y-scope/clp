@@ -2,7 +2,6 @@
 
 mod metadata;
 
-use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 
 use super::AppState;
@@ -15,13 +14,6 @@ use crate::error::ClientError;
 /// A newly created [`OpenApiRouter`] with all `WebUI` routes registered.
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().merge(metadata::router())
-}
-
-/// # Returns
-///
-/// The `OpenAPI` document of all `WebUI` routes.
-pub(super) fn api_doc() -> utoipa::openapi::OpenApi {
-    metadata::ApiDoc::openapi()
 }
 
 /// Records unexpected failures without logging request payloads or stored configuration.
