@@ -342,6 +342,8 @@ enum HandlerError {
     Conflict,
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Gateway timeout: {0}")]
+    GatewayTimeout(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -358,6 +360,7 @@ impl From<ClientError> for HandlerError {
             ClientError::InvalidDatasetName(_) | ClientError::InvalidInput(_) => {
                 Self::BadRequest(format!("{err}"))
             }
+            ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(err.to_string()),
             _ => Self::InternalServer,
         }
     }
@@ -371,6 +374,7 @@ impl IntoResponse for HandlerError {
             Self::Conflict => StatusCode::CONFLICT.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
         }
     }
 }
@@ -383,9 +387,11 @@ mod tests {
     use axum::http::Request;
     use axum::http::StatusCode;
     use axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN;
+    use axum::http::header::CONTENT_TYPE;
     use axum::http::header::ORIGIN;
     use axum::routing::delete;
     use axum::routing::get;
+    use clp_rust_utils::clp_config::package::config::ApiServer;
     use clp_rust_utils::clp_config::package::config::Config;
     use clp_rust_utils::clp_config::package::config::Package;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
@@ -396,6 +402,7 @@ mod tests {
 
     use super::*;
     use crate::client::Cancellability;
+    use crate::webui_client::StreamFileExtractionSettings;
 
     #[derive(Deserialize)]
     struct JobStatusParams {
@@ -452,9 +459,19 @@ mod tests {
         let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
             .connect_lazy("mysql://localhost/clp-db")
             .expect("the MySQL URI should be valid");
+        let stream_file_extraction = StreamFileExtractionSettings::from_config(
+            &ApiServer::default(),
+            &config.stream_output.storage,
+        )
+        .await;
         from_app_state(AppState {
-            client: Client::new(config.clone(), mongodb_client, sql_pool.clone()),
-            webui_client: WebuiClient::new(config, sql_pool),
+            client: Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone()),
+            webui_client: WebuiClient::new(
+                config,
+                sql_pool,
+                mongodb_client,
+                stream_file_extraction,
+            ),
         })
         .expect("the OpenAPI document should serialize")
     }
@@ -543,6 +560,96 @@ mod tests {
         assert!(
             body.contains(&parse_error.to_string()),
             "unexpected body: {body}"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn stream_file_extraction_rejects_invalid_requests() -> anyhow::Result<()> {
+        const ARCHIVE_ID: &str = "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11";
+
+        let app = clp_s_app_with_lazy_clients().await;
+        let invalid_dataset_error = "bad-name"
+            .parse::<DatasetName>()
+            .expect_err("name should be an invalid dataset name")
+            .to_string();
+        for (body, expected) in [
+            (
+                serde_json::json!({
+                    "dataset": "bad-name",
+                    "extract_job_type": "ExtractJson",
+                    "log_event_idx": 0,
+                    "stream_id": ARCHIVE_ID,
+                }),
+                invalid_dataset_error.as_str(),
+            ),
+            (
+                serde_json::json!({
+                    "dataset": null,
+                    "extract_job_type": "ExtractIr",
+                    "log_event_idx": 0,
+                    "stream_id": "",
+                }),
+                "stream_id must not be empty",
+            ),
+            (
+                serde_json::json!({
+                    "extract_job_type": "SearchOrAggregation",
+                    "log_event_idx": 0,
+                    "stream_id": ARCHIVE_ID,
+                }),
+                "extract_job_type must be `ExtractIr` or `ExtractJson`",
+            ),
+            (
+                serde_json::json!({
+                    "extract_job_type": "ExtractIr",
+                    "log_event_idx": -1,
+                    "stream_id": "orig-file",
+                }),
+                "log_event_idx must not be negative",
+            ),
+            (
+                serde_json::json!({
+                    "extract_job_type": "ExtractJson",
+                    "log_event_idx": 0,
+                    "stream_id": "not-an-archive-id",
+                }),
+                "invalid archive ID \"not-an-archive-id\"",
+            ),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::POST)
+                        .uri("/stream_files/extract")
+                        .header(CONTENT_TYPE, "application/json")
+                        .body(Body::from(body.to_string()))?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST, "body: {body}");
+            let response_body = get_body(response).await;
+            assert!(
+                response_body.contains(expected),
+                "body: {body}, unexpected response body: {response_body}"
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn stream_extraction_timeout_returns_gateway_timeout_with_plain_text_body()
+    -> anyhow::Result<()> {
+        let response =
+            HandlerError::from(ClientError::StreamExtractionTimeout(1800)).into_response();
+        assert_eq!(response.status(), StatusCode::GATEWAY_TIMEOUT);
+        assert_eq!(
+            response.headers().get(CONTENT_TYPE),
+            Some(&HeaderValue::from_static("text/plain; charset=utf-8"))
+        );
+        assert_eq!(
+            get_body(response).await,
+            "Stream extraction timed out after 1800 seconds"
         );
         Ok(())
     }

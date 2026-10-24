@@ -400,6 +400,51 @@
         }
       }
     },
+    "/stream_files/extract": {
+      "post": {
+        "tags": [],
+        "description": "Extracts a stream file containing the log event at the given index in the stream with the given ID. If the stream has already been extracted, returns its metadata directly; otherwise submits an extraction job and waits for it to complete.",
+        "operationId": "extract_stream_file",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamFileExtraction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamFileMetadata"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid dataset name or extract job type"
+          },
+          "500": {
+            "description": ""
+          },
+          "504": {
+            "description": "Stream extraction timed out",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/usage/compression": {
       "get": {
         "tags": [],
@@ -867,6 +912,78 @@
             "type": "integer",
             "format": "int64",
             "description": "Total uncompressed size of all archives, in bytes."
+          }
+        }
+      },
+      "StreamFileExtraction": {
+        "type": "object",
+        "description": "Request body for the stream-files extract endpoint.",
+        "required": [
+          "extract_job_type",
+          "log_event_idx",
+          "stream_id"
+        ],
+        "properties": {
+          "dataset": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Dataset the stream belongs to (CLP-S only; `null` for the CLP storage engine). Defaults to\nthe default dataset."
+          },
+          "extract_job_type": {
+            "type": "string",
+            "description": "The type of extraction job to submit.",
+            "enum": [
+              "ExtractIr",
+              "ExtractJson"
+            ]
+          },
+          "log_event_idx": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Index of the log event the extracted stream file must contain."
+          },
+          "stream_id": {
+            "type": "string",
+            "description": "ID of the stream to extract.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "StreamFileMetadata": {
+        "type": "object",
+        "description": "Extracted stream-file metadata returned by the stream-files extract endpoint.",
+        "required": [
+          "begin_msg_ix",
+          "end_msg_ix",
+          "is_last_chunk",
+          "path",
+          "stream_id"
+        ],
+        "properties": {
+          "begin_msg_ix": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Index of the first log event in the stream file (inclusive)."
+          },
+          "end_msg_ix": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Index of the last log event in the stream file (exclusive)."
+          },
+          "is_last_chunk": {
+            "type": "boolean",
+            "description": "Whether this is the stream's last chunk."
+          },
+          "path": {
+            "type": "string",
+            "description": "The resolved stream-file path: a pre-signed URL when stream-files S3 storage is\nconfigured, otherwise a path relative to the webui `/streams` static mount."
+          },
+          "stream_id": {
+            "type": "string",
+            "description": "ID of the stream the file was extracted from."
           }
         }
       },

@@ -42,6 +42,9 @@ pub enum ClientError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    #[error("Stream extraction timed out after {0} seconds")]
+    StreamExtractionTimeout(u64),
+
     #[error("Dataset not found: {0}")]
     DatasetNotFound(DatasetName),
 

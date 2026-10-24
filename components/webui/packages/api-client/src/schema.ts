@@ -190,6 +190,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/stream_files/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Extracts a stream file containing the log event at the given index in the stream with the given ID. If the stream has already been extracted, returns its metadata directly; otherwise submits an extraction job and waits for it to complete. */
+        post: operations["extract_stream_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/usage/compression": {
         parameters: {
             query?: never;
@@ -418,6 +435,48 @@ export interface components {
              * @description Total uncompressed size of all archives, in bytes.
              */
             total_uncompressed_size: number;
+        };
+        /** @description Request body for the stream-files extract endpoint. */
+        StreamFileExtraction: {
+            /**
+             * @description Dataset the stream belongs to (CLP-S only; `null` for the CLP storage engine). Defaults to
+             *     the default dataset.
+             */
+            dataset?: string | null;
+            /**
+             * @description The type of extraction job to submit.
+             * @enum {string}
+             */
+            extract_job_type: "ExtractIr" | "ExtractJson";
+            /**
+             * Format: int64
+             * @description Index of the log event the extracted stream file must contain.
+             */
+            log_event_idx: number;
+            /** @description ID of the stream to extract. */
+            stream_id: string;
+        };
+        /** @description Extracted stream-file metadata returned by the stream-files extract endpoint. */
+        StreamFileMetadata: {
+            /**
+             * Format: int64
+             * @description Index of the first log event in the stream file (inclusive).
+             */
+            begin_msg_ix: number;
+            /**
+             * Format: int64
+             * @description Index of the last log event in the stream file (exclusive).
+             */
+            end_msg_ix: number;
+            /** @description Whether this is the stream's last chunk. */
+            is_last_chunk: boolean;
+            /**
+             * @description The resolved stream-file path: a pre-signed URL when stream-files S3 storage is
+             *     configured, otherwise a path relative to the webui `/streams` static mount.
+             */
+            path: string;
+            /** @description ID of the stream the file was extracted from. */
+            stream_id: string;
         };
         /**
          * @description Earliest and latest log entry timestamps across the selected datasets. The whole value
@@ -804,6 +863,51 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    extract_stream_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StreamFileExtraction"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StreamFileMetadata"];
+                };
+            };
+            /** @description Invalid dataset name or extract job type */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stream extraction timed out */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
             };
         };
     };
