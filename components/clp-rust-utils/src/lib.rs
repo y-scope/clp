@@ -10,6 +10,7 @@ pub mod serde;
 pub mod sqs;
 pub mod task_io;
 pub mod telemetry;
+pub mod timeline;
 pub mod types;
 
 pub use error::Error;

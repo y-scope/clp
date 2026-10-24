@@ -16,6 +16,7 @@ use spider_core::task::ExecutionPolicy;
 use spider_core::task::TaskDescriptor;
 use spider_core::task::TaskGraph;
 use spider_core::task::TdlContext;
+use spider_core::task::TerminationTaskDescriptor;
 use spider_core::task::ValueTypeDescriptor;
 use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
@@ -122,7 +123,10 @@ impl QueryJobSubmitter for SpiderClient {
     }
 }
 
-/// Builds independent archive-search tasks and their positionally ordered external inputs.
+/// Builds archive-search tasks and a final publication task for timeline queries.
+///
+/// Spider may accept cancellation while the commit task runs. Published timeline data must remain
+/// hidden unless the query job reaches its successful terminal state.
 ///
 /// # Returns
 ///
@@ -151,7 +155,20 @@ fn build_query_task_graph(
     const CLP_TDL_PACKAGE_NAME: &str = "clp";
     const QUERY_TASK_FUNC: &str = "query::clp_s_search";
 
-    let mut graph = TaskGraph::new(None, None)?;
+    let commit_task = clp_s_query_option
+        .count_by_time_bucket_size_millisecs
+        .map(|_| TerminationTaskDescriptor {
+            tdl_context: TdlContext {
+                package: CLP_TDL_PACKAGE_NAME.to_owned(),
+                task_func: "query::commit_timeline".to_owned(),
+            },
+            execution_policy: Some(ExecutionPolicy {
+                max_num_retry: 3,
+                max_num_instances: 1,
+                ..ExecutionPolicy::default()
+            }),
+        });
+    let mut graph = TaskGraph::new(commit_task, None)?;
 
     let mut inputs = TaskGraphInputBuilder::new();
     let query_job_id_input = inputs.create_shared_input_payload(&query_job_id)?;

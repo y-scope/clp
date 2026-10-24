@@ -16,8 +16,8 @@ pub struct ClpSQueryOption {
     /// The query string passed positionally to `clp-s`.
     pub query_string: NonEmptyString,
 
-    /// The per-archive result limit. When absent, the task omits `--max-num-results` and returns
-    /// all matching results.
+    /// The per-archive normal-search result limit. When absent, the task omits `--max-num-results`
+    /// and returns all matching results. Timeline aggregation is not limited by this value.
     pub max_num_results: Option<NonZeroU32>,
 
     /// Inclusive `--tge` bound in Unix epoch milliseconds.
@@ -29,8 +29,8 @@ pub struct ClpSQueryOption {
     /// Whether `clp-s` performs a case-insensitive search.
     pub ignore_case: bool,
 
-    /// The positive width, in milliseconds, of each count-by-time bucket. When set, the query
-    /// groups all matching log events in the archive into time buckets and counts the events in
+    /// The positive width, in milliseconds, of each count-by-time bucket. When set, the task
+    /// additionally groups all matching log events into time buckets and counts the events in
     /// each bucket, regardless of `max_num_results`.
     pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
