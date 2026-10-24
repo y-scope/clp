@@ -346,9 +346,7 @@ impl From<ClientError> for HandlerError {
         match err {
             ClientError::QueryJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
             ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
-            ClientError::InvalidDatasetName(_) | ClientError::InvalidInput(_) => {
-                Self::BadRequest(format!("{err}"))
-            }
+            ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
             _ => Self::InternalServer,
         }
     }
@@ -503,7 +501,7 @@ mod tests {
             .expect_err("name should be an invalid dataset name");
         for uri in [
             "/metadata/time_range?dataset=logs,invalid-name",
-            "/metadata/query_speed?dataset=logs,invalid-name&search_job_id=1",
+            "/metadata/query_speed?dataset=logs,invalid-name&query_job_id=1",
         ] {
             let response = app
                 .clone()
@@ -511,7 +509,10 @@ mod tests {
                 .await?;
             assert_eq!(response.status(), StatusCode::BAD_REQUEST, "uri: {uri}");
             let body = get_body(response).await;
-            assert_eq!(body, parse_error.to_string(), "uri: {uri}");
+            assert!(
+                body.contains(&parse_error.to_string()),
+                "uri: {uri}, unexpected body: {body}"
+            );
         }
         Ok(())
     }

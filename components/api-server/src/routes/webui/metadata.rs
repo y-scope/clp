@@ -7,13 +7,15 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::QueryJobId;
 use serde::Deserialize;
+use serde::Deserializer;
+use serde::de::Error as _;
 use utoipa::IntoParams;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use super::log_unexpected_error;
-use crate::error::ClientError;
 use crate::routes::AppState;
 use crate::routes::HandlerError;
 use crate::webui_client::CompressionMetadata;
@@ -44,8 +46,9 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
 #[into_params(parameter_in = Query)]
 struct DatasetsParams {
     /// Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.
-    #[serde(default)]
-    dataset: Option<String>,
+    #[serde(rename = "dataset", default, deserialize_with = "deserialize_datasets")]
+    #[param(value_type = Option<String>)]
+    datasets: Vec<DatasetName>,
 }
 
 /// Query parameters for the query speed endpoint.
@@ -53,10 +56,12 @@ struct DatasetsParams {
 #[into_params(parameter_in = Query)]
 struct QuerySpeedParams {
     /// Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.
-    #[serde(default)]
-    dataset: Option<String>,
-    /// The search job ID whose scan speed should be computed.
-    search_job_id: i64,
+    #[serde(rename = "dataset", default, deserialize_with = "deserialize_datasets")]
+    #[param(value_type = Option<String>)]
+    datasets: Vec<DatasetName>,
+    /// The query job ID whose scan speed should be computed.
+    #[param(value_type = i32)]
+    query_job_id: QueryJobId,
 }
 
 /// Path parameters for the timestamp column names endpoint.
@@ -109,9 +114,8 @@ async fn time_range(
     State(client): State<WebuiClient>,
     Query(params): Query<DatasetsParams>,
 ) -> Result<Json<Option<TimeRange>>, HandlerError> {
-    let datasets = parse_datasets(params.dataset.as_deref())?;
     let time_range = client
-        .get_time_range(&datasets)
+        .get_time_range(&params.datasets)
         .await
         .inspect_err(|err| log_unexpected_error("time_range", err))?;
     Ok(Json(time_range))
@@ -161,7 +165,7 @@ async fn ingestion_details(
     get,
     path = "/metadata/query_speed",
     description = "Gets the query speed (total uncompressed bytes scanned and job duration) \
-        for a search job across the given datasets. Returns `null` when the job hasn't \
+        for a query job across the given datasets. Returns `null` when the job hasn't \
         scanned any archives or hasn't finished yet.",
     params(QuerySpeedParams),
     responses(
@@ -174,9 +178,8 @@ async fn query_speed(
     State(client): State<WebuiClient>,
     Query(params): Query<QuerySpeedParams>,
 ) -> Result<Json<Option<QuerySpeed>>, HandlerError> {
-    let datasets = parse_datasets(params.dataset.as_deref())?;
     let query_speed = client
-        .get_query_speed(&datasets, params.search_job_id)
+        .get_query_speed(&params.datasets, params.query_job_id)
         .await
         .inspect_err(|err| log_unexpected_error("query_speed", err))?;
     Ok(Json(query_speed))
@@ -225,60 +228,75 @@ async fn compression_metadata(
     Ok(Json(compression_metadata))
 }
 
-/// Parses a comma-separated list of dataset names.
+/// Deserializes a comma-separated list of dataset names.
 ///
 /// # Returns
 ///
-/// The trimmed, non-empty dataset names in first-seen order, without duplicates, on success. An
-/// absent list gives no dataset names.
+/// The trimmed, non-empty dataset names in first-seen order, without duplicates, on success.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * [`ClientError::InvalidDatasetName`] if any name isn't a valid dataset name.
-fn parse_datasets(datasets: Option<&str>) -> Result<Vec<DatasetName>, ClientError> {
-    let Some(datasets) = datasets else {
-        return Ok(Vec::new());
-    };
+/// * [`serde::de::Error::custom`] if any name isn't a valid dataset name.
+/// * Forwards [`String::deserialize`]'s return values on failure.
+fn deserialize_datasets<'de, DeserializerType: Deserializer<'de>>(
+    deserializer: DeserializerType,
+) -> Result<Vec<DatasetName>, DeserializerType::Error> {
+    let datasets = String::deserialize(deserializer)?;
     let mut seen = HashSet::new();
     datasets
         .split(',')
         .map(str::trim)
         .filter(|name| !name.is_empty())
         .filter(|name| seen.insert(*name))
-        .map(|name| name.parse().map_err(ClientError::from))
+        .map(|name| name.parse().map_err(DeserializerType::Error::custom))
         .collect()
 }
 
 #[cfg(test)]
 mod tests {
+    use axum::extract::Query;
+    use axum::extract::rejection::QueryRejection;
+    use axum::http::Uri;
     use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::dataset::ParseDatasetNameError;
 
-    use super::parse_datasets;
-    use crate::error::ClientError;
+    use super::DatasetsParams;
+
+    fn extract_datasets(uri: &'static str) -> Result<Vec<DatasetName>, QueryRejection> {
+        let Query(params) = Query::<DatasetsParams>::try_from_uri(&Uri::from_static(uri))?;
+        Ok(params.datasets)
+    }
+
+    #[test]
+    fn absent_dataset_parameter_gives_no_dataset_names() -> anyhow::Result<()> {
+        assert_eq!(
+            extract_datasets("/metadata/time_range")?,
+            Vec::<DatasetName>::new()
+        );
+        Ok(())
+    }
 
     #[test]
     fn dataset_names_are_trimmed_deduplicated_and_kept_in_first_seen_order() -> anyhow::Result<()> {
         let expected: Vec<DatasetName> = vec!["logs".parse()?, "other".parse()?];
         assert_eq!(
-            parse_datasets(Some(" logs, other,logs, ,other "))?,
+            extract_datasets("/metadata/time_range?dataset=%20logs,%20other,logs,%20,other%20")?,
             expected
         );
-        assert_eq!(parse_datasets(None)?, Vec::<DatasetName>::new());
         Ok(())
     }
 
     #[test]
     fn invalid_dataset_names_are_rejected() {
-        let result = parse_datasets(Some("logs,invalid-name"));
+        let parse_error = "invalid-name"
+            .parse::<DatasetName>()
+            .expect_err("name should be an invalid dataset name");
+        let result = extract_datasets("/metadata/time_range?dataset=logs,invalid-name");
         assert!(
             matches!(
                 &result,
-                Err(ClientError::InvalidDatasetName(
-                    ParseDatasetNameError::InvalidCharacters(name)
-                )) if name == "invalid-name"
+                Err(rejection) if rejection.body_text().contains(&parse_error.to_string())
             ),
             "unexpected result: {result:?}"
         );

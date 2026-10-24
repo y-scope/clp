@@ -7,6 +7,7 @@ use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_TASKS_TABLE_NAME;
+use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::serde::ZstdMsgpack;
 use serde::Deserialize;
 use serde::Serialize;
@@ -146,7 +147,7 @@ impl TryFrom<sqlx::mysql::MySqlRow> for IngestionDetails {
     }
 }
 
-/// Query-speed statistics for a search job. The whole value is `None` until the job has
+/// Query-speed statistics for a query job. The whole value is `None` until the job has
 /// scanned archives and finished (its duration is recorded only on completion).
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct QuerySpeed {
@@ -363,8 +364,8 @@ impl WebuiClient {
         Ok(IngestionDetails::try_from(row).ok())
     }
 
-    /// Fetches the query speed (total uncompressed bytes scanned and job duration) for a search
-    /// job across the given datasets.
+    /// Fetches the query speed (total uncompressed bytes scanned and job duration) for a query job
+    /// across the given datasets.
     ///
     /// For the CLP storage engine, `datasets` is ignored.
     ///
@@ -381,7 +382,7 @@ impl WebuiClient {
     pub async fn get_query_speed(
         &self,
         datasets: &[DatasetName],
-        search_job_id: i64,
+        query_job_id: QueryJobId,
     ) -> Result<Option<QuerySpeed>, ClientError> {
         let database = &self.config.database;
         let archives_subquery = match self.config.package.storage_engine {
@@ -410,7 +411,7 @@ impl WebuiClient {
              FROM `{QUERY_JOBS_TABLE_NAME}` qj JOIN totals ON totals.job_id = qj.id"
         );
         let Some(row) = sqlx::query(&sql)
-            .bind(search_job_id)
+            .bind(query_job_id)
             .fetch_optional(&self.sql_pool)
             .await?
         else {
