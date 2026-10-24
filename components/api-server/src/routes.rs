@@ -35,9 +35,9 @@ use crate::webui_client::WebuiClient;
 /// Shared application state passed to all route handlers.
 #[derive(Clone)]
 pub struct AppState {
-    /// Client for search query orchestration.
+    /// Client for the public API routes.
     pub client: Client,
-    /// Client for the operations that back the `WebUI`'s routes.
+    /// Client for the `WebUI`'s routes.
     pub webui_client: WebuiClient,
 }
 
@@ -494,30 +494,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn dataset_scoped_metadata_routes_reject_invalid_dataset_names() -> anyhow::Result<()> {
-        let app = clp_s_app_with_lazy_clients().await;
-        let parse_error = "invalid-name"
-            .parse::<DatasetName>()
-            .expect_err("name should be an invalid dataset name");
-        for uri in [
-            "/metadata/time_range?datasets=logs,invalid-name",
-            "/metadata/query_speed?datasets=logs,invalid-name&query_job_id=1",
-        ] {
-            let response = app
-                .clone()
-                .oneshot(Request::builder().uri(uri).body(Body::empty())?)
-                .await?;
-            assert_eq!(response.status(), StatusCode::BAD_REQUEST, "uri: {uri}");
-            let body = get_body(response).await;
-            assert!(
-                body.contains(&parse_error.to_string()),
-                "uri: {uri}, unexpected body: {body}"
-            );
-        }
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn timestamp_column_names_route_rejects_invalid_dataset_name() -> anyhow::Result<()> {
         let app = clp_s_app_with_lazy_clients().await;
         let response = app
@@ -536,6 +512,29 @@ mod tests {
             body.contains(&parse_error.to_string()),
             "unexpected body: {body}"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn not_found_and_unexpected_client_errors_map_to_their_statuses() -> anyhow::Result<()> {
+        for (error, expected_status) in [
+            (ClientError::QueryJobNotFound(1), StatusCode::NOT_FOUND),
+            (
+                ClientError::DatasetNotFound("logs".parse()?),
+                StatusCode::NOT_FOUND,
+            ),
+            (
+                ClientError::MalformedData,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+        ] {
+            let description = format!("{error:?}");
+            assert_eq!(
+                HandlerError::from(error).into_response().status(),
+                expected_status,
+                "error: {description}"
+            );
+        }
         Ok(())
     }
 

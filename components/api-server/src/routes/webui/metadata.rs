@@ -15,9 +15,9 @@ use utoipa::IntoParams;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use super::log_unexpected_error;
 use crate::routes::AppState;
 use crate::routes::HandlerError;
+use crate::routes::webui::log_unexpected_error;
 use crate::webui_client::CompressionMetadata;
 use crate::webui_client::IngestionDetails;
 use crate::webui_client::QuerySpeed;
@@ -41,11 +41,12 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(compression_metadata))
 }
 
-/// Query parameters for the dataset-scoped metadata endpoints.
+/// Query parameters for the time range endpoint.
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
-struct DatasetsParams {
-    /// Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.
+struct TimeRangeParams {
+    /// Comma-separated list of dataset names. For the CLP storage engine, the names are validated
+    /// but otherwise ignored.
     #[serde(default, deserialize_with = "deserialize_datasets")]
     #[param(value_type = Option<String>)]
     datasets: Vec<DatasetName>,
@@ -55,7 +56,8 @@ struct DatasetsParams {
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 struct QuerySpeedParams {
-    /// Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine.
+    /// Comma-separated list of dataset names. For the CLP storage engine, the names are validated
+    /// but otherwise ignored.
     #[serde(default, deserialize_with = "deserialize_datasets")]
     #[param(value_type = Option<String>)]
     datasets: Vec<DatasetName>,
@@ -74,6 +76,7 @@ struct QuerySpeedParams {
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Path)]
 struct TimestampColumnNamesPath {
+    /// The name of the dataset whose timestamp column names to get.
     #[param(value_type = String)]
     dataset_name: DatasetName,
 }
@@ -101,18 +104,24 @@ async fn datasets(
     get,
     path = "/metadata/time_range",
     description = "Gets the earliest and latest log entry timestamps across the given datasets. \
-        For the CLP storage engine, the `datasets` parameter is ignored. Returns `null` when no \
-        archives exist yet.",
-    params(DatasetsParams),
+        For the CLP storage engine, the dataset names are validated but otherwise ignored. Returns \
+        `null` when the datasets have no archives, including when no datasets are given for \
+        CLP-S.",
+    params(TimeRangeParams),
     responses(
-        (status = OK, body = Option<TimeRange>),
+        (
+            status = OK,
+            body = Option<TimeRange>,
+            description = "The time range, or `null` when the datasets have no archives, \
+                including when no datasets are given for CLP-S."
+        ),
         (status = BAD_REQUEST, description = "Invalid dataset name"),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
 async fn time_range(
     State(client): State<WebuiClient>,
-    Query(params): Query<DatasetsParams>,
+    Query(params): Query<TimeRangeParams>,
 ) -> Result<Json<Option<TimeRange>>, HandlerError> {
     let time_range = client
         .get_time_range(&params.datasets)
@@ -165,12 +174,23 @@ async fn ingestion_details(
     get,
     path = "/metadata/query_speed",
     description = "Gets the query speed (total uncompressed bytes scanned and job duration) for a \
-        query job across the given datasets. Returns `null` when the job hasn't scanned any \
-        archives or hasn't finished yet.",
+        query job across the given datasets. For the CLP storage engine, the dataset names are \
+        validated but otherwise ignored. Returns `null` when the job doesn't exist, the job has no \
+        tasks over the datasets' archives, the job hasn't finished yet, or no datasets are given \
+        for CLP-S.",
     params(QuerySpeedParams),
     responses(
-        (status = OK, body = Option<QuerySpeed>),
-        (status = BAD_REQUEST, description = "Invalid dataset name"),
+        (
+            status = OK,
+            body = Option<QuerySpeed>,
+            description = "The query speed, or `null` when the job doesn't exist, has no tasks \
+                over the datasets' archives, or hasn't finished yet, or when no datasets are given \
+                for CLP-S."
+        ),
+        (
+            status = BAD_REQUEST,
+            description = "Invalid dataset name, or missing or malformed `query_job_id`"
+        ),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -211,8 +231,8 @@ async fn timestamp_column_names(
 #[utoipa::path(
     get,
     path = "/metadata/compression_jobs",
-    description = "Gets recent compression-job metadata (most recent first), with the decoded CLP \
-        IO config for each job.",
+    description = "Gets the metadata of the 1000 most recent compression jobs (most recent first), \
+        with the display fields of each job's config.",
     responses(
         (status = OK, body = Vec<CompressionMetadata>),
         (status = INTERNAL_SERVER_ERROR)
@@ -229,6 +249,10 @@ async fn compression_metadata(
 }
 
 /// Deserializes a comma-separated list of dataset names.
+///
+/// # Type Parameters
+///
+/// * `DeserializerType` - The type of the deserializer to read the list from.
 ///
 /// # Returns
 ///
@@ -261,19 +285,25 @@ mod tests {
     use axum::http::Uri;
     use clp_rust_utils::dataset::DatasetName;
 
-    use super::DatasetsParams;
+    use super::TimeRangeParams;
 
     fn extract_datasets(uri: &'static str) -> Result<Vec<DatasetName>, QueryRejection> {
-        let Query(params) = Query::<DatasetsParams>::try_from_uri(&Uri::from_static(uri))?;
+        let Query(params) = Query::<TimeRangeParams>::try_from_uri(&Uri::from_static(uri))?;
         Ok(params.datasets)
     }
 
     #[test]
-    fn absent_dataset_parameter_gives_no_dataset_names() -> anyhow::Result<()> {
-        assert_eq!(
-            extract_datasets("/metadata/time_range")?,
-            Vec::<DatasetName>::new()
-        );
+    fn empty_or_comma_only_datasets_give_no_dataset_names() -> anyhow::Result<()> {
+        for uri in [
+            "/metadata/time_range?datasets=",
+            "/metadata/time_range?datasets=,%20,,",
+        ] {
+            assert_eq!(
+                extract_datasets(uri)?,
+                Vec::<DatasetName>::new(),
+                "uri: {uri}"
+            );
+        }
         Ok(())
     }
 

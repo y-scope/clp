@@ -4,8 +4,8 @@ mod metadata;
 
 use utoipa_axum::router::OpenApiRouter;
 
-use super::AppState;
 use crate::error::ClientError;
+use crate::routes::AppState;
 
 /// Factory function.
 ///
@@ -16,16 +16,26 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new().merge(metadata::router())
 }
 
-/// Logs `error` if it's an unexpected failure of `operation`, rather than an invalid request.
+/// Logs `error` as a failure of `operation`, unless it converts to a non-500
+/// [`HandlerError`](crate::routes::HandlerError) (i.e., the request itself is invalid).
+///
+/// The variants that aren't logged must be kept in sync with that conversion.
 fn log_unexpected_error(operation: &str, error: &ClientError) {
-    let kind = match error {
-        ClientError::Sql(_) => "sql",
-        ClientError::Mongo(_) => "mongodb",
-        ClientError::Io(_) => "filesystem",
-        ClientError::Aws { .. } => "aws",
-        ClientError::MalformedData => "malformed_data",
-        ClientError::TaskJoin(_) => "background_task",
-        _ => return,
-    };
-    tracing::error!(operation, kind, error = ? error, "WebUI API request failed.");
+    match error {
+        ClientError::QueryJobNotFound(_)
+        | ClientError::DatasetNotFound(_)
+        | ClientError::QueryJobAlreadyTerminated(_)
+        | ClientError::InvalidInput(_) => {}
+        ClientError::Sql(_)
+        | ClientError::Mongo(_)
+        | ClientError::QueryNotSucceeded
+        | ClientError::Io(_)
+        | ClientError::MalformedData
+        | ClientError::TaskJoin(_)
+        | ClientError::Aws { .. }
+        | ClientError::InvalidQueryJobConfig(_)
+        | ClientError::Telemetry(_) => {
+            tracing::error!(operation, error = ? error, "WebUI API request failed.");
+        }
+    }
 }

@@ -23,7 +23,7 @@ pub enum ClientError {
     #[error("Malformed data")]
     MalformedData,
 
-    #[error("Background task failed: {0}")]
+    #[error("background task failed: {0}")]
     TaskJoin(#[from] tokio::task::JoinError),
 
     #[error("`AwsError`: {description}")]

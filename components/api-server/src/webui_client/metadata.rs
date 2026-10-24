@@ -5,74 +5,28 @@ use chrono::Utc;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
+use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_TASKS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::serde::ZstdMsgpack;
-use serde::Deserialize;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use super::WebuiClient;
 use crate::error::ClientError;
+use crate::webui_client::WebuiClient;
 
-/// Fields from a stored compression job config that the `WebUI` may display.
-#[derive(Clone, Debug, Deserialize, ToSchema)]
-pub struct CompressionMetadataDisplayConfig {
-    pub input: CompressionMetadataDisplayInput,
-    pub output: CompressionMetadataDisplayOutput,
-}
-
-/// Partial input fields kept for older compression jobs.
-#[derive(Clone, Debug, Deserialize, ToSchema)]
-pub struct CompressionMetadataDisplayInput {
-    pub r#type: Option<String>,
-    pub dataset: Option<String>,
-    pub paths_to_compress: Option<Vec<String>>,
-    pub path_prefix_to_remove: Option<String>,
-    pub keys: Option<Vec<String>>,
-    pub timestamp_key: Option<String>,
-    pub unstructured: Option<bool>,
-}
-
-/// Partial output fields kept for older compression jobs.
-#[derive(Clone, Debug, Deserialize, ToSchema)]
-pub struct CompressionMetadataDisplayOutput {
-    pub compression_level: Option<f64>,
-    pub target_archive_size: Option<f64>,
-    pub target_dictionaries_size: Option<f64>,
-    pub target_encoded_file_size: Option<f64>,
-    pub target_segment_size: Option<f64>,
-}
-
-/// A row of compression metadata, with the decoded CLP IO config.
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
-pub struct CompressionMetadata {
-    /// The compression job's ID. Named `_id` to match the webui's existing JSON contract.
-    #[serde(rename = "_id")]
-    pub id: i64,
-    /// Current status of the job. Matches `CompressionJobStatus` in
-    /// `job_orchestration.scheduler.constants`.
-    pub status: i32,
-    /// Status message for the job.
-    pub status_msg: String,
-    /// Time the job started executing (RFC 3339). Absent if the job hasn't started.
-    pub start_time: Option<String>,
-    /// Time the job was last updated (RFC 3339).
-    pub update_time: String,
-    /// Wall-clock duration the job ran, in seconds. Absent if the job did not complete.
-    pub duration: Option<f64>,
-    /// Total uncompressed size of input files, in bytes.
-    pub uncompressed_size: i64,
-    /// Total compressed archive size, in bytes.
-    pub compressed_size: i64,
-    /// Display fields from the decoded CLP IO config. Storage credentials are omitted.
-    #[schema(value_type = CompressionMetadataDisplayConfig)]
-    pub clp_config: serde_json::Value,
+/// Earliest and latest log entry timestamps across the selected datasets.
+#[derive(Debug, PartialEq, Eq, Serialize, ToSchema)]
+pub struct TimeRange {
+    /// Earliest log entry timestamp (epoch milliseconds).
+    pub begin_timestamp: i64,
+    /// Latest log entry timestamp (epoch milliseconds).
+    pub end_timestamp: i64,
 }
 
 /// Aggregated space-savings statistics.
-#[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
 pub struct SpaceSavings {
     /// Total uncompressed size of all archives, in bytes.
     pub total_uncompressed_size: i64,
@@ -80,8 +34,8 @@ pub struct SpaceSavings {
     pub total_compressed_size: i64,
 }
 
-/// Ingestion details statistics. The whole value is `None` when no data has been ingested yet.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+/// Ingestion details statistics.
+#[derive(Debug, PartialEq, Eq, Serialize, ToSchema)]
 pub struct IngestionDetails {
     /// Earliest log entry timestamp (epoch milliseconds).
     pub begin_timestamp: i64,
@@ -93,9 +47,8 @@ pub struct IngestionDetails {
     pub num_messages: i64,
 }
 
-/// Query-speed statistics for a query job. The whole value is `None` until the job has scanned
-/// archives and finished (its duration is recorded only on completion).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+/// Query-speed statistics for a query job.
+#[derive(Debug, PartialEq, Serialize, ToSchema)]
 pub struct QuerySpeed {
     /// Total uncompressed size of the archives the job scanned, in bytes.
     pub bytes: f64,
@@ -103,14 +56,77 @@ pub struct QuerySpeed {
     pub duration: f64,
 }
 
-/// Earliest and latest log entry timestamps across the selected datasets. The whole value is `None`
-/// when no archives exist yet (or, for CLP-S, when no datasets were selected).
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct TimeRange {
-    /// Earliest log entry timestamp (epoch milliseconds).
-    pub begin_timestamp: i64,
-    /// Latest log entry timestamp (epoch milliseconds).
-    pub end_timestamp: i64,
+/// The metadata of a compression job, with the display fields of its config.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CompressionMetadata {
+    /// The compression job's ID. Named `_id` to match the `WebUI`'s existing JSON contract.
+    #[serde(rename = "_id")]
+    #[schema(value_type = i32)]
+    pub id: CompressionJobId,
+    /// Current status of the job, as the integer value of a
+    /// [`clp_rust_utils::job_config::CompressionJobStatus`].
+    pub status: i32,
+    /// Status message for the job.
+    pub status_msg: String,
+    /// Time the job started executing (RFC 3339). `null` if the job hasn't started.
+    pub start_time: Option<String>,
+    /// Time the job was last updated (RFC 3339).
+    pub update_time: String,
+    /// Wall-clock duration the job ran, in seconds. `null` if the job did not complete.
+    pub duration: Option<f64>,
+    /// Total uncompressed size of input files, in bytes.
+    pub uncompressed_size: i64,
+    /// Total compressed archive size, in bytes.
+    pub compressed_size: i64,
+    /// The display fields of the job's stored config. Storage credentials are omitted.
+    #[schema(value_type = CompressionMetadataDisplayConfig)]
+    pub clp_config: serde_json::Value,
+}
+
+/// The `OpenAPI` schema of the display subset of a stored compression job config, as returned in
+/// [`CompressionMetadata::clp_config`].
+#[derive(Debug, ToSchema)]
+pub struct CompressionMetadataDisplayConfig {
+    /// The display fields of the config's `input` section.
+    pub input: CompressionMetadataDisplayInput,
+    /// The display fields of the config's `output` section.
+    pub output: CompressionMetadataDisplayOutput,
+}
+
+/// The `OpenAPI` schema of the display fields of a stored config's `input` section. Older
+/// compression jobs may have stored only some of them.
+#[derive(Debug, ToSchema)]
+pub struct CompressionMetadataDisplayInput {
+    /// The input type (e.g., `fs` or `s3`).
+    pub r#type: Option<String>,
+    /// The dataset the logs were compressed into.
+    pub dataset: Option<String>,
+    /// The filesystem paths to compress.
+    pub paths_to_compress: Option<Vec<String>>,
+    /// The prefix removed from the compressed file paths.
+    pub path_prefix_to_remove: Option<String>,
+    /// The S3 object keys to compress.
+    pub keys: Option<Vec<String>>,
+    /// The key of the log events' timestamp field.
+    pub timestamp_key: Option<String>,
+    /// Whether the logs are unstructured.
+    pub unstructured: Option<bool>,
+}
+
+/// The `OpenAPI` schema of the display fields of a stored config's `output` section. Older
+/// compression jobs may have stored only some of them.
+#[derive(Debug, ToSchema)]
+pub struct CompressionMetadataDisplayOutput {
+    /// The compression level.
+    pub compression_level: Option<u8>,
+    /// The target archive size, in bytes.
+    pub target_archive_size: Option<u64>,
+    /// The target dictionaries size, in bytes.
+    pub target_dictionaries_size: Option<u64>,
+    /// The target encoded file size, in bytes.
+    pub target_encoded_file_size: Option<u64>,
+    /// The target segment size, in bytes.
+    pub target_segment_size: Option<u64>,
 }
 
 impl WebuiClient {
@@ -140,8 +156,8 @@ impl WebuiClient {
     ///
     /// # Returns
     ///
-    /// The earliest and latest log entry timestamps on success, or `None` when no archives exist
-    /// yet (or, for CLP-S, when `datasets` is empty).
+    /// The earliest and latest log entry timestamps on success, or `None` when the datasets have no
+    /// archives (including, for CLP-S, when `datasets` is empty).
     ///
     /// # Errors
     ///
@@ -251,11 +267,11 @@ impl WebuiClient {
                 let archives = database.unscoped_archives_table_name();
                 let files = database.unscoped_files_table_name();
                 format!(
-                    "SELECT (SELECT MIN(begin_timestamp) FROM `{archives}`) AS begin_timestamp, \
-                     (SELECT MAX(end_timestamp) FROM `{archives}`) AS end_timestamp, (SELECT \
-                     COUNT(DISTINCT orig_file_id) FROM `{files}`) AS num_files, (SELECT \
-                     CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) FROM `{files}`) AS \
-                     num_messages"
+                    "SELECT a.begin_timestamp, a.end_timestamp, f.num_files, f.num_messages FROM \
+                     (SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
+                     end_timestamp FROM `{archives}`) AS a, (SELECT COUNT(DISTINCT orig_file_id) \
+                     AS num_files, CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) AS num_messages \
+                     FROM `{files}`) AS f"
                 )
             }
             StorageEngine::ClpS => {
@@ -299,8 +315,12 @@ impl WebuiClient {
     ///
     /// # Returns
     ///
-    /// The query-speed statistics on success, or `None` when the job hasn't scanned any archives or
-    /// hasn't finished yet (or, for CLP-S, when `datasets` is empty).
+    /// The query-speed statistics on success, or `None` when:
+    ///
+    /// * the job doesn't exist;
+    /// * the job has no tasks over the archives of the given datasets;
+    /// * the job hasn't finished yet (its duration is `NULL`);
+    /// * for CLP-S, `datasets` is empty.
     ///
     /// # Errors
     ///
@@ -331,12 +351,10 @@ impl WebuiClient {
             }
         };
         let sql = format!(
-            "WITH qt AS ( SELECT job_id, archive_id FROM `{QUERY_TASKS_TABLE_NAME}` WHERE \
-             archive_id IS NOT NULL AND job_id = ? ), totals AS ( SELECT qt.job_id, \
-             SUM(ca.uncompressed_size) AS total_uncompressed_bytes FROM qt JOIN \
-             ({archives_subquery}) ca ON qt.archive_id = ca.id ) SELECT \
-             CAST(totals.total_uncompressed_bytes AS DOUBLE) AS bytes, qj.duration AS duration \
-             FROM `{QUERY_JOBS_TABLE_NAME}` qj JOIN totals ON totals.job_id = qj.id"
+            "SELECT CAST(SUM(ca.uncompressed_size) AS DOUBLE) AS bytes, qj.duration AS duration \
+             FROM `{QUERY_JOBS_TABLE_NAME}` qj JOIN `{QUERY_TASKS_TABLE_NAME}` qt ON qt.job_id = \
+             qj.id JOIN ({archives_subquery}) ca ON qt.archive_id = ca.id WHERE qj.id = ? GROUP \
+             BY qj.id, qj.duration"
         );
         let row = sqlx::query_as::<_, QuerySpeedRowProjection>(&sql)
             .bind(query_job_id)
@@ -364,7 +382,7 @@ impl WebuiClient {
         // Must be kept in sync with `NodeType::Timestamp` and `NodeType::DeprecatedDateString` in
         // `components/core/src/clp_s/SchemaTree.hpp`.
         const TIMESTAMP_NODE_TYPE: i8 = 14;
-        const DEPRECATED_TIMESTAMP_NODE_TYPE: i8 = 8;
+        const DEPRECATED_DATE_STRING_NODE_TYPE: i8 = 8;
         // MySQL error number for "Table doesn't exist".
         const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
@@ -373,7 +391,7 @@ impl WebuiClient {
             "SELECT DISTINCT name FROM `{table_name}` WHERE type IN (?, ?) ORDER BY name"
         ))
         .bind(TIMESTAMP_NODE_TYPE)
-        .bind(DEPRECATED_TIMESTAMP_NODE_TYPE)
+        .bind(DEPRECATED_DATE_STRING_NODE_TYPE)
         .fetch_all(&self.sql_pool)
         .await
         .map_err(|err| {
@@ -389,11 +407,12 @@ impl WebuiClient {
         Ok(names)
     }
 
-    /// Fetches recent compression-job metadata, with the decoded CLP IO config for each job.
+    /// Fetches the metadata of the most recent compression jobs, with the display fields of each
+    /// job's config.
     ///
     /// # Returns
     ///
-    /// The compression-job metadata of the most recent jobs, most recent first, on success.
+    /// The metadata of the 1000 most recent compression jobs, most recent first, on success.
     ///
     /// # Errors
     ///
@@ -401,7 +420,8 @@ impl WebuiClient {
     ///
     /// * [`ClientError::TaskJoin`] if the task decoding the rows panics.
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    /// * Forwards [`CompressionMetadata::try_from`]'s return values on failure.
+    /// * Forwards [`CompressionMetadataRowProjection::into_compression_metadata`]'s return values
+    ///   on failure.
     pub async fn get_compression_metadata(&self) -> Result<Vec<CompressionMetadata>, ClientError> {
         const QUERY_LIMIT: i64 = 1000;
 
@@ -415,43 +435,10 @@ impl WebuiClient {
         .await?;
         tokio::task::spawn_blocking(move || {
             rows.into_iter()
-                .map(CompressionMetadata::try_from)
+                .map(CompressionMetadataRowProjection::into_compression_metadata)
                 .collect()
         })
         .await?
-    }
-}
-
-/// A projection of a compression job row, with its CLP IO config still serialized.
-#[derive(Debug, sqlx::FromRow)]
-struct CompressionMetadataRowProjection {
-    id: i64,
-    status: i32,
-    status_msg: String,
-    start_time: Option<DateTime<Utc>>,
-    update_time: DateTime<Utc>,
-    duration: Option<f64>,
-    uncompressed_size: i64,
-    compressed_size: i64,
-    clp_config: Vec<u8>,
-}
-
-impl TryFrom<CompressionMetadataRowProjection> for CompressionMetadata {
-    type Error = ClientError;
-
-    fn try_from(row: CompressionMetadataRowProjection) -> Result<Self, Self::Error> {
-        let clp_config = compression_metadata_config(ZstdMsgpack::deserialize(&row.clp_config)?);
-        Ok(Self {
-            id: row.id,
-            status: row.status,
-            status_msg: row.status_msg,
-            start_time: row.start_time.map(|time| time.to_rfc3339()),
-            update_time: row.update_time.to_rfc3339(),
-            duration: row.duration,
-            uncompressed_size: row.uncompressed_size,
-            compressed_size: row.compressed_size,
-            clp_config,
-        })
     }
 }
 
@@ -538,12 +525,59 @@ impl QuerySpeedRowProjection {
     }
 }
 
-/// Selects the job config fields exposed in the compression history.
+/// A projection of a compression job row, with its config still serialized.
+#[derive(Debug, sqlx::FromRow)]
+struct CompressionMetadataRowProjection {
+    id: CompressionJobId,
+    status: i32,
+    status_msg: String,
+    start_time: Option<DateTime<Utc>>,
+    update_time: DateTime<Utc>,
+    duration: Option<f64>,
+    uncompressed_size: i64,
+    compressed_size: i64,
+    clp_config: Vec<u8>,
+}
+
+impl CompressionMetadataRowProjection {
+    /// Converts the projection into a [`CompressionMetadata`], keeping only the display fields of
+    /// the job's config.
+    ///
+    /// # Returns
+    ///
+    /// The compression metadata on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`ZstdMsgpack::deserialize`]'s return values on failure.
+    fn into_compression_metadata(self) -> Result<CompressionMetadata, ClientError> {
+        let clp_config =
+            select_compression_metadata_display_fields(ZstdMsgpack::deserialize(&self.clp_config)?);
+        Ok(CompressionMetadata {
+            id: self.id,
+            status: self.status,
+            status_msg: self.status_msg,
+            start_time: self.start_time.map(|time| time.to_rfc3339()),
+            update_time: self.update_time.to_rfc3339(),
+            duration: self.duration,
+            uncompressed_size: self.uncompressed_size,
+            compressed_size: self.compressed_size,
+            clp_config,
+        })
+    }
+}
+
+/// Selects the display fields of a stored compression job config.
+///
+/// The selected fields must be kept in sync with [`CompressionMetadataDisplayInput`] and
+/// [`CompressionMetadataDisplayOutput`].
 ///
 /// # Returns
 ///
 /// `config` with only the display fields of its `input` and `output` sections.
-fn compression_metadata_config(mut config: serde_json::Value) -> serde_json::Value {
+fn select_compression_metadata_display_fields(mut config: serde_json::Value) -> serde_json::Value {
     // Match the display fields in `ClpIoPartialConfigSchema`. Stored input configs also contain AWS
     // credentials, which must never be returned to the browser.
     let input_fields = [
@@ -592,14 +626,33 @@ fn union_all(selects: impl Iterator<Item = String>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::CompressionMetadataDisplayConfig;
+    use chrono::DateTime;
+    use clp_rust_utils::clp_config::AwsAuthentication;
+    use clp_rust_utils::clp_config::AwsCredentials;
+    use clp_rust_utils::clp_config::S3Config;
+    use clp_rust_utils::clp_config::package::config::Config;
+    use clp_rust_utils::clp_config::package::config::Package;
+    use clp_rust_utils::clp_config::package::config::StorageEngine;
+    use clp_rust_utils::job_config::ClpIoConfig;
+    use clp_rust_utils::job_config::InputConfig;
+    use clp_rust_utils::job_config::OutputConfig;
+    use clp_rust_utils::job_config::S3InputConfig;
+    use clp_rust_utils::serde::ZstdMsgpack;
+    use non_empty_string::NonEmptyString;
+
+    use super::CompressionMetadataRowProjection;
     use super::IngestionDetails;
     use super::IngestionDetailsRowProjection;
     use super::QuerySpeed;
     use super::QuerySpeedRowProjection;
     use super::TimeRange;
     use super::TimeRangeRowProjection;
-    use super::compression_metadata_config;
+    use super::select_compression_metadata_display_fields;
+    use crate::webui_client::WebuiClient;
+
+    fn non_empty(value: &str) -> NonEmptyString {
+        NonEmptyString::new(value.to_owned()).expect("the test value should be non-empty")
+    }
 
     #[test]
     fn time_range_is_none_unless_both_timestamps_are_present() {
@@ -671,61 +724,140 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compression_history_omits_storage_credentials() -> anyhow::Result<()> {
-        for input_type in ["s3", "s3_object_metadata"] {
-            let config = serde_json::json!({
-                "input": {
-                    "type": input_type,
-                    "dataset": "logs",
-                    "timestamp_key": null,
-                    "unstructured": false,
-                    "aws_authentication": {"credentials": {
-                        "access_key_id": "test-key",
-                        "secret_access_key": "test-secret",
-                        "session_token": "test-token"
-                    }},
-                    "bucket": "private-bucket"
-                },
-                "output": {"compression_level": 3},
-                "private_field": "private-value"
-            });
-            let display = compression_metadata_config(config);
-            let parsed: CompressionMetadataDisplayConfig = serde_json::from_value(display.clone())?;
-            assert_eq!(parsed.input.r#type.as_deref(), Some(input_type));
-            assert_eq!(
-                display,
-                serde_json::json!({
-                    "input": {
-                        "type": input_type,
-                        "dataset": "logs",
-                        "timestamp_key": null,
-                        "unstructured": false
-                    },
-                    "output": {"compression_level": 3}
-                })
-            );
-        }
+    #[tokio::test]
+    async fn clp_s_query_speed_without_datasets_is_none() -> anyhow::Result<()> {
+        let config = Config {
+            package: Package {
+                storage_engine: StorageEngine::ClpS,
+            },
+            ..Config::default()
+        };
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect_lazy("mysql://localhost:1/clp-db")?;
+        let client = WebuiClient::new(config, sql_pool);
+        assert_eq!(client.get_query_speed(&[], 1).await?, None);
         Ok(())
     }
 
     #[test]
-    fn compression_history_preserves_partial_filesystem_config() -> anyhow::Result<()> {
+    fn compression_metadata_keeps_display_fields_and_omits_storage_credentials()
+    -> anyhow::Result<()> {
+        let config = ClpIoConfig {
+            input: InputConfig::S3InputConfig {
+                config: S3InputConfig {
+                    s3_config: S3Config {
+                        bucket: non_empty("the-bucket"),
+                        region_code: Some(non_empty("us-east-2")),
+                        key_prefix: non_empty("logs/"),
+                        endpoint_url: None,
+                        aws_authentication: AwsAuthentication::Credentials {
+                            credentials: AwsCredentials {
+                                access_key_id: "the-access-key".to_owned(),
+                                secret_access_key: "the-secret-key".to_owned(),
+                                session_token: Some("the-session-token".to_owned()),
+                            },
+                        },
+                    },
+                    keys: Some(vec![non_empty("logs/app.log")]),
+                    dataset: "logs".parse()?,
+                    timestamp_key: Some(non_empty("ts")),
+                    unstructured: false,
+                },
+            },
+            output: OutputConfig {
+                target_archive_size: 1,
+                target_dictionaries_size: 2,
+                target_encoded_file_size: 3,
+                target_segment_size: 4,
+                compression_level: 5,
+            },
+        };
+        let start_time = DateTime::from_timestamp(1_700_000_000, 0).expect("valid timestamp");
+        let update_time = DateTime::from_timestamp(1_700_000_060, 0).expect("valid timestamp");
+        let row = CompressionMetadataRowProjection {
+            id: 7,
+            status: 2,
+            status_msg: "done".to_owned(),
+            start_time: Some(start_time),
+            update_time,
+            duration: Some(60.0),
+            uncompressed_size: 100,
+            compressed_size: 10,
+            clp_config: ZstdMsgpack::serialize(&config)?,
+        };
+
+        let metadata = row.into_compression_metadata()?;
+
+        assert_eq!(metadata.id, 7);
+        assert_eq!(metadata.status, 2);
+        assert_eq!(metadata.status_msg, "done");
+        assert_eq!(metadata.start_time, Some(start_time.to_rfc3339()));
+        assert_eq!(metadata.update_time, update_time.to_rfc3339());
+        assert_eq!(metadata.duration, Some(60.0));
+        assert_eq!(metadata.uncompressed_size, 100);
+        assert_eq!(metadata.compressed_size, 10);
+        assert_eq!(
+            metadata.clp_config,
+            serde_json::json!({
+                "input": {
+                    "type": "s3",
+                    "dataset": "logs",
+                    "keys": ["logs/app.log"],
+                    "timestamp_key": "ts",
+                    "unstructured": false
+                },
+                "output": {
+                    "target_archive_size": 1,
+                    "target_dictionaries_size": 2,
+                    "target_encoded_file_size": 3,
+                    "target_segment_size": 4,
+                    "compression_level": 5
+                }
+            })
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn compression_metadata_display_fields_omit_missing_sections_and_keep_empty_ones() {
+        let output = serde_json::json!({"compression_level": 3});
+        for (config, expected) in [
+            (serde_json::json!({}), serde_json::json!({})),
+            (
+                serde_json::json!({"output": output}),
+                serde_json::json!({"output": output}),
+            ),
+            (
+                serde_json::json!({"input": null, "output": output}),
+                serde_json::json!({"output": output}),
+            ),
+            (
+                serde_json::json!({"input": {"bucket": "the-bucket"}, "output": {}}),
+                serde_json::json!({"input": {}, "output": {}}),
+            ),
+        ] {
+            assert_eq!(
+                select_compression_metadata_display_fields(config.clone()),
+                expected,
+                "config: {config}"
+            );
+        }
+    }
+
+    #[test]
+    fn compression_metadata_display_fields_preserve_partial_filesystem_config() {
         let config = serde_json::json!({
             "input": {
                 "type": "fs",
                 "paths_to_compress": ["/mnt/logs/app.log"],
                 "path_prefix_to_remove": null
             },
-            "output": {}
+            "output": {"compression_level": 3}
         });
-        let display = compression_metadata_config(config.clone());
-        let parsed: CompressionMetadataDisplayConfig = serde_json::from_value(display.clone())?;
         assert_eq!(
-            parsed.input.paths_to_compress,
-            Some(vec!["/mnt/logs/app.log".to_owned()])
+            select_compression_metadata_display_fields(config.clone()),
+            config
         );
-        assert_eq!(display, config);
-        Ok(())
     }
 }

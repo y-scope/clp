@@ -75,14 +75,14 @@ async fn main() -> anyhow::Result<()> {
 
     let sql_pool = create_clp_db_mysql_pool(&config.database, &credentials.database, 10)
         .await
-        .context("Cannot connect to MySQL")?;
+        .context("cannot connect to MySQL")?;
     let mongo_uri = format!(
         "mongodb://{}:{}/{}?directConnection=true",
         config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
     );
     let mongodb_client = mongodb::Client::with_uri_str(mongo_uri)
         .await
-        .context("Cannot connect to MongoDB")?;
+        .context("cannot connect to MongoDB")?;
 
     let client = api_server::client::Client::new(config.clone(), mongodb_client, sql_pool.clone());
     let webui_client = api_server::webui_client::WebuiClient::new(config, sql_pool);
