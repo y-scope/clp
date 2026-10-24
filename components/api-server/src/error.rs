@@ -3,6 +3,7 @@
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::dataset::ParseDatasetNameError;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
@@ -23,17 +24,20 @@ pub enum ClientError {
     #[error("Malformed data")]
     MalformedData,
 
+    #[error("Background task failed: {0}")]
+    TaskJoin(#[from] tokio::task::JoinError),
+
     #[error("`AwsError`: {description}")]
     Aws { description: String },
-
-    #[error("api_server configuration is missing")]
-    ConfigIsNone,
 
     #[error("query job not found: {0}")]
     QueryJobNotFound(u64),
 
     #[error("query job already terminated: {0}")]
     QueryJobAlreadyTerminated(u64),
+
+    #[error(transparent)]
+    InvalidDatasetName(#[from] ParseDatasetNameError),
 
     #[error("Invalid input: {0}")]
     InvalidInput(String),

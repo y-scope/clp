@@ -191,6 +191,31 @@ impl Database {
     pub fn datasets_table_name(&self) -> String {
         format!("{}datasets", self.table_prefix)
     }
+
+    /// # Returns
+    ///
+    /// The files table name (`<prefix><dataset>_files`).
+    #[must_use]
+    pub fn files_table_name(&self, dataset: &DatasetName) -> String {
+        format!("{}{dataset}_files", self.table_prefix)
+    }
+
+    /// # Returns
+    ///
+    /// The archives table name without a dataset (`<prefix>archives`), used by the CLP storage
+    /// engine.
+    #[must_use]
+    pub fn unscoped_archives_table_name(&self) -> String {
+        format!("{}archives", self.table_prefix)
+    }
+
+    /// # Returns
+    ///
+    /// The files table name without a dataset (`<prefix>files`), used by the CLP storage engine.
+    #[must_use]
+    pub fn unscoped_files_table_name(&self) -> String {
+        format!("{}files", self.table_prefix)
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]

@@ -9,8 +9,6 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
-use clp_rust_utils::clp_config::package::credentials::Credentials;
-use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::AggregationConfig;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
@@ -242,39 +240,24 @@ pub struct Client {
 }
 
 impl Client {
-    /// Factory method to create a new client with active connections to both `MySQL` and `MongoDB`
-    /// databases.
+    /// Factory function.
+    ///
+    /// Creates a client that shares the given `MongoDB` client and `MySQL` connection pool.
     ///
     /// # Returns
     ///
-    /// A newly created [`Client`] instance with active connections to both databases.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::ConfigIsNone`] if `config.api_server` is `None`.
-    /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
-    /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
-    pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
-        if config.api_server.is_none() {
-            return Err(ClientError::ConfigIsNone);
-        }
-
-        let sql_pool =
-            create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
-
-        let mongo_uri = format!(
-            "mongodb://{}:{}/{}?directConnection=true",
-            config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
-        );
-        let mongo_client = mongodb::Client::with_uri_str(mongo_uri).await?;
-
-        Ok(Self {
-            config: config.clone(),
-            mongodb_client: mongo_client,
+    /// A newly created [`Client`].
+    #[must_use]
+    pub const fn new(
+        config: Config,
+        mongodb_client: mongodb::Client,
+        sql_pool: sqlx::Pool<sqlx::MySql>,
+    ) -> Self {
+        Self {
+            mongodb_client,
             sql_pool,
-        })
+            config,
+        }
     }
 
     /// Submits a search or aggregation query as a job. The job is a count-by-time aggregation
@@ -733,48 +716,6 @@ impl Client {
         Ok(mapped)
     }
 
-    /// Retrieves timestamp column names for a given dataset.
-    ///
-    /// # Returns
-    ///
-    /// A vector of timestamp column name strings on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
-    pub async fn get_timestamp_column_names(
-        &self,
-        dataset: &DatasetName,
-    ) -> Result<Vec<String>, ClientError> {
-        // Must be kept in sync with `NodeType::Timestamp` in
-        // `components/core/src/clp_s/SchemaTree.hpp`.
-        const TIMESTAMP_NODE_TYPE: i8 = 14;
-        // MySQL error number for "Table doesn't exist".
-        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
-
-        let table_name = self.config.database.column_metadata_table_name(dataset);
-        let names: Vec<String> =
-            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
-                .bind(TIMESTAMP_NODE_TYPE)
-                .fetch_all(&self.sql_pool)
-                .await
-                .map_err(|err| {
-                    if let sqlx::Error::Database(db_err) = &err
-                        && let Some(mysql_err) =
-                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
-                    {
-                        return ClientError::DatasetNotFound(dataset.clone());
-                    }
-                    err.into()
-                })?;
-
-        Ok(names)
-    }
-
     /// Returns compression usage for each job within a time range, optionally
     /// filtered by job outcome.
     ///
@@ -862,33 +803,6 @@ impl Client {
             .api_server
             .as_ref()
             .expect("api_server configuration is missing")
-    }
-}
-
-#[cfg(test)]
-impl Client {
-    /// Factory function.
-    ///
-    /// Creates a client for `config` whose `MySQL` and `MongoDB` connections are only established
-    /// on first use.
-    ///
-    /// # Returns
-    ///
-    /// A newly created [`Client`] instance on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`mongodb::Client::with_uri_str`]'s return values on failure.
-    /// * Forwards [`sqlx::pool::PoolOptions::connect_lazy`]'s return values on failure.
-    pub(crate) async fn connect_lazy(config: Config) -> Result<Self, ClientError> {
-        Ok(Self {
-            mongodb_client: mongodb::Client::with_uri_str("mongodb://localhost:27017").await?,
-            sql_pool: sqlx::mysql::MySqlPoolOptions::new()
-                .connect_lazy("mysql://localhost/clp-db")?,
-            config,
-        })
     }
 }
 
