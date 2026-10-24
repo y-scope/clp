@@ -976,6 +976,7 @@ dependencies = [
  "sqlx",
  "strum",
  "thiserror",
+ "tokio",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
