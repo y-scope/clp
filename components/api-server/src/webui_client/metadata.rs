@@ -580,7 +580,7 @@ impl CompressionMetadataRowProjection {
 fn select_compression_metadata_display_fields(mut config: serde_json::Value) -> serde_json::Value {
     // Match the display fields in `ClpIoPartialConfigSchema`. Stored input configs also contain AWS
     // credentials, which must never be returned to the browser.
-    let input_fields = [
+    const INPUT_DISPLAY_FIELDS: &[&str] = &[
         "type",
         "dataset",
         "timestamp_key",
@@ -589,17 +589,18 @@ fn select_compression_metadata_display_fields(mut config: serde_json::Value) -> 
         "path_prefix_to_remove",
         "keys",
     ];
-    let output_fields = [
+    const OUTPUT_DISPLAY_FIELDS: &[&str] = &[
         "compression_level",
         "target_archive_size",
         "target_dictionaries_size",
         "target_encoded_file_size",
         "target_segment_size",
     ];
+
     let mut displayed = serde_json::Map::new();
     for (section, fields) in [
-        ("input", input_fields.as_slice()),
-        ("output", output_fields.as_slice()),
+        ("input", INPUT_DISPLAY_FIELDS),
+        ("output", OUTPUT_DISPLAY_FIELDS),
     ] {
         if let Some(values) = config
             .get_mut(section)
