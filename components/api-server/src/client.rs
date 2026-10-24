@@ -18,6 +18,7 @@ use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryJobType;
 use clp_rust_utils::job_config::SearchJobConfig;
+use clp_rust_utils::types::PositiveI64;
 use futures::Stream;
 use futures::StreamExt;
 use pin_project_lite::pin_project;
@@ -215,11 +216,20 @@ pub struct QueryConfig {
     /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
     /// search job, and its results are always buffered in `MongoDB`.
     #[serde(default)]
-    pub count_by_time_bucket_size_millisecs: Option<i64>,
+    #[schema(value_type = Option<i64>, minimum = 1)]
+    pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
     fn from(value: QueryConfig) -> Self {
+        let aggregation_config = value
+            .count_by_time_bucket_size_millisecs
+            .map(|bucket_size| AggregationConfig {
+                count_by_time_bucket_size: Some(bucket_size.get()),
+                ..AggregationConfig::default()
+            });
+        // Aggregation results are always buffered in MongoDB.
+        let write_to_file = aggregation_config.is_none() && !value.buffer_results_in_mongodb;
         Self {
             datasets: value.datasets,
             query_string: value.query_string,
@@ -227,7 +237,8 @@ impl From<QueryConfig> for SearchJobConfig {
             begin_timestamp: value.time_range_begin_millisecs,
             end_timestamp: value.time_range_end_millisecs,
             ignore_case: value.ignore_case,
-            write_to_file: !value.buffer_results_in_mongodb,
+            aggregation_config,
+            write_to_file,
             ..Default::default()
         }
     }
@@ -289,33 +300,15 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidInput`] if `count_by_time_bucket_size_millisecs` is set and is `<=
-    ///   0`.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
-        let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
-        if let Some(bucket_size) = count_by_time_bucket_size
-            && bucket_size <= 0
-        {
-            return Err(ClientError::InvalidInput(
-                "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
-            ));
-        }
         let mut query_job_config: SearchJobConfig = query_config.into();
         if query_job_config.datasets.is_none() {
             query_job_config.datasets = match self.config.package.storage_engine {
                 StorageEngine::Clp => None,
                 StorageEngine::ClpS => Some(vec![DatasetName::default()]),
             }
-        }
-        if let Some(bucket_size) = count_by_time_bucket_size {
-            query_job_config.aggregation_config = Some(AggregationConfig {
-                count_by_time_bucket_size: Some(bucket_size),
-                ..AggregationConfig::default()
-            });
-            // Aggregation results are always buffered in MongoDB.
-            query_job_config.write_to_file = false;
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
@@ -1001,6 +994,86 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
+
+    impl Client {
+        /// # Returns
+        ///
+        /// A client with default configuration and a closed SQL pool.
+        ///
+        /// # Panics
+        ///
+        /// Panics if constructing a MongoDB client with default options fails.
+        pub(crate) async fn new_with_closed_sql_pool() -> Self {
+            let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+                .connect_lazy_with(sqlx::mysql::MySqlConnectOptions::new());
+            sql_pool.close().await;
+            Self {
+                mongodb_client: mongodb::Client::with_options(
+                    mongodb::options::ClientOptions::default(),
+                )
+                .expect("default mongodb client options should be valid"),
+                sql_pool,
+                config: Config::default(),
+            }
+        }
+    }
+
+    #[test]
+    fn query_config_conversion_preserves_aggregation_output() -> anyhow::Result<()> {
+        for (bucket_size, buffer_results_in_mongodb, expected_write_to_file) in [
+            (None, false, true),
+            (None, true, false),
+            (Some(1_i64), false, false),
+            (Some(1_i64), true, false),
+            (Some(i64::MAX), false, false),
+            (Some(i64::MAX), true, false),
+        ] {
+            let query_config = serde_json::from_value::<QueryConfig>(serde_json::json!({
+                "query_string": "*",
+                "count_by_time_bucket_size_millisecs": bucket_size,
+                "buffer_results_in_mongodb": buffer_results_in_mongodb,
+            }))?;
+            let config = SearchJobConfig::from(query_config);
+            let expected_aggregation = bucket_size.map(|size| AggregationConfig {
+                count_by_time_bucket_size: Some(size),
+                ..AggregationConfig::default()
+            });
+            assert_eq!(config.aggregation_config, expected_aggregation);
+            assert_eq!(
+                config.write_to_file, expected_write_to_file,
+                "bucket_size={bucket_size:?}, \
+                 buffer_results_in_mongodb={buffer_results_in_mongodb}"
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn submit_query_accepts_valid_bucket_sizes() -> anyhow::Result<()> {
+        let client = Client::new_with_closed_sql_pool().await;
+        for width in [
+            None,
+            Some(serde_json::Value::Null),
+            Some(serde_json::json!(1)),
+            Some(serde_json::json!(i64::from(u32::MAX) + 1)),
+            Some(serde_json::json!(i64::MAX)),
+        ] {
+            let mut body = serde_json::json!({"query_string": "*"});
+            if let Some(width) = width {
+                body["count_by_time_bucket_size_millisecs"] = width;
+            }
+            let config = serde_json::from_value::<QueryConfig>(body.clone())?;
+            let error = client
+                .submit_query(config)
+                .await
+                .expect_err("pool is closed");
+            assert!(
+                matches!(error, ClientError::Sql(sqlx::Error::PoolClosed)),
+                "{body}: {error}"
+            );
+        }
+        Ok(())
+    }
 
     #[test]
     fn parse_job_status_pending_not_in_defaults() {

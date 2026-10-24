@@ -70,6 +70,46 @@
               }
             }
           },
+          "400": {
+            "description": "The request body is not valid JSON or could not be read.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the configured size limit.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The Content-Type header is missing or is not a JSON media type.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results must be a positive integer when non-null, and count_by_time_bucket_size_millisecs must be a positive signed 64-bit integer when non-null.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "500": {
             "description": ""
           }
@@ -96,6 +136,16 @@
         "responses": {
           "200": {
             "description": "The cancellation request was submitted successfully."
+          },
+          "400": {
+            "description": "The query job ID is invalid.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "404": {
             "description": "No query job with the given ID was found."
@@ -153,6 +203,16 @@
                   "type": "string"
                 },
                 "example": "data: {\"timestamp\": 1633036800, \"message\": \"Example log message\"}\\n"
+              }
+            }
+          },
+          "400": {
+            "description": "The query job ID or query parameters are invalid.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -223,7 +283,14 @@
             }
           },
           "400": {
-            "description": "Invalid query parameters (e.g., time_range_begin_millisecs > time_range_end_millisecs, missing required fields)"
+            "description": "Invalid query parameters (e.g., time_range_begin_millisecs > time_range_end_millisecs, missing required fields)",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "500": {
             "description": ""
@@ -326,7 +393,8 @@
               "null"
             ],
             "format": "int64",
-            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`."
+            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`.",
+            "minimum": 1
           },
           "datasets": {
             "type": [
