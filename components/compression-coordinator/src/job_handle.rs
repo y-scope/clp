@@ -3,8 +3,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use clp_rust_utils::clp_config::package::config::Database;
+use clp_rust_utils::clp_config::package::config::ArchiveOutput;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::dataset::register_dataset;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -34,6 +35,12 @@ pub struct SpiderOption {
     pub max_poll_backoff: Duration,
 }
 
+/// Everything needed to register a compression job's dataset before its tasks are submitted.
+pub struct DatasetOption {
+    pub datasets_table: String,
+    pub archive_output: ArchiveOutput,
+}
+
 /// Handles the asynchronous submission of an S3 compression job and the retrieval of its result.
 ///
 /// # Type Parameters
@@ -41,7 +48,6 @@ pub struct SpiderOption {
 /// * `SubmitterType` - The type of the job submitter for Spider job submission.
 pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
     db_pool: MySqlPool,
-    db_config: Database,
     compression_job_id: CompressionJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
@@ -52,6 +58,7 @@ pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
     target_archive_size: u64,
 
     spider_option: Arc<SpiderOption>,
+    dataset_option: Arc<DatasetOption>,
 }
 
 impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterType> {
@@ -70,12 +77,12 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///   [`InputConfig::S3ObjectMetadataInputConfig`].
     pub fn new(
         db_pool: MySqlPool,
-        db_config: Database,
         compression_job_id: CompressionJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
         clp_io_config: ClpIoConfig,
         spider_option: Arc<SpiderOption>,
+        dataset_option: Arc<DatasetOption>,
     ) -> Result<Self, Error> {
         let input_config = clp_io_config.input;
         let InputConfig::S3ObjectMetadataInputConfig {
@@ -100,7 +107,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
 
         Ok(Self {
             db_pool,
-            db_config,
             compression_job_id,
             job_submitter,
             resource_group_id,
@@ -109,15 +115,16 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             dataset,
             target_archive_size: output_config.target_archive_size,
             spider_option,
+            dataset_option,
         })
     }
 
     /// Submits the compression job to Spider and drives it to completion.
     ///
-    /// This method prepares the compression tasks' inputs, ensures the dataset's metadata tables
-    /// exist, submits the job, persists the Spider job ID it was assigned, and then waits for the
-    /// job to reach a terminal state. On any failure, the compression job is marked as
-    /// [`CompressionJobStatus::Failed`] before the error is returned.
+    /// This method prepares the compression tasks' inputs, submits the job, persists the Spider
+    /// job ID it was assigned, and then waits for the job to reach a terminal state. On any
+    /// failure, the compression job is marked as [`CompressionJobStatus::Failed`] before the error
+    /// is returned.
     ///
     /// # Errors
     ///
@@ -170,17 +177,17 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// Returns an error if:
     ///
+    /// * Forwards [`Self::register_dataset`]'s return values on failure.
     /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
-    /// * Forwards [`Self::upsert_metadata_tables`]'s return values on failure.
     /// * Forwards [`S3CompressionJobSubmitter::submit_s3_compression_job`]'s return values on
     ///   failure.
     /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     async fn submit_and_wait(&self) -> Result<(), Error> {
+        self.register_dataset().await?;
+
         let input_sources = self.prepare_task_inputs().await?;
         let num_tasks = input_sources.len();
-
-        self.upsert_metadata_tables().await?;
 
         let spider_job_id = self
             .job_submitter
@@ -207,6 +214,33 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         );
 
         self.to_completion(spider_job_id).await
+    }
+
+    /// Registers the job's dataset in the CLP database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`register_dataset`]'s return values on failure.
+    /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
+    async fn register_dataset(&self) -> Result<(), Error> {
+        let archive_storage_path = self
+            .dataset_option
+            .archive_output
+            .dataset_archive_storage_directory(&self.dataset);
+        let mut tx = self.db_pool.begin().await?;
+        register_dataset(
+            &mut tx,
+            &self.dataset_option.datasets_table,
+            &archive_storage_path,
+            &self.dataset,
+        )
+        .await?;
+        tx.commit().await?;
+
+        Ok(())
     }
 
     /// Reports a compression job failure.
@@ -370,61 +404,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                 (input_source, execution_policy)
             })
             .collect())
-    }
-
-    /// Ensures that the required metadata tables exist for the configured dataset.
-    ///
-    /// This method creates the following tables in the CLP database if they do not already exist:
-    ///
-    /// * The archive metadata table.
-    /// * The column metadata table.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`Error::MetadataTableCreation`] if either table cannot be created.
-    async fn upsert_metadata_tables(&self) -> Result<(), Error> {
-        let archives_table = self.db_config.archives_table_name(&self.dataset);
-        let column_metadata_table = self.db_config.column_metadata_table_name(&self.dataset);
-
-        sqlx::query(&format!(
-            "CREATE TABLE IF NOT EXISTS `{archives_table}` (
-                `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
-                `id` VARCHAR(64) NOT NULL,
-                `begin_timestamp` BIGINT NOT NULL,
-                `end_timestamp` BIGINT NOT NULL,
-                `uncompressed_size` BIGINT NOT NULL,
-                `size` BIGINT NOT NULL,
-                `creator_id` VARCHAR(64) NOT NULL,
-                `creation_ix` INT NOT NULL,
-                KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
-                UNIQUE KEY `archive_id` (`id`) USING BTREE,
-                PRIMARY KEY (`pagination_id`)
-            )"
-        ))
-        .execute(&self.db_pool)
-        .await
-        .map_err(|source| Error::MetadataTableCreation {
-            table: archives_table,
-            source,
-        })?;
-
-        sqlx::query(&format!(
-            "CREATE TABLE IF NOT EXISTS `{column_metadata_table}` (
-                `name` VARCHAR(512) NOT NULL,
-                `type` TINYINT NOT NULL,
-                PRIMARY KEY (`name`, `type`)
-            )"
-        ))
-        .execute(&self.db_pool)
-        .await
-        .map_err(|source| Error::MetadataTableCreation {
-            table: column_metadata_table,
-            source,
-        })?;
-
-        Ok(())
     }
 
     /// Persists the Spider job ID and marks the compression job as running.

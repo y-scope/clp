@@ -21,8 +21,8 @@ namespace clp_s::indexer {
  * querying.
  *
  * Multiple archives related to the same topic can form a table that can be queried using a SQL
- * query engine. When indexing, a table name must be specified. This table is then used by the SQL
- * engine to resolve column metadata.
+ * query engine. When indexing, a dataset name must be specified. The dataset is then used by the
+ * SQL engine to resolve column metadata.
  */
 class IndexManager {
 public:
@@ -41,13 +41,9 @@ public:
     // Constructors
     /**
      * @param optional_db_config
-     * @param should_create_table
      * @throw OperationFailed if `optional_db_config` is invalid.
      */
-    IndexManager(
-            std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config,
-            bool should_create_table = false
-    );
+    explicit IndexManager(std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config);
 
     // Destructor
     ~IndexManager();
@@ -80,7 +76,6 @@ private:
 
     OutputType m_output_type{OutputType::Database};
     std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;
-    bool m_should_create_table{false};
     std::function<void(std::string&, NodeType)> m_field_update_callback;
 };
 }  // namespace clp_s::indexer

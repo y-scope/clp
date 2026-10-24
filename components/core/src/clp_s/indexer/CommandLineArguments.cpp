@@ -22,13 +22,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
     // Define output options
     po::options_description output_options("Output Options");
-    // clang-format off
-    output_options.add_options()(
-            "create-table",
-            po::bool_switch(&m_should_create_table),
-            "Create the column metadata table if it doesn't exist"
-    );
-    // clang-format on
     clp::GlobalMetadataDBConfig metadata_db_config{output_options};
 
     // Define visible options
