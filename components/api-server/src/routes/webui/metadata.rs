@@ -284,8 +284,11 @@ mod tests {
     use axum::extract::rejection::QueryRejection;
     use axum::http::Uri;
     use clp_rust_utils::dataset::DatasetName;
+    use serde::de::IntoDeserializer;
+    use serde::de::value::StrDeserializer;
 
     use super::TimeRangeParams;
+    use super::deserialize_datasets;
 
     fn extract_datasets(uri: &'static str) -> Result<Vec<DatasetName>, QueryRejection> {
         let Query(params) = Query::<TimeRangeParams>::try_from_uri(&Uri::from_static(uri))?;
@@ -322,13 +325,10 @@ mod tests {
         let parse_error = "invalid-name"
             .parse::<DatasetName>()
             .expect_err("name should be an invalid dataset name");
-        let result = extract_datasets("/metadata/time_range?datasets=logs,invalid-name");
-        assert!(
-            matches!(
-                &result,
-                Err(rejection) if rejection.body_text().contains(&parse_error.to_string())
-            ),
-            "unexpected result: {result:?}"
-        );
+        let deserializer: StrDeserializer<'_, serde::de::value::Error> =
+            "logs,invalid-name".into_deserializer();
+        let error = deserialize_datasets(deserializer)
+            .expect_err("an invalid dataset name should be rejected");
+        assert_eq!(error.to_string(), parse_error.to_string());
     }
 }
