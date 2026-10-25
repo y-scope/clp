@@ -3,9 +3,11 @@
 use anyhow::Context;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
+use const_format::formatcp;
 use spider_core::types::id::JobId;
 
 use crate::common::spider_task_executor_config;
@@ -40,6 +42,10 @@ pub(super) async fn commit(
     dataset: &DatasetName,
     archives: Vec<ArchiveMetadata>,
 ) -> anyhow::Result<()> {
+    const QUERY: &str = formatcp!(
+        "SELECT id, status FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE spider_id = ? FOR UPDATE"
+    );
+
     tracing::info!(
         spider_job_id = spider_job_id.get(),
         "CLP compression commit task started."
@@ -63,12 +69,11 @@ pub(super) async fn commit(
         .await
         .context("failed to begin the commit transaction")?;
 
-    let job: Option<(CompressionJobId, CompressionJobStatus)> =
-        sqlx::query_as("SELECT id, status FROM compression_jobs WHERE spider_id = ? FOR UPDATE")
-            .bind(spider_job_id.get())
-            .fetch_optional(&mut *tx)
-            .await
-            .context("failed to look up the CLP compression job")?;
+    let job: Option<(CompressionJobId, CompressionJobStatus)> = sqlx::query_as(QUERY)
+        .bind(spider_job_id.get())
+        .fetch_optional(&mut *tx)
+        .await
+        .context("failed to look up the CLP compression job")?;
     let Some((id, status)) = job else {
         anyhow::bail!(
             "no CLP compression job found for spider job {}",
@@ -183,19 +188,20 @@ async fn mark_job_succeeded(
 ) -> anyhow::Result<()> {
     // NOTE: `duration` (seconds) is derived from the DB clock so it stays consistent with the DB's
     // time.
-    let query_result = sqlx::query(
-        "UPDATE compression_jobs SET status = ?, uncompressed_size = ?, compressed_size = ?, \
-         duration = TIMESTAMPDIFF(MICROSECOND, start_time, CURRENT_TIMESTAMP(3)) / 1000000 WHERE \
-         id = ? AND status = ?",
-    )
-    .bind(CompressionJobStatus::Succeeded)
-    .bind(total_uncompressed_size)
-    .bind(total_compressed_size)
-    .bind(id)
-    .bind(CompressionJobStatus::Running)
-    .execute(&mut **tx)
-    .await
-    .context("failed to mark the CLP compression job succeeded")?;
+    const QUERY: &str = formatcp!(
+        "UPDATE {COMPRESSION_JOBS_TABLE_NAME} SET status = ?, uncompressed_size = ?, \
+         compressed_size = ?, duration = TIMESTAMPDIFF(MICROSECOND, start_time, \
+         CURRENT_TIMESTAMP(3)) / 1000000 WHERE id = ? AND status = ?"
+    );
+    let query_result = sqlx::query(QUERY)
+        .bind(CompressionJobStatus::Succeeded)
+        .bind(total_uncompressed_size)
+        .bind(total_compressed_size)
+        .bind(id)
+        .bind(CompressionJobStatus::Running)
+        .execute(&mut **tx)
+        .await
+        .context("failed to mark the CLP compression job succeeded")?;
 
     if query_result.rows_affected() != 1 {
         anyhow::bail!(
