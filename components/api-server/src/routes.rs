@@ -347,7 +347,15 @@ impl From<ClientError> for HandlerError {
             ClientError::QueryJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
             ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
             ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
-            _ => Self::InternalServer,
+            ClientError::Sql(_)
+            | ClientError::Mongo(_)
+            | ClientError::QueryNotSucceeded
+            | ClientError::Io(_)
+            | ClientError::MalformedData
+            | ClientError::TaskJoin(_)
+            | ClientError::Aws { .. }
+            | ClientError::InvalidQueryJobConfig(_)
+            | ClientError::Telemetry(_) => Self::InternalServer,
         }
     }
 }
@@ -459,7 +467,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn webui_routes_do_not_allow_unrelated_browser_origins() -> anyhow::Result<()> {
+    async fn cors_allows_any_origin_on_public_routes_but_not_on_webui_routes() -> anyhow::Result<()>
+    {
         let app = clp_s_app_with_lazy_clients().await;
 
         let public_response = app

@@ -709,6 +709,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::ClpIoConfig;
+    use clp_rust_utils::job_config::FsInputConfig;
     use clp_rust_utils::job_config::InputConfig;
     use clp_rust_utils::job_config::OutputConfig;
     use clp_rust_utils::job_config::S3InputConfig;
@@ -831,6 +832,22 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn clp_s_time_range_without_datasets_is_none() -> anyhow::Result<()> {
+        let config = Config {
+            package: Package {
+                storage_engine: StorageEngine::ClpS,
+            },
+            ..Config::default()
+        };
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect_lazy("mysql://localhost:1/clp-db")?;
+        let client = WebuiClient::new(config, sql_pool);
+        assert_eq!(client.get_time_range(&[]).await?, None);
+        Ok(())
+    }
+
     #[test]
     fn compression_metadata_keeps_display_fields_and_omits_storage_credentials()
     -> anyhow::Result<()> {
@@ -864,14 +881,12 @@ mod tests {
                 compression_level: 5,
             },
         };
-        let start_time = DateTime::from_timestamp(1_700_000_000, 0).expect("valid timestamp");
-        let update_time = DateTime::from_timestamp(1_700_000_060, 0).expect("valid timestamp");
         let row = CompressionMetadataRowProjection {
             id: 7,
             status: 2,
             status_msg: "done".to_owned(),
-            start_time: Some(start_time),
-            update_time,
+            start_time: Some(DateTime::from_timestamp(1_700_000_000, 0).expect("valid timestamp")),
+            update_time: DateTime::from_timestamp(1_700_000_060, 0).expect("valid timestamp"),
             duration: Some(60.0),
             uncompressed_size: 100,
             compressed_size: 10,
@@ -883,8 +898,14 @@ mod tests {
         assert_eq!(metadata.id, 7);
         assert_eq!(metadata.status, 2);
         assert_eq!(metadata.status_msg, "done");
-        assert_eq!(metadata.start_time, Some(start_time));
-        assert_eq!(metadata.update_time, update_time);
+        assert_eq!(
+            metadata.start_time,
+            Some(DateTime::from_timestamp(1_700_000_000, 0).expect("valid timestamp"))
+        );
+        assert_eq!(
+            metadata.update_time,
+            DateTime::from_timestamp(1_700_000_060, 0).expect("valid timestamp")
+        );
         assert_eq!(metadata.duration, Some(60.0));
         assert_eq!(metadata.uncompressed_size, 100);
         assert_eq!(metadata.compressed_size, 10);
@@ -944,18 +965,57 @@ mod tests {
     }
 
     #[test]
-    fn compression_metadata_display_fields_preserve_partial_filesystem_config() {
-        let config = serde_json::json!({
-            "input": {
-                "type": "fs",
-                "paths_to_compress": ["/mnt/logs/app.log"],
-                "path_prefix_to_remove": null
+    fn compression_metadata_keeps_filesystem_display_fields() -> anyhow::Result<()> {
+        let config = ClpIoConfig {
+            input: InputConfig::FsInputConfig {
+                config: FsInputConfig {
+                    dataset: "logs".parse()?,
+                    paths_to_compress: vec![non_empty("/mnt/logs/app.log")],
+                    path_prefix_to_remove: Some(non_empty("/mnt/logs")),
+                    timestamp_key: None,
+                    unstructured: true,
+                },
             },
-            "output": {"compression_level": 3}
-        });
+            output: OutputConfig {
+                target_archive_size: 1,
+                target_dictionaries_size: 2,
+                target_encoded_file_size: 3,
+                target_segment_size: 4,
+                compression_level: 5,
+            },
+        };
+        let row = CompressionMetadataRowProjection {
+            id: 7,
+            status: 0,
+            status_msg: String::new(),
+            start_time: None,
+            update_time: DateTime::from_timestamp(1_700_000_000, 0).expect("valid timestamp"),
+            duration: None,
+            uncompressed_size: 0,
+            compressed_size: 0,
+            clp_config: ZstdMsgpack::serialize(&config)?,
+        };
+
         assert_eq!(
-            select_compression_metadata_display_fields(config.clone()),
-            config
+            row.into_compression_metadata()?.clp_config,
+            serde_json::json!({
+                "input": {
+                    "type": "fs",
+                    "dataset": "logs",
+                    "paths_to_compress": ["/mnt/logs/app.log"],
+                    "path_prefix_to_remove": "/mnt/logs",
+                    "timestamp_key": null,
+                    "unstructured": true
+                },
+                "output": {
+                    "target_archive_size": 1,
+                    "target_dictionaries_size": 2,
+                    "target_encoded_file_size": 3,
+                    "target_segment_size": 4,
+                    "compression_level": 5
+                }
+            })
         );
+        Ok(())
     }
 }
