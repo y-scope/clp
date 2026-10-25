@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -452,8 +453,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         let num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyCompressionTasks(num_tasks))?;
         sqlx::query(formatcp!(
-            "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, `num_tasks` \
-             = ?, `start_time` = CURRENT_TIMESTAMP(3), `dispatch_time` = \
+            "UPDATE `{COMPRESSION_JOBS_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, \
+             `num_tasks` = ?, `start_time` = CURRENT_TIMESTAMP(3), `dispatch_time` = \
              COALESCE(`dispatch_time`, CURRENT_TIMESTAMP()) WHERE `id` = ?"
         ))
         .bind(spider_job_id.get())
@@ -543,7 +544,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
     async fn get_job_status(&self) -> Result<CompressionJobStatus, Error> {
         let job_status: CompressionJobStatus = sqlx::query_scalar(formatcp!(
-            "SELECT `status` FROM `{COMPRESSION_JOB_TABLE_NAME}` WHERE `id` = ?"
+            "SELECT `status` FROM `{COMPRESSION_JOBS_TABLE_NAME}` WHERE `id` = ?"
         ))
         .bind(self.compression_job_id)
         .fetch_one(&self.db_pool)
@@ -566,7 +567,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ) -> Result<(), Error> {
         let status_message = status_message.as_ref().map_or("", String::as_str);
         sqlx::query(formatcp!(
-            "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` \
+            "UPDATE `{COMPRESSION_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` \
              = ?"
         ))
         .bind(job_status)
@@ -579,7 +580,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     }
 }
 
-const COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 const INGESTED_S3_OBJECT_METADATA_TABLE_NAME: &str = "ingested_s3_object_metadata";
 
 /// A projection of the columns read from an ingested S3 object metadata row.

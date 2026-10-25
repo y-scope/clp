@@ -29,16 +29,23 @@ impl CompressionInputBuilder {
     ///
     /// # Returns
     ///
-    /// A newly created [`CompressionInputBuilder`] with an empty buffer.
-    #[must_use]
-    pub fn new(clp_io_config: &ClpIoConfig) -> Self {
+    /// A newly created [`CompressionInputBuilder`] with an empty buffer on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::UnsupportedInputConfig`] if `clp_io_config`'s input config is an
+    ///   [`InputConfig::FsInputConfig`].
+    pub fn new(clp_io_config: &ClpIoConfig) -> Result<Self, Error> {
         let target_archive_size = clp_io_config.output.target_archive_size;
         let s3_config = match &clp_io_config.input {
+            InputConfig::FsInputConfig { .. } => return Err(Error::UnsupportedInputConfig),
             InputConfig::S3InputConfig { config } => config.s3_config.clone(),
             InputConfig::S3ObjectMetadataInputConfig { config } => config.s3_config.clone(),
         };
 
-        Self::from_s3_config(s3_config, target_archive_size)
+        Ok(Self::from_s3_config(s3_config, target_archive_size))
     }
 
     /// Creates an empty builder from the S3 input settings and target archive size.
@@ -354,7 +361,7 @@ mod tests {
             },
         };
 
-        CompressionInputBuilder::new(&clp_io_config)
+        CompressionInputBuilder::new(&clp_io_config).expect("S3 input config should be supported")
     }
 
     fn add_object(

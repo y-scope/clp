@@ -7,16 +7,12 @@ use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::InputConfig;
-use clp_rust_utils::job_config::OutputConfig;
 use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
 use clp_rust_utils::job_config::ingestion::s3::BaseConfig;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 
 use crate::compression::BufferSubmitter;
 use crate::ingestion_job_manager::ClpCompressionState;
-
-/// The CLP compression job table name.
-pub const CLP_COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 
 /// A compression submitter that implements [`BufferSubmitter`] to submit compression jobs to CLP.
 pub struct CompressionJobSubmitter {
@@ -32,7 +28,7 @@ impl BufferSubmitter for CompressionJobSubmitter {
             InputConfig::S3ObjectMetadataInputConfig { config } => {
                 config.s3_object_metadata_ids = buffer.to_vec();
             }
-            InputConfig::S3InputConfig { .. } => {
+            InputConfig::FsInputConfig { .. } | InputConfig::S3InputConfig { .. } => {
                 unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
             }
         }
@@ -73,18 +69,11 @@ impl CompressionJobSubmitter {
             timestamp_key: ingestion_job_config.timestamp_key.clone(),
             unstructured: ingestion_job_config.unstructured,
         };
-        let output_config = OutputConfig {
-            target_archive_size: archive_output_config.target_archive_size,
-            target_dictionaries_size: archive_output_config.target_dictionaries_size,
-            target_encoded_file_size: archive_output_config.target_encoded_file_size,
-            target_segment_size: archive_output_config.target_segment_size,
-            compression_level: archive_output_config.compression_level,
-        };
         let io_config_template = ClpIoConfig {
             input: InputConfig::S3ObjectMetadataInputConfig {
                 config: s3_object_metadata_input_config,
             },
-            output: output_config,
+            output: archive_output_config.into(),
         };
         Self {
             state: clp_compression_state,
@@ -155,7 +144,7 @@ async fn submit_clp_compression_job_and_wait_for_completion(
     let ingestion_job_id = state.get_ingestion_job_id();
     let num_objects_submitted = match &io_config.input {
         InputConfig::S3ObjectMetadataInputConfig { config } => config.s3_object_metadata_ids.len(),
-        InputConfig::S3InputConfig { .. } => {
+        InputConfig::FsInputConfig { .. } | InputConfig::S3InputConfig { .. } => {
             unreachable!("log-ingestor compression only supports `S3ObjectMetadataInputConfig`")
         }
     };
