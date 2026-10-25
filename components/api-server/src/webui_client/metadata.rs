@@ -1,5 +1,7 @@
 //! Read-only metadata about the CLP package's datasets, archives, and jobs.
 
+use std::collections::HashSet;
+
 use chrono::DateTime;
 use chrono::Utc;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
@@ -15,6 +17,9 @@ use utoipa::ToSchema;
 
 use crate::error::ClientError;
 use crate::webui_client::WebuiClient;
+
+/// `MySQL` error number for "Table doesn't exist".
+const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
 /// Earliest and latest log entry timestamps across the selected datasets.
 #[derive(Debug, PartialEq, Eq, Serialize, ToSchema)]
@@ -53,7 +58,7 @@ pub struct QuerySpeed {
     /// Total uncompressed size of the archives the job scanned, in bytes.
     pub bytes: f64,
     /// Wall-clock duration the job ran, in seconds.
-    pub duration: f64,
+    pub duration: f32,
 }
 
 /// The metadata of a compression job, with the display fields of its config.
@@ -69,11 +74,11 @@ pub struct CompressionMetadata {
     /// Status message for the job.
     pub status_msg: String,
     /// Time the job started executing (RFC 3339). `null` if the job hasn't started.
-    pub start_time: Option<String>,
+    pub start_time: Option<DateTime<Utc>>,
     /// Time the job was last updated (RFC 3339).
-    pub update_time: String,
+    pub update_time: DateTime<Utc>,
     /// Wall-clock duration the job ran, in seconds. `null` if the job did not complete.
-    pub duration: Option<f64>,
+    pub duration: Option<f32>,
     /// Total uncompressed size of input files, in bytes.
     pub uncompressed_size: i64,
     /// Total compressed archive size, in bytes.
@@ -87,9 +92,11 @@ pub struct CompressionMetadata {
 /// [`CompressionMetadata::clp_config`].
 #[derive(Debug, ToSchema)]
 pub struct CompressionMetadataDisplayConfig {
-    /// The display fields of the config's `input` section.
+    /// The display fields of the config's `input` section. Empty if the stored config has no
+    /// `input` section, or if it isn't an object.
     pub input: CompressionMetadataDisplayInput,
-    /// The display fields of the config's `output` section.
+    /// The display fields of the config's `output` section. Empty if the stored config has no
+    /// `output` section, or if it isn't an object.
     pub output: CompressionMetadataDisplayOutput,
 }
 
@@ -132,9 +139,11 @@ pub struct CompressionMetadataDisplayOutput {
 impl WebuiClient {
     /// Fetches all dataset names from the datasets table.
     ///
+    /// The CLP storage engine has no datasets table, so no dataset names are returned for it.
+    ///
     /// # Returns
     ///
-    /// The dataset names, ordered by name, on success.
+    /// The dataset names, ordered by name, on success, or an empty list for the CLP storage engine.
     ///
     /// # Errors
     ///
@@ -142,6 +151,9 @@ impl WebuiClient {
     ///
     /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values on failure.
     pub async fn get_dataset_names(&self) -> Result<Vec<DatasetName>, ClientError> {
+        if self.config.package.storage_engine == StorageEngine::Clp {
+            return Ok(Vec::new());
+        }
         let table = self.config.database.datasets_table_name();
         let names = sqlx::query_scalar(&format!("SELECT name FROM `{table}` ORDER BY name"))
             .fetch_all(&self.sql_pool)
@@ -163,7 +175,11 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure.
+    /// * [`ClientError::DatasetNotFound`] if, for CLP-S, any of `datasets` doesn't exist. The first
+    ///   missing dataset in `datasets` is reported.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on any other failure.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values if looking up the missing
+    ///   dataset fails.
     pub async fn get_time_range(
         &self,
         datasets: &[DatasetName],
@@ -192,9 +208,13 @@ impl WebuiClient {
                 )
             }
         };
-        let row = sqlx::query_as::<_, TimeRangeRowProjection>(&sql)
+        let row = match sqlx::query_as::<_, TimeRangeRowProjection>(&sql)
             .fetch_one(&self.sql_pool)
-            .await?;
+            .await
+        {
+            Ok(row) => row,
+            Err(err) => return Err(self.resolve_dataset_query_error(datasets, err).await),
+        };
         Ok(row.into_time_range())
     }
 
@@ -210,7 +230,8 @@ impl WebuiClient {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::get_dataset_names`]'s return values on failure.
-    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure, including when
+    ///   the tables of a dataset that's being deleted no longer exist.
     pub async fn get_space_savings(&self) -> Result<SpaceSavings, ClientError> {
         let database = &self.config.database;
         let sql = match self.config.package.storage_engine {
@@ -259,7 +280,8 @@ impl WebuiClient {
     /// Returns an error if:
     ///
     /// * Forwards [`Self::get_dataset_names`]'s return values on failure.
-    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_one`]'s return values on failure, including when
+    ///   the tables of a dataset that's being deleted no longer exist.
     pub async fn get_ingestion_details(&self) -> Result<Option<IngestionDetails>, ClientError> {
         let database = &self.config.database;
         let sql = match self.config.package.storage_engine {
@@ -326,7 +348,11 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::QueryAs::fetch_optional`]'s return values on failure.
+    /// * [`ClientError::DatasetNotFound`] if, for CLP-S, any of `datasets` doesn't exist. The first
+    ///   missing dataset in `datasets` is reported.
+    /// * Forwards [`sqlx::query::QueryAs::fetch_optional`]'s return values on any other failure.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_all`]'s return values if looking up the missing
+    ///   dataset fails.
     pub async fn get_query_speed(
         &self,
         datasets: &[DatasetName],
@@ -356,10 +382,14 @@ impl WebuiClient {
              qj.id JOIN ({archives_subquery}) ca ON qt.archive_id = ca.id WHERE qj.id = ? GROUP \
              BY qj.id, qj.duration"
         );
-        let row = sqlx::query_as::<_, QuerySpeedRowProjection>(&sql)
+        let row = match sqlx::query_as::<_, QuerySpeedRowProjection>(&sql)
             .bind(query_job_id)
             .fetch_optional(&self.sql_pool)
-            .await?;
+            .await
+        {
+            Ok(row) => row,
+            Err(err) => return Err(self.resolve_dataset_query_error(datasets, err).await),
+        };
         Ok(row.and_then(QuerySpeedRowProjection::into_query_speed))
     }
 
@@ -383,8 +413,6 @@ impl WebuiClient {
         // `components/core/src/clp_s/SchemaTree.hpp`.
         const TIMESTAMP_NODE_TYPE: i8 = 14;
         const DEPRECATED_DATE_STRING_NODE_TYPE: i8 = 8;
-        // MySQL error number for "Table doesn't exist".
-        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
         let table_name = self.config.database.column_metadata_table_name(dataset);
         let names: Vec<String> = sqlx::query_scalar(&format!(
@@ -395,11 +423,7 @@ impl WebuiClient {
         .fetch_all(&self.sql_pool)
         .await
         .map_err(|err| {
-            if let sqlx::Error::Database(db_err) = &err
-                && let Some(mysql_err) =
-                    db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-                && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
-            {
+            if is_table_not_found(&err) {
                 return ClientError::DatasetNotFound(dataset.clone());
             }
             err.into()
@@ -421,7 +445,7 @@ impl WebuiClient {
     /// * [`ClientError::TaskJoin`] if the task decoding the rows panics.
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     /// * Forwards [`CompressionMetadataRowProjection::into_compression_metadata`]'s return values
-    ///   on failure.
+    ///   on failure, so the whole call fails if any of the jobs' stored configs can't be decoded.
     pub async fn get_compression_metadata(&self) -> Result<Vec<CompressionMetadata>, ClientError> {
         const QUERY_LIMIT: i64 = 1000;
 
@@ -439,6 +463,45 @@ impl WebuiClient {
                 .collect()
         })
         .await?
+    }
+
+    /// Converts the failure of a query over the given datasets' tables into a [`ClientError`].
+    ///
+    /// # Returns
+    ///
+    /// * [`ClientError::DatasetNotFound`] for the first of `datasets` that isn't in the datasets
+    ///   table, if `error` is a "table doesn't exist" error and the storage engine is CLP-S.
+    /// * The lookup's error, if looking up `datasets` in the datasets table fails.
+    /// * `error` otherwise, including when every one of `datasets` is in the datasets table.
+    async fn resolve_dataset_query_error(
+        &self,
+        datasets: &[DatasetName],
+        error: sqlx::Error,
+    ) -> ClientError {
+        if self.config.package.storage_engine != StorageEngine::ClpS
+            || datasets.is_empty()
+            || !is_table_not_found(&error)
+        {
+            return error.into();
+        }
+        let table = self.config.database.datasets_table_name();
+        let placeholders = vec!["?"; datasets.len()].join(", ");
+        let sql = format!("SELECT name FROM `{table}` WHERE name IN ({placeholders})");
+        let mut query = sqlx::query_scalar::<_, DatasetName>(&sql);
+        for dataset in datasets {
+            query = query.bind(dataset);
+        }
+        let existing: HashSet<DatasetName> = match query.fetch_all(&self.sql_pool).await {
+            Ok(names) => names.into_iter().collect(),
+            Err(lookup_error) => return lookup_error.into(),
+        };
+        datasets
+            .iter()
+            .find(|dataset| !existing.contains(*dataset))
+            .map_or_else(
+                || error.into(),
+                |dataset| ClientError::DatasetNotFound(dataset.clone()),
+            )
     }
 }
 
@@ -505,7 +568,7 @@ impl IngestionDetailsRowProjection {
 #[derive(Debug, sqlx::FromRow)]
 struct QuerySpeedRowProjection {
     bytes: f64,
-    duration: Option<f64>,
+    duration: Option<f32>,
 }
 
 impl QuerySpeedRowProjection {
@@ -533,7 +596,7 @@ struct CompressionMetadataRowProjection {
     status_msg: String,
     start_time: Option<DateTime<Utc>>,
     update_time: DateTime<Utc>,
-    duration: Option<f64>,
+    duration: Option<f32>,
     uncompressed_size: i64,
     compressed_size: i64,
     clp_config: Vec<u8>,
@@ -559,8 +622,8 @@ impl CompressionMetadataRowProjection {
             id: self.id,
             status: self.status,
             status_msg: self.status_msg,
-            start_time: self.start_time.map(|time| time.to_rfc3339()),
-            update_time: self.update_time.to_rfc3339(),
+            start_time: self.start_time,
+            update_time: self.update_time,
             duration: self.duration,
             uncompressed_size: self.uncompressed_size,
             compressed_size: self.compressed_size,
@@ -576,11 +639,13 @@ impl CompressionMetadataRowProjection {
 ///
 /// # Returns
 ///
-/// `config` with only the display fields of its `input` and `output` sections.
+/// An object with the `input` and `output` sections of `config`, each with only its display
+/// fields. A section that's missing from `config`, or isn't an object, is returned as an empty
+/// object.
 fn select_compression_metadata_display_fields(mut config: serde_json::Value) -> serde_json::Value {
     // Match the display fields in `ClpIoPartialConfigSchema`. Stored input configs also contain AWS
     // credentials, which must never be returned to the browser.
-    let input_fields = [
+    const INPUT_DISPLAY_FIELDS: &[&str] = &[
         "type",
         "dataset",
         "timestamp_key",
@@ -589,30 +654,39 @@ fn select_compression_metadata_display_fields(mut config: serde_json::Value) -> 
         "path_prefix_to_remove",
         "keys",
     ];
-    let output_fields = [
+    const OUTPUT_DISPLAY_FIELDS: &[&str] = &[
         "compression_level",
         "target_archive_size",
         "target_dictionaries_size",
         "target_encoded_file_size",
         "target_segment_size",
     ];
+
     let mut displayed = serde_json::Map::new();
     for (section, fields) in [
-        ("input", input_fields.as_slice()),
-        ("output", output_fields.as_slice()),
+        ("input", INPUT_DISPLAY_FIELDS),
+        ("output", OUTPUT_DISPLAY_FIELDS),
     ] {
-        if let Some(values) = config
+        let mut values = config
             .get_mut(section)
             .and_then(serde_json::Value::as_object_mut)
-        {
-            values.retain(|name, _| fields.contains(&name.as_str()));
-            displayed.insert(
-                section.to_owned(),
-                serde_json::Value::Object(std::mem::take(values)),
-            );
-        }
+            .map_or_else(serde_json::Map::new, std::mem::take);
+        values.retain(|name, _| fields.contains(&name.as_str()));
+        displayed.insert(section.to_owned(), serde_json::Value::Object(values));
     }
     serde_json::Value::Object(displayed)
+}
+
+/// # Returns
+///
+/// Whether `error` is a `MySQL` "table doesn't exist" error.
+fn is_table_not_found(error: &sqlx::Error) -> bool {
+    if let sqlx::Error::Database(db_err) = error
+        && let Some(mysql_err) = db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+    {
+        return mysql_err.number() == MYSQL_TABLE_NOT_FOUND;
+    }
+    false
 }
 
 /// Combines `SELECT` statements with `UNION ALL`.
@@ -633,6 +707,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::Config;
     use clp_rust_utils::clp_config::package::config::Package;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::ClpIoConfig;
     use clp_rust_utils::job_config::InputConfig;
     use clp_rust_utils::job_config::OutputConfig;
@@ -725,6 +800,22 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn clp_dataset_names_are_empty() -> anyhow::Result<()> {
+        let config = Config {
+            package: Package {
+                storage_engine: StorageEngine::Clp,
+            },
+            ..Config::default()
+        };
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect_lazy("mysql://localhost:1/clp-db")?;
+        let client = WebuiClient::new(config, sql_pool);
+        assert_eq!(client.get_dataset_names().await?, Vec::<DatasetName>::new());
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn clp_s_query_speed_without_datasets_is_none() -> anyhow::Result<()> {
         let config = Config {
             package: Package {
@@ -792,8 +883,8 @@ mod tests {
         assert_eq!(metadata.id, 7);
         assert_eq!(metadata.status, 2);
         assert_eq!(metadata.status_msg, "done");
-        assert_eq!(metadata.start_time, Some(start_time.to_rfc3339()));
-        assert_eq!(metadata.update_time, update_time.to_rfc3339());
+        assert_eq!(metadata.start_time, Some(start_time));
+        assert_eq!(metadata.update_time, update_time);
         assert_eq!(metadata.duration, Some(60.0));
         assert_eq!(metadata.uncompressed_size, 100);
         assert_eq!(metadata.compressed_size, 10);
@@ -820,17 +911,24 @@ mod tests {
     }
 
     #[test]
-    fn compression_metadata_display_fields_omit_missing_sections_and_keep_empty_ones() {
+    fn compression_metadata_display_fields_default_missing_or_non_object_sections_to_empty() {
         let output = serde_json::json!({"compression_level": 3});
         for (config, expected) in [
-            (serde_json::json!({}), serde_json::json!({})),
+            (
+                serde_json::json!({}),
+                serde_json::json!({"input": {}, "output": {}}),
+            ),
             (
                 serde_json::json!({"output": output}),
-                serde_json::json!({"output": output}),
+                serde_json::json!({"input": {}, "output": output}),
             ),
             (
                 serde_json::json!({"input": null, "output": output}),
-                serde_json::json!({"output": output}),
+                serde_json::json!({"input": {}, "output": output}),
+            ),
+            (
+                serde_json::json!({"input": {"type": "fs"}, "output": [3]}),
+                serde_json::json!({"input": {"type": "fs"}, "output": {}}),
             ),
             (
                 serde_json::json!({"input": {"bucket": "the-bucket"}, "output": {}}),

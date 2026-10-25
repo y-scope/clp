@@ -44,6 +44,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
 /// Query parameters for the time range endpoint.
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+#[serde(deny_unknown_fields)]
 struct TimeRangeParams {
     /// Comma-separated list of dataset names. For the CLP storage engine, the names are validated
     /// but otherwise ignored.
@@ -55,6 +56,7 @@ struct TimeRangeParams {
 /// Query parameters for the query speed endpoint.
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
+#[serde(deny_unknown_fields)]
 struct QuerySpeedParams {
     /// Comma-separated list of dataset names. For the CLP storage engine, the names are validated
     /// but otherwise ignored.
@@ -84,7 +86,8 @@ struct TimestampColumnNamesPath {
 #[utoipa::path(
     get,
     path = "/metadata/datasets",
-    description = "Gets the names of all datasets.",
+    description = "Gets the names of all datasets. Returns an empty list for the CLP storage \
+        engine, which has no datasets.",
     responses(
         (status = OK, body = Vec<String>),
         (status = INTERNAL_SERVER_ERROR)
@@ -106,7 +109,7 @@ async fn datasets(
     description = "Gets the earliest and latest log entry timestamps across the given datasets. \
         For the CLP storage engine, the dataset names are validated but otherwise ignored. Returns \
         `null` when the datasets have no archives, including when no datasets are given for \
-        CLP-S.",
+        CLP-S. Returns 404 when any of the datasets doesn't exist for CLP-S.",
     params(TimeRangeParams),
     responses(
         (
@@ -115,7 +118,8 @@ async fn datasets(
             description = "The time range, or `null` when the datasets have no archives, \
                 including when no datasets are given for CLP-S."
         ),
-        (status = BAD_REQUEST, description = "Invalid dataset name"),
+        (status = BAD_REQUEST, description = "Invalid dataset name, or unknown query parameter"),
+        (status = NOT_FOUND, description = "Dataset not found (CLP-S only)"),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -177,7 +181,7 @@ async fn ingestion_details(
         query job across the given datasets. For the CLP storage engine, the dataset names are \
         validated but otherwise ignored. Returns `null` when the job doesn't exist, the job has no \
         tasks over the datasets' archives, the job hasn't finished yet, or no datasets are given \
-        for CLP-S.",
+        for CLP-S. Returns 404 when any of the datasets doesn't exist for CLP-S.",
     params(QuerySpeedParams),
     responses(
         (
@@ -189,8 +193,10 @@ async fn ingestion_details(
         ),
         (
             status = BAD_REQUEST,
-            description = "Invalid dataset name, or missing or malformed `query_job_id`"
+            description = "Invalid dataset name, missing or malformed `query_job_id`, or unknown \
+                query parameter"
         ),
+        (status = NOT_FOUND, description = "Dataset not found (CLP-S only)"),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -232,7 +238,8 @@ async fn timestamp_column_names(
     get,
     path = "/metadata/compression_jobs",
     description = "Gets the metadata of the 1000 most recent compression jobs (most recent first), \
-        with the display fields of each job's config.",
+        with the display fields of each job's config. Returns 500 if any of the jobs' stored \
+        configs can't be decoded.",
     responses(
         (status = OK, body = Vec<CompressionMetadata>),
         (status = INTERNAL_SERVER_ERROR)
