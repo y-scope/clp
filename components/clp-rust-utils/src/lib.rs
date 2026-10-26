@@ -3,6 +3,7 @@ pub mod clp_config;
 pub mod database;
 pub mod dataset;
 mod error;
+pub mod fs;
 pub mod job_config;
 pub mod logging;
 pub mod s3;
