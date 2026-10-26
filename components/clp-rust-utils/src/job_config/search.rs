@@ -36,11 +36,6 @@ pub struct NetworkOutput {
     pub session_token: SessionToken,
 }
 
-/// Mirror of `job_orchestration.scheduler.job_config.SearchJobConfig`. Must be kept in sync.
-///
-/// # NOTE
-///
-/// * `network_output` replaces the Python config's `network_address`.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
