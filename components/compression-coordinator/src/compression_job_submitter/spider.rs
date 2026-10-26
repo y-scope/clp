@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::S3InputSource;
@@ -43,7 +44,7 @@ impl S3CompressionJobSubmitter for SpiderClient {
         compression_job_id: CompressionJobId,
         resource_group_id: ResourceGroupId,
         clp_s_option: ClpSCompressionOption,
-        dataset: Option<String>,
+        dataset: DatasetName,
         input_sources: Vec<(S3InputSource, ExecutionPolicy)>,
         commit_task_execution_policy: ExecutionPolicy,
     ) -> Result<JobId, Error> {
@@ -76,7 +77,7 @@ impl S3CompressionJobSubmitter for SpiderClient {
                         "ClpSCompressionOption",
                     )?),
                     DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                        "Option<String>",
+                        "DatasetName",
                     )?),
                     DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
                         "S3InputSource",

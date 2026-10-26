@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::clp_config::AwsAuthentication;
+use crate::dataset::DatasetName;
 use crate::types::ArchiveId;
 
 /// `clp-s` tuning and engine options for a compression job.
@@ -29,7 +30,7 @@ pub struct S3InputSource {
 /// Output of a compression task.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CompressionTaskOutput {
-    pub dataset: Option<String>,
+    pub dataset: DatasetName,
     pub archives: Vec<ArchiveMetadata>,
 }
 

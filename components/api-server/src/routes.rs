@@ -8,6 +8,7 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::dataset::DatasetName;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -129,9 +130,9 @@ async fn query(
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
     tracing::info!("Submitting query: {:?}", query_config);
-    let search_job_id = match client.submit_query(query_config).await {
+    let query_job_id = match client.submit_query(query_config).await {
         Ok(id) => {
-            tracing::info!("Submitted query with search job ID: {}", id);
+            tracing::info!("Submitted query job ID: {}", id);
             id
         }
         Err(err) => {
@@ -139,7 +140,7 @@ async fn query(
             return Err(err.into());
         }
     };
-    let uri = format!("query_results/{search_job_id}");
+    let uri = format!("query_results/{query_job_id}");
     Ok(Json(QueryResultsUri {
         query_results_uri: uri,
     }))
@@ -172,7 +173,7 @@ struct QueryResultsParams {
 
 #[utoipa::path(
     get,
-    path = "/query_results/{search_job_id}",
+    path = "/query_results/{query_job_id}",
     description = "Streams the results of a previously submitted query as Server-Sent Events \
         (SSE).",
     params(QueryResultsParams),
@@ -190,25 +191,25 @@ struct QueryResultsParams {
 )]
 async fn query_results(
     State(client): State<Client>,
-    Path(search_job_id): Path<u64>,
+    Path(query_job_id): Path<u64>,
     Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
-    tracing::info!("Fetching results for search job ID: {}", search_job_id);
+    tracing::info!("Fetching results for query job ID: {}", query_job_id);
     let results_stream = match client
-        .fetch_results(search_job_id, params.raw_docs, params.sorted)
+        .fetch_results(query_job_id, params.raw_docs, params.sorted)
         .await
     {
         Ok(stream) => {
             tracing::info!(
-                "Successfully initiated result stream for search job ID {}",
-                search_job_id
+                "Successfully initiated result stream for query job ID {}",
+                query_job_id
             );
             stream
         }
         Err(err) => {
             tracing::error!(
-                "Failed to fetch results for search job ID {}: {:?}",
-                search_job_id,
+                "Failed to fetch results for query job ID {}: {:?}",
+                query_job_id,
                 err
             );
             return Err(err.into());
@@ -228,7 +229,7 @@ async fn query_results(
 
 #[utoipa::path(
     delete,
-    path = "/query/{search_job_id}",
+    path = "/query/{query_job_id}",
     description = "Cancels a previously submitted query job.",
     responses(
         (
@@ -237,38 +238,50 @@ async fn query_results(
         ),
         (
             status = NOT_FOUND,
-            description = "No cancellable query job with the given ID was found."
+            description = "No query job with the given ID was found."
+        ),
+        (
+            status = CONFLICT,
+            description = "The query job with the given ID has terminated without being cancelled."
         ),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
 async fn cancel_query(
     State(client): State<Client>,
-    Path(search_job_id): Path<u64>,
+    Path(query_job_id): Path<u64>,
 ) -> Result<StatusCode, HandlerError> {
-    tracing::info!("Cancelling search job ID: {}", search_job_id);
-    match client.cancel_search_job(search_job_id).await {
+    tracing::info!("Cancelling query job ID: {}", query_job_id);
+    match client.cancel_query_job(query_job_id).await {
         Ok(()) => {
             tracing::info!(
-                "Successfully submitted cancellation request for search job ID: {}",
-                search_job_id
+                "Successfully submitted cancellation request for query job ID: {}",
+                query_job_id
             );
             Ok(StatusCode::OK)
         }
         Err(err) => {
-            tracing::error!(
-                "Failed to cancel search job ID {}: {:?}",
-                search_job_id,
-                err
-            );
+            tracing::error!("Failed to cancel query job ID {}: {:?}", query_job_id, err);
             Err(err.into())
         }
     }
 }
 
+/// Path parameters for the timestamp column names endpoint.
+///
+/// # NOTE
+///
+/// * [`DatasetName`] deserializes through `Option<String>`, and axum's top-level path deserializer
+///   doesn't support optional values, so extracting `Path<DatasetName>` directly fails for every
+///   request. Deserializing the dataset name as a struct field avoids this.
+#[derive(Deserialize)]
+struct TimestampColumnNamesPath {
+    dataset_name: DatasetName,
+}
+
 async fn get_timestamp_column_names(
     State(client): State<Client>,
-    Path(dataset_name): Path<String>,
+    Path(TimestampColumnNamesPath { dataset_name }): Path<TimestampColumnNamesPath>,
 ) -> Result<Json<Vec<String>>, HandlerError> {
     let names = client
         .get_timestamp_column_names(&dataset_name)
@@ -326,6 +339,8 @@ enum HandlerError {
     InternalServer,
     #[error("Not found")]
     NotFound,
+    #[error("Conflict")]
+    Conflict,
     #[error("Bad request: {0}")]
     BadRequest(String),
 }
@@ -339,10 +354,9 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::SearchJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
-            ClientError::InvalidDatasetName | ClientError::InvalidInput(_) => {
-                Self::BadRequest(format!("{err}"))
-            }
+            ClientError::QueryJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
+            ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
             _ => Self::InternalServer,
         }
     }
@@ -353,6 +367,7 @@ impl IntoResponse for HandlerError {
     fn into_response(self) -> axum::response::Response {
         match self {
             Self::NotFound => StatusCode::NOT_FOUND.into_response(),
+            Self::Conflict => StatusCode::CONFLICT.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
         }
@@ -362,18 +377,28 @@ impl IntoResponse for HandlerError {
 #[cfg(test)]
 mod tests {
     use axum::body::Body;
+    use axum::http::Method;
     use axum::http::Request;
     use axum::http::StatusCode;
+    use axum::routing::delete;
     use axum::routing::get;
+    use clp_rust_utils::clp_config::package::config::Config;
+    use clp_rust_utils::job_config::QueryJobStatus;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     use super::*;
+    use crate::client::Cancellability;
+
+    #[derive(Deserialize)]
+    struct JobStatusParams {
+        status: QueryJobStatus,
+    }
 
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
     /// status integer codes on success. No real database is needed.
-    fn test_app() -> axum::Router {
+    fn compression_usage_test_app() -> axum::Router {
         axum::Router::new().route(
             "/usage/compression",
             get(|Query(params): Query<CompressionUsageParams>| async move {
@@ -381,6 +406,27 @@ mod tests {
                 let codes: Vec<i32> = validated.job_statuses.into_iter().map(i32::from).collect();
                 Ok::<_, HandlerError>(axum::Json(codes))
             }),
+        )
+    }
+
+    /// Builds a minimal Axum app that resolves query job cancellation requests via
+    /// [`Cancellability::from_status`] for the job status given in the query params, and returns
+    /// [`StatusCode::OK`] on success. No real database is needed.
+    fn cancel_query_test_app() -> axum::Router {
+        axum::Router::new().route(
+            "/query/{query_job_id}",
+            delete(
+                |Path(query_job_id): Path<u64>, Query(params): Query<JobStatusParams>| async move {
+                    match Cancellability::from_status(params.status) {
+                        Cancellability::Cancellable | Cancellability::CancellationRequested => {
+                            Ok(StatusCode::OK)
+                        }
+                        Cancellability::NotCancellable => Err(HandlerError::from(
+                            ClientError::QueryJobAlreadyTerminated(query_job_id),
+                        )),
+                    }
+                },
+            ),
         )
     }
 
@@ -395,8 +441,30 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn reject_begin_greater_than_end() {
-        let app = test_app();
+    async fn timestamp_column_names_route_rejects_invalid_dataset_name() -> anyhow::Result<()> {
+        let app = from_client(Client::connect_lazy(Config::default()).await?)?;
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/column_metadata/bad-name/timestamp")
+                    .body(Body::empty())?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = get_body(response).await;
+        let parse_error = "bad-name"
+            .parse::<DatasetName>()
+            .expect_err("name should be an invalid dataset name");
+        assert!(
+            body.contains(&parse_error.to_string()),
+            "unexpected body: {body}"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reject_begin_greater_than_end() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -404,19 +472,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=200&\
                          time_range_end_millisecs=100",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(body.contains("time_range_begin_millisecs must be <= time_range_end_millisecs"));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_unknown_job_status() {
-        let app = test_app();
+    async fn reject_unknown_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -424,19 +491,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=UNKNOWN",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(body.contains("Unknown job_status: UNKNOWN"));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_lowercase_job_status() {
-        let app = test_app();
+    async fn accept_lowercase_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -444,19 +510,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=succeeded",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2]"); // succeeded → 2
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_valid_params_with_defaults() {
-        let app = test_app();
+    async fn accept_valid_params_with_defaults() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -464,19 +529,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2,3,4]"); // SUCCEEDED, FAILED, KILLED
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_comma_separated_job_status() {
-        let app = test_app();
+    async fn accept_comma_separated_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -484,19 +548,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=SUCCEEDED,RUNNING",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2,1]"); // SUCCEEDED, RUNNING
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_spaces_around_commas() {
-        let app = test_app();
+    async fn accept_spaces_around_commas() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -504,19 +567,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=SUCCEEDED%2C+FAILED",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2,3]"); // SUCCEEDED, FAILED
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_trailing_comma() {
-        let app = test_app();
+    async fn accept_trailing_comma() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -524,19 +586,18 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=SUCCEEDED,",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[2]"); // trailing comma ignored
+        Ok(())
     }
 
     #[tokio::test]
-    async fn accept_single_job_status() {
-        let app = test_app();
+    async fn accept_single_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -544,39 +605,37 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=KILLED",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
         assert_eq!(body, "[4]");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_missing_time_range_begin_millisecs() {
-        let app = test_app();
+    async fn reject_missing_time_range_begin_millisecs() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
                     .uri("/usage/compression?time_range_end_millisecs=100")
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("time_range_begin_millisecs") || body.contains("deserialize"),
             "expected error about missing time_range_begin_millisecs, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_empty_job_status() {
-        let app = test_app();
+    async fn reject_empty_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -584,22 +643,21 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("at least one valid status"),
             "expected error about empty job_status, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_zero_limit() {
-        let app = test_app();
+    async fn reject_zero_limit() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -607,22 +665,21 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&limit=0",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("limit must be > 0"),
             "expected error about limit, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_negative_limit() {
-        let app = test_app();
+    async fn reject_negative_limit() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -630,22 +687,21 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&limit=-1",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("limit must be > 0"),
             "expected error about limit, got: {body}"
         );
+        Ok(())
     }
 
     #[tokio::test]
-    async fn reject_duplicate_job_status() {
-        let app = test_app();
+    async fn reject_duplicate_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
         let response = app
             .oneshot(
                 Request::builder()
@@ -653,16 +709,63 @@ mod tests {
                         "/usage/compression?time_range_begin_millisecs=0&\
                          time_range_end_millisecs=100&job_status=SUCCEEDED,SUCCEEDED",
                     )
-                    .body(Body::empty())
-                    .unwrap(),
+                    .body(Body::empty())?,
             )
-            .await
-            .unwrap();
+            .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         let body = get_body(response).await;
         assert!(
             body.contains("Duplicate job_status"),
             "expected error about duplicate job_status, got: {body}"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cancel_query_returns_conflict_if_job_terminated() -> anyhow::Result<()> {
+        for status in ["Succeeded", "Failed", "Killed"] {
+            let response = cancel_query_test_app()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::DELETE)
+                        .uri(format!("/query/1?status={status}"))
+                        .body(Body::empty())?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::CONFLICT, "status: {status}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cancel_query_returns_ok_if_cancellation_already_requested() -> anyhow::Result<()> {
+        for status in ["CancelRequested", "Cancelling", "Cancelled"] {
+            let response = cancel_query_test_app()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::DELETE)
+                        .uri(format!("/query/1?status={status}"))
+                        .body(Body::empty())?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::OK, "status: {status}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cancel_query_returns_ok_if_job_pending_or_running() -> anyhow::Result<()> {
+        for status in ["Pending", "Running"] {
+            let response = cancel_query_test_app()
+                .oneshot(
+                    Request::builder()
+                        .method(Method::DELETE)
+                        .uri(format!("/query/1?status={status}"))
+                        .body(Body::empty())?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::OK, "status: {status}");
+        }
+        Ok(())
     }
 }
