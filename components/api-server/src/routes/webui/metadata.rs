@@ -238,8 +238,9 @@ async fn timestamp_column_names(
     get,
     path = "/metadata/compression_jobs",
     description = "Gets the metadata of the 1000 most recent compression jobs (most recent first), \
-        with the display fields of each job's config. Returns 500 if any of the jobs' stored \
-        configs can't be decoded.",
+        with the display fields of each job's config. Display fields stored as `null` are \
+        omitted. Returns 500 if any of the jobs' stored configs can't be decoded, including when \
+        the config, one of its sections, or one of its display fields has an unexpected type.",
     responses(
         (status = OK, body = Vec<CompressionMetadata>),
         (status = INTERNAL_SERVER_ERROR)

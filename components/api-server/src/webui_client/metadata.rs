@@ -12,14 +12,12 @@ use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QUERY_TASKS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::serde::ZstdMsgpack;
+use serde::Deserialize;
 use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::error::ClientError;
 use crate::webui_client::WebuiClient;
-
-/// `MySQL` error number for "Table doesn't exist".
-const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
 
 /// Earliest and latest log entry timestamps across the selected datasets.
 #[derive(Debug, PartialEq, Eq, Serialize, ToSchema)]
@@ -83,56 +81,78 @@ pub struct CompressionMetadata {
     pub uncompressed_size: i64,
     /// Total compressed archive size, in bytes.
     pub compressed_size: i64,
-    /// The display fields of the job's stored config. Storage credentials are omitted.
-    #[schema(value_type = CompressionMetadataDisplayConfig)]
-    pub clp_config: serde_json::Value,
+    /// The display fields of the job's stored config. All other fields, including storage
+    /// credentials, are dropped.
+    pub clp_config: CompressionMetadataDisplayConfig,
 }
 
-/// The `OpenAPI` schema of the display subset of a stored compression job config, as returned in
+/// The display subset of a stored compression job config, as returned in
 /// [`CompressionMetadata::clp_config`].
-#[derive(Debug, ToSchema)]
+///
+/// Decoding a stored config into this type keeps only the display fields: all other fields,
+/// including storage credentials, are dropped.
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct CompressionMetadataDisplayConfig {
     /// The display fields of the config's `input` section. Empty if the stored config has no
-    /// `input` section, or if it isn't an object.
+    /// `input` section.
+    #[serde(default)]
+    #[schema(required = true)]
     pub input: CompressionMetadataDisplayInput,
     /// The display fields of the config's `output` section. Empty if the stored config has no
-    /// `output` section, or if it isn't an object.
+    /// `output` section.
+    #[serde(default)]
+    #[schema(required = true)]
     pub output: CompressionMetadataDisplayOutput,
 }
 
-/// The `OpenAPI` schema of the display fields of a stored config's `input` section. Older
-/// compression jobs may have stored only some of them.
-#[derive(Debug, ToSchema)]
+/// The display fields of a stored config's `input` section. Older compression jobs may have stored
+/// only some of them, and a field stored as `null` is omitted.
+#[derive(Debug, Default, Deserialize, Serialize, ToSchema)]
 pub struct CompressionMetadataDisplayInput {
     /// The input type (e.g., `fs` or `s3`).
+    // The `WebUI`'s `ClpIoPartialConfigSchema` accepts a missing key but rejects `null` for most
+    // display fields, so every display field here and in `CompressionMetadataDisplayOutput` omits
+    // `None` instead of serializing it as `null`.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub r#type: Option<String>,
     /// The dataset the logs were compressed into.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dataset: Option<String>,
     /// The filesystem paths to compress.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub paths_to_compress: Option<Vec<String>>,
     /// The prefix removed from the compressed file paths.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub path_prefix_to_remove: Option<String>,
     /// The S3 object keys to compress.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub keys: Option<Vec<String>>,
     /// The key of the log events' timestamp field.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamp_key: Option<String>,
     /// Whether the logs are unstructured.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub unstructured: Option<bool>,
 }
 
-/// The `OpenAPI` schema of the display fields of a stored config's `output` section. Older
-/// compression jobs may have stored only some of them.
-#[derive(Debug, ToSchema)]
+/// The display fields of a stored config's `output` section. Older compression jobs may have
+/// stored only some of them, and a field stored as `null` is omitted.
+#[derive(Debug, Default, Deserialize, Serialize, ToSchema)]
 pub struct CompressionMetadataDisplayOutput {
     /// The compression level.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub compression_level: Option<u8>,
     /// The target archive size, in bytes.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target_archive_size: Option<u64>,
     /// The target dictionaries size, in bytes.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target_dictionaries_size: Option<u64>,
     /// The target encoded file size, in bytes.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target_encoded_file_size: Option<u64>,
     /// The target segment size, in bytes.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target_segment_size: Option<u64>,
 }
 
@@ -423,7 +443,7 @@ impl WebuiClient {
         .fetch_all(&self.sql_pool)
         .await
         .map_err(|err| {
-            if is_table_not_found(&err) {
+            if Self::is_table_not_found(&err) {
                 return ClientError::DatasetNotFound(dataset.clone());
             }
             err.into()
@@ -445,7 +465,8 @@ impl WebuiClient {
     /// * [`ClientError::TaskJoin`] if the task decoding the rows panics.
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     /// * Forwards [`CompressionMetadataRowProjection::into_compression_metadata`]'s return values
-    ///   on failure, so the whole call fails if any of the jobs' stored configs can't be decoded.
+    ///   on failure, so the whole call fails if any of the jobs' stored configs can't be decoded
+    ///   into a [`CompressionMetadataDisplayConfig`].
     pub async fn get_compression_metadata(&self) -> Result<Vec<CompressionMetadata>, ClientError> {
         const QUERY_LIMIT: i64 = 1000;
 
@@ -480,7 +501,7 @@ impl WebuiClient {
     ) -> ClientError {
         if self.config.package.storage_engine != StorageEngine::ClpS
             || datasets.is_empty()
-            || !is_table_not_found(&error)
+            || !Self::is_table_not_found(&error)
         {
             return error.into();
         }
@@ -511,6 +532,21 @@ impl WebuiClient {
     /// The combined statement.
     fn union_all(selects: impl Iterator<Item = String>) -> String {
         selects.collect::<Vec<_>>().join("\nUNION ALL\n")
+    }
+
+    /// # Returns
+    ///
+    /// Whether `error` is a `MySQL` "table doesn't exist" error.
+    fn is_table_not_found(error: &sqlx::Error) -> bool {
+        // MySQL error number for "Table doesn't exist".
+        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
+
+        if let sqlx::Error::Database(db_err) = error
+            && let Some(mysql_err) = db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+        {
+            return mysql_err.number() == MYSQL_TABLE_NOT_FOUND;
+        }
+        false
     }
 }
 
@@ -612,7 +648,7 @@ struct CompressionMetadataRowProjection {
 }
 
 impl CompressionMetadataRowProjection {
-    /// Converts the projection into a [`CompressionMetadata`], keeping only the display fields of
+    /// Converts the projection into a [`CompressionMetadata`], decoding only the display fields of
     /// the job's config.
     ///
     /// # Returns
@@ -623,10 +659,10 @@ impl CompressionMetadataRowProjection {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`ZstdMsgpack::deserialize`]'s return values on failure.
+    /// * Forwards [`ZstdMsgpack::deserialize`]'s return values on failure, including when the
+    ///   stored config, one of its sections, or one of its display fields has an unexpected type.
     fn into_compression_metadata(self) -> Result<CompressionMetadata, ClientError> {
-        let clp_config =
-            select_compression_metadata_display_fields(ZstdMsgpack::deserialize(&self.clp_config)?);
+        let clp_config = ZstdMsgpack::deserialize(&self.clp_config)?;
         Ok(CompressionMetadata {
             id: self.id,
             status: self.status,
@@ -639,63 +675,6 @@ impl CompressionMetadataRowProjection {
             clp_config,
         })
     }
-}
-
-/// Selects the display fields of a stored compression job config.
-///
-/// The selected fields must be kept in sync with [`CompressionMetadataDisplayInput`] and
-/// [`CompressionMetadataDisplayOutput`].
-///
-/// # Returns
-///
-/// An object with the `input` and `output` sections of `config`, each with only its display
-/// fields. A section that's missing from `config`, or isn't an object, is returned as an empty
-/// object.
-fn select_compression_metadata_display_fields(mut config: serde_json::Value) -> serde_json::Value {
-    // Match the display fields in `ClpIoPartialConfigSchema`. Stored input configs also contain AWS
-    // credentials, which must never be returned to the browser.
-    const INPUT_DISPLAY_FIELDS: &[&str] = &[
-        "type",
-        "dataset",
-        "timestamp_key",
-        "unstructured",
-        "paths_to_compress",
-        "path_prefix_to_remove",
-        "keys",
-    ];
-    const OUTPUT_DISPLAY_FIELDS: &[&str] = &[
-        "compression_level",
-        "target_archive_size",
-        "target_dictionaries_size",
-        "target_encoded_file_size",
-        "target_segment_size",
-    ];
-
-    let mut displayed = serde_json::Map::new();
-    for (section, fields) in [
-        ("input", INPUT_DISPLAY_FIELDS),
-        ("output", OUTPUT_DISPLAY_FIELDS),
-    ] {
-        let mut values = config
-            .get_mut(section)
-            .and_then(serde_json::Value::as_object_mut)
-            .map_or_else(serde_json::Map::new, std::mem::take);
-        values.retain(|name, _| fields.contains(&name.as_str()));
-        displayed.insert(section.to_owned(), serde_json::Value::Object(values));
-    }
-    serde_json::Value::Object(displayed)
-}
-
-/// # Returns
-///
-/// Whether `error` is a `MySQL` "table doesn't exist" error.
-fn is_table_not_found(error: &sqlx::Error) -> bool {
-    if let sqlx::Error::Database(db_err) = error
-        && let Some(mysql_err) = db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-    {
-        return mysql_err.number() == MYSQL_TABLE_NOT_FOUND;
-    }
-    false
 }
 
 #[cfg(test)]
@@ -723,7 +702,6 @@ mod tests {
     use super::QuerySpeedRowProjection;
     use super::TimeRange;
     use super::TimeRangeRowProjection;
-    use super::select_compression_metadata_display_fields;
     use crate::webui_client::WebuiClient;
 
     fn non_empty(value: &str) -> NonEmptyString {
@@ -910,7 +888,7 @@ mod tests {
         assert_eq!(metadata.uncompressed_size, 100);
         assert_eq!(metadata.compressed_size, 10);
         assert_eq!(
-            metadata.clp_config,
+            serde_json::to_value(metadata.clp_config)?,
             serde_json::json!({
                 "input": {
                     "type": "s3",
@@ -929,39 +907,6 @@ mod tests {
             })
         );
         Ok(())
-    }
-
-    #[test]
-    fn compression_metadata_display_fields_default_missing_or_non_object_sections_to_empty() {
-        let output = serde_json::json!({"compression_level": 3});
-        for (config, expected) in [
-            (
-                serde_json::json!({}),
-                serde_json::json!({"input": {}, "output": {}}),
-            ),
-            (
-                serde_json::json!({"output": output}),
-                serde_json::json!({"input": {}, "output": output}),
-            ),
-            (
-                serde_json::json!({"input": null, "output": output}),
-                serde_json::json!({"input": {}, "output": output}),
-            ),
-            (
-                serde_json::json!({"input": {"type": "fs"}, "output": [3]}),
-                serde_json::json!({"input": {"type": "fs"}, "output": {}}),
-            ),
-            (
-                serde_json::json!({"input": {"bucket": "the-bucket"}, "output": {}}),
-                serde_json::json!({"input": {}, "output": {}}),
-            ),
-        ] {
-            assert_eq!(
-                select_compression_metadata_display_fields(config.clone()),
-                expected,
-                "config: {config}"
-            );
-        }
     }
 
     #[test]
@@ -997,14 +942,13 @@ mod tests {
         };
 
         assert_eq!(
-            row.into_compression_metadata()?.clp_config,
+            serde_json::to_value(row.into_compression_metadata()?.clp_config)?,
             serde_json::json!({
                 "input": {
                     "type": "fs",
                     "dataset": "logs",
                     "paths_to_compress": ["/mnt/logs/app.log"],
                     "path_prefix_to_remove": "/mnt/logs",
-                    "timestamp_key": null,
                     "unstructured": true
                 },
                 "output": {
