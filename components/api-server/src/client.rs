@@ -338,8 +338,8 @@ impl Client {
     /// A stream of the job's results on success. The stream variant indicates where the results
     /// are stored:
     ///
-    /// * [`SearchResultStream::File`] if the job's results are stored in files.
-    /// * [`SearchResultStream::Mongo`] if the job's results are stored in `MongoDB`.
+    /// * [`QueryResultStream::File`] if the job's results are stored in files.
+    /// * [`QueryResultStream::Mongo`] if the job's results are stored in `MongoDB`.
     ///
     /// # Errors
     ///
@@ -355,7 +355,7 @@ impl Client {
         raw_docs: bool,
         sorted: bool,
     ) -> Result<
-        SearchResultStream<
+        QueryResultStream<
             impl Stream<Item = Result<String, ClientError>> + use<>,
             impl Stream<Item = Result<String, ClientError>> + use<>,
             impl Stream<Item = Result<String, ClientError>> + use<>,
@@ -394,15 +394,15 @@ impl Client {
             return self
                 .fetch_results_from_mongo(query_job_id, None, true, false)
                 .await
-                .map(|s| SearchResultStream::Mongo { inner: s });
+                .map(|s| QueryResultStream::Mongo { inner: s });
         }
 
         if job_config.write_to_file {
             let stream = match &self.config.stream_output.storage {
-                StreamOutputStorage::Fs { .. } => SearchResultStream::File {
+                StreamOutputStorage::Fs { .. } => QueryResultStream::File {
                     inner: self.fetch_results_from_file(query_job_id, max_num_results)?,
                 },
-                StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
+                StreamOutputStorage::S3 { .. } => QueryResultStream::S3 {
                     inner: self
                         .fetch_results_from_s3(query_job_id, max_num_results)
                         .await?,
@@ -413,7 +413,7 @@ impl Client {
 
         self.fetch_results_from_mongo(query_job_id, max_num_results, raw_docs, sorted)
             .await
-            .map(|s| SearchResultStream::Mongo { inner: s })
+            .map(|s| QueryResultStream::Mongo { inner: s })
     }
 
     /// Submits a cancellation request for a query job.
@@ -893,15 +893,15 @@ impl Client {
 }
 
 pin_project! {
-    /// Enum for search result streams from different storage backends.
+    /// Enum for query result streams from different storage backends.
     ///
     /// # Type Parameters
     ///
     /// * `FileStream`: Streaming from file system storage.
     /// * `MongoStream`: Streaming from MongoDB storage.
     /// * `S3Stream`: Streaming from S3 storage.
-    #[project = SearchResultStreamProj]
-    pub enum SearchResultStream<FileStream, MongoStream, S3Stream>
+    #[project = QueryResultStreamProj]
+    pub enum QueryResultStream<FileStream, MongoStream, S3Stream>
     where
         FileStream: Stream<Item = Result<String, ClientError>>,
         MongoStream: Stream<Item = Result<String, ClientError>>,
@@ -914,7 +914,7 @@ pin_project! {
 }
 
 impl<FileStream, MongoStream, S3Stream> Stream
-    for SearchResultStream<FileStream, MongoStream, S3Stream>
+    for QueryResultStream<FileStream, MongoStream, S3Stream>
 where
     FileStream: Stream<Item = Result<String, ClientError>>,
     MongoStream: Stream<Item = Result<String, ClientError>>,
@@ -927,9 +927,9 @@ where
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let poll = match self.project() {
-            SearchResultStreamProj::File { inner } => inner.poll_next(cx),
-            SearchResultStreamProj::Mongo { inner } => inner.poll_next(cx),
-            SearchResultStreamProj::S3 { inner } => inner.poll_next(cx),
+            QueryResultStreamProj::File { inner } => inner.poll_next(cx),
+            QueryResultStreamProj::Mongo { inner } => inner.poll_next(cx),
+            QueryResultStreamProj::S3 { inner } => inner.poll_next(cx),
         };
         if let std::task::Poll::Ready(Some(Err(err))) = &poll {
             tracing::error!("An error occurred when streaming results: {}", err);
@@ -963,7 +963,7 @@ impl Cancellability {
     }
 }
 
-/// Applies an optional limit to a search result stream.
+/// Applies an optional limit to a query result stream.
 ///
 /// # Type Parameters
 ///
