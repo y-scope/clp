@@ -135,8 +135,8 @@ pub struct CompressionMetadataDisplayInput {
     pub unstructured: Option<bool>,
 }
 
-/// The display fields of a stored config's `output` section. Older compression jobs may have
-/// stored only some of them, and a field stored as `null` is omitted.
+/// The display fields of a stored config's `output` section. Older compression jobs may have stored
+/// only some of them, and a field stored as `null` is omitted.
 #[derive(Debug, Default, Deserialize, Serialize, ToSchema)]
 pub struct CompressionMetadataDisplayOutput {
     /// The compression level.

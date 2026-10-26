@@ -108,15 +108,15 @@ async fn datasets(
     path = "/metadata/time_range",
     description = "Gets the earliest and latest log entry timestamps across the given datasets. \
         For the CLP storage engine, the dataset names are validated but otherwise ignored. Returns \
-        `null` when the datasets have no archives, including when no datasets are given for \
-        CLP-S. Returns 404 when any of the datasets doesn't exist for CLP-S.",
+        `null` when the datasets have no archives, including when no datasets are given for CLP-S. \
+        Returns 404 when any of the datasets doesn't exist for CLP-S.",
     params(TimeRangeParams),
     responses(
         (
             status = OK,
             body = Option<TimeRange>,
-            description = "The time range, or `null` when the datasets have no archives, \
-                including when no datasets are given for CLP-S."
+            description = "The time range, or `null` when the datasets have no archives, including \
+                when no datasets are given for CLP-S."
         ),
         (status = BAD_REQUEST, description = "Invalid dataset name, or unknown query parameter"),
         (status = NOT_FOUND, description = "Dataset not found (CLP-S only)"),
@@ -238,9 +238,9 @@ async fn timestamp_column_names(
     get,
     path = "/metadata/compression_jobs",
     description = "Gets the metadata of the 1000 most recent compression jobs (most recent first), \
-        with the display fields of each job's config. Display fields stored as `null` are \
-        omitted. Returns 500 if any of the jobs' stored configs can't be decoded, including when \
-        the config, one of its sections, or one of its display fields has an unexpected type.",
+        with the display fields of each job's config. Display fields stored as `null` are omitted. \
+        Returns 500 if any of the jobs' stored configs can't be decoded, including when the \
+        config, one of its sections, or one of its display fields has an unexpected type.",
     responses(
         (status = OK, body = Vec<CompressionMetadata>),
         (status = INTERNAL_SERVER_ERROR)
