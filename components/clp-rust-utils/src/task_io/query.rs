@@ -1,6 +1,5 @@
 //! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP query jobs.
 
-use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
 use non_empty_string::NonEmptyString;
@@ -9,7 +8,6 @@ use serde::Serialize;
 
 use crate::job_config::NetworkOutput;
 use crate::job_config::SearchJobConfig;
-use crate::job_config::SessionToken;
 use crate::types::PositiveI64;
 
 /// `clp-s` options for a query job.
@@ -88,35 +86,18 @@ pub enum OutputHandle {
 
     /// A TCP listener that the results are streamed to.
     #[serde(rename = "network")]
-    Network {
-        host: NonEmptyString,
-        port: NonZeroU16,
-        session_token: SessionToken,
-    },
-}
-
-impl From<NetworkOutput> for OutputHandle {
-    fn from(network_output: NetworkOutput) -> Self {
-        Self::Network {
-            host: network_output.host,
-            port: network_output.port,
-            session_token: network_output.session_token,
-        }
-    }
+    Network(NetworkOutput),
 }
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroU16;
     use std::num::NonZeroU32;
 
     use non_empty_string::NonEmptyString;
-    use uuid::Uuid;
 
     use super::ClpSQueryOption;
     use super::OutputHandle;
     use super::QueryOptionError;
-    use crate::job_config::SessionToken;
     use crate::types::PositiveI64;
     use crate::types::non_empty_string::ExpectedNonEmpty;
 
@@ -355,44 +336,5 @@ mod tests {
             rmp_serde::from_slice(&serialized).expect("output handle should deserialize");
 
         assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn output_handle_network_round_trips_through_msgpack() {
-        const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
-
-        let expected = OutputHandle::Network {
-            host: NonEmptyString::from_static_str("10.0.0.7"),
-            port: NonZeroU16::new(40_123).expect("40,123 is nonzero"),
-            session_token: SessionToken::from(
-                Uuid::parse_str(SESSION_TOKEN).expect("valid session token UUID"),
-            ),
-        };
-
-        let serialized = rmp_serde::to_vec(&expected).expect("output handle should serialize");
-        let actual: OutputHandle =
-            rmp_serde::from_slice(&serialized).expect("output handle should deserialize");
-
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn output_handle_network_session_token_serializes_as_hyphenated_text() {
-        const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
-
-        let output_handle = OutputHandle::Network {
-            host: NonEmptyString::from_static_str("10.0.0.7"),
-            port: NonZeroU16::new(40_123).expect("40,123 is nonzero"),
-            session_token: SessionToken::from(
-                Uuid::parse_str(SESSION_TOKEN).expect("valid session token UUID"),
-            ),
-        };
-
-        let serialized = rmp_serde::to_vec(&output_handle).expect("output handle should serialize");
-        let (_, _, _, session_token): (String, String, u16, String) =
-            rmp_serde::from_slice(&serialized)
-                .expect("the session token should deserialize as a string");
-
-        assert_eq!(session_token, SESSION_TOKEN);
     }
 }
