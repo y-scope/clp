@@ -28,7 +28,7 @@ pub struct AggregationConfig {
 /// Mirror of `job_orchestration.scheduler.job_config.SearchJobConfig`. Must be kept in sync.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
-pub struct SearchJobConfig {
+pub struct QueryJobConfig {
     pub datasets: Option<Vec<DatasetName>>,
     pub query_string: String,
     pub max_num_results: Option<NonZeroU32>,
