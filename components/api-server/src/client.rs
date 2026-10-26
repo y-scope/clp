@@ -176,7 +176,7 @@ pub struct CompressionUsage {
     pub tasks_duration_secs: Option<f64>,
 }
 
-/// Defines the request configuration for submitting a search query.
+/// Defines the request configuration for submitting a query.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QueryConfig {
