@@ -179,7 +179,7 @@ impl WebuiClient {
                 if datasets.is_empty() {
                     return Ok(None);
                 }
-                let union = union_all(datasets.iter().map(|dataset| {
+                let union = Self::union_all(datasets.iter().map(|dataset| {
                     format!(
                         "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
                          end_timestamp FROM `{}`",
@@ -228,7 +228,7 @@ impl WebuiClient {
                         total_compressed_size: 0,
                     });
                 }
-                let union = union_all(datasets.iter().map(|dataset| {
+                let union = Self::union_all(datasets.iter().map(|dataset| {
                     format!(
                         "SELECT SUM(uncompressed_size) AS uncompressed_size, SUM(size) AS size \
                          FROM `{}`",
@@ -279,14 +279,14 @@ impl WebuiClient {
                 if datasets.is_empty() {
                     return Ok(None);
                 }
-                let archives_union = union_all(datasets.iter().map(|dataset| {
+                let archives_union = Self::union_all(datasets.iter().map(|dataset| {
                     format!(
                         "SELECT MIN(begin_timestamp) AS begin_timestamp, MAX(end_timestamp) AS \
                          end_timestamp FROM `{}`",
                         database.archives_table_name(dataset)
                     )
                 }));
-                let files_union = union_all(datasets.iter().map(|dataset| {
+                let files_union = Self::union_all(datasets.iter().map(|dataset| {
                     format!(
                         "SELECT COUNT(DISTINCT orig_file_id) AS num_files, \
                          CAST(COALESCE(SUM(num_messages), 0) AS SIGNED) AS num_messages FROM `{}`",
@@ -342,7 +342,7 @@ impl WebuiClient {
                 if datasets.is_empty() {
                     return Ok(None);
                 }
-                union_all(datasets.iter().map(|dataset| {
+                Self::union_all(datasets.iter().map(|dataset| {
                     format!(
                         "SELECT id, uncompressed_size FROM `{}`",
                         database.archives_table_name(dataset)
@@ -439,6 +439,15 @@ impl WebuiClient {
                 .collect()
         })
         .await?
+    }
+
+    /// Combines `SELECT` statements with `UNION ALL`.
+    ///
+    /// # Returns
+    ///
+    /// The combined statement.
+    fn union_all(selects: impl Iterator<Item = String>) -> String {
+        selects.collect::<Vec<_>>().join("\nUNION ALL\n")
     }
 }
 
@@ -614,15 +623,6 @@ fn select_compression_metadata_display_fields(mut config: serde_json::Value) -> 
         }
     }
     serde_json::Value::Object(displayed)
-}
-
-/// Combines `SELECT` statements with `UNION ALL`.
-///
-/// # Returns
-///
-/// The combined statement.
-fn union_all(selects: impl Iterator<Item = String>) -> String {
-    selects.collect::<Vec<_>>().join("\nUNION ALL\n")
 }
 
 #[cfg(test)]
