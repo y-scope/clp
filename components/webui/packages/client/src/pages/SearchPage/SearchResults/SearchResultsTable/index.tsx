@@ -21,7 +21,7 @@ import {TABLE_BOTTOM_PADDING} from "./typings";
 const SearchResultsTable = () => {
     const [tableHeight, setTableHeight] = useState<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
-    const {sqlInterface} = usePrestoSearchState();
+    const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
 
     // Antd table requires a fixed height for virtual scrolling. The effect sets a fixed height
     // based on the window height, container top, and fixed padding.
