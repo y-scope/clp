@@ -585,8 +585,8 @@ mod tests {
                     .header(CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         serde_json::json!({
+                            "archive_id": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
                             "log_event_idx": i64::MAX.unsigned_abs() + 1,
-                            "stream_id": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
                         })
                         .to_string(),
                     ))?,

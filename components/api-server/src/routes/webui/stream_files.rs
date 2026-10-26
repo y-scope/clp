@@ -25,7 +25,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     post,
     path = "/stream_files/extract",
     description = "Extracts a JSON stream file that contains the log event at `log_event_idx` in \
-        the archive with ID `stream_id`. Only the clp-s storage engine is supported. If the \
+        the archive with ID `archive_id`. Only the clp-s storage engine is supported. If the \
         results cache already has such a stream file, returns its metadata directly; otherwise \
         submits an extraction job, waits for it to finish, and returns the metadata of the stream \
         file it extracted. The wait is bounded by \
@@ -51,7 +51,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         (
             status = UNPROCESSABLE_ENTITY,
             description = "The request body doesn't match the schema, including when a field has \
-                the wrong JSON type, `stream_id` isn't a UUID, `log_event_idx` is negative, \
+                the wrong JSON type, `archive_id` isn't a UUID, `log_event_idx` is negative, \
                 `dataset` isn't a valid dataset name, or the body has an unknown field (e.g., \
                 `extract_job_type`)"
         ),
