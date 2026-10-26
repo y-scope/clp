@@ -200,14 +200,14 @@ CLP's retention system is designed to avoid deleting expired archives or search 
 still be in use by active jobs. To do so, CLP employs the following mechanisms:
 
 * If any query job is running, CLP conservatively calculates a **safe expiry timestamp** based on
-  the earliest active search job. This ensures no archive which may be searched by the active job is
+  the earliest active query job. This ensures no archive which may be searched by the active job is
   deleted.
 
 * CLP will **not** search an archive once it is considered expired, even if it has not yet been
   deleted by the garbage collector.
 
 :::{warning}
-A hanging search job will prevent CLP from deleting expired archives. Restarting the query scheduler
+A hanging query job will prevent CLP from deleting expired archives. Restarting the query scheduler
 will mark such jobs as killed and allow garbage collection to resume.
 :::
 
