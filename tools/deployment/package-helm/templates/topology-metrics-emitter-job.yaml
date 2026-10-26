@@ -27,7 +27,7 @@ spec:
       {{- end }}
       containers:
         - name: "topology-metrics-emitter"
-          image: "{{ .Values.image.curl.repository }}:{{ .Values.image.curl.tag }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "curl") | quote }}
           imagePullPolicy: {{ .Values.image.curl.pullPolicy | quote }}
           {{- include "clp.createResourceLimits" (dict
               "root" .

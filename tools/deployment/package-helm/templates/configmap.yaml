@@ -184,6 +184,11 @@ data:
       scheduler_concurrency: {{ .scheduler_concurrency | int }}
       telemetry_update_interval_ms: {{ .telemetry_update_interval_ms | int }}
     {{- end }}
+    {{- /*
+      Compression workers also load this file as a `WorkerConfig`, whose `query_worker` is required.
+      So when `query_worker` is null (query workers disabled), omit the key instead of rendering
+      null, letting the models fall back to their defaults.
+    */}}
     {{- with .Values.clpConfig.query_worker }}
     query_worker:
       logging_level: {{ .logging_level | quote }}
@@ -418,18 +423,13 @@ data:
 
 {{- if and .Values.clpConfig.presto (has "presto" .Values.clpConfig.bundled) }}
 {{- with .Values.clpConfig.presto }}
-  presto-coordinator-catalog-clp.properties: |
-    connector.name=clp
-    clp.metadata-provider-type=mysql
-    clp.metadata-db-url=jdbc:mysql://{{ include "clp.databaseHost" $ }}:{{ include "clp.databasePort" $ }}
-    clp.metadata-db-name={{ $.Values.clpConfig.database.names.clp }}
-    clp.metadata-db-user={{ $.Values.credentials.database.username }}
-    clp.metadata-db-password={{ $.Values.credentials.database.password }}
-    clp.metadata-table-prefix=clp_
-    clp.split-provider-type=mysql
-    clp.split-filter-provider-type=mysql
-    clp.split-filter-config=/opt/presto-server/etc/split-filter.json
-
+{{- $jvmHeapSize := .coordinator.jvm_heap_size | default "4G" | toString }}
+{{- if not (regexMatch "^[1-9][0-9]*[kKmMgG]?$" $jvmHeapSize) }}
+{{- fail (printf
+  "clpConfig.presto.coordinator.jvm_heap_size must be a JVM memory size (e.g., \"4G\"), not %q"
+  $jvmHeapSize) }}
+{{- end }}
+  {{- /* The CLP catalogs contain credentials, so `presto-catalog-secret.yaml` renders them. */}}
   presto-coordinator-config-config.properties: |
     coordinator=true
     node-scheduler.include-coordinator=false
@@ -444,10 +444,11 @@ data:
     inline-sql-functions=false
     nested-data-serialization-enabled=false
     native-execution-enabled=true
+    use-connector-provided-serialization-codecs=true
 
   presto-coordinator-config-jvm.config: |
     -server
-    -Xmx4G
+    -Xmx{{ $jvmHeapSize }}
     -XX:+UseG1GC
     -XX:G1HeapRegionSize=32M
     -XX:+UseGCOverheadLimit
@@ -466,23 +467,6 @@ data:
   presto-coordinator-config-split-filter.json: |
     {{ .split_filter | toJson }}
 
-  presto-worker-catalog-clp.properties: |
-    connector.name=clp
-    {{- with $.Values.clpConfig.archive_output.storage }}
-    {{- if eq .type "s3" }}
-    clp.storage-type=s3
-    clp.s3-auth-provider=clp_package
-    clp.s3-access-key-id={{ .s3_config.aws_authentication.credentials.access_key_id }}
-    clp.s3-bucket={{ .s3_config.bucket }}
-    {{- if .s3_config.endpoint_url }}
-    clp.s3-end-point={{ trimSuffix "/" .s3_config.endpoint_url }}
-    {{- else }}
-    clp.s3-end-point=https://s3.{{ .s3_config.region_code }}.amazonaws.com
-    {{- end }}
-    clp.s3-secret-access-key={{ .s3_config.aws_authentication.credentials.secret_access_key }}
-    {{- end }}{{/* if eq .type "s3" */}}
-    {{- end }}{{/* with $.Values.clpConfig.archive_output.storage */}}
-
   presto-worker-config-config.properties: |
     discovery.uri=http://{{ include "clp.fullname" $ }}-presto-coordinator:8889
     http-server.http.port=8889
@@ -491,6 +475,7 @@ data:
     system-memory-gb={{ .worker.system_memory_gb }}
     register-test-functions=false
     runtime-metrics-collection-enabled=false
+    plugin.dir=/opt/presto-server/plugin/clp
 
   presto-worker-config-node.properties: |
     node.environment=production
@@ -509,14 +494,20 @@ data:
     cp "${CONFIG_TEMPLATE_DIR}/presto-worker-config-config.properties" "${PRESTO_CONFIG_DIR}/config.properties"
     cp "${CONFIG_TEMPLATE_DIR}/presto-worker-config-node.properties" "${PRESTO_CONFIG_DIR}/node.properties"
 
-    # Query coordinator for version and append to config
+    # The coordinator only counts workers that report its exact version as active.
     DISCOVERY_URI="http://{{ include "clp.fullname" $ }}-presto-coordinator:8889"
-    PRESTO_VERSION=$(curl -sf "${DISCOVERY_URI}/v1/info" | jq -r '.nodeVersion.version')
+    PRESTO_INFO=$(curl --fail --silent --show-error --max-time 10 "${DISCOVERY_URI}/v1/info")
+    PRESTO_VERSION=$(printf '%s' "${PRESTO_INFO}" | jq --raw-output '.nodeVersion.version // empty')
+    if [ -z "${PRESTO_VERSION}" ]; then
+      echo "Failed to read the Presto version from ${DISCOVERY_URI}/v1/info." >&2
+      exit 1
+    fi
     echo "presto.version=${PRESTO_VERSION}" >> "${PRESTO_CONFIG_DIR}/config.properties"
 
-    # Set node identity from hostname
-    echo "node.internal-address=$(hostname -i)" >> "${PRESTO_CONFIG_DIR}/node.properties"
-    echo "node.id=$(hostname)" >> "${PRESTO_CONFIG_DIR}/node.properties"
+    # The pod's name and IP come from the downward API.
+    : "${POD_IP:?POD_IP must be set}" "${POD_NAME:?POD_NAME must be set}"
+    echo "node.internal-address=${POD_IP}" >> "${PRESTO_CONFIG_DIR}/node.properties"
+    echo "node.id=${POD_NAME}" >> "${PRESTO_CONFIG_DIR}/node.properties"
 {{- end }}{{/* with .Values.clpConfig.presto */}}
 {{- end }}{{/* if has "presto" .Values.clpConfig.bundled */}}
 

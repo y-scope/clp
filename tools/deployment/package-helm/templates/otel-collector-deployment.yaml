@@ -1,10 +1,6 @@
 {{- if and
   (not .Values.clpConfig.telemetry.disable)
   (has "otel_collector" .Values.clpConfig.bundled) }}
-{{- $otelCollectorImage := printf
-  "%s:%s"
-  .Values.image.otelCollector.repository
-  .Values.image.otelCollector.tag }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -30,7 +26,7 @@ spec:
         ) | nindent 6 }}
       containers:
         - name: "otel-collector"
-          image: {{ $otelCollectorImage | quote }}
+          image: {{ include "clp.imageRef" (dict "root" . "component" "otelCollector") | quote }}
           imagePullPolicy: {{ .Values.image.otelCollector.pullPolicy | quote }}
           {{- include "clp.createResourceLimits" (dict
               "root" .

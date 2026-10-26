@@ -111,6 +111,15 @@ in controller.py, ensuring feature parity between Docker Compose and Helm deploy
   "root" .
   "component" "reducer"
 ) | int -}}
+{{- /* Like the controller, report disabled (null) query workers and reducers as zero. */ -}}
+{{- if not .Values.clpConfig.query_worker -}}
+{{- $queryWorkerReplicas = 0 -}}
+{{- $queryWorkerConcurrency = 0 -}}
+{{- end -}}
+{{- if not .Values.clpConfig.reducer -}}
+{{- $reducerReplicas = 0 -}}
+{{- $reducerConcurrency = 0 -}}
+{{- end -}}
 {{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $compressionWorkerReplicas $timestampNs $compressionWorkerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $queryWorkerConcurrency $timestampNs $reducerReplicas $timestampNs $reducerConcurrency $timestampNs -}}
 {{- end -}}
 
@@ -158,28 +167,54 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Creates a container image reference from .Values.image.
 
-Renders repository@digest when "digest" is set; otherwise, renders repository:tag. clpPackage
-defaults to Chart.AppVersion when "tag" is omitted; other components require "tag".
+Renders repository:tag, repository@digest, or repository:tag@digest, depending on which of "tag"
+and "digest" are set. When both are set, the digest selects the image and the tag is only a
+human-readable label. clpPackage defaults to Chart.AppVersion when "tag" is omitted; other
+components require at least one of "tag" or "digest".
 
 @param {object} root Root template context (required)
 @param {string} component Key under .Values.image (e.g., "clpPackage", "redis")
-@return {string} Full image reference (repository@digest or repository:tag)
+@return {string} Full image reference
 */}}
 {{- define "clp.imageRef" -}}
 {{- $img := index .root.Values.image .component -}}
-{{- if $img.digest -}}
-{{- printf "%s@%s" $img.repository $img.digest -}}
-{{- else -}}
 {{- $tag := $img.tag -}}
-{{- if not $tag -}}
-  {{- if eq .component "clpPackage" -}}
-    {{- $tag = .root.Chart.AppVersion -}}
-  {{- else -}}
-    {{- fail (printf "image.%s.tag is required" .component) -}}
-  {{- end -}}
+{{- if and (not $tag) (eq .component "clpPackage") -}}
+  {{- $tag = .root.Chart.AppVersion -}}
 {{- end -}}
-{{- printf "%s:%s" $img.repository $tag -}}
+{{- if not (or $tag $img.digest) -}}
+  {{- fail (printf "image.%s requires \"tag\", \"digest\", or both" .component) -}}
 {{- end -}}
+{{- $ref := $img.repository -}}
+{{- if $tag -}}
+  {{- $ref = printf "%s:%s" $ref $tag -}}
+{{- end -}}
+{{- if $img.digest -}}
+  {{- $ref = printf "%s@%s" $ref $img.digest -}}
+{{- end -}}
+{{- $ref -}}
+{{- end }}
+
+{{/*
+Computes a checksum of selected entries in a rendered ConfigMap or Secret template.
+
+Use it in pod template annotations so that a pod rolls when, and only when, the entries it mounts
+change. Kubernetes doesn't refresh `subPath` mounts or restart processes when those entries change.
+
+@param {object} root Root template context
+@param {string} template File name of the ConfigMap or Secret template under `templates/`
+@param {string} field Map holding the entries: "data" or "stringData"
+@param {string[]} keys Entry keys to include
+@return {string} SHA-256 checksum of the selected entries
+*/}}
+{{- define "clp.renderedEntriesChecksum" -}}
+{{- $rendered := include (print .root.Template.BasePath "/" .template) .root | fromYaml -}}
+{{- $entries := index $rendered .field | default dict -}}
+{{- $selected := dict -}}
+{{- range .keys -}}
+  {{- $_ := set $selected . (index $entries . | default "") -}}
+{{- end -}}
+{{- toJson $selected | sha256sum -}}
 {{- end }}
 
 {{/*
@@ -192,6 +227,18 @@ initialDelaySeconds: 6
 periodSeconds: 2
 timeoutSeconds: 2
 failureThreshold: 10
+{{- end }}
+
+{{/*
+Creates timings for startup probes of components that may take minutes to start (e.g., while
+loading plugins). Liveness and readiness probes only start after the startup probe succeeds.
+
+@return {string} YAML-formatted startup probe timing configuration
+*/}}
+{{- define "clp.slowStartupProbeTimings" -}}
+periodSeconds: 5
+timeoutSeconds: 2
+failureThreshold: 60
 {{- end }}
 
 {{/*
@@ -442,6 +489,26 @@ Gets the port for the Presto service.
 {{- else -}}
 {{- .Values.clpConfig.presto.port -}}
 {{- end -}}
+{{- end }}
+
+{{/*
+Escapes a value for a Java `.properties` file, such as a catalog that the Presto coordinator loads.
+
+@param {string} . The value
+@return {string} The escaped value
+*/}}
+{{- define "clp.javaPropertiesValue" -}}
+{{- $value := toString .
+  | replace "\\" "\\\\"
+  | replace "\n" "\\n"
+  | replace "\r" "\\r"
+  | replace "\t" "\\t"
+  | replace "\f" "\\f" -}}
+{{- /* A loader strips leading whitespace from values, so escape a leading space. */ -}}
+{{- if hasPrefix " " $value -}}
+{{- $value = printf "\\%s" $value -}}
+{{- end -}}
+{{- $value -}}
 {{- end }}
 
 {{/*

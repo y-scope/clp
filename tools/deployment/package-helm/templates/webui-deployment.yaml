@@ -13,6 +13,14 @@ spec:
       app.kubernetes.io/component: "webui"
   template:
     metadata:
+      annotations:
+        # Rolls the Web UI when its settings change, e.g., when switching its query engine.
+        checksum/config: {{ include "clp.renderedEntriesChecksum" (dict
+            "root" .
+            "template" "configmap.yaml"
+            "field" "data"
+            "keys" (list "webui-settings.json")
+          ) | quote }}
       labels:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "webui"

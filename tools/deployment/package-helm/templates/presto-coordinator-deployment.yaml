@@ -14,6 +14,25 @@ spec:
       app.kubernetes.io/component: "presto-coordinator"
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include "clp.renderedEntriesChecksum" (dict
+            "root" .
+            "template" "configmap.yaml"
+            "field" "data"
+            "keys" (list
+              "presto-coordinator-config-config.properties"
+              "presto-coordinator-config-jvm.config"
+              "presto-coordinator-config-log.properties"
+              "presto-coordinator-config-node.properties"
+              "presto-coordinator-config-split-filter.json"
+            )
+          ) | quote }}
+        checksum/presto-catalog: {{ include "clp.renderedEntriesChecksum" (dict
+            "root" .
+            "template" "presto-catalog-secret.yaml"
+            "field" "stringData"
+            "keys" (list "presto-coordinator-catalog-clp.properties")
+          ) | quote }}
       labels:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "presto-coordinator"
@@ -30,10 +49,23 @@ spec:
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
+        - name: "install-clp-plugin"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpConnector") | quote }}
+          imagePullPolicy: {{ .Values.image.clpConnector.pullPolicy | quote }}
+          env:
+            - name: "COORDINATOR_PLUGIN_INSTALL_PATH"
+              value: "/install/coordinator"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "prestoCoordinatorInstallPlugin"
+            ) | nindent 10 }}
+          volumeMounts:
+            - name: "presto-plugin"
+              mountPath: "/install/coordinator"
       containers:
         - name: "presto-coordinator"
-          image: "{{ .Values.image.prestoCoordinator.repository }}:{{ .Values.image.prestoCoordinator.tag }}"
-          imagePullPolicy: "{{ .Values.image.prestoCoordinator.pullPolicy }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "prestoCoordinator") | quote }}
+          imagePullPolicy: {{ .Values.image.prestoCoordinator.pullPolicy | quote }}
           {{- include "clp.createResourceLimits" (dict
               "root" .
               "component" "prestoCoordinator"
@@ -65,22 +97,30 @@ spec:
               mountPath: "/opt/presto-server/etc/split-filter.json"
               subPath: "presto-coordinator-config-split-filter.json"
               readOnly: true
-          readinessProbe:
-            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            - name: "presto-plugin"
+              mountPath: "/opt/presto-server/plugin/clp"
+              readOnly: true
+          startupProbe:
+            {{- include "clp.slowStartupProbeTimings" . | nindent 12 }}
             httpGet: &presto-coordinator-health-check
               path: "/v1/info"
               port: "presto-coord"
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            httpGet: *presto-coordinator-health-check
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet: *presto-coordinator-health-check
       volumes:
         - name: "presto-catalog"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
+          secret:
+            secretName: {{ include "clp.fullname" . }}-presto-catalog
             items:
               - key: "presto-coordinator-catalog-clp.properties"
                 path: "clp.properties"
         - name: "presto-config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        - name: "presto-plugin"
+          emptyDir: {}
 {{- end }}

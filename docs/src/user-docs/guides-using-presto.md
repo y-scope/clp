@@ -45,7 +45,8 @@ the clp-s native query components can optionally be disabled to save resources.
      webui:
        query_engine: "presto"
 
-     # Optional: Disable the clp-s native query pipeline to save resources.
+     # Optional: Disable the clp-s native query pipeline to save resources. The Presto search
+     # interface doesn't use it or the API server, so you can also set `api_server` to null.
      query_scheduler: null
      query_worker: null
      reducer: null
@@ -59,6 +60,8 @@ the clp-s native query components can optionally be disabled to save resources.
        port: 30889
        coordinator:
          logging_level: "INFO"
+         # Optional: The coordinator's maximum JVM heap size (default: "4G").
+         jvm_heap_size: "4G"
          query_max_memory_gb: 1
          query_max_memory_per_node_gb: 1
        worker:
@@ -97,8 +100,43 @@ using CLP's Web UI.
 When using Kubernetes, Presto worker scheduling can be configured using the
 `scheduling.prestoWorker` key in Helm values. Presto coordinator scheduling uses
 `scheduling.prestoCoordinator`. See the [component scheduling][k8s-scheduling] section of the
-Kubernetes deployment guide for details.
+Kubernetes deployment guide for details. Container resources can similarly be set using
+`resources.prestoCoordinator` and `resources.prestoWorker`; keep the coordinator's
+`jvm_heap_size` and the worker's `system_memory_gb` below the containers' memory limits.
 :::
+
+### Archives on S3
+
+When archives are stored on S3 (`clpConfig.archive_output.storage.type: "s3"`), Presto workers read
+them using the archive output's `aws_authentication` setting, which must be one of:
+
+* `credentials`: The workers use the configured access key (and session token, if any).
+* `default`: The workers get credentials from the AWS default credential provider chain. For
+  example, on Amazon EKS, you can give CLP's pods an IAM role for their service account by
+  annotating it:
+
+  ```yaml
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::<account-id>:role/<role-name>"
+  ```
+
+  The role needs permission to read the archives.
+
+The archive output's `s3_config` must also set `region_code` or `endpoint_url`.
+
+:::{note}
+`default` authentication requires a CLP Presto connector that supports it. If the chart's default
+connector doesn't, set `image.clpConnector` to a connector installer image that does.
+:::
+
+### Images
+
+The chart runs stock Presto coordinator and worker images, and installs the
+[CLP Presto connector][clp-presto-connector] into them when their pods start. These images are set
+using `image.prestoCoordinator`, `image.prestoWorker`, and `image.clpConnector`, each of which
+accepts a `tag`, a `digest`, or both (in which case the digest selects the image). The coordinator
+and worker must run the same Presto version, which the connector must support.
 
 ## Docker Compose
 
@@ -319,6 +357,7 @@ The Presto CLP integration has the following limitations at present:
 These limitations will be addressed in a future release of the Presto integration.
 
 [clp-connector-docs]: https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
+[clp-presto-connector]: https://github.com/y-scope/clp-plugin-presto-connector
 [clp-releases]: https://github.com/y-scope/clp/releases
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
