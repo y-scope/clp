@@ -1,5 +1,14 @@
 {{- $logIngestorEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
     (eq .Values.clpConfig.logs_input.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
+{{- if and
+  .Values.spider.enabled
+  (ne .Values.global.archiveOutputStorageType .Values.clpConfig.archive_output.storage.type) }}
+{{- fail (printf
+  "global.archiveOutputStorageType (%v) must match clpConfig.archive_output.storage.type (%v)"
+  .Values.global.archiveOutputStorageType
+  .Values.clpConfig.archive_output.storage.type
+) }}
+{{- end }}
 apiVersion: "v1"
 kind: "ConfigMap"
 metadata:

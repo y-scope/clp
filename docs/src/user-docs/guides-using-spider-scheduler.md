@@ -52,6 +52,10 @@ The CLP Helm chart will then automatically deploy the following components:
    ```{code-block} yaml
    :caption: spider-values.yaml
 
+   global:
+     # Must match `clpConfig.archive_output.storage.type` below.
+     archiveOutputStorageType: "s3"
+
    spider:
      enabled: true
 
@@ -149,6 +153,14 @@ The following settings are commonly adjusted when deploying Spider with CLP.
 :default: `false`
 
 Enables Spider and deploys its related CLP components.
+:::
+
+:::{confval} global.archiveOutputStorageType
+:type: `string`
+:default: `"fs"`
+
+Must match `clpConfig.archive_output.storage.type` when Spider is enabled. When it's `"fs"`, Spider
+workers mount the archives storage so that they can search archives stored on the filesystem.
 :::
 
 :::{confval} spider.spiderConfig.database

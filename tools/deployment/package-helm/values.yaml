@@ -1,4 +1,7 @@
 global:
+  # Must match `clpConfig.archive_output.storage.type`. It's repeated here because the Spider
+  # subchart can only read `global` values; it uses this one to mount archives in its workers.
+  archiveOutputStorageType: "fs"
   fullnameOverride: ""
   nameOverride: ""
 
@@ -430,6 +433,15 @@ spider:
     #   username: "spider-user"
     #   password: "spider-password"
 
+    storage:
+      runtime:
+        # The pinned storage image still uses bounded inbound-queue lanes, whose defaults the Spider
+        # chart dropped in y-scope/spider#526. Remove these once the storage image is past #526.
+        inbound_queue:
+          cleanup_capacity: 256
+          commit_capacity: 256
+          task_capacity: 1048576
+
     worker:
       extra_envs:
         - name: "CLP_CONFIG_PATH"
@@ -444,19 +456,29 @@ spider:
             secretKeyRef:
               name: "{{ include \"clp.fullname\" . }}-database"
               key: "password"
-      extra_volume_mounts:
+      # The archives volume is only mounted when archives are stored on the filesystem.
+      extra_volume_mounts: |-
         - name: "clp-config"
           mountPath: "/etc/clp-config.yaml"
           subPath: "clp-config.yaml"
           readOnly: true
         - name: "staged-archives"
           mountPath: "/var/data/staged-archives"
-      extra_volumes:
+        {{- if eq .Values.global.archiveOutputStorageType "fs" }}
+        - name: "shared-data-archives"
+          mountPath: "/var/data/archives"
+        {{- end }}
+      extra_volumes: |-
         - name: "clp-config"
           configMap:
-            name: "{{ include \"clp.fullname\" . }}-config"
+            name: "{{ include "clp.fullname" . }}-config"
         - name: "staged-archives"
           emptyDir: {}
+        {{- if eq .Values.global.archiveOutputStorageType "fs" }}
+        - name: "shared-data-archives"
+          persistentVolumeClaim:
+            claimName: "{{ include "clp.fullname" . }}-shared-data-archives"
+        {{- end }}
       service_account_name: "{{ include \"clp.fullname\" . }}-service-account"
       pools:
         - name: "general"
