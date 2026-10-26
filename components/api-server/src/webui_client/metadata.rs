@@ -235,7 +235,7 @@ impl WebuiClient {
             Ok(row) => row,
             Err(err) => return Err(self.resolve_dataset_query_error(datasets, err).await),
         };
-        Ok(row.into_time_range())
+        Ok(row.into())
     }
 
     /// Fetches aggregated space-savings statistics across all datasets.
@@ -347,7 +347,7 @@ impl WebuiClient {
         let row = sqlx::query_as::<_, IngestionDetailsRowProjection>(&sql)
             .fetch_one(&self.sql_pool)
             .await?;
-        Ok(row.into_ingestion_details())
+        Ok(row.into())
     }
 
     /// Fetches the query speed (total uncompressed bytes scanned and job duration) for a query job
@@ -410,7 +410,7 @@ impl WebuiClient {
             Ok(row) => row,
             Err(err) => return Err(self.resolve_dataset_query_error(datasets, err).await),
         };
-        Ok(row.and_then(QuerySpeedRowProjection::into_query_speed))
+        Ok(row.and_then(Into::into))
     }
 
     /// Fetches the timestamp column names for a given dataset (CLP-S only).
@@ -464,9 +464,9 @@ impl WebuiClient {
     ///
     /// * [`ClientError::TaskJoin`] if the task decoding the rows panics.
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    /// * Forwards [`CompressionMetadataRowProjection::into_compression_metadata`]'s return values
-    ///   on failure, so the whole call fails if any of the jobs' stored configs can't be decoded
-    ///   into a [`CompressionMetadataDisplayConfig`].
+    /// * Forwards [`CompressionMetadata::try_from`]'s return values on failure, so the whole call
+    ///   fails if any of the jobs' stored configs can't be decoded into a
+    ///   [`CompressionMetadataDisplayConfig`].
     pub async fn get_compression_metadata(&self) -> Result<Vec<CompressionMetadata>, ClientError> {
         const QUERY_LIMIT: i64 = 1000;
 
@@ -480,7 +480,7 @@ impl WebuiClient {
         .await?;
         tokio::task::spawn_blocking(move || {
             rows.into_iter()
-                .map(CompressionMetadataRowProjection::into_compression_metadata)
+                .map(CompressionMetadata::try_from)
                 .collect()
         })
         .await?
@@ -558,15 +558,9 @@ struct TimeRangeRowProjection {
     end_timestamp: Option<i64>,
 }
 
-impl TimeRangeRowProjection {
-    /// Converts the projection into a [`TimeRange`].
-    ///
-    /// # Returns
-    ///
-    /// The time range, or `None` if either timestamp is `NULL`.
-    const fn into_time_range(self) -> Option<TimeRange> {
-        let (Some(begin_timestamp), Some(end_timestamp)) =
-            (self.begin_timestamp, self.end_timestamp)
+impl From<TimeRangeRowProjection> for Option<TimeRange> {
+    fn from(row: TimeRangeRowProjection) -> Self {
+        let (Some(begin_timestamp), Some(end_timestamp)) = (row.begin_timestamp, row.end_timestamp)
         else {
             return None;
         };
@@ -587,23 +581,17 @@ struct IngestionDetailsRowProjection {
     num_messages: i64,
 }
 
-impl IngestionDetailsRowProjection {
-    /// Converts the projection into an [`IngestionDetails`].
-    ///
-    /// # Returns
-    ///
-    /// The ingestion details, or `None` if either timestamp is `NULL`.
-    const fn into_ingestion_details(self) -> Option<IngestionDetails> {
-        let (Some(begin_timestamp), Some(end_timestamp)) =
-            (self.begin_timestamp, self.end_timestamp)
+impl From<IngestionDetailsRowProjection> for Option<IngestionDetails> {
+    fn from(row: IngestionDetailsRowProjection) -> Self {
+        let (Some(begin_timestamp), Some(end_timestamp)) = (row.begin_timestamp, row.end_timestamp)
         else {
             return None;
         };
         Some(IngestionDetails {
             begin_timestamp,
             end_timestamp,
-            num_files: self.num_files,
-            num_messages: self.num_messages,
+            num_files: row.num_files,
+            num_messages: row.num_messages,
         })
     }
 }
@@ -616,19 +604,11 @@ struct QuerySpeedRowProjection {
     duration: Option<f32>,
 }
 
-impl QuerySpeedRowProjection {
-    /// Converts the projection into a [`QuerySpeed`].
-    ///
-    /// # Returns
-    ///
-    /// The query speed, or `None` if the duration is `NULL`.
-    const fn into_query_speed(self) -> Option<QuerySpeed> {
-        let Some(duration) = self.duration else {
-            return None;
-        };
+impl From<QuerySpeedRowProjection> for Option<QuerySpeed> {
+    fn from(row: QuerySpeedRowProjection) -> Self {
         Some(QuerySpeed {
-            bytes: self.bytes,
-            duration,
+            bytes: row.bytes,
+            duration: row.duration?,
         })
     }
 }
@@ -647,31 +627,20 @@ struct CompressionMetadataRowProjection {
     clp_config: Vec<u8>,
 }
 
-impl CompressionMetadataRowProjection {
-    /// Converts the projection into a [`CompressionMetadata`], decoding only the display fields of
-    /// the job's config.
-    ///
-    /// # Returns
-    ///
-    /// The compression metadata on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`ZstdMsgpack::deserialize`]'s return values on failure, including when the
-    ///   stored config, one of its sections, or one of its display fields has an unexpected type.
-    fn into_compression_metadata(self) -> Result<CompressionMetadata, ClientError> {
-        let clp_config = ZstdMsgpack::deserialize(&self.clp_config)?;
-        Ok(CompressionMetadata {
-            id: self.id,
-            status: self.status,
-            status_msg: self.status_msg,
-            start_time: self.start_time,
-            update_time: self.update_time,
-            duration: self.duration,
-            uncompressed_size: self.uncompressed_size,
-            compressed_size: self.compressed_size,
+impl TryFrom<CompressionMetadataRowProjection> for CompressionMetadata {
+    type Error = ClientError;
+
+    fn try_from(row: CompressionMetadataRowProjection) -> Result<Self, Self::Error> {
+        let clp_config = ZstdMsgpack::deserialize(&row.clp_config)?;
+        Ok(Self {
+            id: row.id,
+            status: row.status,
+            status_msg: row.status_msg,
+            start_time: row.start_time,
+            update_time: row.update_time,
+            duration: row.duration,
+            uncompressed_size: row.uncompressed_size,
+            compressed_size: row.compressed_size,
             clp_config,
         })
     }
@@ -695,6 +664,7 @@ mod tests {
     use clp_rust_utils::serde::ZstdMsgpack;
     use non_empty_string::NonEmptyString;
 
+    use super::CompressionMetadata;
     use super::CompressionMetadataRowProjection;
     use super::IngestionDetails;
     use super::IngestionDetailsRowProjection;
@@ -715,14 +685,14 @@ mod tests {
                 begin_timestamp,
                 end_timestamp,
             };
-            assert_eq!(row.into_time_range(), None);
+            assert_eq!(Option::<TimeRange>::from(row), None);
         }
         let row = TimeRangeRowProjection {
             begin_timestamp: Some(1),
             end_timestamp: Some(2),
         };
         assert_eq!(
-            row.into_time_range(),
+            Option::<TimeRange>::from(row),
             Some(TimeRange {
                 begin_timestamp: 1,
                 end_timestamp: 2,
@@ -739,7 +709,7 @@ mod tests {
                 num_files: 0,
                 num_messages: 0,
             };
-            assert_eq!(row.into_ingestion_details(), None);
+            assert_eq!(Option::<IngestionDetails>::from(row), None);
         }
         let row = IngestionDetailsRowProjection {
             begin_timestamp: Some(1),
@@ -748,7 +718,7 @@ mod tests {
             num_messages: 4,
         };
         assert_eq!(
-            row.into_ingestion_details(),
+            Option::<IngestionDetails>::from(row),
             Some(IngestionDetails {
                 begin_timestamp: 1,
                 end_timestamp: 2,
@@ -764,13 +734,13 @@ mod tests {
             bytes: 1024.0,
             duration: None,
         };
-        assert_eq!(row.into_query_speed(), None);
+        assert_eq!(Option::<QuerySpeed>::from(row), None);
         let row = QuerySpeedRowProjection {
             bytes: 1024.0,
             duration: Some(2.0),
         };
         assert_eq!(
-            row.into_query_speed(),
+            Option::<QuerySpeed>::from(row),
             Some(QuerySpeed {
                 bytes: 1024.0,
                 duration: 2.0,
@@ -871,7 +841,7 @@ mod tests {
             clp_config: ZstdMsgpack::serialize(&config)?,
         };
 
-        let metadata = row.into_compression_metadata()?;
+        let metadata = CompressionMetadata::try_from(row)?;
 
         assert_eq!(metadata.id, 7);
         assert_eq!(metadata.status, 2);
@@ -942,7 +912,7 @@ mod tests {
         };
 
         assert_eq!(
-            serde_json::to_value(row.into_compression_metadata()?.clp_config)?,
+            serde_json::to_value(CompressionMetadata::try_from(row)?.clp_config)?,
             serde_json::json!({
                 "input": {
                     "type": "fs",
