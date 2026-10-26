@@ -84,8 +84,6 @@ pub struct ParseArchiveIdError {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct SessionToken {
-    // Without this, msgpack stores the UUID as 16 raw bytes instead of the hyphenated string that
-    // `clp-s` receives on its command line and sends back.
     #[serde(with = "uuid::serde::hyphenated")]
     value: uuid::Uuid,
 }
