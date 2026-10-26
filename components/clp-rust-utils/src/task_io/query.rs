@@ -222,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn persisted_search_config_converts_supported_options() {
+    fn persisted_query_job_config_converts_supported_options() {
         for width in [None, Some(1_i64), Some(i64::MAX)] {
             for max_num_results in [None, NonZeroU32::new(7)] {
                 for (begin, end) in [
