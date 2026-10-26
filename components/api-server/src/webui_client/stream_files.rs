@@ -75,10 +75,10 @@ impl WebuiClient {
     /// * [`ClientError::InvalidInput`] if:
     ///   * the package's storage engine isn't clp-s.
     ///   * `log_event_idx` exceeds `i64::MAX`.
-    ///   * the extraction job finishes without extracting a stream file that contains the log
-    ///     event.
     /// * [`ClientError::StreamExtractionTimeout`] if the extraction job doesn't finish within the
     ///   configured timeout.
+    /// * [`ClientError::LogEventNotFound`] if the extraction job succeeds without extracting a
+    ///   stream file that contains the log event.
     /// * Forwards [`mongodb::Collection::find_one`]'s return values on failure.
     /// * Forwards [`Self::submit_and_wait_for_extraction_job`]'s return values on failure.
     /// * Forwards [`StreamFileStorage::resolve_path`]'s return values on failure.
@@ -98,13 +98,12 @@ impl WebuiClient {
         let log_event_idx = i64::try_from(extraction.log_event_idx).map_err(|_| {
             ClientError::InvalidInput("log_event_idx must not exceed i64::MAX".to_owned())
         })?;
-        let stream_id = extraction.stream_id.to_string();
         let stream_files = self
             .mongodb_client
             .database(&self.config.results_cache.db_name)
             .collection::<StreamFileMetadata>(&self.config.results_cache.stream_collection_name);
         let filter = doc! {
-            "stream_id": stream_id.as_str(),
+            "stream_id": extraction.stream_id.to_string(),
             "begin_msg_ix": {"$lte": log_event_idx},
             "end_msg_ix": {"$gt": log_event_idx},
         };
@@ -127,12 +126,13 @@ impl WebuiClient {
             )
             .await
             .map_err(|_| ClientError::StreamExtractionTimeout(timeout_secs))??;
-            stream_files.find_one(filter).await?.ok_or_else(|| {
-                ClientError::InvalidInput(format!(
-                    "unable to extract stream with stream_id={stream_id} at \
-                     log_event_idx={log_event_idx}"
-                ))
-            })?
+            stream_files
+                .find_one(filter)
+                .await?
+                .ok_or(ClientError::LogEventNotFound {
+                    archive_id: extraction.stream_id,
+                    log_event_idx: extraction.log_event_idx,
+                })?
         };
 
         metadata.path = self
@@ -149,9 +149,9 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::QueryJobNotFound`] if the job disappears from the query jobs table before
-    ///   it finishes.
-    /// * [`ClientError::InvalidInput`] if the job fails, is killed, or is cancelled.
+    /// * [`ClientError::ExtractionJobNotFound`] if the job disappears from the query jobs table
+    ///   before it finishes.
+    /// * [`ClientError::ExtractionJobFailed`] if the job fails, is killed, or is cancelled.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
@@ -182,7 +182,7 @@ impl WebuiClient {
             .bind(job_id)
             .fetch_optional(&self.sql_pool)
             .await?
-            .ok_or(ClientError::QueryJobNotFound(job_id))?;
+            .ok_or(ClientError::ExtractionJobNotFound(job_id))?;
             match status {
                 QueryJobStatus::Succeeded => return Ok(()),
                 QueryJobStatus::Pending
@@ -192,15 +192,8 @@ impl WebuiClient {
                     tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                     delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
                 }
-                QueryJobStatus::Cancelled => {
-                    return Err(ClientError::InvalidInput(format!(
-                        "extraction job {job_id} was cancelled"
-                    )));
-                }
-                QueryJobStatus::Failed | QueryJobStatus::Killed => {
-                    return Err(ClientError::InvalidInput(format!(
-                        "extraction job {job_id} exited with status {status:?}"
-                    )));
+                QueryJobStatus::Failed | QueryJobStatus::Killed | QueryJobStatus::Cancelled => {
+                    return Err(ClientError::ExtractionJobFailed { job_id, status });
                 }
             }
         }

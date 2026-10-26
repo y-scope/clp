@@ -28,7 +28,8 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         ClientError::QueryJobNotFound(_)
         | ClientError::DatasetNotFound(_)
         | ClientError::QueryJobAlreadyTerminated(_)
-        | ClientError::InvalidInput(_) => {}
+        | ClientError::InvalidInput(_)
+        | ClientError::LogEventNotFound { .. } => {}
         ClientError::Sql(_)
         | ClientError::Mongo(_)
         | ClientError::QueryNotSucceeded
@@ -38,6 +39,8 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::Aws { .. }
         | ClientError::InvalidQueryJobConfig(_)
         | ClientError::StreamExtractionTimeout(_)
+        | ClientError::ExtractionJobFailed { .. }
+        | ClientError::ExtractionJobNotFound(_)
         | ClientError::Telemetry(_) => {
             tracing::error!(operation, error = ? error, "WebUI API request failed.");
         }

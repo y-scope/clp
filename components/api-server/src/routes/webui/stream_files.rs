@@ -36,15 +36,13 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         (status = OK, body = StreamFileMetadata),
         (
             status = BAD_REQUEST,
-            description = "The request body isn't valid JSON; the package's storage engine isn't \
-                clp-s; `log_event_idx` exceeds `i64::MAX`; or the extraction job failed, was \
-                killed, was cancelled, or finished without extracting a stream file that contains \
-                the log event"
+            description = "The request body isn't valid JSON, the package's storage engine isn't \
+                clp-s, or `log_event_idx` exceeds `i64::MAX`"
         ),
         (
             status = NOT_FOUND,
-            description = "The extraction job disappeared from the query jobs table before it \
-                finished"
+            description = "The extraction job succeeded, but none of the archive's stream files \
+                contains the log event"
         ),
         (
             status = UNSUPPORTED_MEDIA_TYPE,
@@ -57,7 +55,12 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 `dataset` isn't a valid dataset name, or the body has an unknown field (e.g., \
                 `extract_job_type`)"
         ),
-        (status = INTERNAL_SERVER_ERROR),
+        (
+            status = INTERNAL_SERVER_ERROR,
+            description = "The extraction job failed, was killed, was cancelled, or disappeared \
+                from the query jobs table before it finished; or a database, results-cache, or S3 \
+                request failed"
+        ),
         (
             status = GATEWAY_TIMEOUT,
             description = "The extraction job didn't finish within \

@@ -4,6 +4,8 @@ use aws_sdk_s3::error::DisplayErrorContext;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::types::ArchiveId;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
@@ -41,6 +43,18 @@ pub enum ClientError {
 
     #[error("stream extraction timed out after {0} seconds")]
     StreamExtractionTimeout(u64),
+
+    #[error("extraction job {job_id} ended with status {status:?}")]
+    ExtractionJobFailed { job_id: u64, status: QueryJobStatus },
+
+    #[error("extraction job {0} not found in the query jobs table")]
+    ExtractionJobNotFound(u64),
+
+    #[error("log event {log_event_idx} not found in the stream files of archive {archive_id}")]
+    LogEventNotFound {
+        archive_id: ArchiveId,
+        log_event_idx: u64,
+    },
 
     #[error("Dataset not found: {0}")]
     DatasetNotFound(DatasetName),

@@ -346,7 +346,9 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::QueryJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::QueryJobNotFound(_)
+            | ClientError::DatasetNotFound(_)
+            | ClientError::LogEventNotFound { .. } => Self::NotFound,
             ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
             ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
             ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(format!("{err}")),
@@ -358,6 +360,8 @@ impl From<ClientError> for HandlerError {
             | ClientError::TaskJoin(_)
             | ClientError::Aws { .. }
             | ClientError::InvalidQueryJobConfig(_)
+            | ClientError::ExtractionJobFailed { .. }
+            | ClientError::ExtractionJobNotFound(_)
             | ClientError::Telemetry(_) => Self::InternalServer,
         }
     }
@@ -538,7 +542,25 @@ mod tests {
                 StatusCode::NOT_FOUND,
             ),
             (
+                ClientError::LogEventNotFound {
+                    archive_id: "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11".parse()?,
+                    log_event_idx: 42,
+                },
+                StatusCode::NOT_FOUND,
+            ),
+            (
                 ClientError::MalformedData,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                ClientError::ExtractionJobFailed {
+                    job_id: 1,
+                    status: QueryJobStatus::Failed,
+                },
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                ClientError::ExtractionJobNotFound(1),
                 StatusCode::INTERNAL_SERVER_ERROR,
             ),
         ] {
