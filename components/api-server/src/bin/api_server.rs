@@ -1,6 +1,7 @@
 use anyhow::Context;
 use clap::Parser;
 use clp_rust_utils::clp_config::package;
+use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::serde::yaml;
 
 #[derive(Parser)]
@@ -72,11 +73,24 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context(format!("Cannot listen to {addr}"))?;
 
-    let client = api_server::client::Client::connect(&config, &credentials)
+    let sql_pool = create_clp_db_mysql_pool(&config.database, &credentials.database, 10)
         .await
-        .context("Cannot connect to CLP")?;
+        .context("cannot connect to MySQL")?;
+    let mongo_uri = format!(
+        "mongodb://{}:{}/{}?directConnection=true",
+        config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
+    );
+    let mongodb_client = mongodb::Client::with_uri_str(mongo_uri)
+        .await
+        .context("cannot connect to MongoDB")?;
 
-    let router = api_server::routes::from_client(client)?;
+    let client = api_server::client::Client::new(config.clone(), mongodb_client, sql_pool.clone());
+    let webui_client = api_server::webui_client::WebuiClient::new(config, sql_pool);
+
+    let router = api_server::routes::from_app_state(api_server::routes::AppState {
+        client,
+        webui_client,
+    })?;
     startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 
     tracing::info!("Server started at {addr}");

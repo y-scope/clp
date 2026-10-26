@@ -23,11 +23,11 @@ pub enum ClientError {
     #[error("Malformed data")]
     MalformedData,
 
+    #[error("background task failed: {0}")]
+    TaskJoin(#[from] tokio::task::JoinError),
+
     #[error("`AwsError`: {description}")]
     Aws { description: String },
-
-    #[error("api_server configuration is missing")]
-    ConfigIsNone,
 
     #[error("query job not found: {0}")]
     QueryJobNotFound(u64),
