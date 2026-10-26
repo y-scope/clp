@@ -385,12 +385,12 @@ mod tests {
     use axum::routing::delete;
     use axum::routing::get;
     use clp_rust_utils::clp_config::package::config::Config;
+    use clp_rust_utils::job_config::Cancellability;
     use clp_rust_utils::job_config::QueryJobStatus;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     use super::*;
-    use crate::client::Cancellability;
 
     #[derive(Deserialize)]
     struct JobStatusParams {

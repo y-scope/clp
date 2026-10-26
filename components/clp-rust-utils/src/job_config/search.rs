@@ -83,6 +83,32 @@ impl QueryJobStatus {
     }
 }
 
+/// The cancellability of a query job, derived from its status.
+#[derive(Clone, Copy, Debug)]
+pub enum Cancellability {
+    Cancellable,
+    CancellationRequested,
+    NotCancellable,
+}
+
+impl Cancellability {
+    /// # Returns
+    ///
+    /// The cancellability of a query job in the given status.
+    #[must_use]
+    pub const fn from_status(status: QueryJobStatus) -> Self {
+        match status {
+            QueryJobStatus::Pending | QueryJobStatus::Running => Self::Cancellable,
+            QueryJobStatus::CancelRequested
+            | QueryJobStatus::Cancelling
+            | QueryJobStatus::Cancelled => Self::CancellationRequested,
+            QueryJobStatus::Succeeded | QueryJobStatus::Failed | QueryJobStatus::Killed => {
+                Self::NotCancellable
+            }
+        }
+    }
+}
+
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
 #[derive(
     Clone,
