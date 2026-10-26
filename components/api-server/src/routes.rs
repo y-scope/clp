@@ -333,6 +333,8 @@ enum HandlerError {
     Conflict,
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Gateway timeout: {0}")]
+    GatewayTimeout(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -347,6 +349,7 @@ impl From<ClientError> for HandlerError {
             ClientError::QueryJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
             ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
             ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
+            ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(format!("{err}")),
             ClientError::Sql(_)
             | ClientError::Mongo(_)
             | ClientError::QueryNotSucceeded
@@ -368,6 +371,7 @@ impl IntoResponse for HandlerError {
             Self::Conflict => StatusCode::CONFLICT.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
         }
     }
 }
@@ -380,6 +384,7 @@ mod tests {
     use axum::http::Request;
     use axum::http::StatusCode;
     use axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN;
+    use axum::http::header::CONTENT_TYPE;
     use axum::http::header::ORIGIN;
     use axum::routing::delete;
     use axum::routing::get;
@@ -450,8 +455,8 @@ mod tests {
             .connect_lazy("mysql://localhost/clp-db")
             .expect("the MySQL URI should be valid");
         from_app_state(AppState {
-            client: Client::new(config.clone(), mongodb_client, sql_pool.clone()),
-            webui_client: WebuiClient::new(config, sql_pool),
+            client: Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone()),
+            webui_client: WebuiClient::new(config, sql_pool, mongodb_client).await,
         })
         .expect("the OpenAPI document should serialize")
     }
@@ -545,6 +550,38 @@ mod tests {
             );
         }
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn stream_file_extraction_route_rejects_an_invalid_request() -> anyhow::Result<()> {
+        let app = clp_s_app_with_lazy_clients().await;
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/stream_files/extract")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "extract_job_type": "ExtractIr",
+                            "log_event_idx": 0,
+                            "stream_id": "",
+                        })
+                        .to_string(),
+                    ))?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn stream_extraction_timeout_maps_to_gateway_timeout_with_its_message() {
+        let error = ClientError::StreamExtractionTimeout(1800);
+        let expected = error.to_string();
+        let response = HandlerError::from(error).into_response();
+        assert_eq!(response.status(), StatusCode::GATEWAY_TIMEOUT);
+        assert_eq!(get_body(response).await, expected);
     }
 
     #[tokio::test]

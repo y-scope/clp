@@ -24,6 +24,7 @@ webui:
 #  query_job_polling:
 #    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
+#  stream_file_extraction_timeout_secs: 1800
 
 # log-ingestor is not supported in clp-text
 log_ingestor: null

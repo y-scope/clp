@@ -759,7 +759,8 @@ mod tests {
         let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect_lazy("mysql://localhost:1/clp-db")?;
-        let client = WebuiClient::new(config, sql_pool);
+        let mongodb_client = mongodb::Client::with_uri_str("mongodb://localhost:1").await?;
+        let client = WebuiClient::new(config, sql_pool, mongodb_client).await;
         assert_eq!(client.get_dataset_names().await?, Vec::<DatasetName>::new());
         Ok(())
     }
@@ -775,7 +776,8 @@ mod tests {
         let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect_lazy("mysql://localhost:1/clp-db")?;
-        let client = WebuiClient::new(config, sql_pool);
+        let mongodb_client = mongodb::Client::with_uri_str("mongodb://localhost:1").await?;
+        let client = WebuiClient::new(config, sql_pool, mongodb_client).await;
         assert_eq!(client.get_query_speed(&[], 1).await?, None);
         Ok(())
     }
@@ -791,7 +793,8 @@ mod tests {
         let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect_lazy("mysql://localhost:1/clp-db")?;
-        let client = WebuiClient::new(config, sql_pool);
+        let mongodb_client = mongodb::Client::with_uri_str("mongodb://localhost:1").await?;
+        let client = WebuiClient::new(config, sql_pool, mongodb_client).await;
         assert_eq!(client.get_time_range(&[]).await?, None);
         Ok(())
     }

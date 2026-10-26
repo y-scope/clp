@@ -1,5 +1,6 @@
 //! Error types for the API server.
 
+use aws_sdk_s3::error::DisplayErrorContext;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
 use clp_rust_utils::dataset::DatasetName;
@@ -38,6 +39,9 @@ pub enum ClientError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    #[error("stream extraction timed out after {0} seconds")]
+    StreamExtractionTimeout(u64),
+
     #[error("Dataset not found: {0}")]
     DatasetNotFound(DatasetName),
 
@@ -65,10 +69,10 @@ impl<T: IsMalformedData> From<T> for ClientError {
     }
 }
 
-impl<AwsSdkErrorType> From<SdkError<AwsSdkErrorType>> for ClientError {
+impl<AwsSdkErrorType: std::error::Error + 'static> From<SdkError<AwsSdkErrorType>> for ClientError {
     fn from(value: SdkError<AwsSdkErrorType>) -> Self {
         Self::Aws {
-            description: value.to_string(),
+            description: DisplayErrorContext(&value).to_string(),
         }
     }
 }
