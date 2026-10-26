@@ -153,6 +153,15 @@ auto is_wildcard(char c) -> bool {
     return cSingleCharWildcard == c || cZeroOrMoreCharsWildcard == c;
 }
 
+auto consists_only_of(string_view str, string_view allowed_chars) -> bool {
+    if (str.empty()) {
+        return false;
+    }
+    return std::ranges::all_of(str, [allowed_chars](char const c) -> bool {
+        return string_view::npos != allowed_chars.find(c);
+    });
+}
+
 auto clean_up_wildcard_search_string(string_view str) -> string {
     string cleaned_str;
 

@@ -9,12 +9,10 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <utility>
 
 #include <clp_s/search/ast/FilterOperation.hpp>
 #include <clp_s/search/ast/Literal.hpp>
-#include <clp_s/search/ast/SearchUtils.hpp>
 
 namespace clp_s::search::ast {
 namespace {
@@ -22,6 +20,12 @@ constexpr std::string_view cTrueString{"true"};
 constexpr std::string_view cFalseString{"false"};
 constexpr std::string_view cNullString{"null"};
 constexpr std::string_view cMatchAnyString{"*"};
+
+// Characters that may appear in a wildcard pattern that could match a number's text. The float set
+// includes `+`, `e`, and `E` because `FormattedFloat`/`DictionaryFloat` columns are matched against
+// the retained original text, which may use exponent notation.
+constexpr std::string_view cIntWildcardChars{"0123456789-*?"};
+constexpr std::string_view cFloatWildcardChars{"0123456789-+.eE*?"};
 
 // -2^63, which is exactly representable as a double (unlike the `int64_t` max, 2^63 - 1, which has
 // too many significant bits to be exactly represented as a double). The floor and ceiling of any
@@ -42,15 +46,6 @@ auto parse_number(std::string const& str) -> std::optional<T>;
  * @return Whether `op` is `FilterOperation::EQ` or `FilterOperation::NEQ`.
  */
 auto is_equality_op(FilterOperation op) -> bool;
-
-/**
- * Determines which string types a string can be interpreted as. A string containing spaces or
- * unescaped wildcards can match a CLP string, and a string without spaces can match a variable
- * string.
- * @param str
- * @return A bitmask of the matching string types.
- */
-auto get_string_types(std::string_view str) -> literal_type_bitmask_t;
 
 /**
  * @param v
@@ -74,19 +69,6 @@ auto is_equality_op(FilterOperation op) -> bool {
     return FilterOperation::EQ == op || FilterOperation::NEQ == op;
 }
 
-auto get_string_types(std::string_view str) -> literal_type_bitmask_t {
-    literal_type_bitmask_t types{};
-    if (std::string_view::npos != str.find(' ')) {
-        types |= LiteralType::ClpStringT;
-    } else {
-        types |= LiteralType::VarStringT;
-    }
-    if (has_unescaped_wildcards(str)) {
-        types |= LiteralType::ClpStringT;
-    }
-    return types;
-}
-
 auto get_int_bounds(double v) -> std::optional<std::pair<int64_t, int64_t>> {
     if (v >= cInt64Min && v < -cInt64Min) {
         return std::pair{static_cast<int64_t>(std::floor(v)), static_cast<int64_t>(std::ceil(v))};
@@ -97,13 +79,14 @@ auto get_int_bounds(double v) -> std::optional<std::pair<int64_t, int64_t>> {
 
 auto ValueLiteral::create_from_int(int64_t v) -> std::shared_ptr<Literal> {
     auto str{std::to_string(v)};
-    auto const types{cIntegralTypes | LiteralType::TimestampT | get_string_types(str)};
+    auto const types{cIntegralTypes | LiteralType::TimestampT | LiteralType::VarStringT};
     return std::shared_ptr<Literal>{new ValueLiteral{
             types,
             std::move(str),
             static_cast<double>(v),
             std::nullopt,
-            std::pair{v, v}
+            std::pair{v, v},
+            WildcardProperties{}
     }};
 }
 
@@ -113,55 +96,95 @@ auto ValueLiteral::create_from_float(double v) -> std::shared_ptr<Literal> {
     auto str{ss.str()};
     auto const int_bounds_option{get_int_bounds(v)};
     literal_type_bitmask_t types{
-            LiteralType::FloatT | LiteralType::TimestampT | get_string_types(str)
+            LiteralType::FloatT | LiteralType::TimestampT | LiteralType::VarStringT
     };
     if (int_bounds_option.has_value()) {
         types |= LiteralType::IntegerT;
     }
-    return std::shared_ptr<Literal>{
-            new ValueLiteral{types, std::move(str), v, std::nullopt, int_bounds_option}
-    };
+    return std::shared_ptr<Literal>{new ValueLiteral{
+            types,
+            std::move(str),
+            v,
+            std::nullopt,
+            int_bounds_option,
+            WildcardProperties{}
+    }};
 }
 
 auto ValueLiteral::create_from_bool(bool v) -> std::shared_ptr<Literal> {
     std::string str{v ? cTrueString : cFalseString};
-    auto const types{LiteralType::BooleanT | get_string_types(str)};
-    return std::shared_ptr<Literal>{
-            new ValueLiteral{types, std::move(str), std::nullopt, v, std::nullopt}
-    };
+    auto const types{LiteralType::BooleanT | LiteralType::VarStringT};
+    return std::shared_ptr<Literal>{new ValueLiteral{
+            types,
+            std::move(str),
+            std::nullopt,
+            v,
+            std::nullopt,
+            WildcardProperties{}
+    }};
 }
 
 auto ValueLiteral::create_from_string(std::string_view v) -> std::shared_ptr<Literal> {
+    bool has_space{false};
+    bool is_escaped{false};
+    bool has_only_int_chars{true};
+    bool has_only_float_chars{true};
+    WildcardProperties wildcard_properties;
+    for (auto const c : v) {
+        has_space |= ' ' == c;
+        has_only_int_chars &= std::string_view::npos != cIntWildcardChars.find(c);
+        has_only_float_chars &= std::string_view::npos != cFloatWildcardChars.find(c);
+        if (is_escaped) {
+            is_escaped = false;
+        } else if ('\\' == c) {
+            is_escaped = true;
+        } else if ('*' == c || '?' == c) {
+            wildcard_properties.exists = true;
+        }
+    }
+    wildcard_properties.matches_int = wildcard_properties.exists && has_only_int_chars;
+    wildcard_properties.matches_float = wildcard_properties.exists && has_only_float_chars;
+
     std::string str{v};
-    literal_type_bitmask_t types{get_string_types(str)};
+    literal_type_bitmask_t types{has_space ? LiteralType::ClpStringT : LiteralType::VarStringT};
+    if (wildcard_properties.exists) {
+        types |= LiteralType::ClpStringT;
+    }
     std::optional<double> float_option;
     std::optional<bool> bool_option;
     std::optional<std::pair<int64_t, int64_t>> int_bounds_option;
-    std::optional<int64_t> int_upper_bound_option;
-    if (auto const parsed_int_option{parse_number<int64_t>(str)}; parsed_int_option.has_value()) {
-        types |= cIntegralTypes | LiteralType::TimestampT;
-        float_option = static_cast<double>(parsed_int_option.value());
-        int_bounds_option = {parsed_int_option.value(), parsed_int_option.value()};
-    } else if (auto const parsed_float_option{parse_number<double>(str)};
-               parsed_float_option.has_value())
-    {
-        types |= LiteralType::FloatT | LiteralType::TimestampT;
-        float_option = parsed_float_option;
-        int_bounds_option = get_int_bounds(parsed_float_option.value());
-        if (int_bounds_option.has_value()) {
-            types |= LiteralType::IntegerT;
+    if (false == wildcard_properties.exists) {
+        if (auto const parsed_int_option{parse_number<int64_t>(str)}; parsed_int_option.has_value())
+        {
+            types |= cIntegralTypes | LiteralType::TimestampT;
+            float_option = static_cast<double>(parsed_int_option.value());
+            int_bounds_option = {parsed_int_option.value(), parsed_int_option.value()};
+        } else if (auto const parsed_float_option{parse_number<double>(str)};
+                   parsed_float_option.has_value())
+        {
+            types |= LiteralType::FloatT | LiteralType::TimestampT;
+            float_option = parsed_float_option;
+            int_bounds_option = get_int_bounds(parsed_float_option.value());
+            if (int_bounds_option.has_value()) {
+                types |= LiteralType::IntegerT;
+            }
+        }
+        if (cTrueString == str || cFalseString == str) {
+            types |= LiteralType::BooleanT;
+            bool_option = cTrueString == str;
+        }
+        if (cNullString == str) {
+            types |= LiteralType::NullT;
         }
     }
-    if (cTrueString == str || cFalseString == str) {
-        types |= LiteralType::BooleanT;
-        bool_option = cTrueString == str;
-    }
-    if (cNullString == str) {
-        types |= LiteralType::NullT;
-    }
-    return std::shared_ptr<Literal>{
-            new ValueLiteral{types, std::move(str), float_option, bool_option, int_bounds_option}
-    };
+    return std::shared_ptr<Literal>{new ValueLiteral{
+            types,
+            std::move(str),
+            float_option,
+            bool_option,
+            int_bounds_option,
+            wildcard_properties
+    }};
 }
 
 void ValueLiteral::print() const {
@@ -235,7 +258,39 @@ auto ValueLiteral::as_any(FilterOperation op) -> bool {
     return is_equality_op(op) && cMatchAnyString == m_string;
 }
 
-auto ValueLiteral::has_wildcard() const -> bool {
-    return has_unescaped_wildcards(m_string);
+auto ValueLiteral::can_match_op(LiteralType type, FilterOperation op) const -> bool {
+    switch (type) {
+        case LiteralType::IntegerT:
+            if (m_wildcard.matches_int && is_equality_op(op)) {
+                return true;
+            }
+            if (false == m_int_bounds_option.has_value()) {
+                return false;
+            }
+            switch (op) {
+                case FilterOperation::LT:
+                case FilterOperation::LTE:
+                case FilterOperation::GT:
+                case FilterOperation::GTE:
+                    return true;
+                default:
+                    return m_int_bounds_option->first == m_int_bounds_option->second;
+            }
+        case LiteralType::FloatT:
+            return m_float_option.has_value() || (m_wildcard.matches_float && is_equality_op(op));
+        case LiteralType::ClpStringT:
+        case LiteralType::VarStringT:
+        case LiteralType::NullT:
+            return is_equality_op(op) && 0 != (m_types & type);
+        case LiteralType::BooleanT:
+            return is_equality_op(op) && m_bool_option.has_value();
+        case LiteralType::ArrayT:
+            return is_equality_op(op)
+                   && 0 != (m_types & (LiteralType::ClpStringT | LiteralType::VarStringT));
+        case LiteralType::TimestampT:
+            return 0 != (m_types & LiteralType::TimestampT);
+        default:
+            return false;
+    }
 }
 }  // namespace clp_s::search::ast

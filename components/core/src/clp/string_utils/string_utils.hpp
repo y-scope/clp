@@ -117,6 +117,14 @@ auto to_lower(std::string& str) -> void;
 [[nodiscard]] auto is_wildcard(char c) -> bool;
 
 /**
+ * Checks a non-empty string against a set of allowed characters.
+ * @param str The string to check.
+ * @param allowed_chars The characters permitted in the string.
+ * @return Whether `str` is non-empty and every character of `str` appears in `allowed_chars`.
+ */
+[[nodiscard]] auto consists_only_of(std::string_view str, std::string_view allowed_chars) -> bool;
+
+/**
  * Same as ``wildcard_match_unsafe_case_sensitive`` except this method allows
  * the caller to specify whether the match should be case sensitive.
  *

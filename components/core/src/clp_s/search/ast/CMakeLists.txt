@@ -61,6 +61,7 @@ if(CLP_BUILD_CLP_S_SEARCH_AST)
         PUBLIC
         ystdlib::error_handling
         PRIVATE
+        clp::string_utils
         simdjson::simdjson
     )
 endif()

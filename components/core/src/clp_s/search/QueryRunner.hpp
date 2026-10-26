@@ -304,6 +304,30 @@ private:
     ) -> bool;
 
     /**
+     * Prepares string and numeric matching state for an array search.
+     * @param op The filter operation.
+     * @param operand The filter operand; may be null for EXISTS or NEXISTS.
+     */
+    auto prepare_array_search(ast::FilterOperation op, std::shared_ptr<ast::Literal> const& operand)
+            -> void;
+
+    /**
+     * Evaluates a filter against a numeric element of an unstructured array. Wildcard operands
+     * match its shortest round-trip representation; other operands use numeric comparisons.
+     * Requires matching state prepared by `prepare_array_search` for the same operand and
+     * operation.
+     * @param number The array element to evaluate.
+     * @param op The filter operation.
+     * @param operand The filter operand.
+     * @return Whether `number` satisfies `op` against `operand`.
+     */
+    [[nodiscard]] auto evaluate_array_number_filter(
+            simdjson::ondemand::number number,
+            ast::FilterOperation op,
+            std::shared_ptr<ast::Literal> const& operand
+    ) const -> bool;
+
+    /**
      * Evaluates an array filter expression against an unstructured array. A NEXISTS filter holds
      * when no element of the array contains the path given by `unresolved_tokens`.
      * @param op

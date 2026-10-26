@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -7,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -16,7 +18,10 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <clp_s/search/ast/FilterOperation.hpp>
+#include <clp_s/search/ast/Literal.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
+#include <clp_s/search/ast/TimestampLiteral.hpp>
 #include <clpp/Interpretation.hpp>
 
 #include "../src/clp_s/archive_constants.hpp"
@@ -240,6 +245,168 @@ auto search_clpp(
 }
 }  // namespace
 
+TEST_CASE("clp-s-search-value-literal-typed-factories", "[clp-s][search]") {
+    using namespace clp_s::search::ast;
+
+    for (auto const value : {int64_t{-42}, int64_t{0}, int64_t{42}}) {
+        CAPTURE(value);
+        auto literal = ValueLiteral::create_from_int(value);
+        Literal const& operand = *literal;
+        REQUIRE_FALSE(operand.has_wildcard());
+        REQUIRE(operand.can_match_op(LiteralType::IntegerT, FilterOperation::EQ));
+        int64_t result{};
+        REQUIRE(literal->as_int(result, FilterOperation::EQ));
+        REQUIRE(result == value);
+    }
+    for (auto const value : {-1.5, 0.0, 2.5}) {
+        CAPTURE(value);
+        auto literal = ValueLiteral::create_from_float(value);
+        Literal const& operand = *literal;
+        REQUIRE_FALSE(operand.has_wildcard());
+        REQUIRE(operand.can_match_op(LiteralType::FloatT, FilterOperation::EQ));
+        double result{};
+        REQUIRE(literal->as_float(result, FilterOperation::EQ));
+        REQUIRE(result == value);
+    }
+    for (auto const value : {false, true}) {
+        CAPTURE(value);
+        auto literal = ValueLiteral::create_from_bool(value);
+        Literal const& operand = *literal;
+        REQUIRE_FALSE(operand.has_wildcard());
+        REQUIRE(operand.can_match_op(LiteralType::BooleanT, FilterOperation::EQ));
+        REQUIRE_FALSE(operand.can_match_op(LiteralType::IntegerT, FilterOperation::EQ));
+        bool result{};
+        REQUIRE(literal->as_bool(result, FilterOperation::EQ));
+        REQUIRE(result == value);
+    }
+}
+
+TEST_CASE("clp-s-search-value-literal-wildcards", "[clp-s][search]") {
+    using namespace clp_s::search::ast;
+
+    struct TestCase {
+        std::string_view value;
+        bool wildcard;
+        bool integer;
+        bool floating;
+    };
+
+    for (auto const& [value, wildcard, integer, floating] :
+         std::vector<TestCase>{
+                 {"12", false, true, true},
+                 {"12*", true, true, true},
+                 {"-?2", true, true, true},
+                 {"1.*", true, false, true},
+                 {"1e+?", true, false, true},
+                 {"abc*", true, false, false},
+                 {R"(12\*)", false, false, false},
+                 {R"(12\?)", false, false, false},
+                 {R"(12\\*)", true, false, false},
+                 {R"(12\*?)", true, false, false}
+         })
+    {
+        CAPTURE(value);
+        std::shared_ptr<Literal const> const literal = ValueLiteral::create_from_string(value);
+        REQUIRE(literal->has_wildcard() == wildcard);
+        for (auto const op : {FilterOperation::EQ, FilterOperation::NEQ}) {
+            CAPTURE(op);
+            REQUIRE(literal->can_match_op(LiteralType::IntegerT, op) == integer);
+            REQUIRE(literal->can_match_op(LiteralType::FloatT, op) == floating);
+        }
+        if (wildcard) {
+            for (auto const op :
+                 {FilterOperation::LT,
+                  FilterOperation::LTE,
+                  FilterOperation::GT,
+                  FilterOperation::GTE})
+            {
+                CAPTURE(op);
+                REQUIRE_FALSE(literal->can_match_op(LiteralType::IntegerT, op));
+                REQUIRE_FALSE(literal->can_match_op(LiteralType::FloatT, op));
+            }
+        }
+    }
+}
+
+TEST_CASE("clp-s-search-literal-operation-compatibility", "[clp-s][search]") {
+    using namespace clp_s::search::ast;
+
+    struct TestCase {
+        std::shared_ptr<Literal const> literal;
+        LiteralType type;
+        bool equality;
+        bool ordering;
+    };
+
+    for (auto const& [literal, type, equality, ordering] : std::vector<
+                 TestCase
+         >{{ValueLiteral::create_from_float(1.5), LiteralType::IntegerT, false, true},
+           {ValueLiteral::create_from_string("-1.5"), LiteralType::IntegerT, false, true},
+           {ValueLiteral::create_from_float(2.0), LiteralType::IntegerT, true, true},
+           {ValueLiteral::create_from_string("word"), LiteralType::VarStringT, true, false},
+           {ValueLiteral::create_from_string("two words"), LiteralType::ClpStringT, true, false},
+           {ValueLiteral::create_from_string("word"), LiteralType::ClpStringT, false, false},
+           {ValueLiteral::create_from_string("two words"), LiteralType::VarStringT, false, false},
+           {ValueLiteral::create_from_string("word"), LiteralType::ArrayT, true, false},
+           {ValueLiteral::create_from_bool(false), LiteralType::BooleanT, true, false},
+           {ValueLiteral::create_from_string("true"), LiteralType::BooleanT, true, false},
+           {ValueLiteral::create_from_string("null"), LiteralType::NullT, true, false},
+           {ValueLiteral::create_from_string("word"), LiteralType::NullT, false, false},
+           {ValueLiteral::create_from_int(1), LiteralType::UnknownT, false, false},
+           {ValueLiteral::create_from_int(1), LiteralType::ClppDecomposeT, false, false}})
+    {
+        CAPTURE(type, equality, ordering);
+        for (auto const op :
+             {FilterOperation::EQ,
+              FilterOperation::NEQ,
+              FilterOperation::LT,
+              FilterOperation::LTE,
+              FilterOperation::GT,
+              FilterOperation::GTE})
+        {
+            CAPTURE(op);
+            auto const expected = (FilterOperation::EQ == op || FilterOperation::NEQ == op)
+                                          ? equality
+                                          : ordering;
+            REQUIRE(literal->can_match_op(type, op) == expected);
+        }
+    }
+}
+
+TEST_CASE("clp-s-search-non-value-literal-operation-compatibility", "[clp-s][search]") {
+    using namespace clp_s::search::ast;
+    std::shared_ptr<Literal const> const timestamp = TimestampLiteral::create(1'234'567'890);
+    std::shared_ptr<Literal const> const column
+            = ColumnDescriptor::create_from_escaped_tokens({"value"}, "");
+    for (auto const type :
+         {LiteralType::IntegerT,
+          LiteralType::FloatT,
+          LiteralType::TimestampT,
+          LiteralType::ClpStringT,
+          LiteralType::VarStringT,
+          LiteralType::BooleanT,
+          LiteralType::ArrayT,
+          LiteralType::NullT,
+          LiteralType::ClppDecomposeT,
+          LiteralType::UnknownT})
+    {
+        for (auto const op :
+             {FilterOperation::EQ,
+              FilterOperation::NEQ,
+              FilterOperation::LT,
+              FilterOperation::LTE,
+              FilterOperation::GT,
+              FilterOperation::GTE})
+        {
+            CAPTURE(type, op);
+            auto const expected = LiteralType::IntegerT == type || LiteralType::FloatT == type
+                                  || LiteralType::TimestampT == type;
+            REQUIRE(timestamp->can_match_op(type, op) == expected);
+            REQUIRE_FALSE(column->can_match_op(type, op));
+        }
+    }
+}
+
 // Tests that query preprocessing reduces a query to an empty expression when no column type can
 // satisfy a filter, so that the search terminates before any archive is opened. In particular, a
 // filter whose operand can't be interpreted as a string must also rule out StructurizedText and
@@ -266,6 +433,42 @@ TEST_CASE("clp-s-search-preprocess-logically-false", "[clp-s][search]") {
             == (nullptr != std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(expr)));
 }
 
+// Tests that numeric types are retained only for compatible wildcard patterns and operations.
+TEST_CASE("clp-s-search-narrow-numeric-wildcards", "[clp-s][search]") {
+    auto const [query, matches_int, matches_float] = GENERATE(
+            std::tuple{R"aa(pid: "*xyz*")aa", false, false},
+            std::tuple{R"aa(pid: "1*")aa", true, true},
+            std::tuple{R"aa(pid: "?")aa", true, true},
+            std::tuple{R"aa(pid: "-1?")aa", true, true},
+            std::tuple{R"aa(pid: "1.*")aa", false, true},
+            std::tuple{R"aa(pid: "1e*")aa", false, true},
+            std::tuple{R"aa(pid: "*E3")aa", false, true},
+            std::tuple{R"aa(pid: "*E+3")aa", false, true},
+            std::tuple{R"aa(pid: "1\**")aa", false, false},
+            std::tuple{R"aa(NOT pid: "1*")aa", true, true},
+            std::tuple{R"aa(pid > "1*")aa", false, false},
+            std::tuple{R"aa(pid: "12")aa", true, true},
+            std::tuple{R"aa(pid: "1.5")aa", false, true}
+    );
+    CAPTURE(query);
+
+    auto query_stream{std::istringstream{query}};
+    auto expr{clp_s::search::kql::parse_kql_expression(query_stream)};
+    REQUIRE(nullptr != expr);
+    clp_s::search::ast::NarrowTypes narrow_pass;
+    expr = narrow_pass.run(expr);
+    auto const filter{std::dynamic_pointer_cast<clp_s::search::ast::FilterExpr>(expr)};
+    if (nullptr == filter) {
+        REQUIRE(nullptr != std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(expr));
+        REQUIRE(false == matches_int);
+        REQUIRE(false == matches_float);
+        return;
+    }
+    auto const column{filter->get_column()};
+    REQUIRE(matches_int == column->matches_type(clp_s::search::ast::LiteralType::IntegerT));
+    REQUIRE(matches_float == column->matches_type(clp_s::search::ast::LiteralType::FloatT));
+}
+
 TEST_CASE("clp-s-search", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
             {R"aa(NOT a: b)aa", {0}},
@@ -277,8 +480,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "Msg 6: \tAbc123")aa", {6}},
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(arr.b > 1000)aa", {7, 8}},
-            {R"aa(NOT arr.b: *)aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13}},
-            {R"aa(NOT arr.a: *)aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13}},
+            {R"aa(NOT arr.b: *)aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14}},
+            {R"aa(NOT arr.a: *)aa", {0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14}},
             {R"aa(var_string: *)aa", {9}},
             {R"aa(clp_string: *)aa", {9}},
             {fmt::format(
@@ -296,7 +499,16 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(ambiguous_varstring: "a\*e")aa", {12}},
             {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
             {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}},
-            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}}
+            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
+            {R"aa(*: "*xyz*")aa", {}},
+            {R"aa(o: "*xyz*")aa", {}},
+            {R"aa(*: "0.1*")aa", {14}},
+            {R"aa(n: "0.1*")aa", {14}},
+            {R"aa(o: "?")aa", {14}},
+            {R"aa(o: "1?")aa", {}},
+            {R"aa(o: "0\*")aa", {}},
+            {R"aa(NOT o: "?")aa", {}},
+            {R"aa(NOT o: "1?")aa", {14}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
@@ -331,7 +543,7 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
             {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
             {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}},
             {R"aa(msg: *)aa", {1, 2, 3, 4, 5, 6}},
-            {R"aa(NOT msg: *)aa", {0, 7, 8, 9, 10, 11, 12, 13}},
+            {R"aa(NOT msg: *)aa", {0, 7, 8, 9, 10, 11, 12, 13, 14}},
             {R"aa(shape(msg): *)aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT shape(msg): "xxx")aa", {1, 2, 3, 4, 5, 6}}
     };
@@ -340,7 +552,7 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT msg: "xxx")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT msg: "Msg 1*")aa", {2, 3, 4, 5, 6}},
-            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}},
+            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
             {R"aa(idx: 0 OR NOT msg: "xxx")aa", {0, 1, 2, 3, 4, 5, 6}}
     };
     auto const single_file_archive = GENERATE(true, false);
@@ -373,9 +585,11 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
 // StructurizedText node (idx 3) and an Integer node (idx 4); idx 2 has no `msg` at all. The cases
 // cover:
 // - Value filters, which hold if the value at any matched node matches (`msg: *`, `msg: 42`,
-//   `msg: 2`, `msg: "Msg 0*"`).
+//   `msg: 2`, `msg: plain`, `msg: "Msg 0*"`). Comparing values against StructurizedText requires
+//   decomposition support; otherwise these queries must fail cleanly.
 // - Inverted value filters, which still require the key to be present (`NOT msg: "Msg 0*"`,
-//   `NOT msg: 42`).
+//   `NOT msg: 42`). Integer values are excluded when the operand cannot match integer text,
+//   even for inverted filters.
 // - Inverted existence filters, which hold only when the key is absent under every matched node
 //   (`NOT msg: *`, `NOT *.msg: *`).
 // - Wildcard paths resolving to nodes at different depths (`*.msg: *`, `*.msg: 7`).
@@ -396,18 +610,18 @@ TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
             {R"aa(NOT *.msg: *)aa", {2}},
             {R"aa(shape(msg): *)aa", {0, 7}},
             {R"aa(NOT shape(msg): "xxx")aa", {0, 7}},
-            {R"aa(msg: plain)aa", {6}},
     };
     std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
             {R"aa(msg: 42)aa", {1}},
             {R"aa(msg: 2)aa", {5}},
+            {R"aa(msg: plain)aa", {6}},
             {R"aa(msg: "Msg 0*")aa", {0}},
-            {R"aa(NOT msg: "Msg 0*")aa", {1, 5, 6, 7}},
+            {R"aa(NOT msg: "Msg 0*")aa", {5, 6, 7}},
             {R"aa(NOT msg: 42)aa", {0, 5, 6, 7}},
             {R"aa(NOT msg: plain)aa", {0, 5, 7}},
             {R"aa(NOT msg: "two words")aa", {0, 5, 6}},
             {R"aa(*.msg: 7)aa", {4}},
-            {R"aa(NOT *.msg: "Msg 0*")aa", {1, 3, 4, 5, 6, 7}},
+            {R"aa(NOT *.msg: "Msg 0*")aa", {3, 5, 6, 7}},
             {R"aa(NOT *: "Msg 0*")aa", {1, 2, 3, 4, 5, 6, 7}},
             {R"aa(NOT *: plain)aa", {0, 1, 2, 3, 4, 5, 7}},
             {R"aa(NOT *: "two words")aa", {0, 1, 2, 3, 4, 5, 6}},

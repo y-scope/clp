@@ -43,48 +43,34 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
         }
 
         auto literal = filter->get_operand();
-        std::string tmpstring;
-        int64_t tmpint;
-        double tmpdouble;
-        bool tmpbool;
         bool narrowed_clp_string = false;
         bool narrowed_var_string = false;
         bool matches_var_and_clp_string = column->matches_type(LiteralType::ClpStringT)
                                           && column->matches_type(LiteralType::VarStringT);
 
         if (false == literal->as_any(op)) {
-            if (false == literal->as_clp_string(tmpstring, op)) {
+            if (false == literal->can_match_op(LiteralType::ClpStringT, op)) {
                 narrowed_clp_string = true;
                 column->remove_matching_type(LiteralType::ClpStringT);
             }
-            if (false == literal->as_var_string(tmpstring, op)) {
+            if (false == literal->can_match_op(LiteralType::VarStringT, op)) {
                 narrowed_var_string = true;
                 column->remove_matching_type(LiteralType::VarStringT);
             }
             if (narrowed_clp_string && narrowed_var_string) {
                 column->remove_matching_type(LiteralType::ClppDecomposeT);
             }
-            if (false == literal->as_int(tmpint, op)) {
-                if (false == literal->has_wildcard()) {
-                    column->remove_matching_type(LiteralType::IntegerT);
+            for (auto const type :
+                 {LiteralType::IntegerT,
+                  LiteralType::FloatT,
+                  LiteralType::BooleanT,
+                  LiteralType::ArrayT,
+                  LiteralType::NullT,
+                  LiteralType::TimestampT})
+            {
+                if (false == literal->can_match_op(type, op)) {
+                    column->remove_matching_type(type);
                 }
-            }
-            if (false == literal->as_float(tmpdouble, op)) {
-                if (false == literal->has_wildcard()) {
-                    column->remove_matching_type(LiteralType::FloatT);
-                }
-            }
-            if (false == literal->as_bool(tmpbool, op)) {
-                column->remove_matching_type(LiteralType::BooleanT);
-            }
-            if (false == literal->as_array(tmpstring, op)) {
-                column->remove_matching_type(LiteralType::ArrayT);
-            }
-            if (false == literal->as_null(op)) {
-                column->remove_matching_type(LiteralType::NullT);
-            }
-            if (false == literal->as_timestamp()) {
-                column->remove_matching_type(LiteralType::TimestampT);
             }
         }
 

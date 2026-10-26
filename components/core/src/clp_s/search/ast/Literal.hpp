@@ -111,6 +111,19 @@ public:
 
     virtual bool as_any(FilterOperation op) { return false; }
 
+    /**
+     * Checks compatibility with a value type and comparison operation without converting the
+     * literal. Wildcard compatibility may be conservative and does not guarantee a match against
+     * any particular value. By default reject all type/operation combinations.
+     * @param type The single value type to test.
+     * @param op The comparison operation; existence operations are handled separately by callers.
+     * @return Whether the literal is compatible with `type` under `op`.
+     */
+    [[nodiscard]] virtual auto can_match_op(LiteralType /*type*/, FilterOperation /*op*/) const
+            -> bool {
+        return false;
+    }
+
     [[nodiscard]] virtual auto has_wildcard() const -> bool { return false; }
 };
 }  // namespace clp_s::search::ast
