@@ -1,8 +1,10 @@
 #include "AwsAuthenticationSigner.hpp"
 
 #include <chrono>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <boost/regex.hpp>
@@ -215,6 +217,31 @@ S3Url::S3Url(string const& url) {
     }
 }
 
+AwsAuthenticationSigner::AwsAuthenticationSigner(
+        string access_key_id,
+        string secret_access_key,
+        std::optional<string> session_token,
+        std::chrono::seconds expire_time
+)
+        : m_access_key_id{std::move(access_key_id)},
+          m_secret_access_key{std::move(secret_access_key)},
+          m_session_token{std::move(session_token)},
+          m_expire_time{expire_time} {
+    if (m_expire_time < cMinExpireTime || m_expire_time > cMaxExpireTime) {
+        throw OperationFailed(
+                ErrorCode_BadParam,
+                __FILENAME__,
+                __LINE__,
+                fmt::format(
+                        "Presigned URL expire time must be between {} and {} seconds, but got {}.",
+                        cMinExpireTime.count(),
+                        cMaxExpireTime.count(),
+                        m_expire_time.count()
+                )
+        );
+    }
+}
+
 auto
 AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& presigned_url) const
         -> ErrorCode {
@@ -286,7 +313,7 @@ AwsAuthenticationSigner::get_canonical_query_string(string_view scope, string_vi
             cXAmzDate,
             timestamp,
             cXAmzExpires,
-            cDefaultExpireTime.count()
+            m_expire_time.count()
     );
     if (m_session_token.has_value()) {
         canonical_query_string.append(
