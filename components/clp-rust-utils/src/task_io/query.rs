@@ -162,7 +162,7 @@ mod tests {
         };
         assert_eq!(
             ClpSQueryOption::try_from(&base)
-                .expect("valid search configuration should convert")
+                .expect("valid query job configuration should convert")
                 .max_num_results
                 .map(NonZeroU32::get),
             Some(7)
@@ -213,8 +213,8 @@ mod tests {
             }),
             ..Default::default()
         };
-        let actual =
-            ClpSQueryOption::try_from(&config).expect("valid search configuration should convert");
+        let actual = ClpSQueryOption::try_from(&config)
+            .expect("valid query job configuration should convert");
         assert_eq!(actual.count_by_time_bucket_size_millisecs, None);
         assert_eq!(actual.max_num_results, config.max_num_results);
         assert_eq!(actual.begin_timestamp_millisecs, config.begin_timestamp);
@@ -250,7 +250,7 @@ mod tests {
                         rmp_serde::from_slice(&serialized)
                             .expect("serialized test payload should deserialize");
                     let actual = ClpSQueryOption::try_from(&config)
-                        .expect("valid search configuration should convert");
+                        .expect("valid query job configuration should convert");
                     let expected = ClpSQueryOption {
                         query_string: NonEmptyString::from_static_str("level:error"),
                         max_num_results,
