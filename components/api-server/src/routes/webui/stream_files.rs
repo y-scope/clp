@@ -24,10 +24,11 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
 #[utoipa::path(
     post,
     path = "/stream_files/extract",
-    description = "Extracts a stream file that contains the log event at `log_event_idx` in the \
-        stream with ID `stream_id`. If the results cache already has such a stream file, returns \
-        its metadata directly; otherwise submits an extraction job, waits for it to finish, and \
-        returns the metadata of the stream file it extracted. The wait is bounded by \
+    description = "Extracts a JSON stream file that contains the log event at `log_event_idx` in \
+        the archive with ID `stream_id`. Only the clp-s storage engine is supported. If the \
+        results cache already has such a stream file, returns its metadata directly; otherwise \
+        submits an extraction job, waits for it to finish, and returns the metadata of the stream \
+        file it extracted. The wait is bounded by \
         `api_server.stream_file_extraction_timeout_secs`; the job keeps running when the timeout \
         is reached.",
     request_body(content = StreamFileExtraction),
@@ -35,11 +36,10 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         (status = OK, body = StreamFileMetadata),
         (
             status = BAD_REQUEST,
-            description = "The request body isn't valid JSON, or `extract_job_type` isn't a \
-                string; `stream_id` is empty; `log_event_idx` is negative; `stream_id` isn't an \
-                archive ID for JSON extraction; or the extraction job failed, was killed, was \
-                cancelled, or finished without extracting a stream file that contains the log \
-                event"
+            description = "The request body isn't valid JSON; the package's storage engine isn't \
+                clp-s; `log_event_idx` exceeds `i64::MAX`; or the extraction job failed, was \
+                killed, was cancelled, or finished without extracting a stream file that contains \
+                the log event"
         ),
         (
             status = NOT_FOUND,
@@ -52,9 +52,10 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         ),
         (
             status = UNPROCESSABLE_ENTITY,
-            description = "The request body doesn't match the schema, including when \
-                `extract_job_type` isn't `ExtractIr` or `ExtractJson`, `dataset` isn't a valid \
-                dataset name, or the body has an unknown field"
+            description = "The request body doesn't match the schema, including when a field has \
+                the wrong JSON type, `stream_id` isn't a UUID, `log_event_idx` is negative, \
+                `dataset` isn't a valid dataset name, or the body has an unknown field (e.g., \
+                `extract_job_type`)"
         ),
         (status = INTERNAL_SERVER_ERROR),
         (

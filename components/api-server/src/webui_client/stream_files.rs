@@ -5,9 +5,9 @@ use std::time::Duration;
 use aws_sdk_s3::presigning::PresigningConfig;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::ApiServer;
+use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::dataset::DatasetName;
-use clp_rust_utils::job_config::ExtractIrJobConfig;
 use clp_rust_utils::job_config::ExtractJsonJobConfig;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -26,35 +26,15 @@ use crate::webui_client::WebuiClient;
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StreamFileExtraction {
-    /// The dataset of the archive to extract the stream from, for JSON extraction. Defaults to the
-    /// default dataset when absent or `null`. For IR extraction, it's validated but otherwise
-    /// ignored.
+    /// The dataset of the archive to extract the stream from. Defaults to the default dataset when
+    /// absent or `null`.
     #[schema(value_type = Option<String>)]
     pub dataset: DatasetName,
-    /// The type of extraction job to submit.
-    pub extract_job_type: ExtractJobType,
-    /// Index of the log event that the extracted stream file must contain. Must not be negative.
-    pub log_event_idx: i64,
-    /// ID of the stream to extract: the original file's ID for IR extraction, or the archive ID
-    /// for JSON extraction.
-    #[schema(min_length = 1)]
-    pub stream_id: String,
-}
-
-/// The type of an extraction job.
-#[derive(Clone, Copy, Debug, Deserialize, ToSchema)]
-pub enum ExtractJobType {
-    ExtractIr,
-    ExtractJson,
-}
-
-impl From<ExtractJobType> for QueryJobType {
-    fn from(value: ExtractJobType) -> Self {
-        match value {
-            ExtractJobType::ExtractIr => Self::ExtractIr,
-            ExtractJobType::ExtractJson => Self::ExtractJson,
-        }
-    }
+    /// Index of the log event that the extracted stream file must contain.
+    pub log_event_idx: u64,
+    /// ID of the archive to extract the JSON stream from.
+    #[schema(value_type = String, format = "uuid")]
+    pub stream_id: ArchiveId,
 }
 
 /// The metadata of an extracted stream file.
@@ -75,8 +55,8 @@ pub struct StreamFileMetadata {
 }
 
 impl WebuiClient {
-    /// Extracts a stream file that contains the log event at `log_event_idx` in the stream with ID
-    /// `stream_id`.
+    /// Extracts a JSON stream file that contains the log event at `log_event_idx` in the archive
+    /// with ID `stream_id`.
     ///
     /// If the results cache already has such a stream file, its metadata is returned directly.
     /// Otherwise, an extraction job is submitted, and the stream file is looked up again once the
@@ -92,11 +72,13 @@ impl WebuiClient {
     ///
     /// Returns an error if:
     ///
+    /// * [`ClientError::InvalidInput`] if:
+    ///   * the package's storage engine isn't clp-s.
+    ///   * `log_event_idx` exceeds `i64::MAX`.
+    ///   * the extraction job finishes without extracting a stream file that contains the log
+    ///     event.
     /// * [`ClientError::StreamExtractionTimeout`] if the extraction job doesn't finish within the
     ///   configured timeout.
-    /// * [`ClientError::InvalidInput`] if the extraction job finishes without extracting a stream
-    ///   file that contains the log event.
-    /// * Forwards [`ExtractJobConfig::from_extraction`]'s return values on failure.
     /// * Forwards [`mongodb::Collection::find_one`]'s return values on failure.
     /// * Forwards [`Self::submit_and_wait_for_extraction_job`]'s return values on failure.
     /// * Forwards [`StreamFileStorage::resolve_path`]'s return values on failure.
@@ -108,18 +90,23 @@ impl WebuiClient {
         &self,
         extraction: StreamFileExtraction,
     ) -> Result<StreamFileMetadata, ClientError> {
-        let job_config = ExtractJobConfig::from_extraction(
-            &extraction,
-            self.config.stream_output.target_uncompressed_size.get(),
-        )?;
+        if self.config.package.storage_engine != StorageEngine::ClpS {
+            return Err(ClientError::InvalidInput(
+                "stream extraction requires the clp-s storage engine".to_owned(),
+            ));
+        }
+        let log_event_idx = i64::try_from(extraction.log_event_idx).map_err(|_| {
+            ClientError::InvalidInput("log_event_idx must not exceed i64::MAX".to_owned())
+        })?;
+        let stream_id = extraction.stream_id.to_string();
         let stream_files = self
             .mongodb_client
             .database(&self.config.results_cache.db_name)
             .collection::<StreamFileMetadata>(&self.config.results_cache.stream_collection_name);
         let filter = doc! {
-            "stream_id": job_config.stream_id(),
-            "begin_msg_ix": {"$lte": extraction.log_event_idx},
-            "end_msg_ix": {"$gt": extraction.log_event_idx},
+            "stream_id": stream_id.as_str(),
+            "begin_msg_ix": {"$lte": log_event_idx},
+            "end_msg_ix": {"$gt": log_event_idx},
         };
 
         let mut metadata = if let Some(metadata) = stream_files.find_one(filter.clone()).await? {
@@ -129,6 +116,11 @@ impl WebuiClient {
                 .get_api_server_config()
                 .stream_file_extraction_timeout_secs
                 .get();
+            let job_config = ExtractJsonJobConfig {
+                dataset: extraction.dataset,
+                archive_id: extraction.stream_id,
+                target_chunk_size: Some(self.config.stream_output.target_uncompressed_size.get()),
+            };
             tokio::time::timeout(
                 Duration::from_secs(timeout_secs),
                 self.submit_and_wait_for_extraction_job(&job_config),
@@ -137,8 +129,8 @@ impl WebuiClient {
             .map_err(|_| ClientError::StreamExtractionTimeout(timeout_secs))??;
             stream_files.find_one(filter).await?.ok_or_else(|| {
                 ClientError::InvalidInput(format!(
-                    "unable to extract stream with stream_id={} at log_event_idx={}",
-                    extraction.stream_id, extraction.log_event_idx
+                    "unable to extract stream with stream_id={stream_id} at \
+                     log_event_idx={log_event_idx}"
                 ))
             })?
         };
@@ -150,7 +142,8 @@ impl WebuiClient {
         Ok(metadata)
     }
 
-    /// Submits an extraction job to the query jobs table, and polls its status until it finishes.
+    /// Submits a JSON extraction job to the query jobs table, and polls its status until it
+    /// finishes.
     ///
     /// # Errors
     ///
@@ -168,13 +161,13 @@ impl WebuiClient {
     /// Panics if `self.config.api_server` is `None`.
     async fn submit_and_wait_for_extraction_job(
         &self,
-        job_config: &ExtractJobConfig,
+        job_config: &ExtractJsonJobConfig,
     ) -> Result<(), ClientError> {
         let job_id = sqlx::query(&format!(
             "INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (?, ?)"
         ))
         .bind(rmp_serde::to_vec_named(job_config)?)
-        .bind(QueryJobType::from(job_config.job_type()))
+        .bind(QueryJobType::ExtractJson)
         .execute(&self.sql_pool)
         .await?
         .last_insert_id();
@@ -310,87 +303,6 @@ impl StreamFileStorage {
     }
 }
 
-/// The config of an extraction job.
-#[derive(Debug, Eq, PartialEq, Serialize)]
-// The query scheduler decodes a job's config by the job's type, so only the inner config is stored.
-#[serde(untagged)]
-enum ExtractJobConfig {
-    Ir(ExtractIrJobConfig),
-    Json(ExtractJsonJobConfig),
-}
-
-impl ExtractJobConfig {
-    /// Factory function.
-    ///
-    /// Creates the config of the job that performs the given extraction, with the given target
-    /// uncompressed size of each extracted stream file.
-    ///
-    /// # Returns
-    ///
-    /// The newly created config on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::InvalidInput`] if:
-    ///   * `stream_id` is empty.
-    ///   * `log_event_idx` is negative.
-    ///   * `stream_id` isn't an archive ID for JSON extraction.
-    fn from_extraction(
-        extraction: &StreamFileExtraction,
-        target_uncompressed_size: u64,
-    ) -> Result<Self, ClientError> {
-        let Ok(stream_id) = NonEmptyString::new(extraction.stream_id.clone()) else {
-            return Err(ClientError::InvalidInput(
-                "stream_id must not be empty".to_owned(),
-            ));
-        };
-        let msg_ix = u64::try_from(extraction.log_event_idx).map_err(|_| {
-            ClientError::InvalidInput("log_event_idx must not be negative".to_owned())
-        })?;
-        match extraction.extract_job_type {
-            ExtractJobType::ExtractIr => Ok(Self::Ir(ExtractIrJobConfig {
-                orig_file_id: stream_id,
-                msg_ix,
-                file_split_id: None,
-                target_uncompressed_size: Some(target_uncompressed_size),
-            })),
-            ExtractJobType::ExtractJson => {
-                let archive_id = stream_id
-                    .as_str()
-                    .parse::<ArchiveId>()
-                    .map_err(|err| ClientError::InvalidInput(err.to_string()))?;
-                Ok(Self::Json(ExtractJsonJobConfig {
-                    dataset: extraction.dataset.clone(),
-                    archive_id,
-                    target_chunk_size: Some(target_uncompressed_size),
-                }))
-            }
-        }
-    }
-
-    /// # Returns
-    ///
-    /// The type of the job that the config belongs to.
-    const fn job_type(&self) -> ExtractJobType {
-        match self {
-            Self::Ir(_) => ExtractJobType::ExtractIr,
-            Self::Json(_) => ExtractJobType::ExtractJson,
-        }
-    }
-
-    /// # Returns
-    ///
-    /// The ID of the stream that the job extracts, as the stream files it extracts record it.
-    fn stream_id(&self) -> String {
-        match self {
-            Self::Ir(config) => config.orig_file_id.to_string(),
-            Self::Json(config) => config.archive_id.to_string(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use clp_rust_utils::aws::AWS_DEFAULT_REGION;
@@ -398,122 +310,46 @@ mod tests {
     use clp_rust_utils::clp_config::AwsCredentials;
     use clp_rust_utils::clp_config::S3Config;
     use clp_rust_utils::clp_config::package::config::Config;
+    use clp_rust_utils::clp_config::package::config::Package;
+    use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::clp_config::package::config::StreamOutput;
     use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
     use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::job_config::ExtractIrJobConfig;
-    use clp_rust_utils::job_config::ExtractJsonJobConfig;
-    use clp_rust_utils::job_config::QueryJobType;
-    use clp_rust_utils::types::ArchiveId;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
 
-    use super::ExtractJobConfig;
-    use super::ExtractJobType;
     use super::StreamFileExtraction;
     use super::StreamFileStorage;
     use crate::webui_client::WebuiClient;
 
-    const TARGET_UNCOMPRESSED_SIZE: u64 = 1024;
-
-    #[test]
-    fn ir_extraction_builds_an_extract_ir_job_config_of_the_original_file() -> anyhow::Result<()> {
-        let extraction = StreamFileExtraction {
-            dataset: DatasetName::default(),
-            extract_job_type: ExtractJobType::ExtractIr,
-            log_event_idx: 42,
-            stream_id: "orig-file".to_owned(),
+    #[tokio::test]
+    async fn extraction_is_rejected_under_the_clp_storage_engine() -> anyhow::Result<()> {
+        let config = Config {
+            package: Package {
+                storage_engine: StorageEngine::Clp,
+            },
+            ..Config::default()
         };
+        let sql_pool =
+            sqlx::mysql::MySqlPoolOptions::new().connect_lazy("mysql://127.0.0.1:1/clp-db")?;
+        let mongodb_client =
+            mongodb::Client::with_uri_str("mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=100")
+                .await?;
+        let client = WebuiClient::new(config, sql_pool, mongodb_client).await;
 
-        let job_config = ExtractJobConfig::from_extraction(&extraction, TARGET_UNCOMPRESSED_SIZE)?;
-
-        assert_eq!(
-            job_config,
-            ExtractJobConfig::Ir(ExtractIrJobConfig {
-                orig_file_id: NonEmptyString::from_static_str("orig-file"),
-                msg_ix: 42,
-                file_split_id: None,
-                target_uncompressed_size: Some(TARGET_UNCOMPRESSED_SIZE),
-            })
-        );
-        assert_eq!(
-            QueryJobType::from(job_config.job_type()),
-            QueryJobType::ExtractIr
-        );
-        assert_eq!(job_config.stream_id(), "orig-file");
-        Ok(())
-    }
-
-    #[test]
-    fn json_extraction_builds_an_extract_json_job_config_of_the_archive_id() -> anyhow::Result<()> {
-        const ARCHIVE_ID: &str = "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11";
-
-        let extraction = StreamFileExtraction {
-            dataset: "logs".parse()?,
-            extract_job_type: ExtractJobType::ExtractJson,
-            log_event_idx: 42,
-            stream_id: ARCHIVE_ID.to_owned(),
-        };
-
-        let job_config = ExtractJobConfig::from_extraction(&extraction, TARGET_UNCOMPRESSED_SIZE)?;
-
-        assert_eq!(
-            job_config,
-            ExtractJobConfig::Json(ExtractJsonJobConfig {
-                dataset: "logs".parse()?,
-                archive_id: ARCHIVE_ID.parse()?,
-                target_chunk_size: Some(TARGET_UNCOMPRESSED_SIZE),
-            })
-        );
-        assert_eq!(
-            QueryJobType::from(job_config.job_type()),
-            QueryJobType::ExtractJson
-        );
-        assert_eq!(job_config.stream_id(), ARCHIVE_ID);
-        Ok(())
-    }
-
-    #[test]
-    fn invalid_extractions_are_rejected() {
-        let archive_id_error = "orig-file"
-            .parse::<ArchiveId>()
-            .expect_err("the stream ID should be an invalid archive ID");
-        for (extract_job_type, log_event_idx, stream_id, expected_error) in [
-            (
-                ExtractJobType::ExtractIr,
-                0,
-                "",
-                "Invalid input: stream_id must not be empty".to_owned(),
-            ),
-            (
-                ExtractJobType::ExtractIr,
-                -1,
-                "orig-file",
-                "Invalid input: log_event_idx must not be negative".to_owned(),
-            ),
-            (
-                ExtractJobType::ExtractJson,
-                -1,
-                "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
-                "Invalid input: log_event_idx must not be negative".to_owned(),
-            ),
-            (
-                ExtractJobType::ExtractJson,
-                0,
-                "orig-file",
-                format!("Invalid input: {archive_id_error}"),
-            ),
-        ] {
-            let extraction = StreamFileExtraction {
+        let error = client
+            .extract_stream_file(StreamFileExtraction {
                 dataset: DatasetName::default(),
-                extract_job_type,
-                log_event_idx,
-                stream_id: stream_id.to_owned(),
-            };
-            let error = ExtractJobConfig::from_extraction(&extraction, TARGET_UNCOMPRESSED_SIZE)
-                .expect_err("the extraction should be rejected");
-            assert_eq!(error.to_string(), expected_error);
-        }
+                log_event_idx: 0,
+                stream_id: "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11".parse()?,
+            })
+            .await
+            .expect_err("the extraction should be rejected");
+        assert_eq!(
+            error.to_string(),
+            "Invalid input: stream extraction requires the clp-s storage engine"
+        );
+        Ok(())
     }
 
     #[tokio::test]

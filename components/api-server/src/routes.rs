@@ -553,7 +553,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stream_file_extraction_route_rejects_an_invalid_request() -> anyhow::Result<()> {
+    async fn stream_file_extraction_route_rejects_an_index_above_i64_max() -> anyhow::Result<()> {
         let app = clp_s_app_with_lazy_clients().await;
         let response = app
             .oneshot(
@@ -563,9 +563,8 @@ mod tests {
                     .header(CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         serde_json::json!({
-                            "extract_job_type": "ExtractIr",
-                            "log_event_idx": 0,
-                            "stream_id": "",
+                            "log_event_idx": i64::MAX.unsigned_abs() + 1,
+                            "stream_id": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
                         })
                         .to_string(),
                     ))?,
