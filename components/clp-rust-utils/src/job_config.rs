@@ -4,8 +4,8 @@ pub use clp_io_config::*;
 mod compression;
 mod extraction;
 pub mod ingestion;
-mod search;
+mod query;
 
 pub use compression::*;
 pub use extraction::*;
-pub use search::*;
+pub use query::*;
