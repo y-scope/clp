@@ -15,6 +15,7 @@ use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::AggregationConfig;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
+use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryJobType;
 use clp_rust_utils::job_config::SearchJobConfig;
@@ -293,7 +294,11 @@ impl Client {
     ///   0`.
     /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-    pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
+    ///
+    /// # Panics
+    ///
+    /// Panics if the inserted row's ID doesn't fit in [`QueryJobId`].
+    pub async fn submit_query(&self, query_config: QueryConfig) -> Result<QueryJobId, ClientError> {
         let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
         if let Some(bucket_size) = count_by_time_bucket_size
             && bucket_size <= 0
@@ -328,7 +333,8 @@ impl Client {
         .await?;
 
         let query_job_id = query_result.last_insert_id();
-        Ok(query_job_id)
+        Ok(QueryJobId::try_from(query_job_id)
+            .expect("the inserted query job's ID should fit in `QueryJobId`"))
     }
 
     /// Asynchronously fetches the results of a completed query job.
@@ -351,7 +357,7 @@ impl Client {
     /// * Forwards [`Client::fetch_results_from_s3`]'s return values on failure.
     pub async fn fetch_results(
         &self,
-        query_job_id: u64,
+        query_job_id: QueryJobId,
         raw_docs: bool,
         sorted: bool,
     ) -> Result<
@@ -436,7 +442,7 @@ impl Client {
     /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
-    pub async fn cancel_query_job(&self, query_job_id: u64) -> Result<(), ClientError> {
+    pub async fn cancel_query_job(&self, query_job_id: QueryJobId) -> Result<(), ClientError> {
         let mut tx = self.sql_pool.begin().await?;
         let Some(status) = sqlx::query_scalar::<_, QueryJobStatus>(&format!(
             "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ? FOR UPDATE"
@@ -480,7 +486,10 @@ impl Client {
     /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
     /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
     /// * Forwards [`QueryJobStatus::try_from`]'s return values on failure.
-    pub async fn get_status(&self, query_job_id: u64) -> Result<QueryJobStatus, ClientError> {
+    pub async fn get_status(
+        &self,
+        query_job_id: QueryJobId,
+    ) -> Result<QueryJobStatus, ClientError> {
         let row = sqlx::query(&format!(
             "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
         ))
@@ -491,7 +500,10 @@ impl Client {
         Ok(QueryJobStatus::try_from(status)?)
     }
 
-    async fn get_job_config(&self, query_job_id: u64) -> Result<SearchJobConfig, ClientError> {
+    async fn get_job_config(
+        &self,
+        query_job_id: QueryJobId,
+    ) -> Result<SearchJobConfig, ClientError> {
         let row = sqlx::query(&format!(
             "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
         ))
@@ -531,7 +543,7 @@ impl Client {
     /// Panics if the stream output storage is not file system.
     fn fetch_results_from_file(
         &self,
-        query_job_id: u64,
+        query_job_id: QueryJobId,
         max_num_results: Option<NonZeroU32>,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let StreamOutputStorage::Fs { directory } = &self.config.stream_output.storage else {
@@ -590,7 +602,7 @@ impl Client {
     /// Panics if the stream output storage is not S3.
     async fn fetch_results_from_s3(
         &self,
-        query_job_id: u64,
+        query_job_id: QueryJobId,
         max_num_results: Option<NonZeroU32>,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         tracing::info!("Streaming results from S3");
@@ -692,7 +704,7 @@ impl Client {
     /// * Forwards [`mongodb::Collection::find`]'s return values on failure.
     async fn fetch_results_from_mongo(
         &self,
-        query_job_id: u64,
+        query_job_id: QueryJobId,
         max_num_results: Option<NonZeroU32>,
         raw_docs: bool,
         sorted: bool,

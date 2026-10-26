@@ -9,6 +9,7 @@ use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::QueryJobId;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -176,7 +177,7 @@ struct QueryResultsParams {
     path = "/query_results/{query_job_id}",
     description = "Streams the results of a previously submitted query as Server-Sent Events \
         (SSE).",
-    params(QueryResultsParams),
+    params(("query_job_id" = i32, Path), QueryResultsParams),
     responses(
         (
             status = OK,
@@ -191,7 +192,7 @@ struct QueryResultsParams {
 )]
 async fn query_results(
     State(client): State<Client>,
-    Path(query_job_id): Path<u64>,
+    Path(query_job_id): Path<QueryJobId>,
     Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
     tracing::info!("Fetching results for query job ID: {}", query_job_id);
@@ -231,6 +232,7 @@ async fn query_results(
     delete,
     path = "/query/{query_job_id}",
     description = "Cancels a previously submitted query job.",
+    params(("query_job_id" = i32, Path)),
     responses(
         (
             status = OK,
@@ -249,7 +251,7 @@ async fn query_results(
 )]
 async fn cancel_query(
     State(client): State<Client>,
-    Path(query_job_id): Path<u64>,
+    Path(query_job_id): Path<QueryJobId>,
 ) -> Result<StatusCode, HandlerError> {
     tracing::info!("Cancelling query job ID: {}", query_job_id);
     match client.cancel_query_job(query_job_id).await {
@@ -416,7 +418,8 @@ mod tests {
         axum::Router::new().route(
             "/query/{query_job_id}",
             delete(
-                |Path(query_job_id): Path<u64>, Query(params): Query<JobStatusParams>| async move {
+                |Path(query_job_id): Path<QueryJobId>,
+                 Query(params): Query<JobStatusParams>| async move {
                     match Cancellability::from_status(params.status) {
                         Cancellability::Cancellable | Cancellability::CancellationRequested => {
                             Ok(StatusCode::OK)

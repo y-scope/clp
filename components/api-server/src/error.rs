@@ -3,6 +3,7 @@
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::QueryJobId;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
@@ -30,10 +31,10 @@ pub enum ClientError {
     ConfigIsNone,
 
     #[error("query job not found: {0}")]
-    QueryJobNotFound(u64),
+    QueryJobNotFound(QueryJobId),
 
     #[error("query job already terminated: {0}")]
-    QueryJobAlreadyTerminated(u64),
+    QueryJobAlreadyTerminated(QueryJobId),
 
     #[error("Invalid input: {0}")]
     InvalidInput(String),

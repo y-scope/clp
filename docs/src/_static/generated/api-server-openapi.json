@@ -88,8 +88,7 @@
             "required": true,
             "schema": {
               "type": "integer",
-              "format": "int64",
-              "minimum": 0
+              "format": "int32"
             }
           }
         ],
@@ -116,6 +115,15 @@
         "operationId": "query_results",
         "parameters": [
           {
+            "name": "query_job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
             "name": "raw_docs",
             "in": "query",
             "description": "When `true`, each SSE event contains the raw result document from the results cache\nserialized as JSON (including metadata such as the timestamp and the original file path);\notherwise, each event contains only the log message. Only applies to query jobs whose\nresults are buffered in `MongoDB`.",
@@ -131,16 +139,6 @@
             "required": false,
             "schema": {
               "type": "boolean"
-            }
-          },
-          {
-            "name": "query_job_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 0
             }
           }
         ],
