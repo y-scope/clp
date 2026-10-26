@@ -8,7 +8,7 @@ import yaml
 from sphinx.application import Sphinx
 
 # Constants
-CLP_VERSION = "0.14.0"
+CLP_VERSION = "0.14.1"
 CLP_GIT_REF = f"v{CLP_VERSION}"
 
 

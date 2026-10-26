@@ -260,7 +260,7 @@ wheels = [
 
 [[package]]
 name = "clp-package-utils"
-version = "0.14.0"
+version = "0.14.1"
 source = { directory = "../clp-package-utils" }
 dependencies = [
     { name = "click" },
@@ -295,7 +295,7 @@ dev = [
 
 [[package]]
 name = "clp-py-utils"
-version = "0.14.0"
+version = "0.14.1"
 source = { directory = "../clp-py-utils" }
 dependencies = [
     { name = "boto3" },
@@ -460,7 +460,7 @@ wheels = [
 
 [[package]]
 name = "job-orchestration"
-version = "0.14.0"
+version = "0.14.1"
 source = { editable = "." }
 dependencies = [
     { name = "celery", extra = ["redis"] },
