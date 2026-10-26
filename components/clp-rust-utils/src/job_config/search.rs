@@ -1,17 +1,40 @@
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
+use non_empty_string::NonEmptyString;
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
 use serde::Deserialize;
 use serde::Serialize;
 use strum::EnumString;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 use crate::dataset::DatasetName;
 
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 
 pub type QueryJobId = i32;
+
+/// The token that identifies a session to the query tasks streaming results to it. It serializes
+/// as a hyphenated string, the form `clp-s` receives on its command line and sends back.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+pub struct SessionToken(#[serde(with = "uuid::serde::hyphenated")] Uuid);
+
+impl From<Uuid> for SessionToken {
+    fn from(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+}
+
+impl Display for SessionToken {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
 
 /// Mirror of `job_orchestration.scheduler.job_config.AggregationConfig`. Must be kept in sync.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -25,7 +48,16 @@ pub struct AggregationConfig {
     pub count_by_time_bucket_size: Option<i64>,
 }
 
-/// Mirror of `job_orchestration.scheduler.job_config.SearchJobConfig`. Must be kept in sync.
+/// The TCP listener that a query job's results are streamed to.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct NetworkOutput {
+    pub host: NonEmptyString,
+    pub port: NonZeroU16,
+    pub session_token: SessionToken,
+}
+
+/// Mirror of `job_orchestration.scheduler.job_config.SearchJobConfig`. Must be kept in sync, except
+/// for `network_output`, which replaces the Python config's `network_address`.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
@@ -36,7 +68,7 @@ pub struct SearchJobConfig {
     pub end_timestamp: Option<i64>,
     pub ignore_case: bool,
     pub path_filter: Option<String>,
-    pub network_address: Option<(String, u16)>,
+    pub network_output: Option<NetworkOutput>,
     pub aggregation_config: Option<AggregationConfig>,
     pub write_to_file: bool,
 }

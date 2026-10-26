@@ -1,12 +1,15 @@
 //! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP query jobs.
 
+use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
 use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::job_config::NetworkOutput;
 use crate::job_config::SearchJobConfig;
+use crate::job_config::SessionToken;
 use crate::types::PositiveI64;
 
 /// `clp-s` options for a query job.
@@ -82,6 +85,24 @@ pub enum OutputHandle {
     /// A file per archive. Not yet supported by the Spider query flow.
     #[serde(rename = "file")]
     File,
+
+    /// A TCP listener that the results are streamed to.
+    #[serde(rename = "network")]
+    Network {
+        host: NonEmptyString,
+        port: NonZeroU16,
+        session_token: SessionToken,
+    },
+}
+
+impl From<NetworkOutput> for OutputHandle {
+    fn from(network_output: NetworkOutput) -> Self {
+        Self::Network {
+            host: network_output.host,
+            port: network_output.port,
+            session_token: network_output.session_token,
+        }
+    }
 }
 
 #[cfg(test)]
