@@ -13,8 +13,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Submits a compression job. */
-        post: operations["compression_job"];
+        /** @description Submits a compression job for `paths` in the logs input, into `dataset`. The paths are relative to the logs-input mount point, with a leading `/` that denotes the mount point itself. The job compresses each path at its lexically normalized location under the mount point (a symlink is compressed through its own path, not its target's), and records the paths relative to the mount point. Only the clp-s storage engine with filesystem logs input is supported. */
+        post: operations["submit_compression_job"];
         delete?: never;
         options?: never;
         head?: never;
@@ -61,7 +61,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Gets recent compression-job metadata (most recent first), with the decoded CLP IO config for each job. */
+        /** @description Gets the metadata of the 1000 most recent compression jobs (most recent first), with the display fields of each job's config. Display fields stored as `null` are omitted. Returns 500 if any of the jobs' stored configs can't be decoded, including when the config, one of its sections, or one of its display fields has an unexpected type. */
         get: operations["compression_metadata"];
         put?: never;
         post?: never;
@@ -78,7 +78,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Gets the names of all datasets. */
+        /** @description Gets the names of all datasets. Returns an empty list for the CLP storage engine, which has no datasets. */
         get: operations["datasets"];
         put?: never;
         post?: never;
@@ -112,7 +112,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Gets the query speed (total uncompressed bytes scanned and job duration) for a search job across the given datasets. Returns `null` when the job hasn't scanned any archives or hasn't finished yet. */
+        /** @description Gets the query speed (total uncompressed bytes scanned and job duration) for a query job across the given datasets. For the CLP storage engine, the dataset names are validated but otherwise ignored. Returns `null` when the job doesn't exist, the job has no tasks over the datasets' archives, the job hasn't finished yet, or no datasets are given for CLP-S. Returns 404 when any of the datasets doesn't exist for CLP-S. */
         get: operations["query_speed"];
         put?: never;
         post?: never;
@@ -146,7 +146,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Gets the earliest and latest log entry timestamps across the given datasets. For the CLP storage engine, the `dataset` parameter is ignored. Returns `null` when no archives exist yet. */
+        /** @description Gets the earliest and latest log entry timestamps across the given datasets. For the CLP storage engine, the dataset names are validated but otherwise ignored. Returns `null` when the datasets have no archives, including when no datasets are given for CLP-S. Returns 404 when any of the datasets doesn't exist for CLP-S. */
         get: operations["time_range"];
         put?: never;
         post?: never;
@@ -163,8 +163,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Lists files and directories at the specified path. */
-        get: operations["list_files"];
+        /** @description Lists the entries of the directory at `path` in the logs input. `path` and the returned entries' `parent_path` are relative to the logs-input mount point, with a leading `/` that denotes the mount point itself; `parent_path` is `path` lexically normalized. Returns an empty list if `path` isn't a directory. Only the clp-s storage engine with filesystem logs input is supported. */
+        get: operations["list_logs_input_entries"];
         put?: never;
         post?: never;
         delete?: never;
@@ -233,7 +233,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Extracts a stream file containing the log event at the given index in the stream with the given ID. If the stream has already been extracted, returns its metadata directly; otherwise submits an extraction job and waits for it to complete. */
+        /** @description Extracts a JSON stream file that contains the log event at `log_event_idx` in the archive with ID `archive_id`. Only the clp-s storage engine is supported. If the results cache already has such a stream file, returns its metadata directly; otherwise submits an extraction job, waits for it to finish, and returns the metadata of the stream file it extracted. The wait is bounded by `api_server.stream_file_extraction_timeout_secs`; the job keeps running when the timeout is reached. */
         post: operations["extract_stream_file"];
         delete?: never;
         options?: never;
@@ -262,35 +262,44 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Response body containing the ID of a newly created compression job. */
+        /** @description Response body of the compression-job submission endpoint. */
         CompressionJob: {
             /**
-             * Format: int64
-             * @description The ID of the newly created compression job.
+             * Format: int32
+             * @description The ID of the submitted compression job.
              */
             job_id: number;
         };
-        /** @description Request body for submitting a compression job. */
+        /** @description Request body for the compression-job submission endpoint. */
         CompressionJobCreation: {
-            /** @description Dataset to compress into (CLP-S only). Optional for the CLP storage engine. */
+            /**
+             * @description The dataset to compress the logs into. Defaults to the default dataset when absent or
+             *     `null`.
+             */
             dataset?: string | null;
-            /** @description Absolute filesystem paths of the files to compress. */
+            /**
+             * @description The logs-input paths of the files and directories to compress: relative to the logs-input
+             *     mount point, with a leading `/` that denotes the mount point itself. Must not be empty.
+             */
             paths: string[];
-            /** @description Timestamp key to use when parsing logs. */
+            /** @description The key of the log events' timestamp field. */
             timestamp_key?: string | null;
-            /** @description Whether the input is unstructured. Defaults to `true` for CLP and `false` for CLP-S. */
+            /** @description Whether the logs are unstructured. Defaults to `false` when absent or `null`. */
             unstructured?: boolean | null;
         };
         /** @enum {string} */
         CompressionJobStatus: "Pending" | "Running" | "Succeeded" | "Failed" | "Killed";
-        /** @description A row of compression metadata, with the decoded CLP IO config. */
+        /** @description The metadata of a compression job, with the display fields of its config. */
         CompressionMetadata: {
             /**
-             * Format: int64
-             * @description The compression job's ID. Named `_id` to match the webui's existing JSON contract.
+             * Format: int32
+             * @description The compression job's ID. Named `_id` to match the `WebUI`'s existing JSON contract.
              */
             _id: number;
-            /** @description Display fields from the decoded CLP IO config. Storage credentials are omitted. */
+            /**
+             * @description The display fields of the job's stored config. All other fields, including storage
+             *     credentials, are dropped.
+             */
             clp_config: components["schemas"]["CompressionMetadataDisplayConfig"];
             /**
              * Format: int64
@@ -298,16 +307,19 @@ export interface components {
              */
             compressed_size: number;
             /**
-             * Format: double
-             * @description Wall-clock duration the job ran, in seconds. Absent if the job did not complete.
+             * Format: float
+             * @description Wall-clock duration the job ran, in seconds. `null` if the job did not complete.
              */
             duration?: number | null;
-            /** @description Time the job started executing (RFC 3339). Absent if the job hasn't started. */
+            /**
+             * Format: date-time
+             * @description Time the job started executing (RFC 3339). `null` if the job hasn't started.
+             */
             start_time?: string | null;
             /**
              * Format: int32
-             * @description Current status of the job. Matches `CompressionJobStatus` in
-             *     `job_orchestration.scheduler.constants`.
+             * @description Current status of the job, as the integer value of a
+             *     [`clp_rust_utils::job_config::CompressionJobStatus`].
              */
             status: number;
             /** @description Status message for the job. */
@@ -317,35 +329,80 @@ export interface components {
              * @description Total uncompressed size of input files, in bytes.
              */
             uncompressed_size: number;
-            /** @description Time the job was last updated (RFC 3339). */
+            /**
+             * Format: date-time
+             * @description Time the job was last updated (RFC 3339).
+             */
             update_time: string;
         };
-        /** @description Fields from a stored compression job config that the `WebUI` may display. */
+        /**
+         * @description The display subset of a stored compression job config, as returned in
+         *     [`CompressionMetadata::clp_config`].
+         *
+         *     Decoding a stored config into this type keeps only the display fields: all other fields,
+         *     including storage credentials, are dropped.
+         */
         CompressionMetadataDisplayConfig: {
+            /**
+             * @description The display fields of the config's `input` section. Empty if the stored config has no
+             *     `input` section.
+             */
             input: components["schemas"]["CompressionMetadataDisplayInput"];
+            /**
+             * @description The display fields of the config's `output` section. Empty if the stored config has no
+             *     `output` section.
+             */
             output: components["schemas"]["CompressionMetadataDisplayOutput"];
         };
-        /** @description Partial input fields kept for older compression jobs. */
+        /**
+         * @description The display fields of a stored config's `input` section. Older compression jobs may have stored
+         *     only some of them, and a field stored as `null` is omitted.
+         */
         CompressionMetadataDisplayInput: {
+            /** @description The dataset the logs were compressed into. */
             dataset?: string | null;
+            /** @description The S3 object keys to compress. */
             keys?: string[] | null;
+            /** @description The prefix removed from the compressed file paths. */
             path_prefix_to_remove?: string | null;
+            /** @description The filesystem paths to compress. */
             paths_to_compress?: string[] | null;
+            /** @description The key of the log events' timestamp field. */
             timestamp_key?: string | null;
+            /** @description The input type (e.g., `fs` or `s3`). */
             type?: string | null;
+            /** @description Whether the logs are unstructured. */
             unstructured?: boolean | null;
         };
-        /** @description Partial output fields kept for older compression jobs. */
+        /**
+         * @description The display fields of a stored config's `output` section. Older compression jobs may have stored
+         *     only some of them, and a field stored as `null` is omitted.
+         */
         CompressionMetadataDisplayOutput: {
-            /** Format: double */
+            /**
+             * Format: int32
+             * @description The compression level.
+             */
             compression_level?: number | null;
-            /** Format: double */
+            /**
+             * Format: int64
+             * @description The target archive size, in bytes.
+             */
             target_archive_size?: number | null;
-            /** Format: double */
+            /**
+             * Format: int64
+             * @description The target dictionaries size, in bytes.
+             */
             target_dictionaries_size?: number | null;
-            /** Format: double */
+            /**
+             * Format: int64
+             * @description The target encoded file size, in bytes.
+             */
             target_encoded_file_size?: number | null;
-            /** Format: double */
+            /**
+             * Format: int64
+             * @description The target segment size, in bytes.
+             */
             target_segment_size?: number | null;
         };
         /** @description Resource usage statistics for the compression job with the specified ID. */
@@ -393,29 +450,19 @@ export interface components {
              */
             uncompressed_size_bytes: number;
         };
-        /**
-         * @description A directory entry returned by the file-listing endpoint.
-         *
-         *     Serialized in camelCase to match the webui's existing `FileEntry` JSON contract.
-         */
+        /** @description An entry of a directory in the logs input. */
         DirEntry: {
-            /** @description Whether the entry is a directory or symlink that can be expanded. */
-            isExpandable: boolean;
+            /**
+             * @description Whether the entry is a directory, or a symlink to a directory under the logs-input mount
+             *     point, which the `WebUI`'s path picker can expand.
+             */
+            is_expandable: boolean;
             /** @description The entry's file name. */
             name: string;
-            /** @description Path of the directory containing the entry. */
-            parentPath: string;
+            /** @description The logs-input path of the directory that contains the entry. */
+            parent_path: string;
         };
-        /**
-         * @description Mirror of the extract variants of `job_orchestration.scheduler.constants.QueryJobType`.
-         *     Must be kept in sync with [`clp_rust_utils::job_config::QueryJobType`].
-         * @enum {string}
-         */
-        ExtractJobType: "ExtractIr" | "ExtractJson";
-        /**
-         * @description Ingestion details statistics. The whole value is `None` when no data has been ingested
-         *     yet.
-         */
+        /** @description Ingestion details statistics. */
         IngestionDetails: {
             /**
              * Format: int64
@@ -479,10 +526,7 @@ export interface components {
             /** @description The uri to get the query results. */
             query_results_uri: string;
         };
-        /**
-         * @description Query-speed statistics for a search job. The whole value is `None` until the job has
-         *     scanned archives and finished (its duration is recorded only on completion).
-         */
+        /** @description Query-speed statistics for a query job. */
         QuerySpeed: {
             /**
              * Format: double
@@ -490,7 +534,7 @@ export interface components {
              */
             bytes: number;
             /**
-             * Format: double
+             * Format: float
              * @description Wall-clock duration the job ran, in seconds.
              */
             duration: number;
@@ -508,21 +552,25 @@ export interface components {
              */
             total_uncompressed_size: number;
         };
-        /** @description Request body for the stream-files extract endpoint. */
+        /** @description Request body for the stream-file extraction endpoint. */
         StreamFileExtraction: {
-            /** @description Dataset the stream belongs to (CLP-S only; `null` for the CLP storage engine). */
+            /**
+             * Format: uuid
+             * @description ID of the archive to extract the JSON stream from.
+             */
+            archive_id: string;
+            /**
+             * @description The dataset of the archive to extract the stream from. Defaults to the default dataset when
+             *     absent or `null`.
+             */
             dataset?: string | null;
-            /** @description The type of extraction job to submit. */
-            extract_job_type: components["schemas"]["ExtractJobType"];
             /**
              * Format: int64
-             * @description Index of the log event the extracted stream file must contain.
+             * @description Index of the log event that the extracted stream file must contain.
              */
             log_event_idx: number;
-            /** @description ID of the stream to extract. */
-            stream_id: string;
         };
-        /** @description Extracted stream-file metadata returned by the stream-files extract endpoint. */
+        /** @description The metadata of an extracted stream file. */
         StreamFileMetadata: {
             /**
              * Format: int64
@@ -531,23 +579,21 @@ export interface components {
             begin_msg_ix: number;
             /**
              * Format: int64
-             * @description Index of the last log event in the stream file (exclusive).
+             * @description Index after the last log event in the stream file (exclusive).
              */
             end_msg_ix: number;
             /** @description Whether this is the stream's last chunk. */
             is_last_chunk: boolean;
             /**
-             * @description The resolved stream-file path: a pre-signed URL when stream-files S3 storage is
-             *     configured, otherwise a path relative to the webui `/streams` static mount.
+             * @description Where the `WebUI` fetches the stream file from: a pre-signed URL that's valid for one hour
+             *     when stream output is stored on S3, or a path under the `WebUI`'s `/streams` static mount
+             *     otherwise.
              */
             path: string;
             /** @description ID of the stream the file was extracted from. */
             stream_id: string;
         };
-        /**
-         * @description Earliest and latest log entry timestamps across the selected datasets. The whole value
-         *     is `None` when no archives exist yet (or, for CLP-S, when no datasets were selected).
-         */
+        /** @description Earliest and latest log entry timestamps across the selected datasets. */
         TimeRange: {
             /**
              * Format: int64
@@ -569,7 +615,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    compression_job: {
+    submit_compression_job: {
         parameters: {
             query?: never;
             header?: never;
@@ -582,7 +628,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The created compression job. */
+            /** @description The submitted compression job */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -591,13 +637,35 @@ export interface operations {
                     "application/json": components["schemas"]["CompressionJob"];
                 };
             };
-            /** @description Invalid dataset name */
+            /** @description The request body isn't valid JSON; the package's storage engine isn't clp-s or its logs input isn't on the filesystem; `paths` is empty; or a path resolves to outside the logs-input mount point through a symlink */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
+            /** @description A path doesn't exist, or has a component that is too long */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request's `Content-Type` isn't `application/json` */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body doesn't match the schema, including when a field has the wrong JSON type, `paths` is missing, a path doesn't start with `/`, has a `..` component, or contains a NUL character or a line break, `dataset` isn't a valid dataset name, `timestamp_key` is empty, or the body has an unknown field */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The logs-input mount point can't be resolved, a path can't be resolved (e.g., it's a symlink loop, or due to a permission error), the database request failed, or the inserted job's ID is out of range */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -630,6 +698,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The name of the dataset whose timestamp column names to get. */
                 dataset_name: string;
             };
             cookie?: never;
@@ -744,10 +813,13 @@ export interface operations {
     query_speed: {
         parameters: {
             query: {
-                /** @description Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine. */
-                dataset?: string;
-                /** @description The search job ID whose scan speed should be computed. */
-                search_job_id: number;
+                /**
+                 * @description Comma-separated list of dataset names. For the CLP storage engine, the names are validated
+                 *     but otherwise ignored.
+                 */
+                datasets?: string;
+                /** @description The query job ID whose scan speed should be computed. */
+                query_job_id: number;
             };
             header?: never;
             path?: never;
@@ -755,6 +827,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description The query speed, or `null` when the job doesn't exist, has no tasks over the datasets' archives, or hasn't finished yet, or when no datasets are given for CLP-S. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -763,8 +836,15 @@ export interface operations {
                     "application/json": null | components["schemas"]["QuerySpeed"];
                 };
             };
-            /** @description Invalid dataset name */
+            /** @description Invalid dataset name, missing or malformed `query_job_id`, or unknown query parameter */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dataset not found (CLP-S only) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -806,8 +886,11 @@ export interface operations {
     time_range: {
         parameters: {
             query?: {
-                /** @description Comma-separated list of dataset names (CLP-S only). Ignored for the CLP storage engine. */
-                dataset?: string;
+                /**
+                 * @description Comma-separated list of dataset names. For the CLP storage engine, the names are validated
+                 *     but otherwise ignored.
+                 */
+                datasets?: string;
             };
             header?: never;
             path?: never;
@@ -815,6 +898,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description The time range, or `null` when the datasets have no archives, including when no datasets are given for CLP-S. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -823,8 +907,15 @@ export interface operations {
                     "application/json": null | components["schemas"]["TimeRange"];
                 };
             };
-            /** @description Invalid dataset name */
+            /** @description Invalid dataset name, or unknown query parameter */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dataset not found (CLP-S only) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -838,10 +929,13 @@ export interface operations {
             };
         };
     };
-    list_files: {
+    list_logs_input_entries: {
         parameters: {
             query: {
-                /** @description The absolute filesystem path to list. */
+                /**
+                 * @description The logs-input path of the directory to list: relative to the logs-input mount point, with
+                 *     a leading `/` that denotes the mount point itself.
+                 */
                 path: string;
             };
             header?: never;
@@ -850,6 +944,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description The directory's entries, in no particular order, or an empty list if `path` isn't a directory */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -858,13 +953,21 @@ export interface operations {
                     "application/json": components["schemas"]["DirEntry"][];
                 };
             };
-            /** @description Path not found */
+            /** @description The query string is malformed (e.g., `path` is repeated); `path` is missing, doesn't start with `/`, has a `..` component, or contains a NUL character or a line break; the query has an unknown parameter; the package's storage engine isn't clp-s or its logs input isn't on the filesystem; or `path` resolves to outside the logs-input mount point through a symlink */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `path` doesn't exist, or has a component that is too long */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
+            /** @description The logs-input mount point can't be resolved, or `path` can't be resolved or read (e.g., it's a symlink loop, or due to a permission error) */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1025,27 +1128,47 @@ export interface operations {
                     "application/json": components["schemas"]["StreamFileMetadata"];
                 };
             };
-            /** @description Invalid dataset name or extract job type */
+            /** @description The request body isn't valid JSON, the package's storage engine isn't clp-s, or `log_event_idx` exceeds `i64::MAX` */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
+            /** @description The extraction job succeeded, but none of the archive's stream files contains the log event */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request's `Content-Type` isn't `application/json` */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request body doesn't match the schema, including when a field has the wrong JSON type, `archive_id` isn't a UUID, `log_event_idx` is negative, `dataset` isn't a valid dataset name, or the body has an unknown field (e.g., `extract_job_type`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The extraction job failed, was killed, was cancelled, or disappeared from the query jobs table before it finished; or a database, results-cache, or S3 request failed */
             500: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Stream extraction timed out */
+            /** @description The extraction job didn't finish within `api_server.stream_file_extraction_timeout_secs` */
             504: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "text/plain": string;
-                };
+                content?: never;
             };
         };
     };

@@ -1,4 +1,5 @@
 const HTTP_STATUS_BAD_REQUEST = 400;
+const HTTP_STATUS_NOT_FOUND = 404;
 const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 const HTTP_STATUS_GATEWAY_TIMEOUT = 504;
 
@@ -13,6 +14,9 @@ const HTTP_STATUS_GATEWAY_TIMEOUT = 504;
 const createApiError = (action: string, response: Response, error: unknown): Error => {
     if (HTTP_STATUS_GATEWAY_TIMEOUT === response.status) {
         return new Error(`${action}: Request timed out. Try again later.`);
+    }
+    if (HTTP_STATUS_NOT_FOUND === response.status) {
+        return new Error(`${action}: Not found.`);
     }
     const contentType = response.headers.get("content-type") ?? "";
     let detail: string | undefined;

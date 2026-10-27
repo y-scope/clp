@@ -1,5 +1,4 @@
 import {Type} from "@sinclair/typebox";
-import {QUERY_JOB_TYPE} from "@webui/common/query";
 
 
 /**
@@ -24,21 +23,10 @@ const QUERY_LOADING_STATE_VALUES = Object.freeze(
 );
 
 /**
- * Mapping between extract job type enums and stream type.
- */
-const EXTRACT_JOB_TYPE = Object.freeze({
-    ir: QUERY_JOB_TYPE.EXTRACT_IR,
-    json: QUERY_JOB_TYPE.EXTRACT_JSON,
-});
-
-/**
  * URL search parameters required for extract job.
  */
 const ExtractJobSearchParams = Type.Object({
-    type: Type.Union(
-        Object.keys(EXTRACT_JOB_TYPE).map((key) => Type.Literal(key))
-    ),
-    streamId: Type.String(),
+    archiveId: Type.String(),
     logEventIdx: Type.Number(),
     dataset: Type.Optional(Type.String()),
 });
@@ -79,7 +67,6 @@ const QUERY_LOADING_STATE_DESCRIPTIONS: Record<QUERY_LOADING_STATE, QueryLoading
 
 export type {ExtractStreamResp};
 export {
-    EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,
     QUERY_LOADING_STATE,
     QUERY_LOADING_STATE_DESCRIPTIONS,

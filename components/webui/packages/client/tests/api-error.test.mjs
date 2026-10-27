@@ -16,6 +16,28 @@ test("shows an API validation message", () => {
     );
 });
 
+test("shows a plain-text request body rejection", () => {
+    const message = "Failed to deserialize the JSON body into the target type: unknown field `x`";
+    const response = new Response(message, {
+        status: 422,
+        headers: {"content-type": "text/plain; charset=utf-8"},
+    });
+
+    assert.equal(
+        createApiError("Failed to submit compression job", response, message).message,
+        `Failed to submit compression job: ${message}`
+    );
+});
+
+test("shows a not-found message for a bodyless 404", () => {
+    const response = new Response(null, {status: 404});
+
+    assert.equal(
+        createApiError("Failed to fetch time range", response, null).message,
+        "Failed to fetch time range: Not found."
+    );
+});
+
 test("does not show internal API response details", () => {
     const response = new Response("database connection failed", {status: 500});
 

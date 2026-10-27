@@ -17,7 +17,7 @@ import {DEFAULT_TIME_RANGE} from "./utils";
 const fetchAllTimeRange = async (selectedDatasets: string[]): Promise<[Dayjs, Dayjs]> => {
     // eslint-disable-next-line new-cap
     const {data, error, response} = await apiClient.GET("/metadata/time_range", {
-        params: {query: {dataset: selectedDatasets.join(",")}},
+        params: {query: {datasets: selectedDatasets.join(",")}},
     });
 
     if ("undefined" === typeof data) {

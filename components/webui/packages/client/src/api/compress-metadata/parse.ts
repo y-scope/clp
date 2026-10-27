@@ -1,21 +1,21 @@
 import {Type} from "@sinclair/typebox";
 import {Value} from "@sinclair/typebox/value";
 import {
-    type CompressionMetadataDecoded,
-    CompressionMetadataDecodedSchema,
+    type CompressionMetadata,
+    CompressionMetadataSchema,
 } from "@webui/common/schemas/compress-metadata";
 
 
-const CompressionMetadataListSchema = Type.Array(CompressionMetadataDecodedSchema);
+const CompressionMetadataListSchema = Type.Array(CompressionMetadataSchema);
 
 /**
- * Validates a compression-history response before the Jobs table reads legacy configs.
+ * Validates a compression-history response before the Jobs table reads its display configs.
  *
  * @param payload
  * @return Validated rows with only the display fields.
- * @throws {Error} If a stored row does not match the display contract.
+ * @throws {Error} If a row does not match the display contract.
  */
-const parseCompressionJobs = (payload: unknown): CompressionMetadataDecoded[] => {
+const parseCompressionJobs = (payload: unknown): CompressionMetadata[] => {
     try {
         return Value.Parse(CompressionMetadataListSchema, payload);
     } catch (error: unknown) {

@@ -22,8 +22,8 @@ const fetchQuerySpeed = async (datasetNames: string[], jobId: string): Promise<Q
     const {data, error, response} = await apiClient.GET("/metadata/query_speed", {
         params: {
             query: {
-                dataset: datasetNames.join(","),
-                search_job_id: Number(jobId),
+                datasets: datasetNames.join(","),
+                query_job_id: Number(jobId),
             },
         },
     });

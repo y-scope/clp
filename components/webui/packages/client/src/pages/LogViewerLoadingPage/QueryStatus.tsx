@@ -8,11 +8,12 @@ import {
     AssertError,
     Value,
 } from "@sinclair/typebox/value";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {Nullable} from "@webui/common/utility-types";
 
 import {submitExtractStreamJob} from "../../api/stream-files";
+import {SETTINGS_STORAGE_ENGINE} from "../../config";
 import {
-    EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,
     QUERY_LOADING_STATE,
 } from "../../typings/query";
@@ -47,6 +48,12 @@ const QueryStatus = () => {
         }
         isFirstRun = false;
 
+        if (CLP_STORAGE_ENGINES.CLP_S !== SETTINGS_STORAGE_ENGINE) {
+            setErrorMsg("Viewing logs is only supported for the CLP-S storage engine.");
+
+            return;
+        }
+
         // Validates and parse search parameters.
         const searchParams = new URLSearchParams(window.location.search);
         const paramsObj = Object.fromEntries(searchParams);
@@ -65,25 +72,20 @@ const QueryStatus = () => {
         }
 
         const {
+            archiveId,
             dataset,
-            type,
             logEventIdx,
-            streamId,
         } = parseResult;
 
         submitExtractStreamJob({
+            archiveId: archiveId,
             dataset: "undefined" === typeof dataset ?
                 null :
                 dataset,
-
-            // `parseResult.type` must be valid key since parsed using with typebox type
-            // `ExtractJobSearchParams`.
-            extractJobType: EXTRACT_JOB_TYPE[type as keyof typeof EXTRACT_JOB_TYPE],
             logEventIdx: logEventIdx,
             onUploadProgress: () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
             },
-            streamId: streamId,
         })
             .then(({data}) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);
@@ -97,7 +99,7 @@ const QueryStatus = () => {
             .catch((e: unknown) => {
                 const msg = e instanceof Error ?
                     e.message :
-                    `Unable to extract stream with streamId=${streamId} at ` +
+                    `Unable to extract stream with archiveId=${archiveId} at ` +
                     `logEventIdx=${logEventIdx}.`;
 
                 console.error(msg, e);

@@ -21,7 +21,6 @@ import {
     TreeNode,
 } from "./typings";
 import {
-    addServerPrefix,
     getListHeight,
     toTreeNode,
 } from "./utils";
@@ -77,7 +76,7 @@ const PathsSelectFormItem = () => {
         }
         loadedPathsRef.current.add(path);
         try {
-            const files: FileEntry[] = await listFiles(addServerPrefix(path));
+            const files: FileEntry[] = await listFiles(path);
             addNodes(files.map((f) => toTreeNode(f, path)));
         } catch (e) {
             loadedPathsRef.current.delete(path);

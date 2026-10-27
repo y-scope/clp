@@ -12,7 +12,6 @@ import Message from "../Message";
 import {
     formatResultAsJsonl,
     formatTimestamp,
-    getStreamId,
 } from "../utils";
 import ActionsHeader from "./ActionsHeader";
 
@@ -89,10 +88,10 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         key: "message",
         render: (_, record) => (
             <Message
+                archiveId={record.archive_id}
                 dataset={record.dataset}
                 logEventIdx={record.log_event_idx}
                 message={record.message}
-                streamId={getStreamId(record)}
                 fileText={
                     CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE ?
                         record.orig_file_path :

@@ -10,18 +10,12 @@ import {StringSchema} from "./common.js";
  * Schema for a file or directory entry.
  */
 const FileEntrySchema = Type.Object({
-    isExpandable: Type.Boolean(),
+    is_expandable: Type.Boolean(),
     name: StringSchema,
-    parentPath: StringSchema,
+    parent_path: StringSchema,
 });
 
 type FileEntry = Static<typeof FileEntrySchema>;
-
-const FileListRequestSchema = Type.Object({
-    path: Type.String({
-        default: "/",
-    }),
-});
 
 /**
  * Schema for file listing response.
@@ -33,7 +27,6 @@ type FileListing = Static<typeof FileListingSchema>;
 export {
     FileEntrySchema,
     FileListingSchema,
-    FileListRequestSchema,
 };
 export type {
     FileEntry,
