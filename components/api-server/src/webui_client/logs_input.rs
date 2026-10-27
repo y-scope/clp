@@ -16,11 +16,19 @@ use utoipa::ToSchema;
 use crate::error::ClientError;
 use crate::webui_client::WebuiClient;
 
-/// A path in the logs input, relative to the logs-input mount point ([`LOGS_INPUT_MOUNT_POINT`])
-/// and written with a leading `/` that denotes the mount point itself.
+/// A path in the logs input, relative to the logs-input mount point ([`LOGS_INPUT_MOUNT_POINT`]).
 ///
-/// A logs-input path has no `..` components or NUL characters, and is lexically normalized: its `.`
-/// components, repeated `/`s, and trailing `/` are removed, so the mount point itself is `/`.
+/// A valid logs-input path:
+///
+/// * Starts with `/`, which denotes the mount point itself.
+/// * Has no `..` components.
+/// * Has no NUL characters.
+///
+/// A logs-input path is lexically normalized:
+///
+/// * `.` components are removed.
+/// * Repeated `/`s are collapsed into one.
+/// * A trailing `/` is removed, except from the mount point itself, which is `/`.
 ///
 /// A logs-input path serializes as its normalized string. It deserializes from a string, validated
 /// and normalized by the same rules as its [`TryFrom<String>`] implementation.
