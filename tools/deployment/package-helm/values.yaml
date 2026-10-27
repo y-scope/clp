@@ -327,7 +327,6 @@ clpConfig:
 
   # Where archives should be output to
   archive_output:
-    # S3 storage settings (`s3_config`), used when `global.archiveOutputStorageType` is "s3".
     storage: {}
 
     # Retention period for archives, in minutes. Set to null to disable automatic deletion.
@@ -447,8 +446,6 @@ spider:
             secretKeyRef:
               name: "{{ include \"clp.fullname\" . }}-database"
               key: "password"
-      # The Spider subchart renders these strings with `tpl`, so the archives volume can be mounted
-      # only when archives are stored on the filesystem.
       extra_volume_mounts: |-
         - name: "clp-config"
           mountPath: "/etc/clp-config.yaml"
