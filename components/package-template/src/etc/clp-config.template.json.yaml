@@ -14,10 +14,10 @@ telemetry:
 #api_server:
 #  host: "localhost"
 #  port: 3001
-#  default_max_num_query_results: 1000
 #  query_job_polling:
 #    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
+#  stream_file_extraction_timeout_secs: 1800
 
 ## log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
 #log_ingestor:
@@ -59,8 +59,8 @@ telemetry:
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
 #
-## `spider` and `compression_coordinator` default to `null`. To use them, set `package.scheduler`
-## to "spider", remove `null` from both, and uncomment their fields below.
+## `spider`, `compression_coordinator` and `query_coordinator` default to `null`. To use them, set
+## `package.scheduler` to "spider", remove `null` from all three, and uncomment their fields below.
 #spider: null
 ##  host: "localhost"
 ##  port: 50051
@@ -76,6 +76,8 @@ telemetry:
 ##        replicas: 2
 ##      compression:
 ##        replicas: 2
+##      query:
+##        replicas: 4
 #
 #compression_coordinator: null
 ##  logging_level: "INFO"
@@ -90,6 +92,16 @@ telemetry:
 ##  termination_timeout_secs: 30
 ##  commit_task_soft_timeout_secs: 45
 ##  commit_task_hard_timeout_secs: 60
+#
+#query_coordinator: null
+##  logging_level: "INFO"
+##  database_connection_pool_size: 10
+##  job_polling_interval_millisecs: 100
+##  max_concurrent_jobs: 1000
+##  max_datasets_per_query: 10  # Set to null to disable the limit
+##  query_task_max_retry: 1
+##  result_polling_interval_millisecs: 100
+##  termination_timeout_secs: 30
 #
 #query_scheduler:
 #  host: "localhost"

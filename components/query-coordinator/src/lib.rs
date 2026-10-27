@@ -1,5 +1,6 @@
 //! Coordination for CLP query jobs.
 
+pub mod cancellation_monitor;
 pub mod coordination;
 mod error;
 pub mod job_handle;

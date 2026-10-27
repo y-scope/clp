@@ -3,8 +3,8 @@
         "ClpQueryEngine": "clp-s",
         "ClpStorageEngine": "clp-s",
 
-        "LogsInputRootDir": "/",
         "LogsInputType": "fs",
+        "LogIngestorEnabled": false,
 
         "MaxDatasetsPerQuery": 10,
 
@@ -14,6 +14,7 @@
     },
     "server": {
         "ApiServerUrl": "http://localhost:3001",
+        "LogIngestorUrl": null,
 
         "MongoDbHost": "localhost",
         "MongoDbName": "clp-query-results",

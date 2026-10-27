@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
 use serde::Deserialize;
@@ -5,7 +7,11 @@ use serde::Serialize;
 use strum::EnumString;
 use utoipa::ToSchema;
 
+use crate::dataset::DatasetName;
+
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
+
+pub const QUERY_TASKS_TABLE_NAME: &str = "query_tasks";
 
 pub type QueryJobId = i32;
 
@@ -25,9 +31,9 @@ pub struct AggregationConfig {
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
-    pub datasets: Option<Vec<String>>,
+    pub datasets: Option<Vec<DatasetName>>,
     pub query_string: String,
-    pub max_num_results: u32,
+    pub max_num_results: Option<NonZeroU32>,
     pub begin_timestamp: Option<i64>,
     pub end_timestamp: Option<i64>,
     pub ignore_case: bool,
@@ -59,9 +65,10 @@ pub enum QueryJobStatus {
     Running = 1,
     Succeeded = 2,
     Failed = 3,
-    Cancelling = 4,
-    Cancelled = 5,
-    Killed = 6,
+    CancelRequested = 4,
+    Cancelling = 5,
+    Cancelled = 6,
+    Killed = 7,
 }
 
 impl QueryJobStatus {

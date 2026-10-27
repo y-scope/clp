@@ -29,13 +29,13 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     CompressionOrchestration,
-    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     OTEL_COLLECTOR_COMPONENT_NAME,
+    QUERY_COORDINATOR_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     QueryEngine,
@@ -60,6 +60,7 @@ from clp_package_utils.general import (
     generate_docker_compose_container_config,
     get_clp_home,
     http_request,
+    is_log_ingestor_enabled,
     is_retention_period_configured,
     validate_db_config,
     validate_mcp_server_config,
@@ -600,6 +601,7 @@ class BaseController(ABC):
         env_vars |= {
             "SPIDER_WORKER_REPLICAS": str(worker.pools.general.replicas),
             "CLP_SPIDER_COMPRESSION_WORKER_REPLICAS": str(worker.pools.compression.replicas),
+            "CLP_SPIDER_QUERY_WORKER_REPLICAS": str(worker.pools.query.replicas),
             "SPIDER_WORKER_LOG_LEVEL": worker.log_level,
             "SPIDER_WORKER_CONNECTION_POOL_SIZE": _str_or_none(worker.connection_pool_size),
             "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _str_or_none(worker.scheduler_poll_wait_ms),
@@ -641,6 +643,39 @@ class BaseController(ABC):
         # Credentials
         env_vars |= {
             "CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_query_coordinator(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the query coordinator component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUERY_COORDINATOR_COMPONENT_NAME
+        coordinator_config = self._clp_config.query_coordinator
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Runtime config
+        env_vars |= {
+            "CLP_QUERY_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
+        }
+
+        # Credentials
+        env_vars |= {
+            "CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD": (
                 coordinator_config.resource_group_password
             ),
         }
@@ -799,14 +834,8 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = LOG_INGESTOR_COMPONENT_NAME
-        if self._clp_config.log_ingestor is None:
-            logger.info("%s is not configured, skipping environment setup...", component_name)
-            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
-        if self._clp_config.logs_input.type != StorageType.S3:
-            logger.info(
-                "%s is only applicable for S3 logs input type, skipping environment setup...",
-                component_name,
-            )
+        if self._clp_config.log_ingestor is None or not is_log_ingestor_enabled(self._clp_config):
+            logger.info("%s is not enabled, skipping environment setup...", component_name)
             return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
         logger.info("Setting up environment for %s...", component_name)
 
@@ -844,12 +873,6 @@ class BaseController(ABC):
         validate_webui_config(self._clp_config, settings_json_path)
 
         # Read, update, and write back the Web UI settings.json
-        logs_input_root_dir = (
-            str(CONTAINER_INPUT_LOGS_ROOT_DIR)
-            if StorageType.FS == self._clp_config.logs_input.type
-            else None
-        )
-
         stream_storage = self._clp_config.stream_output.storage
         stream_files_dir = None
         if StorageType.FS == stream_storage.type:
@@ -866,11 +889,19 @@ class BaseController(ABC):
         if self._clp_config.query_scheduler is not None:
             max_datasets_per_query = self._clp_config.query_scheduler.max_datasets_per_query
 
+        log_ingestor_url = (
+            f"http://{container_clp_config.log_ingestor.host}"
+            f":{container_clp_config.log_ingestor.port}"
+            if container_clp_config.log_ingestor is not None
+            and is_log_ingestor_enabled(container_clp_config)
+            else None
+        )
+
         public_settings_updates = {
             "ClpQueryEngine": self._clp_config.webui.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
-            "LogsInputRootDir": logs_input_root_dir,
             "LogsInputType": self._clp_config.logs_input.type,
+            "LogIngestorEnabled": is_log_ingestor_enabled(container_clp_config),
             "MaxDatasetsPerQuery": max_datasets_per_query,
             "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "MongoDbSearchResultsMetadataCollectionName": (
@@ -879,6 +910,7 @@ class BaseController(ABC):
         }
 
         server_settings_updates = {
+            "LogIngestorUrl": log_ingestor_url,
             "ApiServerUrl": (
                 f"http://{container_clp_config.api_server.host}"
                 f":{container_clp_config.api_server.port}"
@@ -1235,6 +1267,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_otel_collector()
         env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_compression_coordinator()
+        env_vars |= self._set_up_env_for_query_coordinator()
         env_vars |= self._set_up_env_for_spider()
         env_vars |= self._set_up_env_for_query_scheduler()
         env_vars |= self._set_up_env_for_compression_worker(num_workers)

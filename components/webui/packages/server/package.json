@@ -39,7 +39,7 @@
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
-    "@types/node": "24.13.3",
+    "@types/node": "24.19.2",
     "@types/presto-client": "^1.0.2",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.4",

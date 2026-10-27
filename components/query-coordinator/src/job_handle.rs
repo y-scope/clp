@@ -2,14 +2,13 @@
 
 use std::cmp::Reverse;
 use std::collections::HashSet;
-use std::num::NonZeroU32;
 use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
-use clp_rust_utils::dataset::is_valid_dataset_name;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -18,7 +17,6 @@ use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
 use const_format::formatcp;
-use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
@@ -80,9 +78,11 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::InvalidQueryJobConfig`] if:
-    ///   * The query string is empty.
-    ///   * The begin timestamp exceeds the end timestamp.
+    /// * [`Error::UnsupportedJobConfig`] if:
+    ///   * The job carries an aggregation config.
+    ///   * The job writes its results to files.
+    /// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
+    /// * Forwards [`ClpSQueryOption::try_from`]'s return values on failure.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -92,11 +92,18 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         output_handle: OutputHandle,
         job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
-        let query_string = NonEmptyString::try_from(search_job_config.query_string.clone())
-            .map_err(|_| {
-                Error::InvalidQueryJobConfig("query string must not be empty".to_owned())
-            })?;
+        if search_job_config.aggregation_config.is_some() {
+            return Err(Error::UnsupportedJobConfig(
+                "aggregation jobs are not supported".to_owned(),
+            ));
+        }
+        if search_job_config.write_to_file {
+            return Err(Error::UnsupportedJobConfig(
+                "writing query results to files is not supported".to_owned(),
+            ));
+        }
 
+        let clp_s_query_option = ClpSQueryOption::try_from(&search_job_config)?;
         if let (Some(begin_timestamp), Some(end_timestamp)) = (
             search_job_config.begin_timestamp,
             search_job_config.end_timestamp,
@@ -111,14 +118,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .archive_selection_options
             .archive_retention_period_millisecs
             .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
-
-        let clp_s_query_option = ClpSQueryOption {
-            query_string,
-            max_num_results: NonZeroU32::new(search_job_config.max_num_results),
-            begin_timestamp_millisecs: search_job_config.begin_timestamp,
-            end_timestamp_millisecs: search_job_config.end_timestamp,
-            ignore_case: search_job_config.ignore_case,
-        };
 
         Ok(Self {
             context,
@@ -233,7 +232,21 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             "Query job submitted.",
         );
 
-        self.start(spider_job_id, persisted_num_tasks).await?;
+        if let Err(start_error) = self.start(spider_job_id, persisted_num_tasks).await {
+            let _ = self
+                .job_submitter
+                .cancel_query_job(spider_job_id)
+                .await
+                .inspect_err(|e| {
+                    tracing::warn!(
+                        query_job_id = % self.query_job_id,
+                        spider_job_id = % spider_job_id,
+                        error = % e,
+                        "Failed to cancel the Spider job after failing to start the query job.",
+                    );
+                });
+            return Err(start_error);
+        }
         Ok(spider_job_id)
     }
 
@@ -277,7 +290,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::QueryJobCancelled`] if the query job is in [`QueryJobStatus::Cancelling`].
+    /// * [`Error::QueryJobCancelled`] if the query job is in [`QueryJobStatus::CancelRequested`].
     /// * [`Error::InvalidQueryJobStatusTransition`] if the query job is in any other status than
     ///   [`QueryJobStatus::Pending`].
     /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
@@ -294,7 +307,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         let mut tx = self.context.db_pool.begin().await?;
         match self.lock_and_get_status(&mut tx).await? {
             QueryJobStatus::Pending => {}
-            QueryJobStatus::Cancelling => return Err(Error::QueryJobCancelled),
+            QueryJobStatus::CancelRequested => return Err(Error::QueryJobCancelled),
             from => {
                 return Err(Error::InvalidQueryJobStatusTransition {
                     from,
@@ -393,9 +406,12 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// persist from the locked status as follows:
     ///
     /// * [`QueryJobOutcome::Succeeded`] is permitted from [`QueryJobStatus::Pending`] and
-    ///   [`QueryJobStatus::Running`]. From [`QueryJobStatus::Cancelling`], the job is terminated as
-    ///   [`QueryJobStatus::Cancelled`] instead, since a cancellation wins over a success.
-    /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::Cancelling`].
+    ///   [`QueryJobStatus::Running`]. From [`QueryJobStatus::CancelRequested`] and
+    ///   [`QueryJobStatus::Cancelling`], the job is terminated as [`QueryJobStatus::Cancelled`]
+    ///   instead, since a cancellation wins over a success.
+    /// * [`QueryJobOutcome::Cancelled`] is permitted only from [`QueryJobStatus::CancelRequested`]
+    ///   and [`QueryJobStatus::Cancelling`]. From [`QueryJobStatus::Running`], the job is
+    ///   terminated as [`QueryJobStatus::Failed`] instead.
     /// * [`QueryJobOutcome::Failed`] is permitted from any non-terminal status, since a failure
     ///   wins over both a success and a cancellation.
     ///
@@ -416,6 +432,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         const CANCELLED_AFTER_COMPLETION_MESSAGE: &str =
             "The query job completed, but it had already been requested to be cancelled.";
         const CANCELLED_MESSAGE: &str = "The query job was cancelled.";
+        const CANCELLED_UNEXPECTED_MESSAGE: &str =
+            "The query job was cancelled unexpectedly without a cancellation request.";
 
         let mut tx = self.context.db_pool.begin().await?;
         let current_status = self.lock_and_get_status(&mut tx).await?;
@@ -425,10 +443,14 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             (QueryJobOutcome::Succeeded, QueryJobStatus::Pending | QueryJobStatus::Running) => {
                 (to, None)
             }
-            (QueryJobOutcome::Cancelled, QueryJobStatus::Cancelling) => {
-                (to, Some(CANCELLED_MESSAGE.to_owned()))
-            }
-            (QueryJobOutcome::Succeeded, QueryJobStatus::Cancelling) => {
+            (
+                QueryJobOutcome::Cancelled,
+                QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling,
+            ) => (to, Some(CANCELLED_MESSAGE.to_owned())),
+            (
+                QueryJobOutcome::Succeeded,
+                QueryJobStatus::CancelRequested | QueryJobStatus::Cancelling,
+            ) => {
                 tracing::info!(
                     query_job_id = % self.query_job_id,
                     "{CANCELLED_AFTER_COMPLETION_MESSAGE}",
@@ -436,6 +458,16 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 (
                     QueryJobStatus::Cancelled,
                     Some(CANCELLED_AFTER_COMPLETION_MESSAGE.to_owned()),
+                )
+            }
+            (QueryJobOutcome::Cancelled, QueryJobStatus::Running) => {
+                tracing::error!(
+                    query_job_id = % self.query_job_id,
+                    "{CANCELLED_UNEXPECTED_MESSAGE}",
+                );
+                (
+                    QueryJobStatus::Failed,
+                    Some(CANCELLED_UNEXPECTED_MESSAGE.to_owned()),
                 )
             }
             (QueryJobOutcome::Failed { error_message }, from) if !from.is_terminal() => {
@@ -560,12 +592,9 @@ impl ArchiveSelector<'_> {
     /// * [`Error::InvalidQueryJobConfig`] if:
     ///   * The job doesn't request any datasets, since clp-text queries aren't supported.
     ///   * The job's requested datasets are empty.
-    ///   * A dataset name fails [`is_valid_dataset_name`].
     ///   * The number of distinct datasets exceeds
     ///     [`ArchiveSelectionOptions::max_datasets_per_query`].
-    fn deduplicate_and_validate_requested_datasets(
-        &self,
-    ) -> Result<HashSet<NonEmptyString>, Error> {
+    fn deduplicate_and_validate_requested_datasets(&self) -> Result<HashSet<DatasetName>, Error> {
         let Some(requested_datasets) = self.search_job_config.datasets.as_deref() else {
             return Err(Error::InvalidQueryJobConfig(
                 "clp-text queries are not supported".to_owned(),
@@ -578,17 +607,7 @@ impl ArchiveSelector<'_> {
             ));
         }
 
-        let datasets = requested_datasets
-            .iter()
-            .map(|dataset| {
-                NonEmptyString::new(dataset.clone())
-                    .ok()
-                    .filter(|name| is_valid_dataset_name(name.as_str()))
-                    .ok_or_else(|| {
-                        Error::InvalidQueryJobConfig(format!("invalid dataset name `{dataset}`"))
-                    })
-            })
-            .collect::<Result<HashSet<_>, _>>()?;
+        let datasets: HashSet<DatasetName> = requested_datasets.iter().cloned().collect();
 
         if let Some(max_datasets_per_query) = self
             .context
@@ -620,7 +639,7 @@ impl ArchiveSelector<'_> {
     /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
     async fn ensure_all_required_datasets_exist(
         &self,
-        datasets: &HashSet<NonEmptyString>,
+        datasets: &HashSet<DatasetName>,
     ) -> Result<(), Error> {
         let datasets_table = self.context.db_config.datasets_table_name();
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
@@ -628,7 +647,7 @@ impl ArchiveSelector<'_> {
         ));
         let mut separated_datasets = query_builder.separated(", ");
         for dataset in datasets {
-            separated_datasets.push_bind(dataset.as_str());
+            separated_datasets.push_bind(dataset);
         }
         query_builder.push(")");
 
@@ -656,14 +675,8 @@ impl ArchiveSelector<'_> {
     /// Returns an error if:
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_archives(
-        &self,
-        dataset: &NonEmptyString,
-    ) -> Result<Vec<ArchiveMetadata>, Error> {
-        let archives_table = self
-            .context
-            .db_config
-            .archives_table_name(Some(dataset.as_str()));
+    async fn fetch_archives(&self, dataset: &DatasetName) -> Result<Vec<ArchiveMetadata>, Error> {
+        let archives_table = self.context.db_config.archives_table_name(dataset);
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
             "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
         ));
@@ -691,7 +704,7 @@ impl ArchiveSelector<'_> {
             .into_iter()
             .map(|row| ArchiveMetadata {
                 id: row.id,
-                dataset: Some(dataset.clone()),
+                dataset: dataset.clone(),
                 uncompressed_size: row.uncompressed_size,
                 end_timestamp: row.end_timestamp,
             })
@@ -751,4 +764,70 @@ struct ArchiveRowProjection {
     #[sqlx(try_from = "i64")]
     uncompressed_size: u64,
     end_timestamp: i64,
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+    use std::num::NonZeroUsize;
+    use std::time::Duration;
+
+    use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::job_config::SearchJobConfig;
+    use sqlx::mysql::MySqlPoolOptions;
+
+    use super::ArchiveSelectionOptions;
+    use super::ArchiveSelector;
+    use super::QueryJobHandleContext;
+    use super::SpiderOption;
+    use crate::Error;
+
+    #[tokio::test]
+    async fn duplicate_requested_datasets_count_once_toward_max_datasets_per_query() {
+        let context = QueryJobHandleContext {
+            db_pool: MySqlPoolOptions::new()
+                .connect_lazy("mysql://localhost/clp-db")
+                .expect("the database URL should be valid"),
+            db_config: Database::default(),
+            archive_selection_options: ArchiveSelectionOptions {
+                archive_retention_period_millisecs: None,
+                max_datasets_per_query: NonZeroUsize::new(1),
+            },
+            spider_option: SpiderOption {
+                poll_interval: Duration::from_secs(1),
+                query_task_max_retry: 0,
+            },
+        };
+        let other_dataset: DatasetName = "other"
+            .parse()
+            .expect("name should be a valid dataset name");
+        let select_datasets = |datasets| {
+            let search_job_config = SearchJobConfig {
+                datasets: Some(datasets),
+                ..SearchJobConfig::default()
+            };
+            ArchiveSelector {
+                context: &context,
+                search_job_config: &search_job_config,
+                archive_end_ts_lower_bound_millisecs: None,
+            }
+            .deduplicate_and_validate_requested_datasets()
+        };
+
+        assert_eq!(
+            select_datasets(vec![DatasetName::default(), DatasetName::default()])
+                .expect("duplicate datasets should count once"),
+            HashSet::from([DatasetName::default()])
+        );
+        let error = select_datasets(vec![DatasetName::default(), other_dataset])
+            .expect_err("two distinct datasets should exceed the limit");
+        assert!(
+            matches!(
+                &error,
+                Error::InvalidQueryJobConfig(message) if message.contains("max_datasets_per_query")
+            ),
+            "unexpected error: {error:?}"
+        );
+    }
 }

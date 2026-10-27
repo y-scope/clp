@@ -104,6 +104,7 @@ scheduling:
   compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
+  queryCoordinator: {}
   queryScheduler: {}
   prestoCoordinator: {}
   garbageCollector: {}
@@ -135,6 +136,7 @@ resources:
   compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
+  queryCoordinator: {}
   queryScheduler: {}
   prestoCoordinator: {}
   garbageCollector: {}
@@ -169,11 +171,10 @@ clpConfig:
   api_server:
     serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30301  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
-    default_max_num_query_results: 1000
-    stream_file_extraction_timeout_secs: 1800
     query_job_polling:
       initial_backoff_ms: 100
       max_backoff_ms: 5000
+    stream_file_extraction_timeout_secs: 1800
 
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.
@@ -213,6 +214,16 @@ clpConfig:
     logging_level: "INFO"
     max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
     telemetry_update_interval_ms: 60000
+
+  query_coordinator:
+    database_connection_pool_size: 10
+    job_polling_interval_millisecs: 100
+    logging_level: "INFO"
+    max_concurrent_jobs: 1000
+    max_datasets_per_query: 10  # Set to null to disable the limit
+    query_task_max_retry: 1
+    result_polling_interval_millisecs: 100
+    termination_timeout_secs: 30
 
   query_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -382,6 +393,7 @@ credentials:
 
   spiderResourceGroups:
     compression: "compression-pass"
+    query: "query-pass"
 
 serviceAccount:
   annotations:
@@ -394,9 +406,9 @@ spider:
   image:
     # Temporary pin: upcoming Spider `main` changes may break, and its next release is a while away.
     scheduler:
-      tag: "sha-86cfba7"
+      tag: "sha-278d06f"
     storage:
-      tag: "sha-86cfba7"
+      tag: "sha-278d06f"
     worker:
       repository: "ghcr.io/y-scope/clp/clp-spider-worker"
       tag: "main"
@@ -459,3 +471,11 @@ spider:
               secretKeyRef:
                 name: "{{ include \"clp.fullname\" . }}-spider-resource-groups"
                 key: "compression"
+        - name: "query"
+          replicas: 4
+          resource_group:
+            external_id: "query"
+            password:
+              secretKeyRef:
+                name: "{{ include \"clp.fullname\" . }}-spider-resource-groups"
+                key: "query"

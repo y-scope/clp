@@ -21,10 +21,10 @@ webui:
 #api_server:
 #  host: "localhost"
 #  port: 3001
-#  default_max_num_query_results: 1000
 #  query_job_polling:
 #    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
+#  stream_file_extraction_timeout_secs: 1800
 
 # log-ingestor is not supported in clp-text
 log_ingestor: null
@@ -62,9 +62,11 @@ log_ingestor: null
 #  logging_level: "INFO"
 #  telemetry_update_interval_ms: 60000
 #
-## `spider` and `compression_coordinator` are unsupported with CLP Text and must stay `null`.
+## `spider`, `compression_coordinator` and `query_coordinator` are unsupported with CLP Text and
+## must stay `null`.
 #spider: null
 #compression_coordinator: null
+#query_coordinator: null
 #
 #query_scheduler:
 #  host: "localhost"

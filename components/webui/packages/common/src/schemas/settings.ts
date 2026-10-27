@@ -14,10 +14,7 @@ const WebuiPublicSettingsSchema = Type.Object({
     ClpQueryEngine: Type.Enum(CLP_QUERY_ENGINES),
     ClpStorageEngine: Type.Enum(CLP_STORAGE_ENGINES),
 
-    LogsInputRootDir: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
+    LogIngestorEnabled: Type.Boolean({default: false}),
     LogsInputType: Type.Enum(STORAGE_TYPE),
 
     MaxDatasetsPerQuery: Type.Union([
@@ -32,6 +29,10 @@ const WebuiPublicSettingsSchema = Type.Object({
 
 const WebuiServerSettingsSchema = Type.Object({
     ApiServerUrl: Type.String(),
+    LogIngestorUrl: Type.Union([
+        Type.String(),
+        Type.Null(),
+    ], {default: null}),
 
     MongoDbHost: Type.String(),
     MongoDbName: Type.String(),
