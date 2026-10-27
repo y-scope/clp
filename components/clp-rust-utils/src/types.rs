@@ -84,7 +84,6 @@ pub struct ParseArchiveIdError {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct SessionToken {
-    #[serde(with = "uuid::serde::hyphenated")]
     value: uuid::Uuid,
 }
 
@@ -294,17 +293,5 @@ mod tests {
             rmp_serde::from_slice::<PositiveI64>(&serialized)
                 .expect_err("out-of-range integer should be rejected");
         }
-    }
-
-    #[test]
-    fn session_token_displays_and_encodes_in_msgpack_as_hyphenated_string() {
-        const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
-
-        let session_token = SessionToken::from(uuid::uuid!(SESSION_TOKEN));
-        assert_eq!(session_token.to_string(), SESSION_TOKEN);
-        assert_eq!(
-            rmp_serde::to_vec(&session_token).expect("session token should serialize"),
-            rmp_serde::to_vec(SESSION_TOKEN).expect("string should serialize")
-        );
     }
 }

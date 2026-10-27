@@ -37,6 +37,7 @@ pub struct NetworkOutput {
     pub session_token: SessionToken,
 }
 
+/// The configuration of a search or aggregation query job, as stored in the query jobs table.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
