@@ -426,7 +426,7 @@ mod tests {
 
     #[tokio::test]
     async fn query_rejects_invalid_numeric_fields() -> anyhow::Result<()> {
-        let app = from_client(Client::new_with_closed_sql_pool().await)?;
+        let app = clp_s_app_with_lazy_clients().await;
         for (field, value) in [
             ("count_by_time_bucket_size_millisecs", serde_json::json!(0)),
             ("count_by_time_bucket_size_millisecs", serde_json::json!(-1)),
