@@ -1,5 +1,7 @@
 //! Routes that back the `WebUI`.
 
+mod compression;
+mod logs_input;
 mod metadata;
 mod stream_files;
 
@@ -15,6 +17,8 @@ use crate::routes::AppState;
 /// A newly created [`OpenApiRouter`] with all `WebUI` routes registered.
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
+        .merge(compression::router())
+        .merge(logs_input::router())
         .merge(metadata::router())
         .merge(stream_files::router())
 }
@@ -29,7 +33,9 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::DatasetNotFound(_)
         | ClientError::QueryJobAlreadyTerminated(_)
         | ClientError::InvalidInput(_)
-        | ClientError::LogEventNotFound { .. } => {}
+        | ClientError::LogEventNotFound { .. }
+        | ClientError::LogsInputPathNotFound(_)
+        | ClientError::LogsInputPathOutsideMountPoint(_) => {}
         ClientError::Sql(_)
         | ClientError::Mongo(_)
         | ClientError::QueryNotSucceeded
@@ -41,6 +47,9 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::StreamExtractionTimeout(_)
         | ClientError::ExtractionJobFailed { .. }
         | ClientError::ExtractionJobNotFound(_)
+        | ClientError::LogsInputPathUnresolvable { .. }
+        | ClientError::LogsInputMountPointUnavailable(_)
+        | ClientError::CompressionJobIdOutOfRange(_)
         | ClientError::Telemetry(_) => {
             tracing::error!(operation, error = ? error, "WebUI API request failed.");
         }

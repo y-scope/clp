@@ -44,4 +44,5 @@ utoipa-axum = { workspace = true }
 
 [dev-dependencies]
 http-body-util = { workspace = true }
+tempfile = { workspace = true }
 tower = { workspace = true }

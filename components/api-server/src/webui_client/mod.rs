@@ -1,9 +1,13 @@
 //! A client for the operations that back the `WebUI`'s routes.
 
+mod compression;
+mod logs_input;
 mod metadata;
 mod stream_files;
 
 use clp_rust_utils::clp_config::package::config::Config;
+pub use compression::*;
+pub use logs_input::*;
 pub use metadata::*;
 pub use stream_files::*;
 
@@ -38,5 +42,30 @@ impl WebuiClient {
             stream_file_storage,
             config,
         }
+    }
+}
+
+#[cfg(test)]
+impl WebuiClient {
+    /// Factory function.
+    ///
+    /// Creates a client whose `MySQL` and `MongoDB` connections are only established on first use.
+    ///
+    /// # Returns
+    ///
+    /// A newly created [`WebuiClient`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if the clients can't be created.
+    async fn new_lazy(config: Config) -> Self {
+        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
+            .connect_lazy("mysql://127.0.0.1:1/clp-db")
+            .expect("the MySQL URI should be valid");
+        let mongodb_client =
+            mongodb::Client::with_uri_str("mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=100")
+                .await
+                .expect("the MongoDB URI should be valid");
+        Self::new(config, sql_pool, mongodb_client).await
     }
 }

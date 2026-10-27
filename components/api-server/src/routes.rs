@@ -348,9 +348,12 @@ impl From<ClientError> for HandlerError {
         match err {
             ClientError::QueryJobNotFound(_)
             | ClientError::DatasetNotFound(_)
-            | ClientError::LogEventNotFound { .. } => Self::NotFound,
+            | ClientError::LogEventNotFound { .. }
+            | ClientError::LogsInputPathNotFound(_) => Self::NotFound,
             ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
-            ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
+            ClientError::InvalidInput(_) | ClientError::LogsInputPathOutsideMountPoint(_) => {
+                Self::BadRequest(format!("{err}"))
+            }
             ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(format!("{err}")),
             ClientError::Sql(_)
             | ClientError::Mongo(_)
@@ -362,6 +365,9 @@ impl From<ClientError> for HandlerError {
             | ClientError::InvalidQueryJobConfig(_)
             | ClientError::ExtractionJobFailed { .. }
             | ClientError::ExtractionJobNotFound(_)
+            | ClientError::LogsInputPathUnresolvable { .. }
+            | ClientError::LogsInputMountPointUnavailable(_)
+            | ClientError::CompressionJobIdOutOfRange(_)
             | ClientError::Telemetry(_) => Self::InternalServer,
         }
     }
@@ -402,6 +408,7 @@ mod tests {
 
     use super::*;
     use crate::client::Cancellability;
+    use crate::webui_client::LogsInputPath;
 
     #[derive(Deserialize)]
     struct JobStatusParams {
@@ -563,6 +570,27 @@ mod tests {
                 ClientError::ExtractionJobNotFound(1),
                 StatusCode::INTERNAL_SERVER_ERROR,
             ),
+            (
+                ClientError::LogsInputPathNotFound(LogsInputPath::try_from("/app.log".to_owned())?),
+                StatusCode::NOT_FOUND,
+            ),
+            (
+                ClientError::LogsInputPathUnresolvable {
+                    path: LogsInputPath::try_from("/loop-link".to_owned())?,
+                    source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+                },
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                ClientError::LogsInputMountPointUnavailable(std::io::Error::from(
+                    std::io::ErrorKind::NotFound,
+                )),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                ClientError::CompressionJobIdOutOfRange(u64::MAX),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
         ] {
             let description = format!("{error:?}");
             assert_eq!(
@@ -593,6 +621,19 @@ mod tests {
             )
             .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn logs_input_path_outside_mount_point_maps_to_bad_request_with_its_message()
+    -> anyhow::Result<()> {
+        let error = ClientError::LogsInputPathOutsideMountPoint(LogsInputPath::try_from(
+            "/outside-link".to_owned(),
+        )?);
+        let expected = error.to_string();
+        let response = HandlerError::from(error).into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(get_body(response).await, expected);
         Ok(())
     }
 
