@@ -54,9 +54,6 @@ pub fn resolve_input_path(root: &Path, path: &Path) -> io::Result<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(unix)]
-    use std::os::unix::ffi::OsStringExt;
-
     use super::*;
 
     #[test]
@@ -76,11 +73,13 @@ mod tests {
             resolve_input_path(&root, &root).expect("directory should resolve"),
             root
         );
-        for invalid in [
-            PathBuf::from("input.log"),
-            directory.clone(),
-            root.join("missing"),
-        ] {
+        assert_eq!(
+            resolve_input_path(&root, Path::new("input.log"))
+                .expect_err("relative input path should be rejected")
+                .kind(),
+            io::ErrorKind::InvalidInput,
+        );
+        for invalid in [directory.clone(), root.join("missing")] {
             assert!(
                 resolve_input_path(&root, &invalid).is_err(),
                 "{}",
@@ -94,6 +93,8 @@ mod tests {
         }
         #[cfg(unix)]
         {
+            use std::os::unix::ffi::OsStringExt;
+
             let internal = root.join("internal");
             std::os::unix::fs::symlink(&file, &internal)
                 .expect("internal symlink should be created");

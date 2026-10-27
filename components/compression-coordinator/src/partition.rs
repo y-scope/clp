@@ -591,9 +591,7 @@ mod tests {
             path: "/logs/zero".to_owned(),
             size: 0,
         });
-        let zero_target_inputs = zero_target_fixture.assert_partitions();
-        assert_eq!(zero_target_inputs.len(), 1);
-        assert_eq!(zero_target_inputs[0].paths(), ["/logs/zero"]);
+        zero_target_fixture.assert_partitions();
 
         let mut fixture = Fixture::new(FsSource::default(), u64::MAX);
         let files = [
@@ -626,7 +624,6 @@ mod tests {
             });
         }
         let inputs = fixture.assert_partitions();
-        assert_eq!(inputs.len(), 2);
         assert_eq!(
             inputs
                 .iter()

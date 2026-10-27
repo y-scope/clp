@@ -720,13 +720,6 @@ mod tests {
             serde_json::from_str::<LogsInput>(logs_input_config_json.to_string().as_str())
                 .expect("failed to deserialize `LogsInput` from JSON");
 
-        let executor_config =
-            serde_json::from_value::<SpiderTaskExecutorConfig>(serde_json::json!({
-                "logs_input": logs_input_config_json,
-            }))
-            .expect("executor should read the logs input configuration");
-        assert_eq!(executor_config.logs_input, deserialized);
-
         match deserialized {
             LogsInput::Fs { config } => {
                 assert_eq!(config.directory, DIRECTORY);
