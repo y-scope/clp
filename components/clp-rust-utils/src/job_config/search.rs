@@ -30,6 +30,7 @@ pub struct AggregationConfig {
 
 /// The TCP listener that a query job's results are streamed to.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct NetworkOutput {
     pub host: NonEmptyString,
     pub port: NonZeroU16,
