@@ -434,15 +434,6 @@ spider:
     #   username: "spider-user"
     #   password: "spider-password"
 
-    storage:
-      runtime:
-        # The pinned storage image still uses bounded inbound-queue lanes, whose defaults the Spider
-        # chart dropped in y-scope/spider#526. Remove these once the storage image is past #526.
-        inbound_queue:
-          cleanup_capacity: 256
-          commit_capacity: 256
-          task_capacity: 1048576
-
     worker:
       extra_envs:
         - name: "CLP_CONFIG_PATH"
