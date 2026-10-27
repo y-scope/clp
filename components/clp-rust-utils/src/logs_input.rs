@@ -218,7 +218,8 @@ impl LogsInputMountPoint {
     /// # Returns
     ///
     /// The directory's entries on success, in no particular order, or an empty list if `path`
-    /// isn't a directory.
+    /// isn't a directory. Entries whose names aren't UTF-8 or contain a line break (`\n` or `\r`)
+    /// are omitted, since no logs-input path can address them.
     ///
     /// # Errors
     ///
@@ -241,6 +242,14 @@ impl LogsInputMountPoint {
         let mut entries = Vec::new();
         for entry in std::fs::read_dir(container_path.as_str()).map_err(unresolvable)? {
             let entry = entry.map_err(unresolvable)?;
+            let Some(name) = entry
+                .file_name()
+                .into_string()
+                .ok()
+                .filter(|name| !name.contains(['\n', '\r']))
+            else {
+                continue;
+            };
             let file_type = entry.file_type().map_err(unresolvable)?;
             let is_expandable = if file_type.is_symlink() {
                 let entry_path = entry.path();
@@ -251,7 +260,7 @@ impl LogsInputMountPoint {
             };
             entries.push(LogsInputEntry {
                 is_expandable,
-                name: entry.file_name().to_string_lossy().into_owned(),
+                name,
             });
         }
         Ok(entries)
@@ -798,6 +807,43 @@ mod tests {
                 "value: {value}"
             );
         }
+        Ok(())
+    }
+
+    #[test]
+    fn entries_with_line_breaks_are_not_listed() -> anyhow::Result<()> {
+        let fixture = Fixture::new();
+        let mount_point = fixture.resolve();
+        for name in ["/dir/app\n.log", "/dir/app\r.log"] {
+            std::fs::write(fixture.under_mount_point(name).as_str(), b"")?;
+        }
+        assert_eq!(
+            mount_point.list(&path("/dir"))?,
+            vec![LogsInputEntry {
+                is_expandable: false,
+                name: "inner.log".to_owned(),
+            }]
+        );
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn non_utf8_entries_are_not_listed() -> anyhow::Result<()> {
+        let fixture = Fixture::new();
+        let mount_point = fixture.resolve();
+        std::fs::write(
+            Path::new(fixture.under_mount_point("/dir").as_str())
+                .join(OsStr::from_bytes(b"app\xff.log")),
+            b"",
+        )?;
+        assert_eq!(
+            mount_point.list(&path("/dir"))?,
+            vec![LogsInputEntry {
+                is_expandable: false,
+                name: "inner.log".to_owned(),
+            }]
+        );
         Ok(())
     }
 
