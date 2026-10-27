@@ -1,141 +1,107 @@
-//! Partitioning of S3 objects into compression-task inputs.
+//! Partitioning of discovered files and S3 objects into compression-task inputs.
 
 use std::collections::VecDeque;
 use std::path::Path;
 
 use clp_rust_utils::clp_config::S3Config;
-use clp_rust_utils::job_config::ClpIoConfig;
-use clp_rust_utils::job_config::InputConfig;
 use clp_rust_utils::s3::ObjectMetadata;
+use clp_rust_utils::task_io::compression::CompressionInputSource;
+use clp_rust_utils::task_io::compression::FsInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
 
 use crate::Error;
+
+/// Source-specific entry validation and compression-task manifest construction.
+pub trait Source {
+    /// The entries accepted by this source.
+    type Entry;
+
+    /// Validates an entry and prepares its file metadata for partitioning.
+    ///
+    /// # Returns
+    ///
+    /// The entry's raw file metadata, or `None` if the source retains it for finalization, on
+    /// success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error`] if the entry violates the source's input constraints.
+    fn prepare_entry(&mut self, entry: Self::Entry) -> Result<Option<InputMetadata>, Error>;
+
+    /// Builds task manifests from file partitions and retained entries, preserving every entry.
+    ///
+    /// # Parameters
+    ///
+    /// * `partitions` - File partitions, each containing between 1 and 4,096 paths.
+    ///
+    /// # Returns
+    ///
+    /// Manifests containing at most 4,096 entries each. Retained entries are emitted in separate
+    /// manifests from files.
+    fn build_task_inputs(self, partitions: Vec<Vec<String>>) -> Vec<CompressionInputSource>;
+}
+
+/// An input path or object key and its raw size.
+pub struct InputMetadata {
+    pub path: String,
+    pub size: u64,
+}
 
 /// Builds inputs for compression tasks.
 ///
 /// The builder buffers input objects internally and groups them into partitions. Each partition
 /// contains the inputs for a single compression task.
-pub struct CompressionInputBuilder {
+///
+/// # Type Parameters
+///
+/// * `SourceType` - The source that validates entries and builds compression task manifests.
+pub struct CompressionInputBuilder<SourceType: Source> {
     buffer: Vec<FileMetadata>,
-    partitioned_task_inputs: Vec<S3InputSource>,
-    total_buffered_size: u64,
+    partitioned_paths: Vec<Vec<String>>,
+    total_buffered_size: u128,
     target_archive_size: u64,
-    buffer_size_to_trigger_partition: u64,
-    s3_config: S3Config,
+    source: SourceType,
 }
 
-impl CompressionInputBuilder {
+impl<SourceType: Source> CompressionInputBuilder<SourceType> {
     /// Factory function.
-    ///
-    /// # Returns
-    ///
-    /// A newly created [`CompressionInputBuilder`] with an empty buffer on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`Error::UnsupportedInputConfig`] if `clp_io_config`'s input config is an
-    ///   [`InputConfig::FsInputConfig`].
-    pub fn new(clp_io_config: &ClpIoConfig) -> Result<Self, Error> {
-        let target_archive_size = clp_io_config.output.target_archive_size;
-        let s3_config = match &clp_io_config.input {
-            InputConfig::FsInputConfig { .. } => return Err(Error::UnsupportedInputConfig),
-            InputConfig::S3InputConfig { config } => config.s3_config.clone(),
-            InputConfig::S3ObjectMetadataInputConfig { config } => config.s3_config.clone(),
-        };
-
-        Ok(Self::from_s3_config(s3_config, target_archive_size))
-    }
-
-    /// Creates an empty builder from the S3 input settings and target archive size.
     ///
     /// # Returns
     ///
     /// A newly created [`CompressionInputBuilder`] with an empty buffer.
     #[must_use]
-    pub(crate) const fn from_s3_config(s3_config: S3Config, target_archive_size: u64) -> Self {
+    pub const fn new(source: SourceType, target_archive_size: u64) -> Self {
         Self {
             buffer: Vec::new(),
-            partitioned_task_inputs: Vec::new(),
+            partitioned_paths: Vec::new(),
             total_buffered_size: 0,
             target_archive_size,
-            buffer_size_to_trigger_partition: target_archive_size * 2,
-            s3_config,
+            source,
         }
     }
 
-    /// Adds an S3 object to the buffer.
+    /// Adds an input entry to the buffer.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::S3BucketMismatch`] if `metadata`'s bucket differs from the buffer's configured
-    ///   bucket.
-    /// * [`Error::S3KeyPrefixMismatch`] if `metadata`'s key doesn't start with the buffer's
-    ///   configured key prefix.
-    pub fn add(&mut self, metadata: ObjectMetadata) -> Result<(), Error> {
-        if metadata.bucket != self.s3_config.bucket {
-            return Err(Error::S3BucketMismatch(
-                String::from(self.s3_config.bucket.clone()),
-                String::from(metadata.bucket),
-            ));
-        }
-
-        if !metadata
-            .key
-            .as_str()
-            .starts_with(self.s3_config.key_prefix.as_str())
-        {
-            return Err(Error::S3KeyPrefixMismatch(
-                String::from(self.s3_config.key_prefix.clone()),
-                String::from(metadata.key),
-            ));
-        }
-
-        let file = FileMetadata::new(String::from(metadata.key), metadata.size);
-        self.total_buffered_size += file.estimated_size;
+    /// * Forwards [`Source::prepare_entry`]'s return values on failure.
+    pub fn add(&mut self, entry: SourceType::Entry) -> Result<(), Error> {
+        let Some(input) = self.source.prepare_entry(entry)? else {
+            return Ok(());
+        };
+        let file = FileMetadata::new(input.path, input.size);
+        self.total_buffered_size += u128::from(file.estimated_size);
         self.buffer.push(file);
-        if self.total_buffered_size >= self.buffer_size_to_trigger_partition {
-            self.partition(false);
+        if self.total_buffered_size >= u128::from(self.target_archive_size.saturating_mul(2))
+            || self.buffer.len() >= MAX_PARTITION_ENTRIES
+        {
+            self.partition(self.buffer.len() >= MAX_PARTITION_ENTRIES);
         }
-
         Ok(())
-    }
-
-    /// Flushes any remaining buffered objects and consumes the builder, returning the completed
-    /// compression task inputs.
-    ///
-    /// # Returns
-    ///
-    /// A vector of input sources, where each source contains the inputs for a single compression
-    /// task.
-    #[must_use]
-    pub fn into_task_input_sources(mut self) -> Vec<S3InputSource> {
-        self.flush();
-        self.partitioned_task_inputs
-    }
-
-    /// Partitions all the objects in the current buffer.
-    fn flush(&mut self) {
-        self.partition(true);
-    }
-
-    /// Converts a non-empty partition into a compression task input and pushes it to the underlying
-    /// task inputs buffer.
-    fn push_input_source(&mut self, object_keys: Vec<String>) {
-        if object_keys.is_empty() {
-            return;
-        }
-
-        self.partitioned_task_inputs.push(S3InputSource {
-            endpoint_url: self.s3_config.endpoint_url.clone(),
-            region_code: self.s3_config.region_code.clone(),
-            bucket: self.s3_config.bucket.clone(),
-            aws_authentication: self.s3_config.aws_authentication.clone(),
-            object_keys,
-        });
     }
 
     /// Partitions buffered objects into target-sized compression task inputs.
@@ -143,45 +109,140 @@ impl CompressionInputBuilder {
     /// When `flush_buffer` is false, objects that cannot fill another target-sized partition
     /// remain buffered. Otherwise, the final partial partition is also emitted.
     fn partition(&mut self, flush_buffer: bool) {
-        if !flush_buffer && self.total_buffered_size < self.target_archive_size {
-            return;
-        }
         if self.buffer.is_empty() {
             return;
         }
 
         let mut rr_iterator = RoundRobinIterator::new(std::mem::take(&mut self.buffer));
 
-        'partitioning: while flush_buffer || self.total_buffered_size >= self.target_archive_size {
+        while flush_buffer || self.total_buffered_size >= u128::from(self.target_archive_size) {
             let mut partition = Vec::new();
-            let mut partition_size = 0;
+            let mut partition_size = 0_u64;
 
-            while partition_size < self.target_archive_size {
-                let Some(file) = rr_iterator.next() else {
-                    self.push_input_source(partition);
-                    break 'partitioning;
-                };
-
-                partition_size += file.estimated_size;
-                self.total_buffered_size -= file.estimated_size;
+            for file in rr_iterator.by_ref().take(MAX_PARTITION_ENTRIES) {
+                partition_size = partition_size.saturating_add(file.estimated_size);
+                self.total_buffered_size -= u128::from(file.estimated_size);
                 partition.push(file.path);
+                if partition_size >= self.target_archive_size {
+                    break;
+                }
             }
 
-            self.push_input_source(partition);
+            if partition.is_empty() {
+                break;
+            }
+            self.partitioned_paths.push(partition);
         }
 
-        self.buffer = rr_iterator.into_flatten();
+        self.buffer = rr_iterator.into();
     }
 }
 
-/// An S3 object's key and its estimated uncompressed size.
+impl<SourceType: Source> From<CompressionInputBuilder<SourceType>> for Vec<CompressionInputSource> {
+    fn from(mut builder: CompressionInputBuilder<SourceType>) -> Self {
+        builder.partition(true);
+        builder.source.build_task_inputs(builder.partitioned_paths)
+    }
+}
+
+impl Source for S3Config {
+    type Entry = ObjectMetadata;
+
+    fn prepare_entry(&mut self, metadata: Self::Entry) -> Result<Option<InputMetadata>, Error> {
+        if metadata.bucket != self.bucket {
+            return Err(Error::S3BucketMismatch(
+                String::from(self.bucket.clone()),
+                String::from(metadata.bucket),
+            ));
+        }
+        if !metadata.key.as_str().starts_with(self.key_prefix.as_str()) {
+            return Err(Error::S3KeyPrefixMismatch(
+                String::from(self.key_prefix.clone()),
+                String::from(metadata.key),
+            ));
+        }
+        Ok(Some(InputMetadata {
+            path: String::from(metadata.key),
+            size: metadata.size,
+        }))
+    }
+
+    fn build_task_inputs(self, partitions: Vec<Vec<String>>) -> Vec<CompressionInputSource> {
+        partitions
+            .into_iter()
+            .map(|object_keys| {
+                CompressionInputSource::S3(S3InputSource {
+                    endpoint_url: self.endpoint_url.clone(),
+                    region_code: self.region_code.clone(),
+                    bucket: self.bucket.clone(),
+                    aws_authentication: self.aws_authentication.clone(),
+                    object_keys,
+                })
+            })
+            .collect()
+    }
+}
+
+/// Filesystem entries supplied to the partition planner.
+pub enum FsEntry {
+    File { path: String, size: u64 },
+    EmptyDirectory { path: String },
+}
+
+/// Filesystem source for compression-task planning.
+#[derive(Default)]
+pub struct FsSource {
+    empty_directories: Vec<String>,
+}
+
+impl Source for FsSource {
+    type Entry = FsEntry;
+
+    fn prepare_entry(&mut self, entry: Self::Entry) -> Result<Option<InputMetadata>, Error> {
+        match entry {
+            FsEntry::File { path, size } => Ok(Some(InputMetadata { path, size })),
+            FsEntry::EmptyDirectory { path } => {
+                self.empty_directories.push(path);
+                Ok(None)
+            }
+        }
+    }
+
+    fn build_task_inputs(self, partitions: Vec<Vec<String>>) -> Vec<CompressionInputSource> {
+        let mut inputs: Vec<_> = partitions
+            .into_iter()
+            .map(|file_paths| {
+                CompressionInputSource::Fs(FsInputSource {
+                    file_paths,
+                    empty_directories: Vec::new(),
+                })
+            })
+            .collect();
+        let mut directories = self.empty_directories.into_iter();
+        loop {
+            let chunk: Vec<_> = directories.by_ref().take(MAX_PARTITION_ENTRIES).collect();
+            if chunk.is_empty() {
+                break;
+            }
+            inputs.push(CompressionInputSource::Fs(FsInputSource {
+                file_paths: Vec::new(),
+                empty_directories: chunk,
+            }));
+        }
+        inputs
+    }
+}
+
+const MAX_PARTITION_ENTRIES: usize = 4096;
+
+/// An input path and its estimated uncompressed size.
 struct FileMetadata {
     path: String,
     estimated_size: u64,
 }
 
 impl FileMetadata {
-    /// Creates metadata for the object identified by `path`, estimating its uncompressed size from
+    /// Creates metadata for the input identified by `path`, estimating its uncompressed size from
     /// its raw `size`.
     ///
     /// # Returns
@@ -210,20 +271,16 @@ impl RoundRobinIterator {
     fn new(files: Vec<FileMetadata>) -> Self {
         let groups = group_files_by_similar_filenames(files)
             .into_iter()
-            .filter(|group| !group.is_empty())
             .map(IntoIterator::into_iter)
             .collect();
 
         Self { groups }
     }
+}
 
-    /// Consumes the iterator and collects every object that has not yet been returned.
-    ///
-    /// # Returns
-    ///
-    /// The remaining objects, flattened according to the iterator's current group order.
-    fn into_flatten(self) -> Vec<FileMetadata> {
-        self.groups.into_iter().flatten().collect()
+impl From<RoundRobinIterator> for Vec<FileMetadata> {
+    fn from(iterator: RoundRobinIterator) -> Self {
+        iterator.groups.into_iter().flatten().collect()
     }
 }
 
@@ -232,7 +289,7 @@ impl Iterator for RoundRobinIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut group = self.groups.pop_front()?;
-        let file = group.next()?;
+        let file = group.next().expect("filename groups must not be empty");
         if !group.as_slice().is_empty() {
             self.groups.push_back(group);
         }
@@ -240,23 +297,23 @@ impl Iterator for RoundRobinIterator {
     }
 }
 
-/// Estimates an S3 object's uncompressed size from its compressor suffix.
+/// Estimates an input's uncompressed size from its compressor suffix.
 ///
 /// # Returns
 ///
 /// The estimated uncompressed size.
-fn estimate_uncompressed_size(key: &str, size: u64) -> u64 {
+fn estimate_uncompressed_size(path: &str, size: u64) -> u64 {
     const GZIP_COMPRESSION_RATIO_ESTIMATE: u64 = 13;
     const GZIP_SUFFIXES: &[&str] = &[".gz", ".gzip", ".tgz"];
     const ZSTD_COMPRESSION_RATIO_ESTIMATE: u64 = 8;
 
     if GZIP_SUFFIXES
         .iter()
-        .any(|suffix| ends_with_ignore_ascii_case(key, suffix))
+        .any(|suffix| ends_with_ignore_ascii_case(path, suffix))
     {
-        size * GZIP_COMPRESSION_RATIO_ESTIMATE
-    } else if ends_with_ignore_ascii_case(key, ".zst") {
-        size * ZSTD_COMPRESSION_RATIO_ESTIMATE
+        size.saturating_mul(GZIP_COMPRESSION_RATIO_ESTIMATE)
+    } else if ends_with_ignore_ascii_case(path, ".zst") {
+        size.saturating_mul(ZSTD_COMPRESSION_RATIO_ESTIMATE)
     } else {
         size
     }
@@ -264,29 +321,29 @@ fn estimate_uncompressed_size(key: &str, size: u64) -> u64 {
 
 /// # Returns
 ///
-/// Whether `key` ends with `suffix` using ASCII case-insensitive match.
-fn ends_with_ignore_ascii_case(key: &str, suffix: &str) -> bool {
-    let suffix_start = key.len().saturating_sub(suffix.len());
-    let key_suffix = key.get(suffix_start..);
-    key_suffix.is_some_and(|key_suffix| key_suffix.eq_ignore_ascii_case(suffix))
+/// Whether `value` ends with `suffix` using ASCII case-insensitive match.
+fn ends_with_ignore_ascii_case(value: &str, suffix: &str) -> bool {
+    let suffix_start = value.len().saturating_sub(suffix.len());
+    let value_suffix = value.get(suffix_start..);
+    value_suffix.is_some_and(|value_suffix| value_suffix.eq_ignore_ascii_case(suffix))
 }
 
-/// Gets the filename portion of an S3 object's key.
+/// Gets the filename portion of an input path.
 ///
 /// # Returns
 ///
-/// The key's filename, or the complete key if it has no filename component.
-fn filename(key: &str) -> &str {
-    let Some(file_name) = Path::new(key)
+/// The path's filename, or the complete path if it has no filename component.
+fn filename(path: &str) -> &str {
+    let Some(file_name) = Path::new(path)
         .file_name()
         .and_then(|file_name| file_name.to_str())
     else {
-        return key;
+        return path;
     };
     file_name
 }
 
-/// Groups S3 objects by filename similarity.
+/// Groups input paths by filename similarity.
 ///
 /// Places files with sufficiently similar filenames into the same group based on their normalized
 /// Levenshtein similarity.
@@ -321,99 +378,337 @@ mod tests {
     use std::collections::BTreeMap;
 
     use clp_rust_utils::clp_config::AwsAuthentication;
-    use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::job_config::OutputConfig;
-    use clp_rust_utils::job_config::S3InputConfig;
     use non_empty_string::NonEmptyString;
 
     use super::*;
 
     const TEST_BUCKET: &str = "test-bucket";
 
-    fn create_non_empty_string(value: &str) -> NonEmptyString {
-        NonEmptyString::try_from(value).expect("test string literals are non-empty")
+    /// # Type Parameters
+    ///
+    /// * `SourceType` - The source used to construct compression task manifests.
+    struct Fixture<SourceType: Source> {
+        builder: CompressionInputBuilder<SourceType>,
+        path_to_size: BTreeMap<String, u64>,
     }
 
-    fn create_builder(target_archive_size: u64) -> CompressionInputBuilder {
-        let s3_config = S3Config {
-            bucket: create_non_empty_string(TEST_BUCKET),
-            region_code: None,
-            key_prefix: create_non_empty_string("logs/"),
-            endpoint_url: None,
-            aws_authentication: AwsAuthentication::Default,
-        };
-        let clp_io_config = ClpIoConfig {
-            input: InputConfig::S3InputConfig {
-                config: S3InputConfig {
-                    s3_config,
-                    keys: None,
-                    dataset: DatasetName::default(),
-                    timestamp_key: None,
-                    unstructured: false,
-                },
-            },
-            output: OutputConfig {
-                target_archive_size,
-                target_dictionaries_size: 1024,
-                target_encoded_file_size: 1024,
-                target_segment_size: 1024,
-                compression_level: 3,
-            },
-        };
-
-        CompressionInputBuilder::new(&clp_io_config).expect("S3 input config should be supported")
-    }
-
-    fn add_object(
-        builder: &mut CompressionInputBuilder,
-        key_to_size: &mut BTreeMap<String, u64>,
-        key: &str,
-        size: u64,
-    ) {
-        builder
-            .add(ObjectMetadata {
-                bucket: create_non_empty_string(TEST_BUCKET),
-                key: create_non_empty_string(key),
-                size,
-            })
-            .expect("object's bucket matches the builder's configured bucket");
-        key_to_size.insert(String::from(key), size);
-    }
-
-    fn assert_partition_invariants(
-        input_sources: &[S3InputSource],
-        key_to_size: &BTreeMap<String, u64>,
-        target_archive_size: u64,
-    ) {
-        let mut key_counts: BTreeMap<&str, usize> = BTreeMap::new();
-        for key in input_sources.iter().flat_map(|source| &source.object_keys) {
-            *key_counts.entry(key.as_str()).or_default() += 1;
+    impl<SourceType: Source> Fixture<SourceType> {
+        /// # Returns
+        ///
+        /// An empty fixture with the supplied source and target archive size.
+        fn new(source: SourceType, target_archive_size: u64) -> Self {
+            Self {
+                builder: CompressionInputBuilder::new(source, target_archive_size),
+                path_to_size: BTreeMap::new(),
+            }
         }
-        for key in key_to_size.keys() {
-            assert_eq!(key_counts.remove(key.as_str()), Some(1));
+
+        /// Checks completed manifests and file partitions against the recorded inputs and target
+        /// size.
+        ///
+        /// # Returns
+        ///
+        /// The completed task manifests.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the file inputs differ from the recorded inputs, a manifest is empty or
+        /// exceeds the entry limit, or a partition contains additional files after reaching the
+        /// target size.
+        fn assert_partitions(self) -> Vec<CompressionInputSource> {
+            let target_archive_size = self.builder.target_archive_size;
+            let input_sources = Vec::<CompressionInputSource>::from(self.builder);
+            let mut path_counts: BTreeMap<&str, usize> = BTreeMap::new();
+            for path in input_sources.iter().flat_map(CompressionInputSource::paths) {
+                *path_counts.entry(path.as_str()).or_default() += 1;
+            }
+            for path in self.path_to_size.keys() {
+                assert_eq!(path_counts.remove(path.as_str()), Some(1));
+            }
+            assert_eq!(path_counts, BTreeMap::new());
+
+            for source in &input_sources {
+                let paths = source.paths();
+                let num_entries = match source {
+                    CompressionInputSource::S3(source) => source.object_keys.len(),
+                    CompressionInputSource::Fs(source) => {
+                        source.file_paths.len() + source.empty_directories.len()
+                    }
+                };
+                assert!((1..=MAX_PARTITION_ENTRIES).contains(&num_entries));
+                let Some((_, preceding_paths)) = paths.split_last() else {
+                    continue;
+                };
+                if target_archive_size == 0 {
+                    assert_eq!(preceding_paths, [] as [String; 0]);
+                } else {
+                    let preceding_size: u128 = preceding_paths
+                        .iter()
+                        .map(|path| {
+                            let size = self.path_to_size.get(path).expect("every path was added");
+                            u128::from(estimate_uncompressed_size(path, *size))
+                        })
+                        .sum();
+                    assert!(preceding_size < u128::from(target_archive_size));
+                }
+            }
+            input_sources
         }
-        assert!(key_counts.is_empty());
+    }
 
-        for source in input_sources {
-            let total_size: u64 = source
-                .object_keys
-                .iter()
-                .map(|key| key_to_size.get(key).expect("every key was added"))
-                .sum();
-            let last_size = source
-                .object_keys
-                .last()
-                .map(|key| key_to_size.get(key).expect("every key was added"))
-                .expect("`push_input_source` never pushes an empty partition");
+    impl Fixture<S3Config> {
+        /// Adds an S3 object and records its expected size.
+        ///
+        /// # Panics
+        ///
+        /// Panics if `key` is empty, does not match the fixture's prefix, or was already added.
+        fn add(&mut self, key: String, size: u64) {
+            self.builder
+                .add(ObjectMetadata {
+                    bucket: self.builder.source.bucket.clone(),
+                    key: NonEmptyString::new(key.clone()).expect("fixture key must be non-empty"),
+                    size,
+                })
+                .expect("fixture object must match its configured bucket and prefix");
+            assert_eq!(self.path_to_size.insert(key, size), None);
+        }
+    }
 
-            // Files are appended only while the partition is still under the target, so removing
-            // the last-appended file must drop the partition back below the target.
-            assert!(total_size - last_size < target_archive_size);
+    impl Fixture<FsSource> {
+        /// Adds a filesystem entry and records a file's expected size.
+        ///
+        /// # Panics
+        ///
+        /// Panics if a file path was already added or the source rejects the entry.
+        fn add(&mut self, entry: FsEntry) {
+            if let FsEntry::File { path, size } = &entry {
+                assert_eq!(self.path_to_size.insert(path.clone(), *size), None);
+            }
+            self.builder
+                .add(entry)
+                .expect("filesystem fixture entry should be accepted");
         }
     }
 
     #[test]
-    fn test_estimate_uncompressed_size_for_gzip_suffix() {
+    fn s3_entries_validate_bucket_and_prefix_and_preserve_keys() {
+        use clp_rust_utils::clp_config::AwsCredentials;
+
+        let s3_config = S3Config {
+            bucket: NonEmptyString::try_from(TEST_BUCKET).expect("test bucket is non-empty"),
+            region_code: Some(
+                NonEmptyString::try_from("us-east-1").expect("test region is non-empty"),
+            ),
+            key_prefix: NonEmptyString::try_from("logs/").expect("test prefix is non-empty"),
+            endpoint_url: Some(
+                NonEmptyString::try_from("https://s3.example.com")
+                    .expect("test endpoint is non-empty"),
+            ),
+            aws_authentication: AwsAuthentication::Credentials {
+                credentials: AwsCredentials {
+                    access_key_id: "test-access-key".to_owned(),
+                    secret_access_key: "test-secret-key".to_owned(),
+                    session_token: Some("test-session-token".to_owned()),
+                },
+            },
+        };
+        let mut builder = CompressionInputBuilder::new(s3_config.clone(), 1024);
+        let bucket_error = builder.add(ObjectMetadata {
+            bucket: NonEmptyString::try_from("other-bucket").expect("test bucket is non-empty"),
+            key: NonEmptyString::try_from("logs/a").expect("test key is non-empty"),
+            size: 0,
+        });
+        assert!(
+            matches!(bucket_error, Err(Error::S3BucketMismatch(expected, actual))
+            if expected == TEST_BUCKET && actual == "other-bucket")
+        );
+        let prefix_error = builder.add(ObjectMetadata {
+            bucket: NonEmptyString::try_from(TEST_BUCKET).expect("test bucket is non-empty"),
+            key: NonEmptyString::try_from("other/a").expect("test key is non-empty"),
+            size: 0,
+        });
+        assert!(
+            matches!(prefix_error, Err(Error::S3KeyPrefixMismatch(expected, actual))
+            if expected == "logs/" && actual == "other/a")
+        );
+        let keys = ["logs/a//../%2F input.json", "logs/./🕷.json"];
+        for key in keys {
+            builder
+                .add(ObjectMetadata {
+                    bucket: NonEmptyString::try_from(TEST_BUCKET)
+                        .expect("test bucket is non-empty"),
+                    key: NonEmptyString::try_from(key).expect("test key is non-empty"),
+                    size: 0,
+                })
+                .expect("matching S3 object should be accepted");
+        }
+        let inputs = Vec::<CompressionInputSource>::from(builder);
+        let [CompressionInputSource::S3(source)] = inputs.as_slice() else {
+            panic!("expected one S3 manifest")
+        };
+        assert_eq!(source.bucket, s3_config.bucket);
+        assert_eq!(source.region_code, s3_config.region_code);
+        assert_eq!(source.endpoint_url, s3_config.endpoint_url);
+        assert_eq!(source.aws_authentication, s3_config.aws_authentication);
+        let mut actual = source
+            .object_keys
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
+        actual.sort_unstable();
+        let mut expected = keys;
+        expected.sort_unstable();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn s3_partition_on_flush() {
+        const TARGET_ARCHIVE_SIZE: u64 = 1000;
+        const FILE_SIZE: u64 = 100;
+        const NUM_FILES: u64 = 15;
+
+        let source = S3Config {
+            bucket: NonEmptyString::try_from(TEST_BUCKET).expect("test bucket is non-empty"),
+            region_code: None,
+            key_prefix: NonEmptyString::try_from("logs/").expect("test prefix is non-empty"),
+            endpoint_url: None,
+            aws_authentication: AwsAuthentication::Default,
+        };
+        let mut fixture = Fixture::new(source, TARGET_ARCHIVE_SIZE);
+        for i in 0..NUM_FILES {
+            fixture.add(format!("logs/app.log.{i}"), FILE_SIZE);
+        }
+
+        assert_eq!(fixture.builder.partitioned_paths, [] as [Vec<String>; 0]);
+
+        fixture.assert_partitions();
+    }
+
+    #[test]
+    fn s3_partition_on_the_fly() {
+        const TARGET_ARCHIVE_SIZE: u64 = 1000;
+        const FILE_STEMS: &[&str] = &["app.log", "database.log", "kernel.log", "nginx.log"];
+        const NUM_FILES_PER_STEM: u64 = 60;
+
+        let source = S3Config {
+            bucket: NonEmptyString::try_from(TEST_BUCKET).expect("test bucket is non-empty"),
+            region_code: None,
+            key_prefix: NonEmptyString::try_from("logs/").expect("test prefix is non-empty"),
+            endpoint_url: None,
+            aws_authentication: AwsAuthentication::Default,
+        };
+        let mut fixture = Fixture::new(source, TARGET_ARCHIVE_SIZE);
+        for stem in FILE_STEMS {
+            for i in 0..NUM_FILES_PER_STEM {
+                fixture.add(format!("logs/{stem}.{i}"), 10 + (i % 7) * 30);
+            }
+        }
+
+        assert_ne!(fixture.builder.partitioned_paths, [] as [Vec<String>; 0]);
+
+        fixture.assert_partitions();
+    }
+
+    #[test]
+    fn fs_manifests_bound_zero_size_files_and_empty_directories() {
+        let count = MAX_PARTITION_ENTRIES + 17;
+        let directories: Vec<_> = (0..count)
+            .map(|index| format!("/logs/empty/{index}"))
+            .collect();
+        let mut fixture = Fixture::new(FsSource::default(), 1024);
+        for directory in &directories {
+            fixture.add(FsEntry::EmptyDirectory {
+                path: directory.clone(),
+            });
+        }
+        for index in 0..count {
+            fixture.add(FsEntry::File {
+                path: format!("/logs/file/{index}"),
+                size: 0,
+            });
+        }
+        let inputs = fixture.assert_partitions();
+        let mut all_directories = Vec::new();
+        for input in inputs {
+            let CompressionInputSource::Fs(source) = input else {
+                panic!("expected filesystem manifest")
+            };
+            assert!(source.file_paths.is_empty() || source.empty_directories.is_empty());
+            all_directories.extend(source.empty_directories);
+        }
+        all_directories.sort();
+        let mut expected_directories = directories;
+        expected_directories.sort();
+        assert_eq!(all_directories, expected_directories);
+
+        let directory = "/logs/directory-only";
+        let mut directory_fixture = Fixture::new(FsSource::default(), 1024);
+        directory_fixture.add(FsEntry::EmptyDirectory {
+            path: directory.to_owned(),
+        });
+        assert_eq!(
+            directory_fixture.assert_partitions(),
+            [CompressionInputSource::Fs(FsInputSource {
+                file_paths: Vec::new(),
+                empty_directories: vec![directory.to_owned()],
+            }),]
+        );
+    }
+
+    #[test]
+    fn fs_extreme_sizes_partition_without_overflow_or_lost_inputs() {
+        let mut zero_target_fixture = Fixture::new(FsSource::default(), 0);
+        zero_target_fixture.add(FsEntry::File {
+            path: "/logs/zero".to_owned(),
+            size: 0,
+        });
+        let zero_target_inputs = zero_target_fixture.assert_partitions();
+        assert_eq!(zero_target_inputs.len(), 1);
+        assert_eq!(zero_target_inputs[0].paths(), ["/logs/zero"]);
+
+        let mut fixture = Fixture::new(FsSource::default(), u64::MAX);
+        let files = [
+            ("/logs/a.gz", u64::MAX),
+            ("/logs/b.zst", u64::MAX),
+            ("/logs/c", 7),
+        ];
+        for (path, size) in files {
+            fixture.add(FsEntry::File {
+                path: path.to_owned(),
+                size,
+            });
+        }
+        let inputs = fixture.assert_partitions();
+        let paths: Vec<_> = inputs
+            .iter()
+            .flat_map(CompressionInputSource::paths)
+            .map(String::as_str)
+            .collect();
+        assert_eq!(paths, files.map(|(path, _)| path));
+        assert_eq!(inputs.len(), files.len());
+        assert_eq!(estimate_uncompressed_size("input.gz", u64::MAX), u64::MAX);
+        assert_eq!(estimate_uncompressed_size("input.zst", u64::MAX), u64::MAX);
+
+        let mut fixture = Fixture::new(FsSource::default(), u64::MAX - 1);
+        for path in ["/logs/a", "/logs/b", "/logs/c"] {
+            fixture.add(FsEntry::File {
+                path: path.to_owned(),
+                size: u64::MAX / 2,
+            });
+        }
+        let inputs = fixture.assert_partitions();
+        assert_eq!(inputs.len(), 2);
+        assert_eq!(
+            inputs
+                .iter()
+                .map(|source| source.paths().len())
+                .collect::<Vec<_>>(),
+            [2, 1]
+        );
+    }
+
+    #[test]
+    fn fs_estimate_uncompressed_size_for_gzip_suffix() {
         const FILE_SIZE: u64 = 100;
 
         for path in [
@@ -431,7 +726,7 @@ mod tests {
     }
 
     #[test]
-    fn test_estimate_uncompressed_size_for_zstandard_suffix() {
+    fn fs_estimate_uncompressed_size_for_zstandard_suffix() {
         const FILE_SIZE: u64 = 100;
 
         for path in [
@@ -445,65 +740,7 @@ mod tests {
     }
 
     #[test]
-    fn test_partition_on_flush() {
-        const TARGET_ARCHIVE_SIZE: u64 = 1000;
-        const FILE_SIZE: u64 = 100;
-        const NUM_FILES: u64 = 15;
-
-        let mut builder = create_builder(TARGET_ARCHIVE_SIZE);
-        let mut key_to_size = BTreeMap::new();
-        for i in 0..NUM_FILES {
-            add_object(
-                &mut builder,
-                &mut key_to_size,
-                &format!("logs/app.log.{i}"),
-                FILE_SIZE,
-            );
-        }
-
-        assert_eq!(
-            builder.partitioned_task_inputs,
-            [] as [clp_rust_utils::task_io::compression::S3InputSource; 0]
-        );
-
-        let input_sources = builder.into_task_input_sources();
-        assert_ne!(
-            input_sources,
-            [] as [clp_rust_utils::task_io::compression::S3InputSource; 0]
-        );
-        assert_partition_invariants(&input_sources, &key_to_size, TARGET_ARCHIVE_SIZE);
-    }
-
-    #[test]
-    fn test_partition_on_the_fly() {
-        const TARGET_ARCHIVE_SIZE: u64 = 1000;
-        const FILE_STEMS: &[&str] = &["app.log", "database.log", "kernel.log", "nginx.log"];
-        const NUM_FILES_PER_STEM: u64 = 60;
-
-        let mut builder = create_builder(TARGET_ARCHIVE_SIZE);
-        let mut key_to_size = BTreeMap::new();
-        for stem in FILE_STEMS {
-            for i in 0..NUM_FILES_PER_STEM {
-                add_object(
-                    &mut builder,
-                    &mut key_to_size,
-                    &format!("logs/{stem}.{i}"),
-                    10 + (i % 7) * 30,
-                );
-            }
-        }
-
-        assert_ne!(
-            builder.partitioned_task_inputs,
-            [] as [clp_rust_utils::task_io::compression::S3InputSource; 0]
-        );
-
-        let input_sources = builder.into_task_input_sources();
-        assert_partition_invariants(&input_sources, &key_to_size, TARGET_ARCHIVE_SIZE);
-    }
-
-    #[test]
-    fn test_round_robin_iterator() {
+    fn fs_round_robin_iterator() {
         let files = ["app.log", "app.log.1", "app.log.2"]
             .into_iter()
             .chain(["nginx.log", "nginx.log.1", "nginx.log.2"])
@@ -514,8 +751,7 @@ mod tests {
         let yielded: Vec<String> = rr_iterator.by_ref().take(3).map(|file| file.path).collect();
         assert_eq!(yielded, vec!["app.log", "nginx.log", "app.log.1"]);
 
-        let mut remaining: Vec<String> = rr_iterator
-            .into_flatten()
+        let mut remaining: Vec<String> = Vec::from(rr_iterator)
             .into_iter()
             .map(|file| file.path)
             .collect();
