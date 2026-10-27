@@ -120,6 +120,32 @@ archive_output:
 * `<access-key-id>` and `<secret-access-key>` are the credentials for accessing your S3-compatible
   storage service.
 
+:::{note}
+For [Kubernetes deployments](../guides-k8s-deployment.md#installing-the-helm-chart), set the storage
+type with `global.archiveOutputStorageType` instead of `type`, and set `s3_config` under
+`clpConfig.archive_output.storage` in the Helm values file. The Helm chart sets `staging_directory`
+itself.
+
+```yaml
+global:
+  archiveOutputStorageType: "s3"
+
+clpConfig:
+  archive_output:
+    storage:
+      s3_config:
+        endpoint_url: "<endpoint-url>"
+        bucket: "<bucket-name>"
+        key_prefix: "<key-prefix>"
+        aws_authentication:
+          type: "credentials"
+          credentials:
+            access_key_id: "<access-key-id>"
+            secret_access_key: "<secret-access-key>"
+```
+
+:::
+
 ## Compressing logs from S3-compatible storage
 
 To compress logs from S3-compatible storage, use the `sbin/compress-from-s3.sh` script with

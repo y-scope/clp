@@ -594,9 +594,9 @@ programmatically.
 
 The [admin tools][admin-tools] (`sbin/admin-tools/archive-manager.sh` and
 `sbin/admin-tools/dataset-manager.sh`) are **not supported** in Kubernetes deployments with
-filesystem storage (`archive_output.storage.type: "fs"`). Those scripts require direct filesystem
-access to the archive directory via Docker bind mounts, which is not possible when archives are
-backed by PVCs inside the cluster.
+filesystem storage (`global.archiveOutputStorageType: "fs"`). Those scripts require direct
+filesystem access to the archive directory via Docker bind mounts, which is not possible when
+archives are backed by PVCs inside the cluster.
 :::
 
 ---

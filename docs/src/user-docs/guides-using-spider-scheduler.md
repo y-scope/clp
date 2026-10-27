@@ -53,7 +53,7 @@ The CLP Helm chart will then automatically deploy the following components:
    :caption: spider-values.yaml
 
    global:
-     # Must match `clpConfig.archive_output.storage.type` below.
+     # In the current release, `compression-coordinator` supports only S3 archive output.
      archiveOutputStorageType: "s3"
 
    spider:
@@ -96,8 +96,6 @@ The CLP Helm chart will then automatically deploy the following components:
 
      archive_output:
        storage:
-         # In the current release, `compression-coordinator` supports only S3 archive output.
-         type: "s3"
          s3_config:
            region_code: "us-east-2"
            bucket: "<archives-bucket>"
@@ -159,8 +157,8 @@ Enables Spider and deploys its related CLP components.
 :type: `string`
 :default: `"fs"`
 
-Must match `clpConfig.archive_output.storage.type` when Spider is enabled. When it's `"fs"`, Spider
-workers mount the archives storage so that they can search archives stored on the filesystem.
+Sets where archives are stored, either `"fs"` or `"s3"`. When it's `"fs"`, Spider workers mount the
+archives storage so that they can search archives stored on the filesystem.
 :::
 
 :::{confval} spider.spiderConfig.database

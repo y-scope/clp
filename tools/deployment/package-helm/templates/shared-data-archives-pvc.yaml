@@ -1,4 +1,4 @@
-{{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+{{- if eq .Values.global.archiveOutputStorageType "fs" }}
 {{- include "clp.createPvc" (dict
   "root" .
   "component_category" "shared-data"

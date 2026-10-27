@@ -62,6 +62,30 @@ archive_output:
   * `<type>` and the type-specific settings are described in the
     [configuring AWS authentication](#configuring-aws-authentication) section.
 
+:::{note}
+For [Kubernetes deployments][k8s-install-helm-chart], set the storage type with
+`global.archiveOutputStorageType` instead of `type`, and set `s3_config` under
+`clpConfig.archive_output.storage` in the Helm values file. The Helm chart sets `staging_directory`
+itself.
+
+```yaml
+global:
+  archiveOutputStorageType: "s3"
+
+clpConfig:
+  archive_output:
+    storage:
+      s3_config:
+        region_code: "<region-code>"
+        bucket: "<bucket-name>"
+        key_prefix: "<key-prefix>"
+        aws_authentication:
+          type: "<type>"
+          # type-specific settings
+```
+
+:::
+
 ## Configuration for stream storage
 
 To configure CLP to cache stream files on AWS S3, update the `stream_output.storage` key in
