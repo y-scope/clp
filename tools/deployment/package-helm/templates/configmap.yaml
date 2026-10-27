@@ -1,12 +1,5 @@
 {{- $logIngestorEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
     (eq .Values.clpConfig.logs_input.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
-{{- $archiveStorage := .Values.clpConfig.archive_output.storage | default dict }}
-{{- if $archiveStorage.type }}
-{{- fail (printf
-  "clpConfig.archive_output.storage.type (%v) moved to global.archiveOutputStorageType"
-  $archiveStorage.type
-) }}
-{{- end }}
 {{- if not (has .Values.global.archiveOutputStorageType (list "fs" "s3")) }}
 {{- fail (printf
   "global.archiveOutputStorageType (%v) must be \"fs\" or \"s3\""
@@ -41,7 +34,7 @@ data:
         {{- else if eq .Values.global.archiveOutputStorageType "s3" }}
         type: "s3"
         staging_directory: "/var/data/staged-archives"
-        {{- with $archiveStorage.s3_config }}
+        {{- with .Values.clpConfig.archive_output.storage.s3_config }}
         s3_config:
           {{- if .endpoint_url }}
           endpoint_url: {{ .endpoint_url | quote }}
@@ -66,7 +59,7 @@ data:
               {{- end }}
             {{- end }}
           {{- end }}{{/* with .aws_authentication */}}
-        {{- end }}{{/* with .s3_config */}}
+        {{- end }}{{/* with .Values.clpConfig.archive_output.storage.s3_config */}}
         {{- end }}{{/* if eq .Values.global.archiveOutputStorageType "fs" */}}
       {{- if .Values.clpConfig.archive_output.retention_period }}
       retention_period: {{ .Values.clpConfig.archive_output.retention_period | int }}
