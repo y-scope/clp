@@ -88,7 +88,7 @@ named `default`.
 ### Limitations
 
 * `archive-manager.sh` is not supported for Kubernetes (Helm) deployments when using filesystem
-  storage (`global.archiveOutputStorageType: "fs"`). The script relies on bind-mounting the archive
+  storage (`archive_output.storage.type: "fs"`). The script relies on bind-mounting the archive
   directory into a Docker container, which is not possible when archives are backed by
   PersistentVolumeClaims inside the cluster.
 
@@ -150,6 +150,6 @@ directory.
 ### Limitations
 
 * `dataset-manager.sh` is not supported for Kubernetes (Helm) deployments when using filesystem
-  storage (`global.archiveOutputStorageType: "fs"`). The script relies on bind-mounting the archive
+  storage (`archive_output.storage.type: "fs"`). The script relies on bind-mounting the archive
   directory into a Docker container, which is not possible when archives are backed by
   PersistentVolumeClaims inside the cluster.
