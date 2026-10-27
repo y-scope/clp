@@ -143,66 +143,74 @@ impl LogsInputMountPoint {
         })
     }
 
-    /// Locates a logs-input path under the mount point, and checks that it doesn't resolve to
-    /// outside the mount point through a symlink.
+    /// Converts a logs-input path to its container path under the mount point, and checks that it
+    /// doesn't resolve to outside the mount point through a symlink.
     ///
-    /// Symlinks are only resolved for the check: the returned location is the path's lexical
+    /// Symlinks are only resolved for the check: the returned container path is the path's lexical
     /// location under the mount point.
     ///
     /// # Returns
     ///
-    /// The path's lexical location under the mount point on success.
+    /// The path's container path on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`Self::canonicalize`]'s return values on failure.
-    pub fn locate(&self, path: &LogsInputPath) -> Result<NonEmptyString, LogsInputError> {
-        let mut location = self.path.clone();
+    pub fn to_container_path(
+        &self,
+        path: &LogsInputPath,
+    ) -> Result<NonEmptyString, LogsInputError> {
+        let mut container_path = self.path.clone();
         if !path.is_mount_point() {
-            location.push_str(&path.value);
+            container_path.push_str(&path.value);
         }
-        self.canonicalize(Path::new(location.as_str()), Path::new(&path.value))?;
-        Ok(location)
+        self.canonicalize(Path::new(container_path.as_str()), Path::new(&path.value))?;
+        Ok(container_path)
     }
 
-    /// Checks that an absolute location doesn't resolve to outside the mount point, and converts
-    /// it to a location under the mount point.
+    /// Checks that a container path doesn't resolve to outside the mount point, and converts it to
+    /// the container path to compress.
     ///
     /// # Returns
     ///
     /// On success:
     ///
-    /// * `location` with its `.` components, repeated `/`s, and trailing `/` removed, if it's
+    /// * `container_path` with its `.` components, repeated `/`s, and trailing `/` removed, if it's
     ///   lexically under the mount point.
-    /// * `location`'s canonical form otherwise (e.g., if `location` is a symlink outside the mount
-    ///   point that points to inside it).
+    /// * `container_path`'s canonical form otherwise (e.g., if `container_path` is a symlink
+    ///   outside the mount point that points to inside it).
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`LogsInputError::RelativeLocation`] if `location` is relative.
-    /// * [`LogsInputError::UnsupportedName`] if the returned location isn't UTF-8 or contains a
-    ///   line break.
+    /// * [`LogsInputError::RelativeContainerPath`] if `container_path` is relative.
+    /// * [`LogsInputError::UnsupportedName`] if the returned container path isn't UTF-8 or contains
+    ///   a line break.
     /// * Forwards [`Self::canonicalize`]'s return values on failure.
-    pub fn contain(&self, location: &Path) -> Result<NonEmptyString, LogsInputError> {
-        if location.is_relative() {
-            return Err(LogsInputError::RelativeLocation(location.to_path_buf()));
+    pub fn checked_container_path(
+        &self,
+        container_path: &Path,
+    ) -> Result<NonEmptyString, LogsInputError> {
+        if container_path.is_relative() {
+            return Err(LogsInputError::RelativeContainerPath(
+                container_path.to_path_buf(),
+            ));
         }
-        let location: PathBuf = location.components().collect();
-        let canonical_location = self.canonicalize(&location, &location)?;
-        let contained_location = if location.starts_with(self.path.as_str()) {
-            location
+        let container_path: PathBuf = container_path.components().collect();
+        let canonical_path = self.canonicalize(&container_path, &container_path)?;
+        let checked_path = if container_path.starts_with(self.path.as_str()) {
+            container_path
         } else {
-            canonical_location
+            canonical_path
         };
-        contained_location
+        checked_path
             .to_str()
-            .filter(|location| !location.contains(['\n', '\r']))
-            .and_then(|location| NonEmptyString::new(location.to_owned()).ok())
-            .ok_or(LogsInputError::UnsupportedName(contained_location))
+            .filter(|path| !path.contains(['\n', '\r']))
+            .and_then(|path| NonEmptyString::new(path.to_owned()).ok())
+            .ok_or(LogsInputError::UnsupportedName(checked_path))
     }
 
     /// Lists the entries of the directory at a logs-input path under the mount point.
@@ -217,21 +225,21 @@ impl LogsInputMountPoint {
     /// Returns an error if:
     ///
     /// * [`LogsInputError::Unresolvable`] if the directory's entries can't be read.
-    /// * Forwards [`Self::locate`]'s return values on failure.
+    /// * Forwards [`Self::to_container_path`]'s return values on failure.
     pub fn list(&self, path: &LogsInputPath) -> Result<Vec<LogsInputEntry>, LogsInputError> {
-        let location = self.locate(path)?;
+        let container_path = self.to_container_path(path)?;
         let unresolvable = |source| LogsInputError::Unresolvable {
             path: PathBuf::from(&path.value),
             source,
         };
-        if !std::fs::metadata(location.as_str())
+        if !std::fs::metadata(container_path.as_str())
             .map_err(unresolvable)?
             .is_dir()
         {
             return Ok(Vec::new());
         }
         let mut entries = Vec::new();
-        for entry in std::fs::read_dir(location.as_str()).map_err(unresolvable)? {
+        for entry in std::fs::read_dir(container_path.as_str()).map_err(unresolvable)? {
             let entry = entry.map_err(unresolvable)?;
             let file_type = entry.file_type().map_err(unresolvable)?;
             let is_expandable = if file_type.is_symlink() {
@@ -249,26 +257,27 @@ impl LogsInputMountPoint {
         Ok(entries)
     }
 
-    /// Canonicalizes a location, and checks that it's under the mount point.
+    /// Canonicalizes a container path, and checks that it's under the mount point.
     ///
-    /// `path` is the path the caller gave for `location`, which the returned errors report.
+    /// `path` is the path the caller gave for `container_path`, which the returned errors report.
     ///
     /// # Returns
     ///
-    /// The location's canonical form on success.
+    /// The container path's canonical form on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`LogsInputError::NotFound`] if `location` doesn't exist or has a component that is too
-    ///   long.
-    /// * [`LogsInputError::OutsideMountPoint`] if `location` resolves to outside the mount point.
-    /// * [`LogsInputError::Unresolvable`] if `location` can't be resolved for any other reason
-    ///   (e.g., a symlink loop or a permission error).
-    fn canonicalize(&self, location: &Path, path: &Path) -> Result<PathBuf, LogsInputError> {
-        let canonical_location =
-            std::fs::canonicalize(location).map_err(|source| match source.kind() {
+    /// * [`LogsInputError::NotFound`] if `container_path` doesn't exist or has a component that is
+    ///   too long.
+    /// * [`LogsInputError::OutsideMountPoint`] if `container_path` resolves to outside the mount
+    ///   point.
+    /// * [`LogsInputError::Unresolvable`] if `container_path` can't be resolved for any other
+    ///   reason (e.g., a symlink loop or a permission error).
+    fn canonicalize(&self, container_path: &Path, path: &Path) -> Result<PathBuf, LogsInputError> {
+        let canonical_path =
+            std::fs::canonicalize(container_path).map_err(|source| match source.kind() {
                 io::ErrorKind::NotFound
                 | io::ErrorKind::NotADirectory
                 | io::ErrorKind::InvalidFilename => LogsInputError::NotFound(path.to_path_buf()),
@@ -277,10 +286,10 @@ impl LogsInputMountPoint {
                     source,
                 },
             })?;
-        if !canonical_location.starts_with(&self.canonical_path) {
+        if !canonical_path.starts_with(&self.canonical_path) {
             return Err(LogsInputError::OutsideMountPoint(path.to_path_buf()));
         }
-        Ok(canonical_location)
+        Ok(canonical_path)
     }
 }
 
@@ -299,8 +308,8 @@ pub enum LogsInputError {
     )]
     OutsideMountPoint(PathBuf),
 
-    #[error("logs-input location isn't absolute: {}", .0.display())]
-    RelativeLocation(PathBuf),
+    #[error("logs-input container path isn't absolute: {}", .0.display())]
+    RelativeContainerPath(PathBuf),
 
     #[error("logs-input path isn't UTF-8 or contains a line break: {}", .0.display())]
     UnsupportedName(PathBuf),
@@ -403,7 +412,7 @@ mod tests {
 
         /// # Returns
         ///
-        /// The location of `suffix` under the mount point.
+        /// The container path of `suffix` under the mount point.
         fn under_mount_point(&self, suffix: &str) -> NonEmptyString {
             let mut path = self.mount_point.clone();
             path.push_str(suffix);
@@ -536,7 +545,7 @@ mod tests {
     }
 
     #[test]
-    fn paths_are_located_at_their_lexical_location_under_the_mount_point() -> anyhow::Result<()> {
+    fn paths_convert_to_their_lexical_container_paths() -> anyhow::Result<()> {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         for (value, suffix) in [
@@ -546,7 +555,7 @@ mod tests {
             ("/inside-link/inner.log", "/inside-link/inner.log"),
         ] {
             assert_eq!(
-                mount_point.locate(&path(value))?,
+                mount_point.to_container_path(&path(value))?,
                 fixture.under_mount_point(suffix),
                 "value: {value}"
             );
@@ -555,17 +564,20 @@ mod tests {
     }
 
     #[test]
-    fn paths_under_a_symlinked_mount_point_are_located_through_the_symlink() -> anyhow::Result<()> {
+    fn paths_under_a_symlinked_mount_point_convert_through_the_symlink() -> anyhow::Result<()> {
         let fixture = Fixture::new();
         let linked_mount_point = &fixture.linked_mount_point;
         let mount_point = LogsInputMountPoint::resolve(linked_mount_point.clone())?;
         assert_eq!(
-            mount_point.locate(&path("/dir/inner.log"))?,
+            mount_point.to_container_path(&path("/dir/inner.log"))?,
             NonEmptyString::new(format!("{linked_mount_point}/dir/inner.log"))
                 .expect("the path should be non-empty")
         );
-        assert_eq!(mount_point.locate(&path("/"))?, *linked_mount_point);
-        let result = mount_point.locate(&path("/sibling-link"));
+        assert_eq!(
+            mount_point.to_container_path(&path("/"))?,
+            *linked_mount_point
+        );
+        let result = mount_point.to_container_path(&path("/sibling-link"));
         assert!(
             matches!(
                 &result,
@@ -582,7 +594,7 @@ mod tests {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         for value in ["/outside-link", "/sibling-link", "/sibling-link/x.log"] {
-            let result = mount_point.locate(&path(value));
+            let result = mount_point.to_container_path(&path(value));
             assert!(
                 matches!(
                     &result,
@@ -605,7 +617,7 @@ mod tests {
             "/dangling-link",
             too_long_name.as_str(),
         ] {
-            let result = mount_point.locate(&path(value));
+            let result = mount_point.to_container_path(&path(value));
             assert!(
                 matches!(
                     &result,
@@ -620,7 +632,7 @@ mod tests {
     fn unresolvable_paths_are_unresolvable() {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
-        let result = mount_point.locate(&path("/loop-link"));
+        let result = mount_point.to_container_path(&path("/loop-link"));
         assert!(
             matches!(
                 &result,
@@ -633,22 +645,25 @@ mod tests {
     }
 
     #[test]
-    fn locations_under_the_mount_point_are_contained_as_is() -> anyhow::Result<()> {
+    fn container_paths_under_the_mount_point_are_checked_as_is() -> anyhow::Result<()> {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         let location = fixture.under_mount_point("/dir/inner.log");
-        assert_eq!(mount_point.contain(Path::new(location.as_str()))?, location);
+        assert_eq!(
+            mount_point.checked_container_path(Path::new(location.as_str()))?,
+            location
+        );
         Ok(())
     }
 
     #[test]
-    fn locations_under_the_mount_point_are_contained_lexically_normalized() -> anyhow::Result<()> {
+    fn container_paths_under_the_mount_point_are_checked_normalized() -> anyhow::Result<()> {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         for suffix in ["//dir/./inner.log", "/dir//inner.log/", "/./dir/inner.log"] {
             let location = fixture.under_mount_point(suffix);
             assert_eq!(
-                mount_point.contain(Path::new(location.as_str()))?,
+                mount_point.checked_container_path(Path::new(location.as_str()))?,
                 fixture.under_mount_point("/dir/inner.log"),
                 "suffix: {suffix}"
             );
@@ -657,32 +672,36 @@ mod tests {
     }
 
     #[test]
-    fn symlinks_under_the_mount_point_are_contained_as_is() -> anyhow::Result<()> {
+    fn symlinks_under_the_mount_point_are_checked_as_is() -> anyhow::Result<()> {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         let location = fixture.under_mount_point("/inside-link");
-        assert_eq!(mount_point.contain(Path::new(location.as_str()))?, location);
+        assert_eq!(
+            mount_point.checked_container_path(Path::new(location.as_str()))?,
+            location
+        );
         Ok(())
     }
 
     #[test]
-    fn symlinks_outside_the_mount_point_are_contained_as_their_targets() -> anyhow::Result<()> {
+    fn symlinks_outside_the_mount_point_are_checked_as_their_targets() -> anyhow::Result<()> {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         let target = std::fs::canonicalize(fixture.under_mount_point("/app.log").as_str())?;
         assert_eq!(
-            mount_point.contain(&fixture.base.path().join("outside-to-inside-link"))?,
+            mount_point
+                .checked_container_path(&fixture.base.path().join("outside-to-inside-link"))?,
             Fixture::non_empty_path(&target)
         );
         Ok(())
     }
 
     #[test]
-    fn locations_resolving_outside_the_mount_point_are_not_contained() {
+    fn container_paths_resolving_outside_the_mount_point_are_rejected() {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         let location = PathBuf::from(fixture.under_mount_point("/outside-link").as_str());
-        let result = mount_point.contain(&location);
+        let result = mount_point.checked_container_path(&location);
         assert!(
             matches!(
                 &result,
@@ -693,14 +712,14 @@ mod tests {
     }
 
     #[test]
-    fn relative_locations_are_not_contained() {
+    fn relative_container_paths_are_rejected() {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
-        let result = mount_point.contain(Path::new("logs/app.log"));
+        let result = mount_point.checked_container_path(Path::new("logs/app.log"));
         assert!(
             matches!(
                 &result,
-                Err(LogsInputError::RelativeLocation(rejected))
+                Err(LogsInputError::RelativeContainerPath(rejected))
                     if rejected == Path::new("logs/app.log")
             ),
             "unexpected result: {result:?}"
@@ -708,11 +727,11 @@ mod tests {
     }
 
     #[test]
-    fn missing_locations_are_not_found() {
+    fn missing_container_paths_are_not_found() {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         let location = PathBuf::from(fixture.under_mount_point("/missing.log").as_str());
-        let result = mount_point.contain(&location);
+        let result = mount_point.checked_container_path(&location);
         assert!(
             matches!(
                 &result,
@@ -723,13 +742,13 @@ mod tests {
     }
 
     #[test]
-    fn locations_with_unsupported_names_are_not_contained() -> anyhow::Result<()> {
+    fn container_paths_with_unsupported_names_are_rejected() -> anyhow::Result<()> {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         for name in [OsStr::from_bytes(b"app\xff.log"), OsStr::new("app\n.log")] {
             let location = Path::new(fixture.mount_point.as_str()).join(name);
             std::fs::write(&location, b"")?;
-            let result = mount_point.contain(&location);
+            let result = mount_point.checked_container_path(&location);
             assert!(
                 matches!(
                     &result,
