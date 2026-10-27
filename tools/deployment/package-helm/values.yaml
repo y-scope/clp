@@ -1,6 +1,5 @@
 global:
-  # Where archives are stored: "fs" or "s3". It's a `global` value because the Spider subchart also
-  # needs it to mount archives in its workers. S3 settings go in `clpConfig.archive_output.storage`.
+  # Where archives are stored: "fs" or "s3".
   archiveOutputStorageType: "fs"
   fullnameOverride: ""
   nameOverride: ""
@@ -328,7 +327,7 @@ clpConfig:
 
   # Where archives should be output to
   archive_output:
-    # The storage type is set by `global.archiveOutputStorageType`.
+    # S3 storage settings (`s3_config`), used when `global.archiveOutputStorageType` is "s3".
     storage: {}
 
     # Retention period for archives, in minutes. Set to null to disable automatic deletion.
