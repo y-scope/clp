@@ -24,6 +24,7 @@ data:
       query_job_polling:
         initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
         max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
+      stream_file_extraction_timeout_secs: {{ .stream_file_extraction_timeout_secs | int }}
     {{- else }}
     api_server: null
     {{- end }}
