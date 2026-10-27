@@ -5,11 +5,10 @@ use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::types::ArchiveId;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
-
-use crate::webui_client::LogsInputPath;
 
 #[derive(Error, Debug)]
 pub enum ClientError {
@@ -61,21 +60,8 @@ pub enum ClientError {
     #[error("Dataset not found: {0}")]
     DatasetNotFound(DatasetName),
 
-    #[error("logs-input path not found: {0}")]
-    LogsInputPathNotFound(LogsInputPath),
-
-    #[error("logs-input path resolves to outside the logs-input mount point: {0}")]
-    LogsInputPathOutsideMountPoint(LogsInputPath),
-
-    #[error("logs-input path can't be resolved: {path}: {source}")]
-    LogsInputPathUnresolvable {
-        path: LogsInputPath,
-        #[source]
-        source: std::io::Error,
-    },
-
-    #[error("logs-input mount point can't be resolved: {0}")]
-    LogsInputMountPointUnavailable(std::io::Error),
+    #[error(transparent)]
+    LogsInput(#[from] LogsInputError),
 
     #[error("compression job ID {0} is out of range")]
     CompressionJobIdOutOfRange(u64),

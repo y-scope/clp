@@ -8,6 +8,8 @@ use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::FsInputConfig;
 use clp_rust_utils::job_config::InputConfig;
 use clp_rust_utils::job_config::OutputConfig;
+use clp_rust_utils::logs_input::LogsInputMountPoint;
+use clp_rust_utils::logs_input::LogsInputPath;
 use clp_rust_utils::serde::ZstdMsgpack;
 use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
 use non_empty_string::NonEmptyString;
@@ -16,8 +18,6 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::error::ClientError;
-use crate::webui_client::LogsInputMountPoint;
-use crate::webui_client::LogsInputPath;
 use crate::webui_client::WebuiClient;
 
 /// Request body for the compression-job submission endpoint.
@@ -66,9 +66,11 @@ impl WebuiClient {
     /// * [`ClientError::InvalidInput`] if `creation` has no paths.
     /// * [`ClientError::CompressionJobIdOutOfRange`] if the ID of the inserted job doesn't fit in a
     ///   [`CompressionJobId`].
+    /// * [`ClientError::TaskJoin`] if the task converting the paths to their container paths
+    ///   panics.
     /// * Forwards [`Self::check_logs_input_access`]'s return values on failure.
     /// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
-    /// * Forwards [`LogsInputMountPoint::locate`]'s return values on failure.
+    /// * Forwards [`LogsInputMountPoint::to_container_path`]'s return values on failure.
     /// * Forwards [`ZstdMsgpack::serialize`]'s return values on failure.
     /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_compression_job(
@@ -87,13 +89,16 @@ impl WebuiClient {
                 "a compression job must have at least one path".to_owned(),
             ));
         }
-        let mount_point =
-            LogsInputMountPoint::resolve(NonEmptyString::from_static_str(LOGS_INPUT_MOUNT_POINT))
-                .await?;
-        let mut paths_to_compress = Vec::with_capacity(paths.len());
-        for path in &paths {
-            paths_to_compress.push(mount_point.locate(path).await?);
-        }
+        let paths_to_compress = tokio::task::spawn_blocking(move || {
+            let mount_point = LogsInputMountPoint::resolve(NonEmptyString::from_static_str(
+                LOGS_INPUT_MOUNT_POINT,
+            ))?;
+            paths
+                .iter()
+                .map(|path| mount_point.to_container_path(path))
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .await??;
         let clp_io_config =
             self.compression_job_config(paths_to_compress, dataset, timestamp_key, unstructured);
         let job_id = sqlx::query(&format!(
@@ -149,10 +154,10 @@ mod tests {
     use clp_rust_utils::job_config::FsInputConfig;
     use clp_rust_utils::job_config::InputConfig;
     use clp_rust_utils::job_config::OutputConfig;
+    use clp_rust_utils::logs_input::LogsInputPath;
     use non_empty_string::NonEmptyString;
 
     use super::CompressionJobCreation;
-    use crate::webui_client::LogsInputPath;
     use crate::webui_client::WebuiClient;
 
     /// # Returns

@@ -52,8 +52,8 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             status = UNPROCESSABLE_ENTITY,
             description = "The request body doesn't match the schema, including when a field has \
                 the wrong JSON type, `paths` is missing, a path doesn't start with `/`, has a `..` \
-                component, or contains a NUL character, `dataset` isn't a valid dataset name, \
-                `timestamp_key` is empty, or the body has an unknown field"
+                component, or contains a NUL character or a line break, `dataset` isn't a valid \
+                dataset name, `timestamp_key` is empty, or the body has an unknown field"
         ),
         (
             status = INTERNAL_SERVER_ERROR,

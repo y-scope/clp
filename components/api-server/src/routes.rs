@@ -11,6 +11,7 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::logs_input::LogsInputError;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -349,9 +350,10 @@ impl From<ClientError> for HandlerError {
             ClientError::QueryJobNotFound(_)
             | ClientError::DatasetNotFound(_)
             | ClientError::LogEventNotFound { .. }
-            | ClientError::LogsInputPathNotFound(_) => Self::NotFound,
+            | ClientError::LogsInput(LogsInputError::NotFound(_)) => Self::NotFound,
             ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
-            ClientError::InvalidInput(_) | ClientError::LogsInputPathOutsideMountPoint(_) => {
+            ClientError::InvalidInput(_)
+            | ClientError::LogsInput(LogsInputError::OutsideMountPoint(_)) => {
                 Self::BadRequest(format!("{err}"))
             }
             ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(format!("{err}")),
@@ -365,8 +367,12 @@ impl From<ClientError> for HandlerError {
             | ClientError::InvalidQueryJobConfig(_)
             | ClientError::ExtractionJobFailed { .. }
             | ClientError::ExtractionJobNotFound(_)
-            | ClientError::LogsInputPathUnresolvable { .. }
-            | ClientError::LogsInputMountPointUnavailable(_)
+            | ClientError::LogsInput(
+                LogsInputError::MountPointUnavailable(_)
+                | LogsInputError::RelativeContainerPath(_)
+                | LogsInputError::UnsupportedName(_)
+                | LogsInputError::Unresolvable { .. },
+            )
             | ClientError::CompressionJobIdOutOfRange(_)
             | ClientError::Telemetry(_) => Self::InternalServer,
         }
@@ -388,6 +394,8 @@ impl IntoResponse for HandlerError {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use axum::body::Body;
     use axum::http::HeaderValue;
     use axum::http::Method;
@@ -408,7 +416,6 @@ mod tests {
 
     use super::*;
     use crate::client::Cancellability;
-    use crate::webui_client::LogsInputPath;
 
     #[derive(Deserialize)]
     struct JobStatusParams {
@@ -571,19 +578,19 @@ mod tests {
                 StatusCode::INTERNAL_SERVER_ERROR,
             ),
             (
-                ClientError::LogsInputPathNotFound(LogsInputPath::try_from("/app.log".to_owned())?),
+                ClientError::LogsInput(LogsInputError::NotFound(PathBuf::from("/app.log"))),
                 StatusCode::NOT_FOUND,
             ),
             (
-                ClientError::LogsInputPathUnresolvable {
-                    path: LogsInputPath::try_from("/loop-link".to_owned())?,
+                ClientError::LogsInput(LogsInputError::Unresolvable {
+                    path: PathBuf::from("/loop-link"),
                     source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
-                },
+                }),
                 StatusCode::INTERNAL_SERVER_ERROR,
             ),
             (
-                ClientError::LogsInputMountPointUnavailable(std::io::Error::from(
-                    std::io::ErrorKind::NotFound,
+                ClientError::LogsInput(LogsInputError::MountPointUnavailable(
+                    std::io::Error::from(std::io::ErrorKind::NotFound),
                 )),
                 StatusCode::INTERNAL_SERVER_ERROR,
             ),
@@ -625,16 +632,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn logs_input_path_outside_mount_point_maps_to_bad_request_with_its_message()
-    -> anyhow::Result<()> {
-        let error = ClientError::LogsInputPathOutsideMountPoint(LogsInputPath::try_from(
-            "/outside-link".to_owned(),
-        )?);
+    async fn logs_input_path_outside_mount_point_maps_to_bad_request_with_its_message() {
+        let error = LogsInputError::OutsideMountPoint(PathBuf::from("/outside-link"));
         let expected = error.to_string();
-        let response = HandlerError::from(error).into_response();
+        let response = HandlerError::from(ClientError::LogsInput(error)).into_response();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         assert_eq!(get_body(response).await, expected);
-        Ok(())
     }
 
     #[tokio::test]

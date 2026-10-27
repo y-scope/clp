@@ -3,6 +3,7 @@
 use axum::Json;
 use axum::extract::Query;
 use axum::extract::State;
+use clp_rust_utils::logs_input::LogsInputPath;
 use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa_axum::router::OpenApiRouter;
@@ -12,7 +13,6 @@ use crate::routes::AppState;
 use crate::routes::HandlerError;
 use crate::routes::webui::log_unexpected_error;
 use crate::webui_client::DirEntry;
-use crate::webui_client::LogsInputPath;
 use crate::webui_client::WebuiClient;
 
 /// Factory function.
@@ -55,9 +55,9 @@ struct ListParams {
             status = BAD_REQUEST,
             description = "The query string is malformed (e.g., `path` is repeated); `path` is \
                 missing, doesn't start with `/`, has a `..` component, or contains a NUL \
-                character; the query has an unknown parameter; the package's storage engine isn't \
-                clp-s or its logs input isn't on the filesystem; or `path` resolves to outside the \
-                logs-input mount point through a symlink"
+                character or a line break; the query has an unknown parameter; the package's \
+                storage engine isn't clp-s or its logs input isn't on the filesystem; or `path` \
+                resolves to outside the logs-input mount point through a symlink"
         ),
         (
             status = NOT_FOUND,
@@ -75,7 +75,7 @@ async fn list_logs_input_entries(
     Query(params): Query<ListParams>,
 ) -> Result<Json<Vec<DirEntry>>, HandlerError> {
     let entries = client
-        .list_logs_input_entries(&params.path)
+        .list_logs_input_entries(params.path)
         .await
         .inspect_err(|err| log_unexpected_error("list_logs_input_entries", err))?;
     Ok(Json(entries))

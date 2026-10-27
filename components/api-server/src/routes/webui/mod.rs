@@ -5,6 +5,7 @@ mod logs_input;
 mod metadata;
 mod stream_files;
 
+use clp_rust_utils::logs_input::LogsInputError;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::ClientError;
@@ -34,8 +35,9 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::QueryJobAlreadyTerminated(_)
         | ClientError::InvalidInput(_)
         | ClientError::LogEventNotFound { .. }
-        | ClientError::LogsInputPathNotFound(_)
-        | ClientError::LogsInputPathOutsideMountPoint(_) => {}
+        | ClientError::LogsInput(
+            LogsInputError::NotFound(_) | LogsInputError::OutsideMountPoint(_),
+        ) => {}
         ClientError::Sql(_)
         | ClientError::Mongo(_)
         | ClientError::QueryNotSucceeded
@@ -47,8 +49,12 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::StreamExtractionTimeout(_)
         | ClientError::ExtractionJobFailed { .. }
         | ClientError::ExtractionJobNotFound(_)
-        | ClientError::LogsInputPathUnresolvable { .. }
-        | ClientError::LogsInputMountPointUnavailable(_)
+        | ClientError::LogsInput(
+            LogsInputError::MountPointUnavailable(_)
+            | LogsInputError::RelativeContainerPath(_)
+            | LogsInputError::UnsupportedName(_)
+            | LogsInputError::Unresolvable { .. },
+        )
         | ClientError::CompressionJobIdOutOfRange(_)
         | ClientError::Telemetry(_) => {
             tracing::error!(operation, error = ? error, "WebUI API request failed.");
