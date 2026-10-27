@@ -84,8 +84,10 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("cannot connect to MongoDB")?;
 
-    let client = api_server::client::Client::new(config.clone(), mongodb_client, sql_pool.clone());
-    let webui_client = api_server::webui_client::WebuiClient::new(config, sql_pool);
+    let client =
+        api_server::client::Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone());
+    let webui_client =
+        api_server::webui_client::WebuiClient::new(config, sql_pool, mongodb_client).await;
 
     let router = api_server::routes::from_app_state(api_server::routes::AppState {
         client,
