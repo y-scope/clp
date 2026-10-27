@@ -9,7 +9,7 @@ import {
 /**
  * Validates that the given dataset name abides by the following rules:
  * - Its length won't cause any metadata table names to exceed MySQL's max table name length.
- * - It only contains alphanumeric characters and underscores.
+ * - It only contains Unicode letters, numbers, and underscores in the Basic Multilingual Plane.
  *
  * @param datasetName The dataset name to validate.
  * @return An error message if invalid, or null if valid.
@@ -29,9 +29,8 @@ const validateDatasetName = (datasetName: string): string | null => {
                 return "Dataset name can only be a maximum of " +
                     `${DATASET_NAME_MAX_LEN} characters long.`;
             }
-            if (ValueErrorType.StringPattern === firstError.type) {
-                return "Dataset name can only contain alphanumeric characters " +
-                    "and underscores.";
+            if (ValueErrorType.RegExp === firstError.type) {
+                return "Dataset name can only contain letters, numbers, and underscores.";
             }
         }
 
