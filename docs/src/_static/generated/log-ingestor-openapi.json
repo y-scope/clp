@@ -224,7 +224,9 @@
           },
           "dataset": {
             "type": "string",
-            "description": "The dataset to ingest into. Defaults to `None` (which uses the default dataset).",
+            "description": "The dataset to ingest into. Defaults to the default dataset.",
+            "default": "default",
+            "maxLength": 44,
             "minLength": 1
           },
           "endpoint_url": {

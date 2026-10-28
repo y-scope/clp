@@ -6,6 +6,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clp_rust_utils::clp_config::AwsAuthentication;
 use clp_rust_utils::clp_config::AwsCredentials;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::ingestion::s3::BaseConfig;
 use clp_rust_utils::job_config::ingestion::s3::BufferConfig;
 use clp_rust_utils::job_config::ingestion::s3::S3ScannerConfig;
@@ -264,7 +265,7 @@ async fn test_sqs_listener() -> Result<()> {
                     bucket_name: aws_config.bucket_name.clone(),
                     key_prefix: prefix.clone(),
                     endpoint_url: Some(aws_config.endpoint.clone()),
-                    dataset: None,
+                    dataset: DatasetName::default(),
                     timestamp_key: None,
                     unstructured: false,
                 },
@@ -307,7 +308,7 @@ async fn test_s3_scanner() -> Result<()> {
             bucket_name: aws_config.bucket_name.clone(),
             key_prefix: prefix.clone(),
             endpoint_url: Some(aws_config.endpoint.clone()),
-            dataset: None,
+            dataset: DatasetName::default(),
             timestamp_key: None,
             unstructured: false,
         },
@@ -386,7 +387,7 @@ async fn test_s3_scanner_single_object() -> Result<()> {
             bucket_name: aws_config.bucket_name.clone(),
             key_prefix: prefix.clone(),
             endpoint_url: Some(aws_config.endpoint.clone()),
-            dataset: None,
+            dataset: DatasetName::default(),
             timestamp_key: None,
             unstructured: false,
         },

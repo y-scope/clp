@@ -6,6 +6,30 @@ import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 import {SearchResult} from "./typings";
 
 
+interface ClpSearchResultId {
+    log_event_idx: number;
+    orig_file_id: string;
+}
+
+interface ClpSSearchResultId {
+    archive_id: string;
+    log_event_idx: number;
+}
+
+type SearchResultWithoutId = Omit<
+    SearchResult,
+    "_id" | "archive_id" | "log_event_idx" | "orig_file_id"
+>;
+
+type RawSearchResult =
+    (SearchResultWithoutId & {
+        _id: ClpSearchResultId;
+    }) |
+    (SearchResultWithoutId & {
+        _id: ClpSSearchResultId;
+    });
+
+
 /**
  * Custom hook to stream search results for the current searchJobId from the API server's SSE
  * endpoint. When the stream ends, the search UI state is updated to `DONE` (or `FAILED` if the
@@ -33,15 +57,24 @@ const useSearchResults = () => {
             }
         },
         parse: (data) => {
-            // MongoDB ObjectIds are serialized as `{"$oid": "..."}` in the SSE stream.
-            const doc = JSON.parse(data) as Omit<SearchResult, "_id"> &
-                {_id: string | {$oid: string}};
+            const doc = JSON.parse(data) as RawSearchResult;
+
+            if ("orig_file_id" in doc._id) {
+                return {
+                    ...doc,
+                    _id: JSON.stringify(doc._id),
+                    archive_id: "",
+                    log_event_idx: doc._id.log_event_idx,
+                    orig_file_id: doc._id.orig_file_id,
+                };
+            }
 
             return {
                 ...doc,
-                _id: "object" === typeof doc._id ?
-                    doc._id.$oid :
-                    doc._id,
+                _id: JSON.stringify(doc._id),
+                archive_id: doc._id.archive_id,
+                log_event_idx: doc._id.log_event_idx,
+                orig_file_id: "",
             };
         },
         rawDocs: true,

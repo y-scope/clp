@@ -37,7 +37,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/query/{search_job_id}": {
+    "/query/{query_job_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -54,7 +54,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/query_results/{search_job_id}": {
+    "/query_results/{query_job_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -160,9 +160,9 @@ export interface components {
             ignore_case?: boolean;
             /**
              * Format: int32
-             * @description The maximum number of results to return. Set to `0` for no limit.
+             * @description The maximum number of results to return. Omit for no limit.
              */
-            max_num_results?: number;
+            max_num_results?: number | null;
             /** @description The search query as a KQL string. */
             query_string: string;
             /**
@@ -226,7 +226,6 @@ export interface operations {
                  *       "time_range_begin_millisecs": 0,
                  *       "time_range_end_millisecs": 17356896,
                  *       "ignore_case": true,
-                 *       "max_num_results": 0,
                  *       "buffer_results_in_mongodb": true,
                  *       "count_by_time_bucket_size_millisecs": null
                  *     }
@@ -262,7 +261,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                search_job_id: number;
+                query_job_id: number;
             };
             cookie?: never;
         };
@@ -275,8 +274,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description No cancellable query job with the given ID was found. */
+            /** @description No query job with the given ID was found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The query job with the given ID has terminated without being cancelled. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -309,7 +315,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                search_job_id: number;
+                query_job_id: number;
             };
             cookie?: never;
         };

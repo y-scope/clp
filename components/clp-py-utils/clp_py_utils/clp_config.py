@@ -9,12 +9,14 @@ import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Discriminator,
     Field,
     field_validator,
     model_validator,
     PlainSerializer,
     PrivateAttr,
     StringConstraints,
+    Tag,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum, SnakeCaseStrEnum
 
@@ -38,6 +40,7 @@ RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 OTEL_COLLECTOR_COMPONENT_NAME = "otel-collector"
 COMPRESSION_COORDINATOR_COMPONENT_NAME = "compression_coordinator"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
+QUERY_COORDINATOR_COMPONENT_NAME = "query_coordinator"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
@@ -49,6 +52,11 @@ MCP_SERVER_COMPONENT_NAME = "mcp_server"
 SPIDER_COMPONENT_NAME = "spider"
 SPIDER_STORAGE_COMPONENT_NAME = "spider-storage"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
+
+# Spider resource groups
+SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME = "spider_resource_groups"
+COMPRESSION_RESOURCE_GROUP_NAME = "compression"
+QUERY_RESOURCE_GROUP_NAME = "query"
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -148,9 +156,7 @@ CompressionOrchestrationStr = Annotated[CompressionOrchestration, StrEnumSeriali
 
 class SpiderSchedulerPolicy(SnakeCaseStrEnum):
     ROUND_ROBIN = auto()
-
-
-SpiderSchedulerPolicyStr = Annotated[SpiderSchedulerPolicy, StrEnumSerializer]
+    RESOURCE_GROUP_ROUND_ROBIN = auto()
 
 
 class QueryEngine(KebabCaseStrEnum):
@@ -756,7 +762,7 @@ class ApiServer(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
-    default_max_num_query_results: int = 1000
+    stream_file_extraction_timeout_secs: PositiveInt = 1800
 
     def transform_for_container(self):
         self.host = API_SERVER_COMPONENT_NAME
@@ -764,9 +770,15 @@ class ApiServer(BaseModel):
 
 
 class LogIngestor(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 3002
+
     host: DomainStr = "localhost"
-    port: Port = 3002
+    port: Port = DEFAULT_PORT
     logging_level: LoggingLevelRust = "INFO"
+
+    def transform_for_container(self) -> None:
+        self.host = LOG_INGESTOR_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class SpiderInboundQueue(BaseModel):
@@ -801,24 +813,63 @@ class SpiderEmRegistry(BaseModel):
 
 class SpiderRoundRobin(BaseModel):
     active_job_queue_capacity: PositiveInt | None = None
-    cleanup_ready_task_capacity: PositiveInt | None = None
-    commit_ready_task_capacity: PositiveInt | None = None
     dispatch_queue_capacity: PositiveInt | None = None
-    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
     ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
     storage_poll_timeout_ms: PositiveInt | None = None
     tick_interval_ms: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
 
 
-class SpiderScheduler(BaseModel):
-    DEFAULT_POLICY: ClassVar[SpiderSchedulerPolicy] = SpiderSchedulerPolicy.ROUND_ROBIN
+class SpiderResourceGroupRoundRobin(BaseModel):
+    active_job_list_capacity: PositiveInt | None = None
+    dispatch_queue_capacity: PositiveInt | None = None
+    ready_task_capacity: PositiveInt | None = None
+    commit_ready_task_capacity: PositiveInt | None = None
+    cleanup_ready_task_capacity: PositiveInt | None = None
+    storage_poll_timeout_ms: PositiveInt | None = None
+    tick_interval_ms: PositiveInt | None = None
+    finalizing_job_expiration_timeout_sec: PositiveInt | None = None
 
+
+class SpiderSchedulerBase(BaseModel):
     log_level: LoggingLevelRust | None = None
-    policy: SpiderSchedulerPolicyStr | None = None
     connection_pool_size: PositiveInt | None = None
     stop_timeout_sec: PositiveInt | None = None
     em_registry: SpiderEmRegistry = SpiderEmRegistry()
-    round_robin: SpiderRoundRobin = SpiderRoundRobin()
+
+
+class SpiderRoundRobinScheduler(SpiderSchedulerBase):
+    policy: Literal[SpiderSchedulerPolicy.ROUND_ROBIN.value]
+    config: SpiderRoundRobin = SpiderRoundRobin()
+
+
+class SpiderResourceGroupRoundRobinScheduler(SpiderSchedulerBase):
+    policy: Literal[SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value] = (
+        SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value
+    )
+    config: SpiderResourceGroupRoundRobin = SpiderResourceGroupRoundRobin()
+
+
+def _get_spider_scheduler_policy(scheduler: Any) -> str:
+    """
+    :param scheduler: The raw `spider.scheduler` config, or an already-validated scheduler model.
+    :return: The scheduler's `policy`, defaulting to `resource_group_round_robin` when unset.
+    """
+    if isinstance(scheduler, dict):
+        return scheduler.get("policy", SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value)
+    return scheduler.policy
+
+
+SpiderScheduler = Annotated[
+    Annotated[SpiderRoundRobinScheduler, Tag(SpiderSchedulerPolicy.ROUND_ROBIN.value)]
+    | Annotated[
+        SpiderResourceGroupRoundRobinScheduler,
+        Tag(SpiderSchedulerPolicy.RESOURCE_GROUP_ROUND_ROBIN.value),
+    ],
+    Discriminator(_get_spider_scheduler_policy),
+]
 
 
 class SpiderLiveness(BaseModel):
@@ -826,8 +877,25 @@ class SpiderLiveness(BaseModel):
     storage_heartbeat_interval_sec: PositiveInt | None = None
 
 
+class SpiderWorkerPool(BaseModel):
+    """A pool of Spider workers."""
+
+    replicas: NonNegativeInt = 2
+
+
+class SpiderWorkerPools(BaseModel):
+    """
+    Spider worker pools. `general` runs any resource group's tasks; each other pool is dedicated
+    to the resource group of the same name.
+    """
+
+    general: SpiderWorkerPool = SpiderWorkerPool()
+    compression: SpiderWorkerPool = SpiderWorkerPool()
+    query: SpiderWorkerPool = SpiderWorkerPool(replicas=4)
+
+
 class SpiderWorker(BaseModel):
-    replicas: PositiveInt | None = None
+    pools: SpiderWorkerPools = SpiderWorkerPools()
     log_level: LoggingLevelRust | None = None
     connection_pool_size: PositiveInt | None = None
     scheduler_poll_wait_ms: PositiveInt | None = None
@@ -842,7 +910,7 @@ class Spider(BaseModel):
     port: Port = DEFAULT_PORT
 
     storage: SpiderStorage = SpiderStorage()
-    scheduler: SpiderScheduler = SpiderScheduler()
+    scheduler: SpiderScheduler = SpiderResourceGroupRoundRobinScheduler()
     worker: SpiderWorker = SpiderWorker()
 
     def dump_to_primitive_dict(self):
@@ -854,10 +922,6 @@ class Spider(BaseModel):
         self.port = self.DEFAULT_PORT
 
 
-class SpiderResourceGroup(BaseModel):
-    name: NonEmptyStr
-
-
 class PollingBackoff(BaseModel):
     init_backoff_millisecs: PositiveInt
     max_backoff_millisecs: PositiveInt
@@ -865,7 +929,6 @@ class PollingBackoff(BaseModel):
 
 class CompressionCoordinator(BaseModel):
     logging_level: LoggingLevelRust = "INFO"
-    resource_group: SpiderResourceGroup = SpiderResourceGroup(name="compression-coordinator")
     job_polling_interval_millisecs: PositiveInt = 100
     max_concurrent_jobs: PositiveInt = 1000
     result_polling: PollingBackoff = PollingBackoff(
@@ -877,6 +940,37 @@ class CompressionCoordinator(BaseModel):
     termination_timeout_secs: PositiveInt = 30
     commit_task_soft_timeout_secs: PositiveInt = 45
     commit_task_hard_timeout_secs: PositiveInt = 60
+    # This field is loaded at runtime through `load_credentials_from_file`.
+    resource_group_password: str | None = None
+
+    def dump_to_primitive_dict(self):
+        return self.model_dump(exclude={"resource_group_password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        self.resource_group_password = _load_spider_resource_group_password(
+            credentials_file_path, COMPRESSION_RESOURCE_GROUP_NAME
+        )
+
+
+class QueryCoordinator(BaseModel):
+    logging_level: LoggingLevelRust = "INFO"
+    database_connection_pool_size: PositiveInt = 10
+    job_polling_interval_millisecs: PositiveInt = 100
+    max_concurrent_jobs: PositiveInt = 1000
+    max_datasets_per_query: PositiveInt | None = 10
+    query_task_max_retry: NonNegativeInt = 1
+    result_polling_interval_millisecs: PositiveInt = 100
+    termination_timeout_secs: PositiveInt = 30
+    # This field is loaded at runtime through `load_credentials_from_file`.
+    resource_group_password: str | None = None
+
+    def dump_to_primitive_dict(self):
+        return self.model_dump(exclude={"resource_group_password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        self.resource_group_password = _load_spider_resource_group_password(
+            credentials_file_path, QUERY_RESOURCE_GROUP_NAME
+        )
 
 
 class Presto(BaseModel):
@@ -888,6 +982,26 @@ class Presto(BaseModel):
     def transform_for_container(self):
         self.host = PRESTO_COORDINATOR_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
+
+
+def _load_spider_resource_group_password(
+    credentials_file_path: pathlib.Path, resource_group_name: str
+) -> str:
+    """
+    :param credentials_file_path:
+    :param resource_group_name:
+    :return: The password of the given Spider resource group from the credentials file.
+    :raise ValueError: if the credentials file is empty or doesn't contain the password.
+    """
+    config = read_yaml_config_file(credentials_file_path)
+    if config is None:
+        raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+    try:
+        return get_config_value(
+            config, f"{SPIDER_RESOURCE_GROUPS_CREDENTIALS_NAME}.{resource_group_name}"
+        )
+    except KeyError as ex:
+        raise ValueError(f"Credentials file '{credentials_file_path}' does not contain key '{ex}'.")
 
 
 def _get_env_var(name: str) -> str:
@@ -932,6 +1046,7 @@ class ClpConfig(BaseModel):
     log_ingestor: LogIngestor | None = LogIngestor()
     spider: Spider | None = None
     compression_coordinator: CompressionCoordinator | None = None
+    query_coordinator: QueryCoordinator | None = None
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
@@ -1108,7 +1223,14 @@ class ClpConfig(BaseModel):
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = {"database", "queue", "redis", "spider"}
+        custom_serialized_fields = {
+            "compression_coordinator",
+            "database",
+            "query_coordinator",
+            "queue",
+            "redis",
+            "spider",
+        }
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             value = getattr(self, key)
@@ -1128,8 +1250,8 @@ class ClpConfig(BaseModel):
     @model_validator(mode="after")
     def validate_compression_orchestration_config(self):
         if CompressionOrchestration.SPIDER != self.package.scheduler:
-            # Neither service is deployed in this mode, so no `spider` or
-            # `compression_coordinator` config check is necessary.
+            # None of these services are deployed in this mode, so no `spider`,
+            # `compression_coordinator` or `query_coordinator` config check is necessary.
             return self
         if self.spider is None:
             msg = (
@@ -1140,6 +1262,12 @@ class ClpConfig(BaseModel):
         if self.compression_coordinator is None:
             msg = (
                 "`compression_coordinator` must be configured when `package.scheduler` is"
+                f" `{CompressionOrchestration.SPIDER}`."
+            )
+            raise ValueError(msg)
+        if self.query_coordinator is None:
+            msg = (
+                "`query_coordinator` must be configured when `package.scheduler` is"
                 f" `{CompressionOrchestration.SPIDER}`."
             )
             raise ValueError(msg)
@@ -1157,6 +1285,20 @@ class ClpConfig(BaseModel):
             raise ValueError(msg)
         if self.spider is None:
             msg = "compression-coordinator requires Spider to be configured."
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def validate_query_coordinator_config(self):
+        if self.query_coordinator is None:
+            return self
+        if self.package.storage_engine != StorageEngine.CLP_S:
+            msg = (
+                f"query-coordinator is only compatible with storage engine `{StorageEngine.CLP_S}`."
+            )
+            raise ValueError(msg)
+        if self.spider is None:
+            msg = "query-coordinator requires Spider to be configured."
             raise ValueError(msg)
         return self
 
@@ -1200,7 +1342,7 @@ class ClpConfig(BaseModel):
             raise ValueError("`redis` must be configured when using Celery orchestration.")
         return self
 
-    def transform_for_container(self):
+    def transform_for_container(self) -> None:
         """
         Converts all relevant directories to absolute paths inside the container, and updates
         component hostnames and ports to their container service names and default ports.
@@ -1223,6 +1365,8 @@ class ClpConfig(BaseModel):
         self.otel_collector.transform_for_container(BundledService.OTEL_COLLECTOR in self.bundled)
         if self.api_server is not None:
             self.api_server.transform_for_container()
+        if self.log_ingestor is not None:
+            self.log_ingestor.transform_for_container()
         if self.query_scheduler is not None:
             self.query_scheduler.transform_for_container()
         if self.reducer is not None:
