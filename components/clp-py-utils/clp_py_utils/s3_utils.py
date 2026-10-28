@@ -278,7 +278,7 @@ def generate_s3_url(
     scheme = match.group("scheme")
     endpoint = match.group("endpoint")
 
-    if region_code is None:
+    if region_code is None or not s3_prefix:
         return f"{scheme}://{s3_prefix}{endpoint}/{bucket_name}/{object_key}"
 
     return f"{scheme}://{s3_prefix}{region_code}.{endpoint}/{bucket_name}/{object_key}"

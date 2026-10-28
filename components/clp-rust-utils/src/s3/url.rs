@@ -11,7 +11,8 @@ use crate::Error;
 /// When `endpoint_url` is unset, a virtual-hosted-style URL against the default AWS endpoint
 /// (`amazonaws.com`) is produced, with `region_code` inserted as a subdomain when set. When
 /// `endpoint_url` is set, it is parsed into a scheme, an optional `s3` prefix, and a host, and a
-/// path-style URL is produced; `region_code`, when set, is prepended to the host as a subdomain.
+/// path-style URL is produced; `region_code`, when set, is prepended to the host as a subdomain
+/// only when the endpoint carries an `s3` prefix (i.e. a genuine S3 endpoint)
 ///
 /// # Returns
 ///
@@ -71,6 +72,11 @@ pub fn generate_s3_url(
         .expect("endpoint should be unconditionally captured")
         .as_str();
 
+    // Only a genuine S3 endpoint (`s3.*`) takes the region as a subdomain; the region is a bucket
+    // location hint, not part of a custom endpoint host.
+    if s3_prefix.is_empty() {
+        return Ok(format!("{scheme}://{endpoint}/{bucket}/{object_key}"));
+    }
     Ok(region_code.map_or_else(
         || format!("{scheme}://{s3_prefix}{endpoint}/{bucket}/{object_key}"),
         |region| format!("{scheme}://{s3_prefix}{region}.{endpoint}/{bucket}/{object_key}"),
@@ -146,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    fn custom_endpoint_prepends_region() {
+    fn custom_endpoint_ignores_region() {
         assert_eq!(
             generate_s3_url(
                 Some("http://minio:9000"),
@@ -155,7 +161,21 @@ mod tests {
                 &to_non_empty_string("a/b.json")
             )
             .unwrap(),
-            "http://us-east-1.minio:9000/logs/a/b.json"
+            "http://minio:9000/logs/a/b.json"
+        );
+    }
+
+    #[test]
+    fn custom_endpoint_with_s3_prefix_prepends_region() {
+        assert_eq!(
+            generate_s3_url(
+                Some("https://s3.example.com"),
+                Some("us-east-1"),
+                &to_non_empty_string("logs"),
+                &to_non_empty_string("a/b.json")
+            )
+            .unwrap(),
+            "https://s3.us-east-1.example.com/logs/a/b.json"
         );
     }
 
