@@ -32,7 +32,8 @@ impl WebuiClient {
     /// # Returns
     ///
     /// The directory's entries on success, in no particular order, or an empty list if `path` isn't
-    /// a directory.
+    /// a directory. Entries whose names aren't UTF-8 or contain a line break (`\n` or `\r`) are
+    /// omitted, since no logs-input path can address them.
     ///
     /// # Errors
     ///

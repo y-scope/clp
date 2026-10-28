@@ -41,15 +41,17 @@ struct ListParams {
     description = "Lists the entries of the directory at `path` in the logs input. `path` and the \
         returned entries' `parent_path` are relative to the logs-input mount point, with a leading \
         `/` that denotes the mount point itself; `parent_path` is `path` lexically normalized. \
-        Returns an empty list if `path` isn't a directory. Only the clp-s storage engine with \
-        filesystem logs input is supported.",
+        Returns an empty list if `path` isn't a directory. Entries whose names aren't UTF-8 or \
+        contain a line break are omitted, since no logs-input path can address them. Only the \
+        clp-s storage engine with filesystem logs input is supported.",
     params(ListParams),
     responses(
         (
             status = OK,
             body = Vec<DirEntry>,
             description = "The directory's entries, in no particular order, or an empty list if \
-                `path` isn't a directory"
+                `path` isn't a directory; entries whose names aren't UTF-8 or contain a line break \
+                are omitted"
         ),
         (
             status = BAD_REQUEST,
