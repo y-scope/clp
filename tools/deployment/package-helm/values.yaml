@@ -9,6 +9,8 @@ allowHostAccessForSbinScripts: true
 # the tag is only a human-readable label.
 image:
   # Installs the CLP connector plugin into the Presto coordinator and worker pods.
+  # NOTE: Archives on S3 with `aws_authentication.type: "default"` require a connector that supports
+  # the "default" S3 auth provider.
   clpConnector:
     repository: "ghcr.io/y-scope/clp-plugin-presto-connector"
     pullPolicy: "IfNotPresent"
@@ -313,6 +315,11 @@ clpConfig:
 
   # Presto query engine config. When "presto" is in `bundled`, the chart deploys Presto coordinator
   # and worker pods. When not in `bundled`, set `host` and `port` to an external Presto instance.
+  #
+  # Bundled Presto workers read archives on S3 using the archive output's `aws_authentication`,
+  # whose type must be "credentials" or "default". With "default", workers get credentials from the
+  # AWS default credential provider chain, e.g., an IAM role for the service account through
+  # `serviceAccount.annotations`.
   presto: null
   #   serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
   #   host: "localhost"

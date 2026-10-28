@@ -14,6 +14,9 @@ spec:
       app.kubernetes.io/component: "presto-worker"
   template:
     metadata:
+      annotations:
+        # Kubernetes doesn't restart Presto when its catalog changes, so roll the pod instead.
+        checksum/presto-catalog: {{ include "clp.prestoWorkerCatalog" . | sha256sum | quote }}
       labels:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "presto-worker"
@@ -64,6 +67,20 @@ spec:
         - name: "presto-worker"
           image: {{ include "clp.imageRef" (dict "root" . "component" "prestoWorker") | quote }}
           imagePullPolicy: {{ .Values.image.prestoWorker.pullPolicy | quote }}
+          {{- with .Values.clpConfig.archive_output.storage }}
+          {{- if and
+            (eq .type "s3")
+            (eq .s3_config.aws_authentication.type "default")
+            .s3_config.region_code }}
+          env:
+            # Lets the AWS default credential provider chain (e.g., web identity) use the bucket's
+            # region.
+            - name: "AWS_REGION"
+              value: {{ .s3_config.region_code | quote }}
+            - name: "AWS_DEFAULT_REGION"
+              value: {{ .s3_config.region_code | quote }}
+          {{- end }}
+          {{- end }}{{/* with .Values.clpConfig.archive_output.storage */}}
           {{- include "clp.createResourceLimits" (dict
               "root" .
               "component" "prestoWorker"
@@ -101,8 +118,8 @@ spec:
             tcpSocket: *presto-worker-health-check
       volumes:
         - name: "presto-catalog"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
+          secret:
+            secretName: {{ include "clp.fullname" . }}-presto-catalog
             items:
               - key: "presto-worker-catalog-clp.properties"
                 path: "clp.properties"

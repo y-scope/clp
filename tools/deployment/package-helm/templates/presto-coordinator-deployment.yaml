@@ -14,6 +14,9 @@ spec:
       app.kubernetes.io/component: "presto-coordinator"
   template:
     metadata:
+      annotations:
+        # Kubernetes doesn't restart Presto when its catalog changes, so roll the pod instead.
+        checksum/presto-catalog: {{ include "clp.prestoCoordinatorCatalog" . | sha256sum | quote }}
       labels:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "presto-coordinator"
@@ -91,8 +94,8 @@ spec:
             httpGet: *presto-coordinator-health-check
       volumes:
         - name: "presto-catalog"
-          configMap:
-            name: {{ include "clp.fullname" . }}-config
+          secret:
+            secretName: {{ include "clp.fullname" . }}-presto-catalog
             items:
               - key: "presto-coordinator-catalog-clp.properties"
                 path: "clp.properties"
