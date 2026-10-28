@@ -5,6 +5,7 @@ use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::types::ArchiveId;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
@@ -58,6 +59,12 @@ pub enum ClientError {
 
     #[error("Dataset not found: {0}")]
     DatasetNotFound(DatasetName),
+
+    #[error(transparent)]
+    LogsInput(#[from] LogsInputError),
+
+    #[error("compression job ID {0} is out of range")]
+    CompressionJobIdOutOfRange(u64),
 
     #[error("invalid query job config: {0}")]
     InvalidQueryJobConfig(String),
