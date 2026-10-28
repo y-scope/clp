@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <iterator>
 #include <memory>
 #include <string>
 

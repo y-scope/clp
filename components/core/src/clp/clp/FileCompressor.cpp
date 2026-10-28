@@ -167,7 +167,7 @@ bool FileCompressor::compress_file(
     return succeeded;
 }
 
-void FileCompressor::parse_and_encode(
+auto FileCompressor::parse_and_encode(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
         size_t target_encoded_file_size,
@@ -175,7 +175,7 @@ void FileCompressor::parse_and_encode(
         group_id_t group_id,
         streaming_archive::writer::Archive& archive_writer,
         ReaderInterface& reader
-) {
+) -> void {
     m_parsed_message.clear();
 
     // Open compressed file
