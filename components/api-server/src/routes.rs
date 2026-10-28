@@ -333,6 +333,8 @@ enum HandlerError {
     Conflict,
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Gateway timeout: {0}")]
+    GatewayTimeout(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -344,9 +346,12 @@ impl From<axum::Error> for HandlerError {
 impl From<ClientError> for HandlerError {
     fn from(err: ClientError) -> Self {
         match err {
-            ClientError::QueryJobNotFound(_) | ClientError::DatasetNotFound(_) => Self::NotFound,
+            ClientError::QueryJobNotFound(_)
+            | ClientError::DatasetNotFound(_)
+            | ClientError::LogEventNotFound { .. } => Self::NotFound,
             ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
             ClientError::InvalidInput(_) => Self::BadRequest(format!("{err}")),
+            ClientError::StreamExtractionTimeout(_) => Self::GatewayTimeout(format!("{err}")),
             ClientError::Sql(_)
             | ClientError::Mongo(_)
             | ClientError::QueryNotSucceeded
@@ -355,6 +360,8 @@ impl From<ClientError> for HandlerError {
             | ClientError::TaskJoin(_)
             | ClientError::Aws { .. }
             | ClientError::InvalidQueryJobConfig(_)
+            | ClientError::ExtractionJobFailed { .. }
+            | ClientError::ExtractionJobNotFound(_)
             | ClientError::Telemetry(_) => Self::InternalServer,
         }
     }
@@ -368,6 +375,7 @@ impl IntoResponse for HandlerError {
             Self::Conflict => StatusCode::CONFLICT.into_response(),
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
         }
     }
 }
@@ -380,6 +388,7 @@ mod tests {
     use axum::http::Request;
     use axum::http::StatusCode;
     use axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN;
+    use axum::http::header::CONTENT_TYPE;
     use axum::http::header::ORIGIN;
     use axum::routing::delete;
     use axum::routing::get;
@@ -450,8 +459,8 @@ mod tests {
             .connect_lazy("mysql://localhost/clp-db")
             .expect("the MySQL URI should be valid");
         from_app_state(AppState {
-            client: Client::new(config.clone(), mongodb_client, sql_pool.clone()),
-            webui_client: WebuiClient::new(config, sql_pool),
+            client: Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone()),
+            webui_client: WebuiClient::new(config, sql_pool, mongodb_client).await,
         })
         .expect("the OpenAPI document should serialize")
     }
@@ -533,7 +542,25 @@ mod tests {
                 StatusCode::NOT_FOUND,
             ),
             (
+                ClientError::LogEventNotFound {
+                    archive_id: "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11".parse()?,
+                    log_event_idx: 42,
+                },
+                StatusCode::NOT_FOUND,
+            ),
+            (
                 ClientError::MalformedData,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                ClientError::ExtractionJobFailed {
+                    job_id: 1,
+                    status: QueryJobStatus::Failed,
+                },
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+            (
+                ClientError::ExtractionJobNotFound(1),
                 StatusCode::INTERNAL_SERVER_ERROR,
             ),
         ] {
@@ -545,6 +572,37 @@ mod tests {
             );
         }
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn stream_file_extraction_route_rejects_an_index_above_i64_max() -> anyhow::Result<()> {
+        let app = clp_s_app_with_lazy_clients().await;
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/stream_files/extract")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "archive_id": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
+                            "log_event_idx": i64::MAX.unsigned_abs() + 1,
+                        })
+                        .to_string(),
+                    ))?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn stream_extraction_timeout_maps_to_gateway_timeout_with_its_message() {
+        let error = ClientError::StreamExtractionTimeout(1800);
+        let expected = error.to_string();
+        let response = HandlerError::from(error).into_response();
+        assert_eq!(response.status(), StatusCode::GATEWAY_TIMEOUT);
+        assert_eq!(get_body(response).await, expected);
     }
 
     #[tokio::test]
