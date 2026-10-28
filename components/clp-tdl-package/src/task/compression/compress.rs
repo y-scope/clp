@@ -15,11 +15,11 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::S3Config;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
-use clp_rust_utils::clp_config::package::config::LogsInput;
+use clp_rust_utils::clp_config::package::config::LOGS_INPUT_MOUNT_POINT;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::DatasetName;
-use clp_rust_utils::fs::resolve_input_path;
+use clp_rust_utils::logs_input::LogsInputMountPoint;
 use clp_rust_utils::s3::create_new_client;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
@@ -28,6 +28,7 @@ use clp_rust_utils::task_io::compression::CompressionTaskOutput;
 use clp_rust_utils::task_io::compression::FsInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
 use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
 use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
@@ -41,10 +42,6 @@ pub(super) trait Source: Sized {
     const USE_S3_AUTH: bool;
 
     /// Validates the source and prepares its explicit input list and credentials.
-    ///
-    /// # Parameters
-    ///
-    /// * `logs_input` - The worker's configured input root for filesystem validation.
     ///
     /// # Returns
     ///
@@ -60,7 +57,7 @@ pub(super) trait Source: Sized {
     /// # Panics
     ///
     /// Panics for S3 inputs if the package runtime has not been initialized.
-    fn prepare(self, logs_input: &LogsInput) -> anyhow::Result<Option<PreparedSource<Self>>>;
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource<Self>>>;
 }
 
 /// Validated input-list contents and their read credentials.
@@ -79,7 +76,7 @@ impl Source for S3InputSource {
     ///
     /// * Forwards [`build_s3_logs_list`]'s return values on failure.
     /// * Forwards [`s3_credential_env`]'s return values on failure.
-    fn prepare(self, _logs_input: &LogsInput) -> anyhow::Result<Option<PreparedSource<Self>>> {
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource<Self>>> {
         let logs_list = build_s3_logs_list(&self)?;
         let input_region = self
             .region_code
@@ -101,9 +98,12 @@ impl Source for FsInputSource {
     ///
     /// Returns an error if:
     ///
+    /// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
     /// * Forwards [`build_fs_logs_list`]'s return values on failure.
-    fn prepare(self, logs_input: &LogsInput) -> anyhow::Result<Option<PreparedSource<Self>>> {
-        let logs_list = build_fs_logs_list(&self, logs_input)?;
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource<Self>>> {
+        let mount_point =
+            LogsInputMountPoint::resolve(NonEmptyString::from_static_str(LOGS_INPUT_MOUNT_POINT))?;
+        let logs_list = build_fs_logs_list(&self, &mount_point)?;
         if logs_list.is_empty() {
             return Ok(None);
         }
@@ -151,7 +151,7 @@ pub(super) fn compress<SourceType: Source>(
     if StorageEngine::ClpS != config.package.storage_engine {
         anyhow::bail!("compression requires the clp-s storage engine");
     }
-    let Some(prepared_source) = input_source.prepare(&config.logs_input)? else {
+    let Some(prepared_source) = input_source.prepare()? else {
         return Ok(CompressionTaskOutput {
             dataset,
             archives: Vec::new(),
@@ -494,48 +494,40 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
     Ok(list)
 }
 
-/// Revalidates filesystem entries against the configured input root.
+/// Revalidates filesystem entries against the logs-input mount point.
 ///
 /// # Returns
 ///
-/// A newline-terminated list of canonical regular-file paths on success. Empty directories are
+/// A newline-terminated list of checked regular-file paths on success. Empty directories are
 /// validated but omitted from the list.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * The configured input is not filesystem-backed or its root is not a directory.
 /// * A file entry is not a regular file or an empty-directory entry contains entries.
-/// * Forwards [`Path::canonicalize`]'s return values on failure.
-/// * Forwards [`resolve_input_path`]'s return values on failure.
+/// * Forwards [`LogsInputMountPoint::checked_container_path`]'s return values on failure.
 /// * Forwards [`std::fs::read_dir`]'s return values on failure.
 /// * Forwards [`std::fs::ReadDir::next`]'s entry errors on failure.
-fn build_fs_logs_list(source: &FsInputSource, logs_input: &LogsInput) -> anyhow::Result<String> {
-    let LogsInput::Fs { config } = logs_input else {
-        anyhow::bail!("filesystem compression requires a filesystem input root");
-    };
-    let root = Path::new(&config.directory)
-        .canonicalize()
-        .with_context(|| format!("failed to resolve input root {}", config.directory))?;
-    if !root.is_dir() {
-        anyhow::bail!("input root {} is not a directory", root.display());
-    }
+fn build_fs_logs_list(
+    source: &FsInputSource,
+    mount_point: &LogsInputMountPoint,
+) -> anyhow::Result<String> {
     let mut list = String::new();
     for file in &source.file_paths {
-        let path = resolve_input_path(&root, Path::new(file))?;
-        if !path.is_file() {
-            anyhow::bail!("input {} is not a regular file", path.display());
+        let path = mount_point.checked_container_path(Path::new(file))?;
+        if !Path::new(path.as_str()).is_file() {
+            anyhow::bail!("input {} is not a regular file", path.as_str());
         }
-        list.push_str(path.to_str().expect("resolved input paths are UTF-8"));
+        list.push_str(path.as_str());
         list.push('\n');
     }
     for directory in &source.empty_directories {
-        let path = resolve_input_path(&root, Path::new(directory))?;
-        let mut entries = std::fs::read_dir(&path)
-            .with_context(|| format!("input {} is not a readable directory", path.display()))?;
+        let path = mount_point.checked_container_path(Path::new(directory))?;
+        let mut entries = std::fs::read_dir(path.as_str())
+            .with_context(|| format!("input {} is not a readable directory", path.as_str()))?;
         if entries.next().transpose()?.is_some() {
-            anyhow::bail!("input directory {} is no longer empty", path.display());
+            anyhow::bail!("input directory {} is no longer empty", path.as_str());
         }
     }
     Ok(list)
@@ -1016,6 +1008,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::logs_input::LogsInputMountPoint;
     use clp_rust_utils::task_io::compression::ClpSCompressionOption;
     use clp_rust_utils::task_io::compression::FsInputSource;
     use clp_rust_utils::task_io::compression::S3InputSource;
@@ -1029,9 +1022,11 @@ mod tests {
     use super::ClpSInput;
     use super::InputList;
     use super::PreparedInput;
+    use super::PreparedSource;
     use super::Source;
     use super::TmpFileDeleter;
     use super::build_clp_s_args;
+    use super::build_fs_logs_list;
     use super::build_indexer_args;
     use super::build_log_converter_args;
     use super::build_s3_logs_list;
@@ -1048,6 +1043,7 @@ mod tests {
     struct FsFixture {
         root: PathBuf,
         cleanup: TmpFileDeleter,
+        mount_point: LogsInputMountPoint,
     }
 
     impl FsFixture {
@@ -1059,13 +1055,19 @@ mod tests {
         ///
         /// # Panics
         ///
-        /// Panics if the temporary root cannot be created or canonicalized.
+        /// Panics if the temporary root cannot be created, represented as UTF-8, or resolved.
         fn new() -> Self {
             let root = std::env::temp_dir().join(format!("clp-worker-input-{}", JobId::random()));
             std::fs::create_dir(&root).expect("temporary input root should be created");
             let mut cleanup = TmpFileDeleter::new();
             cleanup.add(root.clone());
+            let mount_point = LogsInputMountPoint::resolve(
+                NonEmptyString::new(root.to_str().expect("test root is UTF-8").to_owned())
+                    .expect("test root is nonempty"),
+            )
+            .expect("test mount should resolve");
             Self {
+                mount_point,
                 root: root
                     .canonicalize()
                     .expect("temporary input root should resolve"),
@@ -1075,19 +1077,15 @@ mod tests {
 
         /// # Returns
         ///
-        /// A CLP-S worker configuration with this fixture's input root.
-        ///
-        /// # Panics
-        ///
-        /// Panics if the temporary root is not UTF-8.
-        fn config(&self) -> SpiderTaskExecutorConfig {
+        /// A CLP-S worker configuration with a host-side input path unavailable to the worker.
+        fn config() -> SpiderTaskExecutorConfig {
             SpiderTaskExecutorConfig {
                 package: Package {
                     storage_engine: StorageEngine::ClpS,
                 },
                 logs_input: LogsInput::Fs {
                     config: FsIngestion {
-                        directory: self.root.to_str().expect("test root is UTF-8").to_owned(),
+                        directory: "/host-only/input/path".to_owned(),
                     },
                 },
                 ..SpiderTaskExecutorConfig::default()
@@ -1119,7 +1117,7 @@ mod tests {
 
         crate::common::init_runtime().expect("test runtime should initialize");
         let fixture = FsFixture::new();
-        let config = fixture.config();
+        let config = FsFixture::config();
         let source = S3InputSource {
             endpoint_url: Some(NonEmptyString::from_static_str("http://localhost:4566")),
             region_code: None,
@@ -1134,7 +1132,7 @@ mod tests {
             object_keys: vec!["input.json".to_owned()],
         };
         let prepared_source = source
-            .prepare(&config.logs_input)
+            .prepare()
             .expect("valid source should be prepared")
             .expect("s3 preparation produces an explicit list");
         let list_path = fixture.root.join("s3-list.txt");
@@ -1304,11 +1302,18 @@ mod tests {
                     .to_owned(),
             ],
         };
-        let config = fixture.config();
-        let prepared_source = source
-            .prepare(&config.logs_input)
-            .expect("valid source should be prepared")
-            .expect("a zero-byte file still requires compression");
+        let config = FsFixture::config();
+        let logs_list = build_fs_logs_list(&source, &fixture.mount_point)
+            .expect("valid source should be prepared");
+        assert!(
+            !logs_list.is_empty(),
+            "a zero-byte file still requires compression"
+        );
+        let prepared_source = PreparedSource::<FsInputSource> {
+            logs_list,
+            credential_env: vec![],
+            source_type: PhantomData,
+        };
         let list_path = fixture.root.join("input-list.txt");
         let mut cleanup = TmpFileDeleter::new();
         let input_list = InputList::new(list_path.clone(), prepared_source, &mut cleanup)
@@ -1342,6 +1347,39 @@ mod tests {
         assert!(file.exists());
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn fs_list_preserves_internal_alias_and_resolves_external_alias() {
+        let mut fixture = FsFixture::new();
+        let file = fixture.root.join("input.json");
+        std::fs::write(&file, []).expect("test input file should be created");
+        let internal_alias = fixture.root.join("alias.json");
+        std::os::unix::fs::symlink(&file, &internal_alias)
+            .expect("internal alias should be created");
+        let external_alias = fixture.root.with_extension("alias");
+        std::os::unix::fs::symlink(&file, &external_alias)
+            .expect("external alias should be created");
+        fixture.cleanup.add(external_alias.clone());
+        let source = FsInputSource {
+            file_paths: vec![
+                internal_alias
+                    .to_str()
+                    .expect("test alias is UTF-8")
+                    .to_owned(),
+                external_alias
+                    .to_str()
+                    .expect("test alias is UTF-8")
+                    .to_owned(),
+            ],
+            empty_directories: vec![],
+        };
+        assert_eq!(
+            build_fs_logs_list(&source, &fixture.mount_point)
+                .expect("aliases into the mount should be accepted"),
+            format!("{}\n{}\n", internal_alias.display(), file.display()),
+        );
+    }
+
     #[test]
     fn fs_list_rejects_directory_in_place_of_file() {
         let fixture = FsFixture::new();
@@ -1355,15 +1393,13 @@ mod tests {
             ],
             empty_directories: vec![],
         };
-        let error = source
-            .prepare(&fixture.config().logs_input)
-            .map(|_| ())
+        let error = build_fs_logs_list(&source, &fixture.mount_point)
             .expect_err("a directory must not be recursively compressed");
         assert!(error.to_string().contains("not a regular file"));
     }
 
     #[test]
-    fn fs_empty_task_revalidates_directories_before_returning() {
+    fn fs_list_revalidates_empty_directories() {
         let fixture = FsFixture::new();
         let source = FsInputSource {
             file_paths: vec![],
@@ -1375,26 +1411,15 @@ mod tests {
                     .to_owned(),
             ],
         };
-        let output = compress(
-            &task_context(),
-            &fixture.config(),
-            &BASE_OPTION,
-            DatasetName::default(),
-            source.clone(),
-        )
-        .expect("validated empty input should succeed");
-        assert_eq!(output.archives, vec![]);
-        assert_eq!(output.dataset, DatasetName::default());
+        assert_eq!(
+            build_fs_logs_list(&source, &fixture.mount_point)
+                .expect("validated empty directories should succeed"),
+            ""
+        );
         std::fs::write(fixture.root.join("new.json"), [])
             .expect("new input file should be created");
-        let error = compress(
-            &task_context(),
-            &fixture.config(),
-            &BASE_OPTION,
-            DatasetName::default(),
-            source,
-        )
-        .expect_err("a directory populated after planning must be rejected");
+        let error = build_fs_logs_list(&source, &fixture.mount_point)
+            .expect_err("a directory populated after planning must be rejected");
         assert!(error.to_string().contains("no longer empty"));
     }
 
@@ -1410,7 +1435,7 @@ mod tests {
                 file_paths: vec![],
                 empty_directories: vec![file.to_str().expect("test path is UTF-8").to_owned()],
             };
-            assert!(source.prepare(&fixture.config().logs_input).is_err());
+            assert!(build_fs_logs_list(&source, &fixture.mount_point).is_err());
         }
     }
 
@@ -1431,7 +1456,7 @@ mod tests {
                 file_paths: vec![file.to_str().expect("test path is UTF-8").to_owned()],
                 empty_directories: vec![],
             };
-            assert!(source.prepare(&fixture.config().logs_input).is_err());
+            assert!(build_fs_logs_list(&source, &fixture.mount_point).is_err());
         }
     }
 
