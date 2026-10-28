@@ -16,6 +16,9 @@ use crate::types::non_empty_string::ExpectedNonEmpty;
 /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`. Must be kept in sync.
 pub const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
 
+/// The directory where the package mounts the logs input in its containers.
+pub const LOGS_INPUT_MOUNT_POINT: &str = "/mnt/logs";
+
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
 /// # NOTE
