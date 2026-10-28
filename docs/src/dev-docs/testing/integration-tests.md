@@ -17,6 +17,12 @@ To test the core CLP binaries:
 task tests:integration:core
 ```
 
+To test how the CLP package Helm chart renders with different values:
+
+```shell
+task tests:integration:helm
+```
+
 ### Using `pytest` markers
 
 To run more specific sets of tests, you can use `pytest` directly with `pytest` markers.
