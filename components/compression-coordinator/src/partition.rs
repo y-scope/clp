@@ -4,8 +4,8 @@ use std::collections::VecDeque;
 use std::path::Path;
 
 use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::logs_input::LogsInputPath;
 use clp_rust_utils::s3::ObjectMetadata;
-use clp_rust_utils::task_io::compression::CompressionInputSource;
 use clp_rust_utils::task_io::compression::FsInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
 
@@ -15,6 +15,12 @@ use crate::Error;
 pub trait Source {
     /// The entries accepted by this source.
     type Entry;
+
+    /// The source's file-path or object-key representation.
+    type Path: AsRef<str>;
+
+    /// The complete explicit list of input entries assigned to one compression task.
+    type Manifest;
 
     /// Validates an entry and prepares its file metadata for partitioning.
     ///
@@ -28,7 +34,10 @@ pub trait Source {
     /// Returns an error if:
     ///
     /// * [`Error`] if the entry violates the source's input constraints.
-    fn prepare_entry(&mut self, entry: Self::Entry) -> Result<Option<InputMetadata>, Error>;
+    fn prepare_entry(
+        &mut self,
+        entry: Self::Entry,
+    ) -> Result<Option<InputMetadata<Self::Path>>, Error>;
 
     /// Builds task manifests from file partitions and retained entries, preserving every entry.
     ///
@@ -40,12 +49,16 @@ pub trait Source {
     ///
     /// Manifests containing at most 4,096 entries each. Retained entries are emitted in separate
     /// manifests from files.
-    fn build_task_inputs(self, partitions: Vec<Vec<String>>) -> Vec<CompressionInputSource>;
+    fn build_manifests(self, partitions: Vec<Vec<Self::Path>>) -> Vec<Self::Manifest>;
 }
 
 /// An input path or object key and its raw size.
-pub struct InputMetadata {
-    pub path: String,
+///
+/// # Type Parameters
+///
+/// * `PathType` - The source-specific file-path or object-key representation.
+pub struct InputMetadata<PathType: AsRef<str>> {
+    pub path: PathType,
     pub size: u64,
 }
 
@@ -58,8 +71,8 @@ pub struct InputMetadata {
 ///
 /// * `SourceType` - The source that validates entries and builds compression task manifests.
 pub struct CompressionInputBuilder<SourceType: Source> {
-    buffer: Vec<FileMetadata>,
-    partitioned_paths: Vec<Vec<String>>,
+    buffer: Vec<FileMetadata<SourceType::Path>>,
+    partitioned_paths: Vec<Vec<SourceType::Path>>,
     total_buffered_size: u128,
     target_archive_size: u64,
     source: SourceType,
@@ -138,17 +151,22 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
     }
 }
 
-impl<SourceType: Source> From<CompressionInputBuilder<SourceType>> for Vec<CompressionInputSource> {
+impl<SourceType: Source> From<CompressionInputBuilder<SourceType>> for Vec<SourceType::Manifest> {
     fn from(mut builder: CompressionInputBuilder<SourceType>) -> Self {
         builder.partition(true);
-        builder.source.build_task_inputs(builder.partitioned_paths)
+        builder.source.build_manifests(builder.partitioned_paths)
     }
 }
 
 impl Source for S3Config {
     type Entry = ObjectMetadata;
+    type Path = String;
+    type Manifest = S3InputSource;
 
-    fn prepare_entry(&mut self, metadata: Self::Entry) -> Result<Option<InputMetadata>, Error> {
+    fn prepare_entry(
+        &mut self,
+        metadata: Self::Entry,
+    ) -> Result<Option<InputMetadata<Self::Path>>, Error> {
         if metadata.bucket != self.bucket {
             return Err(Error::S3BucketMismatch(
                 String::from(self.bucket.clone()),
@@ -167,38 +185,43 @@ impl Source for S3Config {
         }))
     }
 
-    fn build_task_inputs(self, partitions: Vec<Vec<String>>) -> Vec<CompressionInputSource> {
+    fn build_manifests(self, partitions: Vec<Vec<Self::Path>>) -> Vec<Self::Manifest> {
         partitions
             .into_iter()
-            .map(|object_keys| {
-                CompressionInputSource::S3(S3InputSource {
-                    endpoint_url: self.endpoint_url.clone(),
-                    region_code: self.region_code.clone(),
-                    bucket: self.bucket.clone(),
-                    aws_authentication: self.aws_authentication.clone(),
-                    object_keys,
-                })
+            .map(|object_keys| S3InputSource {
+                endpoint_url: self.endpoint_url.clone(),
+                region_code: self.region_code.clone(),
+                bucket: self.bucket.clone(),
+                aws_authentication: self.aws_authentication.clone(),
+                object_keys,
             })
             .collect()
     }
 }
 
 /// Filesystem entries supplied to the partition planner.
+///
+/// Paths are relative to the logs-input mount point, where `/` denotes that mount point.
 pub enum FsEntry {
-    File { path: String, size: u64 },
-    EmptyDirectory { path: String },
+    File { path: LogsInputPath, size: u64 },
+    EmptyDirectory { path: LogsInputPath },
 }
 
 /// Filesystem source for compression-task planning.
 #[derive(Default)]
 pub struct FsSource {
-    empty_directories: Vec<String>,
+    empty_directories: Vec<LogsInputPath>,
 }
 
 impl Source for FsSource {
     type Entry = FsEntry;
+    type Path = LogsInputPath;
+    type Manifest = FsInputSource;
 
-    fn prepare_entry(&mut self, entry: Self::Entry) -> Result<Option<InputMetadata>, Error> {
+    fn prepare_entry(
+        &mut self,
+        entry: Self::Entry,
+    ) -> Result<Option<InputMetadata<Self::Path>>, Error> {
         match entry {
             FsEntry::File { path, size } => Ok(Some(InputMetadata { path, size })),
             FsEntry::EmptyDirectory { path } => {
@@ -208,14 +231,12 @@ impl Source for FsSource {
         }
     }
 
-    fn build_task_inputs(self, partitions: Vec<Vec<String>>) -> Vec<CompressionInputSource> {
-        let mut inputs: Vec<_> = partitions
+    fn build_manifests(self, partitions: Vec<Vec<Self::Path>>) -> Vec<Self::Manifest> {
+        let mut manifests: Vec<_> = partitions
             .into_iter()
-            .map(|file_paths| {
-                CompressionInputSource::Fs(FsInputSource {
-                    file_paths,
-                    empty_directories: Vec::new(),
-                })
+            .map(|file_paths| FsInputSource {
+                file_paths,
+                empty_directories: Vec::new(),
             })
             .collect();
         let mut directories = self.empty_directories.into_iter();
@@ -224,32 +245,36 @@ impl Source for FsSource {
             if chunk.is_empty() {
                 break;
             }
-            inputs.push(CompressionInputSource::Fs(FsInputSource {
+            manifests.push(FsInputSource {
                 file_paths: Vec::new(),
                 empty_directories: chunk,
-            }));
+            });
         }
-        inputs
+        manifests
     }
 }
 
 const MAX_PARTITION_ENTRIES: usize = 4096;
 
 /// An input path and its estimated uncompressed size.
-struct FileMetadata {
-    path: String,
+///
+/// # Type Parameters
+///
+/// * `PathType` - The source-specific file-path or object-key representation.
+struct FileMetadata<PathType: AsRef<str>> {
+    path: PathType,
     estimated_size: u64,
 }
 
-impl FileMetadata {
+impl<PathType: AsRef<str>> FileMetadata<PathType> {
     /// Creates metadata for the input identified by `path`, estimating its uncompressed size from
     /// its raw `size`.
     ///
     /// # Returns
     ///
     /// A new [`FileMetadata`].
-    fn new(path: String, size: u64) -> Self {
-        let estimated_size = estimate_uncompressed_size(&path, size);
+    fn new(path: PathType, size: u64) -> Self {
+        let estimated_size = estimate_uncompressed_size(path.as_ref(), size);
         Self {
             path,
             estimated_size,
@@ -258,17 +283,21 @@ impl FileMetadata {
 }
 
 /// Owns filename-similarity groups and returns one object from each group in round-robin order.
-struct RoundRobinIterator {
-    groups: VecDeque<std::vec::IntoIter<FileMetadata>>,
+///
+/// # Type Parameters
+///
+/// * `PathType` - The source-specific file-path or object-key representation.
+struct RoundRobinIterator<PathType: AsRef<str>> {
+    groups: VecDeque<std::vec::IntoIter<FileMetadata<PathType>>>,
 }
 
-impl RoundRobinIterator {
+impl<PathType: AsRef<str>> RoundRobinIterator<PathType> {
     /// Groups objects by filename similarity and creates a round-robin iterator over the groups.
     ///
     /// # Returns
     ///
     /// A new [`RoundRobinIterator`].
-    fn new(files: Vec<FileMetadata>) -> Self {
+    fn new(files: Vec<FileMetadata<PathType>>) -> Self {
         let groups = group_files_by_similar_filenames(files)
             .into_iter()
             .map(IntoIterator::into_iter)
@@ -278,14 +307,14 @@ impl RoundRobinIterator {
     }
 }
 
-impl From<RoundRobinIterator> for Vec<FileMetadata> {
-    fn from(iterator: RoundRobinIterator) -> Self {
+impl<PathType: AsRef<str>> From<RoundRobinIterator<PathType>> for Vec<FileMetadata<PathType>> {
+    fn from(iterator: RoundRobinIterator<PathType>) -> Self {
         iterator.groups.into_iter().flatten().collect()
     }
 }
 
-impl Iterator for RoundRobinIterator {
-    type Item = FileMetadata;
+impl<PathType: AsRef<str>> Iterator for RoundRobinIterator<PathType> {
+    type Item = FileMetadata<PathType>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut group = self.groups.pop_front()?;
@@ -348,21 +377,29 @@ fn filename(path: &str) -> &str {
 /// Places files with sufficiently similar filenames into the same group based on their normalized
 /// Levenshtein similarity.
 ///
+/// # Type Parameters
+///
+/// * `PathType` - The source-specific file-path or object-key representation.
+///
 /// # Returns
 ///
 /// A vector of filename-similarity groups.
-fn group_files_by_similar_filenames(mut files: Vec<FileMetadata>) -> Vec<Vec<FileMetadata>> {
+fn group_files_by_similar_filenames<PathType: AsRef<str>>(
+    mut files: Vec<FileMetadata<PathType>>,
+) -> Vec<Vec<FileMetadata<PathType>>> {
     const FILE_GROUPING_MIN_LEVENSHTEIN_RATIO: f64 = 0.6;
 
-    files.sort_by(|a, b| filename(&a.path).cmp(filename(&b.path)));
-    files
-        .into_iter()
-        .fold(Vec::new(), |mut groups: Vec<Vec<FileMetadata>>, curr| {
+    files.sort_by(|a, b| filename(a.path.as_ref()).cmp(filename(b.path.as_ref())));
+    files.into_iter().fold(
+        Vec::new(),
+        |mut groups: Vec<Vec<FileMetadata<PathType>>>, curr| {
             match groups.last_mut() {
                 Some(group)
                     if group.last().is_some_and(|prev| {
-                        strsim::normalized_levenshtein(filename(&prev.path), filename(&curr.path))
-                            >= FILE_GROUPING_MIN_LEVENSHTEIN_RATIO
+                        strsim::normalized_levenshtein(
+                            filename(prev.path.as_ref()),
+                            filename(curr.path.as_ref()),
+                        ) >= FILE_GROUPING_MIN_LEVENSHTEIN_RATIO
                     }) =>
                 {
                     group.push(curr);
@@ -370,7 +407,8 @@ fn group_files_by_similar_filenames(mut files: Vec<FileMetadata>) -> Vec<Vec<Fil
                 _ => groups.push(vec![curr]),
             }
             groups
-        })
+        },
+    )
 }
 
 #[cfg(test)]
@@ -384,15 +422,53 @@ mod tests {
 
     const TEST_BUCKET: &str = "test-bucket";
 
+    trait ManifestEntries {
+        type Path: AsRef<str> + std::fmt::Debug + PartialEq;
+
+        /// # Returns
+        ///
+        /// The file paths or object keys assigned to the task.
+        fn file_paths(&self) -> &[Self::Path];
+
+        /// # Returns
+        ///
+        /// The number of file and directory entries assigned to the task.
+        fn num_entries(&self) -> usize;
+    }
+
+    impl ManifestEntries for S3InputSource {
+        type Path = String;
+
+        fn file_paths(&self) -> &[Self::Path] {
+            &self.object_keys
+        }
+
+        fn num_entries(&self) -> usize {
+            self.object_keys.len()
+        }
+    }
+
+    impl ManifestEntries for FsInputSource {
+        type Path = LogsInputPath;
+
+        fn file_paths(&self) -> &[Self::Path] {
+            &self.file_paths
+        }
+
+        fn num_entries(&self) -> usize {
+            self.file_paths.len() + self.empty_directories.len()
+        }
+    }
+
     /// # Type Parameters
     ///
     /// * `SourceType` - The source used to construct compression task manifests.
-    struct Fixture<SourceType: Source> {
+    struct Fixture<SourceType: Source<Manifest: ManifestEntries>> {
         builder: CompressionInputBuilder<SourceType>,
         path_to_size: BTreeMap<String, u64>,
     }
 
-    impl<SourceType: Source> Fixture<SourceType> {
+    impl<SourceType: Source<Manifest: ManifestEntries>> Fixture<SourceType> {
         /// # Returns
         ///
         /// An empty fixture with the supplied source and target archive size.
@@ -415,44 +491,42 @@ mod tests {
         /// Panics if the file inputs differ from the recorded inputs, a manifest is empty or
         /// exceeds the entry limit, or a partition contains additional files after reaching the
         /// target size.
-        fn assert_partitions(self) -> Vec<CompressionInputSource> {
+        fn assert_partitions(self) -> Vec<SourceType::Manifest> {
             let target_archive_size = self.builder.target_archive_size;
-            let input_sources = Vec::<CompressionInputSource>::from(self.builder);
+            let manifests = Vec::<SourceType::Manifest>::from(self.builder);
             let mut path_counts: BTreeMap<&str, usize> = BTreeMap::new();
-            for path in input_sources.iter().flat_map(CompressionInputSource::paths) {
-                *path_counts.entry(path.as_str()).or_default() += 1;
+            for path in manifests.iter().flat_map(ManifestEntries::file_paths) {
+                *path_counts.entry(path.as_ref()).or_default() += 1;
             }
             for path in self.path_to_size.keys() {
                 assert_eq!(path_counts.remove(path.as_str()), Some(1));
             }
             assert_eq!(path_counts, BTreeMap::new());
 
-            for source in &input_sources {
-                let paths = source.paths();
-                let num_entries = match source {
-                    CompressionInputSource::S3(source) => source.object_keys.len(),
-                    CompressionInputSource::Fs(source) => {
-                        source.file_paths.len() + source.empty_directories.len()
-                    }
-                };
+            for manifest in &manifests {
+                let paths = manifest.file_paths();
+                let num_entries = manifest.num_entries();
                 assert!((1..=MAX_PARTITION_ENTRIES).contains(&num_entries));
                 let Some((_, preceding_paths)) = paths.split_last() else {
                     continue;
                 };
                 if target_archive_size == 0 {
-                    assert_eq!(preceding_paths, [] as [String; 0]);
+                    assert_eq!(preceding_paths, &[]);
                 } else {
                     let preceding_size: u128 = preceding_paths
                         .iter()
                         .map(|path| {
-                            let size = self.path_to_size.get(path).expect("every path was added");
-                            u128::from(estimate_uncompressed_size(path, *size))
+                            let size = self
+                                .path_to_size
+                                .get(path.as_ref())
+                                .expect("every path was added");
+                            u128::from(estimate_uncompressed_size(path.as_ref(), *size))
                         })
                         .sum();
                     assert!(preceding_size < u128::from(target_archive_size));
                 }
             }
-            input_sources
+            manifests
         }
     }
 
@@ -482,7 +556,10 @@ mod tests {
         /// Panics if a file path was already added or the source rejects the entry.
         fn add(&mut self, entry: FsEntry) {
             if let FsEntry::File { path, size } = &entry {
-                assert_eq!(self.path_to_size.insert(path.clone(), *size), None);
+                assert_eq!(
+                    self.path_to_size.insert(path.as_ref().to_owned(), *size),
+                    None
+                );
             }
             self.builder
                 .add(entry)
@@ -542,7 +619,10 @@ mod tests {
     fn fs_manifests_bound_zero_size_files_and_empty_directories() {
         let count = MAX_PARTITION_ENTRIES + 17;
         let directories: Vec<_> = (0..count)
-            .map(|index| format!("/logs/empty/{index}"))
+            .map(|index| {
+                LogsInputPath::try_from(format!("/empty/{index}"))
+                    .expect("test path should be valid")
+            })
             .collect();
         let mut fixture = Fixture::new(FsSource::default(), 1024);
         for directory in &directories {
@@ -552,35 +632,34 @@ mod tests {
         }
         for index in 0..count {
             fixture.add(FsEntry::File {
-                path: format!("/logs/file/{index}"),
+                path: LogsInputPath::try_from(format!("/file/{index}"))
+                    .expect("test path should be valid"),
                 size: 0,
             });
         }
-        let inputs = fixture.assert_partitions();
+        let manifests = fixture.assert_partitions();
         let mut all_directories = Vec::new();
-        for input in inputs {
-            let CompressionInputSource::Fs(source) = input else {
-                panic!("expected filesystem manifest")
-            };
-            assert!(source.file_paths.is_empty() || source.empty_directories.is_empty());
-            all_directories.extend(source.empty_directories);
+        for manifest in manifests {
+            assert!(manifest.file_paths.is_empty() || manifest.empty_directories.is_empty());
+            all_directories.extend(manifest.empty_directories);
         }
-        all_directories.sort();
+        all_directories.sort_by(|left, right| left.as_ref().cmp(right.as_ref()));
         let mut expected_directories = directories;
-        expected_directories.sort();
+        expected_directories.sort_by(|left, right| left.as_ref().cmp(right.as_ref()));
         assert_eq!(all_directories, expected_directories);
 
-        let directory = "/logs/directory-only";
+        let directory = LogsInputPath::try_from("//directory-only/./".to_owned())
+            .expect("test path should be valid");
         let mut directory_fixture = Fixture::new(FsSource::default(), 1024);
         directory_fixture.add(FsEntry::EmptyDirectory {
-            path: directory.to_owned(),
+            path: directory.clone(),
         });
         assert_eq!(
             directory_fixture.assert_partitions(),
-            [CompressionInputSource::Fs(FsInputSource {
+            [FsInputSource {
                 file_paths: Vec::new(),
-                empty_directories: vec![directory.to_owned()],
-            }),]
+                empty_directories: vec![directory],
+            }]
         );
     }
 
@@ -588,7 +667,7 @@ mod tests {
     fn fs_extreme_sizes_partition_without_overflow_or_lost_inputs() {
         let mut zero_target_fixture = Fixture::new(FsSource::default(), 0);
         zero_target_fixture.add(FsEntry::File {
-            path: "/logs/zero".to_owned(),
+            path: LogsInputPath::try_from("/zero".to_owned()).expect("test path should be valid"),
             size: 0,
         });
         zero_target_fixture.assert_partitions();
@@ -601,33 +680,33 @@ mod tests {
         ];
         for (path, size) in files {
             fixture.add(FsEntry::File {
-                path: path.to_owned(),
+                path: LogsInputPath::try_from(path.to_owned()).expect("test path should be valid"),
                 size,
             });
         }
-        let inputs = fixture.assert_partitions();
-        let paths: Vec<_> = inputs
+        let manifests = fixture.assert_partitions();
+        let paths: Vec<_> = manifests
             .iter()
-            .flat_map(CompressionInputSource::paths)
-            .map(String::as_str)
+            .flat_map(ManifestEntries::file_paths)
+            .map(AsRef::as_ref)
             .collect();
         assert_eq!(paths, files.map(|(path, _)| path));
-        assert_eq!(inputs.len(), files.len());
+        assert_eq!(manifests.len(), files.len());
         assert_eq!(estimate_uncompressed_size("input.gz", u64::MAX), u64::MAX);
         assert_eq!(estimate_uncompressed_size("input.zst", u64::MAX), u64::MAX);
 
         let mut fixture = Fixture::new(FsSource::default(), u64::MAX - 1);
         for path in ["/logs/a", "/logs/b", "/logs/c"] {
             fixture.add(FsEntry::File {
-                path: path.to_owned(),
+                path: LogsInputPath::try_from(path.to_owned()).expect("test path should be valid"),
                 size: u64::MAX / 2,
             });
         }
-        let inputs = fixture.assert_partitions();
+        let manifests = fixture.assert_partitions();
         assert_eq!(
-            inputs
+            manifests
                 .iter()
-                .map(|source| source.paths().len())
+                .map(|manifest| manifest.file_paths.len())
                 .collect::<Vec<_>>(),
             [2, 1]
         );

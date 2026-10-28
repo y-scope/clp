@@ -13,7 +13,6 @@ use clp_rust_utils::job_config::InputConfig;
 use clp_rust_utils::s3::ObjectMetadata;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
-use clp_rust_utils::task_io::compression::CompressionInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
@@ -345,22 +344,19 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             }
         }
 
-        let input_sources = Vec::<CompressionInputSource>::from(input_builder);
-        if input_sources.is_empty() {
+        let manifests = Vec::<S3InputSource>::from(input_builder);
+        if manifests.is_empty() {
             return Err(Error::NoTaskInputs);
         }
 
-        Ok(input_sources
+        Ok(manifests
             .into_iter()
-            .map(|input_source| {
-                let CompressionInputSource::S3(input_source) = input_source else {
-                    unreachable!("ingestion metadata produces only S3 input sources")
-                };
+            .map(|manifest| {
                 // NOTE: The timeout policy scales with the number of objects assigned to the task.
                 // Each object contributes three minutes to the soft timeout and five minutes to
                 // the hard timeout. This heuristic does not account for object size and can be
                 // refined in the future.
-                let num_objects = input_source.object_keys.len() as u64;
+                let num_objects = manifest.object_keys.len() as u64;
                 let execution_policy = ExecutionPolicy {
                     max_num_retry: self.spider_option.compression_task_max_retry,
                     timeout_policy: TimeoutPolicy {
@@ -369,7 +365,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                     },
                     ..ExecutionPolicy::default()
                 };
-                (input_source, execution_policy)
+                (manifest, execution_policy)
             })
             .collect())
     }

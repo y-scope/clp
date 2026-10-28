@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use crate::clp_config::AwsAuthentication;
 use crate::dataset::DatasetName;
+use crate::logs_input::LogsInputPath;
 use crate::types::ArchiveId;
 
 /// `clp-s` tuning and engine options for a compression job.
@@ -17,35 +18,15 @@ pub struct ClpSCompressionOption {
     pub unstructured: bool,
 }
 
-/// Input manifest for a compression task.
+/// A manifest is the complete explicit list of input entries assigned to one compression task.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "source", rename_all = "snake_case")]
 pub enum CompressionInputSource {
-    Fs(FsInputSource),
     S3(S3InputSource),
+    Fs(FsInputSource),
 }
 
-impl CompressionInputSource {
-    /// # Returns
-    ///
-    /// The file paths or object keys assigned to the task.
-    #[must_use]
-    pub fn paths(&self) -> &[String] {
-        match self {
-            Self::Fs(source) => &source.file_paths,
-            Self::S3(source) => &source.object_keys,
-        }
-    }
-}
-
-/// Filesystem entries assigned to one compression task.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FsInputSource {
-    pub file_paths: Vec<String>,
-    pub empty_directories: Vec<String>,
-}
-
-/// S3 objects assigned to one compression task.
+/// A complete explicit list of S3 objects assigned to one compression task.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct S3InputSource {
     pub endpoint_url: Option<NonEmptyString>,
@@ -53,6 +34,16 @@ pub struct S3InputSource {
     pub bucket: NonEmptyString,
     pub aws_authentication: AwsAuthentication,
     pub object_keys: Vec<String>,
+}
+
+/// A complete explicit list of filesystem entries assigned to one compression task.
+///
+/// Paths are relative to the logs-input mount point: `/` denotes that mount point. They are not
+/// container paths; consumers must translate them through the logs-input mount point.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FsInputSource {
+    pub file_paths: Vec<LogsInputPath>,
+    pub empty_directories: Vec<LogsInputPath>,
 }
 
 /// Output of a compression task.
