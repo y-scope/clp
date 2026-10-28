@@ -196,7 +196,7 @@ auto compress_and_extract(
 
 auto validate_archive_header(clp_s::ClpFlavour expected_flavour) -> void {
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
-        clp_s::ArchiveReader archive_reader{
+        clp_s::ArchiveReader const archive_reader{
                 clp_s::Path{
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
@@ -220,6 +220,23 @@ auto validate_archive_header(clp_s::ClpFlavour expected_flavour) -> void {
         for (size_t i{0}; i < cReservedPaddingLength; ++i) {
             REQUIRE(0ULL == archive_header.reserved_padding[i]);
         }
+
+        std::vector<std::string_view> expected_sections;
+        expected_sections.emplace_back(clp_s::constants::cArchiveSchemaTreeFile);
+        expected_sections.emplace_back(clp_s::constants::cArchiveSchemaMapFile);
+        expected_sections.emplace_back(clp_s::constants::cArchiveTableMetadataFile);
+        if (clp_s::ClpFlavour::Clpp == expected_flavour) {
+            expected_sections.emplace_back(clp_s::constants::cArchiveParsingSpecFile);
+        }
+        expected_sections.emplace_back(clp_s::constants::cArchiveVarDictFile);
+        expected_sections.emplace_back(clp_s::constants::cArchiveLogDictFile);
+        expected_sections.emplace_back(clp_s::constants::cArchiveArrayDictFile);
+        if (clp_s::ClpFlavour::Clpp == expected_flavour) {
+            expected_sections.emplace_back(clp_s::constants::cArchiveParentRuleShapesFile);
+            expected_sections.emplace_back(clp_s::constants::cArchiveLogShapeStatsFile);
+        }
+        expected_sections.emplace_back(clp_s::constants::cArchiveTablesFile);
+        REQUIRE(expected_sections == archive_reader.get_sections());
     }
 }
 

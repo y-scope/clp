@@ -111,10 +111,18 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             {constants::cArchiveSchemaTreeFile, schema_tree_compressed_size},
             {constants::cArchiveSchemaMapFile, schema_map_compressed_size},
             {constants::cArchiveTableMetadataFile, table_metadata_compressed_size},
-            {constants::cArchiveVarDictFile, var_dict_compressed_size},
-            {constants::cArchiveLogDictFile, log_dict_compressed_size},
-            {constants::cArchiveArrayDictFile, array_dict_compressed_size}
     };
+
+    if (m_clpp.has_value()) {
+        files.emplace_back(
+                std::string(constants::cArchiveParsingSpecFile),
+                store_parsing_spec(m_clpp->parsing_spec)
+        );
+    }
+
+    files.emplace_back(constants::cArchiveVarDictFile, var_dict_compressed_size);
+    files.emplace_back(constants::cArchiveLogDictFile, log_dict_compressed_size);
+    files.emplace_back(constants::cArchiveArrayDictFile, array_dict_compressed_size);
 
     if (m_clpp.has_value()) {
         auto& clpp{m_clpp.value()};
@@ -125,10 +133,6 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
         files.emplace_back(
                 std::string(constants::cArchiveLogShapeStatsFile),
                 close_log_shape_stats(clpp)
-        );
-        files.emplace_back(
-                std::string(constants::cArchiveParsingSpecFile),
-                store_parsing_spec(clpp.parsing_spec)
         );
     }
 

@@ -167,9 +167,12 @@ public:
     auto read_log_shape_stats_array() -> ystdlib::error_handling::Result<clpp::LogShapeStatsArray>;
 
     /**
-     * Reads the parsing specification from the archive.
+     * @return The parsing specification, reading it from the archive if it hasn't been read yet, or
+     * an error code indicating the failure:
+     * - `clpp::ClppErrorCodeEnum::BadParam` if the archive isn't clpp-flavour.
+     * @throws OperationFailed if reading or decompressing the parsing specification fails.
      */
-    auto read_parsing_spec() -> ystdlib::error_handling::Result<std::string>;
+    auto read_parsing_spec() -> ystdlib::error_handling::Result<std::string_view>;
 
     /**
      * Reads the metadata from the archive.
@@ -259,6 +262,13 @@ public:
         return m_archive_reader_adaptor->get_header();
     }
 
+    /**
+     * @return The names of every section in the archive, in on-disk order.
+     */
+    [[nodiscard]] auto get_sections() const -> std::vector<std::string_view> {
+        return m_archive_reader_adaptor->get_sections();
+    }
+
     auto get_log_shape_stats_array() -> clpp::LogShapeStatsArray const&;
 
     auto get_parent_rule_shapes_array() -> clpp::ParentRuleShapesArray const&;
@@ -325,6 +335,7 @@ public:
 private:
     // Types
     struct Clpp {
+        std::optional<std::string> parsing_spec;
         std::shared_ptr<LogShapeDictionaryReader> log_shape_dict;
         std::optional<clpp::LogShapeStatsArray> log_shape_stats_array;
         std::optional<clpp::ParentRuleShapesArray> parent_rule_shapes_array;

@@ -162,7 +162,11 @@ public:
     void open(ArchiveWriterOption const& option);
 
     /**
-     * Closes the archive writer.
+     * Closes the archive writer, storing the archive's sections in the order they must be read in
+     * a single-file archive: schema tree, schema map, table metadata, parsing spec (clpp only),
+     * variable dictionary, log type or log shape dictionary, array dictionary, parent rule shapes
+     * and log shape stats (clpp only), and finally the encoded record tables. Each section is
+     * stored before the sections that depend on it, so a reader never has to seek backwards.
      * @param is_split Whether the last file ingested into the archive is split.
      * @return Statistics for the newly-written archive.
      */

@@ -689,13 +689,17 @@ auto ArchiveReader::read_log_shape_stats_array()
     return stats_array;
 }
 
-auto ArchiveReader::read_parsing_spec() -> ystdlib::error_handling::Result<std::string> {
+auto ArchiveReader::read_parsing_spec() -> ystdlib::error_handling::Result<std::string_view> {
     if (false == m_clpp.has_value()) {
         return clpp::ClppErrorCode{clpp::ClppErrorCodeEnum::BadParam};
     }
-    ensure_section_readable(constants::cArchiveParsingSpecFile);
-    m_read_sections.emplace(constants::cArchiveParsingSpecFile);
-    return ReaderUtils::read_parsing_spec(*m_archive_reader_adaptor);
+    auto& parsing_spec{m_clpp.value().parsing_spec};
+    if (false == parsing_spec.has_value()) {
+        ensure_section_readable(constants::cArchiveParsingSpecFile);
+        m_read_sections.emplace(constants::cArchiveParsingSpecFile);
+        parsing_spec = ReaderUtils::read_parsing_spec(*m_archive_reader_adaptor);
+    }
+    return std::string_view{parsing_spec.value()};
 }
 
 auto ArchiveReader::read_parent_rule_shapes_array()
