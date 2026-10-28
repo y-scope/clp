@@ -1,0 +1,83 @@
+{{- if .Values.spider.enabled }}
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp.fullname" . }}-query-coordinator
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "query-coordinator"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "query-coordinator"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "query-coordinator"
+    spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "queryCoordinator"
+        ) | nindent 6 }}
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
+      terminationGracePeriodSeconds: 60
+      initContainers:
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "job"
+            "name" "db-table-creator"
+          ) | nindent 10 }}
+        - {{- include "clp.waitForResultsCache" . | nindent 10 }}
+        - {{- include "clp.waitFor" (dict
+            "root" .
+            "type" "service"
+            "name" "storage"
+          ) | nindent 10 }}
+      containers:
+        - name: "query-coordinator"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          env:
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "password"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-database
+                  key: "username"
+            - name: "SPIDER_EXTERNAL_RESOURCE_GROUP_ID"
+              value: "query"
+            - name: "SPIDER_RESOURCE_GROUP_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-spider-resource-groups
+                  key: "query"
+            - name: "OTEL_SERVICE_NAME"
+              value: "query-coordinator"
+            - name: "RUST_LOG"
+              value: {{ .Values.clpConfig.query_coordinator.logging_level | quote }}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "queryCoordinator"
+            ) | nindent 10 }}
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yaml"
+              subPath: "clp-config.yaml"
+              readOnly: true
+          command: [
+            "/opt/clp/bin/query-coordinator",
+            "--config", "/etc/clp-config.yaml"
+          ]
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+{{- end }}

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
-use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -17,7 +17,6 @@ use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
 use const_format::formatcp;
-use non_empty_string::NonEmptyString;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
@@ -593,12 +592,9 @@ impl ArchiveSelector<'_> {
     /// * [`Error::InvalidQueryJobConfig`] if:
     ///   * The job doesn't request any datasets, since clp-text queries aren't supported.
     ///   * The job's requested datasets are empty.
-    ///   * A dataset name doesn't match [`VALID_DATASET_NAME_REGEX`].
     ///   * The number of distinct datasets exceeds
     ///     [`ArchiveSelectionOptions::max_datasets_per_query`].
-    fn deduplicate_and_validate_requested_datasets(
-        &self,
-    ) -> Result<HashSet<NonEmptyString>, Error> {
+    fn deduplicate_and_validate_requested_datasets(&self) -> Result<HashSet<DatasetName>, Error> {
         let Some(requested_datasets) = self.search_job_config.datasets.as_deref() else {
             return Err(Error::InvalidQueryJobConfig(
                 "clp-text queries are not supported".to_owned(),
@@ -611,17 +607,7 @@ impl ArchiveSelector<'_> {
             ));
         }
 
-        let datasets = requested_datasets
-            .iter()
-            .map(|dataset| {
-                NonEmptyString::new(dataset.clone())
-                    .ok()
-                    .filter(|name| VALID_DATASET_NAME_REGEX.is_match(name.as_str()))
-                    .ok_or_else(|| {
-                        Error::InvalidQueryJobConfig(format!("invalid dataset name `{dataset}`"))
-                    })
-            })
-            .collect::<Result<HashSet<_>, _>>()?;
+        let datasets: HashSet<DatasetName> = requested_datasets.iter().cloned().collect();
 
         if let Some(max_datasets_per_query) = self
             .context
@@ -653,7 +639,7 @@ impl ArchiveSelector<'_> {
     /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
     async fn ensure_all_required_datasets_exist(
         &self,
-        datasets: &HashSet<NonEmptyString>,
+        datasets: &HashSet<DatasetName>,
     ) -> Result<(), Error> {
         let datasets_table = self.context.db_config.datasets_table_name();
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
@@ -661,7 +647,7 @@ impl ArchiveSelector<'_> {
         ));
         let mut separated_datasets = query_builder.separated(", ");
         for dataset in datasets {
-            separated_datasets.push_bind(dataset.as_str());
+            separated_datasets.push_bind(dataset);
         }
         query_builder.push(")");
 
@@ -689,14 +675,8 @@ impl ArchiveSelector<'_> {
     /// Returns an error if:
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn fetch_archives(
-        &self,
-        dataset: &NonEmptyString,
-    ) -> Result<Vec<ArchiveMetadata>, Error> {
-        let archives_table = self
-            .context
-            .db_config
-            .archives_table_name(Some(dataset.as_str()));
+    async fn fetch_archives(&self, dataset: &DatasetName) -> Result<Vec<ArchiveMetadata>, Error> {
+        let archives_table = self.context.db_config.archives_table_name(dataset);
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
             "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
         ));
@@ -724,7 +704,7 @@ impl ArchiveSelector<'_> {
             .into_iter()
             .map(|row| ArchiveMetadata {
                 id: row.id,
-                dataset: Some(dataset.clone()),
+                dataset: dataset.clone(),
                 uncompressed_size: row.uncompressed_size,
                 end_timestamp: row.end_timestamp,
             })
@@ -784,4 +764,70 @@ struct ArchiveRowProjection {
     #[sqlx(try_from = "i64")]
     uncompressed_size: u64,
     end_timestamp: i64,
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+    use std::num::NonZeroUsize;
+    use std::time::Duration;
+
+    use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::job_config::SearchJobConfig;
+    use sqlx::mysql::MySqlPoolOptions;
+
+    use super::ArchiveSelectionOptions;
+    use super::ArchiveSelector;
+    use super::QueryJobHandleContext;
+    use super::SpiderOption;
+    use crate::Error;
+
+    #[tokio::test]
+    async fn duplicate_requested_datasets_count_once_toward_max_datasets_per_query() {
+        let context = QueryJobHandleContext {
+            db_pool: MySqlPoolOptions::new()
+                .connect_lazy("mysql://localhost/clp-db")
+                .expect("the database URL should be valid"),
+            db_config: Database::default(),
+            archive_selection_options: ArchiveSelectionOptions {
+                archive_retention_period_millisecs: None,
+                max_datasets_per_query: NonZeroUsize::new(1),
+            },
+            spider_option: SpiderOption {
+                poll_interval: Duration::from_secs(1),
+                query_task_max_retry: 0,
+            },
+        };
+        let other_dataset: DatasetName = "other"
+            .parse()
+            .expect("name should be a valid dataset name");
+        let select_datasets = |datasets| {
+            let search_job_config = SearchJobConfig {
+                datasets: Some(datasets),
+                ..SearchJobConfig::default()
+            };
+            ArchiveSelector {
+                context: &context,
+                search_job_config: &search_job_config,
+                archive_end_ts_lower_bound_millisecs: None,
+            }
+            .deduplicate_and_validate_requested_datasets()
+        };
+
+        assert_eq!(
+            select_datasets(vec![DatasetName::default(), DatasetName::default()])
+                .expect("duplicate datasets should count once"),
+            HashSet::from([DatasetName::default()])
+        );
+        let error = select_datasets(vec![DatasetName::default(), other_dataset])
+            .expect_err("two distinct datasets should exceed the limit");
+        assert!(
+            matches!(
+                &error,
+                Error::InvalidQueryJobConfig(message) if message.contains("max_datasets_per_query")
+            ),
+            "unexpected error: {error:?}"
+        );
+    }
 }

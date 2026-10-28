@@ -957,6 +957,7 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 name = "clp-rust-utils"
 version = "0.13.1-dev"
 dependencies = [
+ "anyhow",
  "aws-config",
  "aws-sdk-s3",
  "aws-sdk-sqs",
@@ -971,9 +972,12 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "serde_with",
  "sqlx",
  "strum",
+ "tempfile",
  "thiserror",
+ "tokio",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
@@ -991,6 +995,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-s3",
  "clp-rust-utils",
+ "const_format",
  "non-empty-string",
  "rmp-serde",
  "secrecy",
@@ -3280,7 +3285,6 @@ dependencies = [
  "clap",
  "clp-rust-utils",
  "const_format",
- "non-empty-string",
  "rmp-serde",
  "secrecy",
  "serde",

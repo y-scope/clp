@@ -10,6 +10,7 @@ use clp_rust_utils::clp_config::package::config::LogsInput;
 use clp_rust_utils::clp_config::package::credentials::Credentials as ClpCredentials;
 use clp_rust_utils::database::mysql::MySqlEnumFormat;
 use clp_rust_utils::impl_sqlx_type;
+use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -29,7 +30,6 @@ use strum_macros::EnumString;
 use tokio::sync::mpsc;
 
 use crate::compression::Buffer;
-use crate::compression::CLP_COMPRESSION_JOB_TABLE_NAME;
 use crate::compression::CompressionBufferEntry;
 use crate::compression::CompressionJobSubmitter;
 use crate::compression::Listener;
@@ -1085,12 +1085,12 @@ impl ClpCompressionState {
     ) -> anyhow::Result<CompressionJobId> {
         const COMPRESSION_JOB_SUBMISSION_QUERY: &str = formatcp!(
             r"INSERT INTO {table} (`clp_config`) VALUES (?)",
-            table = CLP_COMPRESSION_JOB_TABLE_NAME
+            table = COMPRESSION_JOBS_TABLE_NAME
         );
 
         let object_metadata_ids: &[S3ObjectMetadataId] = match &io_config.input {
             InputConfig::S3ObjectMetadataInputConfig { config } => &config.s3_object_metadata_ids,
-            InputConfig::S3InputConfig { .. } => {
+            InputConfig::FsInputConfig { .. } | InputConfig::S3InputConfig { .. } => {
                 unreachable!("compression submission only supports `S3ObjectMetadataInputConfig`")
             }
         };
@@ -1263,7 +1263,7 @@ impl ClpCompressionState {
         loop {
             const POLLING_QUERY: &str = formatcp!(
                 r"SELECT `status`, `status_msg` FROM `{table}` WHERE `id` = ?",
-                table = CLP_COMPRESSION_JOB_TABLE_NAME
+                table = COMPRESSION_JOBS_TABLE_NAME
             );
             const MAX_SLEEP_DURATION_SEC: u32 = 30;
 
@@ -1435,7 +1435,7 @@ CREATE TABLE IF NOT EXISTS `{table}` (
         job_table = INGESTION_JOB_TABLE_NAME,
         status_enum = IngestedS3ObjectMetadataStatus::format_as_sql_enum(),
         default_status = IngestedS3ObjectMetadataStatus::Buffered,
-        compression_job_table = crate::compression::CLP_COMPRESSION_JOB_TABLE_NAME,
+        compression_job_table = COMPRESSION_JOBS_TABLE_NAME,
     )
 }
 

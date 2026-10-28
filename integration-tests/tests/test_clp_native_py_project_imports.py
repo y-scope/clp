@@ -21,7 +21,7 @@ def test_clp_native_py_project_enum_classes() -> None:
     """
     assert QueryJobType.SEARCH_OR_AGGREGATION == QueryJobType(0)
     assert JobType.COMPRESSION == JobType("compression")
-    assert StorageEngine.CLP == StorageEngine("clp")
+    assert StorageEngine.CLP_S == StorageEngine("clp-s")
     assert CompressionJobStatus.PENDING == CompressionJobStatus(0)
 
 
