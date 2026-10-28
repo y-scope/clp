@@ -405,9 +405,9 @@ impl Client {
     /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
     /// * [`ClientError::QueryJobAlreadyTerminated`] if the job has already succeeded, failed, or
     ///   been killed.
-    /// * Forwards [`query_job::cancel`]'s return values on failure.
+    /// * Forwards [`query_job::request_cancellation`]'s return values on failure.
     pub async fn cancel_query_job(&self, query_job_id: u64) -> Result<(), ClientError> {
-        match query_job::cancel(&self.sql_pool, query_job_id).await? {
+        match query_job::request_cancellation(&self.sql_pool, query_job_id).await? {
             None => Err(ClientError::QueryJobNotFound(query_job_id)),
             Some(Cancellability::Cancellable | Cancellability::CancellationRequested) => Ok(()),
             Some(Cancellability::NotCancellable) => {
@@ -426,9 +426,12 @@ impl Client {
     ///
     /// Returns an error if:
     ///
+    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
     /// * Forwards [`query_job::get_status`]'s return values on failure.
     pub async fn get_status(&self, query_job_id: u64) -> Result<QueryJobStatus, ClientError> {
-        Ok(query_job::get_status(&self.sql_pool, query_job_id).await?)
+        query_job::get_status(&self.sql_pool, query_job_id)
+            .await?
+            .ok_or(ClientError::QueryJobNotFound(query_job_id))
     }
 
     async fn get_job_config(&self, query_job_id: u64) -> Result<SearchJobConfig, ClientError> {

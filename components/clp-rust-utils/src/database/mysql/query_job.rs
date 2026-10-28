@@ -51,7 +51,7 @@ pub async fn submit(
 /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
 /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
 /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
-pub async fn cancel(
+pub async fn request_cancellation(
     db_pool: &sqlx::MySqlPool,
     query_job_id: u64,
 ) -> Result<Option<Cancellability>, crate::Error> {
@@ -85,21 +85,21 @@ pub async fn cancel(
 ///
 /// # Returns
 ///
-/// The current status of the query job on success.
+/// The current status of the query job on success, or `None` if the query job doesn't exist.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
+/// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
 pub async fn get_status(
     db_pool: &sqlx::MySqlPool,
     query_job_id: u64,
-) -> Result<QueryJobStatus, crate::Error> {
+) -> Result<Option<QueryJobStatus>, crate::Error> {
     const QUERY: &str = formatcp!("SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?");
 
     Ok(sqlx::query_scalar::<_, QueryJobStatus>(QUERY)
         .bind(query_job_id)
-        .fetch_one(db_pool)
+        .fetch_optional(db_pool)
         .await?)
 }

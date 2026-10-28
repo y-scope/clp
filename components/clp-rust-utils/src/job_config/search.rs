@@ -86,7 +86,7 @@ impl QueryJobStatus {
 }
 
 /// The cancellability of a query job, derived from its status.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Cancellability {
     Cancellable,
     CancellationRequested,
@@ -129,4 +129,39 @@ pub enum QueryJobType {
     SearchOrAggregation = 0,
     ExtractIr = 1,
     ExtractJson = 2,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cancellability;
+    use super::QueryJobStatus;
+
+    #[test]
+    fn cancellability_from_status_covers_every_status() {
+        for (status, expected) in [
+            (QueryJobStatus::Pending, Cancellability::Cancellable),
+            (QueryJobStatus::Running, Cancellability::Cancellable),
+            (
+                QueryJobStatus::CancelRequested,
+                Cancellability::CancellationRequested,
+            ),
+            (
+                QueryJobStatus::Cancelling,
+                Cancellability::CancellationRequested,
+            ),
+            (
+                QueryJobStatus::Cancelled,
+                Cancellability::CancellationRequested,
+            ),
+            (QueryJobStatus::Succeeded, Cancellability::NotCancellable),
+            (QueryJobStatus::Failed, Cancellability::NotCancellable),
+            (QueryJobStatus::Killed, Cancellability::NotCancellable),
+        ] {
+            assert_eq!(
+                Cancellability::from_status(status),
+                expected,
+                "status: {status:?}"
+            );
+        }
+    }
 }
