@@ -388,6 +388,7 @@ impl IntoResponse for HandlerError {
 mod tests {
     use axum::body::Body;
     use axum::http::HeaderValue;
+    use axum::http::Method;
     use axum::http::Request;
     use axum::http::StatusCode;
     use axum::http::header::ACCESS_CONTROL_ALLOW_ORIGIN;
@@ -398,6 +399,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::Package;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::job_config::QueryJobStatus;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
