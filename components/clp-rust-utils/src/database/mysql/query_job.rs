@@ -4,7 +4,6 @@ use const_format::formatcp;
 
 use crate::job_config::Cancellability;
 use crate::job_config::QUERY_JOBS_TABLE_NAME;
-use crate::job_config::QueryJobId;
 use crate::job_config::QueryJobStatus;
 use crate::job_config::QueryJobType;
 use crate::job_config::SearchJobConfig;
@@ -21,14 +20,10 @@ use crate::job_config::SearchJobConfig;
 ///
 /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
 /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if the inserted row's ID doesn't fit in [`QueryJobId`].
 pub async fn submit(
     db_pool: &sqlx::MySqlPool,
     search_job_config: &SearchJobConfig,
-) -> Result<QueryJobId, crate::Error> {
+) -> Result<u64, crate::Error> {
     const QUERY: &str =
         formatcp!("INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (?, ?)");
 
@@ -38,9 +33,7 @@ pub async fn submit(
         .execute(db_pool)
         .await?;
 
-    let query_job_id = query_result.last_insert_id();
-    Ok(QueryJobId::try_from(query_job_id)
-        .expect("the inserted query job's ID should fit in `QueryJobId`"))
+    Ok(query_result.last_insert_id())
 }
 
 /// Requests the cancellation of a query job.
@@ -60,7 +53,7 @@ pub async fn submit(
 /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
 pub async fn cancel(
     db_pool: &sqlx::MySqlPool,
-    query_job_id: QueryJobId,
+    query_job_id: u64,
 ) -> Result<Option<Cancellability>, crate::Error> {
     const SELECT_QUERY: &str =
         formatcp!("SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ? FOR UPDATE");
@@ -101,7 +94,7 @@ pub async fn cancel(
 /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
 pub async fn get_status(
     db_pool: &sqlx::MySqlPool,
-    query_job_id: QueryJobId,
+    query_job_id: u64,
 ) -> Result<QueryJobStatus, crate::Error> {
     const QUERY: &str = formatcp!("SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?");
 
