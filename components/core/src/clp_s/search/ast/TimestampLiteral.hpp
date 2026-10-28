@@ -34,10 +34,10 @@ public:
     TimestampLiteral(TimestampLiteral const&) = delete;
     TimestampLiteral& operator=(TimestampLiteral const&) = delete;
 
-    // Methods implementing Value
+    // Methods inherited from Value
     void print() const override;
 
-    // Methods implementing Literal
+    // Methods inherited from Literal
     [[nodiscard]] auto matches_type(LiteralType type) const -> bool override {
         return type & cTimestampLiteralTypes;
     }
@@ -50,17 +50,10 @@ public:
         return mask == cTimestampLiteralTypes;
     }
 
-    // Methods overriding Literal
-    bool as_timestamp() override { return true; }
-
-    bool as_int(int64_t& ret, FilterOperation op) override;
-
-    bool as_float(double& ret, FilterOperation op) override;
-
     /**
      * Checks compatibility with numeric and timestamp value types.
      * @param type The single value type to test.
-     * @param op The comparison operation.
+     * @param op The comparison operation; unused.
      * @return Whether `type` is integer, float, or timestamp.
      */
     [[nodiscard]] auto can_match_op(LiteralType type, FilterOperation /*op*/) const
@@ -68,6 +61,12 @@ public:
         return LiteralType::IntegerT == type || LiteralType::FloatT == type
                || LiteralType::TimestampT == type;
     }
+
+    bool as_timestamp() override { return true; }
+
+    bool as_int(int64_t& ret, FilterOperation op) override;
+
+    bool as_float(double& ret, FilterOperation op) override;
 
     // Methods
     /**

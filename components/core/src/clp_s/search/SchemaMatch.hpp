@@ -611,11 +611,11 @@ private:
     );
 
     /**
-     * Determines whether a NEXISTS filter on `column` can hold for records of `schema_id`: either
+     * Determines whether `schema_id` must be searched for a NEXISTS filter on `column`: either
      * the schema has no node for the column, or the column resolved to an unstructured array in
      * the schema with tokens left unresolved, so the array must be scanned for the remaining keys.
-     * @param column
-     * @param schema_id
+     * @param column The NEXISTS filter's column; may have unresolved tokens.
+     * @param schema_id The ID of the schema to test.
      * @return Whether `schema_id` must be searched for the NEXISTS filter.
      */
     [[nodiscard]] auto

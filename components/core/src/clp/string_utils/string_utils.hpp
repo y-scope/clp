@@ -125,6 +125,13 @@ auto to_lower(std::string& str) -> void;
 [[nodiscard]] auto consists_only_of(std::string_view str, std::string_view allowed_chars) -> bool;
 
 /**
+ * Trims trailing whitespace off of a string.
+ * @param str
+ * @return A view of `str` without its trailing whitespace.
+ */
+[[nodiscard]] auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
+
+/**
  * Same as ``wildcard_match_unsafe_case_sensitive`` except this method allows
  * the caller to specify whether the match should be case sensitive.
  *

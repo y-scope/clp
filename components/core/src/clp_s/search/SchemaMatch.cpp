@@ -691,19 +691,21 @@ auto SchemaMatch::intersect_and_sub_expr(
             }
 
             auto const& cur_schemas{column->resolved_nodes().schema_to_node_id};
-            if (first && op != FilterOperation::NEXISTS) {
-                for (auto const& [schema_id, node_id] : cur_schemas) {
-                    common_schema.insert(schema_id);
-                }
-                return false;
-            } else if (first /*&& op == FilterOperation::NEXISTS */) {
-                for (auto& schema : *m_schemas) {
-                    if (is_nexists_candidate_schema(*column, schema.first)) {
-                        common_schema.insert(schema.first);
+            if (first) {
+                if (FilterOperation::NEXISTS == op) {
+                    for (auto const& schema : *m_schemas) {
+                        if (is_nexists_candidate_schema(*column, schema.first)) {
+                            common_schema.insert(schema.first);
+                        }
+                    }
+                } else {
+                    for (auto const& [schema_id, node_id] : cur_schemas) {
+                        common_schema.insert(schema_id);
                     }
                 }
                 return false;
-            } else if (op == FilterOperation::NEXISTS) {
+            }
+            if (FilterOperation::NEXISTS == op) {
                 std::erase_if(common_schema, [&](int32_t const schema_id) -> bool {
                     return false == is_nexists_candidate_schema(*column, schema_id);
                 });

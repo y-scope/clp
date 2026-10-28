@@ -1,7 +1,6 @@
 #include "JsonParser.hpp"
 
 #include <array>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -61,15 +60,6 @@ using clp::UtcOffset;
 
 namespace clp_s {
 namespace {
-/**
- * Trims trailing whitespace off of a `string_view`. The returned `string_view` points to a subset
- * of the input `string_view`.
- *
- * @param str
- * @return The input string without trailing whitespace.
- */
-auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
-
 /**
  * Checks whether marshalling a double value to a string using a specific format matches the
  * original floating point string.
@@ -167,18 +157,6 @@ auto update_open_parent_scopes(
         mpt_node_id_t structurized_text_node_id,
         ArchiveWriter& archive_writer
 ) -> mpt_node_id_t;
-
-auto trim_trailing_whitespace(std::string_view str) -> std::string_view {
-    size_t substr_size{str.size()};
-    for (auto it{str.rbegin()}; str.rend() != it; ++it) {
-        if (std::isspace(static_cast<int>(*it))) {
-            --substr_size;
-        } else {
-            break;
-        }
-    }
-    return str.substr(0ULL, substr_size);
-}
 
 auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
         -> bool {
@@ -362,7 +340,9 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                 simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
-                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
+                        auto double_value_str{clp::string_utils::trim_trailing_whitespace(
+                                cur_value.raw_json_token()
+                        )};
                         auto const float_format_result{get_float_encoding(double_value_str)};
                         if (false == float_format_result.has_error()
                             && round_trip_is_identical(
@@ -483,7 +463,9 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                 simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
-                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
+                        auto double_value_str{clp::string_utils::trim_trailing_whitespace(
+                                cur_value.raw_json_token()
+                        )};
                         auto const float_format_result{get_float_encoding(double_value_str)};
                         if (false == float_format_result.has_error()
                             && round_trip_is_identical(
@@ -665,7 +647,7 @@ void JsonParser::parse_line(
                                 cur_key
                         );
                         auto const double_value_str{
-                                trim_trailing_whitespace(line.raw_json_token())
+                                clp::string_utils::trim_trailing_whitespace(line.raw_json_token())
                         };
                         m_current_parsed_message.add_value(
                                 node_id,
@@ -676,7 +658,9 @@ void JsonParser::parse_line(
                                 )
                         );
                     } else if (m_retain_float_format) {
-                        auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
+                        auto double_value_str{
+                                clp::string_utils::trim_trailing_whitespace(line.raw_json_token())
+                        };
                         auto const float_format_result{get_float_encoding(double_value_str)};
                         if (false == float_format_result.has_error()
                             && round_trip_is_identical(
@@ -712,7 +696,7 @@ void JsonParser::parse_line(
             case simdjson::ondemand::json_type::string: {
                 if (m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key)) {
                     auto const raw_timestamp_literal{
-                            trim_trailing_whitespace(line.raw_json_token())
+                            clp::string_utils::trim_trailing_whitespace(line.raw_json_token())
                     };
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::Timestamp, cur_key);

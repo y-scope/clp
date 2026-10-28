@@ -73,10 +73,12 @@ public:
 
     /**
      * Checks compatibility with a value type and comparison operation without converting the
-     * literal. Numeric compatibility includes exact numeric interpretations and, for EQ/NEQ,
-     * wildcard patterns whose characters could appear in the requested numeric type's text.
-     * Wildcard compatibility is conservative and does not guarantee a match against any particular
-     * value.
+     * literal. For a wildcard pattern, numeric compatibility only indicates that the pattern's
+     * characters could appear in a number's text; it does not guarantee a match against any
+     * particular value. Conversely, a pattern reported as incompatible with a numeric type (e.g.,
+     * `*abc*` against integers) still satisfies a negated equality (`NEQ`, or `NOT` + `EQ`) for
+     * every value of that type, since no value's text matches the pattern; callers must keep the
+     * numeric types searchable in that case.
      * @param type The single value type to test.
      * @param op The comparison operation; existence operations are handled separately by callers.
      * @return Whether the literal is compatible with `type` under `op`.
@@ -86,31 +88,19 @@ public:
     /**
      * @return Whether the literal contains an unescaped wildcard.
      */
-    [[nodiscard]] auto has_wildcard() const -> bool override { return m_wildcard.exists; }
+    [[nodiscard]] auto has_wildcard() const -> bool override { return 0 != m_wildcard_types; }
 
 private:
-    // Types
-    /**
-     * Wildcard presence and compatibility with numeric text.
-     */
-    struct WildcardProperties {
-        // Whether the literal contains an unescaped wildcard.
-        bool exists{false};
-        // Whether a wildcard is present and the pattern passes the integer-character heuristic.
-        bool matches_int{false};
-        // Whether a wildcard is present and the pattern passes the float-character heuristic.
-        bool matches_float{false};
-    };
-
     // Constructors
     /**
-     * Creates a literal with the supplied interpretations and wildcard properties.
+     * Creates a literal with the supplied interpretations.
      * @param types The compatible literal types.
      * @param string_value The string interpretation.
      * @param float_option The floating-point interpretation, if available.
      * @param bool_option The boolean interpretation, if available.
      * @param int_bounds_option The integer floor and ceiling, if representable.
-     * @param wildcard_properties The wildcard presence and numeric compatibility.
+     * @param wildcard_types The types whose text the wildcard pattern can be matched against (0 if
+     * no unescaped wildcard).
      */
     ValueLiteral(
             literal_type_bitmask_t types,
@@ -118,14 +108,24 @@ private:
             std::optional<double> float_option,
             std::optional<bool> bool_option,
             std::optional<std::pair<int64_t, int64_t>> int_bounds_option,
-            WildcardProperties wildcard_properties
+            literal_type_bitmask_t wildcard_types
     )
             : m_types{types},
               m_string{std::move(string_value)},
               m_float_option{float_option},
               m_bool_option{bool_option},
               m_int_bounds_option{std::move(int_bounds_option)},
-              m_wildcard{wildcard_properties} {}
+              m_wildcard_types{wildcard_types} {}
+
+    // Methods
+    /**
+     * Resolves the integer bound this literal compares against under `op`: ordering operations
+     * resolve to the corresponding bound, equality operations require the bounds to coincide.
+     * @param op The comparison operation.
+     * @return The bound, or empty if the literal has no integer bounds or cannot be compared
+     * against an integer under `op`.
+     */
+    [[nodiscard]] auto int_bound_for_op(FilterOperation op) const -> std::optional<int64_t>;
 
     // Data members
     literal_type_bitmask_t m_types{};
@@ -133,7 +133,7 @@ private:
     std::optional<double> m_float_option;
     std::optional<bool> m_bool_option;
     std::optional<std::pair<int64_t, int64_t>> m_int_bounds_option;
-    WildcardProperties m_wildcard;
+    literal_type_bitmask_t m_wildcard_types{};
 };
 }  // namespace clp_s::search::ast
 

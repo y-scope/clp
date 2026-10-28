@@ -1,6 +1,7 @@
 #include "NarrowTypes.hpp"
 
 #include <algorithm>
+#include <array>
 
 #include "ConstantProp.hpp"
 #include "EmptyExpr.hpp"
@@ -47,30 +48,38 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
         bool narrowed_var_string = false;
         bool matches_var_and_clp_string = column->matches_type(LiteralType::ClpStringT)
                                           && column->matches_type(LiteralType::VarStringT);
+        bool const is_negated_equality{
+                (filter->is_inverted() && FilterOperation::EQ == op)
+                || (false == filter->is_inverted() && FilterOperation::NEQ == op)
+        };
 
         if (false == literal->as_any(op)) {
-            if (false == literal->can_match_op(LiteralType::ClpStringT, op)) {
-                narrowed_clp_string = true;
-                column->remove_matching_type(LiteralType::ClpStringT);
-            }
-            if (false == literal->can_match_op(LiteralType::VarStringT, op)) {
-                narrowed_var_string = true;
-                column->remove_matching_type(LiteralType::VarStringT);
+            constexpr std::array cNarrowableLiteralTypes{
+                    LiteralType::IntegerT,
+                    LiteralType::FloatT,
+                    LiteralType::ClpStringT,
+                    LiteralType::VarStringT,
+                    LiteralType::BooleanT,
+                    LiteralType::ArrayT,
+                    LiteralType::NullT,
+                    LiteralType::TimestampT
+            };
+            for (auto const type : cNarrowableLiteralTypes) {
+                // A wildcard is matched against numeric text, so under a negated equality the
+                // numeric types must stay searchable even when the pattern can't be numeric text:
+                // a number can never match such a pattern, so it always satisfies the negation.
+                if (literal->can_match_op(type, op)
+                    || (is_negated_equality && literal->has_wildcard()
+                        && (LiteralType::IntegerT == type || LiteralType::FloatT == type)))
+                {
+                    continue;
+                }
+                column->remove_matching_type(type);
+                narrowed_clp_string |= LiteralType::ClpStringT == type;
+                narrowed_var_string |= LiteralType::VarStringT == type;
             }
             if (narrowed_clp_string && narrowed_var_string) {
                 column->remove_matching_type(LiteralType::ClppDecomposeT);
-            }
-            for (auto const type :
-                 {LiteralType::IntegerT,
-                  LiteralType::FloatT,
-                  LiteralType::BooleanT,
-                  LiteralType::ArrayT,
-                  LiteralType::NullT,
-                  LiteralType::TimestampT})
-            {
-                if (false == literal->can_match_op(type, op)) {
-                    column->remove_matching_type(type);
-                }
             }
         }
 
@@ -106,10 +115,9 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
          *   variable string, and the EXISTS column would be pinned to a single string type that can
          *   never resolve to the StructurizedText or ParentRule node a shape() column requires.
          */
-        if (((filter->is_inverted() && FilterOperation::EQ == op)
-             || (false == filter->is_inverted() && FilterOperation::NEQ == op))
-            && matches_var_and_clp_string && narrowed_clp_string != narrowed_var_string
-            && false == column->is_pure_wildcard() && false == column->is_shape_query())
+        if (is_negated_equality && matches_var_and_clp_string
+            && narrowed_clp_string != narrowed_var_string && false == column->is_pure_wildcard()
+            && false == column->is_shape_query())
         {
             auto exists_column_type
                     = narrowed_clp_string ? LiteralType::ClpStringT : LiteralType::VarStringT;

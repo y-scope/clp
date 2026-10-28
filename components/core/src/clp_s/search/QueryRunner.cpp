@@ -66,6 +66,7 @@ namespace {
  * @param operand The wildcard pattern operand.
  * @param readers The numeric columns to search.
  * @param cur_message The index of the message to evaluate.
+ * @param ignore_case Whether to ignore case when matching.
  * @return Whether the filter holds for any reader.
  */
 template <typename T>
@@ -73,7 +74,8 @@ auto evaluate_numeric_wildcard_filter(
         ast::FilterOperation op,
         std::shared_ptr<ast::Literal> const& operand,
         std::vector<BaseColumnReader*> const& readers,
-        uint64_t cur_message
+        uint64_t cur_message,
+        bool ignore_case
 ) -> bool;
 
 /**
@@ -81,17 +83,27 @@ auto evaluate_numeric_wildcard_filter(
  * @tparam T The numeric type.
  * @param value The number to match.
  * @param pattern The wildcard pattern.
+ * @param ignore_case Whether to ignore case when matching.
  * @return Whether the formatted `value` matches `pattern`.
  */
 template <typename T>
-auto wildcard_matches_number(T value, std::string_view pattern) -> bool;
+auto wildcard_matches_number(T value, std::string_view pattern, bool ignore_case) -> bool;
+
+/**
+ * Rewrites a negated array operation to its positive form: NEQ over an array must hold for every
+ * element, so it is evaluated as a negated EQ, and NEXISTS is the negation of EXISTS.
+ * @param op The operation to rewrite in place; unchanged if it is not negated.
+ * @return Whether the caller must negate the evaluation result.
+ */
+[[nodiscard]] auto rewrite_negated_array_op(ast::FilterOperation& op) -> bool;
 
 template <typename T>
 auto evaluate_numeric_wildcard_filter(
         ast::FilterOperation op,
         std::shared_ptr<ast::Literal> const& operand,
         std::vector<BaseColumnReader*> const& readers,
-        uint64_t cur_message
+        uint64_t cur_message,
+        bool ignore_case
 ) -> bool {
     std::string pattern;
     if (false == operand->as_var_string(pattern, op)
@@ -102,17 +114,29 @@ auto evaluate_numeric_wildcard_filter(
     std::string value_string;
     for (BaseColumnReader* reader : readers) {
         bool matched{false};
-        if (std::is_floating_point_v<T>
-            && (NodeType::FormattedFloat == reader->get_type()
-                || NodeType::DictionaryFloat == reader->get_type()))
-        {
-            value_string.clear();
-            reader->extract_string_value_into_buffer(cur_message, value_string);
-            matched = clp::string_utils::wildcard_match_unsafe(value_string, pattern, false);
+        if constexpr (std::is_floating_point_v<T>) {
+            if (NodeType::FormattedFloat == reader->get_type()
+                || NodeType::DictionaryFloat == reader->get_type())
+            {
+                value_string.clear();
+                reader->extract_string_value_into_buffer(cur_message, value_string);
+                matched = clp::string_utils::wildcard_match_unsafe(
+                        value_string,
+                        pattern,
+                        false == ignore_case
+                );
+            } else {
+                matched = wildcard_matches_number(
+                        std::get<T>(reader->extract_value(cur_message)),
+                        pattern,
+                        ignore_case
+                );
+            }
         } else {
             matched = wildcard_matches_number(
                     std::get<T>(reader->extract_value(cur_message)),
-                    pattern
+                    pattern,
+                    ignore_case
             );
         }
         if ((ast::FilterOperation::EQ == op) == matched) {
@@ -123,7 +147,7 @@ auto evaluate_numeric_wildcard_filter(
 }
 
 template <typename T>
-auto wildcard_matches_number(T value, std::string_view pattern) -> bool {
+auto wildcard_matches_number(T value, std::string_view pattern, bool ignore_case) -> bool {
     // Large enough for the longest shortest-round-trip `double` (24 chars) or `int64_t` (20 chars).
     constexpr size_t cNumericConversionBufferSize{32};
     std::array<char, cNumericConversionBufferSize> buf{};
@@ -133,7 +157,19 @@ auto wildcard_matches_number(T value, std::string_view pattern) -> bool {
     }
 
     std::string_view const value_sv{buf.data(), result.size};
-    return clp::string_utils::wildcard_match_unsafe(value_sv, pattern, false);
+    return clp::string_utils::wildcard_match_unsafe(value_sv, pattern, false == ignore_case);
+}
+
+auto rewrite_negated_array_op(ast::FilterOperation& op) -> bool {
+    if (ast::FilterOperation::NEXISTS == op) {
+        op = ast::FilterOperation::EXISTS;
+        return true;
+    }
+    if (ast::FilterOperation::NEQ == op) {
+        op = ast::FilterOperation::EQ;
+        return true;
+    }
+    return false;
 }
 }  // namespace
 
@@ -557,7 +593,13 @@ bool QueryRunner::evaluate_int_filter(
     }
 
     if (operand->has_wildcard()) {
-        return evaluate_numeric_wildcard_filter<int64_t>(op, operand, readers, m_cur_message);
+        return evaluate_numeric_wildcard_filter<int64_t>(
+                op,
+                operand,
+                readers,
+                m_cur_message,
+                m_ignore_case
+        );
     }
 
     int64_t op_value;
@@ -603,7 +645,13 @@ bool QueryRunner::evaluate_float_filter(
     }
 
     if (operand->has_wildcard()) {
-        return evaluate_numeric_wildcard_filter<double>(op, operand, readers, m_cur_message);
+        return evaluate_numeric_wildcard_filter<double>(
+                op,
+                operand,
+                readers,
+                m_cur_message,
+                m_ignore_case
+        );
     }
 
     double op_value;
@@ -721,59 +769,47 @@ bool QueryRunner::evaluate_var_string_filter(
 bool QueryRunner::evaluate_array_filter(
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
-        std::string& value,
+        std::string& array_text,
         std::shared_ptr<Literal> const& operand
 ) {
-    if (value.capacity() < (value.size() + simdjson::SIMDJSON_PADDING)) {
-        value.reserve(value.size() + simdjson::SIMDJSON_PADDING);
+    if (array_text.capacity() < (array_text.size() + simdjson::SIMDJSON_PADDING)) {
+        array_text.reserve(array_text.size() + simdjson::SIMDJSON_PADDING);
     }
-    auto obj = m_array_parser.iterate(value);
+    auto obj = m_array_parser.iterate(array_text);
     simdjson::ondemand::array array = obj.get_array();
 
-    if (FilterOperation::NEXISTS == op) {
-        op = FilterOperation::EXISTS;
-        prepare_array_search(op, operand);
-        return false == evaluate_array_filter_array(array, op, unresolved_tokens, 0, operand);
-    }
-
+    bool const negate{rewrite_negated_array_op(op)};
     prepare_array_search(op, operand);
-    return evaluate_array_filter_array(array, op, unresolved_tokens, 0, operand);
+    return negate != evaluate_array_filter_array(array, op, unresolved_tokens, 0, operand);
 }
 
 auto QueryRunner::prepare_array_search(FilterOperation op, std::shared_ptr<Literal> const& operand)
         -> void {
-    m_maybe_string = false;
-    m_maybe_number = false;
-    if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
-        return;
-    }
-
-    m_maybe_string = operand->as_var_string(m_array_search_string, op)
-                     || operand->as_clp_string(m_array_search_string, op);
-    m_maybe_number = operand->can_match_op(LiteralType::IntegerT, op)
-                     || operand->can_match_op(LiteralType::FloatT, op);
+    bool const searches_for_value{FilterOperation::EXISTS != op && FilterOperation::NEXISTS != op};
+    m_maybe_string = searches_for_value
+                     && (operand->as_var_string(m_array_search_string, op)
+                         || operand->as_clp_string(m_array_search_string, op));
+    m_maybe_number = searches_for_value
+                     && (operand->can_match_op(LiteralType::IntegerT, op)
+                         || operand->can_match_op(LiteralType::FloatT, op));
 }
 
 auto QueryRunner::evaluate_array_number_filter(
-        simdjson::ondemand::number number,
+        simdjson::ondemand::value& value,
         FilterOperation op,
         std::shared_ptr<Literal> const& operand
 ) const -> bool {
     if (operand->has_wildcard()) {
-        // TODO: Unstructured arrays retain the original text of their elements, so this could match
-        // the pattern against the element's `raw_json_token()` to mirror how
-        // `evaluate_numeric_wildcard_filter` treats `FormattedFloat`/`DictionaryFloat` columns.
-        bool matched{false};
-        if (number.is_double()) {
-            matched = wildcard_matches_number(number.get_double(), m_array_search_string);
-        } else if (number.is_uint64()) {
-            matched = wildcard_matches_number(number.get_uint64(), m_array_search_string);
-        } else {
-            matched = wildcard_matches_number(number.get_int64(), m_array_search_string);
-        }
+        // simdjson's `raw_json_token()` includes any whitespace between the token and the next one.
+        bool const matched{clp::string_utils::wildcard_match_unsafe(
+                clp::string_utils::trim_trailing_whitespace(value.raw_json_token()),
+                m_array_search_string,
+                false == m_ignore_case
+        )};
         return (FilterOperation::EQ == op) == matched;
     }
 
+    auto const number{value.get_number().value()};
     if (number.is_double()) {
         double op_value{};
         return operand->as_float(op_value, op) && eval(op, number.get_double(), op_value);
@@ -836,12 +872,10 @@ bool QueryRunner::evaluate_array_filter_value(
             if (false == m_maybe_number || unresolved_tokens.size() != cur_idx) {
                 break;
             }
-            match = evaluate_array_number_filter(item.get_number(), op, operand);
+            match = evaluate_array_number_filter(item, op, operand);
         } break;
         case simdjson::ondemand::json_type::boolean: {
-            if (unresolved_tokens.size() != cur_idx || op == FilterOperation::EXISTS
-                || op == FilterOperation::NEXISTS)
-            {
+            if (unresolved_tokens.size() != cur_idx || op == FilterOperation::EXISTS) {
                 break;
             }
             bool tmp_bool;
@@ -850,9 +884,7 @@ bool QueryRunner::evaluate_array_filter_value(
             }
         } break;
         case simdjson::ondemand::json_type::null: {
-            if (op != FilterOperation::EXISTS && op != FilterOperation::NEXISTS
-                && operand->as_null(op))
-            {
+            if (op != FilterOperation::EXISTS && operand->as_null(op)) {
                 match = op == FilterOperation::EQ;
             }
         } break;
@@ -892,10 +924,8 @@ bool QueryRunner::evaluate_array_filter_object(
         }
 
         cur_idx += 1;
-        if (cur_idx == unresolved_tokens.size()
-            && (op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS))
-        {
-            return op == FilterOperation::EXISTS;
+        if (cur_idx == unresolved_tokens.size() && op == FilterOperation::EXISTS) {
+            return true;
         }
 
         simdjson::ondemand::value item = field.value();
@@ -915,8 +945,9 @@ bool QueryRunner::evaluate_wildcard_array_filter(
     auto obj = m_array_parser.iterate(value);
     simdjson::ondemand::array array = obj.get_array();
 
+    bool const negate{rewrite_negated_array_op(op)};
     prepare_array_search(op, operand);
-    return evaluate_wildcard_array_filter(array, op, operand);
+    return negate != evaluate_wildcard_array_filter(array, op, operand);
 }
 
 bool QueryRunner::evaluate_wildcard_array_filter(
@@ -924,55 +955,8 @@ bool QueryRunner::evaluate_wildcard_array_filter(
         FilterOperation op,
         std::shared_ptr<Literal> const& operand
 ) const {
-    bool match = false;
     for (auto item : array) {
-        switch (item.type()) {
-            case simdjson::ondemand::json_type::object: {
-                simdjson::ondemand::object nested_object = item.get_object();
-                if (evaluate_wildcard_array_filter(nested_object, op, operand)) {
-                    match = true;
-                }
-            } break;
-            case simdjson::ondemand::json_type::array: {
-                simdjson::ondemand::array nested_array = item.get_array();
-                if (evaluate_wildcard_array_filter(nested_array, op, operand)) {
-                    match = true;
-                }
-            } break;
-            case simdjson::ondemand::json_type::string: {
-                if (false == m_maybe_string) {
-                    break;
-                }
-                if (clp::string_utils::wildcard_match_unsafe(
-                            item.get_string().value(),
-                            m_array_search_string,
-                            false == m_ignore_case
-                    ))
-                {
-                    match |= op == FilterOperation::EQ;
-                }
-                break;
-            } break;
-            case simdjson::ondemand::json_type::number: {
-                if (false == m_maybe_number) {
-                    break;
-                }
-                match |= evaluate_array_number_filter(item.get_number(), op, operand);
-            } break;
-            case simdjson::ondemand::json_type::boolean: {
-                bool tmp;
-                if (operand->as_bool(tmp, op) && eval(op, item.get_bool(), tmp)) {
-                    match = true;
-                }
-            } break;
-            case simdjson::ondemand::json_type::null:
-                if (operand->as_null(op)) {
-                    match |= op == FilterOperation::EQ;
-                }
-                break;
-        }
-
-        if (match) {
+        if (evaluate_wildcard_array_filter_value(item.value(), op, operand)) {
             return true;
         }
     }
@@ -984,60 +968,51 @@ bool QueryRunner::evaluate_wildcard_array_filter(
         FilterOperation op,
         std::shared_ptr<Literal> const& operand
 ) const {
-    bool match = false;
     for (auto field : object) {
         simdjson::ondemand::value item = field.value();
-        switch (item.type()) {
-            case simdjson::ondemand::json_type::object: {
-                simdjson::ondemand::object nested_object = item.get_object();
-                if (evaluate_wildcard_array_filter(nested_object, op, operand)) {
-                    match = true;
-                }
-            } break;
-            case simdjson::ondemand::json_type::array: {
-                simdjson::ondemand::array nested_array = item.get_array();
-                if (evaluate_wildcard_array_filter(nested_array, op, operand)) {
-                    match = true;
-                }
-            } break;
-            case simdjson::ondemand::json_type::string: {
-                if (false == m_maybe_string) {
-                    break;
-                }
-                if (clp::string_utils::wildcard_match_unsafe(
-                            item.get_string().value(),
-                            m_array_search_string,
-                            false == m_ignore_case
-                    ))
-                {
-                    match |= op == FilterOperation::EQ;
-                }
-                break;
-            } break;
-            case simdjson::ondemand::json_type::number: {
-                if (false == m_maybe_number) {
-                    break;
-                }
-                match |= evaluate_array_number_filter(item.get_number(), op, operand);
-            } break;
-            case simdjson::ondemand::json_type::boolean: {
-                bool tmp;
-                if (operand->as_bool(tmp, op) && eval(op, item.get_bool(), tmp)) {
-                    match = true;
-                }
-            } break;
-            case simdjson::ondemand::json_type::null:
-                if (operand->as_null(op)) {
-                    match |= op == FilterOperation::EQ;
-                }
-                break;
-        }
-
-        if (match) {
+        if (evaluate_wildcard_array_filter_value(item, op, operand)) {
             return true;
         }
     }
     return false;
+}
+
+auto QueryRunner::evaluate_wildcard_array_filter_value(
+        simdjson::ondemand::value& item,
+        FilterOperation op,
+        std::shared_ptr<Literal> const& operand
+) const -> bool {
+    switch (item.type()) {
+        case simdjson::ondemand::json_type::object: {
+            simdjson::ondemand::object nested_object = item.get_object();
+            return evaluate_wildcard_array_filter(nested_object, op, operand);
+        }
+        case simdjson::ondemand::json_type::array: {
+            simdjson::ondemand::array nested_array = item.get_array();
+            return evaluate_wildcard_array_filter(nested_array, op, operand);
+        }
+        case simdjson::ondemand::json_type::string: {
+            return m_maybe_string
+                   && clp::string_utils::wildcard_match_unsafe(
+                           item.get_string().value(),
+                           m_array_search_string,
+                           false == m_ignore_case
+                   )
+                   && FilterOperation::EQ == op;
+        }
+        case simdjson::ondemand::json_type::number: {
+            return m_maybe_number && evaluate_array_number_filter(item, op, operand);
+        }
+        case simdjson::ondemand::json_type::boolean: {
+            bool tmp{};
+            return operand->as_bool(tmp, op) && eval(op, item.get_bool(), tmp);
+        }
+        case simdjson::ondemand::json_type::null: {
+            return operand->as_null(op) && FilterOperation::EQ == op;
+        }
+        default:
+            return false;
+    }
 }
 
 bool QueryRunner::evaluate_bool_filter(
@@ -1263,17 +1238,20 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
     } else if (auto const constant{ast::EmptyExpr::as_constant(*expr)}; constant.has_value()) {
         return constant.value() ? EvaluatedValue::True : EvaluatedValue::False;
     } else if (auto filter = std::dynamic_pointer_cast<FilterExpr>(expr)) {
-        if ((filter->get_operation() == FilterOperation::EXISTS
-             || filter->get_operation() == FilterOperation::NEXISTS)
-            && (!filter->get_column()->has_unresolved_tokens()
-                || filter->get_column()->is_pure_wildcard()
-                || !filter->get_column()->matches_exactly(LiteralType::ArrayT)
-                || false == filter->get_column()->is_bound()))
+        if (filter->get_operation() == FilterOperation::EXISTS
+            || filter->get_operation() == FilterOperation::NEXISTS)
         {
-            // semantics of previous passes means that EXISTS and NEXISTS are
-            // trivially matching
-            // FIXME: have an edgecase to handle with NEXISTS on pure wildcard columns
-            return EvaluatedValue::True;
+            auto const& column{filter->get_column()};
+            bool const requires_array_scan{
+                    column->has_unresolved_tokens() && false == column->is_pure_wildcard()
+                    && column->matches_exactly(LiteralType::ArrayT) && column->is_bound()
+            };
+            if (false == requires_array_scan) {
+                // semantics of previous passes means that EXISTS and NEXISTS are
+                // trivially matching
+                // FIXME: have an edgecase to handle with NEXISTS on pure wildcard columns
+                return EvaluatedValue::True;
+            }
         } else if (filter->get_column()->is_pure_wildcard()
                    && filter->get_column()->matches_any(
                            LiteralType::ClpStringT | LiteralType::VarStringT

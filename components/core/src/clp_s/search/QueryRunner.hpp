@@ -304,7 +304,8 @@ private:
     ) -> bool;
 
     /**
-     * Prepares string and numeric matching state for an array search.
+     * Prepares string and numeric matching state for an array search; the state is read by the
+     * array-evaluation helpers until the next call.
      * @param op The filter operation.
      * @param operand The filter operand; may be null for EXISTS or NEXISTS.
      */
@@ -313,33 +314,35 @@ private:
 
     /**
      * Evaluates a filter against a numeric element of an unstructured array. Wildcard operands
-     * match its shortest round-trip representation; other operands use numeric comparisons.
-     * Requires matching state prepared by `prepare_array_search` for the same operand and
-     * operation.
-     * @param number The array element to evaluate.
+     * (supported only for EQ and NEQ) match the element's original text as it appears in the array
+     * (excluding any whitespace following it), mirroring how numeric columns that retain their
+     * original text are matched; other operands use numeric comparisons. Requires matching state
+     * prepared by `prepare_array_search` for the same operand and operation.
+     * @param value The array element to evaluate; must be a number.
      * @param op The filter operation.
      * @param operand The filter operand.
-     * @return Whether `number` satisfies `op` against `operand`.
+     * @return Whether the element satisfies `op` against `operand`.
      */
     [[nodiscard]] auto evaluate_array_number_filter(
-            simdjson::ondemand::number number,
+            simdjson::ondemand::value& value,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
     ) const -> bool;
 
     /**
      * Evaluates an array filter expression against an unstructured array. A NEXISTS filter holds
-     * when no element of the array contains the path given by `unresolved_tokens`.
-     * @param op
-     * @param unresolved_tokens
-     * @param value
-     * @param operand
+     * when no element of the array contains the path given by `unresolved_tokens`, and an NEQ
+     * filter holds when no element's located value matches the operand.
+     * @param op The filter operation.
+     * @param unresolved_tokens The column's unresolved key tokens to locate inside the array.
+     * @param array_text The array's raw JSON text; padded in place if parsing requires it.
+     * @param operand The filter operand; unused for EXISTS and NEXISTS.
      * @return Whether the expression evaluates to true.
      */
     auto evaluate_array_filter(
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
-            std::string& value,
+            std::string& array_text,
             std::shared_ptr<ast::Literal> const& operand
     ) -> bool;
 
@@ -395,11 +398,12 @@ private:
     ) const -> bool;
 
     /**
-     * Evaluates a wildcard array filter expression
-     * @param op
-     * @param value
-     * @param operand
-     * @return true if the expression evaluates to true, false otherwise
+     * Evaluates a wildcard array filter expression. An NEQ filter holds when no element of the
+     * array matches the operand.
+     * @param op The filter operation.
+     * @param value The array's raw JSON text; padded in place if parsing requires it.
+     * @param operand The filter operand.
+     * @return Whether the expression evaluates to true.
      */
     auto evaluate_wildcard_array_filter(
             ast::FilterOperation op,
@@ -429,6 +433,21 @@ private:
      */
     auto evaluate_wildcard_array_filter(
             simdjson::ondemand::object& object,
+            ast::FilterOperation op,
+            std::shared_ptr<ast::Literal> const& operand
+    ) const -> bool;
+
+    /**
+     * Evaluates a wildcard filter against a single element of an unstructured array, recursing
+     * into nested arrays and objects. Requires matching state prepared by `prepare_array_search`
+     * for the same operand and operation.
+     * @param item The element to evaluate.
+     * @param op The filter operation.
+     * @param operand The filter operand.
+     * @return Whether the element satisfies the filter.
+     */
+    [[nodiscard]] auto evaluate_wildcard_array_filter_value(
+            simdjson::ondemand::value& item,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
     ) const -> bool;

@@ -12,4 +12,4 @@
 {"idx": 11, "ambiguous_varstring": "ae"}
 {"idx": 12, "ambiguous_varstring": "a*e"}
 {"idx": 13, "one": 1}
-{"idx": 14, "n": 0.1, "o": [0]}
+{"idx": 14, "n": 0.1, "o": [0 , 5 ]}

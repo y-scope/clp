@@ -162,6 +162,15 @@ auto consists_only_of(string_view str, string_view allowed_chars) -> bool {
     });
 }
 
+auto trim_trailing_whitespace(string_view str) -> string_view {
+    auto const last_non_space{
+            std::ranges::find_if_not(str.rbegin(), str.rend(), [](char const c) -> bool {
+                return 0 != std::isspace(static_cast<unsigned char>(c));
+            })
+    };
+    return str.substr(0, static_cast<size_t>(str.rend() - last_non_space));
+}
+
 auto clean_up_wildcard_search_string(string_view str) -> string {
     string cleaned_str;
 
