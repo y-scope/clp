@@ -412,7 +412,20 @@ public:
      * @return std::nullopt if the column matches any occurrence of its MPT node.
      */
     [[nodiscard]] auto get_leaf_position() const -> std::optional<size_t> {
-        return m_leaf_position;
+        if (m_pinned_leaf.has_value()) {
+            return m_pinned_leaf->leaf_position;
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @return The same-node StructurizedText occurrence pinned by decomposition, if any.
+     */
+    [[nodiscard]] auto get_structurized_text_occurrence_idx() const -> std::optional<size_t> {
+        if (m_pinned_leaf.has_value()) {
+            return m_pinned_leaf->occurrence_idx;
+        }
+        return std::nullopt;
     }
 
     /**
@@ -438,15 +451,28 @@ public:
      * resolution leaves the mapping untouched.
      * @param node_id The MPT node to bind this column to.
      * @param leaf_position The StructurizedText-relative leaf placeholder position of this column.
+     * @param occurrence_idx The same-node StructurizedText occurrence index in document order.
      * @param schema_ids The schemas to map this column to.
      */
     auto bind_as_decomposed_leaf(
             mpt_node_id_t node_id,
             size_t leaf_position,
+            size_t occurrence_idx,
             std::unordered_set<int32_t> const& schema_ids
     ) -> void;
 
 private:
+    // Types
+    /**
+     * Identifies a leaf within one same-node StructurizedText occurrence in document order.
+     */
+    struct LeafPosition {
+        size_t occurrence_idx;
+        size_t leaf_position;
+
+        [[nodiscard]] auto operator==(LeafPosition const&) const -> bool = default;
+    };
+
     // Data members
     DescriptorList m_descriptors;  // list of descriptors describing the column
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
@@ -458,9 +484,7 @@ private:
     Function m_function{Function::None};
     // The single MPT node this column has been bound to, if any.
     std::optional<mpt_node_id_t> m_bound_node_id;
-    // For a column bound to a leaf node within a StructurizedText: the leaf rule placeholder
-    // position this column is pinned to, if any.
-    std::optional<size_t> m_leaf_position;
+    std::optional<LeafPosition> m_pinned_leaf;
     bool m_is_decomposed_leaf{false};
     ResolvedNodes m_resolved_nodes;
 

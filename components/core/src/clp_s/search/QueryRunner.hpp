@@ -490,10 +490,10 @@ private:
 
     /**
      * Resolves the column reader for a leaf rule filter column pinned to a leaf placeholder
-     * position. The reader for leaf position `leaf_position` of a StructurizedText is the reader
-     * at `structurized_text_column_start + leaf_position`, which holds because readers are
-     * appended in the document order of the leaf placeholders.
-     * @param column A column with a leaf position.
+     * position within an exact same-node StructurizedText occurrence. Readers are appended in leaf
+     * placeholder document order, so the reader index is the occurrence's range begin plus the
+     * leaf position. The position must remain within that occurrence's column range.
+     * @param column A column with a leaf position and StructurizedText occurrence index.
      * @param column_readers The current ERT's column readers, in schema order.
      * @return The reader, or nullptr if `column` is unbound or the position doesn't resolve to a
      * reader for `column`'s node in the current ERT.

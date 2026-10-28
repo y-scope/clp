@@ -38,6 +38,7 @@
 #include <clp_s/search/ast/OrExpr.hpp>
 #include <clp_s/search/ast/OrOfAndForm.hpp>
 #include <clp_s/search/ast/ValueLiteral.hpp>
+#include <clp_s/search/ClppMatcher.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
 
@@ -57,6 +58,35 @@ using clp_s::search::ast::OrOfAndForm;
 
 namespace clp_s::search {
 namespace {
+/**
+ * One (interpretation index, occurrence index) combination that may hold for a schema: the index of
+ * an interpretation in the matcher's `InterpretationMatch` list and the index of a same-node
+ * StructurizedText occurrence (in document order) within the schema that the interpretation's
+ * shape matched.
+ */
+using InterpretationOccurrence = std::pair<size_t, size_t>;
+
+/**
+ * The interpretations that may hold for each schema containing a decomposition root, split into
+ * those that need their leaf queries checked and those that hold unconditionally.
+ */
+struct ApplicableInterpretations {
+    // Each schema's applicable interpretation-occurrence pairs, in interpretation order and then
+    // occurrence order. Excludes the unconditionally matched schemas.
+    std::unordered_map<int32_t, std::vector<InterpretationOccurrence>> by_schema;
+    // Schemas matched by an interpretation with no leaf constraints.
+    std::unordered_set<int32_t> unconditionally_matched_schema_ids;
+};
+
+/**
+ * Collects the interpretations applicable to each schema.
+ * @param interpretations The interpretation matches to collect.
+ * @return The applicable interpretations.
+ */
+[[nodiscard]] auto collect_applicable_interpretations(
+        std::vector<ClppMatcher::InterpretationMatch> const& interpretations
+) -> ApplicableInterpretations;
+
 /**
  * Gets the `NodeType` corresponding to a given subtree type.
  * @param subtree_type
@@ -129,6 +159,28 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
  */
 auto narrow_common_schemas(std::set<int32_t> schemas, std::set<int32_t>& common_schema, bool first)
         -> void;
+
+auto collect_applicable_interpretations(
+        std::vector<ClppMatcher::InterpretationMatch> const& interpretations
+) -> ApplicableInterpretations {
+    ApplicableInterpretations applicable;
+    for (size_t i{0}; i < interpretations.size(); ++i) {
+        auto const& [occurrences, leaf_queries]{interpretations.at(i)};
+        for (auto const& [schema_id, occurrence_indices] : occurrences) {
+            if (leaf_queries.empty()) {
+                applicable.unconditionally_matched_schema_ids.emplace(schema_id);
+                continue;
+            }
+            for (auto const occurrence_idx : occurrence_indices) {
+                applicable.by_schema[schema_id].emplace_back(i, occurrence_idx);
+            }
+        }
+    }
+    for (auto const schema_id : applicable.unconditionally_matched_schema_ids) {
+        applicable.by_schema.erase(schema_id);
+    }
+    return applicable;
+}
 
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     if (constants::cMetadataSubtreeType == subtree_type) {
@@ -1033,6 +1085,7 @@ auto SchemaMatch::build_leaf_query_expr(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         mpt_node_id_t decomposition_root,
         std::span<clpp::LeafQuery const> leaf_queries,
+        size_t occurrence_idx,
         std::unordered_set<int32_t> const& matched_schema_ids
 ) -> std::optional<std::shared_ptr<ast::Expression>> {
     if (leaf_queries.empty()) {
@@ -1044,9 +1097,14 @@ auto SchemaMatch::build_leaf_query_expr(
     }
     auto leaves_expr{ast::AndExpr::create()};
     for (auto const& leaf : leaf_queries) {
-        auto leaf_filters{
-                build_leaf_filters(column, decomposition_root, leaf, matched_schema_ids, false)
-        };
+        auto leaf_filters{build_leaf_filters(
+                column,
+                decomposition_root,
+                leaf,
+                occurrence_idx,
+                matched_schema_ids,
+                false
+        )};
         if (false == leaf_filters.has_value()) {
             return std::nullopt;
         }
@@ -1063,13 +1121,19 @@ auto SchemaMatch::build_negated_leaf_query_expr(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         mpt_node_id_t decomposition_root,
         std::span<clpp::LeafQuery const> leaf_queries,
+        size_t occurrence_idx,
         std::unordered_set<int32_t> const& matched_schema_ids
 ) -> std::optional<std::shared_ptr<ast::Expression>> {
     auto any_leaf_fails{ast::OrExpr::create()};
     for (auto const& leaf : leaf_queries) {
-        auto leaf_filters{
-                build_leaf_filters(column, decomposition_root, leaf, matched_schema_ids, true)
-        };
+        auto leaf_filters{build_leaf_filters(
+                column,
+                decomposition_root,
+                leaf,
+                occurrence_idx,
+                matched_schema_ids,
+                true
+        )};
         if (false == leaf_filters.has_value()) {
             return std::nullopt;
         }
@@ -1086,6 +1150,7 @@ auto SchemaMatch::build_leaf_filters(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         mpt_node_id_t decomposition_root,
         clpp::LeafQuery const& leaf,
+        size_t occurrence_idx,
         std::unordered_set<int32_t> const& matched_schema_ids,
         bool is_inverted
 ) -> std::optional<std::vector<std::shared_ptr<ast::Expression>>> {
@@ -1097,7 +1162,12 @@ auto SchemaMatch::build_leaf_filters(
     std::vector<std::shared_ptr<ast::Expression>> filters;
     filters.reserve(leaf_cols->size());
     for (auto& [leaf_col, node_id] : leaf_cols.value()) {
-        leaf_col->bind_as_decomposed_leaf(node_id, leaf.m_leaf_position, matched_schema_ids);
+        leaf_col->bind_as_decomposed_leaf(
+                node_id,
+                leaf.m_leaf_position,
+                occurrence_idx,
+                matched_schema_ids
+        );
         auto leaf_literal{ast::ValueLiteral::create_from_string(leaf.m_query)};
         filters.emplace_back(
                 FilterExpr::create(leaf_col, FilterOperation::EQ, leaf_literal, is_inverted)
@@ -1167,13 +1237,29 @@ auto SchemaMatch::build_decomposed_query_filter(
         );
     }
     auto results{ast::OrExpr::create()};
-    for (auto const& [schema_ids, leaf_queries] : interpretations.value()) {
-        if (auto leaves_expr{
-                    build_leaf_query_expr(column, decomposition_root, leaf_queries, schema_ids)
-            };
-            leaves_expr.has_value())
-        {
-            results->add_operand(*leaves_expr);
+    for (auto const& [occurrences, leaf_queries] : interpretations.value()) {
+        // Schemas can share a filter only when its same-node occurrence index agrees. Unconstrained
+        // interpretations have no leaf filters to pin, so their schemas are collected together.
+        std::map<size_t, std::unordered_set<int32_t>> schema_ids_by_occurrence;
+        for (auto const& [schema_id, occurrence_indices] : occurrences) {
+            for (auto const occurrence_idx : occurrence_indices) {
+                schema_ids_by_occurrence[leaf_queries.empty() ? 0 : occurrence_idx].emplace(
+                        schema_id
+                );
+            }
+        }
+        for (auto const& [occurrence_idx, schema_ids] : schema_ids_by_occurrence) {
+            if (auto leaves_expr{build_leaf_query_expr(
+                        column,
+                        decomposition_root,
+                        leaf_queries,
+                        occurrence_idx,
+                        schema_ids
+                )};
+                leaves_expr.has_value())
+            {
+                results->add_operand(*leaves_expr);
+            }
         }
     }
     if (results->get_op_list().empty()) {
@@ -1223,26 +1309,12 @@ auto SchemaMatch::build_negated_decomposed_query_filter(
         mpt_node_id_t decomposition_root,
         std::vector<ClppMatcher::InterpretationMatch> const& interpretations
 ) -> std::shared_ptr<ast::Expression> {
-    std::unordered_map<int32_t, std::vector<size_t>> applicable_interpretations_by_schema;
-    std::unordered_set<int32_t> unconditionally_matched_schema_ids;
-    for (size_t i{0}; i < interpretations.size(); ++i) {
-        auto const& [schema_ids, leaf_queries]{interpretations.at(i)};
-        if (leaf_queries.empty()) {
-            unconditionally_matched_schema_ids.insert(schema_ids.begin(), schema_ids.end());
-            continue;
-        }
-        for (auto const schema_id : schema_ids) {
-            applicable_interpretations_by_schema[schema_id].push_back(i);
-        }
-    }
-    for (auto const schema_id : unconditionally_matched_schema_ids) {
-        applicable_interpretations_by_schema.erase(schema_id);
-    }
+    auto const applicable{collect_applicable_interpretations(interpretations)};
 
     std::unordered_set<int32_t> never_matched_schema_ids;
     for (auto const schema_id : find_schemas_containing_node(decomposition_root)) {
-        if (false == unconditionally_matched_schema_ids.contains(schema_id)
-            && false == applicable_interpretations_by_schema.contains(schema_id))
+        if (false == applicable.unconditionally_matched_schema_ids.contains(schema_id)
+            && false == applicable.by_schema.contains(schema_id))
         {
             never_matched_schema_ids.emplace(schema_id);
         }
@@ -1256,17 +1328,19 @@ auto SchemaMatch::build_negated_decomposed_query_filter(
     }};
     add_narrowing(never_matched_schema_ids);
 
-    std::map<std::vector<size_t>, std::unordered_set<int32_t>> schema_ids_by_interpretation_group;
-    for (auto const& [schema_id, interpretation_indices] : applicable_interpretations_by_schema) {
+    std::map<std::vector<InterpretationOccurrence>, std::unordered_set<int32_t>>
+            schema_ids_by_interpretation_group;
+    for (auto const& [schema_id, interpretation_indices] : applicable.by_schema) {
         schema_ids_by_interpretation_group[interpretation_indices].emplace(schema_id);
     }
     for (auto const& [interpretation_indices, schema_ids] : schema_ids_by_interpretation_group) {
         auto no_interpretation_holds{ast::AndExpr::create()};
-        for (auto const i : interpretation_indices) {
+        for (auto const& [i, occurrence_idx] : interpretation_indices) {
             if (auto negated_expr{build_negated_leaf_query_expr(
                         column,
                         decomposition_root,
                         interpretations.at(i).leaf_queries,
+                        occurrence_idx,
                         schema_ids
                 )};
                 negated_expr.has_value())

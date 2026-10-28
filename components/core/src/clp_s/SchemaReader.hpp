@@ -114,6 +114,14 @@ public:
         size_t m_uncompressed_size{0};
     };
 
+    /**
+     * Column-reader range `[begin, end)` of one StructurizedText occurrence.
+     */
+    struct StructurizedTextColumnRange {
+        size_t begin;
+        size_t end;
+    };
+
     // Constructor
     SchemaReader() = default;
 
@@ -167,7 +175,7 @@ public:
         m_local_id_to_global_id.clear();
         m_global_id_to_local_id.clear();
         m_global_id_to_unordered_object.clear();
-        m_structurized_text_column_starts.clear();
+        m_structurized_text_column_ranges.clear();
         m_local_schema_tree.clear();
         m_json_serializer.clear();
         m_global_schema_tree = std::move(schema_tree);
@@ -214,32 +222,37 @@ public:
     ) -> void;
 
     /**
-     * Records the index into the column readers of the first column of a `StructurizedText`
-     * object. Unlike `mark_unordered_object`, this is recorded whether or not records are
-     * marshalled, since search needs it to resolve leaf filters pinned to a leaf rule placeholder
-     * position.
+     * Records an occurrence's columns in same-node document order, even when not marshalling.
+     * StructurizedText objects are never nested, so completion order is also document order.
      * @param structurized_text_id The `StructurizedText` root node ID.
-     * @param start_column_reader_idx Index in `m_columns` of the object's first column reader.
+     * @param begin Index in `m_columns` of the object's first column reader.
+     * @param end Index just past the object's last column reader.
      */
-    auto set_structurized_text_column_start(
+    auto append_structurized_text_column_range(
             mpt_node_id_t structurized_text_id,
-            size_t start_column_reader_idx
+            size_t begin,
+            size_t end
     ) -> void {
-        m_structurized_text_column_starts.emplace(structurized_text_id, start_column_reader_idx);
+        m_structurized_text_column_ranges[structurized_text_id].push_back(
+                {.begin = begin, .end = end}
+        );
     }
 
     /**
      * @param structurized_text_id The `StructurizedText` root node ID.
-     * @return The index of the object's first column reader.
-     * @return std::nullopt if the schema has no such object.
+     * @param occurrence_idx The zero-based same-node occurrence index in document order.
+     * @return The occurrence's column-reader range.
+     * @return std::nullopt if the occurrence does not exist.
      */
-    [[nodiscard]] auto get_structurized_text_column_start(mpt_node_id_t structurized_text_id) const
-            -> std::optional<size_t> {
-        auto const it{m_structurized_text_column_starts.find(structurized_text_id)};
-        if (m_structurized_text_column_starts.end() == it) {
+    [[nodiscard]] auto get_structurized_text_column_range(
+            mpt_node_id_t structurized_text_id,
+            size_t occurrence_idx
+    ) const -> std::optional<StructurizedTextColumnRange> {
+        auto const it{m_structurized_text_column_ranges.find(structurized_text_id)};
+        if (m_structurized_text_column_ranges.end() == it || occurrence_idx >= it->second.size()) {
             return std::nullopt;
         }
-        return it->second;
+        return it->second.at(occurrence_idx);
     }
 
     /**
@@ -748,7 +761,8 @@ private:
     // Keyed by the object root's schema-tree node ID.
     std::map<int32_t, MarkedUnorderedObject> m_global_id_to_unordered_object;
     // Keyed by the `StructurizedText` root's schema-tree node ID.
-    std::unordered_map<mpt_node_id_t, size_t> m_structurized_text_column_starts;
+    std::unordered_map<mpt_node_id_t, std::vector<StructurizedTextColumnRange>>
+            m_structurized_text_column_ranges;
     LogShapeDictionaryReader const* m_log_shape_dict{nullptr};
     clpp::ParentRuleShapesArray const* m_parent_rule_shapes_array{nullptr};
     bool m_extract_mode{false};

@@ -468,9 +468,6 @@ auto ArchiveReader::append_unordered_reader_columns(
         bool should_marshal_records
 ) -> void {
     size_t const object_begin_pos{reader.get_column_size()};
-    if (NodeType::StructurizedText == m_schema_tree->get_node(subtree_root_id).get_type()) {
-        reader.set_structurized_text_column_start(subtree_root_id, object_begin_pos);
-    }
     for (auto const& entry : sub_schema) {
         if (auto const* obj{std::get_if<UnorderedObject>(&entry)}) {
             append_unordered_reader_columns(
@@ -528,6 +525,14 @@ auto ArchiveReader::append_unordered_reader_columns(
         }
     }
 
+    // Recorded after the object's columns are appended so that the range's end is known.
+    if (NodeType::StructurizedText == m_schema_tree->get_node(subtree_root_id).get_type()) {
+        reader.append_structurized_text_column_range(
+                subtree_root_id,
+                object_begin_pos,
+                reader.get_column_size()
+        );
+    }
     if (should_marshal_records) {
         reader.mark_unordered_object(object_begin_pos, subtree_root_id, sub_schema, log_shape_id);
     }

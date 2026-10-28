@@ -294,11 +294,18 @@ auto QueryRunner::find_positional_reader(
     if (constants::cRootNodeId == structurized_text_id) {
         return nullptr;
     }
-    auto const column_start{m_reader->get_structurized_text_column_start(structurized_text_id)};
-    if (false == column_start.has_value()) {
+    auto const occurrence_idx{column.get_structurized_text_occurrence_idx()};
+    if (false == occurrence_idx.has_value()) {
         return nullptr;
     }
-    auto const reader_idx{column_start.value() + leaf_position.value()};
+    auto const range{m_reader->get_structurized_text_column_range(
+            structurized_text_id,
+            occurrence_idx.value()
+    )};
+    if (false == range.has_value() || leaf_position.value() >= range->end - range->begin) {
+        return nullptr;
+    }
+    auto const reader_idx{range->begin + leaf_position.value()};
     if (reader_idx >= column_readers.size() || column_readers.at(reader_idx)->get_id() != node_id) {
         return nullptr;
     }

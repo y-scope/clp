@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_SCHEMAMATCH_HPP
 #define CLP_S_SEARCH_SCHEMAMATCH_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -118,6 +119,7 @@ private:
      * @param column The original column descriptor triggering query decomposition.
      * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param leaf_queries The interpretation's leaf queries, constraining value matches.
+     * @param occurrence_idx The same-node StructurizedText occurrence to pin every leaf to.
      * @param matched_schema_ids Schemas to register the leaf columns against.
      * @return The expression.
      * @return std::nullopt if a leaf column cannot be resolved in the MPT.
@@ -126,6 +128,7 @@ private:
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             mpt_node_id_t decomposition_root,
             std::span<clpp::LeafQuery const> leaf_queries,
+            size_t occurrence_idx,
             std::unordered_set<int32_t> const& matched_schema_ids
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 
@@ -141,6 +144,7 @@ private:
      * @param column The original column descriptor triggering query decomposition.
      * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param leaf_queries The interpretation's leaf queries; must be non-empty.
+     * @param occurrence_idx The same-node StructurizedText occurrence to pin every leaf to.
      * @param matched_schema_ids Schemas to register the leaf columns against.
      * @return The expression.
      * @return std::nullopt if a leaf column cannot be resolved in the MPT.
@@ -149,6 +153,7 @@ private:
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             mpt_node_id_t decomposition_root,
             std::span<clpp::LeafQuery const> leaf_queries,
+            size_t occurrence_idx,
             std::unordered_set<int32_t> const& matched_schema_ids
     ) -> std::optional<std::shared_ptr<ast::Expression>>;
 
@@ -159,6 +164,7 @@ private:
      * @param column The original column descriptor triggering query decomposition.
      * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param leaf The leaf query.
+     * @param occurrence_idx The same-node StructurizedText occurrence to pin the leaf to.
      * @param matched_schema_ids Schemas to map the leaf columns to.
      * @param is_inverted Whether each equality filter is inverted.
      * @return One filter per resolved node.
@@ -168,6 +174,7 @@ private:
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             mpt_node_id_t decomposition_root,
             clpp::LeafQuery const& leaf,
+            size_t occurrence_idx,
             std::unordered_set<int32_t> const& matched_schema_ids,
             bool is_inverted
     ) -> std::optional<std::vector<std::shared_ptr<ast::Expression>>>;
@@ -248,12 +255,12 @@ private:
     /**
      * Builds the expression for a negated value filter at a decomposable node.
      *
-     * Schemas are grouped by their (matching) interpretations, and each group's operand registers
-     * its columns against only the schemas in that group. Each group becomes:
+     * Schemas are grouped by their matching (interpretation, occurrence) pairs, and each group's
+     * operand registers its columns against only the schemas in that group. Each group becomes:
      * - nothing, if an interpretation with no leaf constraints applies (the query always holds);
      * - a `NarrowSchemasExpr`, if no interpretation applies (the query never holds);
-     * - an AndExpr of the applicable interpretations' negated leaf query expressions otherwise.
-     * Interpretations whose leaves cannot be resolved can never hold and are omitted.
+     * - an AndExpr of all applicable interpretation-occurrence pairs' negated leaf queries
+     * otherwise. Interpretations whose leaves cannot be resolved can never hold and are omitted.
      * @param column The column triggering query decomposition.
      * @param decomposition_root The decomposable node where the query's decomposition is rooted.
      * @param interpretations The interpretation matches applicable to a schema.

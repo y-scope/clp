@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -23,17 +24,20 @@ namespace clp_s::search {
 /**
  * Requirements for a callback invoked by `ClppMatcher::for_each_matching_occurrence` for each
  * occurrence (a parent rule occurrence or a whole log shape) whose shape matches the query.
+ * @tparam OccurrenceMatchHandler The callback type.
+ * @tparam Occurrences `ClppMatcher::InterpretationMatch::Occurrences`, taken as a parameter only
+ * because the concept must be declared before `ClppMatcher`.
  * @param on_match
- * @param schema_ids The schema IDs containing a matching shape.
- * @param leaf_position The position of the occurrence's first leaf placeholder among the leaf
- * placeholders of the whole log shape (always 0 for a whole log shape).
+ * @param occurrences The per-schema same-node occurrence indices containing the matching log shape.
+ * @param leaf_position The position of the matching occurrence's first leaf placeholder among the
+ * leaf placeholders of the whole log shape (always 0 for a whole log shape).
  */
-template <typename OccurrenceMatchHandler>
+template <typename OccurrenceMatchHandler, typename Occurrences>
 concept OccurrenceMatchHandlerReq = requires(
         OccurrenceMatchHandler const& on_match,
-        std::unordered_set<int32_t> const& schema_ids,
+        Occurrences const& occurrences,
         size_t leaf_position
-) { on_match(schema_ids, leaf_position); };
+) { on_match(occurrences, leaf_position); };
 
 /**
  * Utility for matching shapes and decomposing queries against them.
@@ -42,13 +46,18 @@ class ClppMatcher {
 public:
     // Types
     /**
-     * A matched interpretation of a decomposed query, made of the schema IDs containing a matching
-     * shape (log shape or parent rule shape) and any leaf queries constraining it. If
-     * `leaf_queries` is empty then matching shapes satisfy the query without constraining any leaf
-     * values. Leaf positions are relative to the leaf placeholders of the whole log shape.
+     * A matched interpretation of a decomposed query, made of the per-schema same-node occurrence
+     * indices containing a matching shape and any leaf queries constraining it. If `leaf_queries`
+     * is empty then matching shapes satisfy the query without constraining any leaf values. Leaf
+     * positions are relative to the leaf placeholders of the whole log shape.
      */
     struct InterpretationMatch {
-        std::unordered_set<int32_t> schema_ids;
+        /**
+         * Occurrence indices for each schema, relative to one StructurizedText MPT node.
+         */
+        using Occurrences = std::unordered_map<int32_t, std::vector<size_t>>;
+
+        Occurrences occurrences;
         std::vector<clpp::LeafQuery> leaf_queries;
     };
 
@@ -100,26 +109,26 @@ private:
     // Types
     /**
      * A reference to a `StructurizedText` occurrence within a schema, identified by the schema ID
-     * and the `StructurizedText` node's MPT node ID. A schema can contain several sibling
-     * `StructurizedText` nodes when a log event has multiple unstructured text fields, so the
-     * schema ID alone does not disambiguate which field to use.
+     * and the `StructurizedText` node's MPT node ID, plus its zero-based same-node occurrence index
+     * in schema document order. Arrays can repeat the same MPT node, while sibling text fields can
+     * use different MPT nodes, so neither schema ID nor node ID alone identifies an occurrence.
      */
     struct StructurizedTextRef {
         int32_t schema_id;
         mpt_node_id_t structurized_text_id;
+        size_t occurrence_idx;
     };
 
     // Methods
     /**
-     * Collects the schema IDs whose `StructurizedText` node `structurized_text_id` has log shape ID
-     * `log_shape_id`.
+     * Collects same-node occurrences having log shape ID `log_shape_id`.
      * @param log_shape_id
      * @param structurized_text_id
-     * @return The matching schema IDs.
+     * @return The matching occurrence indices keyed by schema ID.
      */
     [[nodiscard]] auto
-    get_schema_ids(clpp::log_shape_id_t log_shape_id, mpt_node_id_t structurized_text_id) const
-            -> std::unordered_set<int32_t>;
+    get_occurrences(clpp::log_shape_id_t log_shape_id, mpt_node_id_t structurized_text_id) const
+            -> InterpretationMatch::Occurrences;
 
     /**
      * Builds the log-surgeon parser from the archive's parsing spec if it hasn't been built yet.
@@ -164,7 +173,7 @@ private:
      * @param on_match Invoked for every matching occurrence.
      * @throw Propagates `ArchiveReader::get_parent_rule_shapes_array`'s exceptions.
      */
-    template <OccurrenceMatchHandlerReq OnMatch>
+    template <OccurrenceMatchHandlerReq<InterpretationMatch::Occurrences> OnMatch>
     auto for_each_matching_occurrence(
             mpt_node_id_t structurized_text_id,
             std::string_view rule_name,
@@ -179,7 +188,7 @@ private:
     std::unique_ptr<log_surgeon::ParsingSpec> m_parsing_spec;
 };
 
-template <OccurrenceMatchHandlerReq OnMatch>
+template <OccurrenceMatchHandlerReq<ClppMatcher::InterpretationMatch::Occurrences> OnMatch>
 auto ClppMatcher::for_each_matching_occurrence(
         mpt_node_id_t structurized_text_id,
         std::string_view rule_name,
@@ -194,8 +203,8 @@ auto ClppMatcher::for_each_matching_occurrence(
     for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < log_shape_entries.size();
          ++log_shape_id)
     {
-        auto const schema_ids{get_schema_ids(log_shape_id, structurized_text_id)};
-        if (schema_ids.empty()) {
+        auto const occurrences{get_occurrences(log_shape_id, structurized_text_id)};
+        if (occurrences.empty()) {
             continue;
         }
         clpp::TextShape<std::string_view> const log_shape{
@@ -203,7 +212,7 @@ auto ClppMatcher::for_each_matching_occurrence(
         };
         if (rule_name.empty()) {
             if (matches_query(log_shape.view())) {
-                on_match(schema_ids, 0);
+                on_match(occurrences, 0);
             }
             continue;
         }
@@ -214,7 +223,7 @@ auto ClppMatcher::for_each_matching_occurrence(
                 continue;
             }
             if (matches_query(log_shape.view().substr(parent_match.m_start, parent_match.m_size))) {
-                on_match(schema_ids, log_shape.count_placeholders_before(parent_match.m_start));
+                on_match(occurrences, log_shape.count_placeholders_before(parent_match.m_start));
             }
         }
     }

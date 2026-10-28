@@ -6,8 +6,10 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <stdexcept>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -49,6 +51,7 @@ ClppMatcher::ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive)
 
     m_structurized_texts_per_log_shape.resize(log_shape_dict->get_entries().size());
     for (auto const& [schema_id, schema] : *m_archive_reader->get_schema_map()) {
+        std::unordered_map<mpt_node_id_t, size_t> next_occurrence_idx;
         for (auto const& [structurized_text_id, log_shape_id] :
              schema.get_view().find_structurized_texts())
         {
@@ -61,24 +64,25 @@ ClppMatcher::ClppMatcher(ArchiveReader* archive_reader, bool case_sensitive)
                     .push_back(
                             StructurizedTextRef{
                                     .schema_id = schema_id,
-                                    .structurized_text_id = structurized_text_id
+                                    .structurized_text_id = structurized_text_id,
+                                    .occurrence_idx = next_occurrence_idx[structurized_text_id]++
                             }
                     );
         }
     }
 }
 
-auto ClppMatcher::get_schema_ids(
+auto ClppMatcher::get_occurrences(
         clpp::log_shape_id_t log_shape_id,
         mpt_node_id_t structurized_text_id
-) const -> std::unordered_set<int32_t> {
-    std::unordered_set<int32_t> schema_ids;
-    for (auto const& structurized_text_node : m_structurized_texts_per_log_shape.at(log_shape_id)) {
-        if (structurized_text_node.structurized_text_id == structurized_text_id) {
-            schema_ids.emplace(structurized_text_node.schema_id);
+) const -> InterpretationMatch::Occurrences {
+    InterpretationMatch::Occurrences occurrences;
+    for (auto const& ref : m_structurized_texts_per_log_shape.at(log_shape_id)) {
+        if (ref.structurized_text_id == structurized_text_id) {
+            occurrences[ref.schema_id].push_back(ref.occurrence_idx);
         }
     }
-    return schema_ids;
+    return occurrences;
 }
 
 auto ClppMatcher::find_matching_schemas(
@@ -91,8 +95,10 @@ auto ClppMatcher::find_matching_schemas(
             structurized_text_id,
             rule_name,
             shape_query,
-            [&](std::unordered_set<int32_t> const& occurrence_schema_ids, size_t) -> void {
-                schema_ids.insert(occurrence_schema_ids.begin(), occurrence_schema_ids.end());
+            [&](InterpretationMatch::Occurrences const& occurrences, size_t) -> void {
+                for (auto const& [schema_id, _] : occurrences) {
+                    schema_ids.emplace(schema_id);
+                }
             }
     );
     return schema_ids;
@@ -139,8 +145,8 @@ ClppMatcher::decompose_by_log_shapes(mpt_node_id_t structurized_text_id, std::st
     for (clpp::log_shape_id_t log_shape_id{0}; log_shape_id < interpretations_per_shape.size();
          ++log_shape_id)
     {
-        auto const schema_ids{get_schema_ids(log_shape_id, structurized_text_id)};
-        if (schema_ids.empty()) {
+        auto const occurrences{get_occurrences(log_shape_id, structurized_text_id)};
+        if (occurrences.empty()) {
             continue;
         }
         for (auto& leaf_queries : interpretations_per_shape.at(log_shape_id)) {
@@ -156,11 +162,11 @@ ClppMatcher::decompose_by_log_shapes(mpt_node_id_t structurized_text_id, std::st
                     }
             ))
         {
-            matches.push_back({.schema_ids{schema_ids}, .leaf_queries{}});
+            matches.push_back({.occurrences{occurrences}, .leaf_queries{}});
             continue;
         }
         for (auto& leaf_queries : interpretations_per_shape.at(log_shape_id)) {
-            matches.push_back({.schema_ids{schema_ids}, .leaf_queries{std::move(leaf_queries)}});
+            matches.push_back({.occurrences{occurrences}, .leaf_queries{std::move(leaf_queries)}});
         }
     }
     return matches;
@@ -179,26 +185,41 @@ auto ClppMatcher::decompose_by_rule_name(
     matches.reserve(interpretations.size());
     for (auto& interpretation : interpretations) {
         erase_unconstrained_leaves(interpretation.m_leaf_queries);
-        std::map<size_t, std::unordered_set<int32_t>> schema_ids_by_leaf_position;
+        std::map<size_t, InterpretationMatch::Occurrences> occurrences_by_leaf_position;
         for_each_matching_occurrence(
                 structurized_text_id,
                 rule_name,
                 interpretation.m_shape_query.view(),
-                [&](std::unordered_set<int32_t> const& schema_ids, size_t leaf_position) -> void {
+                [&](InterpretationMatch::Occurrences const& occurrences,
+                    size_t leaf_position) -> void {
                     // Unconstrained interpretations are satisfied by any matching occurrence, so
-                    // their schemas are collected under a single position.
+                    // their occurrences are collected under a single position.
                     auto const key{interpretation.m_leaf_queries.empty() ? 0 : leaf_position};
-                    auto [it, _]{schema_ids_by_leaf_position.try_emplace(key)};
-                    it->second.insert(schema_ids.begin(), schema_ids.end());
+                    auto& grouped_occurrences{occurrences_by_leaf_position[key]};
+                    for (auto const& [schema_id, occurrence_indices] : occurrences) {
+                        auto& indices{grouped_occurrences[schema_id]};
+                        indices.insert(
+                                indices.end(),
+                                occurrence_indices.begin(),
+                                occurrence_indices.end()
+                        );
+                    }
                 }
         );
-        for (auto& [leaf_position, schema_ids] : schema_ids_by_leaf_position) {
+        for (auto& [leaf_position, occurrences] : occurrences_by_leaf_position) {
+            // A schema's occurrence can be collected several times when a log shape contains
+            // multiple matching parent rule occurrences at the same leaf position.
+            for (auto& indices : occurrences | std::views::values) {
+                std::ranges::sort(indices);
+                auto const [duplicates_begin, duplicates_end]{std::ranges::unique(indices)};
+                indices.erase(duplicates_begin, duplicates_end);
+            }
             auto leaf_queries{interpretation.m_leaf_queries};
             for (auto& leaf : leaf_queries) {
                 leaf.m_leaf_position += leaf_position;
             }
             matches.push_back(
-                    {.schema_ids{std::move(schema_ids)}, .leaf_queries{std::move(leaf_queries)}}
+                    {.occurrences{std::move(occurrences)}, .leaf_queries{std::move(leaf_queries)}}
             );
         }
     }

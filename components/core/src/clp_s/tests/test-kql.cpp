@@ -1,3 +1,5 @@
+#include <cstddef>
+#include <cstdint>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -9,6 +11,9 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
+
+#include <clp_s/Defs.hpp>
+#include <clp_s/search/ast/Literal.hpp>
 
 #include "../src/clp_s/search/ast/AndExpr.hpp"
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
@@ -498,4 +503,76 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         stringstream invalid_query_stream{invalid_query};
         REQUIRE(nullptr == parse_kql_expression(invalid_query_stream));
     }
+}
+
+TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnDescriptor]") {
+    using clp_s::search::ast::LiteralType;
+
+    constexpr clp_s::mpt_node_id_t cNodeId{42};
+    constexpr clp_s::mpt_node_id_t cOtherNodeId{43};
+    constexpr int32_t cSchemaId{7};
+    constexpr size_t cLeafPosition{3};
+    constexpr size_t cOccurrenceIdx{1};
+    constexpr size_t cOtherOccurrenceIdx{2};
+
+    auto column{ColumnDescriptor::create_from_escaped_tokens({"message", "value"}, "")};
+    column->set_matching_type(LiteralType::IntegerT);
+    column->bind_as_decomposed_leaf(cNodeId, cLeafPosition, cOccurrenceIdx, {cSchemaId});
+
+    REQUIRE(column->is_bound());
+    REQUIRE(column->is_decomposed_leaf());
+    REQUIRE(cNodeId == column->get_bound_node_id());
+    REQUIRE(cLeafPosition == column->get_leaf_position());
+    REQUIRE(cOccurrenceIdx == column->get_structurized_text_occurrence_idx());
+
+    SECTION("Different occurrences of the same leaf compare unequal") {
+        auto other{column->copy()};
+        REQUIRE(*column == *other);
+
+        other->bind_as_decomposed_leaf(cNodeId, cLeafPosition, cOtherOccurrenceIdx, {cSchemaId});
+        REQUIRE_FALSE(*column == *other);
+    }
+
+    SECTION("Copy preserves the leaf, occurrence, and resolved nodes") {
+        auto copied{column->copy()};
+        REQUIRE(copied.get() != column.get());
+        REQUIRE(*column == *copied);
+        REQUIRE(copied->is_decomposed_leaf());
+        REQUIRE(cNodeId == copied->get_bound_node_id());
+        REQUIRE(cLeafPosition == copied->get_leaf_position());
+        REQUIRE(cOccurrenceIdx == copied->get_structurized_text_occurrence_idx());
+        REQUIRE(column->resolved_nodes().schema_to_node_id
+                == copied->resolved_nodes().schema_to_node_id);
+    }
+
+    SECTION("Rebinding preserves the leaf and occurrence but clears resolved nodes") {
+        auto rebound{column->copy_bound_to(cOtherNodeId, LiteralType::IntegerT)};
+        REQUIRE(rebound->is_bound());
+        REQUIRE(rebound->is_decomposed_leaf());
+        REQUIRE(cOtherNodeId == rebound->get_bound_node_id());
+        REQUIRE(rebound->matches_exactly(LiteralType::IntegerT));
+        REQUIRE(cLeafPosition == rebound->get_leaf_position());
+        REQUIRE(cOccurrenceIdx == rebound->get_structurized_text_occurrence_idx());
+        REQUIRE(rebound->resolved_nodes().schema_to_node_id.empty());
+        REQUIRE(rebound->resolved_nodes().wildcard_node_ids.empty());
+    }
+
+    SECTION("Unbound copy clears both the leaf and occurrence") {
+        auto unbound{column->copy_unbound()};
+        REQUIRE_FALSE(unbound->is_bound());
+        REQUIRE_FALSE(unbound->is_decomposed_leaf());
+        REQUIRE_FALSE(unbound->get_leaf_position().has_value());
+        REQUIRE_FALSE(unbound->get_structurized_text_occurrence_idx().has_value());
+        REQUIRE(unbound->resolved_nodes().schema_to_node_id.empty());
+        REQUIRE(unbound->resolved_nodes().wildcard_node_ids.empty());
+
+        auto expected{ColumnDescriptor::create_from_escaped_tokens({"message", "value"}, "")};
+        expected->set_matching_type(LiteralType::IntegerT);
+        REQUIRE(*expected == *unbound);
+    }
+
+    REQUIRE(cNodeId == column->get_bound_node_id());
+    REQUIRE(cLeafPosition == column->get_leaf_position());
+    REQUIRE(cOccurrenceIdx == column->get_structurized_text_occurrence_idx());
+    REQUIRE(cNodeId == column->resolved_nodes().schema_to_node_id.at(cSchemaId));
 }

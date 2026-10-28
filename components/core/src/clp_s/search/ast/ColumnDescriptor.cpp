@@ -121,7 +121,7 @@ ColumnDescriptor::ColumnDescriptor(ColumnDescriptor const& other)
           m_subtree_type{other.m_subtree_type},
           m_function{other.m_function},
           m_bound_node_id{other.m_bound_node_id},
-          m_leaf_position{other.m_leaf_position},
+          m_pinned_leaf{other.m_pinned_leaf},
           m_is_decomposed_leaf{other.m_is_decomposed_leaf} {}
 
 auto ColumnDescriptor::copy() const -> std::shared_ptr<ColumnDescriptor> {
@@ -133,7 +133,7 @@ auto ColumnDescriptor::copy() const -> std::shared_ptr<ColumnDescriptor> {
 auto ColumnDescriptor::copy_unbound() const -> std::shared_ptr<ColumnDescriptor> {
     std::shared_ptr<ColumnDescriptor> unbound{new ColumnDescriptor{*this}};
     unbound->m_bound_node_id.reset();
-    unbound->m_leaf_position.reset();
+    unbound->m_pinned_leaf.reset();
     unbound->m_is_decomposed_leaf = false;
     return unbound;
 }
@@ -149,11 +149,12 @@ auto ColumnDescriptor::copy_bound_to(mpt_node_id_t node_id, LiteralType type) co
 auto ColumnDescriptor::bind_as_decomposed_leaf(
         mpt_node_id_t node_id,
         size_t leaf_position,
+        size_t occurrence_idx,
         std::unordered_set<int32_t> const& schema_ids
 ) -> void {
     m_is_decomposed_leaf = true;
     m_bound_node_id = node_id;
-    m_leaf_position = leaf_position;
+    m_pinned_leaf = LeafPosition{.occurrence_idx = occurrence_idx, .leaf_position = leaf_position};
     m_resolved_nodes = {};
     for (int32_t const schema_id : schema_ids) {
         m_resolved_nodes.schema_to_node_id.emplace(schema_id, node_id);
@@ -213,8 +214,9 @@ void ColumnDescriptor::print() const {
     if (Function::None != m_function) {
         os << "function=" << function_to_str(get_function()) << ", ";
     }
-    if (m_leaf_position.has_value()) {
-        os << "leaf_position=" << m_leaf_position.value() << ", ";
+    if (m_pinned_leaf.has_value()) {
+        os << "occurrence_idx=" << m_pinned_leaf->occurrence_idx << ", "
+           << "leaf_position=" << m_pinned_leaf->leaf_position << ", ";
     }
     if (m_bound_node_id.has_value()) {
         os << "bound_node_id=" << m_bound_node_id.value() << ", ";
@@ -238,7 +240,7 @@ void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {
 bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
     return m_bound_node_id == rhs.m_bound_node_id && m_descriptors == rhs.m_descriptors
            && m_flags == rhs.m_flags && m_function == rhs.m_function
-           && m_leaf_position == rhs.m_leaf_position && m_namespace == rhs.m_namespace
+           && m_pinned_leaf == rhs.m_pinned_leaf && m_namespace == rhs.m_namespace
            && m_pure_wildcard == rhs.m_pure_wildcard && m_subtree_type == rhs.m_subtree_type
            && m_unresolved_descriptors == rhs.m_unresolved_descriptors
            && m_unresolved_tokens == rhs.m_unresolved_tokens;

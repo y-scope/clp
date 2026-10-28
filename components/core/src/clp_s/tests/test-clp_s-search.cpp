@@ -18,10 +18,13 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <clp_s/Defs.hpp>
+#include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/FilterOperation.hpp>
 #include <clp_s/search/ast/Literal.hpp>
 #include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/search/ast/TimestampLiteral.hpp>
+#include <clp_s/search/ClppMatcher.hpp>
 #include <clpp/Interpretation.hpp>
 
 #include "../src/clp_s/archive_constants.hpp"
@@ -52,6 +55,7 @@ constexpr std::string_view cTestInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestSearchInputFile{"test_search.jsonl"};
 constexpr std::string_view cTestSearchMixedTypesFile{"test_search_mixed_types.jsonl"};
 constexpr std::string_view cTestSearchPureWildcardFile{"test_search_pure_wildcard.jsonl"};
+constexpr std::string_view cTestSearchClppOccurrencesFile{"test_search_clpp_occurrences.jsonl"};
 constexpr std::string_view cTestSearchFormattedFloatFile{"test_search_formatted_float.jsonl"};
 constexpr std::string_view cTestSearchFloatTimestampFile{"test_search_float_timestamp.jsonl"};
 constexpr std::string_view cTestSearchIntTimestampFile{"test_search_int_timestamp.jsonl"};
@@ -890,6 +894,152 @@ TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
             queries_and_results,
             decomposed_queries_and_results
     );
+}
+
+/**
+ * Tests occurrence-bound text and parent-rule filters, including repeated rules, leafless texts,
+ * shared leaf paths, and nested arrays. Explicit leaf filters retain any-occurrence semantics.
+ * Repeated schemas check per-record values and repeated matches must not duplicate results.
+ * Numeric wildcard conjunctions also exercise the QueryRunner fallback.
+ */
+TEST_CASE("clp-s-search-clpp-precise-occurrences", "[clp-s][search][clpp]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(edge.int_fallback >= 2 AND edge.int_fallback <= 2)aa", {0, 2}},
+            {R"aa(pairs.key_value.key: a AND pairs.key_value.int_value: 2)aa", {9, 11}},
+    };
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
+            {R"aa(edge: "my edge case 2")aa", {0, 2}},
+            {R"aa(NOT edge: "my edge case 2")aa", {1}},
+            {R"aa(zero_first: "no variables here")aa", {3, 5}},
+            {R"aa(zero_first: "my edge case 5")aa", {3}},
+            {R"aa(zero_last: "my edge case 5")aa", {4}},
+            {R"aa(NOT zero_first: "no variables here")aa", {}},
+            {R"aa(NOT zero_last: "my edge case 5")aa", {6}},
+            {R"aa(shapes: "beta 22")aa", {7}},
+            {R"aa(shapes: "alpha 22")aa", {}},
+            {R"aa(shapes: "beta 11")aa", {}},
+            {R"aa(pairs: "b=2")aa", {9}},
+            {R"aa(pairs: "a=2")aa", {11}},
+            {R"aa(pairs.key_value: "a=2")aa", {11}},
+            {R"aa(NOT pairs.key_value: "a=2")aa", {9, 10}},
+            {R"aa(repeated: "a=3 b=4")aa", {12}},
+            {R"aa(repeated: "a=1 b=4")aa", {}},
+            {R"aa(repeated.key_value: "b=4")aa", {12}},
+            {R"aa(repeated.key_value: "a=2")aa", {}},
+            {R"aa(repeated.key_value: "a=4")aa", {}},
+            {R"aa(NOT repeated.key_value: "b=4")aa", {13}},
+            {R"aa(variables: "role=bob")aa", {14}},
+            {R"aa(variables: "user=bob")aa", {16}},
+            {R"aa(variable_shapes: "beta user=bob")aa", {19}},
+            {R"aa(variable_shapes: "beta user=alice")aa", {}},
+            {R"aa(groups.messages: "nested 3")aa", {17}},
+            {R"aa(NOT groups.messages: "nested 2")aa", {18}},
+            {R"aa(repeated: "a=1 b=4" AND repeated.key_value.int_value: 4*)aa", {}},
+            {R"aa(repeated: "a=3 b=4" AND repeated.key_value.int_value: 4*)aa", {12}},
+            {R"aa(NOT repeated.key_value: "b=4" AND repeated.key_value.int_value: 8*)aa", {13}},
+    };
+    auto const single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchClppOccurrencesFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    true,
+                    get_heuristic_parsing_spec_path()
+            )
+    );
+
+    CAPTURE(single_file_archive);
+    search_clpp(queries_and_results, decomposed_queries_and_results);
+}
+
+/**
+ * Parent-rule interpretations sharing a leaf position must be grouped across surrounding text
+ * shapes, without losing any schema/occurrence pairs. Reusing a shape with a different value also
+ * checks that the grouped interpretation still applies its leaf constraints during search.
+ */
+TEST_CASE("clp-s-search-clpp-grouped-shapes", "[clp-s][search][clpp]") {
+    constexpr std::string_view cInputFile{"test_search_clpp_grouped_shapes.jsonl"};
+    constexpr size_t cNumTextShapes{8};
+    // The record reusing the first text shape with a different leaf value.
+    constexpr int64_t cReusedShapeRecordId{cNumTextShapes};
+    auto const single_file_archive = GENERATE(true, false);
+    CAPTURE(single_file_archive);
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cInputFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false,
+                    get_heuristic_parsing_spec_path()
+            )
+    );
+
+    std::vector<int64_t> matching_record_ids;
+    for (size_t idx{0}; idx < cNumTextShapes; ++idx) {
+        matching_record_ids.push_back(static_cast<int64_t>(idx));
+    }
+    search_clpp(
+            {},
+            {{R"aa(message.key_value: "a=1")aa", matching_record_ids},
+             {R"aa(message.key_value: "a=1" AND message: "alpha*")aa", {0}},
+             {R"aa(message.key_value: "a=2" AND message: "alpha*")aa", {cReusedShapeRecordId}}}
+    );
+    if (false == clpp::supports_decomposition()) {
+        return;
+    }
+
+    size_t archive_count{0};
+    for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
+        ++archive_count;
+        clp_s::ArchiveReader archive_reader;
+        archive_reader.open(
+                clp_s::Path{
+                        .source = clp_s::InputSource::Filesystem,
+                        .path = entry.path().string()
+                },
+                clp_s::ArchiveReader::Options{}
+        );
+        REQUIRE(false == archive_reader.read_metadata().has_error());
+        std::optional<clp_s::mpt_node_id_t> message_node_id;
+        for (auto const& node : archive_reader.get_schema_tree()->get_nodes()) {
+            if (clp_s::NodeType::StructurizedText == node.get_type()
+                && "message" == node.get_key_name())
+            {
+                REQUIRE(false == message_node_id.has_value());
+                message_node_id = node.get_id();
+            }
+        }
+        if (false == message_node_id.has_value()) {
+            FAIL("The grouped-shapes fixture has no message StructurizedText node");
+            return;
+        }
+
+        clp_s::search::ClppMatcher matcher{&archive_reader, true};
+        auto const result{matcher.decompose_query(message_node_id.value(), "a=1", "key_value")};
+        REQUIRE(false == result.has_error());
+        auto const& interpretations{result.value()};
+        REQUIRE(1 == interpretations.size());
+        auto const& occurrences{interpretations.front().occurrences};
+        REQUIRE(cNumTextShapes == occurrences.size());
+        REQUIRE(cNumTextShapes == archive_reader.get_schema_map()->size());
+        for (auto const& [schema_id, _] : *archive_reader.get_schema_map()) {
+            CAPTURE(schema_id);
+            REQUIRE(occurrences.contains(schema_id));
+            REQUIRE(std::vector<size_t>{0} == occurrences.at(schema_id));
+        }
+        archive_reader.close();
+    }
+    REQUIRE(1 == archive_count);
 }
 
 TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
