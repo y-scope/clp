@@ -160,8 +160,8 @@ impl<SourceType: Source> From<CompressionInputBuilder<SourceType>> for Vec<Sourc
 
 impl Source for S3Config {
     type Entry = ObjectMetadata;
-    type Path = String;
     type Manifest = S3InputSource;
+    type Path = String;
 
     fn prepare_entry(
         &mut self,
@@ -215,8 +215,8 @@ pub struct FsSource {
 
 impl Source for FsSource {
     type Entry = FsEntry;
-    type Path = LogsInputPath;
     type Manifest = FsInputSource;
+    type Path = LogsInputPath;
 
     fn prepare_entry(
         &mut self,
