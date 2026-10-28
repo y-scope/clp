@@ -771,6 +771,49 @@ TEST_CASE("clp-s-search-pure-wildcard-existence", "[clp-s][search]") {
     }
 }
 
+TEST_CASE("clp-s-search-structurized-arrays", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {"*.Nonexistent > 1000", {}},
+            {"*.Nonexistent: *", {}},
+            {"nested.Nonexistent > 1000", {}},
+            {"nested.*.Nonexistent > 1000", {}},
+            {"arr.Nonexistent > 1000", {}},
+            {"objs.Nonexistent: 5", {}},
+            {"objs.c.Nonexistent: 7", {}},
+            {"*.Value > 1000", {}},
+            {"objs: 5", {}},
+            {"nested > 1000", {0}},
+            {"*.nested > 1000", {0}},
+            {"nested.* > 1000", {0}},
+            {"nested: *", {0, 1}},
+            {"arr > 1000", {2}},
+            {"arr.* > 1000", {2}},
+            {"objs.b: 5", {3}},
+            {"*.b: 5", {3}},
+            {"objs.*: 5", {3}},
+            {"objs.c: 7", {3}},
+            {"*.c: 7", {3}},
+            {"*.Port > 1000", {4}}
+    };
+    auto const single_file_archive{GENERATE(true, false)};
+    CAPTURE(single_file_archive);
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path("test_search_structurized_arrays.jsonl"),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    true
+            )
+    );
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
+}
+
 TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(arr.b > 1000)aa", {7, 8}},

@@ -567,7 +567,10 @@ auto SchemaMatch::populate_column_mapping(
             matched_node = true;
             continue;
         }
-        if (next_at_descriptor_list_end
+        bool const descriptor_consumed_at_node{
+                is_key_name_empty ? at_descriptor_list_end : next_at_descriptor_list_end
+        };
+        if (descriptor_consumed_at_node
             && column->matches_type(SchemaNode::node_to_literal_type(cur_node.get_type())))
         {
             bool const is_decomposable{cur_node.is_decomposable()};
