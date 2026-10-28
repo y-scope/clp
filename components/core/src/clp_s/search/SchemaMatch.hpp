@@ -459,9 +459,11 @@ private:
     ) -> void;
 
     /**
-     * Handles the special case of a pure wildcard column (`*`). A pure wildcard has no MPT node of
-     * its own, so the object subtree of `column`'s namespace is walked to collect every
-     * decomposable node:
+     * Handles the special case of a pure wildcard column (`*`). An existence filter on an
+     * unrestricted `*` is left unchanged, since it doesn't depend on any column (see
+     * `find_pure_wildcard_candidate_schemas`). Otherwise, since a pure wildcard has no MPT node of
+     * its own, the object subtree of `column`'s namespace is walked to collect every decomposable
+     * node:
      * - If the filter is expandable over decomposable nodes and such nodes exist, it is rewritten
      *   into an expression with one filter per node plus a non-decomposable wildcard filter over
      *   every other column type (or `EmptyExpr` if no schema can match).
@@ -596,6 +598,7 @@ private:
      * Finds common schemas and relevant columns across filters. The `first` parameter is true
      * on the initial call (initializing `common_schema` with the matched schemas for the first
      * column) and false on recursive calls (intersecting subsequent columns into `common_schema`).
+     * A pure wildcard column contributes the schemas from `find_pure_wildcard_candidate_schemas`.
      * @param cur The current expression node to process.
      * @param common_schema The set of schemas common to all processed columns so far, updated
      *     in place.
@@ -609,6 +612,26 @@ private:
             std::set<ast::ColumnDescriptor*>& columns,
             bool first
     );
+
+    /**
+     * Finds the schemas that may contain a record matching `filter` on the pure wildcard `column`.
+     *
+     * Value filters can only be decided per record, so every schema is a candidate. Existence
+     * filters are decided here, per schema:
+     * - On an unrestricted `*` (matching every type, e.g. from `*: *` or `NOT *: *`), `*` may
+     *   match zero kv-pairs, so EXISTS holds for every record (including one without any kv-pairs)
+     *   and NEXISTS holds for none.
+     * - On a `*` restricted to some types (e.g. `*: null` or `NOT *: null`), `*` behaves like any
+     *   other key: EXISTS holds in a schema with at least one non-metadata column of a matching
+     *   type, and NEXISTS holds in every other schema.
+     * @param column The pure wildcard column.
+     * @param filter The filter containing `column`.
+     * @return The IDs of the candidate schemas.
+     */
+    [[nodiscard]] auto find_pure_wildcard_candidate_schemas(
+            ast::ColumnDescriptor const& column,
+            ast::FilterExpr const& filter
+    ) const -> std::set<int32_t>;
 
     /**
      * Determines whether `schema_id` must be searched for a NEXISTS filter on `column`: either

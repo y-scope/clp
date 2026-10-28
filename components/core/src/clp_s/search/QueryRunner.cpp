@@ -1247,9 +1247,9 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                     && column->matches_exactly(LiteralType::ArrayT) && column->is_bound()
             };
             if (false == requires_array_scan) {
-                // semantics of previous passes means that EXISTS and NEXISTS are
-                // trivially matching
-                // FIXME: have an edgecase to handle with NEXISTS on pure wildcard columns
+                // Schema matching has already restricted this schema to ones in which the
+                // existence filter holds (including for pure wildcard columns), so it holds for
+                // every record.
                 return EvaluatedValue::True;
             }
         } else if (filter->get_column()->is_pure_wildcard()

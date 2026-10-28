@@ -51,6 +51,7 @@ constexpr std::string_view cTestSearchArchiveDirectory{"test-clp-s-search-archiv
 constexpr std::string_view cTestInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestSearchInputFile{"test_search.jsonl"};
 constexpr std::string_view cTestSearchMixedTypesFile{"test_search_mixed_types.jsonl"};
+constexpr std::string_view cTestSearchPureWildcardFile{"test_search_pure_wildcard.jsonl"};
 constexpr std::string_view cTestSearchFormattedFloatFile{"test_search_formatted_float.jsonl"};
 constexpr std::string_view cTestSearchFloatTimestampFile{"test_search_float_timestamp.jsonl"};
 constexpr std::string_view cTestSearchIntTimestampFile{"test_search_int_timestamp.jsonl"};
@@ -657,6 +658,10 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
             {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}},
             {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
+            {R"aa(*: *)aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
+            {R"aa(NOT *: *)aa", {}},
+            {R"aa(*: null)aa", {}},
+            {R"aa(NOT *: null)aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
             {R"aa(*: "*xyz*")aa", {}},
             {R"aa(o: "*xyz*")aa", {}},
             {R"aa(*: "0.1*")aa", {14}},
@@ -723,6 +728,46 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             );
             REQUIRE_NOTHROW(search(neq_expr, false, expected));
         }
+    }
+}
+
+// Pins the semantics of existence queries on the pure wildcard key `*`:
+// - An unrestricted `*` may match zero kv-pairs, so `*: *` matches every record and `NOT *: *`
+//   matches none.
+// - A `*` restricted to some types behaves like any other key: `*: null` matches records with a
+//   null kv-pair and `NOT *: null` matches records with a non-null kv-pair.
+// Every record here has a non-null `idx`, so `NOT *: null` matches all of them. That `*: *` also
+// matches a record without any kv-pairs (e.g. `{}`) can't be tested with this harness, which
+// identifies records by `idx`.
+TEST_CASE("clp-s-search-pure-wildcard-existence", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(*: *)aa", {0, 1, 2, 3, 4}},
+            {R"aa(NOT *: *)aa", {}},
+            {R"aa(*: null)aa", {1, 3}},
+            {R"aa(NOT *: null)aa", {0, 1, 2, 3, 4}},
+            {R"aa(NOT *: * OR e: y)aa", {3}},
+            {R"aa(idx: 1 AND NOT *: *)aa", {}},
+            {R"aa(NOT e: * AND *: null)aa", {1}},
+    };
+    auto const structurize_arrays = GENERATE(true, false);
+    auto const single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchPureWildcardFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    structurize_arrays
+            )
+    );
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 }
 

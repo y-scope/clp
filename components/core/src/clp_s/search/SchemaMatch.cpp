@@ -96,6 +96,20 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
 [[nodiscard]] auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool;
 
 /**
+ * Determines whether `filter` is an existence filter on a pure wildcard column that can match every
+ * type, i.e. the result of rewriting `*: *` or `NOT *: *`. Such a filter is decided without looking
+ * at any column: `*` may match zero kv-pairs, so the EXISTS form holds for every record (including
+ * one without any kv-pairs) and the NEXISTS form holds for none.
+ * @param column The pure wildcard column.
+ * @param filter The filter containing `column`.
+ * @return Whether `filter` is an existence filter on an unrestricted pure wildcard column.
+ */
+[[nodiscard]] auto is_unrestricted_pure_wildcard_existence_filter(
+        ast::ColumnDescriptor const& column,
+        ast::FilterExpr const& filter
+) -> bool;
+
+/**
  * Copies `filter`, replacing its column with `column`. The operation, operand (if any) and
  * inversion are kept; the operand is shared with `filter`, not copied.
  * @param column
@@ -161,6 +175,15 @@ auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool {
     auto const op{filter.get_operation()};
     bool const is_existence_filter{FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op};
     return is_existence_filter && ((FilterOperation::NEXISTS == op) != filter.is_inverted());
+}
+
+auto is_unrestricted_pure_wildcard_existence_filter(
+        ast::ColumnDescriptor const& column,
+        ast::FilterExpr const& filter
+) -> bool {
+    auto const op{filter.get_operation()};
+    return column.is_pure_wildcard() && column.matches_exactly(ast::cAllTypes)
+           && (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op);
 }
 
 auto copy_filter_with_column(
@@ -290,6 +313,9 @@ auto SchemaMatch::resolve_pure_wildcard(
         std::shared_ptr<ast::Expression> const& expr
 ) -> std::shared_ptr<ast::Expression> {
     auto const& filter{dynamic_cast<FilterExpr const&>(*expr)};
+    if (is_unrestricted_pure_wildcard_existence_filter(*column, filter)) {
+        return expr;
+    }
     if (false == is_expandable_over_decomposable_nodes(*column, filter)) {
         return resolve_pure_wildcard_by_node_type(column, expr);
     }
@@ -680,13 +706,14 @@ auto SchemaMatch::intersect_and_sub_expr(
             }
 
             if (column->is_pure_wildcard()) {
-                // TODO: consider handling `*:null` NEXISTS edgecase here instead of during
-                // output
-                if (first) {
-                    for (auto schema_it : *m_schemas) {
-                        common_schema.insert(schema_it.first);
-                    }
-                }
+                narrow_common_schemas(
+                        find_pure_wildcard_candidate_schemas(
+                                *column,
+                                dynamic_cast<FilterExpr const&>(*cur)
+                        ),
+                        common_schema,
+                        first
+                );
                 return false;
             }
 
@@ -721,6 +748,50 @@ auto SchemaMatch::intersect_and_sub_expr(
         }
     }
     return first;
+}
+
+auto SchemaMatch::find_pure_wildcard_candidate_schemas(
+        ast::ColumnDescriptor const& column,
+        ast::FilterExpr const& filter
+) const -> std::set<int32_t> {
+    auto const op{filter.get_operation()};
+    bool const holds_when_absent{existence_filter_holds_when_absent(filter)};
+    std::set<int32_t> candidate_schemas;
+    if (FilterOperation::EXISTS != op && FilterOperation::NEXISTS != op) {
+        for (auto const& [schema_id, _] : *m_schemas) {
+            candidate_schemas.insert(schema_id);
+        }
+        return candidate_schemas;
+    }
+    if (is_unrestricted_pure_wildcard_existence_filter(column, filter)) {
+        if (false == holds_when_absent) {
+            for (auto const& [schema_id, _] : *m_schemas) {
+                candidate_schemas.insert(schema_id);
+            }
+        }
+        return candidate_schemas;
+    }
+
+    auto const metadata_subtree_root_node_id{m_tree->get_metadata_subtree_node_id()};
+    for (auto const& [schema_id, schema] : *m_schemas) {
+        bool const has_matching_node{
+                schema.get_view().any_node_id<true>([&](mpt_node_id_t node_id) -> bool {
+                    auto const& node{m_tree->get_node(node_id)};
+                    bool const is_metadata_column{
+                            constants::cRootNodeId != metadata_subtree_root_node_id
+                            && metadata_subtree_root_node_id == node.get_parent_id()
+                    };
+                    return false == is_metadata_column
+                           && column.matches_type(
+                                   SchemaNode::node_to_literal_type(node.get_type())
+                           );
+                })
+        };
+        if (has_matching_node != holds_when_absent) {
+            candidate_schemas.insert(schema_id);
+        }
+    }
+    return candidate_schemas;
 }
 
 auto SchemaMatch::is_nexists_candidate_schema(
