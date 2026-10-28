@@ -5,11 +5,17 @@ builds, testing, and linting. We briefly describe each workflow below.
 
 ## clp-artifact-build
 
-This workflow is responsible for:
+This workflow is responsible for the following:
 
-1. building (Linux) container images containing CLP-core's dependencies,
-2. building CLP-core and running its unit & integration tests, and
-3. building a container image containing CLP's package components.
+1. Building container images containing the dependencies necessary to build all CLP artifacts.
+2. Building CLP-core, the CLP-core Python wheels, and the CLP package.
+3. Building container images containing:
+
+    * CLP-core;
+    * the CLP package; and
+    * the binaries necessary for the Spider worker.
+
+4. Running C++ linting checks, unit tests, and integration tests on the built artifacts.
 
 To minimize build times, the jobs in the workflow are organized in the directed acyclic graph (DAG)
 shown below.
@@ -29,24 +35,50 @@ shown below.
   }
 }%%
 flowchart LR
+    %% CLP-artifact-dependency container build jobs
     calc-build-triggers --> centos-stream-9-deps-image
     calc-build-triggers --> manylinux_2_28-deps-image
     calc-build-triggers --> musllinux_1_2-deps-image
-    calc-build-triggers --> ubuntu-jammy-deps-image
-    calc-build-triggers --> centos-stream-9-binaries
-    calc-build-triggers --> manylinux_2_28-x86_64-binaries
-    calc-build-triggers --> musllinux_1_2-x86_64-binaries
-    calc-build-triggers --> ubuntu-jammy-binaries
-    centos-stream-9-deps-image --> centos-stream-9-binaries
+    calc-build-triggers --> ubuntu-jammy-aarch64-deps-image
+    calc-build-triggers --> ubuntu-jammy-x86_64-deps-image
     manylinux_2_28-deps-image --> manylinux_2_28-deps-image-merge
+    musllinux_1_2-deps-image --> musllinux_1_2-deps-image-merge
+
+    %% CLP-core build jobs
+    calc-build-triggers --> centos-stream-9-binaries
+    centos-stream-9-deps-image --> centos-stream-9-binaries
+    calc-build-triggers --> manylinux_2_28-x86_64-binaries
     manylinux_2_28-deps-image --> manylinux_2_28-x86_64-binaries
     manylinux_2_28-deps-image-merge --> manylinux_2_28-x86_64-binaries
-    musllinux_1_2-deps-image --> musllinux_1_2-deps-image-merge
+    calc-build-triggers --> musllinux_1_2-x86_64-binaries
     musllinux_1_2-deps-image --> musllinux_1_2-x86_64-binaries
     musllinux_1_2-deps-image-merge --> musllinux_1_2-x86_64-binaries
-    ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
-    ubuntu-jammy-deps-image --> package-image
+    calc-build-triggers --> ubuntu-jammy-binaries
+    ubuntu-jammy-x86_64-deps-image --> ubuntu-jammy-binaries
+
+    %% CLP-core binaries container build jobs
     ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
+
+    %% CLP-core Python-wheel build jobs
+    calc-build-triggers --> manylinux_2_28-x86_64-python-wheels
+    manylinux_2_28-deps-image --> manylinux_2_28-x86_64-python-wheels
+    manylinux_2_28-deps-image-merge --> manylinux_2_28-x86_64-python-wheels
+
+    %% CLP-package container build jobs
+    calc-build-triggers --> package-image
+    ubuntu-jammy-aarch64-deps-image --> package-image
+    ubuntu-jammy-x86_64-deps-image --> package-image
+    package-image --> package-image-multiarch-manifest
+
+    %% Spider-worker container build jobs
+    calc-build-triggers --> spider-worker-image
+    ubuntu-jammy-aarch64-deps-image --> spider-worker-image
+    ubuntu-jammy-x86_64-deps-image --> spider-worker-image
+    spider-worker-image --> spider-worker-image-multiarch-manifest
+
+    %% Lint & test jobs
+    calc-build-triggers --> ubuntu-jammy-lint
+    ubuntu-jammy-x86_64-deps-image --> ubuntu-jammy-lint
     ubuntu-jammy-binaries --> ubuntu-jammy-integration-tests-core
 :::
 
@@ -69,21 +101,31 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   arch-suffixed tag (e.g. `:main-amd64`).
 * `musllinux_1_2-deps-image-merge`: On push to `main`, merges the per-arch tags produced by
   `musllinux_1_2-deps-image` into a single multi-arch `:main` manifest.
-* `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build
-  CLP-core in an Ubuntu Jammy x86 environment.
+* `ubuntu-jammy-x86_64-deps-image` / `ubuntu-jammy-aarch64-deps-image`: Builds a container image
+  containing the dependencies necessary to build CLP-core in an Ubuntu Jammy x86/aarch64
+  environment.
 * `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
   and runs core's unit tests.
 * `manylinux_2_28-x86_64-binaries`: Builds the CLP-core binaries in the built manylinux_2_28
   container and runs core's unit tests.
 * `musllinux_1_2-x86_64-binaries`: Builds the CLP-core binaries in the built musllinux_1_2 container
   and runs core's unit tests.
-* `package-image`: Builds a container image containing CLP's package components.
+* `manylinux_2_28-x86_64-python-wheels`: Builds the `yscope-clp-core` wheels in the built
+  `manylinux_2_28` container.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.
 * `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's
   binaries built in the `ubuntu-jammy-binaries` job.
+* `ubuntu-jammy-lint`: Runs C++ linting checks in the built ubuntu-jammy container.
 * `ubuntu-jammy-integration-tests-core`: Runs CLP-core's integration tests using the binaries built
   in the `ubuntu-jammy-binaries` job, and then uploads the logs from the tests.
+* `package-image`: Builds the CLP package container image.
+* `package-image-multiarch-manifest`: When run on `main`, merges the per-arch tags produced by
+  `package-image` into a single multi-arch manifest.
+* `spider-worker-image`: Builds a container image containing certain binaries from CLP-core
+  (`clp-s`, `indexer`, and `log-converter`) and `clp-tdl-package`.
+* `spider-worker-image-multiarch-manifest`: When the image is being published, merges the per-arch
+  tags produced by `spider-worker-image` into a single multi-arch manifest.
 
 When the PR or commit doesn't change any of the files that affect CLP's dependencies (or the
 dependency container images), then the dependency container images won't be rebuilt; instead the
@@ -115,14 +157,55 @@ details, see [GitHub-hosted runners][gh-hosted-runners].
 
 ## clp-core-build-macos
 
-This workflow builds CLP-core on macOS and runs its unit tests.
+This workflow builds CLP-core on macOS, runs its unit tests, and runs C++ linting checks.
+
+## clp-docs
+
+This workflow validates that the docs site can be built.
+
+## clp-docs-generated-code-checks
+
+This workflow generates the OpenAPI docs and validates that they don't differ from the committed
+OpenAPI docs.
 
 ## clp-lint
 
-This workflow runs linting checks on the codebase.
+This workflow runs all JavaScript, Python, and YAML linting checks on the codebase.
+
+:::{note}
+Further linting checks on the codebase are run as appropriate in other workflows: C++ linting in
+`clp-artifact-build` and `clp-core-build-macos`, Rust linting in `clp-rust-checks`, and Helm linting
+in `clp-package-helm`.
+:::
+
+## clp-package-helm
+
+This workflow contains two jobs for linting, building, and publishing the Helm chart:
+
+* `lint` runs Helm linting checks on the chart.
+* `publish` builds the chart and publishes it to the `gh-pages` branch; `publish` runs only on
+  pushes to `main` and semantic-version branches.
+
+## clp-pr-title-checks
+
+This workflow validates pull request titles against the Conventional Commits specification.
+
+## clp-rust-checks
+
+This workflow validates Rust's lock files, runs all Rust linting checks, and runs all Rust tests.
+
+## clp-s-generated-code-checks
+
+This workflow generates the KQL and SQL ANTLR parsers and validates that they don't differ from the
+committed parsers.
 
 ## clp-uv-checks
 
 This workflow checks whether each UV Python project's lockfile matches the project metadata.
+
+## clp-webui-generated-code-checks
+
+This workflow generates the webui's API client schema and validates that it doesn't differ from the
+committed schema.
 
 [gh-hosted-runners]: https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners
