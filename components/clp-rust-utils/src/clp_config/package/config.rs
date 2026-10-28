@@ -236,7 +236,7 @@ impl Default for ApiServer {
             host: "localhost".to_owned(),
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
-            stream_file_extraction_timeout_secs: NonZeroU64::new(1800)
+            stream_file_extraction_timeout_secs: NonZeroU64::new(270)
                 .expect("default stream file extraction timeout should not be zero"),
         }
     }
