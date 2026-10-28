@@ -126,7 +126,7 @@ tasks:
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo run --bin api-server-openapi-codegen --release \
-        -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/api-server-openapi.json" \
-        "{{.G_WEBUI_SRC_DIR}}/packages/api-client/openapi.json"
+        -- --public-path "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/api-server-openapi.json" \
+        --webui-path "{{.G_WEBUI_SRC_DIR}}/packages/api-client/openapi.json"
       cargo run --bin log-ingestor-openapi-codegen --release \
         -- "{{.G_DOCS_SRC_STATIC_GENERATED_DIR}}/log-ingestor-openapi.json"

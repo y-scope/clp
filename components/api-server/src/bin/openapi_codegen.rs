@@ -6,7 +6,10 @@ use utoipa::OpenApi;
 #[derive(Parser)]
 #[command(version, about = "Generate the public and WebUI OpenAPI documents")]
 struct Args {
+    #[arg(long)]
     public_path: String,
+
+    #[arg(long)]
     webui_path: String,
 }
 
