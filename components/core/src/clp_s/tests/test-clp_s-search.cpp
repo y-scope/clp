@@ -780,6 +780,65 @@ TEST_CASE("clp-s-search-multiple-archives-in-one-process", "[clp-s][search]") {
     }
 }
 
+TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
+    using DictionaryType = clp_s::ArchiveReader::DictionaryType;
+    auto const single_file_archive = GENERATE(true, false);
+    // A single-file archive is read in on-disk order, so reading the array dictionary also reads
+    // the log type dictionary stored before it.
+    auto const dictionaries_stored_before_array_dict{
+            single_file_archive ? DictionaryType::LogTypeDict : DictionaryType::None
+    };
+    std::vector<std::pair<std::string, DictionaryType>> const queries_and_dictionaries{
+            {R"aa(b: null)aa", DictionaryType::None},
+            {R"aa(a: "x")aa", DictionaryType::VarDict},
+            {R"aa(c: 1)aa",
+             DictionaryType::VarDict | DictionaryType::ArrayDict
+                     | dictionaries_stored_before_array_dict},
+    };
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchPureWildcardFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false
+            )
+    );
+
+    for (auto const& [query, expected_dictionaries] : queries_and_dictionaries) {
+        CAPTURE(query);
+        auto query_stream = std::istringstream{query};
+        auto expr = clp_s::search::kql::parse_kql_expression(query_stream);
+        REQUIRE(nullptr != expr);
+        expr = clp_s::search::ast::preprocess_query(expr);
+        REQUIRE(nullptr != expr);
+
+        for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
+            auto archive_reader = std::make_shared<clp_s::ArchiveReader>(
+                    clp_s::Path{
+                            .source = clp_s::InputSource::Filesystem,
+                            .path = entry.path().string()
+                    },
+                    clp_s::ArchiveReader::Options{}
+            );
+            REQUIRE(DictionaryType::None == archive_reader->get_read_dictionaries());
+
+            auto match_pass = std::make_shared<clp_s::search::SchemaMatch>(archive_reader, true);
+            auto archive_expr = expr->copy();
+            REQUIRE_NOTHROW(archive_expr = match_pass->run(archive_expr));
+            REQUIRE(nullptr != archive_expr);
+            REQUIRE(nullptr
+                    == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr));
+
+            REQUIRE(expected_dictionaries == archive_reader->get_read_dictionaries());
+        }
+    }
+}
+
 TEST_CASE("clp-s-search-pure-wildcard-existence", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(*: *)aa", {0, 1, 2, 3, 4}},

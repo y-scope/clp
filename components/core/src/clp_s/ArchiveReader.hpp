@@ -2,6 +2,7 @@
 #define CLP_S_ARCHIVEREADER_HPP
 
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>
@@ -49,6 +50,7 @@ concept SectionReaderReq
  */
 class ArchiveReader {
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
         // Constructors
@@ -60,6 +62,44 @@ public:
         NetworkAuthOption m_network_auth{};
         bool m_extract_mode{false};
     };
+
+    /**
+     * The dictionaries an archive may contain, as bit flags. A combination of flags is also a
+     * `DictionaryType`; `None` is the empty set. The bitwise operators below are hidden friends so
+     * that they're found by argument-dependent lookup wherever the enum is used.
+     */
+    enum class DictionaryType : uint8_t {
+        None = 0,
+        VarDict = 1U << 0,
+        LogTypeDict = 1U << 1,
+        ArrayDict = 1U << 2,
+        LogShapeDict = 1U << 3,
+        ParentRuleShapes = 1U << 4,
+    };
+
+    [[nodiscard]] friend constexpr auto operator|(DictionaryType lhs, DictionaryType rhs)
+            -> DictionaryType {
+        return static_cast<DictionaryType>(
+                static_cast<std::underlying_type_t<DictionaryType>>(lhs)
+                | static_cast<std::underlying_type_t<DictionaryType>>(rhs)
+        );
+    }
+
+    [[nodiscard]] friend constexpr auto operator&(DictionaryType lhs, DictionaryType rhs)
+            -> DictionaryType {
+        return static_cast<DictionaryType>(
+                static_cast<std::underlying_type_t<DictionaryType>>(lhs)
+                & static_cast<std::underlying_type_t<DictionaryType>>(rhs)
+        );
+    }
+
+    friend constexpr auto operator|=(DictionaryType& lhs, DictionaryType rhs) -> DictionaryType& {
+        return lhs = lhs | rhs;
+    }
+
+    friend constexpr auto operator&=(DictionaryType& lhs, DictionaryType rhs) -> DictionaryType& {
+        return lhs = lhs & rhs;
+    }
 
     // Constructors
     /**
@@ -184,6 +224,24 @@ public:
      * null if the archive isn't clpp-flavour.
      */
     auto get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictionaryReader>;
+
+    /**
+     * @return The dictionaries this archive contains, which depends on its flavour.
+     */
+    [[nodiscard]] auto get_available_dictionaries() const -> DictionaryType;
+
+    /**
+     * @return The dictionaries that have been read from the archive so far.
+     */
+    [[nodiscard]] auto get_read_dictionaries() const -> DictionaryType;
+
+    /**
+     * Reads the given dictionaries from the archive in on-disk order, skipping any that have
+     * already been read or that the archive doesn't contain.
+     * @param dictionaries
+     * @throws Propagates the exceptions of each dictionary's `get_` accessor.
+     */
+    auto read_dictionaries(DictionaryType dictionaries) -> void;
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
         return m_archive_reader_adaptor->get_timestamp_dictionary();
@@ -386,6 +444,7 @@ private:
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
     std::shared_ptr<ArchiveReaderAdaptor> m_archive_reader_adaptor;
     std::unordered_set<std::string_view> m_read_sections;
+    DictionaryType m_read_dictionaries{DictionaryType::None};
 
     std::shared_ptr<SchemaTree> m_schema_tree;
     std::shared_ptr<ReaderUtils::SchemaMap> m_schema_map;

@@ -429,10 +429,12 @@ private:
             -> mpt_node_id_t;
 
     /**
-     * Reads the dictionaries needed to read the columns in the given schema view, recursing into
-     * unordered object sub-schemas.
+     * @param schema
+     * @return The dictionaries needed to read the columns in the given schema view, including those
+     * in unordered object sub-schemas.
      */
-    auto read_dictionaries_for_schema(SchemaView const& schema) -> void;
+    [[nodiscard]] auto get_required_dictionaries(SchemaView const& schema) const
+            -> ArchiveReader::DictionaryType;
 
     /**
      * Computes the set of literal types a column may resolve to, as a bitmask.

@@ -269,6 +269,7 @@ auto ArchiveReader::get_variable_dictionary() -> std::shared_ptr<VariableDiction
         ensure_section_readable(constants::cArchiveVarDictFile);
         m_read_sections.emplace(constants::cArchiveVarDictFile);
         m_var_dict->read_entries(true);
+        m_read_dictionaries |= DictionaryType::VarDict;
     }
     return m_var_dict;
 }
@@ -281,6 +282,7 @@ auto ArchiveReader::get_log_type_dictionary() -> std::shared_ptr<LogTypeDictiona
         ensure_section_readable(constants::cArchiveLogDictFile);
         m_read_sections.emplace(constants::cArchiveLogDictFile);
         m_log_dict->read_entries(true);
+        m_read_dictionaries |= DictionaryType::LogTypeDict;
     }
     return m_log_dict;
 }
@@ -293,6 +295,7 @@ auto ArchiveReader::get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictio
         ensure_section_readable(constants::cArchiveLogDictFile);
         m_read_sections.emplace(constants::cArchiveLogDictFile);
         m_clpp->log_shape_dict->read_entries(true);
+        m_read_dictionaries |= DictionaryType::LogShapeDict;
     }
     return m_clpp->log_shape_dict;
 }
@@ -302,8 +305,42 @@ auto ArchiveReader::get_array_dictionary() -> std::shared_ptr<LogTypeDictionaryR
         ensure_section_readable(constants::cArchiveArrayDictFile);
         m_read_sections.emplace(constants::cArchiveArrayDictFile);
         m_array_dict->read_entries(true);
+        m_read_dictionaries |= DictionaryType::ArrayDict;
     }
     return m_array_dict;
+}
+
+auto ArchiveReader::get_available_dictionaries() const -> DictionaryType {
+    auto dictionaries{DictionaryType::VarDict | DictionaryType::ArrayDict};
+    if (m_clpp.has_value()) {
+        dictionaries |= DictionaryType::LogShapeDict | DictionaryType::ParentRuleShapes;
+    } else {
+        dictionaries |= DictionaryType::LogTypeDict;
+    }
+    return dictionaries;
+}
+
+auto ArchiveReader::get_read_dictionaries() const -> DictionaryType {
+    return m_read_dictionaries;
+}
+
+auto ArchiveReader::read_dictionaries(DictionaryType dictionaries) -> void {
+    dictionaries &= get_available_dictionaries();
+    if (DictionaryType::None != (dictionaries & DictionaryType::VarDict)) {
+        get_variable_dictionary();
+    }
+    if (DictionaryType::None != (dictionaries & DictionaryType::LogTypeDict)) {
+        get_log_type_dictionary();
+    }
+    if (DictionaryType::None != (dictionaries & DictionaryType::LogShapeDict)) {
+        get_log_shape_dictionary();
+    }
+    if (DictionaryType::None != (dictionaries & DictionaryType::ArrayDict)) {
+        get_array_dictionary();
+    }
+    if (DictionaryType::None != (dictionaries & DictionaryType::ParentRuleShapes)) {
+        get_parent_rule_shapes_array();
+    }
 }
 
 auto ArchiveReader::get_log_shape_stats_array() -> clpp::LogShapeStatsArray const& {
@@ -334,6 +371,7 @@ auto ArchiveReader::get_parent_rule_shapes_array() -> clpp::ParentRuleShapesArra
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
         m_clpp->parent_rule_shapes_array = result.value();
+        m_read_dictionaries |= DictionaryType::ParentRuleShapes;
     }
     return m_clpp->parent_rule_shapes_array.value();
 }
