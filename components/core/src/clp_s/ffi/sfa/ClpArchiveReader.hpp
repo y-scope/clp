@@ -111,7 +111,8 @@ private:
 
     // Methods
     /**
-     * Cleans up underlying resources.
+     * Cleans up underlying resources. Safe to call repeatedly, since FFI frontends may invoke
+     * destruction paths more than once (e.g., an explicit close followed by GC finalization).
      */
     auto close() noexcept -> void;
 

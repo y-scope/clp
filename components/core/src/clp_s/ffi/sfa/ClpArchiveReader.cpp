@@ -30,8 +30,7 @@ auto ClpArchiveReader::create(
 
     try {
         auto path{get_path_object_for_raw_path(archive_path)};
-        reader = std::make_unique<clp_s::ArchiveReader>();
-        reader->open(path, options);
+        reader = std::make_unique<clp_s::ArchiveReader>(path, options);
         auto clp_archive_reader{ClpArchiveReader{std::move(reader), nullptr}};
         YSTDLIB_ERROR_HANDLING_TRYV(clp_archive_reader.precompute_archive_metadata());
         return clp_archive_reader;
@@ -65,8 +64,7 @@ auto ClpArchiveReader::create(
                 archive_data_owner->size()
         )};
 
-        archive_reader = std::make_unique<clp_s::ArchiveReader>();
-        archive_reader->open(reader, cDefaultArchiveId, options);
+        archive_reader = std::make_unique<clp_s::ArchiveReader>(reader, cDefaultArchiveId, options);
         auto clp_archive_reader{
                 ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)}
         };
@@ -107,17 +105,7 @@ ClpArchiveReader::~ClpArchiveReader() noexcept {
 }
 
 auto ClpArchiveReader::close() noexcept -> void {
-    // FFI frontends may invoke destruction paths multiple times (e.g., explicit close followed by
-    // GC finalization). Guard against this by checking for a null reader before attempting to
-    // close.
-    if (nullptr != m_archive_reader) {
-        try {
-            m_archive_reader->close();
-        } catch (std::exception const& ex) {
-            SPDLOG_ERROR("Exception while closing ClpArchiveReader: {}", ex.what());
-        }
-        m_archive_reader.reset();
-    }
+    m_archive_reader.reset();
     m_event_count = 0;
     m_file_names.clear();
     m_file_infos.clear();

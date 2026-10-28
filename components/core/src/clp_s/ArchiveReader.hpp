@@ -40,6 +40,13 @@ template <typename T>
 concept SectionReaderReq
         = std::is_invocable_r_v<ystdlib::error_handling::Result<void>, T, ZstdDecompressor&>;
 
+/**
+ * Reads a single archive. Each instance is bound to one archive for its whole lifetime: the
+ * constructors open the archive and read its schema tree and schema map, sections are read lazily
+ * through the `get_`/`read_` accessors, and the destructor releases every resource. If reading a
+ * section fails, the instance is left in an unspecified state and should be destroyed. Instances
+ * can't be copied or moved, so the archive's resources are never shared or left dangling.
+ */
 class ArchiveReader {
 public:
     class OperationFailed : public TraceableException {
@@ -54,28 +61,42 @@ public:
         bool m_extract_mode{false};
     };
 
-    // Constructor
-    ArchiveReader() : m_is_open(false) {}
-
+    // Constructors
     /**
      * Opens an archive for reading.
      * @param archive_path
      * @param options
+     * @throws OperationFailed if the archive ID can't be derived from `archive_path`.
+     * @throws OperationFailed if the archive metadata can't be loaded.
      */
-    void open(Path const& archive_path, Options const& options);
+    ArchiveReader(Path const& archive_path, Options const& options);
 
     /**
      * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
      * @param single_file_archive_reader The already opened archive reader.
      * @param archive_id The unique name or identifier for the archive.
      * @param options Options controlling how the archive is read.
+     * @throws OperationFailed if `single_file_archive_reader` is null or `archive_id` is empty.
+     * @throws OperationFailed if the archive metadata can't be loaded.
      */
-    auto open(
+    ArchiveReader(
             std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
             std::string_view archive_id,
             Options const& options
-    ) -> void;
+    );
 
+    // Delete copy constructor and assignment operator
+    ArchiveReader(ArchiveReader const&) = delete;
+    auto operator=(ArchiveReader const&) -> ArchiveReader& = delete;
+
+    // Delete move constructor and assignment operator
+    ArchiveReader(ArchiveReader&&) = delete;
+    auto operator=(ArchiveReader&&) -> ArchiveReader& = delete;
+
+    // Destructor
+    ~ArchiveReader();
+
+    // Methods
     /**
      * Reads the dictionaries and metadata.
      * @throws OperationFailed if reading or decompressing metadata fails.
@@ -191,11 +212,6 @@ public:
     void store(FileWriter& writer);
 
     /**
-     * Closes the archive.
-     */
-    void close();
-
-    /**
      * @return The schema ids in the archive. It also defines the order that tables should be
      * read in to avoid seeking backwards.
      */
@@ -258,7 +274,9 @@ private:
 
     // Methods
     /**
-     * Reads archive metadata and prepares the archive reader for subsequent archive reads.
+     * Loads the archive metadata, schema tree, and schema map, and prepares the dictionary readers
+     * for subsequent lazy reads.
+     * @throws OperationFailed if the archive metadata can't be loaded.
      */
     auto initialize_archive_reader() -> void;
 
@@ -362,7 +380,6 @@ private:
             -> ystdlib::error_handling::Result<void>;
 
     // Data members
-    bool m_is_open;
     std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;

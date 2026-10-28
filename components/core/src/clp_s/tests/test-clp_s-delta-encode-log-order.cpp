@@ -82,8 +82,7 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
     ));
     REQUIRE(1 == archive_paths.size());
 
-    clp_s::ArchiveReader archive_reader;
-    REQUIRE_NOTHROW(archive_reader.open(archive_paths.back(), clp_s::ArchiveReader::Options{}));
+    clp_s::ArchiveReader archive_reader{archive_paths.back(), clp_s::ArchiveReader::Options{}};
     REQUIRE_NOTHROW(archive_reader.read_dictionaries_and_metadata());
     REQUIRE_NOTHROW(archive_reader.open_packed_streams());
     auto mpt = archive_reader.get_schema_tree();
@@ -117,5 +116,4 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
         REQUIRE(val == static_cast<int64_t>(i));
         i = (i + 1) % cNumEntries;
     }
-    REQUIRE_NOTHROW(archive_reader.close());
 }

@@ -131,13 +131,12 @@ void generate_ir() {
 }
 
 void read_and_check_archive_metadata(bool from_ir) {
-    clp_s::ArchiveReader archive_reader;
     for (auto const& entry : std::filesystem::directory_iterator(cTestRangeIndexArchiveDirectory)) {
         clp_s::Path archive_path{
                 .source{clp_s::InputSource::Filesystem},
                 .path{entry.path().string()}
         };
-        REQUIRE_NOTHROW(archive_reader.open(archive_path, clp_s::ArchiveReader::Options{}));
+        clp_s::ArchiveReader archive_reader{archive_path, clp_s::ArchiveReader::Options{}};
         auto const& range_index = archive_reader.get_range_index();
         check_archive_range_index(range_index, from_ir);
         for (size_t i{}; i < cNumRecordsInInputFile; ++i) {
@@ -151,7 +150,6 @@ void read_and_check_archive_metadata(bool from_ir) {
                 archive_reader.get_metadata_for_log_event(cNumRecordsInInputFile),
                 clp_s::ArchiveReaderAdaptor::OperationFailed
         );
-        REQUIRE_NOTHROW(archive_reader.close());
     }
 }
 

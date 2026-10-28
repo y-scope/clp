@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -32,13 +33,8 @@
 #include <clpp/ParentRuleShapes.hpp>
 
 namespace clp_s {
-void ArchiveReader::open(Path const& archive_path, Options const& options) {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-    m_is_open = true;
-    m_options = options;
-
+ArchiveReader::ArchiveReader(Path const& archive_path, Options const& options)
+        : m_options{options} {
     if (false == get_archive_id_from_path(archive_path, m_archive_id)) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
@@ -48,25 +44,28 @@ void ArchiveReader::open(Path const& archive_path, Options const& options) {
     initialize_archive_reader();
 }
 
-auto ArchiveReader::open(
+ArchiveReader::ArchiveReader(
         std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
         std::string_view archive_id,
         Options const& options
-) -> void {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-    m_is_open = true;
-    m_options = options;
-
+)
+        : m_archive_id{archive_id},
+          m_options{options} {
     if (nullptr == single_file_archive_reader || archive_id.empty()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
-    m_archive_id = archive_id;
 
     m_archive_reader_adaptor
             = std::make_shared<ArchiveReaderAdaptor>(std::move(single_file_archive_reader));
     initialize_archive_reader();
+}
+
+ArchiveReader::~ArchiveReader() {
+    try {
+        m_stream_reader.close();
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to close packed streams for archive {} - {}", m_archive_id, e.what());
+    }
 }
 
 auto ArchiveReader::initialize_archive_reader() -> void {
@@ -606,38 +605,6 @@ void ArchiveReader::store(FileWriter& writer) {
             writer.write(message.c_str(), message.length());
         }
     }
-}
-
-void ArchiveReader::close() {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
-    }
-    m_is_open = false;
-
-    m_var_dict->close();
-    if (m_clpp.has_value()) {
-        m_clpp->log_shape_dict->close();
-        if (m_clpp->log_shape_stats_array) {
-            m_clpp->log_shape_stats_array->clear();
-        }
-        if (m_clpp->parent_rule_shapes_array) {
-            m_clpp->parent_rule_shapes_array->clear();
-        }
-    } else {
-        m_log_dict->close();
-    }
-    m_array_dict->close();
-
-    m_clpp.reset();
-    m_stream_reader.close();
-    m_archive_reader_adaptor.reset();
-
-    m_id_to_schema_metadata.clear();
-    m_schema_ids.clear();
-    m_cur_stream_id = 0;
-    m_stream_buffer.reset();
-    m_stream_buffer_size = 0ULL;
-    m_log_event_idx_column_id = -1;
 }
 
 std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_buffer) {

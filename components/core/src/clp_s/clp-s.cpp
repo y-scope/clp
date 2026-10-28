@@ -322,10 +322,10 @@ auto handle_stats_queries(CommandLineArguments const& cli_args) -> int {
     {
         return -1;
     }
-    auto archive_reader{std::make_shared<clp_s::ArchiveReader>()};
     for (auto const& input_path : cli_args.get_input_paths()) {
+        std::shared_ptr<clp_s::ArchiveReader> archive_reader;
         try {
-            archive_reader->open(
+            archive_reader = std::make_shared<clp_s::ArchiveReader>(
                     input_path,
                     clp_s::ArchiveReader::Options{.m_network_auth = cli_args.get_network_auth()}
             );
@@ -349,7 +349,6 @@ auto handle_stats_queries(CommandLineArguments const& cli_args) -> int {
             SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));
             return 3;
         }
-        archive_reader->close();
     }
     return 0;
 }
@@ -765,7 +764,6 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
         auto const clpp_function{find_clpp_function(expr, projection_columns.value())};
-        auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         for (auto const& input_path : command_line_arguments.get_input_paths()) {
             if (std::string::npos != input_path.path.find(clp::ir::cIrFileExtension)) {
                 if (clpp_function.has_value()) {
@@ -840,8 +838,9 @@ int main(int argc, char const* argv[]) {
             };
             utils::profiling::Reporter const profiler_reporter{"search", emit_measurement};
 
+            std::shared_ptr<clp_s::ArchiveReader> archive_reader;
             try {
-                archive_reader->open(
+                archive_reader = std::make_shared<clp_s::ArchiveReader>(
                         input_path,
                         clp_s::ArchiveReader::Options{
                                 .m_network_auth = command_line_arguments.get_network_auth()
@@ -876,7 +875,6 @@ int main(int argc, char const* argv[]) {
             {
                 return 1;
             }
-            archive_reader->close();
         }
     }
 

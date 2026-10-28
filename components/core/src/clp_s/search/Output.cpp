@@ -72,7 +72,6 @@ bool Output::filter() {
     EvaluateTimestampIndex timestamp_index(m_archive_reader->get_timestamp_dictionary());
     if (EvaluatedValue::False == timestamp_index.run(m_expr)) {
         m_termination_stage = cTerminationStageTimeRangeMatchingAfterColumnResolution;
-        m_archive_reader->close();
         return true;
     }
 

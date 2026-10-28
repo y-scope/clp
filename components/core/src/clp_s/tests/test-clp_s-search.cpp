@@ -18,6 +18,7 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <clp_s/ArchiveWriter.hpp>
 #include <clp_s/Defs.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/FilterOperation.hpp>
@@ -214,12 +215,14 @@ void search(
 
     std::vector<clp_s::VectorOutputHandler::QueryResult> results;
     for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
-        auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         auto archive_path = clp_s::Path{
                 .source{clp_s::InputSource::Filesystem},
                 .path{entry.path().string()}
         };
-        archive_reader->open(archive_path, clp_s::ArchiveReader::Options{});
+        auto archive_reader = std::make_shared<clp_s::ArchiveReader>(
+                archive_path,
+                clp_s::ArchiveReader::Options{}
+        );
 
         auto archive_expr = expr->copy();
 
@@ -249,7 +252,6 @@ void search(
                 ignore_case
         );
         output_pass.filter();
-        archive_reader->close();
     }
 
     validate_results(results, expected_results);
@@ -743,6 +745,41 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
 // Every record here has a non-null `idx`, so `NOT *: null` matches all of them. That `*: *` also
 // matches a record without any kv-pairs (e.g. `{}`) can't be tested with this harness, which
 // identifies records by `idx`.
+TEST_CASE("clp-s-search-multiple-archives-in-one-process", "[clp-s][search]") {
+    // The queries avoid the timestamp key, since the `search` helper requires the timestamp index
+    // to accept every archive.
+    constexpr size_t cTargetEncodedSizeForcingArchiveSplit{256};
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(*: *)aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
+            {R"aa(NOT *: *)aa", {}},
+            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
+            {R"aa(var_string: * OR arr.b > 1000)aa", {7, 8, 9}},
+    };
+    auto const single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    std::vector<clp_s::ArchiveStats> archive_stats;
+    REQUIRE_NOTHROW(
+            archive_stats = compress_archive(
+                    get_test_input_local_path(cTestSearchInputFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false,
+                    std::nullopt,
+                    cTargetEncodedSizeForcingArchiveSplit
+            )
+    );
+    REQUIRE(archive_stats.size() > 1);
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
+}
+
 TEST_CASE("clp-s-search-pure-wildcard-existence", "[clp-s][search]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(*: *)aa", {0, 1, 2, 3, 4}},
@@ -1001,14 +1038,13 @@ TEST_CASE("clp-s-search-clpp-grouped-shapes", "[clp-s][search][clpp]") {
     size_t archive_count{0};
     for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
         ++archive_count;
-        clp_s::ArchiveReader archive_reader;
-        archive_reader.open(
+        clp_s::ArchiveReader archive_reader{
                 clp_s::Path{
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
                 clp_s::ArchiveReader::Options{}
-        );
+        };
         REQUIRE(false == archive_reader.read_metadata().has_error());
         std::optional<clp_s::mpt_node_id_t> message_node_id;
         for (auto const& node : archive_reader.get_schema_tree()->get_nodes()) {
@@ -1037,7 +1073,6 @@ TEST_CASE("clp-s-search-clpp-grouped-shapes", "[clp-s][search][clpp]") {
             REQUIRE(occurrences.contains(schema_id));
             REQUIRE(std::vector<size_t>{0} == occurrences.at(schema_id));
         }
-        archive_reader.close();
     }
     REQUIRE(1 == archive_count);
 }

@@ -34,8 +34,7 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option) : m_option
 }
 
 void JsonConstructor::store() {
-    m_archive_reader = std::make_unique<ArchiveReader>();
-    m_archive_reader->open(
+    m_archive_reader = std::make_unique<ArchiveReader>(
             m_option.archive_path,
             ArchiveReader::Options{.m_network_auth = m_option.network_auth, .m_extract_mode = true}
     );
@@ -61,7 +60,7 @@ void JsonConstructor::store() {
     } else {
         construct_in_order();
     }
-    m_archive_reader->close();
+    m_archive_reader.reset();
 }
 
 void JsonConstructor::construct_in_order() {
