@@ -5,6 +5,7 @@ pub mod dataset;
 mod error;
 pub mod job_config;
 pub mod logging;
+pub mod logs_input;
 pub mod s3;
 pub mod serde;
 pub mod sqs;

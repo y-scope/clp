@@ -6,6 +6,7 @@ use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::job_config::NetworkOutput;
 use crate::job_config::SearchJobConfig;
 use crate::types::PositiveI64;
 
@@ -82,6 +83,10 @@ pub enum OutputHandle {
     /// A file per archive. Not yet supported by the Spider query flow.
     #[serde(rename = "file")]
     File,
+
+    /// A TCP listener that the results are streamed to.
+    #[serde(rename = "network")]
+    Network(NetworkOutput),
 }
 
 #[cfg(test)]
