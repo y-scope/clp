@@ -1,7 +1,4 @@
-import {
-    Static,
-    Type,
-} from "@sinclair/typebox";
+import {Type} from "@sinclair/typebox";
 
 import {
     CLP_DEFAULT_TABLE_PREFIX,
@@ -43,37 +40,6 @@ const DatasetNameSchema = Type.String({
 });
 
 /**
- * Schema for an absolute file system path.
- * - Must not be empty.
- * - Must start with "/": the path must be an absolute path.
- */
-const AbsolutePathSchema = Type.String({
-    minLength: 1,
-    pattern: "^/",
-});
-
-/**
- * Schema for request to create a new compression job.
- */
-const CompressionJobCreationSchema = Type.Object({
-    paths: Type.Array(AbsolutePathSchema, {minItems: 1}),
-    dataset: Type.Optional(DatasetNameSchema),
-    timestampKey: Type.Optional(Type.String()),
-    unstructured: Type.Optional(Type.Boolean()),
-});
-
-type CompressionJobCreation = Static<typeof CompressionJobCreationSchema>;
-
-/**
- * Schema for compression job response.
- */
-const CompressionJobSchema = Type.Object({
-    jobId: Type.Number(),
-});
-
-type CompressionJob = Static<typeof CompressionJobSchema>;
-
-/**
  * Matching the `InputType` class in `job_orchestration.scheduler.job_config`.
  */
 enum CompressionJobInputType {
@@ -83,14 +49,8 @@ enum CompressionJobInputType {
 }
 
 export {
-    CompressionJobCreationSchema,
     CompressionJobInputType,
-    CompressionJobSchema,
     DATASET_NAME_MAX_LEN,
     DATASET_NAME_PATTERN,
     DatasetNameSchema,
-};
-export type {
-    CompressionJob,
-    CompressionJobCreation,
 };

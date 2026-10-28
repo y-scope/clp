@@ -1,15 +1,16 @@
+import type {components} from "@webui/api-client";
 import {Nullable} from "@webui/common/utility-types";
 
-import {ExtractStreamResp} from "../../typings/query";
 import {apiClient} from "../search";
 import {createApiError} from "../utils";
 
+
+type StreamFileMetadata = components["schemas"]["StreamFileMetadata"];
 
 interface SubmitExtractStreamJobProps {
     archiveId: string;
     dataset: Nullable<string>;
     logEventIdx: number;
-    onUploadProgress: () => void;
 }
 
 /**
@@ -20,18 +21,14 @@ interface SubmitExtractStreamJobProps {
  * @param props.archiveId
  * @param props.dataset
  * @param props.logEventIdx
- * @param props.onUploadProgress
- * @return The API response.
+ * @return The metadata of the extracted stream file.
  * @throws {Error} If the request fails or the API server returns an unexpected response.
  */
 const submitExtractStreamJob = async ({
     archiveId,
     dataset,
     logEventIdx,
-    onUploadProgress,
-}: SubmitExtractStreamJobProps): Promise<{data: ExtractStreamResp}> => {
-    onUploadProgress();
-
+}: SubmitExtractStreamJobProps): Promise<StreamFileMetadata> => {
     // eslint-disable-next-line new-cap
     const {data, error, response} = await apiClient.POST("/stream_files/extract", {
         body: {
@@ -45,16 +42,7 @@ const submitExtractStreamJob = async ({
         throw createApiError("Failed to extract stream file", response, error);
     }
 
-    return {
-        data: {
-            _id: data.stream_id,
-            begin_msg_ix: data.begin_msg_ix,
-            end_msg_ix: data.end_msg_ix,
-            is_last_chunk: data.is_last_chunk,
-            path: data.path,
-            stream_id: data.stream_id,
-        },
-    };
+    return data;
 };
 
 export {submitExtractStreamJob};

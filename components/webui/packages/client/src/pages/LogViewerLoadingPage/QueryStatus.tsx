@@ -77,17 +77,15 @@ const QueryStatus = () => {
             logEventIdx,
         } = parseResult;
 
+        setQueryState(QUERY_LOADING_STATE.WAITING);
         submitExtractStreamJob({
             archiveId: archiveId,
             dataset: "undefined" === typeof dataset ?
                 null :
                 dataset,
             logEventIdx: logEventIdx,
-            onUploadProgress: () => {
-                setQueryState(QUERY_LOADING_STATE.WAITING);
-            },
         })
-            .then(({data}) => {
+            .then((data) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);
 
                 const innerLogEventNum = parseResult.logEventIdx - data.begin_msg_ix + 1;

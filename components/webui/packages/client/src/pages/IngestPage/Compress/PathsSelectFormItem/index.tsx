@@ -5,7 +5,6 @@ import {
     useState,
 } from "react";
 
-import {FileEntry} from "@webui/common/schemas/os";
 import {
     Form,
     message,
@@ -13,7 +12,10 @@ import {
     TreeSelectProps,
 } from "antd";
 
-import {listFiles} from "../../../../api/os";
+import {
+    DirEntry,
+    listFiles,
+} from "../../../../api/os";
 import SwitcherIcon from "./SwitcherIcon";
 import {
     ROOT_NODE,
@@ -76,7 +78,7 @@ const PathsSelectFormItem = () => {
         }
         loadedPathsRef.current.add(path);
         try {
-            const files: FileEntry[] = await listFiles(path);
+            const files: DirEntry[] = await listFiles(path);
             addNodes(files.map((f) => toTreeNode(f, path)));
         } catch (e) {
             loadedPathsRef.current.delete(path);

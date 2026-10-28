@@ -43,8 +43,11 @@ const DatasetSelect = ({isMultiSelect, maxTagCount, ...selectProps}: DatasetSele
     const {data, isPending, isSuccess, error} = useQuery({
         queryKey: ["datasets"],
         queryFn: async () => {
-            // eslint-disable-next-line new-cap, @stylistic/max-len
-            const {data: datasetNames, error: apiError, response} = await apiClient.GET("/metadata/datasets", {});
+            // eslint-disable-next-line new-cap
+            const {data: datasetNames, error: apiError, response} = await apiClient.GET(
+                "/metadata/datasets",
+                {},
+            );
 
             if ("undefined" === typeof datasetNames) {
                 throw createApiError("Failed to fetch dataset names", response, apiError);

@@ -1,8 +1,10 @@
-import {FileListing} from "@webui/common/schemas/os";
+import type {components} from "@webui/api-client";
 
 import {apiClient} from "../search";
 import {createApiError} from "../utils";
 
+
+type DirEntry = components["schemas"]["DirEntry"];
 
 /**
  * Lists files and directories at the specified path.
@@ -11,7 +13,7 @@ import {createApiError} from "../utils";
  * @return
  * @throws {Error} If the request fails or the API server returns an unexpected response.
  */
-const listFiles = async (path: string): Promise<FileListing> => {
+const listFiles = async (path: string): Promise<DirEntry[]> => {
     // eslint-disable-next-line new-cap
     const {data, error, response} = await apiClient.GET("/os/ls", {params: {query: {path}}});
     if ("undefined" === typeof data) {
@@ -21,4 +23,5 @@ const listFiles = async (path: string): Promise<FileListing> => {
     return data;
 };
 
+export type {DirEntry};
 export {listFiles};

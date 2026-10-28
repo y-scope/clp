@@ -47,20 +47,6 @@ test("does not show internal API response details", () => {
     );
 });
 
-test("shows a structured validation message", () => {
-    const response = new Response(null, {
-        status: 400,
-        headers: {"content-type": "application/json"},
-    });
-
-    assert.equal(
-        createApiError("Failed to submit compression job", response, {
-            message: "At least one path is required",
-        }).message,
-        "Failed to submit compression job: At least one path is required"
-    );
-});
-
 test("gives a safe retry message after extraction times out", () => {
     const response = new Response("private diagnostic", {status: 504});
 

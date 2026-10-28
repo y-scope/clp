@@ -22,20 +22,11 @@ const createApiError = (action: string, response: Response, error: unknown): Err
     let detail: string | undefined;
 
     if (HTTP_STATUS_BAD_REQUEST <= response.status &&
-        HTTP_STATUS_INTERNAL_SERVER_ERROR > response.status
+        HTTP_STATUS_INTERNAL_SERVER_ERROR > response.status &&
+        "string" === typeof error &&
+        contentType.includes("text/plain")
     ) {
-        if ("string" === typeof error &&
-            (contentType.includes("text/plain") || contentType.includes("application/json"))
-        ) {
-            detail = error.trim();
-        } else if (contentType.includes("application/json") &&
-            null !== error &&
-            "object" === typeof error &&
-            "message" in error &&
-            "string" === typeof error.message
-        ) {
-            detail = error.message.trim();
-        }
+        detail = error.trim();
     }
 
     return new Error(detail ?

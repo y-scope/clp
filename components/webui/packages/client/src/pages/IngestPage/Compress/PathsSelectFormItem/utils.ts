@@ -1,5 +1,4 @@
-import {FileEntry} from "@webui/common/schemas/os";
-
+import {DirEntry} from "../../../../api/os";
 import {
     ROOT_PATH,
     TreeNode,
@@ -48,7 +47,7 @@ const joinPath = (...parts: string[]): string => parts
  * @param parentPath Parent path for tree hierarchy
  * @return TreeNode with normalized path as id/value
  */
-const toTreeNode = (fileEntry: FileEntry, parentPath: string): TreeNode => {
+const toTreeNode = (fileEntry: DirEntry, parentPath: string): TreeNode => {
     const fullPath = joinPath(fileEntry.parent_path, fileEntry.name);
 
     return {

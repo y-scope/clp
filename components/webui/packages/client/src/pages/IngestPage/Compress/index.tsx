@@ -3,13 +3,15 @@ import {
     useQueryClient,
 } from "@tanstack/react-query";
 import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
-import {CompressionJobCreation} from "@webui/common/schemas/compression";
 import {
     Form,
     Typography,
 } from "antd";
 
-import {submitCompressionJob} from "../../../api/compress";
+import {
+    CompressionJobCreation,
+    submitCompressionJob,
+} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
 import ClpSFormItems from "./ClpSFormItems";
 import PathsSelectFormItem from "./PathsSelectFormItem";
@@ -61,8 +63,8 @@ const Compress = () => {
         }
         if (true === values.unstructured) {
             payload.unstructured = true;
-        } else if ("undefined" !== typeof values.timestampKey) {
-            payload.timestampKey = values.timestampKey;
+        } else if ("undefined" !== typeof values.timestampKey && 0 < values.timestampKey.length) {
+            payload.timestamp_key = values.timestampKey;
         }
 
         mutate(payload);
@@ -83,7 +85,7 @@ const Compress = () => {
                     <Typography.Text type={"success"}>
                         Compression job submitted successfully with ID:
                         {" "}
-                        {data.jobId}
+                        {data.job_id}
                     </Typography.Text>
                 )}
                 {isError && (
