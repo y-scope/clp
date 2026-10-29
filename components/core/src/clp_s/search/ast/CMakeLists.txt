@@ -5,16 +5,14 @@ set(
     CLP_S_AST_SOURCES
     AndExpr.cpp
     AndExpr.hpp
-    BooleanLiteral.cpp
-    BooleanLiteral.hpp
     ColumnDescriptor.cpp
     ColumnDescriptor.hpp
     ConstantProp.cpp
     ConstantProp.hpp
     ConvertToExists.cpp
     ConvertToExists.hpp
-    DateLiteral.cpp
-    DateLiteral.hpp
+    TimestampLiteral.cpp
+    TimestampLiteral.hpp
     EmptyExpr.cpp
     EmptyExpr.hpp
     Expression.cpp
@@ -22,23 +20,21 @@ set(
     FilterExpr.cpp
     FilterExpr.hpp
     FilterOperation.hpp
-    Integral.cpp
-    Integral.hpp
     Literal.hpp
     NarrowTypes.cpp
     NarrowTypes.hpp
-    NullLiteral.cpp
-    NullLiteral.hpp
     OrExpr.cpp
     OrExpr.hpp
     OrOfAndForm.cpp
     OrOfAndForm.hpp
     SearchUtils.cpp
     SearchUtils.hpp
-    StringLiteral.cpp
-    StringLiteral.hpp
+    SetTimestampLiteralPrecision.cpp
+    SetTimestampLiteralPrecision.hpp
     Transformation.hpp
     Value.hpp
+    ValueLiteral.cpp
+    ValueLiteral.hpp
 )
 
 set(
@@ -60,8 +56,6 @@ if(CLP_BUILD_CLP_S_SEARCH_AST)
     target_include_directories(clp_s_search_ast PUBLIC ../../../)
     target_link_libraries(
         clp_s_search_ast
-        PUBLIC
-        clp_s::timestamp_pattern
         PRIVATE
         simdjson::simdjson
     )

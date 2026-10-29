@@ -7,10 +7,14 @@
 #include <set>
 
 #include <boost/url.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
+#include <simdjson.h>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
+#if CLP_BUILD_CLP_S_ENABLE_CURL
+    #include "../clp/NetworkReader.hpp"
+#endif
 #include "archive_constants.hpp"
 
 using std::string;
@@ -149,6 +153,65 @@ bool FileUtils::get_last_non_empty_path_component(std::string_view const path, s
     return false;
 }
 
+#if CLP_BUILD_CLP_S_ENABLE_CURL
+auto
+NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader)
+        -> bool {
+    auto const* network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
+    if (nullptr == network_reader) {
+        return false;
+    }
+    if (auto const curl_error_info = network_reader->get_curl_error_info();
+        curl_error_info.has_value())
+    {
+        SPDLOG_ERROR(
+                "Encountered curl error while reading {} - Code: {} - Message: {}",
+                path,
+                static_cast<int64_t>(curl_error_info->code()),
+                curl_error_info->message()
+        );
+        return true;
+    }
+    return false;
+}
+
+auto NetworkUtils::is_retryable_curl_error(clp::ReaderInterface const* reader) -> bool {
+    auto const* network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
+    if (nullptr == network_reader) {
+        return false;
+    }
+    auto const curl_error_info = network_reader->get_curl_error_info();
+    if (false == curl_error_info.has_value()) {
+        return false;
+    }
+    auto const code{curl_error_info->code()};
+    // NOTE: CURLE_HTTP_RETURNED_ERROR (22) triggers for HTTP errors >= 400 (both 4xx and 5xx)
+    // when CURLOPT_FAILONERROR is enabled. We treat it as retryable since we cannot distinguish
+    // server errors (5xx) from client errors (4xx) without the HTTP response code. In practice,
+    // the most common errors are transient S3 503/500 responses.
+    //
+    // CURLE_SSL_CONNECT_ERROR (35): SSL connection reset by peer
+    // CURLE_GOT_NOTHING (52): Empty reply from server
+    // CURLE_RECV_ERROR (56): Failure in receiving network data
+    // CURLE_OPERATION_TIMEDOUT (28): Operation timed out
+    return CURLE_HTTP_RETURNED_ERROR == code || CURLE_SSL_CONNECT_ERROR == code
+           || CURLE_GOT_NOTHING == code || CURLE_RECV_ERROR == code
+           || CURLE_OPERATION_TIMEDOUT == code;
+}
+#else
+auto NetworkUtils::check_and_log_curl_error(
+        [[maybe_unused]] std::string_view path,
+        [[maybe_unused]] clp::ReaderInterface const* reader
+) -> bool {
+    return false;
+}
+
+auto NetworkUtils::is_retryable_curl_error([[maybe_unused]] clp::ReaderInterface const* reader)
+        -> bool {
+    return false;
+}
+#endif
+
 bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& name) {
     auto parsed_result = boost::urls::parse_uri(uri);
     if (false == parsed_result.has_value()) {
@@ -163,54 +226,18 @@ bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& n
     return true;
 }
 
-bool StringUtils::get_bounds_of_next_var(string const& msg, size_t& begin_pos, size_t& end_pos) {
-    auto const msg_length = msg.length();
-    if (end_pos >= msg_length) {
-        return false;
+void SimdJsonStringEscaper::escape(std::string& destination, std::string_view const source) {
+    m_builder.clear();
+    m_builder.escape_and_append(source);
+
+    std::string_view escaped_source;
+    auto const status = m_builder.view().get(escaped_source);
+    if (simdjson::SUCCESS == status) {
+        destination.append(escaped_source);
+        return;
     }
 
-    while (true) {
-        begin_pos = end_pos;
-        // Find next non-delimiter
-        for (; begin_pos < msg_length; ++begin_pos) {
-            if (false == is_delim(msg[begin_pos])) {
-                break;
-            }
-        }
-        if (msg_length == begin_pos) {
-            // Early exit for performance
-            return false;
-        }
-
-        bool contains_decimal_digit = false;
-        bool contains_alphabet = false;
-
-        // Find next delimiter
-        end_pos = begin_pos;
-        for (; end_pos < msg_length; ++end_pos) {
-            char c = msg[end_pos];
-            if (clp::string_utils::is_decimal_digit(c)) {
-                contains_decimal_digit = true;
-            } else if (clp::string_utils::is_alphabet(c)) {
-                contains_alphabet = true;
-            } else if (is_delim(c)) {
-                break;
-            }
-        }
-
-        // Treat token as variable if:
-        // - it contains a decimal digit, or
-        // - it's directly preceded by an equals sign and contains an alphabet, or
-        // - it could be a multi-digit hex value
-        if (contains_decimal_digit
-            || (begin_pos > 0 && '=' == msg[begin_pos - 1] && contains_alphabet)
-            || could_be_multi_digit_hex_value(msg, begin_pos, end_pos))
-        {
-            break;
-        }
-    }
-
-    return (msg_length != begin_pos);
+    StringUtils::escape_json_string(destination, source);
 }
 
 void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {

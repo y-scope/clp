@@ -1,7 +1,6 @@
 #ifndef CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
 
-#include <memory>
 #include <optional>
 #include <string>
 
@@ -141,7 +140,7 @@ private:
     // Compressed stream variables
     ZSTD_DStream* m_decompression_stream{nullptr};
 
-    std::unique_ptr<ReadOnlyMemoryMappedFile> m_memory_mapped_file;
+    std::optional<ReadOnlyMemoryMappedFile> m_memory_mapped_file;
     ReaderInterface* m_reader{nullptr};
     size_t m_reader_initial_pos{0ULL};
 

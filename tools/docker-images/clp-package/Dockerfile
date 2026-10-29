@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1
+
+ARG UBUNTU_VERSION_CODENAME=jammy
+FROM ubuntu:${UBUNTU_VERSION_CODENAME} AS base
+
+WORKDIR /root
+
+COPY --link ./tools/docker-images/clp-package/setup-scripts ./setup-scripts
+RUN ./setup-scripts/install-prebuilt-packages.sh \
+    && rm -rf ./setup-scripts/
+
+# Remove cached files
+RUN apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Flatten the image
+FROM scratch
+COPY --link --from=base / /
+
+ARG UID=1000
+ENV CLP_HOME="/opt/clp"
+ENV PATH="${CLP_HOME}/sbin:${CLP_HOME}/bin:${PATH}" \
+    PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
+    USER="clp-user"
+
+RUN existing_user="$(getent passwd "${UID}" | cut --delimiter=: --fields=1)" || true; \
+    [ -z "${existing_user}" ] || userdel --remove "${existing_user}" \
+    || { echo "ERROR: Cannot delete user '${existing_user}' that occupies UID ${UID}"; exit 1; }; \
+    useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
+USER ${USER}
+WORKDIR ${CLP_HOME}
+
+COPY --link --chown=${UID} ./components/package-template/src/ .
+COPY --link --chown=${UID} ./build/core/clg bin/
+COPY --link --chown=${UID} ./build/core/clo bin/
+COPY --link --chown=${UID} ./build/core/clp bin/
+COPY --link --chown=${UID} ./build/core/clp-s bin/
+COPY --link --chown=${UID} ./build/core/indexer bin/
+COPY --link --chown=${UID} ./build/core/log-converter bin/
+COPY --link --chown=${UID} ./build/core/reducer-server bin/
+COPY --link --chown=${UID} ./build/nodejs/bin/node bin/node
+COPY --link --chown=${UID} ./build/python-libs/ lib/python3/site-packages/
+COPY --link --chown=${UID} ./build/rust-targets/release/api_server bin/
+COPY --link --chown=${UID} ./build/rust-targets/release/compression-coordinator bin/
+COPY --link --chown=${UID} ./build/rust-targets/release/log-ingestor bin/
+COPY --link --chown=${UID} ./build/rust-targets/release/query-coordinator bin/
+COPY --link --chown=${UID} ./build/webui/ var/www/webui/

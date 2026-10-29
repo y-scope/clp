@@ -3,14 +3,20 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/builder/basic/kvp.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <mongocxx/exception/bulk_write_exception.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
-#include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
+
+#include <clp_s/MongoDBUtils.hpp>
+#include <clp_s/ResultsCacheUtils.hpp>
 
 #include "../clp/networking/socket_utils.hpp"
 #include "../reducer/CountOperator.hpp"
@@ -18,11 +24,25 @@
 #include "../reducer/Record.hpp"
 #include "archive_constants.hpp"
 #include "search/OutputHandler.hpp"
+#include "TraceableException.hpp"
 
 using std::string;
 using std::string_view;
 
 namespace clp_s {
+auto FileOutputHandler::write(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id,
+        int64_t log_event_idx
+) -> ErrorCode {
+    static constexpr string_view cOrigFilePathPlaceholder{""};
+    msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
+            src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
+    msgpack::pack(m_file_writer, src);
+    return ErrorCodeSuccess;
+}
+
 NetworkOutputHandler::NetworkOutputHandler(
         string const& host,
         int port,
@@ -32,16 +52,16 @@ NetworkOutputHandler::NetworkOutputHandler(
     m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
     }
 }
 
-void NetworkOutputHandler::write(
+auto NetworkOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
         string_view archive_id,
         int64_t log_event_idx
-) {
+) -> ErrorCode {
     static constexpr string_view cOrigFilePathPlaceholder{""};
     msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
             src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
@@ -49,118 +69,161 @@ void NetworkOutputHandler::write(
     msgpack::pack(m, src);
 
     if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
     }
+    return ErrorCodeSuccess;
 }
 
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
-        string const& uri,
-        string const& collection,
+        string_view uri,
+        string_view collection,
         uint64_t batch_size,
-        uint64_t max_num_results,
+        std::optional<uint64_t> max_num_results,
+        string_view dataset,
         bool should_output_timestamp
 )
-        : ::clp_s::search::OutputHandler(should_output_timestamp, true),
-          m_batch_size(batch_size),
-          m_max_num_results(max_num_results) {
-    try {
-        auto mongo_uri = mongocxx::uri(uri);
-        m_client = mongocxx::client(mongo_uri);
-        m_collection = m_client[mongo_uri.database()][collection];
-        m_results.reserve(m_batch_size);
-    } catch (mongocxx::exception const& e) {
-        throw OperationFailed(ErrorCode::ErrorCodeBadParamDbUri, __FILENAME__, __LINE__);
-    }
+        : ::clp_s::search::OutputHandler{should_output_timestamp, true},
+          m_batch_size{batch_size},
+          m_max_num_results{max_num_results},
+          m_dataset{dataset} {
+    m_collection = connect_to_results_cache(uri, collection, m_client);
+    m_insert_options.ordered(false);
+    m_results.reserve(m_batch_size);
 }
 
-ErrorCode ResultsCacheOutputHandler::flush() {
-    size_t count = 0;
+ErrorCode ResultsCacheOutputHandler::finish() {
     while (false == m_latest_results.empty()) {
         auto result = std::move(*m_latest_results.top());
         m_latest_results.pop();
-
-        try {
-            m_results.emplace_back(
-                    std::move(
-                            bsoncxx::builder::basic::make_document(
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cOrigFilePath,
-                                            std::move(result.original_path)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cMessage,
-                                            std::move(result.message)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cTimestamp,
-                                            result.timestamp
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cArchiveId,
-                                            std::move(result.archive_id)
-                                    ),
-                                    bsoncxx::builder::basic::kvp(
-                                            constants::results_cache::search::cLogEventIx,
-                                            result.log_event_idx
-                                    )
-                            )
-                    )
-            );
-            count++;
-
-            if (count == m_batch_size) {
-                m_collection.insert_many(m_results);
-                m_results.clear();
-                count = 0;
-            }
-        } catch (mongocxx::exception const& e) {
-            return ErrorCode::ErrorCodeFailureDbBulkWrite;
+        if (auto const error_code{append_result(std::move(result))}; ErrorCodeSuccess != error_code)
+        {
+            return error_code;
         }
     }
 
+    if (false == m_results.empty() && false == insert_results()) {
+        return ErrorCodeFailureDbBulkWrite;
+    }
+    return ErrorCodeSuccess;
+}
+
+auto ResultsCacheOutputHandler::write(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id,
+        int64_t log_event_idx
+) -> ErrorCode {
+    if (false == m_max_num_results.has_value()) {
+        return append_result(
+                QueryResult{string_view{}, message, timestamp, archive_id, log_event_idx, m_dataset}
+        );
+    }
+    if (m_latest_results.size() < m_max_num_results.value()) {
+        m_latest_results.emplace(
+                std::make_unique<QueryResult>(
+                        string_view{},
+                        message,
+                        timestamp,
+                        archive_id,
+                        log_event_idx,
+                        m_dataset
+                )
+        );
+    } else if (m_latest_results.top()->timestamp < timestamp) {
+        m_latest_results.pop();
+        m_latest_results.emplace(
+                std::make_unique<QueryResult>(
+                        string_view{},
+                        message,
+                        timestamp,
+                        archive_id,
+                        log_event_idx,
+                        m_dataset
+                )
+        );
+    }
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+auto ResultsCacheOutputHandler::append_result(QueryResult result) -> ErrorCode {
     try {
-        if (false == m_results.empty()) {
-            m_collection.insert_many(m_results);
-            m_results.clear();
-        }
+        m_results.emplace_back(
+                std::move(
+                        bsoncxx::builder::basic::make_document(
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cId,
+                                        bsoncxx::builder::basic::make_document(
+                                                bsoncxx::builder::basic::kvp(
+                                                        constants::results_cache::search::
+                                                                cArchiveId,
+                                                        std::move(result.archive_id)
+                                                ),
+                                                bsoncxx::builder::basic::kvp(
+                                                        constants::results_cache::search::
+                                                                cLogEventIdx,
+                                                        result.log_event_idx
+                                                )
+                                        )
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cOrigFilePath,
+                                        std::move(result.original_path)
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cMessage,
+                                        std::move(result.message)
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        constants::results_cache::search::cTimestamp,
+                                        result.timestamp
+                                ),
+                                bsoncxx::builder::basic::kvp(
+                                        std::string{constants::results_cache::search::cDataset},
+                                        std::move(result.dataset)
+                                )
+                        )
+                )
+        );
     } catch (mongocxx::exception const& e) {
+        SPDLOG_ERROR("Failed to build search result - {}", e.what());
+        return ErrorCodeFailureDbBulkWrite;
+    }
+
+    if (m_results.size() >= m_batch_size && false == insert_results()) {
         return ErrorCode::ErrorCodeFailureDbBulkWrite;
     }
     return ErrorCode::ErrorCodeSuccess;
 }
 
-void ResultsCacheOutputHandler::write(
-        string_view message,
-        epochtime_t timestamp,
-        string_view archive_id,
-        int64_t log_event_idx
-) {
-    if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(
-                std::make_unique<
-                        QueryResult>(string_view{}, message, timestamp, archive_id, log_event_idx)
-        );
-    } else if (m_latest_results.top()->timestamp < timestamp) {
-        m_latest_results.pop();
-        m_latest_results.emplace(
-                std::make_unique<
-                        QueryResult>(string_view{}, message, timestamp, archive_id, log_event_idx)
-        );
+auto ResultsCacheOutputHandler::insert_results() -> bool {
+    try {
+        m_collection.insert_many(m_results, m_insert_options);
+    } catch (mongocxx::bulk_write_exception const& exception) {
+        if (false == contains_only_duplicate_key_write_errors(exception, m_results.size())) {
+            SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+            return false;
+        }
+    } catch (mongocxx::exception const& exception) {
+        SPDLOG_ERROR("Failed to insert search results - {}", exception.what());
+        return false;
     }
+    m_results.clear();
+    return true;
 }
 
-CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
-        : ::clp_s::search::OutputHandler(false, false),
+CountReducerOutputHandler::CountReducerOutputHandler(int reducer_socket_fd)
+        : search::OutputHandler(false, false),
           m_reducer_socket_fd(reducer_socket_fd),
           m_pipeline(reducer::PipelineInputMode::InterStage) {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
-void CountOutputHandler::write(string_view message) {
+auto CountReducerOutputHandler::write(string_view message) -> ErrorCode {
     m_pipeline.push_record(reducer::EmptyRecord{});
+    return ErrorCode::ErrorCodeSuccess;
 }
 
-ErrorCode CountOutputHandler::finish() {
+auto CountReducerOutputHandler::finish() -> ErrorCode {
     if (false
         == reducer::send_pipeline_results(m_reducer_socket_fd, std::move(m_pipeline.finish())))
     {
@@ -169,7 +232,7 @@ ErrorCode CountOutputHandler::finish() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-ErrorCode CountByTimeOutputHandler::finish() {
+auto CountByTimeReducerOutputHandler::finish() -> ErrorCode {
     if (false
         == reducer::send_pipeline_results(
                 m_reducer_socket_fd,

@@ -1,6 +1,1 @@
-line-length = 100
-select = ["I"]
-
-[lint.isort]
-case-sensitive = false
-order-by-type = false
+extend = "tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"

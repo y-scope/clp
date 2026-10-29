@@ -13,15 +13,15 @@ namespace clp_s::search::kql::generated {
 class  KqlParser : public antlr4::Parser {
 public:
   enum {
-    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, AND = 6, OR = 7, NOT = 8, 
-    DATE_LITERAL = 9, LITERAL = 10, QUOTED_STRING = 11, UNQUOTED_LITERAL = 12, 
+    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
+    AND = 8, OR = 9, NOT = 10, QUOTED_STRING = 11, UNQUOTED_LITERAL = 12, 
     RANGE_OPERATOR = 13, SPACE = 14
   };
 
   enum {
     RuleStart = 0, RuleQuery = 1, RuleExpression = 2, RuleColumn_range_expression = 3, 
     RuleColumn_value_expression = 4, RuleColumn = 5, RuleValue_expression = 6, 
-    RuleList_of_values = 7
+    RuleList_of_values = 7, RuleTimestamp_expression = 8, RuleLiteral = 9
   };
 
   explicit KqlParser(antlr4::TokenStream *input);
@@ -48,7 +48,9 @@ public:
   class Column_value_expressionContext;
   class ColumnContext;
   class Value_expressionContext;
-  class List_of_valuesContext; 
+  class List_of_valuesContext;
+  class Timestamp_expressionContext;
+  class LiteralContext; 
 
   class  StartContext : public antlr4::ParserRuleContext {
   public:
@@ -154,14 +156,14 @@ public:
   class  Column_range_expressionContext : public antlr4::ParserRuleContext {
   public:
     KqlParser::ColumnContext *col = nullptr;
-    antlr4::Token *date_lit = nullptr;
-    antlr4::Token *lit = nullptr;
+    KqlParser::Timestamp_expressionContext *timestamp = nullptr;
+    KqlParser::LiteralContext *lit = nullptr;
     Column_range_expressionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *RANGE_OPERATOR();
     ColumnContext *column();
-    antlr4::tree::TerminalNode *DATE_LITERAL();
-    antlr4::tree::TerminalNode *LITERAL();
+    Timestamp_expressionContext *timestamp_expression();
+    LiteralContext *literal();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -174,14 +176,14 @@ public:
   public:
     KqlParser::ColumnContext *col = nullptr;
     KqlParser::List_of_valuesContext *list = nullptr;
-    antlr4::Token *date_lit = nullptr;
-    antlr4::Token *lit = nullptr;
+    KqlParser::Timestamp_expressionContext *timestamp = nullptr;
+    KqlParser::LiteralContext *lit = nullptr;
     Column_value_expressionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     ColumnContext *column();
     List_of_valuesContext *list_of_values();
-    antlr4::tree::TerminalNode *DATE_LITERAL();
-    antlr4::tree::TerminalNode *LITERAL();
+    Timestamp_expressionContext *timestamp_expression();
+    LiteralContext *literal();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -194,7 +196,7 @@ public:
   public:
     ColumnContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *LITERAL();
+    LiteralContext *literal();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -207,7 +209,7 @@ public:
   public:
     Value_expressionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *LITERAL();
+    LiteralContext *literal();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -219,12 +221,12 @@ public:
   class  List_of_valuesContext : public antlr4::ParserRuleContext {
   public:
     antlr4::Token *condition = nullptr;
-    antlr4::Token *literalToken = nullptr;
-    std::vector<antlr4::Token *> literals;
+    KqlParser::LiteralContext *literalContext = nullptr;
+    std::vector<LiteralContext *> literals;
     List_of_valuesContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    std::vector<antlr4::tree::TerminalNode *> LITERAL();
-    antlr4::tree::TerminalNode* LITERAL(size_t i);
+    std::vector<LiteralContext *> literal();
+    LiteralContext* literal(size_t i);
     antlr4::tree::TerminalNode *AND();
     antlr4::tree::TerminalNode *OR();
     antlr4::tree::TerminalNode *NOT();
@@ -235,6 +237,36 @@ public:
   };
 
   List_of_valuesContext* list_of_values();
+
+  class  Timestamp_expressionContext : public antlr4::ParserRuleContext {
+  public:
+    antlr4::Token *timestamp = nullptr;
+    antlr4::Token *pattern = nullptr;
+    Timestamp_expressionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<antlr4::tree::TerminalNode *> QUOTED_STRING();
+    antlr4::tree::TerminalNode* QUOTED_STRING(size_t i);
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Timestamp_expressionContext* timestamp_expression();
+
+  class  LiteralContext : public antlr4::ParserRuleContext {
+  public:
+    LiteralContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *QUOTED_STRING();
+    antlr4::tree::TerminalNode *UNQUOTED_LITERAL();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  LiteralContext* literal();
 
 
   bool sempred(antlr4::RuleContext *_localctx, size_t ruleIndex, size_t predicateIndex) override;

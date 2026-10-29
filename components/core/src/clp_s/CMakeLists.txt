@@ -1,21 +1,18 @@
+add_subdirectory(ffi)
+add_subdirectory(filter)
 add_subdirectory(indexer)
+add_subdirectory(log_converter)
 add_subdirectory(search)
+add_subdirectory(timestamp_parser)
 
 set(
         CLP_S_CLP_SOURCES
-        ../clp/aws/AwsAuthenticationSigner.cpp
-        ../clp/aws/AwsAuthenticationSigner.hpp
         ../clp/BoundedReader.cpp
         ../clp/BoundedReader.hpp
-        ../clp/CurlDownloadHandler.cpp
-        ../clp/CurlDownloadHandler.hpp
-        ../clp/CurlEasyHandle.hpp
-        ../clp/CurlGlobalInstance.cpp
-        ../clp/CurlGlobalInstance.hpp
-        ../clp/CurlOperationFailed.hpp
-        ../clp/CurlStringList.hpp
-        ../clp/cli_utils.cpp
-        ../clp/cli_utils.hpp
+        ../clp/BufferedReader.cpp
+        ../clp/BufferedReader.hpp
+        ../clp/BufferReader.cpp
+        ../clp/BufferReader.hpp
         ../clp/Defs.h
         ../clp/EncodedVariableInterpreter.cpp
         ../clp/EncodedVariableInterpreter.hpp
@@ -23,13 +20,26 @@ set(
         ../clp/ffi/encoding_methods.cpp
         ../clp/ffi/encoding_methods.hpp
         ../clp/ffi/encoding_methods.inc
+        ../clp/ffi/EncodedTextAst.hpp
+        ../clp/ffi/EncodedTextAstError.cpp
+        ../clp/ffi/EncodedTextAstError.hpp
         ../clp/ffi/ir_stream/byteswap.hpp
         ../clp/ffi/ir_stream/decoding_methods.cpp
         ../clp/ffi/ir_stream/decoding_methods.hpp
         ../clp/ffi/ir_stream/decoding_methods.inc
         ../clp/ffi/ir_stream/Deserializer.hpp
+        ../clp/ffi/ir_stream/DeserializerImpl.cpp
+        ../clp/ffi/ir_stream/DeserializerImpl.hpp
         ../clp/ffi/ir_stream/encoding_methods.cpp
         ../clp/ffi/ir_stream/encoding_methods.hpp
+        ../clp/ffi/ir_stream/IrDeserializationError.cpp
+        ../clp/ffi/ir_stream/IrDeserializationError.hpp
+        ../clp/ffi/ir_stream/IrSerializationError.cpp
+        ../clp/ffi/ir_stream/IrSerializationError.hpp
+        ../clp/ffi/ir_stream/KvIrDeserializerImpl.cpp
+        ../clp/ffi/ir_stream/KvIrDeserializerImpl.hpp
+        ../clp/ffi/ir_stream/UnstructuredIrDeserializerImpl.cpp
+        ../clp/ffi/ir_stream/UnstructuredIrDeserializerImpl.hpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         ../clp/ffi/ir_stream/protocol_constants.hpp
@@ -51,27 +61,24 @@ set(
         ../clp/ffi/KeyValuePairLogEvent.hpp
         ../clp/ffi/SchemaTree.cpp
         ../clp/ffi/SchemaTree.hpp
+        ../clp/ffi/StringBlob.hpp
         ../clp/ffi/Value.hpp
         ../clp/FileDescriptor.cpp
         ../clp/FileDescriptor.hpp
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
+        ../clp/FileWriter.cpp
+        ../clp/FileWriter.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
-        ../clp/hash_utils.cpp
-        ../clp/hash_utils.hpp
         ../clp/ir/constants.hpp
-        ../clp/ir/EncodedTextAst.cpp
-        ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
-        ../clp/LogSurgeonReader.cpp
-        ../clp/LogSurgeonReader.hpp
-        ../clp/NetworkReader.cpp
-        ../clp/NetworkReader.hpp
+        ../clp/LogTypeDictionaryEntryReq.hpp
+        ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/networking/socket_utils.cpp
         ../clp/networking/socket_utils.hpp
         ../clp/Query.cpp
@@ -86,6 +93,11 @@ set(
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_archive/Constants.hpp
+        ../clp/streaming_compression/Constants.hpp
+        ../clp/streaming_compression/Compressor.hpp
+        ../clp/streaming_compression/Decompressor.hpp
+        ../clp/streaming_compression/zstd/Compressor.cpp
+        ../clp/streaming_compression/zstd/Compressor.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/StringReader.cpp
@@ -97,9 +109,43 @@ set(
         ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
+        ../clp/VariableDictionaryEntryReq.hpp
+        ../clp/VariableDictionaryReaderReq.hpp
+        ../clp/VariableDictionaryWriterReq.hpp
         ../clp/WriterInterface.cpp
         ../clp/WriterInterface.hpp
 )
+
+set(
+        CLP_S_CLP_CURL_SOURCES
+        ../clp/aws/AwsAuthenticationSigner.cpp
+        ../clp/aws/AwsAuthenticationSigner.hpp
+        ../clp/hash_utils.cpp
+        ../clp/hash_utils.hpp
+        ../clp/CurlDownloadHandler.cpp
+        ../clp/CurlDownloadHandler.hpp
+        ../clp/CurlEasyHandle.hpp
+        ../clp/CurlGlobalInstance.cpp
+        ../clp/CurlGlobalInstance.hpp
+        ../clp/CurlOperationFailed.hpp
+        ../clp/CurlStringList.hpp
+        ../clp/NetworkReader.cpp
+        ../clp/NetworkReader.hpp
+)
+if(CLP_BUILD_CLP_S_ENABLE_CURL)
+        list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_CURL_SOURCES})
+endif()
+
+set(
+        CLP_S_CLP_LIBARCHIVE_SOURCES
+        ../clp/LibarchiveReader.cpp
+        ../clp/LibarchiveReader.hpp
+        ../clp/LibarchiveFileReader.cpp
+        ../clp/LibarchiveFileReader.hpp
+)
+if(CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE)
+        list(APPEND CLP_S_CLP_SOURCES ${CLP_S_CLP_LIBARCHIVE_SOURCES})
+endif()
 
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
 if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
@@ -109,23 +155,40 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         )
         add_library(clp_s::clp_dependencies ALIAS clp_s_clp_dependencies)
         target_compile_features(clp_s_clp_dependencies PRIVATE cxx_std_20)
+        target_include_directories(clp_s_clp_dependencies PUBLIC ../)
         target_link_libraries(
                 clp_s_clp_dependencies
                 PUBLIC
+                absl::flat_hash_map
+                absl::flat_hash_set
                 clp::string_utils
-                log_surgeon::log_surgeon
+                utils::profiling
                 ystdlib::containers
-                ${zstd_TARGET}
+                zstd::libzstd_static
                 PRIVATE
                 Boost::regex
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
-                OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
         )
+        if(CLP_BUILD_CLP_S_ENABLE_CURL)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PUBLIC
+                        ${CURL_LIBRARIES}
+                        PRIVATE
+                        OpenSSL::Crypto
+                )
+        endif()
+        if(CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE)
+                target_link_libraries(
+                        clp_s_clp_dependencies
+                        PUBLIC
+                        LibArchive::LibArchive
+                )
+        endif()
 endif()
 
 set(
@@ -160,6 +223,7 @@ if(CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
         )
         add_library(clp_s::reducer_dependencies ALIAS clp_s_reducer_dependencies)
         target_compile_features(clp_s_reducer_dependencies PRIVATE cxx_std_20)
+        target_include_directories(clp_s_reducer_dependencies PUBLIC ../)
         target_link_libraries(
                 clp_s_reducer_dependencies
                 PUBLIC
@@ -195,16 +259,24 @@ if(CLP_BUILD_CLP_S_IO)
                 ${CLP_S_IO_SOURCES}
         )
         add_library(clp_s::io ALIAS clp_s_io)
+        target_compile_definitions(
+                clp_s_io
+                PRIVATE
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+                CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_LIBARCHIVE}>
+        )
         target_compile_features(clp_s_io PRIVATE cxx_std_20)
         target_include_directories(clp_s_io PUBLIC ../)
         target_link_libraries(
                 clp_s_io
+                PUBLIC
+                simdjson::simdjson
+                zstd::libzstd_static
                 PRIVATE
-                Boost::iostreams Boost::url
+                Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
                 spdlog::spdlog
-                ${zstd_TARGET}
         )
 endif()
 
@@ -221,6 +293,8 @@ set(
         DictionaryWriter.cpp
         DictionaryWriter.hpp
         ErrorCode.hpp
+        FloatFormatEncoding.cpp
+        FloatFormatEncoding.hpp
         JsonFileIterator.cpp
         JsonFileIterator.hpp
         JsonParser.cpp
@@ -253,21 +327,27 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ${CLP_S_ARCHIVE_WRITER_SOURCES}
         )
         add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
+        target_compile_definitions(
+                clp_s_archive_writer
+                PRIVATE
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+        )
         target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_writer PUBLIC ../)
         target_link_libraries(
                 clp_s_archive_writer
                 PUBLIC
                 absl::flat_hash_map
+                clp_s::clp_dependencies
                 clp_s::io
+                clp_s::timestamp_parser
+                clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 simdjson::simdjson
+                ystdlib::error_handling
                 PRIVATE
                 Boost::url
-                clp_s::clp_dependencies
-                clp_s::timestamp_pattern
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
         )
@@ -288,6 +368,8 @@ set(
         DictionaryEntry.hpp
         DictionaryReader.hpp
         ErrorCode.hpp
+        FloatFormatEncoding.cpp
+        FloatFormatEncoding.hpp
         JsonSerializer.hpp
         PackedStreamReader.cpp
         PackedStreamReader.hpp
@@ -314,6 +396,11 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 ${CLP_S_ARCHIVE_READER_SOURCES}
         )
         add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
+        target_compile_definitions(
+                clp_s_archive_reader
+                PRIVATE
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+        )
         target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
         target_include_directories(clp_s_archive_reader PUBLIC ../)
         target_link_libraries(
@@ -322,13 +409,15 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 absl::flat_hash_map
                 clp::string_utils
                 clp_s::io
+                clp_s::timestamp_parser
+                clp_s::timestamp_pattern
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
+                simdjson::simdjson
+                ystdlib::error_handling
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
-                clp_s::timestamp_pattern
-                ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
         )
@@ -354,7 +443,6 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
-                ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
                 ${MONGOCXX_TARGET}
@@ -390,27 +478,31 @@ endif()
 
 set(
         CLP_S_EXE_SOURCES
+        AggregationSink.cpp
+        AggregationSink.hpp
+        aggregators.cpp
+        aggregators.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         ErrorCode.hpp
         kv_ir_search.cpp
         kv_ir_search.hpp
+        MongoDBUtils.cpp
+        MongoDBUtils.hpp
         OutputHandlerImpl.cpp
         OutputHandlerImpl.hpp
+        ResultsCacheUtils.cpp
+        ResultsCacheUtils.hpp
         TraceableException.hpp
 )
 
 if(CLP_BUILD_EXECUTABLES)
-        add_executable(
-                clp-s
-                clp-s.cpp
-                ${CLP_S_EXE_SOURCES}
-        )
-        target_compile_features(clp-s PRIVATE cxx_std_20)
+        # Runtime dependencies built by clp-s for the executable. Keep in sync with
+        # `CLP_BUILD_CLP_S_*` flags required by `CLP_BUILD_EXECUTABLES` inside options.cmake.
+        add_library(clp_s_binary_runtime INTERFACE)
         target_link_libraries(
-                clp-s
-                PRIVATE
-                Boost::program_options
+                clp_s_binary_runtime
+                INTERFACE
                 clp_s::archive_reader
                 clp_s::archive_writer
                 clp_s::clp_dependencies
@@ -420,6 +512,26 @@ if(CLP_BUILD_EXECUTABLES)
                 clp_s::search
                 clp_s::search::ast
                 clp_s::search::kql
+                clp_s::timestamp_parser
+        )
+
+        add_executable(
+                clp-s
+                clp-s.cpp
+                ${CLP_S_EXE_SOURCES}
+        )
+        target_compile_definitions(
+                clp-s
+                PRIVATE
+                CLP_BUILD_CLP_S_ENABLE_CURL=$<BOOL:${CLP_BUILD_CLP_S_ENABLE_CURL}>
+        )
+        target_compile_features(clp-s PRIVATE cxx_std_20)
+        target_include_directories(clp-s PRIVATE ../)
+        target_link_libraries(
+                clp-s
+                PRIVATE
+                Boost::program_options
+                clp_s_binary_runtime
                 ${MONGOCXX_TARGET}
                 msgpack-cxx
                 spdlog::spdlog
@@ -429,5 +541,29 @@ if(CLP_BUILD_EXECUTABLES)
                 clp-s
                 PROPERTIES
                 RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()
+
+if(CLP_BUILD_TESTING)
+        add_library(clp_s_unit_test_sources INTERFACE)
+        add_library(clp_s::unit_test_sources ALIAS clp_s_unit_test_sources)
+        target_sources(
+                clp_s_unit_test_sources
+                INTERFACE
+                filter/tests/test-clp_s-bitmap_view.cpp
+                filter/tests/test-clp_s-bloom_filter.cpp
+                filter/tests/test-clp_s-xxhash.cpp
+                tests/clp_s_test_utils.cpp
+                tests/clp_s_test_utils.hpp
+                tests/test-FloatFormatEncoding.cpp
+                tests/test-clp_s-delta-encode-log-order.cpp
+                tests/test-clp_s-end_to_end.cpp
+                tests/test-clp_s-ffi_sfa_reader.cpp
+                tests/test-clp_s-range_index.cpp
+                tests/test-clp_s-search.cpp
+                tests/test-kql.cpp
+                tests/test-sql.cpp
+                tests/test_InputConfig.cpp
+                timestamp_parser/test/test_TimestampParser.cpp
         )
 endif()

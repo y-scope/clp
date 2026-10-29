@@ -2,9 +2,12 @@
 #define CLP_S_INPUTCONFIG_HPP
 
 #include <cstdint>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -21,7 +24,11 @@ constexpr char cAwsSessionTokenEnvVar[] = "AWS_SESSION_TOKEN";
  */
 enum class FileType : uint8_t {
     Json = 0,
-    KeyValueIr
+    KeyValueIr,
+    LogText,
+    Zstd,
+    EmptyFile,
+    Unknown
 };
 
 /**
@@ -68,6 +75,16 @@ struct Path {
  * @return a Path object representing the raw path or url
  */
 [[nodiscard]] auto get_path_object_for_raw_path(std::string_view const path) -> Path;
+
+/**
+ * Removes a prefix from a filesystem path.
+ * @param path
+ * @param prefix
+ * @return An option containing the path with the prefix removed on success, or an empty option on
+ * failure.
+ */
+[[nodiscard]] auto remove_path_prefix(std::string_view path, std::string_view prefix)
+        -> std::optional<std::string>;
 
 /**
  * Recursively collects all file paths from the given raw path, including the path itself.
@@ -121,6 +138,65 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  */
 [[nodiscard]] auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         -> std::shared_ptr<clp::ReaderInterface>;
+
+/**
+ * Tries to deduce the underlying file-type of the file opened by `reader`, and returns a
+ * (potentially new) reader for underlying JSON or KV-IR content by unwrapping layers of
+ * compression.
+ * @param reader
+ * @return A vector of all created `clp::ReaderInterface`s, where the last entry in the vector is
+ * open for reading content of the type described by the element in the pair. On error, we return an
+ * empty vector and `FileType::Unknown`.
+ */
+[[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
+        -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType>;
+
+/**
+ * Closes all readers in a vector of nested readers, starting from the last reader.
+ * @param readers
+ */
+void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> const& readers);
+
+/**
+ * Creates a reader for the given path and deduces its file type, retrying on transient network
+ * errors with exponential backoff.
+ * @param path
+ * @param network_auth
+ * @param max_retries Maximum number of retry attempts after the initial attempt.
+ * @return A pair of (nested_readers, file_type). On unrecoverable failure, returns an empty vector
+ * and `FileType::Unknown`.
+ */
+[[nodiscard]] auto try_create_reader_and_deduce_type_with_retries(
+        Path const& path,
+        NetworkAuthOption const& network_auth,
+        size_t max_retries = 3
+) -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType>;
+
+/**
+ * Tries to process an archive using libarchive, deducing the file type of each member and
+ * calling the appropriate handler. This utility skips over empty directories and other non-file
+ * content within archives.
+ * @param reader The reader to open as an archive.
+ * @param path The path to the archive.
+ * @param default_file_path The path name to use when this is a single compressed file.
+ * @param json_handler Called for each JSON file in an archive.
+ * @param kv_ir_handler Called for each KV-IR file in an archive.
+ * @param log_text_handler Called for each log-text file in an archive.
+ * @param empty_file_handler Called for each empty file in an archive.
+ * @return Whether all of the files in the archive were processed successfully.
+ */
+[[nodiscard]] auto try_process_general_purpose_archive_with_libarchive(
+        std::shared_ptr<clp::ReaderInterface> reader,
+        Path const& path,
+        std::string const& default_file_path,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)> json_handler,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
+                kv_ir_handler,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
+                log_text_handler,
+        std::function<bool(std::shared_ptr<clp::ReaderInterface>, std::string const&)>
+                empty_file_handler
+) -> bool;
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP

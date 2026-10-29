@@ -1,0 +1,43 @@
+{ "standardExceedsPrecisionLimit": 123456789.123456789 }
+{ "negativeStandardExceedsPrecisionLimit": -123456789.123456789 }
+{ "standardExceedsPrecisionLimitWithTrailingZeros": 123456789.123456700 }
+{ "negativeStandardExceedsPrecisionLimitWithTrailingZeros": -123456789.123456700 }
+{ "standardExceedsPrecisionLimitWithLeadingZeros": 0.00000000000000000123456789123456789 }
+{ "negativeStandardExceedsPrecisionLimitWithLeadingZeros": -0.00000000000000000123456789123456789 }
+{ "standardExceedsPrecisionLimitWithLeadingZerosAndTrailingZeros": 0.00000000000000000123456789123456700 }
+{ "standardZeroWithMoreThanSeventeenZeros": 0.00000000000000000 }
+{ "negativeStandardZeroWithMoreThanSeventeenZeros": -0.00000000000000000 }
+{ "scientificFloatExceedingPrecisionLimitWithPositiveExponent": 1.23456789123456789E8 }
+{ "negativeScientificFloatExceedingPrecisionLimitWithPositiveExponent": -1.23456789123456789E8 }
+{ "scientificFloatExceedingPrecisionLimitWithNegativeExponent": 1.23456789123456789E-8 }
+{ "negativeScientificFloatExceedingPrecisionLimitWithNegativeExponent": -1.23456789123456789E-8 }
+{ "scientificSignificandsExceedingPrecisionLimitWithTrailingZerosWithPositiveExponent": 1.23456789123456700E8 }
+{ "negativeScientificSignificandsExceedingPrecisionLimitWithTrailingZerosWithPositiveExponent": -1.23456789123456700E8 }
+{ "scientificSignificandsExceedingPrecisionLimitWithTrailingZerosWithNegativeExponent": 1.23456789123456700E-8 }
+{ "negativeScientificSignificandsExceedingPrecisionLimitWithTrailingZerosWithNegativeExponent": -1.23456789123456700E-8 }
+{ "scientificPositiveExponentExceedingDigitLimitWithLeadingZeros": 1.234567891234567E00008 }
+{ "negativeScientificPositiveExponentExceedingDigitLimitWithLeadingZeros": -1.234567891234567E00008 }
+{ "scientificPositiveExponentExceedingDigitLimitWithLeadingZerosWithPlus": 1.234567891234567E+00008 }
+{ "negativeScientificPositiveExponentExceedingDigitLimitWithLeadingZerosWithPlus": -1.234567891234567E+00008 }
+{ "scientificNegativeExponentExceedingDigitLimitWithLeadingZeros": 1.234567891234567E-00008 }
+{ "negativeScientificNegativeExponentExceedingDigitLimitWithLeadingZeros": -1.234567891234567E-00008 }
+{ "scientificSignificandsExceedingPrecisionLimitWithTrailingZerosWithNegativeExponentExceedingDigitLimitWithLeadingZeros": 1.23456789123456700E-00008 }
+{ "negativeScientificSignificandsExceedingPrecisionLimitWithTrailingZerosWithPositiveExponentExceedingDigitLimitWithLeadingZerosWithPlus": -1.23456789123456700E+00008 }
+{ "scientificWithGreaterThanTenMantissa": 123456789.1234567E3 }
+{ "negativeScientificWithGreaterThanTenMantissa": -123456789.1234567E3 }
+{ "scientificWithGreaterThanTenMantissaExceedingPrecision": 123456789.123456789E3 }
+{ "negativeScientificWithGreaterThanTenMantissaExceedingPrecision": -123456789.123456789E3 }
+{ "scientificWithGreaterThanTenMantissa2": 12.34567891234567E01 }
+{ "negativeScientificWithGreaterThanTenMantissa2": -12.34567891234567E01 }
+{ "scientificWithGreaterThanTenMantissa3": 123456789.1234567E+3 }
+{ "negativeScientificWithGreaterThanTenMantissa3": -123456789.1234567E+3 }
+{ "nonZeroScientificWithZeroMantissa": 0.00000001234567891234567E-3 }
+{ "negativeNonZeroScientificWithZeroMantissa": -0.00000001234567891234567E-3 }
+{ "nonZeroScientificWithZeroMantissaExceedingPrecision": 0.0000000123456789123456789E-3 }
+{ "negativeNonZeroScientificWithZeroMantissaExceedingPrecision": -0.0000000123456789123456789E-3 }
+{ "nonZeroScientificWithZeroMantissa2": 0.00000001234567891234567E-01 }
+{ "negativeNonZeroScientificWithZeroMantissa2": -0.00000001234567891234567E-01 }
+{ "non754ScientificFloat": 1.2345678912345679e+13}
+{ "negativeNon754ScientificFloat": -1.2345678912345679e+13}
+{ "non754ScientificFloatWithNegativeExponent": 1.2345678912345679e-13}
+{ "negativeNon754ScientificFloatWithNegativeExponent": -1.2345678912345679e-13}

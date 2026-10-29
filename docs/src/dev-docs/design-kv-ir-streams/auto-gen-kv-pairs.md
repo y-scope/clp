@@ -81,7 +81,7 @@ instance, if a user is logging in both Java and Python, and they use CLP logging
 KV-IR streams, the generated streams can both use the same key for log levels---e.g., `level`. In
 turn, this would allow users to query log levels across both their Java and Python logs using the
 query syntax `@level: <value>`. In addition, it would allow users to use the same key to filter
-their logs by level when viewing them in the [log viewer][log-viewer].
+their logs by level when viewing them in the [log viewer][yscope-log-viewer].
 
 Another benefit of supporting auto-generated KV pairs is that we can potentially leverage
 the query syntax for more advanced queries on unstructured text KV pairs. For instance, we could
@@ -95,5 +95,5 @@ set of key-less auto-generated and user-generated values, formatted into a singl
 :::
 
 [json-lines]: https://jsonlines.org/
-[log-viewer]: https://github.com/y-scope/yscope-log-viewer
+[yscope-log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [Zap]: https://github.com/uber-go/zap

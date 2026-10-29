@@ -33,10 +33,9 @@ To search for a key or value with multiple words, you must quote the key/value w
 "multi-word key": "multi-word value"
 ```
 
-:::{caution}
-Currently, a query that contains spaces is interpreted as a substring search, i.e., it will match
-log events that contain the value as a *substring*. In a future version of CLP, these queries will
-be interpreted as _exact_ searches unless they include [wildcards](#wildcards-in-values).
+:::{note}
+Keys and values in queries will be interpreted as searches for _exact_ matches unless they include
+[wildcards](#wildcards-in-values).
 :::
 
 :::{note}

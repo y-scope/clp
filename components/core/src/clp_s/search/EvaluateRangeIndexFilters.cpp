@@ -9,10 +9,11 @@
 
 #include <nlohmann/json.hpp>
 
-#include "../../clp/ffi/encoding_methods.hpp"
+#include <clp_s/search/ast/ValueLiteral.hpp>
+
+#include "../../clp/ffi/EncodedTextAst.hpp"
 #include "../../clp/ffi/ir_stream/search/utils.hpp"
 #include "../../clp/ffi/Value.hpp"
-#include "../../clp/ir/EncodedTextAst.hpp"
 #include "../../clp/ir/types.hpp"
 #include "../archive_constants.hpp"
 #include "../ArchiveReaderAdaptor.hpp"
@@ -22,40 +23,12 @@
 #include "ast/EmptyExpr.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
-#include "ast/Integral.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/OrOfAndForm.hpp"
 
 using clp::ffi::ir_stream::search::evaluate_filter_against_literal_type_value_pair;
 
 namespace clp_s::search {
-namespace {
-/**
- * Gets the four byte encoded text AST for a given input string.
- * @param text
- * @return The four byte encoded text AST corresponding to the input string.
- */
-auto get_encoded_text_ast(std::string_view text)
-        -> clp::ir::EncodedTextAst<clp::ir::four_byte_encoded_variable_t> {
-    std::string logtype;
-    std::vector<clp::ir::four_byte_encoded_variable_t> encoded_vars;
-    std::vector<int32_t> dict_var_bounds;
-    clp::ffi::encode_message(text, logtype, encoded_vars, dict_var_bounds);
-    std::vector<std::string> dict_vars;
-    dict_vars.reserve(dict_var_bounds.size() / 2);
-    for (size_t i{0}; i < dict_var_bounds.size(); i += 2) {
-        auto const begin_pos{static_cast<size_t>(dict_var_bounds[i])};
-        auto const end_pos{static_cast<size_t>(dict_var_bounds[i + 1])};
-        dict_vars.emplace_back(text.cbegin() + begin_pos, text.cbegin() + end_pos);
-    }
-    return clp::ir::EncodedTextAst<clp::ir::four_byte_encoded_variable_t>{
-            logtype,
-            dict_vars,
-            encoded_vars
-    };
-}
-}  // namespace
-
 auto EvaluateRangeIndexFilters::run(std::shared_ptr<ast::Expression>& expr)
         -> std::shared_ptr<ast::Expression> {
     bool must_renormalize{false};
@@ -110,8 +83,12 @@ void EvaluateRangeIndexFilters::evaluate_and_rewrite_filter(
         replacement_expr = ast::OrExpr::create();
 
         auto add_range_to_filter = [&](std::pair<size_t, size_t> const& range) {
-            auto begin_literal{ast::Integral::create_from_int(range.first)};
-            auto end_literal{ast::Integral::create_from_int(range.second)};
+            auto begin_literal{
+                    ast::ValueLiteral::create_from_int(static_cast<int64_t>(range.first))
+            };
+            auto end_literal{
+                    ast::ValueLiteral::create_from_int(static_cast<int64_t>(range.second))
+            };
             auto begin_filter{ast::FilterExpr::create(
                     log_event_idx_col,
                     ast::FilterOperation::GTE,
@@ -243,9 +220,10 @@ auto EvaluateRangeIndexFilters::evaluate_filter(
                             return true;
                         }
                     } else {
-                        std::optional<clp::ffi::Value> str_value{
-                                clp::ffi::Value{get_encoded_text_ast(tmp_string)}
-                        };
+                        std::optional<clp::ffi::Value> const str_value{clp::ffi::Value{
+                                clp::ffi::EncodedTextAst<clp::ir::four_byte_encoded_variable_t>::
+                                        parse_and_encode_from(tmp_string)
+                        }};
                         if (evaluate_expr(ast::LiteralType::ClpStringT, str_value)) {
                             return true;
                         }

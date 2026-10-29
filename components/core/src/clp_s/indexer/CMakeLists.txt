@@ -4,6 +4,10 @@ set(
         ../../clp/aws/AwsAuthenticationSigner.hpp
         ../../clp/BoundedReader.cpp
         ../../clp/BoundedReader.hpp
+        ../../clp/BufferedReader.cpp
+        ../../clp/BufferedReader.hpp
+        ../../clp/BufferReader.cpp
+        ../../clp/BufferReader.hpp
         ../../clp/CurlDownloadHandler.cpp
         ../../clp/CurlDownloadHandler.hpp
         ../../clp/CurlEasyHandle.hpp
@@ -17,6 +21,9 @@ set(
         ../../clp/EncodedVariableInterpreter.cpp
         ../../clp/EncodedVariableInterpreter.hpp
         ../../clp/ErrorCode.hpp
+        ../../clp/ffi/EncodedTextAst.hpp
+        ../../clp/ffi/EncodedTextAstError.cpp
+        ../../clp/ffi/EncodedTextAstError.hpp
         ../../clp/ffi/encoding_methods.cpp
         ../../clp/ffi/encoding_methods.hpp
         ../../clp/ffi/encoding_methods.inc
@@ -24,11 +31,18 @@ set(
         ../../clp/ffi/ir_stream/decoding_methods.cpp
         ../../clp/ffi/ir_stream/decoding_methods.hpp
         ../../clp/ffi/ir_stream/decoding_methods.inc
+        ../../clp/ffi/ir_stream/IrDeserializationError.cpp
+        ../../clp/ffi/ir_stream/IrDeserializationError.hpp
+        ../../clp/ffi/ir_stream/IrSerializationError.cpp
+        ../../clp/ffi/ir_stream/IrSerializationError.hpp
         ../../clp/ffi/ir_stream/protocol_constants.hpp
         ../../clp/ffi/ir_stream/utils.cpp
         ../../clp/ffi/ir_stream/utils.hpp
         ../../clp/ffi/SchemaTree.cpp
         ../../clp/ffi/SchemaTree.hpp
+        ../../clp/ffi/StringBlob.hpp
+        ../../clp/FileDescriptor.cpp
+        ../../clp/FileDescriptor.hpp
         ../../clp/FileReader.cpp
         ../../clp/FileReader.hpp
         ../../clp/GlobalMetadataDBConfig.cpp
@@ -43,6 +57,7 @@ set(
         ../../clp/ir/parsing.hpp
         ../../clp/ir/parsing.inc
         ../../clp/ir/types.hpp
+        ../../clp/LogTypeDictionaryEntryReq.hpp
         ../../clp/MySQLDB.cpp
         ../../clp/MySQLDB.hpp
         ../../clp/MySQLParamBindings.cpp
@@ -55,11 +70,22 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/ReadOnlyMemoryMappedFile.cpp
+        ../../clp/ReadOnlyMemoryMappedFile.hpp
+        ../../clp/streaming_compression/Constants.hpp
+        ../../clp/streaming_compression/Decompressor.hpp
+        ../../clp/streaming_compression/zstd/Decompressor.cpp
+        ../../clp/streaming_compression/zstd/Decompressor.hpp
         ../../clp/Thread.cpp
         ../../clp/Thread.hpp
         ../../clp/time_types.hpp
         ../../clp/TraceableException.hpp
         ../../clp/type_utils.hpp
+        ../../clp/utf8_utils.cpp
+        ../../clp/utf8_utils.hpp
+        ../../clp/VariableDictionaryEntryReq.hpp
+        ../../clp/VariableDictionaryReaderReq.hpp
+        ../../clp/VariableDictionaryWriterReq.hpp
         ../archive_constants.hpp
         ../ArchiveReader.cpp
         ../ArchiveReader.hpp
@@ -74,6 +100,8 @@ set(
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
+        ../FloatFormatEncoding.cpp
+        ../FloatFormatEncoding.hpp
         ../InputConfig.cpp
         ../InputConfig.hpp
         ../PackedStreamReader.cpp
@@ -110,13 +138,16 @@ set(
 if(CLP_BUILD_EXECUTABLES)
         add_executable(indexer ${INDEXER_SOURCES})
         target_compile_features(indexer PRIVATE cxx_std_20)
+        target_include_directories(indexer PRIVATE ../../)
         target_link_libraries(indexer
                 PRIVATE
                 absl::flat_hash_map
-                Boost::iostreams Boost::program_options Boost::url
+                Boost::program_options Boost::url
                 ${CURL_LIBRARIES}
                 clp::string_utils
+                clp_s::timestamp_parser
                 date::date
+                LibArchive::LibArchive
                 MariaDBClient::MariaDBClient
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
@@ -124,7 +155,8 @@ if(CLP_BUILD_EXECUTABLES)
                 simdjson::simdjson
                 spdlog::spdlog
                 ystdlib::containers
-                ${zstd_TARGET}
+                ystdlib::error_handling
+                zstd::libzstd_static
         )
         # Put the built executable at the root of the build directory
         set_target_properties(

@@ -1,3 +1,4 @@
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -8,6 +9,8 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <string_utils/string_utils.hpp>
+#include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"
@@ -15,7 +18,6 @@
 #include "../Grep.hpp"
 #include "../GrepCore.hpp"
 #include "../ir/constants.hpp"
-#include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -40,7 +42,6 @@ using clp::ErrorCode_Success;
 using clp::Grep;
 using clp::GrepCore;
 using clp::ir::cIrFileExtension;
-using clp::load_lexer_from_file;
 using clp::logtype_dictionary_id_t;
 using clp::Query;
 using clp::segment_id_t;
@@ -143,7 +144,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         if (auto const error_code = create_directory(output_dir.string(), 0700, true);
             ErrorCode_Success != error_code)
         {
-            SPDLOG_ERROR("Failed to create {} - {}", output_dir.string(), strerror(errno));
+            SPDLOG_ERROR("Failed to create {} - {}", output_dir.string(), std::strerror(errno));
             return false;
         }
 
@@ -482,15 +483,6 @@ static bool search_archive(
         return false;
     }
 
-    // Load lexers from schema file if it exists
-    auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-    log_surgeon::lexers::ByteLexer lexer;
-    bool use_heuristic = true;
-    if (std::filesystem::exists(schema_file_path)) {
-        use_heuristic = false;
-        load_lexer_from_file(schema_file_path.string(), lexer);
-    }
-
     Archive archive_reader;
     archive_reader.open(archive_path.string());
     archive_reader.refresh_dictionaries();
@@ -508,9 +500,7 @@ static bool search_archive(
             wildcard_search_string,
             search_begin_ts,
             search_end_ts,
-            command_line_args.ignore_case(),
-            lexer,
-            use_heuristic
+            command_line_args.ignore_case()
     );
     if (false == query_processing_result.has_value()) {
         return true;
@@ -580,7 +570,7 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    clp::Profiler::init();
+    utils::profiling::Reporter const profiler_reporter{"clo", utils::profiling::SpdlogEmitter{}};
     clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clo");
@@ -594,6 +584,8 @@ int main(int argc, char const* argv[]) {
             // Continue processing
             break;
     }
+
+    PROFILE_SCOPE("main");
 
     // mongocxx static init
     mongocxx::instance mongocxx_instance{};

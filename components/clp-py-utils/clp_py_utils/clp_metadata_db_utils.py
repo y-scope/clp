@@ -1,30 +1,22 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Set
 
-from clp_py_utils.clp_config import (
-    ArchiveOutput,
-    StorageType,
-)
+from clp_py_utils.clp_config import ArchiveOutput, StorageType
 
 # Constants
 MYSQL_TABLE_NAME_MAX_LEN = 64
 
-ARCHIVE_TAGS_TABLE_SUFFIX = "archive_tags"
 ARCHIVES_TABLE_SUFFIX = "archives"
 COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
 DATASETS_TABLE_SUFFIX = "datasets"
 FILES_TABLE_SUFFIX = "files"
-TAGS_TABLE_SUFFIX = "tags"
 
 TABLE_SUFFIX_MAX_LEN = max(
-    len(ARCHIVE_TAGS_TABLE_SUFFIX),
     len(ARCHIVES_TABLE_SUFFIX),
     len(COLUMN_METADATA_TABLE_SUFFIX),
     len(DATASETS_TABLE_SUFFIX),
     len(FILES_TABLE_SUFFIX),
-    len(TAGS_TABLE_SUFFIX),
 )
 
 
@@ -43,35 +35,6 @@ def _create_archives_table(db_cursor, archives_table_name: str) -> None:
             KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
             UNIQUE KEY `archive_id` (`id`) USING BTREE,
             PRIMARY KEY (`pagination_id`)
-        )
-        """
-    )
-
-
-def _create_tags_table(db_cursor, tags_table_name: str) -> None:
-    db_cursor.execute(
-        f"""
-        CREATE TABLE IF NOT EXISTS `{tags_table_name}` (
-            `tag_id` INT unsigned NOT NULL AUTO_INCREMENT,
-            `tag_name` VARCHAR(255) NOT NULL,
-            UNIQUE KEY (`tag_name`) USING BTREE,
-            PRIMARY KEY (`tag_id`)
-        )
-        """
-    )
-
-
-def _create_archive_tags_table(
-    db_cursor, archive_tags_table_name: str, archives_table_name: str, tags_table_name: str
-) -> None:
-    db_cursor.execute(
-        f"""
-        CREATE TABLE IF NOT EXISTS `{archive_tags_table_name}` (
-            `archive_id` VARCHAR(64) NOT NULL,
-            `tag_id` INT unsigned NOT NULL,
-            PRIMARY KEY (`archive_id`,`tag_id`),
-            FOREIGN KEY (`archive_id`) REFERENCES `{archives_table_name}` (`id`),
-            FOREIGN KEY (`tag_id`) REFERENCES `{tags_table_name}` (`tag_id`)
         )
         """
     )
@@ -131,7 +94,6 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
     :param db_cursor: The database cursor to execute the table creation.
     :param table_prefix: A string to prepend to the table name.
     """
-
     # For a description of the table, see
     # `../../../docs/src/dev-docs/design-metadata-db.md`
     db_cursor.execute(
@@ -184,7 +146,7 @@ def add_dataset(
 def fetch_existing_datasets(
     db_cursor,
     table_prefix: str,
-) -> Set[str]:
+) -> set[str]:
     """
     Gets the names of all existing datasets.
 
@@ -208,23 +170,17 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
         _create_column_metadata_table(db_cursor, table_prefix, dataset)
 
     archives_table_name = get_archives_table_name(table_prefix, dataset)
-    tags_table_name = get_tags_table_name(table_prefix, dataset)
-    archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
 
     _create_archives_table(db_cursor, archives_table_name)
-    _create_tags_table(db_cursor, tags_table_name)
-    _create_archive_tags_table(
-        db_cursor, archive_tags_table_name, archives_table_name, tags_table_name
-    )
     _create_files_table(db_cursor, table_prefix, dataset)
 
 
 def delete_archives_from_metadata_db(
-    db_cursor, archive_ids: List[str], table_prefix: str, dataset: str | None
+    db_cursor, archive_ids: list[str], table_prefix: str, dataset: str | None
 ) -> None:
     """
     Deletes archives from the metadata database specified by a list of IDs. It also deletes
-    the associated entries from `files` and `archive_tags` tables that reference these archives.
+    the associated entries from the `files` table that reference these archives.
 
     The order of deletion follows the foreign key constraints, ensuring no violations occur during
     the process.
@@ -239,14 +195,6 @@ def delete_archives_from_metadata_db(
     db_cursor.execute(
         f"""
         DELETE FROM `{get_files_table_name(table_prefix, dataset)}`
-        WHERE archive_id in ({ids_list_string})
-        """,
-        archive_ids,
-    )
-
-    db_cursor.execute(
-        f"""
-        DELETE FROM `{get_archive_tags_table_name(table_prefix, dataset)}`
         WHERE archive_id in ({ids_list_string})
         """,
         archive_ids,
@@ -269,13 +217,10 @@ def delete_dataset_from_metadata_db(db_cursor, table_prefix: str, dataset: str) 
     :param table_prefix:
     :param dataset:
     """
-
     # Drop tables in an order such that no foreign key constraint is violated.
     tables_in_removal_order = [
         get_column_metadata_table_name(table_prefix, dataset),
         get_files_table_name(table_prefix, dataset),
-        get_archive_tags_table_name(table_prefix, dataset),
-        get_tags_table_name(table_prefix, dataset),
         get_archives_table_name(table_prefix, dataset),
     ]
 
@@ -292,10 +237,6 @@ def delete_dataset_from_metadata_db(db_cursor, table_prefix: str, dataset: str) 
     )
 
 
-def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
-
-
 def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
     return _get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
 
@@ -310,7 +251,3 @@ def get_datasets_table_name(table_prefix: str) -> str:
 
 def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
     return _get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
-
-
-def get_tags_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)

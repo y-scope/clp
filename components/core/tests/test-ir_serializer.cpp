@@ -15,7 +15,6 @@
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/streaming_compression/zstd/Decompressor.hpp"
 
-using clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success;
 using clp::ir::cIrFileExtension;
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
@@ -88,13 +87,13 @@ TEMPLATE_TEST_CASE(
     serializer.close();
 
     Decompressor ir_reader;
-    ir_reader.open(ir_test_file);
+    REQUIRE(ir_reader.open(ir_test_file) == clp::ErrorCode_Success);
 
-    bool uses_four_byte_encoding{false};
-    REQUIRE(
-            (IRErrorCode_Success
-             == clp::ffi::ir_stream::get_encoding_type(ir_reader, uses_four_byte_encoding))
-    );
+    auto const encoding_type_result{clp::ffi::ir_stream::get_encoding_type(ir_reader)};
+    REQUIRE(encoding_type_result.has_value());
+    bool const uses_four_byte_encoding{
+            clp::ffi::ir_stream::EncodingType::FourByte == encoding_type_result.value()
+    };
     REQUIRE((is_same_v<TestType, four_byte_encoded_variable_t> == uses_four_byte_encoding));
 
     auto result = LogEventDeserializer<TestType>::create(ir_reader);

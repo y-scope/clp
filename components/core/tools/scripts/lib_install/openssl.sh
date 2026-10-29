@@ -1,43 +1,41 @@
 #!/usr/bin/env bash
 
-# Exit on error
-set -e
+# Dependencies: a C compiler, curl, make, Perl, and tar.
+set -o errexit
+set -o nounset
+set -o pipefail
 
-cUsage="Usage: ${BASH_SOURCE[0]} <version> [prefix] [openssldir]"
-if [ "$#" -lt 1 ] ; then
-    echo $cUsage
-    exit
+if [[ "$#" -lt 1 || "$#" -gt 3 ]]; then
+    echo "Usage: ${BASH_SOURCE[0]} <version> [prefix] [openssldir]" >&2
+    exit 1
 fi
 version="$1"
-prefix="${2:-/opt/openssl-${version}}"
-openssldir="${3:-$prefix/ssl}"  # Default to prefix/ssl if not specified
+prefix="${2:-/usr/local}"
+openssldir="${3:-${prefix}/ssl}"
 
-package_name=openssl-${version}
-temp_dir="/tmp/${package_name}-installation"
-mkdir -p "$temp_dir"
-
-echo "🔧 OpenSSL version: $version"
-echo "📁 Install prefix: $prefix"
-echo "📂 OpenSSL directory: $openssldir"
-
-echo "Checking for elevated privileges..."
-if [ ${EUID:-$(id -u)} -ne 0 ] ; then
-  sudo echo "Script can elevate privileges."
+if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+[a-z]?$ ]]; then
+    echo "Invalid OpenSSL version: ${version}" >&2
+    exit 1
+fi
+if [[ "${prefix}" != /* || "${openssldir}" != /* ]]; then
+    echo "The installation prefix and OpenSSL directory must be absolute paths." >&2
+    exit 1
 fi
 
-# Download and extract
+install_cmd_args=()
+if [[ ${EUID} -ne 0 ]]; then
+    install_cmd_args+=("sudo")
+fi
+
+temp_dir="$(mktemp -d)"
+trap 'rm -rf "${temp_dir}"' EXIT
+package_name="openssl-${version}"
 cd "${temp_dir}"
-curl -LO "https://www.openssl.org/source/openssl-${version}.tar.gz"
-tar -xf "openssl-${version}.tar.gz"
-cd "openssl-${version}"
+curl -fsSL "https://www.openssl.org/source/${package_name}.tar.gz" -o "${package_name}.tar.gz"
+tar -xf "${package_name}.tar.gz"
+cd "${package_name}"
 
-# Configure and build
-./config --prefix="$prefix" --openssldir="$openssldir" -fPIC
+./config --prefix="${prefix}" --openssldir="${openssldir}"
 make -j"$(nproc)"
-make install_sw  # install_sw skips man pages
-
-echo "✅ OpenSSL $version installed to $prefix"
-echo "📄 Runtime config expected at $openssldir"
-
-# Clean up
-rm -rf "$temp_dir"
+# install_sw skips documentation. Install the configuration as well, into this version's prefix.
+"${install_cmd_args[@]}" make install_sw install_ssldirs

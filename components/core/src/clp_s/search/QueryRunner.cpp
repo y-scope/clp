@@ -1,9 +1,9 @@
 #include "QueryRunner.hpp"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "../../clp/Defs.h"
@@ -11,6 +11,7 @@
 #include "../../clp/Query.hpp"
 #include "../../clp/type_utils.hpp"
 #include "../SchemaTree.hpp"
+#include "../Utils.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
@@ -19,6 +20,7 @@
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/SearchUtils.hpp"
+#include "ColumnScan.hpp"
 #include "EvaluateTimestampIndex.hpp"
 
 using clp_s::search::ast::AndExpr;
@@ -62,7 +64,8 @@ auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
 void QueryRunner::clear_readers() {
     m_clp_string_readers.clear();
     m_var_string_readers.clear();
-    m_datestring_readers.clear();
+    m_timestamp_readers.clear();
+    m_deprecated_datestring_reader = nullptr;
     m_basic_readers.clear();
 }
 
@@ -72,16 +75,25 @@ void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_
              & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
         || m_match->schema_searches_against_column(m_schema, column_id))
     {
-        auto* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
-        auto* var_reader = dynamic_cast<VariableStringColumnReader*>(column_reader);
-        auto* date_reader = dynamic_cast<DateStringColumnReader*>(column_reader);
-        if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
+        if (auto* const clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
+            nullptr != clp_reader && NodeType::ClpString == clp_reader->get_type())
+        {
             m_clp_string_readers[column_id].push_back(clp_reader);
-        } else if (nullptr != var_reader && var_reader->get_type() == NodeType::VarString) {
+        } else if (auto* const var_reader
+                   = dynamic_cast<VariableStringColumnReader*>(column_reader);
+                   nullptr != var_reader)
+        {
             m_var_string_readers[column_id].push_back(var_reader);
-        } else if (nullptr != date_reader) {
-            // Datestring readers with a given column ID are guaranteed not to repeat
-            m_datestring_readers.emplace(column_id, date_reader);
+        } else if (auto* const timestamp_reader
+                   = dynamic_cast<TimestampColumnReader*>(column_reader);
+                   nullptr != timestamp_reader)
+        {
+            m_timestamp_readers.emplace(column_id, timestamp_reader);
+        } else if (auto* const deprecated_date_reader
+                   = dynamic_cast<DeprecatedDateStringColumnReader*>(column_reader);
+                   nullptr != deprecated_date_reader)
+        {
+            m_deprecated_datestring_reader = deprecated_date_reader;
         } else {
             m_basic_readers[column_id].push_back(column_reader);
         }
@@ -97,6 +109,33 @@ void QueryRunner::init(SchemaReader* reader, std::vector<BaseColumnReader*> cons
         auto column_id = column_reader->get_id();
         initialize_reader(column_id, column_reader);
     }
+}
+
+auto QueryRunner::prepare_filter(SchemaReader& reader) -> FilterClass& {
+    m_column_scan.reset();
+    if (EvaluatedValue::Unknown != m_expression_value) {
+        return *this;
+    }
+
+    reader.initialize_filter(*this);
+
+    auto column_scan = ColumnScan::try_create(
+            m_expr,
+            m_basic_readers,
+            m_clp_string_readers,
+            m_var_string_readers,
+            m_timestamp_readers,
+            m_deprecated_datestring_reader,
+            m_expr_clp_query,
+            m_expr_var_match_map,
+            reader.get_num_messages()
+    );
+    if (column_scan.has_value()) {
+        m_column_scan = std::make_unique<ColumnScan>(std::move(column_scan.value()));
+        return *m_column_scan;
+    }
+
+    return *this;
 }
 
 std::string& QueryRunner::get_cached_decompressed_unstructured_array(int32_t column_id) {
@@ -226,13 +265,19 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
         }
     }
 
-    if (column->matches_type(LiteralType::EpochDateT)) {
-        for (auto entry : m_datestring_readers) {
-            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
-                continue;
-            }
-            if (evaluate_epoch_date_filter(op, entry.second, literal)) {
+    if (column->matches_type(LiteralType::TimestampT)) {
+        if (nullptr != m_deprecated_datestring_reader) {
+            if (evaluate_epoch_date_filter(op, m_deprecated_datestring_reader, literal)) {
                 return true;
+            }
+        } else {
+            for (auto entry : m_timestamp_readers) {
+                if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                    continue;
+                }
+                if (evaluate_timestamp_filter(op, entry.second, literal)) {
+                    return true;
+                }
             }
         }
     }
@@ -306,12 +351,22 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
                     get_cached_decompressed_unstructured_array(column_id),
                     literal
             );
-        case LiteralType::EpochDateT:
-            return evaluate_epoch_date_filter(
+        case LiteralType::TimestampT: {
+            if (nullptr != m_deprecated_datestring_reader
+                && m_deprecated_datestring_reader->get_id() == column_id)
+            {
+                return evaluate_epoch_date_filter(
+                        expr->get_operation(),
+                        m_deprecated_datestring_reader,
+                        literal
+                );
+            }
+            return evaluate_timestamp_filter(
                     expr->get_operation(),
-                    m_datestring_readers[column_id],
+                    m_timestamp_readers.at(column_id),
                     literal
             );
+        }
             // case LiteralType::NullT:
             //  null checks are always turned into existence operators --
             //  no need to evaluate here
@@ -860,7 +915,6 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
 
             // search on log type dictionary
             clp::epochtime_t placeholder_timestamp{};
-            log_surgeon::lexers::ByteLexer placeholder_lexer;
             m_string_query_map.emplace(
                     query_string,
                     clp::GrepCore::process_raw_query(
@@ -869,9 +923,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                             query_string,
                             placeholder_timestamp,
                             placeholder_timestamp,
-                            m_ignore_case,
-                            placeholder_lexer,
-                            true
+                            m_ignore_case
                     )
             );
         }
@@ -885,19 +937,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
 
             std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
             if (false == ast::has_unescaped_wildcards(query_string)) {
-                std::string unescaped_query_string;
-                bool escape = false;
-                for (char const c : query_string) {
-                    if (escape) {
-                        unescaped_query_string.push_back(c);
-                        escape = false;
-                    } else if (c == '\\') {
-                        escape = true;
-                    } else {
-                        unescaped_query_string.push_back(c);
-                    }
-                }
-
+                auto const unescaped_query_string{clp::string_utils::unescape_string(query_string)};
                 auto const entries = m_var_dict->get_entry_matching_value(
                         unescaped_query_string,
                         m_ignore_case
@@ -958,7 +998,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
                 auto literal_type = node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
                 if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
-                    && NodeType::DateString != tree_node_type)
+                    && NodeType::DeprecatedDateString != tree_node_type)
                 {
                     m_wildcard_to_searched_basic_columns[col].insert(node);
                 }
@@ -1060,7 +1100,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             bool matches_clp_string = false;
             constexpr literal_type_bitmask_t other_types
                     = LiteralType::ArrayT | ast::cIntegralTypes | LiteralType::NullT
-                      | LiteralType::BooleanT | LiteralType::EpochDateT;
+                      | LiteralType::BooleanT | LiteralType::TimestampT;
             bool has_other = wildcard->matches_any(other_types);
             std::string filter_string;
             bool valid
@@ -1173,7 +1213,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
 
 bool QueryRunner::evaluate_epoch_date_filter(
         FilterOperation op,
-        DateStringColumnReader* reader,
+        DeprecatedDateStringColumnReader* reader,
         std::shared_ptr<Literal>& operand
 ) {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -1181,6 +1221,23 @@ bool QueryRunner::evaluate_epoch_date_filter(
     }
 
     int64_t op_value;
+    if (false == operand->as_int(op_value, op)) {
+        return false;
+    }
+
+    return evaluate_int_filter_core(op, reader->get_encoded_time(m_cur_message), op_value);
+}
+
+auto QueryRunner::evaluate_timestamp_filter(
+        ast::FilterOperation op,
+        TimestampColumnReader* reader,
+        std::shared_ptr<ast::Literal>& operand
+) -> bool {
+    if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
+        return true;
+    }
+
+    int64_t op_value{};
     if (false == operand->as_int(op_value, op)) {
         return false;
     }

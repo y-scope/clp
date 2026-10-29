@@ -45,7 +45,8 @@ bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var) 
     std::conditional_t<
             std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
             uint32_t,
-            uint64_t>
+            uint64_t
+    >
             digits = 0;
     for (; pos < value_length; ++pos) {
         auto c = str[pos];
@@ -87,7 +88,8 @@ encoded_variable_t encode_float_properties(
         std::conditional_t<
                 std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
                 uint32_t,
-                uint64_t> digits,
+                uint64_t
+        > digits,
         size_t num_digits,
         size_t decimal_point_pos
 ) {
@@ -171,7 +173,8 @@ void decode_float_properties(
         std::conditional_t<
                 std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
                 uint32_t,
-                uint64_t>& digits,
+                uint64_t
+        >& digits,
         uint8_t& num_digits,
         uint8_t& decimal_point_pos
 ) {
@@ -225,7 +228,8 @@ std::string decode_float_var(encoded_variable_t encoded_var) {
     std::conditional_t<
             std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
             uint32_t,
-            uint64_t>
+            uint64_t
+    >
             digits;
     bool is_negative;
     decode_float_properties(encoded_var, is_negative, digits, num_digits, decimal_point_pos);
@@ -346,7 +350,8 @@ template <
         typename encoded_variable_t,
         typename ConstantHandler,
         typename EncodedVariableHandler,
-        typename DictionaryVariableHandler>
+        typename DictionaryVariableHandler
+>
 bool encode_message_generically(
         std::string_view message,
         std::string& logtype,

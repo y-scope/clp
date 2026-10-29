@@ -14,48 +14,167 @@ maintained in a [fork][yscope-presto] of the Presto project. At some point, thes
 been merged into the main Presto repository so that you can use official Presto releases with CLP.
 :::
 
-## Requirements
+## Deployment options
 
-* [CLP][clp-releases] (clp-json) v0.4.0 or higher
+CLP supports Presto through two deployment methods:
+
+* **[Kubernetes (Helm)](#kubernetes-helm)**: Presto is deployed as part of the CLP Helm chart. This
+  is the simplest option if you are already using the [Kubernetes deployment][k8s-deployment].
+* **[Docker Compose](#docker-compose)**: Presto is deployed separately using Docker Compose alongside
+  a CLP package installation.
+
+## Kubernetes (Helm)
+
+When deploying CLP on Kubernetes using Helm, Presto can be enabled by setting `clpConfig.presto` to
+a non-null configuration and `clpConfig.webui.query_engine` to `"presto"`. The `query_engine` setting controls
+which search interface the Web UI displays. Presto runs alongside the existing compression pipeline;
+the clp-s native query components can optionally be disabled to save resources.
+
+### Requirements
+
+* A running CLP Kubernetes deployment (see the [Kubernetes deployment guide][k8s-deployment])
+
+### Set up
+
+1. Create a values file to enable Presto:
+
+   ```{code-block} yaml
+   :caption: presto-values.yaml
+
+   clpConfig:
+     webui:
+       query_engine: "presto"
+
+     # Optional: Disable the clp-s native query pipeline to save resources.
+     query_scheduler: null
+     query_worker: null
+     reducer: null
+
+     # Disable results cache retention since the Presto integration doesn't yet support
+     # garbage collection of search results.
+     results_cache:
+       retention_period: null
+
+     presto:
+       port: 30889
+       coordinator:
+         logging_level: "INFO"
+         query_max_memory_gb: 1
+         query_max_memory_per_node_gb: 1
+       worker:
+         query_memory_gb: 4
+         system_memory_gb: 8
+       # Split filter config for the Presto CLP connector. For each dataset, add a filter entry.
+       # Replace <dataset> with the dataset name (use "default" if you didn't specify one when
+       # compressing) and <timestamp-key> with the timestamp key used during compression.
+       # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
+       split_filter:
+         clp.default.<dataset>:
+           - columnName: "<timestamp-key>"
+             customOptions:
+               rangeMapping:
+                 lowerBound: "begin_timestamp"
+                 upperBound: "end_timestamp"
+             required: false
+   ```
+
+2. Install (or upgrade) the Helm chart with the Presto values:
+
+   ```bash
+   helm install clp clp/clp DOCS_VAR_HELM_VERSION_FLAG -f presto-values.yaml
+   ```
+
+3. Verify that the Presto coordinator and worker pods are running:
+
+   ```bash
+   kubectl get pods -l "app.kubernetes.io/component in (presto-coordinator, presto-worker)"
+   ```
+
+Once the pods are ready, you can [query your logs through Presto](#querying-your-logs-through-presto)
+using CLP's Web UI.
+
+:::{note}
+When using Kubernetes, Presto worker scheduling can be configured using the
+`scheduling.prestoWorker` key in Helm values. Presto coordinator scheduling uses
+`scheduling.prestoCoordinator`. See the [component scheduling][k8s-scheduling] section of the
+Kubernetes deployment guide for details.
+:::
+
+## Docker Compose
+
+### Requirements
+
+* [CLP][clp-releases] (clp-json) v0.5.0 or higher
 * [Docker] v28 or higher
 * [Docker Compose][docker-compose] v2.20.2 or higher
 * Python
 * python3-venv (for the version of Python installed)
 
-## Set up
+### Set up
 
-Using Presto with CLP requires:
+Using Presto with CLP via Docker Compose requires:
 
 * [Setting up CLP](#setting-up-clp) and compressing some logs.
 * [Setting up Presto](#setting-up-presto) to query CLP's metadata database and archives.
 
 ### Setting up CLP
 
-1. Follow the [quick-start](./quick-start/index.md) guide to download and extract the CLP package,
+1. Follow the [quick-start](quick-start/index.md) guide to download and extract the CLP package,
    but don't start the package just yet.
-2. Before starting the package, update the package's config as follows:
+2. Before starting the package, update the package's config file (`etc/clp-config.yaml`) as follows:
 
-    * Open `etc/clp-config.yml` located within the package.
-    * Uncomment the `database` section.
-    * Change `database.host` value to a non-localhost hostname/IP.
-    * After the change, the `database` section should look something like this:
+    * Set the `webui.query_engine` key to `"presto"`.
 
       ```yaml
-      database:
-        type: "mariadb"  # "mariadb" or "mysql"
-        host: "<new-IP-address>"
-        port: 3306
-        name: "clp-db"
+      webui:
+        query_engine: "presto"
       ```
 
-    :::{note}
-    This change is necessary since the Presto containers run on a Docker network, whereas CLP's
-    database runs on the host network. So `localhost` refers to two different entities in those
-    networks. This limitation will be addressed in the future when we unify Presto and CLP's
-    deployment infrastructure.
-    :::
+    * Set the `results_cache.retention_period` key to `null` since the CLP + Presto integration
+      doesn't yet support garbage collection.
 
-3. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
+      ```yaml
+      results_cache:
+      #  host: "localhost"
+      #  port: 27017
+      #  db_name: "clp-query-results"
+      #  stream_collection_name: "stream-files"
+      #
+      #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
+        retention_period: null
+      ```
+
+    * Optional: Disable the native query pipeline to save resources.
+
+      ```yaml
+      query_scheduler: null
+      query_worker: null
+      reducer: null
+      ```
+
+    * Update the `presto` key with the host and port of the Presto cluster. If you follow the
+      [Setting up Presto](#setting-up-presto) section, the host is `localhost` and the port is
+      `8889`.
+
+      ```yaml
+      presto:
+        host: "<ip-address>"
+        port: <port>
+      ```
+
+      :::{note}
+      Presto doesn't need to be running before you start CLP.
+      :::
+
+3. If you'd like to store your compressed logs on S3, follow the
+   [using object storage](guides-using-object-storage/index.md) guide.
+
+   :::{note}
+   Currently, the Presto integration only supports the
+   [credentials](guides-using-object-storage/aws-s3/clp-config.md#credentials) authentication type.
+   :::
+
+4. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
    compress your logs. A sample dataset that works well with Presto is [postgresql].
 
 ### Setting up Presto
@@ -63,7 +182,7 @@ Using Presto with CLP requires:
 1. Clone the CLP repository:
 
     ```bash
-    git clone https://github.com/y-scope/clp.git
+    git clone --branch DOCS_VAR_CLP_GIT_REF https://github.com/y-scope/clp.git
     ```
 
 2. Navigate to the `tools/deployment/presto-clp` directory in your terminal.
@@ -78,7 +197,7 @@ Using Presto with CLP requires:
 
 4. Configure Presto to use CLP's metadata database as follows:
 
-    * Open and edit `coordinator/config-template/metadata-filter.json`.
+    * Open and edit `coordinator/config-template/split-filter.json`.
     * For each dataset you want to query, add a filter config of the form:
 
       ```json
@@ -86,9 +205,11 @@ Using Presto with CLP requires:
         "clp.default.<dataset>": [
           {
             "columnName": "<timestamp-key>",
-            "rangeMapping": {
-              "lowerBound": "begin_timestamp",
-              "upperBound": "end_timestamp"
+            "customOptions": {
+              "rangeMapping": {
+                "lowerBound": "begin_timestamp",
+                "upperBound": "end_timestamp"
+              }
             },
             "required": false
           }
@@ -105,37 +226,35 @@ Using Presto with CLP requires:
 5. Start a Presto cluster by running:
 
     ```bash
-    docker compose up
+    docker compose up --wait
     ```
 
-    * To use more than Presto worker, you can use the `--scale` option as follows:
+    * To use more than one Presto worker, you can use the `--scale` option as follows:
 
       ```bash
-      docker compose up --scale presto-worker=<num-workers>
+      docker compose up --wait --scale presto-worker=<num-workers>
       ```
 
       * Replace `<num-workers>` with the number of Presto worker nodes you want to run.
 
 ### Stopping the Presto cluster
 
-To stop the Presto cluster, use CTRL + C.
+To stop the Presto cluster:
+
+```bash
+docker compose stop
+```
 
 To clean up the Presto cluster entirely:
 
 ```bash
-docker compose rm
+docker compose down
 ```
 
 ## Querying your logs through Presto
 
-To query your logs through Presto, you can use the Presto CLI:
-
-```bash
-docker compose exec presto-coordinator \
-  presto-cli \
-    --catalog clp \
-    --schema default
-```
+You can query your compressed logs in your browser from [CLP's UI](#querying-from-clps-ui), or
+from the command line using the [Presto CLI](#querying-from-the-presto-cli).
 
 Each dataset in CLP shows up as a table in Presto. To show all available datasets:
 
@@ -143,8 +262,20 @@ Each dataset in CLP shows up as a table in Presto. To show all available dataset
 SHOW TABLES;
 ```
 
+:::{note}
 If you didn't specify a dataset when compressing your logs in CLP, your logs will have been stored
-in the `default` dataset. To query the logs in this dataset:
+in the `default` dataset.
+:::
+
+To show all available columns in the `default` dataset:
+
+```sql
+DESCRIBE default;
+```
+
+If you wish to show the columns of a different dataset, replace `default` above.
+
+To query the logs in this dataset:
 
 ```sql
 SELECT * FROM default LIMIT 1;
@@ -157,6 +288,26 @@ contain the field `foo.bar`, you can query it using:
 SELECT foo.bar FROM default LIMIT 1;
 ```
 
+### Querying from CLP's UI
+
+CLP's UI should be available at [http://localhost:4000](http://localhost:4000) (if you changed
+`webui.host` or `webui.port` in `etc/clp-config.yaml`, use the new values).
+
+:::{note}
+The UI can only run one query at a time, and queries must not end with a `;`.
+:::
+
+### Querying from the Presto CLI
+
+To access the Presto CLI, navigate to the `tools/deployment/presto-clp` directory and run:
+
+```bash
+docker compose exec presto-coordinator \
+  presto-cli \
+    --catalog clp \
+    --schema default
+```
+
 ## Limitations
 
 The Presto CLP integration has the following limitations at present:
@@ -164,14 +315,15 @@ The Presto CLP integration has the following limitations at present:
 * Nested fields containing special characters cannot be queried (see [y-scope/presto#8]). Allowed
   characters are alphanumeric characters and underscores. To get around this limitation, you'll
   need to preprocess your logs to remove any special characters.
-* Only logs stored on the filesystem, rather than S3, can be queried through Presto.
 
 These limitations will be addressed in a future release of the Presto integration.
 
-[clp-connector-docs]: https://docs.yscope.com/presto/connector/clp.html#metadata-filter-config-file
+[clp-connector-docs]: https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
 [clp-releases]: https://github.com/y-scope/clp/releases
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
+[k8s-deployment]: guides-k8s-deployment.md
+[k8s-scheduling]: guides-k8s-deployment.md#component-scheduling
 [postgresql]: https://zenodo.org/records/10516401
 [Presto]: https://prestodb.io/
 [y-scope/presto#8]: https://github.com/y-scope/presto/issues/8

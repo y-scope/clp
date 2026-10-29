@@ -1,5 +1,8 @@
 #include "SchemaMap.hpp"
 
+#include <cstddef>
+#include <cstdint>
+
 #include "archive_constants.hpp"
 #include "FileWriter.hpp"
 #include "ZstdCompressor.hpp"
@@ -24,7 +27,7 @@ size_t SchemaMap::store(std::string const& archives_dir, int compression_level) 
             FileWriter::OpenMode::CreateForWriting
     );
     schema_map_compressor.open(schema_map_writer, compression_level);
-    schema_map_compressor.write_numeric_value(m_schema_map.size());
+    schema_map_compressor.write_numeric_value(static_cast<uint64_t>(m_schema_map.size()));
     for (auto const& schema_mapping : m_schema_map) {
         auto const& schema = schema_mapping.first;
         schema_map_compressor.write_numeric_value(schema_mapping.second);

@@ -1,23 +1,28 @@
 #include "AddTimestampConditions.hpp"
 
+#include "../Defs.hpp"
 #include "../Utils.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
-#include "ast/DateLiteral.hpp"
 #include "ast/EmptyExpr.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
+#include "ast/TimestampLiteral.hpp"
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::ColumnDescriptor;
-using clp_s::search::ast::DateLiteral;
 using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::TimestampLiteral;
 
 namespace clp_s::search {
+namespace {
+constexpr epochtime_t cNanosecondsInMillisecond{1000LL * 1000LL};
+}  // namespace
+
 std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expression>& expr) {
     if (false == m_begin_ts.has_value() && false == m_end_ts.has_value()) {
         return expr;
@@ -36,15 +41,17 @@ std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expressi
 
     auto and_expr = AndExpr::create();
     if (m_begin_ts.has_value()) {
-        auto date_literal = DateLiteral::create_from_int(m_begin_ts.value());
+        auto timestamp_literal
+                = TimestampLiteral::create(m_begin_ts.value() * cNanosecondsInMillisecond);
         and_expr->add_operand(
-                FilterExpr::create(timestamp_column, FilterOperation::GTE, date_literal)
+                FilterExpr::create(timestamp_column, FilterOperation::GTE, timestamp_literal)
         );
     }
     if (m_end_ts.has_value()) {
-        auto date_literal = DateLiteral::create_from_int(m_end_ts.value());
+        auto timestamp_literal
+                = TimestampLiteral::create(m_end_ts.value() * cNanosecondsInMillisecond);
         and_expr->add_operand(
-                FilterExpr::create(timestamp_column, FilterOperation::LTE, date_literal)
+                FilterExpr::create(timestamp_column, FilterOperation::LTE, timestamp_literal)
         );
     }
     and_expr->add_operand(expr);

@@ -1,39 +1,41 @@
 #include "JsonParser.hpp"
 
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <stack>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
-#include <curl/curl.h>
+#include <fmt/format.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
-#include "../clp/ffi/ir_stream/decoding_methods.hpp"
-#include "../clp/ffi/ir_stream/Deserializer.hpp"
-#include "../clp/ffi/ir_stream/IrUnitType.hpp"
-#include "../clp/ffi/ir_stream/protocol_constants.hpp"
-#include "../clp/ffi/KeyValuePairLogEvent.hpp"
-#include "../clp/ffi/SchemaTree.hpp"
-#include "../clp/ffi/Value.hpp"
-#include "../clp/ir/EncodedTextAst.hpp"
-#include "../clp/NetworkReader.hpp"
-#include "../clp/ReaderInterface.hpp"
-#include "../clp/streaming_compression/zstd/Decompressor.hpp"
-#include "../clp/time_types.hpp"
-#include "archive_constants.hpp"
-#include "ErrorCode.hpp"
-#include "InputConfig.hpp"
-#include "JsonFileIterator.hpp"
-#include "JsonParser.hpp"
-#include "search/ast/ColumnDescriptor.hpp"
-#include "search/ast/SearchUtils.hpp"
+#include <clp/ErrorCode.hpp>
+#include <clp/ffi/EncodedTextAst.hpp>
+#include <clp/ffi/ir_stream/decoding_methods.hpp>
+#include <clp/ffi/ir_stream/Deserializer.hpp>
+#include <clp/ffi/ir_stream/IrUnitType.hpp>
+#include <clp/ffi/ir_stream/protocol_constants.hpp>
+#include <clp/ffi/KeyValuePairLogEvent.hpp>
+#include <clp/ffi/SchemaTree.hpp>
+#include <clp/ffi/Value.hpp>
+#include <clp/ReaderInterface.hpp>
+#include <clp/time_types.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/FloatFormatEncoding.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/JsonFileIterator.hpp>
+#include <clp_s/search/ast/ColumnDescriptor.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
+#include <clp_s/Utils.hpp>
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -41,6 +43,34 @@ using clp::ffi::KeyValuePairLogEvent;
 using clp::UtcOffset;
 
 namespace clp_s {
+namespace {
+/**
+ * Trims trailing whitespace off of a `string_view`. The returned `string_view` points to a subset
+ * of the input `string_view`.
+ *
+ * @param str
+ * @return The input string without trailing whitespace.
+ */
+auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
+
+/**
+ * Checks whether marshalling a double value to a string using a specific format matches the
+ * original floating point string.
+ *
+ * This should happen only when either:
+ *   1. `float_str` was marshalled from an ieee-754 binary64 float in a non-standard compliant way
+ *   or
+ *   2. `float_str` was not marshalled from an ieee-754 binary64 float (e.g. human-written,
+ *      marshalled from a binary128 or decimalX float, etc.)
+ *
+ * @param float_str
+ * @param value
+ * @param format
+ * @return Whether marshalling `value` using `format` is identical to `float_str` or not.
+ */
+auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
+        -> bool;
+
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
  */
@@ -87,14 +117,33 @@ private:
     bool m_is_complete{false};
 };
 
+auto trim_trailing_whitespace(std::string_view str) -> std::string_view {
+    size_t substr_size{str.size()};
+    for (auto it{str.rbegin()}; str.rend() != it; ++it) {
+        if (std::isspace(static_cast<int>(*it))) {
+            --substr_size;
+        } else {
+            break;
+        }
+    }
+    return str.substr(0ULL, substr_size);
+}
+
+auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
+        -> bool {
+    auto const restore_result{restore_encoded_float(value, format)};
+    return false == restore_result.has_error() && float_str == restore_result.value();
+}
+}  // namespace
+
 JsonParser::JsonParser(JsonParserOption const& option)
-        : m_num_messages(0),
-          m_target_encoded_size(option.target_encoded_size),
+        : m_target_encoded_size(option.target_encoded_size),
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
-          m_input_paths(option.input_paths),
+          m_retain_float_format(option.retain_float_format),
+          m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
         if (false
@@ -204,10 +253,39 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::number: {
                 simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
-                    double double_value = number_value.get_double();
-                    m_current_parsed_message.add_unordered_value(double_value);
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                    if (m_retain_float_format) {
+                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            ))
+                        {
+                            m_current_parsed_message.add_unordered_value(
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            );
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::FormattedFloat,
+                                    cur_key
+                            );
+                        } else {
+                            m_current_parsed_message.add_unordered_value(double_value_str);
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::DictionaryFloat,
+                                    cur_key
+                            );
+                        }
+                    } else {
+                        double double_value = number_value.get_double();
+                        m_current_parsed_message.add_unordered_value(double_value);
+                        node_id = m_archive_writer
+                                          ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                    }
                 } else {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
@@ -282,9 +360,38 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             case simdjson::ondemand::json_type::number: {
                 simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
-                    double double_value = number_value.get_double();
-                    m_current_parsed_message.add_unordered_value(double_value);
-                    node_id = m_archive_writer->add_node(parent_node_id, NodeType::Float, "");
+                    if (m_retain_float_format) {
+                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            ))
+                        {
+                            m_current_parsed_message.add_unordered_value(
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            );
+                            node_id = m_archive_writer->add_node(
+                                    parent_node_id,
+                                    NodeType::FormattedFloat,
+                                    ""
+                            );
+                        } else {
+                            m_current_parsed_message.add_unordered_value(double_value_str);
+                            node_id = m_archive_writer->add_node(
+                                    parent_node_id,
+                                    NodeType::DictionaryFloat,
+                                    ""
+                            );
+                        }
+                    } else {
+                        double double_value = number_value.get_double();
+                        m_current_parsed_message.add_unordered_value(double_value);
+                        node_id = m_archive_writer->add_node(parent_node_id, NodeType::Float, "");
+                    }
                 } else {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
@@ -387,62 +494,110 @@ void JsonParser::parse_line(
                 break;
             }
             case simdjson::ondemand::json_type::number: {
-                NodeType type;
                 simdjson::ondemand::number number_value = line.get_number();
                 auto const matches_timestamp
                         = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
-                if (false == number_value.is_double()) {
-                    // FIXME: should have separate integer and unsigned
-                    // integer types to handle values greater than max int64
-                    type = NodeType::Integer;
-                } else {
-                    type = NodeType::Float;
-                }
-                node_id = m_archive_writer->add_node(node_id_stack.top(), type, cur_key);
 
-                if (type == NodeType::Integer) {
+                if (false == number_value.is_double()) {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
                         i64_value = static_cast<int64_t>(number_value.get_uint64());
                     } else {
-                        i64_value = line.get_int64();
+                        i64_value = number_value.get_int64();
                     }
 
-                    m_current_parsed_message.add_value(node_id, i64_value);
+                    node_id = m_archive_writer->add_node(
+                            node_id_stack.top(),
+                            matches_timestamp ? NodeType::Timestamp : NodeType::Integer,
+                            cur_key
+                    );
                     if (matches_timestamp) {
-                        m_archive_writer
-                                ->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
+                        m_current_parsed_message.add_value(
+                                node_id,
+                                m_archive_writer->ingest_unknown_precision_epoch_timestamp(
+                                        m_timestamp_key,
+                                        node_id,
+                                        i64_value
+                                )
+                        );
+                    } else {
+                        m_current_parsed_message.add_value(node_id, i64_value);
                     }
                 } else {
-                    double double_value = line.get_double();
-                    m_current_parsed_message.add_value(node_id, double_value);
+                    auto const double_value{number_value.get_double()};
                     if (matches_timestamp) {
-                        m_archive_writer
-                                ->ingest_timestamp_entry(m_timestamp_key, node_id, double_value);
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::Timestamp,
+                                cur_key
+                        );
+                        auto const double_value_str{
+                                trim_trailing_whitespace(line.raw_json_token())
+                        };
+                        m_current_parsed_message.add_value(
+                                node_id,
+                                m_archive_writer->ingest_numeric_json_timestamp(
+                                        m_timestamp_key,
+                                        node_id,
+                                        double_value_str
+                                )
+                        );
+                    } else if (m_retain_float_format) {
+                        auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    double_value,
+                                    float_format_result.value()
+                            ))
+                        {
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::FormattedFloat,
+                                    cur_key
+                            );
+                            m_current_parsed_message
+                                    .add_value(node_id, double_value, float_format_result.value());
+                        } else {
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::DictionaryFloat,
+                                    cur_key
+                            );
+                            m_current_parsed_message.add_value(node_id, double_value_str);
+                        }
+                    } else {
+                        node_id = m_archive_writer
+                                          ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                        m_current_parsed_message.add_value(node_id, double_value);
                     }
                 }
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
             case simdjson::ondemand::json_type::string: {
-                std::string_view value = line.get_string(true);
-                auto const matches_timestamp
-                        = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
-                if (matches_timestamp) {
-                    node_id = m_archive_writer->add_node(
-                            node_id_stack.top(),
-                            NodeType::DateString,
-                            cur_key
-                    );
-                    uint64_t encoding_id{0};
-                    epochtime_t timestamp = m_archive_writer->ingest_timestamp_entry(
-                            m_timestamp_key,
+                if (m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key)) {
+                    auto const raw_timestamp_literal{
+                            trim_trailing_whitespace(line.raw_json_token())
+                    };
+                    node_id = m_archive_writer
+                                      ->add_node(node_id_stack.top(), NodeType::Timestamp, cur_key);
+                    m_current_parsed_message.add_value(
                             node_id,
-                            value,
-                            encoding_id
+                            m_archive_writer->ingest_string_timestamp(
+                                    m_timestamp_key,
+                                    node_id,
+                                    raw_timestamp_literal,
+                                    true
+                            )
                     );
-                    m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
-                } else if (value.find(' ') != std::string::npos) {
+                    m_current_schema.insert_ordered(node_id);
+                    break;
+                }
+
+                std::string_view value = line.get_string(true);
+                if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
@@ -451,7 +606,6 @@ void JsonParser::parse_line(
                                       ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
                 }
-
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
@@ -489,106 +643,396 @@ void JsonParser::parse_line(
     } while (false == object_stack.empty());
 }
 
-bool JsonParser::parse() {
+bool JsonParser::ingest() {
     auto archive_creator_id = boost::uuids::to_string(m_generator());
-    for (auto const& path : m_input_paths) {
-        auto reader{try_create_reader(path, m_network_auth)};
-        if (nullptr == reader) {
-            std::ignore = m_archive_writer->close();
-            return false;
-        }
+    for (auto const& [path, file_name_in_metadata] : m_input_paths_and_canonical_filenames) {
+        auto [nested_readers, file_type]
+                = try_create_reader_and_deduce_type_with_retries(path, m_network_auth);
 
-        JsonFileIterator json_file_iterator(*reader, m_max_document_size);
-        if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
-            SPDLOG_ERROR(
-                    "Encountered error - {} - while trying to parse {} after parsing 0 bytes",
-                    simdjson::error_message(json_file_iterator.get_error()),
-                    path.path
-            );
-            std::ignore = m_archive_writer->close();
-            return false;
-        }
-
-        simdjson::ondemand::document_stream::iterator json_it;
-
-        m_num_messages = 0;
-        size_t bytes_consumed_up_to_prev_archive = 0;
-        size_t bytes_consumed_up_to_prev_record = 0;
-
-        size_t file_split_number{0ULL};
-        int32_t log_event_idx_node_id{};
-        auto initialize_fields_for_archive = [&]() -> bool {
-            if (false == m_record_log_order) {
-                return true;
-            }
-            log_event_idx_node_id
-                    = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
-            if (auto const rc = m_archive_writer->add_field_to_current_range(
-                        std::string{constants::range_index::cFilename},
-                        path.path
-                );
-                ErrorCodeSuccess != rc)
-            {
-                SPDLOG_ERROR(
-                        "Failed to add metadata field \"{}\" ({})",
-                        constants::range_index::cFilename,
-                        static_cast<int64_t>(rc)
-                );
-                return false;
-            }
-            if (auto const rc = m_archive_writer->add_field_to_current_range(
-                        std::string{constants::range_index::cFileSplitNumber},
-                        file_split_number
-                );
-                ErrorCodeSuccess != rc)
-            {
-                SPDLOG_ERROR(
-                        "Failed to add metadata field \"{}\" ({})",
-                        constants::range_index::cFileSplitNumber,
-                        static_cast<int64_t>(rc)
-                );
-                return false;
-            }
-            if (auto const rc = m_archive_writer->add_field_to_current_range(
-                        std::string{constants::range_index::cArchiveCreatorId},
+        bool ingestion_successful{};
+        switch (file_type) {
+            case FileType::EmptyFile:
+            case FileType::Json:
+                ingestion_successful = ingest_json(
+                        nested_readers.back(),
+                        path,
+                        file_name_in_metadata,
                         archive_creator_id
                 );
-                ErrorCodeSuccess != rc)
-            {
-                SPDLOG_ERROR(
-                        "Failed to add metadata field \"{}\" ({})",
-                        constants::range_index::cArchiveCreatorId,
-                        static_cast<int64_t>(rc)
+                break;
+            case FileType::KeyValueIr:
+                ingestion_successful = ingest_kvir(
+                        nested_readers.back(),
+                        path,
+                        file_name_in_metadata,
+                        archive_creator_id
                 );
-                return false;
-            }
-            return true;
-        };
-        if (false == initialize_fields_for_archive()) {
-            std::ignore = m_archive_writer->close();
-            return false;
-        }
-        auto update_fields_after_archive_split = [&]() { ++file_split_number; };
-
-        while (json_file_iterator.get_json(json_it)) {
-            m_current_schema.clear();
-
-            auto ref = *json_it;
-            auto is_scalar_result = ref.is_scalar();
-            // If you don't check the error on is_scalar it will sometimes throw TAPE_ERROR when
-            // converting to bool. The error being TAPE_ERROR or is_scalar() being true both mean
-            // that this isn't a valid JSON document but they get set in different situations so we
-            // need to check both here.
-            if (is_scalar_result.error() || true == is_scalar_result.value()) {
+                break;
+            case FileType::LogText:
                 SPDLOG_ERROR(
-                        "Encountered non-json-object while trying to parse {} after parsing {} "
-                        "bytes",
-                        path.path,
-                        bytes_consumed_up_to_prev_record
+                        "Direct ingestion of unstructured log-text is not supported from input {}",
+                        path.path
                 );
                 std::ignore = m_archive_writer->close();
                 return false;
+            case FileType::Unknown: {
+                if (false == nested_readers.empty()
+                    && NetworkUtils::check_and_log_curl_error(
+                            path.path,
+                            nested_readers.front().get()
+                    ))
+                {
+                    close_nested_readers(nested_readers);
+                    SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
+                    std::ignore = m_archive_writer->close();
+                    return false;
+                }
+
+                auto json_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                        std::string const& file_name) -> bool {
+                    return ingest_json(reader, path, file_name, archive_creator_id);
+                };
+
+                auto kv_ir_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                         std::string const& file_name) -> bool {
+                    return ingest_kvir(reader, path, file_name, archive_creator_id);
+                };
+
+                auto log_text_handler = [&](std::shared_ptr<clp::ReaderInterface> reader,
+                                            std::string const& file_name) -> bool {
+                    SPDLOG_ERROR(
+                            "Direct ingestion of unstructured log-text is not supported from"
+                            " archive member {}",
+                            file_name
+                    );
+                    return false;
+                };
+
+                if (false == nested_readers.empty()
+                    && try_process_general_purpose_archive_with_libarchive(
+                            nested_readers.back(),
+                            path,
+                            file_name_in_metadata,
+                            json_handler,
+                            kv_ir_handler,
+                            log_text_handler,
+                            json_handler
+                    ))
+                {
+                    ingestion_successful = true;
+                    break;
+                }
             }
+            case FileType::Zstd:
+            default: {
+                if (false == nested_readers.empty()) {
+                    NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get());
+                    close_nested_readers(nested_readers);
+                }
+                SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
+                std::ignore = m_archive_writer->close();
+                return false;
+            }
+        }
+
+        close_nested_readers(nested_readers);
+        if (false == ingestion_successful
+            || (false == nested_readers.empty()
+                && NetworkUtils::check_and_log_curl_error(path.path, nested_readers.front().get())))
+        {
+            std::ignore = m_archive_writer->close();
+            return false;
+        }
+    }
+    return true;
+}
+
+auto JsonParser::ingest_json(
+        std::shared_ptr<clp::ReaderInterface> reader,
+        Path const& path,
+        std::string const& file_name_in_metadata,
+        std::string const& archive_creator_id
+) -> bool {
+    JsonFileIterator json_file_iterator(*reader, m_max_document_size);
+    if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
+        SPDLOG_ERROR(
+                "Encountered error - {} - while trying to parse {} after parsing 0 bytes",
+                simdjson::error_message(json_file_iterator.get_error()),
+                path.path
+        );
+        return false;
+    }
+
+    simdjson::ondemand::document_stream::iterator json_it;
+
+    size_t bytes_consumed_up_to_prev_archive{0ULL};
+    size_t bytes_consumed_up_to_prev_record{0ULL};
+
+    size_t file_split_number{0ULL};
+    int32_t log_event_idx_node_id{};
+    auto initialize_fields_for_archive = [&]() -> bool {
+        if (false == m_record_log_order) {
+            return true;
+        }
+        log_event_idx_node_id
+                = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
+        if (auto const rc = m_archive_writer->add_field_to_current_range(
+                    std::string{constants::range_index::cFilename},
+                    file_name_in_metadata
+            );
+            ErrorCodeSuccess != rc)
+        {
+            SPDLOG_ERROR(
+                    "Failed to add metadata field \"{}\" ({})",
+                    constants::range_index::cFilename,
+                    static_cast<int64_t>(rc)
+            );
+            return false;
+        }
+        if (auto const rc = m_archive_writer->add_field_to_current_range(
+                    std::string{constants::range_index::cFileSplitNumber},
+                    file_split_number
+            );
+            ErrorCodeSuccess != rc)
+        {
+            SPDLOG_ERROR(
+                    "Failed to add metadata field \"{}\" ({})",
+                    constants::range_index::cFileSplitNumber,
+                    static_cast<int64_t>(rc)
+            );
+            return false;
+        }
+        if (auto const rc = m_archive_writer->add_field_to_current_range(
+                    std::string{constants::range_index::cArchiveCreatorId},
+                    archive_creator_id
+            );
+            ErrorCodeSuccess != rc)
+        {
+            SPDLOG_ERROR(
+                    "Failed to add metadata field \"{}\" ({})",
+                    constants::range_index::cArchiveCreatorId,
+                    static_cast<int64_t>(rc)
+            );
+            return false;
+        }
+        return true;
+    };
+    if (false == initialize_fields_for_archive()) {
+        std::ignore = m_archive_writer->close();
+        return false;
+    }
+    auto update_fields_after_archive_split = [&]() { ++file_split_number; };
+
+    while (json_file_iterator.get_json(json_it)) {
+        m_current_schema.clear();
+
+        auto ref = *json_it;
+        auto is_scalar_result = ref.is_scalar();
+        // If you don't check the error on is_scalar it will sometimes throw TAPE_ERROR when
+        // converting to bool. The error being TAPE_ERROR or is_scalar() being true both mean
+        // that this isn't a valid JSON document but they get set in different situations so we
+        // need to check both here.
+        if (is_scalar_result.error() || true == is_scalar_result.value()) {
+            SPDLOG_ERROR(
+                    "Encountered non-json-object while trying to parse {} after parsing {} "
+                    "bytes",
+                    path.path,
+                    bytes_consumed_up_to_prev_record
+            );
+            return false;
+        }
+
+        // Add log_event_idx field to metadata for record
+        if (m_record_log_order) {
+            m_current_parsed_message.add_value(
+                    log_event_idx_node_id,
+                    m_archive_writer->get_next_log_event_id()
+            );
+            m_current_schema.insert_ordered(log_event_idx_node_id);
+        }
+
+        // Some errors from simdjson are latent until trying to access invalid JSON fields.
+        // Instead of checking for an error every time we access a JSON field in parse_line we
+        // just catch simdjson_error here instead.
+        try {
+            parse_line(ref.value(), constants::cRootNodeId, constants::cRootNodeName);
+        } catch (simdjson::simdjson_error& error) {
+            SPDLOG_ERROR(
+                    "Encountered error - {} - while trying to parse {} after parsing {} bytes",
+                    error.what(),
+                    path.path,
+                    bytes_consumed_up_to_prev_record
+            );
+            return false;
+        }
+
+        int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
+        m_current_parsed_message.set_id(current_schema_id);
+        m_archive_writer
+                ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
+
+        bytes_consumed_up_to_prev_record = json_file_iterator.get_num_bytes_consumed();
+        if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
+            m_archive_writer->increment_uncompressed_size(
+                    bytes_consumed_up_to_prev_record - bytes_consumed_up_to_prev_archive
+            );
+            bytes_consumed_up_to_prev_archive = bytes_consumed_up_to_prev_record;
+            split_archive();
+            update_fields_after_archive_split();
+            if (false == initialize_fields_for_archive()) {
+                return false;
+            }
+        }
+
+        m_current_parsed_message.clear();
+    }
+
+    m_archive_writer->increment_uncompressed_size(
+            json_file_iterator.get_num_bytes_read() - bytes_consumed_up_to_prev_archive
+    );
+
+    if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
+        SPDLOG_ERROR(
+                "Encountered error - {} - while trying to parse {} after parsing {} bytes",
+                simdjson::error_message(json_file_iterator.get_error()),
+                path.path,
+                bytes_consumed_up_to_prev_record
+        );
+        return false;
+    } else if (json_file_iterator.truncated_bytes() > 0) {
+        // currently don't treat truncated bytes at the end of the file as an error
+        SPDLOG_WARN(
+                "Truncated JSON  ({} bytes) at end of file {}",
+                json_file_iterator.truncated_bytes(),
+                path.path
+        );
+    }
+
+    if (m_record_log_order) {
+        if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
+            SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
+            return false;
+        }
+    }
+    return true;
+}
+
+auto JsonParser::ingest_kvir(
+        std::shared_ptr<clp::ReaderInterface> reader,
+        Path const& path,
+        std::string const& file_name_in_metadata,
+        std::string const& archive_creator_id
+) -> bool {
+    auto deserializer_result{Deserializer<IrUnitHandler>::create(*reader, IrUnitHandler{})};
+    if (deserializer_result.has_error()) {
+        auto err = deserializer_result.error();
+        SPDLOG_ERROR(
+                "Encountered error while creating kv-ir deserializer: ({}) - {}",
+                err.value(),
+                err.message()
+        );
+        return false;
+    }
+    auto& deserializer = deserializer_result.value();
+    auto& ir_unit_handler{deserializer.get_ir_unit_handler()};
+
+    size_t file_split_number{0ULL};
+    int32_t log_event_idx_node_id{};
+    auto initialize_fields_for_archive = [&]() -> bool {
+        if (false == m_record_log_order) {
+            return true;
+        }
+        log_event_idx_node_id
+                = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
+        if (auto const rc = m_archive_writer->add_field_to_current_range(
+                    std::string{constants::range_index::cFilename},
+                    file_name_in_metadata
+            );
+            ErrorCodeSuccess != rc)
+        {
+            SPDLOG_ERROR(
+                    "Failed to add metadata field \"{}\" ({})",
+                    constants::range_index::cFilename,
+                    static_cast<int64_t>(rc)
+            );
+            return false;
+        }
+        if (auto const rc = m_archive_writer->add_field_to_current_range(
+                    std::string{constants::range_index::cFileSplitNumber},
+                    file_split_number
+            );
+            ErrorCodeSuccess != rc)
+        {
+            SPDLOG_ERROR(
+                    "Failed to add metadata field \"{}\" ({})",
+                    constants::range_index::cFileSplitNumber,
+                    static_cast<int64_t>(rc)
+            );
+            return false;
+        }
+        if (auto const rc = m_archive_writer->add_field_to_current_range(
+                    std::string{constants::range_index::cArchiveCreatorId},
+                    archive_creator_id
+            );
+            ErrorCodeSuccess != rc)
+        {
+            SPDLOG_ERROR(
+                    "Failed to add metadata field \"{}\" ({})",
+                    constants::range_index::cArchiveCreatorId,
+                    static_cast<int64_t>(rc)
+            );
+            return false;
+        }
+        auto const& metadata = deserializer.get_metadata();
+        if (metadata.contains(clp::ffi::ir_stream::cProtocol::Metadata::UserDefinedMetadataKey)) {
+            for (auto const& [metadata_key, metadata_value] :
+                 metadata.at(clp::ffi::ir_stream::cProtocol::Metadata::UserDefinedMetadataKey)
+                         .items())
+            {
+                if (auto const rc
+                    = m_archive_writer->add_field_to_current_range(metadata_key, metadata_value);
+                    ErrorCodeSuccess != rc)
+                {
+                    SPDLOG_ERROR(
+                            "Failed to add metadata field \"{}\" ({})",
+                            metadata_key,
+                            static_cast<int64_t>(rc)
+                    );
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+    if (false == initialize_fields_for_archive()) {
+        return false;
+    }
+    auto update_fields_after_archive_split = [&]() { ++file_split_number; };
+
+    size_t curr_pos{};
+    size_t last_pos{};
+    while (true) {
+        auto const kv_log_event_result{deserializer.deserialize_next_ir_unit(*reader)};
+
+        if (kv_log_event_result.has_error()) {
+            auto err = kv_log_event_result.error();
+            SPDLOG_WARN(
+                    "Encountered error while deserializing kv-ir log event from stream \"{}\": "
+                    "({}) - {}",
+                    path.path,
+                    err.value(),
+                    err.message()
+            );
+            // Treat deserialization error as end of a truncated stream.
+            break;
+        }
+        if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
+            break;
+        }
+        if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::LogEvent) {
+            auto const kv_log_event = &(ir_unit_handler.get_deserialized_log_event().value());
+
+            m_current_schema.clear();
 
             // Add log_event_idx field to metadata for record
             if (m_record_log_order) {
@@ -599,78 +1043,49 @@ bool JsonParser::parse() {
                 m_current_schema.insert_ordered(log_event_idx_node_id);
             }
 
-            // Some errors from simdjson are latent until trying to access invalid JSON fields.
-            // Instead of checking for an error every time we access a JSON field in parse_line we
-            // just catch simdjson_error here instead.
             try {
-                parse_line(ref.value(), constants::cRootNodeId, constants::cRootNodeName);
-            } catch (simdjson::simdjson_error& error) {
-                SPDLOG_ERROR(
-                        "Encountered error - {} - while trying to parse {} after parsing {} bytes",
-                        error.what(),
-                        path.path,
-                        bytes_consumed_up_to_prev_record
-                );
-                std::ignore = m_archive_writer->close();
+                parse_kv_log_event(*kv_log_event);
+            } catch (std::exception const& e) {
+                SPDLOG_ERROR("Encountered error while parsing a kv log event - {}", e.what());
                 return false;
             }
-            m_num_messages++;
 
-            int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
-            m_current_parsed_message.set_id(current_schema_id);
-            m_archive_writer
-                    ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
-
-            bytes_consumed_up_to_prev_record = json_file_iterator.get_num_bytes_consumed();
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
-                m_archive_writer->increment_uncompressed_size(
-                        bytes_consumed_up_to_prev_record - bytes_consumed_up_to_prev_archive
-                );
-                bytes_consumed_up_to_prev_archive = bytes_consumed_up_to_prev_record;
+                m_ir_node_to_archive_node_id_mapping.clear();
+                m_autogen_ir_node_to_archive_node_id_mapping.clear();
+                curr_pos = reader->get_pos();
+                m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
+                last_pos = curr_pos;
                 split_archive();
                 update_fields_after_archive_split();
                 if (false == initialize_fields_for_archive()) {
-                    std::ignore = m_archive_writer->close();
                     return false;
                 }
             }
 
+            ir_unit_handler.clear();
             m_current_parsed_message.clear();
-        }
-
-        m_archive_writer->increment_uncompressed_size(
-                json_file_iterator.get_num_bytes_read() - bytes_consumed_up_to_prev_archive
-        );
-
-        if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
+        } else if (kv_log_event_result.value()
+                   == clp::ffi::ir_stream::IrUnitType::SchemaTreeNodeInsertion)
+        {
+            continue;
+        } else {
             SPDLOG_ERROR(
-                    "Encountered error - {} - while trying to parse {} after parsing {} bytes",
-                    simdjson::error_message(json_file_iterator.get_error()),
-                    path.path,
-                    bytes_consumed_up_to_prev_record
+                    "Encountered unknown IR unit type ({}) during deserialization.",
+                    static_cast<uint8_t>(kv_log_event_result.value())
             );
-            std::ignore = m_archive_writer->close();
-            return false;
-        } else if (json_file_iterator.truncated_bytes() > 0) {
-            // currently don't treat truncated bytes at the end of the file as an error
-            SPDLOG_WARN(
-                    "Truncated JSON  ({} bytes) at end of file {}",
-                    json_file_iterator.truncated_bytes(),
-                    path.path
-            );
-        }
-
-        if (check_and_log_curl_error(path, reader)) {
-            std::ignore = m_archive_writer->close();
             return false;
         }
+    }
+    m_ir_node_to_archive_node_id_mapping.clear();
+    m_autogen_ir_node_to_archive_node_id_mapping.clear();
+    curr_pos = reader->get_pos();
+    m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
 
-        if (m_record_log_order) {
-            if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
-                SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
-                std::ignore = m_archive_writer->close();
-                return false;
-            }
+    if (m_record_log_order) {
+        if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
+            SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
+            return false;
         }
     }
     return true;
@@ -725,14 +1140,7 @@ auto JsonParser::adjust_archive_node_type_for_timestamp(NodeType node_type, bool
     if (false == matches_timestamp) {
         return node_type;
     }
-
-    switch (node_type) {
-        case NodeType::ClpString:
-        case NodeType::VarString:
-            return NodeType::DateString;
-        default:
-            return node_type;
-    }
+    return NodeType::Timestamp;
 }
 
 template <bool autogen>
@@ -853,17 +1261,34 @@ void JsonParser::parse_kv_log_event_subtree(
             case NodeType::Integer: {
                 auto const i64_value
                         = pair.second.value().get_immutable_view<clp::ffi::value_int_t>();
-                m_current_parsed_message.add_value(node_id, i64_value);
                 if (matches_timestamp) {
-                    m_archive_writer->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
+                    m_current_parsed_message.add_value(
+                            node_id,
+                            m_archive_writer->ingest_unknown_precision_epoch_timestamp(
+                                    m_timestamp_key,
+                                    node_id,
+                                    i64_value
+                            )
+                    );
+                } else {
+                    m_current_parsed_message.add_value(node_id, i64_value);
                 }
             } break;
             case NodeType::Float: {
                 auto const d_value
                         = pair.second.value().get_immutable_view<clp::ffi::value_float_t>();
-                m_current_parsed_message.add_value(node_id, d_value);
                 if (matches_timestamp) {
-                    m_archive_writer->ingest_timestamp_entry(m_timestamp_key, node_id, d_value);
+                    auto const timestamp_str{fmt::format("{:.9f}", d_value)};
+                    m_current_parsed_message.add_value(
+                            node_id,
+                            m_archive_writer->ingest_numeric_json_timestamp(
+                                    m_timestamp_key,
+                                    node_id,
+                                    timestamp_str
+                            )
+                    );
+                } else {
+                    m_current_parsed_message.add_value(node_id, d_value);
                 }
             } break;
             case NodeType::Boolean: {
@@ -874,59 +1299,82 @@ void JsonParser::parse_kv_log_event_subtree(
             case NodeType::VarString: {
                 auto const var_value{pair.second.value().get_immutable_view<std::string>()};
                 if (matches_timestamp) {
-                    uint64_t encoding_id{};
-                    auto const timestamp = m_archive_writer->ingest_timestamp_entry(
-                            m_timestamp_key,
+                    m_current_parsed_message.add_value(
                             node_id,
-                            var_value,
-                            encoding_id
+                            m_archive_writer->ingest_string_timestamp(
+                                    m_timestamp_key,
+                                    node_id,
+                                    var_value,
+                                    false
+                            )
                     );
-                    m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
                 } else {
                     m_current_parsed_message.add_value(node_id, var_value);
                 }
             } break;
             case NodeType::ClpString: {
-                std::string decoded_value;
-                if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
-                    decoded_value = pair.second.value()
-                                            .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
-                                            .decode_and_unparse()
-                                            .value();
+                bool const is_eight_byte_encoding{
+                        pair.second.value().is<clp::ffi::EightByteEncodedTextAst>()
+                };
+                if (false == matches_timestamp) {
+                    if (is_eight_byte_encoding) {
+                        m_current_parsed_message.add_value(
+                                node_id,
+                                pair.second.value()
+                                        .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
+                        );
+                    } else {
+                        m_current_parsed_message.add_value(
+                                node_id,
+                                pair.second.value()
+                                        .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
+                        );
+                    }
+                    break;
+                }
 
-                } else {
-                    decoded_value = pair.second.value()
-                                            .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
-                                            .decode_and_unparse()
-                                            .value();
-                }
-                if (matches_timestamp) {
-                    uint64_t encoding_id{};
-                    auto const timestamp = m_archive_writer->ingest_timestamp_entry(
-                            m_timestamp_key,
-                            node_id,
-                            decoded_value,
-                            encoding_id
+                auto const decoding_result
+                        = is_eight_byte_encoding
+                                  ? pair.second.value()
+                                            .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
+                                            .to_string()
+                                  : pair.second.value()
+                                            .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
+                                            .to_string();
+                if (decoding_result.has_error()) {
+                    auto const error{decoding_result.error()};
+                    throw clp::ffi::ir_stream::DecodingException(
+                            clp::ErrorCode_Failure,
+                            __FILENAME__,
+                            __LINE__,
+                            fmt::format("{}: {}", error.category().name(), error.message())
                     );
-                    m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
-                } else {
-                    m_current_parsed_message.add_value(node_id, decoded_value);
                 }
+
+                m_current_parsed_message.add_value(
+                        node_id,
+                        m_archive_writer->ingest_string_timestamp(
+                                m_timestamp_key,
+                                node_id,
+                                decoding_result.value(),
+                                false
+                        )
+                );
             } break;
             case NodeType::UnstructuredArray: {
-                std::string array_str;
-                if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
-                    array_str = pair.second.value()
-                                        .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
-                                        .decode_and_unparse()
-                                        .value();
+                if (pair.second.value().is<clp::ffi::EightByteEncodedTextAst>()) {
+                    m_current_parsed_message.add_value(
+                            node_id,
+                            pair.second.value()
+                                    .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
+                    );
                 } else {
-                    array_str = pair.second.value()
-                                        .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
-                                        .decode_and_unparse()
-                                        .value();
+                    m_current_parsed_message.add_value(
+                            node_id,
+                            pair.second.value()
+                                    .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
+                    );
                 }
-                m_current_parsed_message.add_value(node_id, array_str);
                 break;
             }
             default:
@@ -954,213 +1402,6 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
     m_archive_writer->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
 }
 
-auto JsonParser::parse_from_ir() -> bool {
-    constexpr size_t cDecompressorReadBufferCapacity{64 * 1024};  // 64 KB
-    auto archive_creator_id = boost::uuids::to_string(m_generator());
-    for (auto const& path : m_input_paths) {
-        auto reader{try_create_reader(path, m_network_auth)};
-        if (nullptr == reader) {
-            std::ignore = m_archive_writer->close();
-            return false;
-        }
-
-        clp::streaming_compression::zstd::Decompressor decompressor;
-        size_t curr_pos{};
-        size_t last_pos{};
-        decompressor.open(*reader, cDecompressorReadBufferCapacity);
-
-        auto deserializer_result{
-                Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
-        };
-        if (deserializer_result.has_error()) {
-            auto err = deserializer_result.error();
-            SPDLOG_ERROR(
-                    "Encountered error while creating kv-ir deserializer: ({}) - {}",
-                    err.value(),
-                    err.message()
-            );
-            decompressor.close();
-            check_and_log_curl_error(path, reader);
-            std::ignore = m_archive_writer->close();
-            return false;
-        }
-        auto& deserializer = deserializer_result.value();
-        auto& ir_unit_handler{deserializer.get_ir_unit_handler()};
-
-        size_t file_split_number{0ULL};
-        int32_t log_event_idx_node_id{};
-        auto initialize_fields_for_archive = [&]() -> bool {
-            if (false == m_record_log_order) {
-                return true;
-            }
-            log_event_idx_node_id
-                    = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
-            if (auto const rc = m_archive_writer->add_field_to_current_range(
-                        std::string{constants::range_index::cFilename},
-                        path.path
-                );
-                ErrorCodeSuccess != rc)
-            {
-                SPDLOG_ERROR(
-                        "Failed to add metadata field \"{}\" ({})",
-                        constants::range_index::cFilename,
-                        static_cast<int64_t>(rc)
-                );
-                return false;
-            }
-            if (auto const rc = m_archive_writer->add_field_to_current_range(
-                        std::string{constants::range_index::cFileSplitNumber},
-                        file_split_number
-                );
-                ErrorCodeSuccess != rc)
-            {
-                SPDLOG_ERROR(
-                        "Failed to add metadata field \"{}\" ({})",
-                        constants::range_index::cFileSplitNumber,
-                        static_cast<int64_t>(rc)
-                );
-                return false;
-            }
-            if (auto const rc = m_archive_writer->add_field_to_current_range(
-                        std::string{constants::range_index::cArchiveCreatorId},
-                        archive_creator_id
-                );
-                ErrorCodeSuccess != rc)
-            {
-                SPDLOG_ERROR(
-                        "Failed to add metadata field \"{}\" ({})",
-                        constants::range_index::cArchiveCreatorId,
-                        static_cast<int64_t>(rc)
-                );
-                return false;
-            }
-            auto const& metadata = deserializer.get_metadata();
-            if (metadata.contains(clp::ffi::ir_stream::cProtocol::Metadata::UserDefinedMetadataKey))
-            {
-                for (auto const& [metadata_key, metadata_value] :
-                     metadata.at(clp::ffi::ir_stream::cProtocol::Metadata::UserDefinedMetadataKey)
-                             .items())
-                {
-                    if (auto const rc = m_archive_writer->add_field_to_current_range(
-                                metadata_key,
-                                metadata_value
-                        );
-                        ErrorCodeSuccess != rc)
-                    {
-                        SPDLOG_ERROR(
-                                "Failed to add metadata field \"{}\" ({})",
-                                metadata_key,
-                                static_cast<int64_t>(rc)
-                        );
-                        return false;
-                    }
-                }
-            }
-            return true;
-        };
-        if (false == initialize_fields_for_archive()) {
-            decompressor.close();
-            std::ignore = m_archive_writer->close();
-            return false;
-        }
-        auto update_fields_after_archive_split = [&]() { ++file_split_number; };
-
-        while (true) {
-            auto const kv_log_event_result{deserializer.deserialize_next_ir_unit(decompressor)};
-
-            if (kv_log_event_result.has_error()) {
-                auto err = kv_log_event_result.error();
-                SPDLOG_WARN(
-                        "Encountered error while deserializing kv-ir log event from stream \"{}\": "
-                        "({}) - {}",
-                        path.path,
-                        err.value(),
-                        err.message()
-                );
-                if (check_and_log_curl_error(path, reader)) {
-                    std::ignore = m_archive_writer->close();
-                    decompressor.close();
-                    return false;
-                } else {
-                    // Treat deserialization error as end of a truncated stream
-                    break;
-                }
-            }
-            if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
-                break;
-            }
-            if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::LogEvent) {
-                auto const kv_log_event = &(ir_unit_handler.get_deserialized_log_event().value());
-
-                m_current_schema.clear();
-
-                // Add log_event_idx field to metadata for record
-                if (m_record_log_order) {
-                    m_current_parsed_message.add_value(
-                            log_event_idx_node_id,
-                            m_archive_writer->get_next_log_event_id()
-                    );
-                    m_current_schema.insert_ordered(log_event_idx_node_id);
-                }
-
-                try {
-                    parse_kv_log_event(*kv_log_event);
-                } catch (std::exception const& e) {
-                    SPDLOG_ERROR("Encountered error while parsing a kv log event - {}", e.what());
-                    std::ignore = m_archive_writer->close();
-                    decompressor.close();
-                    return false;
-                }
-
-                if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
-                    m_ir_node_to_archive_node_id_mapping.clear();
-                    m_autogen_ir_node_to_archive_node_id_mapping.clear();
-                    curr_pos = decompressor.get_pos();
-                    m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
-                    last_pos = curr_pos;
-                    split_archive();
-                    update_fields_after_archive_split();
-                    if (false == initialize_fields_for_archive()) {
-                        std::ignore = m_archive_writer->close();
-                        decompressor.close();
-                        return false;
-                    }
-                }
-
-                ir_unit_handler.clear();
-                m_current_parsed_message.clear();
-
-            } else if (kv_log_event_result.value()
-                       == clp::ffi::ir_stream::IrUnitType::SchemaTreeNodeInsertion)
-            {
-                continue;
-            } else {
-                SPDLOG_ERROR(
-                        "Encountered unkown IR unit type ({}) during deserialization.",
-                        static_cast<uint8_t>(kv_log_event_result.value())
-                );
-                std::ignore = m_archive_writer->close();
-                decompressor.close();
-                return false;
-            }
-        }
-        m_ir_node_to_archive_node_id_mapping.clear();
-        m_autogen_ir_node_to_archive_node_id_mapping.clear();
-        curr_pos = decompressor.get_pos();
-        m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
-        decompressor.close();
-
-        if (m_record_log_order) {
-            if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
-                SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
-                std::ignore = m_archive_writer->close();
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 auto JsonParser::store() -> std::vector<ArchiveStats> {
     m_archive_stats.emplace_back(m_archive_writer->close());
     return std::move(m_archive_stats);
@@ -1170,28 +1411,5 @@ void JsonParser::split_archive() {
     m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
-}
-
-bool JsonParser::check_and_log_curl_error(
-        Path const& path,
-        std::shared_ptr<clp::ReaderInterface> reader
-) {
-    if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
-        nullptr != network_reader)
-    {
-        if (auto const rc = network_reader->get_curl_ret_code();
-            rc.has_value() && CURLcode::CURLE_OK != rc.value())
-        {
-            auto const curl_error_message = network_reader->get_curl_error_msg();
-            SPDLOG_ERROR(
-                    "Encountered curl error while ingesting {} - Code: {} - Message: {}",
-                    path.path,
-                    static_cast<int64_t>(rc.value()),
-                    curl_error_message.value_or("Unknown error")
-            );
-            return true;
-        }
-    }
-    return false;
 }
 }  // namespace clp_s
