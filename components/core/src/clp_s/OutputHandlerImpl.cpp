@@ -1,8 +1,10 @@
 #include "OutputHandlerImpl.hpp"
 
+#include <cstdint>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <bsoncxx/builder/basic/document.hpp>
@@ -46,9 +48,13 @@ auto FileOutputHandler::write(
 NetworkOutputHandler::NetworkOutputHandler(
         string const& host,
         int port,
+        string session_token,
+        uint64_t task_idx,
         bool should_output_timestamp
 )
-        : ::clp_s::search::OutputHandler(should_output_timestamp, true) {
+        : ::clp_s::search::OutputHandler(should_output_timestamp, true),
+          m_session_token{std::move(session_token)},
+          m_task_idx{task_idx} {
     m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);

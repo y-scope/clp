@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -104,9 +105,11 @@ public:
     };
 
     // Constructors
-    explicit NetworkOutputHandler(
+    NetworkOutputHandler(
             std::string const& host,
             int port,
+            std::string session_token,
+            uint64_t task_idx,
             bool should_output_metadata = false
     );
 
@@ -133,6 +136,8 @@ private:
     std::string m_host;
     std::string m_port;
     int m_socket_fd;
+    std::string m_session_token;
+    uint64_t m_task_idx{};
 };
 
 /**
