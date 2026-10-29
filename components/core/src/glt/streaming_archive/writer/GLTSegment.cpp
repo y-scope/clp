@@ -1,5 +1,6 @@
 #include "GLTSegment.hpp"
 
+#include <cstring>
 #include <iostream>
 
 #include "../LogtypeSizeTracker.hpp"
@@ -52,7 +53,7 @@ void GLTSegment::compress_logtype_tables_to_disk() {
     // Create output directory in case it doesn't exist
     auto error_code = create_directory(segment_var_directory, 0700, true);
     if (ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to create {} - {}", segment_var_directory, strerror(errno));
+        SPDLOG_ERROR("Failed to create {} - {}", segment_var_directory, std::strerror(errno));
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 
@@ -342,8 +343,10 @@ uint64_t GLTSegment::get_uncompressed_size() {
 
 size_t GLTSegment::get_compressed_size() {
     if (!m_segment_path.empty()) {
-        SPDLOG_ERROR("streaming_archive::writer::GLTSegment: get_compressed_size called before "
-                     "closing the segment");
+        SPDLOG_ERROR(
+                "streaming_archive::writer::GLTSegment: get_compressed_size called before closing"
+                " the segment"
+        );
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
     return m_compressed_size;

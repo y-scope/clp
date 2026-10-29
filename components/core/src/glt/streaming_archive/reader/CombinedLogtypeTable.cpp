@@ -1,7 +1,6 @@
 #include "CombinedLogtypeTable.hpp"
 
 namespace glt::streaming_archive::reader {
-
 CombinedLogtypeTable::CombinedLogtypeTable() {
     // try to reuse a buffer to avoid malloc & free
     m_buffer_size = 0;

@@ -1,0 +1,146 @@
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
+
+import {
+    Editor,
+    EditorProps,
+    useMonaco,
+} from "@monaco-editor/react";
+import {theme} from "antd";
+import color from "color";
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+
+import styles from "./index.module.css";
+
+import "./monaco-loader";
+
+
+type SqlEditorType = monaco.editor.IStandaloneCodeEditor;
+
+type SqlEditorProps = Omit<EditorProps, "language"> & {
+    disabled: boolean;
+    className?: string;
+
+    /** Callback when the editor is mounted and ref is ready to use. */
+    onEditorReady?: (editor: SqlEditorType) => void;
+};
+
+/**
+ * Monaco editor with highlighting for SQL syntax.
+ *
+ * @param props
+ * @return
+ */
+const SqlEditor = (props: SqlEditorProps) => {
+    const {disabled, onEditorReady, className, ...editorProps} = props;
+    const monacoEditor = useMonaco();
+    const {token} = theme.useToken();
+    const [isFocused, setIsFocused] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+
+    const handleEditorDidMount = useCallback((
+        editor: SqlEditorType,
+    ) => {
+        onEditorReady?.(editor);
+    }, [onEditorReady]);
+
+    // Define default and disabled themes for monaco editor
+    useEffect(() => {
+        if (null === monacoEditor) {
+            return;
+        }
+
+        monacoEditor.editor.defineTheme("default-theme", {
+            base: "vs",
+            inherit: true,
+            rules: [],
+            colors: {
+                "editor.background": color(token.colorBgContainer).hexa(),
+                "editor.foreground": color(token.colorText).hexa(),
+                "focusBorder": "#0000",
+            },
+        });
+
+        monacoEditor.editor.defineTheme("disabled-theme", {
+            base: "vs",
+            inherit: true,
+            rules: [],
+            colors: {
+                "editor.background": color(token.colorBgContainerDisabled).hexa(),
+                "editor.foreground": color(token.colorTextDisabled).hexa(),
+                "focusBorder": "#0000",
+            },
+        });
+    }, [
+        monacoEditor,
+        token,
+    ]);
+
+    let borderColor = token.colorBorder;
+    if (isFocused) {
+        borderColor = token.colorPrimary;
+    } else if (isHovered) {
+        borderColor = token.colorPrimaryHover;
+    }
+
+    const boxShadow = isFocused ?
+        `0 0 0 ${token.controlOutlineWidth}px ${token.controlOutline}` :
+        "none";
+
+    const pointerEvents = disabled ?
+        "none" :
+        "auto";
+
+    return (
+        <div
+            className={[styles["editor"],
+                className].filter(Boolean).join(" ")}
+            style={{
+                border: `${token.lineWidth}px ${token.lineType} ${borderColor}`,
+                borderRadius: token.borderRadius,
+                boxShadow: boxShadow,
+                pointerEvents: pointerEvents,
+            }}
+            tabIndex={disabled ?
+                -1 :
+                0}
+            onBlur={() => {
+                setIsFocused(false);
+            }}
+            onFocus={() => {
+                setIsFocused(true);
+            }}
+            onMouseEnter={() => {
+                setIsHovered(true);
+            }}
+            onMouseLeave={() => {
+                setIsHovered(false);
+            }}
+        >
+            <Editor
+                language={"sql"}
+                loading={
+                    <div
+                        style={{
+                            backgroundColor: token.colorBgContainer,
+                            height: "100%",
+                            width: "100%",
+                        }}/>
+                }
+                theme={disabled ?
+                    "disabled-theme" :
+                    "default-theme"}
+                onMount={handleEditorDidMount}
+                {...editorProps}/>
+        </div>
+    );
+};
+
+export default SqlEditor;
+export type {
+    SqlEditorProps,
+    SqlEditorType,
+};

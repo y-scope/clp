@@ -11,8 +11,6 @@
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
@@ -62,21 +60,8 @@ public:
         }
     };
 
-    TimestampPattern* m_old_ts_pattern;
-    size_t m_target_data_size_of_dicts;
-    UserConfig m_archive_user_config;
-    std::string m_path_for_compression;
-    group_id_t m_group_id;
-    size_t m_target_encoded_file_size;
-    std::string m_schema_file_path;
-
     // Constructors
-    Archive()
-            : m_segments_dir_fd(-1),
-              m_compression_level(0),
-              m_global_metadata_db(nullptr),
-              m_old_ts_pattern(nullptr),
-              m_schema_file_path() {}
+    Archive() : m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr) {}
 
     // Destructor
     ~Archive();
@@ -144,13 +129,6 @@ public:
      */
     void
     write_msg(epochtime_t timestamp, std::string const& message, size_t num_uncompressed_bytes);
-
-    /**
-     * Encodes and writes a message to the given file using schema file
-     * @param log_event_view
-     * @throw FileWriter::OperationFailed if any write fails
-     */
-    void write_msg_using_schema(log_surgeon::LogEventView const& log_event_view);
 
     /**
      * Writes an IR log event to the current encoded file
@@ -245,7 +223,7 @@ private:
             std::vector<File*>& files_in_segment
     );
     /**
-     * Writes the given files' metadata to the database using bulk writes
+     * Writes the given files' metadata to the local database using bulk writes.
      * @param files
      * @throw streaming_archive::writer::Archive::OperationFailed if failed to replace old
      * metadata for any file
@@ -253,8 +231,8 @@ private:
      */
     void persist_file_metadata(std::vector<File*> const& files);
     /**
-     * Closes a given segment, persists the metadata of the files in the segment, and cleans up
-     * any data remaining outside the segment
+     * Closes a given segment, persists metadata to local database for files in the segment, and
+     * cleans up any data remaining outside the segment.
      * @param segment
      * @param files
      * @param segment_logtype_ids
@@ -274,10 +252,21 @@ private:
      * is closed
      */
     uint64_t get_dynamic_compressed_size();
+
     /**
-     * Updates the archive's metadata
+     * Prints archive progress statistics as a JSON object.
      */
-    void update_metadata();
+    auto print_archive_stats_progress() -> void;
+
+    /**
+     * Updates the archive's metadata in the local metadata database.
+     */
+    void update_local_metadata();
+
+    /**
+     * Updates the archive's metadata in the global metadata database.
+     */
+    auto update_global_metadata() -> void;
 
     // Variables
     boost::uuids::uuid m_id;
@@ -300,8 +289,6 @@ private:
     LogTypeDictionaryWriter m_logtype_dict;
     // Holds preallocated logtype dictionary entry for performance
     LogTypeDictionaryEntry m_logtype_dict_entry;
-    std::vector<encoded_variable_t> m_encoded_vars;
-    std::vector<variable_dictionary_id_t> m_var_ids;
     VariableDictionaryWriter m_var_dict;
 
     boost::uuids::random_generator m_uuid_generator;
@@ -315,6 +302,10 @@ private:
     segment_id_t m_next_segment_id;
     std::vector<File*> m_files_with_timestamps_in_segment;
     std::vector<File*> m_files_without_timestamps_in_segment;
+
+    // Collection of `File`s which have been written to archive and deallocated, but whose
+    // metadata has not yet been persisted globally.
+    std::vector<File*> m_file_metadata_for_global_update;
 
     size_t m_target_segment_uncompressed_size;
     Segment m_segment_for_files_with_timestamps;

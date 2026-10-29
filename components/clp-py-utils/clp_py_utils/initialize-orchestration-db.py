@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import pathlib
 import sys
 from contextlib import closing
 
@@ -10,16 +11,18 @@ from job_orchestration.scheduler.constants import (
     QueryJobStatus,
     QueryTaskStatus,
 )
-from sql_adapter import SQL_Adapter
+from mysql.connector.errorcode import ER_DUP_KEYNAME
+from pydantic import ValidationError
 
 from clp_py_utils.clp_config import (
+    ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
-    Database,
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
 )
 from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.sql_adapter import SqlAdapter
 
 # Setup logging
 # Create logger
@@ -36,17 +39,27 @@ def main(argv):
     args_parser = argparse.ArgumentParser(
         description="Sets up metadata tables for job orchestration."
     )
-    args_parser.add_argument("--config", required=True, help="Database config file.")
+    args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
 
+    # Load configuration
+    config_path = pathlib.Path(parsed_args.config)
     try:
-        database_config = Database.parse_obj(read_yaml_config_file(parsed_args.config))
-        if database_config is None:
-            raise ValueError(f"Database configuration file '{parsed_args.config}' is empty.")
-        sql_adapter = SQL_Adapter(database_config)
-        with closing(sql_adapter.create_connection(True)) as scheduling_db, closing(
-            scheduling_db.cursor(dictionary=True)
-        ) as scheduling_db_cursor:
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config.database.load_credentials_from_env()
+    except (ValidationError, ValueError) as err:
+        logger.error(err)
+        return -1
+    except Exception:
+        logger.exception("Failed to load CLP configuration.")
+        return -1
+
+    try:
+        sql_adapter = SqlAdapter(clp_config.database)
+        with (
+            closing(sql_adapter.create_connection(True)) as scheduling_db,
+            closing(scheduling_db.cursor(dictionary=True)) as scheduling_db_cursor,
+        ):
             scheduling_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_JOBS_TABLE_NAME}` (
@@ -55,7 +68,8 @@ def main(argv):
                     `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
-                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP()
+                        ON UPDATE CURRENT_TIMESTAMP(),
                     `duration` FLOAT NULL DEFAULT NULL,
                     `original_size` BIGINT NOT NULL DEFAULT '0',
                     `uncompressed_size` BIGINT NOT NULL DEFAULT '0',
@@ -63,13 +77,32 @@ def main(argv):
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `clp_binary_version` INT NULL DEFAULT NULL,
-                    `clp_config` VARBINARY(60000) NOT NULL,
+                    `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+                    `dispatch_time` DATETIME NULL DEFAULT NULL,
+                    `clp_config` MEDIUMBLOB NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE,
-                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE
+                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE,
+                    INDEX `JOB_START_TIME_STATUS` (`start_time`, `status`) USING BTREE,
+                    INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
+
+            # Add index to existing tables that were created before this index
+            # was added to the CREATE TABLE statement. Ignoring duplicate-key
+            # errors makes this idempotent for databases that already have it.
+            try:
+                scheduling_db_cursor.execute(
+                    f"""
+                    ALTER TABLE `{COMPRESSION_JOBS_TABLE_NAME}`
+                    ADD INDEX `JOB_START_TIME_STATUS`
+                    (`start_time`, `status`) USING BTREE
+                    """
+                )
+            except Exception as err:
+                if not (hasattr(err, "errno") and err.errno == ER_DUP_KEYNAME):
+                    raise
 
             scheduling_db_cursor.execute(
                 f"""
@@ -80,7 +113,7 @@ def main(argv):
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_id` INT NOT NULL,
-                    `clp_paths_to_compress` VARBINARY(60000) NOT NULL,
+                    `clp_paths_to_compress` MEDIUMBLOB NOT NULL,
                     `partition_original_size` BIGINT NOT NULL,
                     `partition_uncompressed_size` BIGINT NULL DEFAULT NULL,
                     `partition_compressed_size` BIGINT NULL DEFAULT NULL,
@@ -101,14 +134,19 @@ def main(argv):
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `type` INT NOT NULL,
                     `status` INT NOT NULL DEFAULT '{QueryJobStatus.PENDING}',
+                    `status_msg` TEXT NULL DEFAULT NULL,
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
-                    `job_config` VARBINARY(60000) NOT NULL,
+                    `job_config` MEDIUMBLOB NOT NULL,
+                    `spider_id` BIGINT UNSIGNED NULL DEFAULT NULL,
+                    `dispatch_time` DATETIME NULL DEFAULT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
-                    INDEX `JOB_STATUS` (`status`) USING BTREE
+                    INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
+                    INDEX `JOB_STATUS` (`status`) USING BTREE,
+                    INDEX `JOB_SPIDER_ID` (`spider_id`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )

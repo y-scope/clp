@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 
-# Exit on any error
-set -e
-
-# Error on undefined variable
-set -u
-
 # Dependencies:
 # - curl
 # - make
 # - gcc
 # NOTE: Dependencies should be installed outside the script to allow the script to be largely distro-agnostic
+
+set -o errexit
+set -o nounset
+set -o pipefail
 
 for cmd in curl make gcc; do
     if ! $cmd --version >/dev/null 2>&1; then
@@ -25,6 +23,45 @@ if [ "$#" -lt 1 ] ; then
     exit
 fi
 version=$1
+
+# Ensure version must be greater or equal to 5.8.1 to mitigate both CVE-2024-3094 (resolved in
+# version >5.6.1) and CVE-2025-31115 (resolved in version >5.8.0).
+validate_minimum_required_version() {
+    min_required_major=5
+    min_required_minor=8
+    min_required_patch=1
+
+    local major minor patch
+
+    IFS='.' read -r major minor patch <<< "$version"
+
+    # Check the major version
+    if (( major > min_required_major )); then
+        return 0
+    elif (( major < min_required_major )); then
+        return 1
+    fi
+
+    # Check the minor version
+    if (( minor > min_required_minor )); then
+        return 0
+    elif (( minor < min_required_minor )); then
+        return 1
+    fi
+
+    # Check the patch version
+    if (( patch >= min_required_patch )); then
+        return 0
+    fi
+
+    return 1
+}
+
+if ! validate_minimum_required_version "$version"; then
+    echo "Error: Version $version must be greater or equal to 5.8.1 to mitigate CVE-2024-3094 and" \
+         " CVE-2025-31115."
+    exit 1
+fi
 
 package_name=liblzma
 temp_dir=/tmp/${package_name}-installation
@@ -54,8 +91,8 @@ if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   install_cmd_args+=("sudo")
 fi
 
-# Get number of cpu cores
-num_cpus=$(grep -c ^processor /proc/cpuinfo)
+# Get number of cpu cores (memory-capped parallelism is handled in taskfile-driven builds)
+num_cpus=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 1)
 
 # Download
 mkdir -p $temp_dir

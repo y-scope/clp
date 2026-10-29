@@ -1,8 +1,8 @@
 set(
         CLP_SOURCES
         ../ArrayBackedPosIntSet.hpp
-        ../BufferedFileReader.cpp
-        ../BufferedFileReader.hpp
+        ../BufferedReader.cpp
+        ../BufferedReader.hpp
         ../BufferReader.cpp
         ../BufferReader.hpp
         ../database_utils.cpp
@@ -19,20 +19,30 @@ set(
         ../ffi/encoding_methods.cpp
         ../ffi/encoding_methods.hpp
         ../ffi/encoding_methods.inc
+        ../ffi/EncodedTextAst.hpp
+        ../ffi/EncodedTextAstError.cpp
+        ../ffi/EncodedTextAstError.hpp
         ../ffi/ir_stream/byteswap.hpp
         ../ffi/ir_stream/decoding_methods.cpp
         ../ffi/ir_stream/decoding_methods.hpp
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/IrDeserializationError.cpp
+        ../ffi/ir_stream/IrDeserializationError.hpp
+        ../ffi/ir_stream/IrSerializationError.cpp
+        ../ffi/ir_stream/IrSerializationError.hpp
         ../ffi/ir_stream/utils.cpp
         ../ffi/ir_stream/utils.hpp
+        ../ffi/StringBlob.hpp
         ../FileDescriptor.cpp
         ../FileDescriptor.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
+        ../global_metadata_db_utils.cpp
+        ../global_metadata_db_utils.hpp
         ../GlobalMetadataDB.hpp
         ../GlobalMetadataDBConfig.cpp
         ../GlobalMetadataDBConfig.hpp
@@ -58,10 +68,9 @@ set(
         ../LibarchiveFileReader.hpp
         ../LibarchiveReader.cpp
         ../LibarchiveReader.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryEntryReq.hpp
         ../LogTypeDictionaryReader.hpp
         ../LogTypeDictionaryWriter.cpp
         ../LogTypeDictionaryWriter.hpp
@@ -78,8 +87,6 @@ set(
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../Platform.hpp
-        ../Profiler.cpp
-        ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
         ../ReaderInterface.cpp
@@ -91,8 +98,6 @@ set(
         ../SQLiteDB.hpp
         ../SQLitePreparedStatement.cpp
         ../SQLitePreparedStatement.hpp
-        ../Stopwatch.cpp
-        ../Stopwatch.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -141,14 +146,16 @@ set(
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
+        ../VariableDictionaryEntryReq.hpp
         ../VariableDictionaryReader.hpp
+        ../VariableDictionaryReaderReq.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
+        ../VariableDictionaryWriterReq.hpp
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         clp.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
@@ -166,26 +173,37 @@ set(
         utils.hpp
 )
 
-add_executable(clp ${CLP_SOURCES})
-target_compile_features(clp PRIVATE cxx_std_20)
-target_include_directories(clp PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(clp
-        PRIVATE
-        Boost::filesystem Boost::program_options
-        fmt::fmt
-        log_surgeon::log_surgeon
-        spdlog::spdlog
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
-        ${STD_FS_LIBS}
-        clp::string_utils
-        yaml-cpp::yaml-cpp
-        ZStd::ZStd
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        clp
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(clp ${CLP_SOURCES})
+        target_compile_features(clp PRIVATE cxx_std_20)
+        target_include_directories(clp
+                PRIVATE
+                ../../
+                "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
+        )
+        target_link_libraries(clp
+                PRIVATE
+                absl::flat_hash_map
+                Boost::filesystem Boost::program_options
+                date::date
+                fmt::fmt
+                spdlog::spdlog
+                ${sqlite_LIBRARY_DEPENDENCIES}
+                LibArchive::LibArchive
+                MariaDBClient::MariaDBClient
+                msgpack-cxx
+                nlohmann_json::nlohmann_json
+                ${STD_FS_LIBS}
+                clp::string_utils
+                utils::profiling
+                ystdlib::containers
+                ystdlib::error_handling
+                zstd::libzstd_static
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                clp
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

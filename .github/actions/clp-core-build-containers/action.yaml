@@ -17,14 +17,23 @@ inputs:
   token:
     description: "Registry token"
     required: true
+  arch:
+    description: >-
+      Target architecture (e.g. "amd64" or "arm64") when building a single arch of a
+      multi-arch image. When set, the image is tagged/published under an arch-suffixed
+      tag (e.g. ":main-amd64") within the single image_name repository, so a downstream
+      merge step can combine the per-arch tags into a multi-arch manifest. When empty,
+      the image is tagged/published under the bare branch tag (legacy behaviour).
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
-    - uses: "docker/setup-buildx-action@v3"
+    - uses: "docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069"  # v4.4.1
 
     - if: "inputs.push_deps_image == 'true'"
-      uses: "docker/login-action@v3"
+      uses: "docker/login-action@dbcb813823bdd20940b903addbd779551569679f"  # v4.6.0
       with:
         registry: "ghcr.io"
         username: "${{github.actor}}"
@@ -33,6 +42,17 @@ runs:
     - id: "get_image_props"
       shell: "bash"
       run: |
+        # When `arch` is set, arch-suffix the tag/artifact so each arch of a multi-arch
+        # image is published/loaded under a distinct tag (e.g. ":main-amd64") within the
+        # single image_name repository. A downstream merge step combines them into a
+        # multi-arch ":main" manifest.
+        arch="${{inputs.arch}}"
+        if [[ -n "$arch" ]]; then
+          arch_suffix="-${arch}"
+        else
+          arch_suffix=""
+        fi
+
         if [[ "${{inputs.push_deps_image}}" == "true" ]] ; then
           # Docker doesn't support repository names with uppercase characters, so we convert to
           # lowercase here.
@@ -40,34 +60,59 @@ runs:
 
           echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}" \
             >> "$GITHUB_OUTPUT"
-          echo "branch=${{github.ref_name}}" >> "$GITHUB_OUTPUT"
+          echo "branch=${{github.ref_name}}${arch_suffix}" >> "$GITHUB_OUTPUT"
           echo "output=type=registry" >> "$GITHUB_OUTPUT"
         else
-          image_path="/tmp/${{inputs.image_name}}.tar"
+          image_path="/tmp/${{inputs.image_name}}${arch_suffix}.tar"
           echo "image_path=${image_path}" >> "$GITHUB_OUTPUT"
 
-          echo "qualified_image_name=${{inputs.image_name}}" >> "$GITHUB_OUTPUT"
+          echo "qualified_image_name=${{inputs.image_name}}${arch_suffix}" >> "$GITHUB_OUTPUT"
           echo "branch=latest" >> "$GITHUB_OUTPUT"
           echo "output=type=docker,dest=${image_path}" >> "$GITHUB_OUTPUT"
         fi
 
     - id: "deps_image_meta"
-      uses: "docker/metadata-action@v5"
+      uses: "docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302"  # v6.2.0
       with:
         images: "${{steps.get_image_props.outputs.qualified_image_name}}"
         tags: |
           type=raw,value=${{steps.get_image_props.outputs.branch}}
 
-    - uses: "docker/build-push-action@v5"
+    - name: "Stage CA certificate bundle for Docker build"
+      shell: "bash"
+      run: |
+        # Copy the runner's system CA bundle into the Docker build context so
+        # the container has valid TLS certs. See corporate-proxy-host.sh for
+        # the equivalent step in local builds.
+        ca_dest="${{inputs.docker_context}}/tools/scripts/ca-certificates.crt"
+        for ca_path in \
+            /etc/ssl/certs/ca-certificates.crt \
+            /etc/pki/tls/certs/ca-bundle.crt \
+            /etc/ssl/cert.pem; do
+          if [[ -f "$ca_path" ]]; then
+            cp "$ca_path" "$ca_dest"
+            echo "Staged CA bundle from $ca_path"
+            break
+          fi
+        done
+        if [[ ! -f "$ca_dest" ]]; then
+          echo >&2 "ERROR: No system CA bundle found on runner"
+          exit 1
+        fi
+
+    - uses: "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc"  # v7.4.0
       with:
         context: "${{inputs.docker_context}}"
         file: "${{inputs.docker_file}}"
         labels: "${{steps.deps_image_meta.outputs.labels}}"
         tags: "${{steps.deps_image_meta.outputs.tags}}"
         outputs: "${{steps.get_image_props.outputs.output}}"
+        # Disable provenance to create a simple image instead of a manifest list.
+        # This allows `docker manifest create` to combine the per-arch images later.
+        provenance: false
 
     - if: "inputs.push_deps_image == 'false'"
-      uses: "actions/upload-artifact@v4"
+      uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
       with:
         name: "${{steps.get_image_props.outputs.qualified_image_name}}"
         path: "${{steps.get_image_props.outputs.image_path}}"

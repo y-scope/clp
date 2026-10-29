@@ -15,7 +15,7 @@ void MySQLParamBindings::resize(size_t num_fields) {
     m_statement_binding_lengths.resize(num_fields);
     for (size_t i = 0; i < num_fields; ++i) {
         auto& binding = m_statement_bindings[i];
-        memset((void*)&binding, 0, sizeof(binding));
+        std::memset((void*)&binding, 0, sizeof(binding));
         binding.length = &m_statement_binding_lengths[i];
     }
 }

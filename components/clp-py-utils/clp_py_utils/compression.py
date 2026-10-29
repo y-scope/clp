@@ -1,28 +1,11 @@
 import pathlib
-import typing
 
 import Levenshtein
 
+from clp_py_utils.core import FileMetadata
+
 # Constants
 FILE_GROUPING_MIN_LEVENSHTEIN_RATIO = 0.6
-
-
-class FileMetadata:
-    __slots__ = ("path", "size", "estimated_uncompressed_size")
-
-    def __init__(self, path: pathlib.Path, size: int):
-        self.path = path
-        self.size = size
-        self.estimated_uncompressed_size = size
-
-        filename = path.name
-        if any(filename.endswith(extension) for extension in [".gz", ".gzip", ".tgz", ".tar.gz"]):
-            self.estimated_uncompressed_size *= 13
-        elif any(
-            filename.endswith(extension)
-            for extension in [".zstd", ".zstandard", ".tar.zstd", ".tar.zstandard"]
-        ):
-            self.estimated_uncompressed_size *= 8
 
 
 class FilesPartition:
@@ -76,7 +59,7 @@ def file_paths_in_same_group(a: pathlib.Path, b: pathlib.Path):
     return Levenshtein.ratio(str(a.name), str(b.name)) >= FILE_GROUPING_MIN_LEVENSHTEIN_RATIO
 
 
-def group_files_by_similar_filenames(files: typing.List[FileMetadata]):
+def group_files_by_similar_filenames(files: list[FileMetadata]):
     groups = []
 
     if len(files) == 0:

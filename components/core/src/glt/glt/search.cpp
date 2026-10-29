@@ -2,6 +2,7 @@
 
 #include <sys/stat.h>
 
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 
@@ -10,7 +11,6 @@
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
-#include "../Profiler.hpp"
 #include "CommandLineArguments.hpp"
 
 using glt::combined_table_id_t;
@@ -22,7 +22,6 @@ using glt::GlobalMetadataDB;
 using glt::GlobalMetadataDBConfig;
 using glt::Grep;
 using glt::LogtypeQueries;
-using glt::Profiler;
 using glt::Query;
 using glt::segment_id_t;
 using glt::streaming_archive::MetadataDB;
@@ -37,7 +36,6 @@ using std::string;
 using std::vector;
 
 namespace glt::glt {
-
 /**
  * Opens the archive and reads the dictionaries
  * @param archive_path
@@ -490,7 +488,7 @@ bool search(CommandLineArguments& command_line_args) {
         SPDLOG_ERROR(
                 "'{}' does not exist or cannot be accessed - {}.",
                 archives_dir.c_str(),
-                strerror(errno)
+                std::strerror(errno)
         );
         return false;
     } else if (S_ISDIR(archives_dir_stat.st_mode) == false) {
@@ -549,8 +547,6 @@ bool search(CommandLineArguments& command_line_args) {
             return false;
         }
 
-        // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
         // Perform search
         if (!search(search_strings, command_line_args, archive_reader, num_matches)) {
             return false;

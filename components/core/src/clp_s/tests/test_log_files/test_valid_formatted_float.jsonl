@@ -1,0 +1,44 @@
+{ "singleDigitStandard": 0.007 }
+{ "negativeSingleDigitStandard": -0.007 }
+{ "normalStandard": 123456789.1234567 }
+{ "standardIntegerWithTrailingZeros": 123456789.000 }
+{ "standardFloatWithLeadingZerosAndTrailingZeros": 0.00000000000000000000000000001234567891234500 }
+{ "standardZeroWithTrailingZeros": 0.00 }
+{ "negativeNormalStandard": -123456789.1234567 }
+{ "negativeStandardIntegerWithTrailingZeros": -123456789.000 }
+{ "negativeStandardFloatWithLeadingZerosAndTrailingZeros": -0.00000000000000000000000000001234567891234500 }
+{ "negativeStandardZeroWithTrailingZeros": -0.00 }
+{ "normalScientific": 1.234567891234567E9 }
+{ "normalNegativeExponent": 1.234567891234567E-9 }
+{ "scientificFloatWithTrailingZeros": 1.234567891234500E9 }
+{ "pureScientificInteger": 1E16 }
+{ "exponentWithPositiveSign": 1.234567891234567E+9 }
+{ "exponentWithLeadingZerosAndPlus": 1.234567891234567E+0009 }
+{ "exponentWithLeadingZerosAndMinus": -1.234567891234567E-0009 }
+{ "lowerCaseE": 1.234567891234567e9 }
+{ "negativeNormalScientific": -1.234567891234567E9 }
+{ "negativeNormalNegativeExponent": -1.234567891234567E-9 }
+{ "negativeScientificFloatWithTrailingZeros": -1.234567891234500E9 }
+{ "negativePureScientificInteger": -1E16 }
+{ "negativeExponentWithPositiveSign": -1.234567891234567E+9 }
+{ "negativeExponentWithLeadingZerosAndPlus": -1.234567891234567E+0009 }
+{ "negativeExponentWithLeadingZerosAndMinus": -1.234567891234567E-0009 }
+{ "negativeLowerCaseE": -1.234567891234567e9 }
+{ "e0CornerCase1": 1.000E0 }
+{ "e0CornerCase2": 1E0 }
+{ "e0CornerCase3": 0.000E0 }
+{ "e0CornerCase4": -0.000E0 }
+{ "e0CornerCase5": 0E0 }
+{ "e0CornerCase6": 0E-0000 }
+{ "e0CornerCase7": -0E+0000 }
+{ "e0CornerCase8": 0.000E-0000 }
+{ "e0CornerCase9": -0.000E+0000 }
+{ "e0cornerCase10": 1.000E+0 }
+{ "e0cornerCase11": 1.000E-0 }
+{ "e0cornerCase12": 1.000E-00 }
+{ "unstructuredArray": [123456789.1234567, 1.234567891234567E9] }
+{ "structuredArray": [{ "floatOfDifferentFormat": 123456789.1234567 }, { "floatOfDifferentFormat": 1.234567891234567E9 }] }
+{ "binary64Max": 1.7976931348623157E308}
+{ "binary64MinSubnormal": 4.9406564584124654E-324}
+{ "mantissa0CornerCase1": 0.0000000000000000E0000 }
+{ "mantissa0CornerCase2": -0.0000000000000000E0000 }

@@ -4,6 +4,8 @@ import pathlib
 import subprocess
 import sys
 
+from clp_py_utils.clp_config import StorageEngine
+
 # Setup logging
 # Create logger
 logger = logging.getLogger(__file__)
@@ -17,24 +19,31 @@ logger.addHandler(logging_console_handler)
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Creates database tables for CLP.")
-    args_parser.add_argument("--config", required=True, help="Database config file.")
+    args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
+    args_parser.add_argument(
+        "--storage-engine",
+        type=str,
+        choices=[engine.value for engine in StorageEngine],
+        required=True,
+        help="Compression storage engine to use.",
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     config_file_path = pathlib.Path(parsed_args.config)
-
-    script_dir = pathlib.Path(__file__).parent.resolve()
+    storage_engine = StorageEngine(parsed_args.storage_engine)
 
     # fmt: off
     cmd = [
-        "python3", str(script_dir / "initialize-clp-metadata-db.py"),
+        "python3", "-m", "clp_py_utils.initialize-clp-metadata-db",
         "--config", str(config_file_path),
+        "--storage-engine", str(storage_engine),
     ]
     # fmt: on
     subprocess.run(cmd, check=True)
 
     # fmt: off
     cmd = [
-        "python3", str(script_dir / "initialize-orchestration-db.py"),
+        "python3", "-m", "clp_py_utils.initialize-orchestration-db",
         "--config", str(config_file_path),
     ]
     # fmt: on

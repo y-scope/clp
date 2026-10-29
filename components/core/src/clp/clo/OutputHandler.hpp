@@ -3,6 +3,7 @@
 
 #include <unistd.h>
 
+#include <optional>
 #include <queue>
 #include <string>
 #include <string_view>
@@ -10,6 +11,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
+#include <mongocxx/options/insert.hpp>
 #include <mongocxx/uri.hpp>
 
 #include "../../reducer/Pipeline.hpp"
@@ -169,7 +171,7 @@ public:
             std::string const& uri,
             std::string const& collection,
             uint64_t batch_size,
-            uint64_t max_num_results
+            std::optional<uint64_t> max_num_results
     );
 
     // Methods inherited from OutputHandler
@@ -187,7 +189,8 @@ public:
      */
     ErrorCode flush() override;
 
-    [[nodiscard]] bool can_skip_file(::clp::streaming_archive::MetadataDB::FileIterator const& it
+    [[nodiscard]] bool can_skip_file(
+            ::clp::streaming_archive::MetadataDB::FileIterator const& it
     ) override {
         return is_latest_results_full() && get_smallest_timestamp() > it.get_end_ts();
     }
@@ -204,19 +207,38 @@ private:
      * @return Whether the heap of latest results is full.
      */
     [[nodiscard]] bool is_latest_results_full() const {
-        return m_latest_results.size() >= m_max_num_results;
+        return m_max_num_results.has_value()
+               && m_latest_results.size() >= m_max_num_results.value();
     }
+
+    /**
+     * Converts a result to BSON and appends it to `m_results`. Flushes MongoDB batch when it
+     * reaches `m_batch_size` documents.
+     *
+     * @return ErrorCode_Success on success.
+     * @return ErrorCode_Failure_DB_Bulk_Write if document construction or batch insertion fails.
+     */
+    [[nodiscard]] auto append_result(QueryResult result) -> ErrorCode;
+
+    /**
+     * Inserts the pending results as an unordered batch. Duplicate-key errors are treated as
+     * success so that retries converge on the complete result set.
+     * @return Whether insertion succeeded or produced only duplicate-key errors.
+     */
+    [[nodiscard]] auto insert_results() -> bool;
 
     mongocxx::client m_client;
     mongocxx::collection m_collection;
+    mongocxx::options::insert m_insert_options;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
-    uint64_t m_max_num_results;
+    std::optional<uint64_t> m_max_num_results;
     // The search results with the latest timestamps
     std::priority_queue<
             std::unique_ptr<QueryResult>,
             std::vector<std::unique_ptr<QueryResult>>,
-            QueryResultGreaterTimestampComparator>
+            QueryResultGreaterTimestampComparator
+    >
             m_latest_results;
 };
 

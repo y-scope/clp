@@ -18,8 +18,8 @@
 #include <vector>
 
 #include <curl/curl.h>
+#include <ystdlib/containers/Array.hpp>
 
-#include "Array.hpp"
 #include "CurlDownloadHandler.hpp"
 #include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
@@ -64,6 +64,25 @@ public:
         Failed,
         // The data at the given URL has been downloaded.
         Finished
+    };
+
+    /**
+     * CURL error details set by the underlying CURL handler.
+     */
+    class CurlErrorInfo {
+    public:
+        // Constructor
+        CurlErrorInfo(CURLcode code, std::string_view message) : m_code{code}, m_message{message} {}
+
+        // Methods
+        [[nodiscard]] auto code() const -> CURLcode { return m_code; }
+
+        [[nodiscard]] auto message() const -> std::string_view { return m_message; }
+
+    private:
+        // Members
+        CURLcode m_code;
+        std::string_view m_message;
     };
 
     // Constants
@@ -224,16 +243,15 @@ public:
     }
 
     /**
-     * @return The error message set by the underlying CURL handler.
-     * @return std::nullopt if the download is still in-progress or no error has occured.
+     * @return CURL error info if the download has completed with a CURL error.
+     * @return std::nullopt if the download is still in-progress or no error has occurred.
      */
-    [[nodiscard]] auto get_curl_error_msg() const -> std::optional<std::string_view> {
-        if (auto const ret_code{get_curl_ret_code()};
-            false == ret_code.has_value() || CURLE_OK == ret_code.value())
-        {
+    [[nodiscard]] auto get_curl_error_info() const -> std::optional<CurlErrorInfo> {
+        auto const ret_code = get_curl_ret_code();
+        if (false == ret_code.has_value() || CURLcode::CURLE_OK == ret_code.value()) {
             return std::nullopt;
         }
-        return std::string_view{m_curl_error_msg_buf->data()};
+        return CurlErrorInfo{ret_code.value(), std::string_view{m_curl_error_msg_buf->data()}};
     }
 
 private:
@@ -344,7 +362,7 @@ private:
     size_t m_buffer_size{cDefaultBufferSize};
     size_t m_curr_downloader_buf_idx{0};
 
-    std::vector<Array<char>> m_buffer_pool;
+    std::vector<ystdlib::containers::Array<char>> m_buffer_pool;
     std::queue<BufferView> m_filled_buffer_queue;
     std::optional<BufferView> m_curr_downloader_buf;
     std::optional<BufferView> m_curr_reader_buf;

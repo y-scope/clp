@@ -1,5 +1,6 @@
 #include "decoding_methods.hpp"
 
+#include <cstring>
 #include <regex>
 
 #include "../../ir/types.hpp"
@@ -108,8 +109,8 @@ static IRErrorCode deserialize_metadata(
 template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if (tag == cProtocol::Payload::VarStrLenUByte || tag == cProtocol::Payload::VarStrLenUShort
@@ -223,8 +224,8 @@ template <typename encoded_variable_t>
 static IRErrorCode
 deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -417,10 +418,16 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
     if (error_code != ErrorCode_Success) {
         return IRErrorCode_Incomplete_IR;
     }
-    if (0 == memcmp(buffer, cProtocol::FourByteEncodingMagicNumber, cProtocol::MagicNumberLength)) {
+    if (0
+        == std::memcmp(
+                buffer,
+                cProtocol::FourByteEncodingMagicNumber,
+                cProtocol::MagicNumberLength
+        ))
+    {
         is_four_bytes_encoding = true;
     } else if ((0
-                == memcmp(
+                == std::memcmp(
                         buffer,
                         cProtocol::EightByteEncodingMagicNumber,
                         cProtocol::MagicNumberLength

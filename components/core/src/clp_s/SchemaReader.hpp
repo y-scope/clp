@@ -1,6 +1,8 @@
 #ifndef CLP_S_SCHEMAREADER_HPP
 #define CLP_S_SCHEMAREADER_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <string>
@@ -23,27 +25,19 @@ public:
     /**
      * Initializes the filter
      * @param reader
-     * @param schema_id
      * @param column_readers
      */
-    virtual void init(
-            SchemaReader* reader,
-            int32_t schema_id,
-            std::vector<BaseColumnReader*> const& column_readers
-    ) = 0;
+    virtual void init(SchemaReader* reader, std::vector<BaseColumnReader*> const& column_readers)
+            = 0;
 
     /**
      * Initializes the filter with a column map.
      * Note: the column map only contains the ordered columns in a schema.
      * @param reader
-     * @param schema_id
      * @param column_map
      */
-    virtual void init(
-            SchemaReader* reader,
-            int32_t schema_id,
-            std::unordered_map<int32_t, BaseColumnReader*> const& column_map
-    ) {}
+    virtual void
+    init(SchemaReader* reader, std::unordered_map<int32_t, BaseColumnReader*> const& column_map) {}
 
     /**
      * Filters the message
@@ -62,15 +56,54 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    struct SchemaMetadata {
-        uint64_t stream_id;
-        uint64_t stream_offset;
-        uint64_t num_messages;
-        uint64_t uncompressed_size;
+    /**
+     * Metadata describing one schema table entry.
+     *
+     * Fields (except `num_messages`) are stored as `size_t` instead of their serialized type
+     * `uint64_t` because they are passed to buffer and index APIs that operate on pointer sized
+     * offsets. Deserialized metadata must therefore be converted before constructing this object.
+     */
+    class SchemaMetadata {
+    public:
+        // Constructors
+        SchemaMetadata() = default;
+
+        /**
+         * Constructs metadata without `uncompressed_size`, which is derived later after reading
+         * neighboring schema entries.
+         *
+         * @param stream_id
+         * @param stream_offset
+         * @param num_messages
+         */
+        SchemaMetadata(size_t stream_id, size_t stream_offset, uint64_t num_messages)
+                : m_stream_id{stream_id},
+                  m_stream_offset{stream_offset},
+                  m_num_messages{num_messages} {}
+
+        // Methods
+        [[nodiscard]] auto stream_id() const -> size_t { return m_stream_id; }
+
+        [[nodiscard]] auto stream_offset() const -> size_t { return m_stream_offset; }
+
+        [[nodiscard]] auto num_messages() const -> uint64_t { return m_num_messages; }
+
+        [[nodiscard]] auto uncompressed_size() const -> size_t { return m_uncompressed_size; }
+
+        auto set_uncompressed_size(size_t uncompressed_size) -> void {
+            m_uncompressed_size = uncompressed_size;
+        }
+
+    private:
+        // Members
+        size_t m_stream_id{0};
+        size_t m_stream_offset{0};
+        uint64_t m_num_messages{0};
+        size_t m_uncompressed_size{0};
     };
 
     // Constructor
-    SchemaReader() {}
+    SchemaReader() = default;
 
     // Destructor
     ~SchemaReader() { delete_columns(); }
@@ -163,7 +196,14 @@ public:
     uint64_t get_num_messages() const { return m_num_messages; }
 
     /**
-     * Gets next message
+     * Generates a JSON string from the encoded columns
+     * @param message_index The index of the message to generate the JSON string for.
+     * @return The generated JSON string
+     */
+    [[nodiscard]] auto generate_json_string(uint64_t message_index) -> std::string;
+
+    /**
+     * Gets the next message
      * @param message
      * @return true if there is a next message
      */
@@ -175,7 +215,20 @@ public:
      * @param filter
      * @return true if there is a next message
      */
-    bool get_next_message(std::string& message, FilterClass* filter);
+    bool get_next_message(std::string& message, FilterClass& filter);
+
+    /**
+     * Gets the next message as well as its timestamp and log event index.
+     * @param message
+     * @param timestamp
+     * @param log_event_idx
+     * @return true if there is a next message
+     */
+    bool get_next_message_with_metadata(
+            std::string& message,
+            epochtime_t& timestamp,
+            int64_t& log_event_idx
+    );
 
     /**
      * Gets the next message matching a filter as well as its timestamp and log event index.
@@ -189,21 +242,26 @@ public:
             std::string& message,
             epochtime_t& timestamp,
             int64_t& log_event_idx,
-            FilterClass* filter
+            FilterClass& filter
     );
 
     /**
      * Initializes the filter
      * @param filter
      */
-    void initialize_filter(FilterClass* filter);
+    void initialize_filter(FilterClass& filter);
 
     /**
      * Initializes the filter with a column map.
      * Note: the column map only contains the ordered columns in a schema.
      * @param filter
      */
-    void initialize_filter_with_column_map(FilterClass* filter);
+    void initialize_filter_with_column_map(FilterClass& filter);
+
+    /**
+     * Initializes all internal data structures required to serialize records.
+     */
+    void initialize_serializer();
 
     /**
      * Marks a column as timestamp
@@ -214,7 +272,7 @@ public:
     /**
      * Marks a column as the log_event_idx column.
      */
-    void mark_column_as_log_event_idx(Int64ColumnReader* column_reader) {
+    void mark_column_as_log_event_idx(BaseColumnReader* column_reader) {
         m_log_event_idx_column = column_reader;
     }
 
@@ -307,16 +365,6 @@ private:
             std::vector<int32_t>& path_to_intersection
     );
 
-    /**
-     * Generates a json string from the extracted values
-     */
-    void generate_json_string();
-
-    /**
-     * Initializes all internal data structured required to serialize records.
-     */
-    void initialize_serializer();
-
     int32_t m_schema_id;
     uint64_t m_num_messages;
     uint64_t m_cur_message;
@@ -329,7 +377,7 @@ private:
 
     BaseColumnReader* m_timestamp_column;
     std::function<epochtime_t()> m_get_timestamp;
-    Int64ColumnReader* m_log_event_idx_column{nullptr};
+    BaseColumnReader* m_log_event_idx_column{nullptr};
 
     std::shared_ptr<SchemaTree> m_global_schema_tree;
     SchemaTree m_local_schema_tree;

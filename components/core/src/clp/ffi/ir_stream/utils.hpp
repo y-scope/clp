@@ -9,8 +9,8 @@
 #include <utility>
 #include <vector>
 
-#include <json/single_include/nlohmann/json.hpp>
-#include <outcome/single-header/outcome.hpp>
+#include <nlohmann/json.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ErrorCode.hpp"
 #include "../../ir/types.hpp"
@@ -20,6 +20,8 @@
 #include "byteswap.hpp"
 #include "decoding_methods.hpp"
 #include "encoding_methods.hpp"
+#include "IrDeserializationError.hpp"
+#include "IrSerializationError.hpp"
 #include "protocol_constants.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -50,6 +52,19 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void;
  */
 template <IntegerType integer_t>
 [[nodiscard]] auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool;
+
+/**
+ * Deserializes an integer from the given reader.
+ * @tparam integer_t The type of the integer to deserialize
+ * @param reader
+ * @return A result containing the deserialized integer on success, or an error code indicating the
+ * failure:
+ * - IrDeserializationErrorEnum::IncompleteStream if the reader doesn't contain enough data to
+ *   deserialize.
+ */
+template <IntegerType integer_t>
+[[nodiscard]] auto deserialize_int(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<integer_t>;
 
 /**
  * Serializes a string using CLP's encoding for unstructured text.
@@ -89,18 +104,20 @@ template <IntegerType T>
  * @tparam four_byte_length_indicator_tag Tag for four-byte node ID encoding.
  * @param node_id
  * @param output_buf
- * @return true on success.
- * @return false if the ID exceeds the representable range.
+ * @return A void result on success, or an error code indicating the failure:
+ * - IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure if the ID exceeds the
+ *   representable range.
  */
 template <
         bool is_auto_generated_node,
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
-        int8_t four_byte_length_indicator_tag>
+        int8_t four_byte_length_indicator_tag
+>
 [[nodiscard]] auto encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
-) -> bool;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Deserializes and decodes a schema tree node ID.
@@ -120,11 +137,12 @@ template <
 template <
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
-        int8_t four_byte_length_indicator_tag>
+        int8_t four_byte_length_indicator_tag
+>
 [[nodiscard]] auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
         ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
+) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>>;
 
 /**
  * @param ir_error_code
@@ -144,6 +162,8 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {
         value_big_endian = bswap_32(value);
     } else if constexpr (sizeof(value) == 8) {
         value_big_endian = bswap_64(value);
+    } else {
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
     }
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     std::span<int8_t> const data_view{reinterpret_cast<int8_t*>(&value_big_endian), sizeof(value)};
@@ -166,8 +186,31 @@ auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
         value = bswap_32(value_little_endian);
     } else if constexpr (cReadSize == 8) {
         value = bswap_64(value_little_endian);
+    } else {
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
     }
     return true;
+}
+
+template <IntegerType integer_t>
+auto deserialize_int(ReaderInterface& reader) -> ystdlib::error_handling::Result<integer_t> {
+    integer_t value_little_endian{};
+    if (reader.try_read_numeric_value(value_little_endian) != clp::ErrorCode_Success) {
+        return IrDeserializationError{IrDeserializationErrorEnum::IncompleteStream};
+    }
+
+    constexpr auto cReadSize = sizeof(integer_t);
+    if constexpr (cReadSize == 1) {
+        return value_little_endian;
+    } else if constexpr (cReadSize == 2) {
+        return bswap_16(value_little_endian);
+    } else if constexpr (cReadSize == 4) {
+        return bswap_32(value_little_endian);
+    } else if constexpr (cReadSize == 8) {
+        return bswap_64(value_little_endian);
+    } else {
+        []<bool flag = false>() { static_assert(flag, "unsupported integer size"); }();
+    }
 }
 
 template <typename encoded_variable_t>
@@ -175,8 +218,8 @@ template <typename encoded_variable_t>
 serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int8_t>& output_buf)
         -> bool {
     static_assert(
-            (std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
-             || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>)
+            std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
+            || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>
     );
     bool succeeded{};
     if constexpr (std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>) {
@@ -199,11 +242,12 @@ template <
         bool is_auto_generated_node,
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
-        int8_t four_byte_length_indicator_tag>
+        int8_t four_byte_length_indicator_tag
+>
 auto encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
-) -> bool {
+) -> ystdlib::error_handling::Result<void> {
     auto size_dependent_encode_and_serialize_schema_tree_node_id
             = [&output_buf,
                &node_id]<SignedIntegerType encoded_node_id_t>(int8_t length_indicator_tag) -> void {
@@ -216,53 +260,57 @@ auto encode_and_serialize_schema_tree_node_id(
     };
 
     if (node_id <= static_cast<SchemaTree::Node::id_t>(INT8_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int8_t>(one_byte_length_indicator_tag);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator()<int8_t>(
+                one_byte_length_indicator_tag
+        );
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT16_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int16_t>(two_byte_length_indicator_tag);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator()<int16_t>(
+                two_byte_length_indicator_tag
+        );
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT32_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int32_t>(four_byte_length_indicator_tag);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator()<int32_t>(
+                four_byte_length_indicator_tag
+        );
     } else {
-        return false;
+        return IrSerializationError{IrSerializationErrorEnum::SchemaTreeNodeIdSerializationFailure};
     }
-    return true;
+    return ystdlib::error_handling::success();
 }
 
 template <
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
-        int8_t four_byte_length_indicator_tag>
+        int8_t four_byte_length_indicator_tag
+>
 auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
         ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>> {
     auto size_dependent_deserialize_and_decode_schema_tree_node_id
-            = [&reader]<SignedIntegerType encoded_node_id_t>(
-              ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+            = [&reader]<SignedIntegerType encoded_node_id_t>()
+            -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>> {
         encoded_node_id_t encoded_node_id{};
         if (false == deserialize_int(reader, encoded_node_id)) {
             return std::errc::result_out_of_range;
         }
         if (0 > encoded_node_id) {
-            return {true, static_cast<SchemaTree::Node::id_t>(get_ones_complement(encoded_node_id))
-            };
+            return {true,
+                    static_cast<SchemaTree::Node::id_t>(get_ones_complement(encoded_node_id))};
         }
         return {false, static_cast<SchemaTree::Node::id_t>(encoded_node_id)};
     };
 
     if (one_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
-        )<int8_t>();
+        return size_dependent_deserialize_and_decode_schema_tree_node_id
+                .template operator()<int8_t>();
     }
     if (two_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
-        )<int16_t>();
+        return size_dependent_deserialize_and_decode_schema_tree_node_id
+                .template operator()<int16_t>();
     }
     if (four_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
-        )<int32_t>();
+        return size_dependent_deserialize_and_decode_schema_tree_node_id
+                .template operator()<int32_t>();
     }
     return std::errc::protocol_error;
 }

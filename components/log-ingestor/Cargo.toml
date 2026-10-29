@@ -1,0 +1,51 @@
+[package]
+name = "log-ingestor"
+version = { workspace = true }
+edition = { workspace = true }
+autotests = false
+
+[lib]
+name = "log_ingestor"
+path = "src/lib.rs"
+
+[[bin]]
+name = "log-ingestor"
+path  = "src/bin/log_ingestor.rs"
+
+[[bin]]
+name = "log-ingestor-openapi-codegen"
+path = "src/bin/log_ingestor_openapi_codegen.rs"
+
+[[test]]
+name = "log_ingestor_tests"
+path = "tests/test.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+axum = { workspace = true }
+async-trait = { workspace = true }
+aws-sdk-s3 = { workspace = true }
+aws-sdk-sqs = { workspace = true }
+clap = { workspace = true }
+clp-rust-utils = { workspace = true }
+const_format = { workspace = true }
+non-empty-string = { workspace = true }
+opentelemetry = { workspace = true }
+secrecy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+tokio = { workspace = true, features = ["macros", "signal"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+tower-http = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+utoipa = { workspace = true, features = ["axum_extras"] }
+utoipa-axum = { workspace = true }
+
+[dev-dependencies]
+serial_test = { workspace = true }
+uuid = { workspace = true }

@@ -10,7 +10,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../ir/types.hpp"

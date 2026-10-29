@@ -3,13 +3,13 @@
 #ifndef CLP_S_ZSTDDECOMPRESSOR_HPP
 #define CLP_S_ZSTDDECOMPRESSOR_HPP
 
-#include <memory>
+#include <optional>
 #include <string>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <zstd.h>
 
 #include "../clp/ReaderInterface.hpp"
+#include "../clp/ReadOnlyMemoryMappedFile.hpp"
 #include "Decompressor.hpp"
 #include "TraceableException.hpp"
 
@@ -129,7 +129,7 @@ private:
     // Compressed stream variables
     ZSTD_DStream* m_decompression_stream;
 
-    boost::iostreams::mapped_file_source m_memory_mapped_compressed_file;
+    std::optional<clp::ReadOnlyMemoryMappedFile> m_memory_mapped_file;
     FileReader* m_file_reader;
     clp::ReaderInterface* m_reader;
     size_t m_file_reader_initial_pos;

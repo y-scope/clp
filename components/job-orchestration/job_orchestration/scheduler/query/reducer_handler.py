@@ -1,10 +1,12 @@
 import asyncio
+import contextlib
 import enum
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 import msgpack
 from clp_py_utils.clp_logging import get_logger
+
 from job_orchestration.scheduler.job_config import AggregationConfig
 
 # Setup logging
@@ -78,15 +80,23 @@ async def _handle_unexpected_msg_from_listener(
     await msg_queues.put_to_listeners(msg)
 
 
-async def _recv_msg_from_reducer(reader: asyncio.StreamReader) -> bytes:
+async def _recv_msg_from_reducer(reader: asyncio.StreamReader) -> bytes | None:
     """
     Receives and deserializes a message from the connected reducer
     :param reader: StreamReader connected to a reducer
-    :return: The received message
+    :return: The received message, or None if the connection was closed without sending any data.
+    :raise: asyncio.IncompleteReadError if the connection is closed mid-message.
     """
-    msg_size_bytes = await reader.readexactly(8)
-    msg_size = int.from_bytes(msg_size_bytes, byteorder="little")
-    return await reader.readexactly(msg_size)
+    try:
+        msg_size_bytes = await reader.readexactly(8)
+        msg_size = int.from_bytes(msg_size_bytes, byteorder="little")
+        return await reader.readexactly(msg_size)
+    except asyncio.IncompleteReadError as e:
+        if len(e.partial) == 0:
+            # Connection was opened but no data was sent; treat as benign noise.
+            logger.debug("Reducer connection closed without sending handshake bytes.")
+            return None
+        raise
 
 
 async def _send_msg_to_reducer(msg: bytes, writer: asyncio.StreamWriter):
@@ -101,13 +111,26 @@ async def _send_msg_to_reducer(msg: bytes, writer: asyncio.StreamWriter):
     await writer.drain()
 
 
+async def _clean_up_task(task: asyncio.Task | None) -> None:
+    if task is None:
+        return
+    if not task.done():
+        task.cancel()
+    with contextlib.suppress(asyncio.CancelledError, asyncio.IncompleteReadError):
+        await task
+
+
 async def handle_reducer_connection(
     reader: asyncio.StreamReader,
     writer: asyncio.StreamWriter,
     reducer_connection_queue: asyncio.Queue,
 ):
+    recv_listener_msg_task: asyncio.Task | None = None
+    recv_reducer_msg_task: asyncio.Task | None = None
     try:
         message_bytes = await _recv_msg_from_reducer(reader)
+        if message_bytes is None:
+            return
         reducer_addr_info = msgpack.unpackb(message_bytes)
 
         msg_queues = ReducerHandlerMessageQueues()
@@ -127,10 +150,8 @@ async def handle_reducer_connection(
         # Transition to next state
         """
         current_wait_state: _ReducerHandlerWaitState = _ReducerHandlerWaitState.JOB_CONFIG
-        recv_listener_msg_task: Optional[asyncio.Task] = asyncio.create_task(
-            msg_queues.get_from_listeners()
-        )
-        recv_reducer_msg_task: Optional[asyncio.Task] = asyncio.create_task(reader.readexactly(1))
+        recv_listener_msg_task = asyncio.create_task(msg_queues.get_from_listeners())
+        recv_reducer_msg_task = asyncio.create_task(reader.readexactly(1))
         while True:
             pending = [recv_listener_msg_task, recv_reducer_msg_task]
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
@@ -168,11 +189,10 @@ async def handle_reducer_connection(
                     if ReducerHandlerMessageType.FAILURE == msg.msg_type:
                         # Listener requested cancellation
                         return
-                    else:
-                        await _handle_unexpected_msg_from_listener(
-                            current_wait_state, msg.msg_type, msg_queues
-                        )
-                        return
+                    await _handle_unexpected_msg_from_listener(
+                        current_wait_state, msg.msg_type, msg_queues
+                    )
+                    return
 
                 # Tell the listener the reducer ACKed the job
                 msg = ReducerHandlerMessage(ReducerHandlerMessageType.SUCCESS)
@@ -189,7 +209,7 @@ async def handle_reducer_connection(
                 if ReducerHandlerMessageType.FAILURE == msg.msg_type:
                     # Listener requested cancellation
                     return
-                elif ReducerHandlerMessageType.SUCCESS != msg.msg_type:
+                if ReducerHandlerMessageType.SUCCESS != msg.msg_type:
                     await _handle_unexpected_msg_from_listener(
                         current_wait_state, msg.msg_type, msg_queues
                     )
@@ -206,15 +226,16 @@ async def handle_reducer_connection(
                     if ReducerHandlerMessageType.FAILURE == msg.msg_type:
                         # Listener requested cancellation
                         return
-                    else:
-                        await _handle_unexpected_msg_from_listener(
-                            current_wait_state, msg.msg_type, msg_queues
-                        )
-                        return
+                    await _handle_unexpected_msg_from_listener(
+                        current_wait_state, msg.msg_type, msg_queues
+                    )
+                    return
 
                 msg = ReducerHandlerMessage(ReducerHandlerMessageType.SUCCESS)
                 await msg_queues.put_to_listeners(msg)
                 break
     finally:
+        await _clean_up_task(recv_listener_msg_task)
+        await _clean_up_task(recv_reducer_msg_task)
         writer.close()
         await writer.wait_closed()

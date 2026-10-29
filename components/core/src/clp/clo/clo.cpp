@@ -1,18 +1,23 @@
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <string>
 
-#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <string_utils/string_utils.hpp>
+#include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"
 #include "../Defs.h"
 #include "../Grep.hpp"
+#include "../GrepCore.hpp"
 #include "../ir/constants.hpp"
-#include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -35,14 +40,18 @@ using clp::ErrorCode_errno;
 using clp::ErrorCode_FileExists;
 using clp::ErrorCode_Success;
 using clp::Grep;
+using clp::GrepCore;
 using clp::ir::cIrFileExtension;
-using clp::load_lexer_from_file;
+using clp::logtype_dictionary_id_t;
 using clp::Query;
+using clp::segment_id_t;
 using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
+using clp::string_utils::clean_up_wildcard_search_string;
 using clp::TraceableException;
+using clp::variable_dictionary_id_t;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -135,7 +144,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         if (auto const error_code = create_directory(output_dir.string(), 0700, true);
             ErrorCode_Success != error_code)
         {
-            SPDLOG_ERROR("Failed to create {} - {}", output_dir.string(), strerror(errno));
+            SPDLOG_ERROR("Failed to create {} - {}", output_dir.string(), std::strerror(errno));
             return false;
         }
 
@@ -190,28 +199,32 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                 );
                 return false;
             }
-            results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::Path,
-                            dest_ir_file_name
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::StreamId,
-                            orig_file_id
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx,
-                            static_cast<int64_t>(begin_message_ix)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::EndMsgIx,
-                            static_cast<int64_t>(end_message_ix)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::IsLastChunk,
-                            is_last_chunk
+            results.emplace_back(
+                    std::move(
+                            bsoncxx::builder::basic::make_document(
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::Path,
+                                            dest_ir_file_name
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::StreamId,
+                                            orig_file_id
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx,
+                                            static_cast<int64_t>(begin_message_ix)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::EndMsgIx,
+                                            static_cast<int64_t>(end_message_ix)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::IsLastChunk,
+                                            is_last_chunk
+                                    )
+                            )
                     )
-            )));
+            );
 
             if (command_line_args.print_ir_stats()) {
                 nlohmann::json json_msg;
@@ -470,43 +483,44 @@ static bool search_archive(
         return false;
     }
 
-    // Load lexers from schema file if it exists
-    auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-    unique_ptr<log_surgeon::lexers::ByteLexer> forward_lexer, reverse_lexer;
-    bool use_heuristic = true;
-    if (std::filesystem::exists(schema_file_path)) {
-        use_heuristic = false;
-        // Create forward lexer
-        forward_lexer.reset(new log_surgeon::lexers::ByteLexer());
-        load_lexer_from_file(schema_file_path.string(), false, *forward_lexer);
-
-        // Create reverse lexer
-        reverse_lexer.reset(new log_surgeon::lexers::ByteLexer());
-        load_lexer_from_file(schema_file_path.string(), true, *reverse_lexer);
-    }
-
     Archive archive_reader;
     archive_reader.open(archive_path.string());
     archive_reader.refresh_dictionaries();
 
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
+    auto const& logtype_dict{archive_reader.get_logtype_dictionary()};
+    auto const& var_dict{archive_reader.get_var_dictionary()};
 
-    auto query_processing_result = Grep::process_raw_query(
-            archive_reader,
-            command_line_args.get_search_string(),
+    std::string wildcard_search_string
+            = clean_up_wildcard_search_string('*' + command_line_args.get_search_string() + '*');
+    auto query_processing_result = GrepCore::process_raw_query(
+            logtype_dict,
+            var_dict,
+            wildcard_search_string,
             search_begin_ts,
             search_end_ts,
-            command_line_args.ignore_case(),
-            *forward_lexer,
-            *reverse_lexer,
-            use_heuristic
+            command_line_args.ignore_case()
     );
     if (false == query_processing_result.has_value()) {
         return true;
     }
 
     auto& query = query_processing_result.value();
+    // Calculate the IDs of the segments that may contain results for each sub-query.
+    auto get_segments_containing_logtype_dict_id
+            = [&logtype_dict](logtype_dictionary_id_t logtype_id) -> std::set<segment_id_t> const& {
+        return logtype_dict.get_entry(logtype_id).get_ids_of_segments_containing_entry();
+    };
+    auto get_segments_containing_var_dict_id
+            = [&var_dict](variable_dictionary_id_t var_id) -> std::set<segment_id_t> const& {
+        return var_dict.get_entry(var_id).get_ids_of_segments_containing_entry();
+    };
+    query.calculate_ids_of_matching_segments(
+            get_segments_containing_logtype_dict_id,
+            get_segments_containing_var_dict_id
+    );
+
     // Get all segments potentially containing query results
     std::set<clp::segment_id_t> ids_of_segments_to_search;
     for (auto& sub_query : query.get_sub_queries()) {
@@ -556,7 +570,7 @@ int main(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    clp::Profiler::init();
+    utils::profiling::Reporter const profiler_reporter{"clo", utils::profiling::SpdlogEmitter{}};
     clp::TimestampPattern::init();
 
     CommandLineArguments command_line_args("clo");
@@ -570,6 +584,8 @@ int main(int argc, char const* argv[]) {
             // Continue processing
             break;
     }
+
+    PROFILE_SCOPE("main");
 
     // mongocxx static init
     mongocxx::instance mongocxx_instance{};

@@ -1,2 +1,9 @@
-docs/
+# Dependencies
 node_modules/
+yscope-log-viewer/
+
+# Build
+.turbo/
+
+# Local development
+.env.local

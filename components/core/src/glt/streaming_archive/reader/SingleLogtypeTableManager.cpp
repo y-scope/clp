@@ -60,7 +60,8 @@ void SingleLogtypeTableManager::close_combined_table() {
     m_combined_table_decompressor.close();
 }
 
-void SingleLogtypeTableManager::load_logtype_table_from_combine(logtype_dictionary_id_t logtype_id
+void SingleLogtypeTableManager::load_logtype_table_from_combine(
+        logtype_dictionary_id_t logtype_id
 ) {
     m_combined_tables.load_logtype_table(
             logtype_id,

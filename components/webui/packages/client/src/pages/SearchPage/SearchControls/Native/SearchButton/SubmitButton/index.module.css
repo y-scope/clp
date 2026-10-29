@@ -1,0 +1,6 @@
+.gradientButton {
+    background-image: linear-gradient(135deg, #6253e1, #04befe);
+    color: white;
+    transition: background 0.3s;
+    background-size: 200% auto;
+}

@@ -1,0 +1,10 @@
+1972-12-13T05:33:00.000 apollo-17 d07 e000 crew prepares for second surface excursion with suit and system checks; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T05:42:35.999 apollo-17 d07 e001 cabin depressurization and hatch opening procedures completed again; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T05:52:11.998 apollo-17 d07 e002 lunar rover driven toward designated geology stations away from landing site; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T06:01:47.997 apollo-17 d07 e003 sampling at Station Two documents dark mantle deposits and boulders; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T06:11:23.996 apollo-17 d07 e004 crew deploys additional experiment packages and marker flags along traverse; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T06:20:59.995 apollo-17 d07 e005 detailed core samples extracted for stratigraphic study of regolith; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T06:30:35.994 apollo-17 d07 e006 camera panoramas taken at multiple stations for context documentation; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T06:40:11.993 apollo-17 d07 e007 navigation data from rover used to refine local lunar topographic maps; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T06:49:47.992 apollo-17 d07 e008 communications remain stable during extended traverse distance from LM; all primary systems nominal; communications lock; navigation solution within expected error
+1972-12-13T06:59:23.991 apollo-17 d07 e009 crew notes color contrasts and layering in valley walls and boulders; all primary systems nominal; communications lock; navigation solution within expected error

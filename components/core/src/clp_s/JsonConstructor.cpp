@@ -4,17 +4,16 @@
 #include <queue>
 #include <system_error>
 
-#include <fmt/core.h>
-#include <json/single_include/nlohmann/json.hpp>
+#include <fmt/format.h>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/uri.hpp>
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
-#include "ReaderUtils.hpp"
-#include "SchemaTree.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
@@ -40,8 +39,10 @@ void JsonConstructor::store() {
     m_archive_reader->read_dictionaries_and_metadata();
 
     if (m_option.ordered && false == m_archive_reader->has_log_order()) {
-        SPDLOG_WARN("This archive is missing ordering information and can not be decompressed in "
-                    "log order. Falling back to out of order decompression.");
+        SPDLOG_WARN(
+                "This archive is missing ordering information and can not be decompressed in log"
+                " order. Falling back to out of order decompression."
+        );
     }
 
     m_archive_reader->open_packed_streams();
@@ -88,7 +89,7 @@ void JsonConstructor::construct_in_order() {
             client = mongocxx::client{mongo_uri};
             collection = client[mongo_uri.database()][m_option.metadata_db->mongodb_collection];
         } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCodeBadParamDbUri, __FILE__, __LINE__, e.what());
+            throw OperationFailed(ErrorCodeBadParamDbUri, __FILENAME__, __LINE__, e.what());
         }
     }
 
@@ -103,32 +104,36 @@ void JsonConstructor::construct_in_order() {
         std::error_code ec;
         std::filesystem::rename(src_path, new_file_path, ec);
         if (ec) {
-            throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__, ec.message());
         }
 
         if (m_option.metadata_db.has_value()) {
-            results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cPath,
-                            new_file_path.filename()
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cStreamId,
-                            std::string{m_archive_reader->get_archive_id()}
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cBeginMsgIx,
-                            first_idx
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cEndMsgIx,
-                            last_idx
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cIsLastChunk,
-                            false == open_new_writer
+            results.emplace_back(
+                    std::move(
+                            bsoncxx::builder::basic::make_document(
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::decompression::cPath,
+                                            new_file_path.filename()
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::decompression::cStreamId,
+                                            std::string{m_archive_reader->get_archive_id()}
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::decompression::cBeginMsgIx,
+                                            first_idx
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::decompression::cEndMsgIx,
+                                            last_idx
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::decompression::cIsLastChunk,
+                                            false == open_new_writer
+                                    )
+                            )
                     )
-            )));
+            );
         }
 
         if (m_option.print_ordered_chunk_stats) {
@@ -172,7 +177,7 @@ void JsonConstructor::construct_in_order() {
         std::error_code ec;
         std::filesystem::remove(src_path, ec);
         if (ec) {
-            throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__, ec.message());
         }
     }
 
@@ -180,7 +185,7 @@ void JsonConstructor::construct_in_order() {
         try {
             collection.insert_many(results);
         } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__, e.what());
+            throw OperationFailed(ErrorCodeFailureDbBulkWrite, __FILENAME__, __LINE__, e.what());
         }
     }
 }

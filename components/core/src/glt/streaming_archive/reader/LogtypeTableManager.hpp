@@ -9,7 +9,6 @@
 #include "LogtypeTable.hpp"
 
 namespace glt::streaming_archive::reader {
-
 class LogtypeTableManager {
 public:
     // Types

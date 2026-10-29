@@ -1,33 +1,39 @@
 #include "IndexManager.hpp"
 
 #include <filesystem>
+#include <memory>
 #include <stack>
+#include <string>
+
+#include <spdlog/spdlog.h>
 
 #include "../archive_constants.hpp"
+#include "../TimestampDictionaryReader.hpp"
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
-        std::optional<clp::GlobalMetadataDBConfig> const& db_config,
+        std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config,
         bool should_create_table
 ) {
-    if (db_config.has_value()) {
+    try {
+        auto const& db_config = optional_db_config.value();
         m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
-                db_config->get_metadata_db_host(),
-                db_config->get_metadata_db_port(),
-                db_config->get_metadata_db_username(),
-                db_config->get_metadata_db_password(),
-                db_config->get_metadata_db_name(),
-                db_config->get_metadata_table_prefix()
+                db_config.get_metadata_db_host(),
+                db_config.get_metadata_db_port(),
+                db_config.get_metadata_db_username().value(),
+                db_config.get_metadata_db_password().value(),
+                db_config.get_metadata_db_name(),
+                db_config.get_metadata_table_prefix()
         );
-        m_mysql_index_storage->open();
-        m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
-            m_mysql_index_storage->add_field(field_name, field_type);
-        };
-        m_should_create_table = should_create_table;
-        m_output_type = OutputType::Database;
-    } else {
+    } catch (std::bad_optional_access const& e) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
+    m_mysql_index_storage->open();
+    m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
+        m_mysql_index_storage->add_field(field_name, field_type);
+    };
+    m_should_create_table = should_create_table;
+    m_output_type = OutputType::Database;
 }
 
 IndexManager::~IndexManager() {
@@ -36,13 +42,16 @@ IndexManager::~IndexManager() {
     }
 }
 
-void IndexManager::update_metadata(std::string const& table_name, Path const& archive_path) {
-    m_mysql_index_storage->init(table_name, m_should_create_table);
+void IndexManager::update_metadata(std::string const& dataset_name, Path const& archive_path) {
+    m_mysql_index_storage->init(dataset_name, m_should_create_table);
 
     ArchiveReader archive_reader;
     archive_reader.open(archive_path, NetworkAuthOption{});
 
-    traverse_schema_tree_and_update_metadata(archive_reader.get_schema_tree());
+    traverse_schema_tree_and_update_metadata(
+            archive_reader.get_schema_tree(),
+            archive_reader.get_timestamp_dictionary()
+    );
 }
 
 std::string IndexManager::escape_key_name(std::string_view const key_name) {
@@ -93,16 +102,27 @@ std::string IndexManager::escape_key_name(std::string_view const key_name) {
 }
 
 void IndexManager::traverse_schema_tree_and_update_metadata(
-        std::shared_ptr<SchemaTree> const& schema_tree
+        std::shared_ptr<SchemaTree> const& schema_tree,
+        std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
 ) {
     if (nullptr == schema_tree) {
+        return;
+    }
+
+    if (nullptr == timestamp_dict) {
+        return;
+    }
+
+    auto const object_subtree_root
+            = schema_tree->get_object_subtree_node_id_for_namespace(constants::cDefaultNamespace);
+    if (-1 == object_subtree_root) {
         return;
     }
 
     std::string path_buffer;
     // Stack of pairs of node_id and path_length
     std::stack<std::pair<int32_t, uint64_t>> s;
-    s.emplace(schema_tree->get_object_subtree_node_id(), 0);
+    s.emplace(object_subtree_root, 0);
 
     while (false == s.empty()) {
         auto [node_id, path_length] = s.top();

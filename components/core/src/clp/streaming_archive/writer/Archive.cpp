@@ -2,35 +2,32 @@
 
 #include <sys/stat.h>
 
+#include <cstdint>
 #include <filesystem>
-#include <fstream>
-#include <iostream>
+#include <string>
+#include <system_error>
+#include <vector>
 
 #include <boost/asio.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <json/single_include/nlohmann/json.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/LogParser.hpp>
+#include <nlohmann/json.hpp>
 
-#include "../../EncodedVariableInterpreter.hpp"
-#include "../../ir/types.hpp"
-#include "../../spdlog_with_specializations.hpp"
-#include "../../Utils.hpp"
-#include "../Constants.hpp"
-#include "utils.hpp"
-
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
-using log_surgeon::LogEventView;
-using std::list;
-using std::make_unique;
-using std::string;
-using std::unordered_set;
-using std::vector;
+#include <clp/Defs.h>
+#include <clp/EncodedVariableInterpreter.hpp>
+#include <clp/ir/LogEvent.hpp>
+#include <clp/ir/types.hpp>
+#include <clp/streaming_archive/Constants.hpp>
+#include <clp/streaming_archive/writer/utils.hpp>
+#include <clp/TimestampPattern.hpp>
 
 namespace clp::streaming_archive::writer {
+using clp::ir::eight_byte_encoded_variable_t;
+using clp::ir::four_byte_encoded_variable_t;
+using std::string;
+using std::vector;
+
 Archive::~Archive() {
     if (m_path.empty() == false || m_file != nullptr
         || m_files_with_timestamps_in_segment.empty() == false
@@ -122,22 +119,6 @@ void Archive::open(UserConfig const& user_config) {
     m_next_segment_id = 0;
     m_compression_level = user_config.compression_level;
 
-    /// TODO: add schema file size to m_stable_size???
-    // Copy schema file into archive
-    if (!m_schema_file_path.empty()) {
-        std::filesystem::path const archive_schema_filesystem_path = archive_path / cSchemaFileName;
-        try {
-            std::filesystem::path const schema_filesystem_path = m_schema_file_path;
-            std::filesystem::copy(schema_filesystem_path, archive_schema_filesystem_path);
-        } catch (FileWriter::OperationFailed& e) {
-            SPDLOG_CRITICAL(
-                    "Failed to copy schema file to archive: {}",
-                    archive_schema_filesystem_path.c_str()
-            );
-            throw;
-        }
-    }
-
     // Save metadata to disk
     auto metadata_file_path = archive_path / cMetadataFileName;
     try {
@@ -156,10 +137,6 @@ void Archive::open(UserConfig const& user_config) {
     }
 
     m_global_metadata_db = user_config.global_metadata_db;
-
-    m_global_metadata_db->open();
-    m_global_metadata_db->add_archive(m_id_as_string, *m_local_metadata);
-    m_global_metadata_db->close();
 
     m_file = nullptr;
 
@@ -238,7 +215,17 @@ void Archive::close() {
 
     m_metadata_file_writer.close();
 
+    update_global_metadata();
     m_global_metadata_db = nullptr;
+
+    for (auto* file : m_file_metadata_for_global_update) {
+        delete file;
+    }
+    m_file_metadata_for_global_update.clear();
+
+    if (m_print_archive_stats_progress) {
+        print_archive_stats_progress();
+    }
 
     m_metadata_db.close();
 
@@ -309,141 +296,13 @@ Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_unco
     update_segment_indices(logtype_id, var_ids);
 }
 
-void Archive::write_msg_using_schema(LogEventView const& log_view) {
-    epochtime_t timestamp = 0;
-    TimestampPattern* timestamp_pattern = nullptr;
-    auto const& log_output_buffer = log_view.get_log_output_buffer();
-    if (log_output_buffer->has_timestamp()) {
-        size_t start;
-        size_t end;
-        timestamp_pattern = (TimestampPattern*)TimestampPattern::search_known_ts_patterns(
-                log_output_buffer->get_mutable_token(0).to_string(),
-                timestamp,
-                start,
-                end
-        );
-        if (m_old_ts_pattern != timestamp_pattern) {
-            change_ts_pattern(timestamp_pattern);
-            m_old_ts_pattern = timestamp_pattern;
-        }
-    }
-    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
-        split_file_and_archive(
-                m_archive_user_config,
-                m_path_for_compression,
-                m_group_id,
-                timestamp_pattern,
-                *this
-        );
-    } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
-        split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
-    }
-    m_encoded_vars.clear();
-    m_var_ids.clear();
-    m_logtype_dict_entry.clear();
-    size_t num_uncompressed_bytes = 0;
-    // Timestamp is included in the uncompressed message size
-    uint32_t start_pos = log_output_buffer->get_token(0).m_start_pos;
-    if (timestamp_pattern == nullptr) {
-        start_pos = log_output_buffer->get_token(1).m_start_pos;
-    }
-    uint32_t end_pos = log_output_buffer->get_token(log_output_buffer->pos() - 1).m_end_pos;
-    if (start_pos <= end_pos) {
-        num_uncompressed_bytes = end_pos - start_pos;
-    } else {
-        num_uncompressed_bytes
-                = log_output_buffer->get_token(0).m_buffer_size - start_pos + end_pos;
-    }
-    for (uint32_t i = 1; i < log_output_buffer->pos(); i++) {
-        log_surgeon::Token& token = log_output_buffer->get_mutable_token(i);
-        int token_type = token.m_type_ids_ptr->at(0);
-        if (log_output_buffer->has_delimiters() && (timestamp_pattern != nullptr || i > 1)
-            && token_type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
-            && token_type != static_cast<int>(log_surgeon::SymbolID::TokenNewlineId))
-        {
-            m_logtype_dict_entry.add_constant(token.get_delimiter(), 0, 1);
-            if (token.m_start_pos == token.m_buffer_size - 1) {
-                token.m_start_pos = 0;
-            } else {
-                token.m_start_pos++;
-            }
-        }
-        switch (token_type) {
-            case static_cast<int>(log_surgeon::SymbolID::TokenNewlineId):
-            case static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID): {
-                m_logtype_dict_entry.add_constant(token.to_string(), 0, token.get_length());
-                break;
-            }
-            case static_cast<int>(log_surgeon::SymbolID::TokenIntId): {
-                encoded_variable_t encoded_var;
-                if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                            token.to_string(),
-                            encoded_var
-                    ))
-                {
-                    variable_dictionary_id_t id;
-                    m_var_dict.add_entry(token.to_string(), id);
-                    encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                    m_logtype_dict_entry.add_dictionary_var();
-                } else {
-                    m_logtype_dict_entry.add_int_var();
-                }
-                m_encoded_vars.push_back(encoded_var);
-                break;
-            }
-            case static_cast<int>(log_surgeon::SymbolID::TokenFloatId): {
-                encoded_variable_t encoded_var;
-                if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                            token.to_string(),
-                            encoded_var
-                    ))
-                {
-                    variable_dictionary_id_t id;
-                    m_var_dict.add_entry(token.to_string(), id);
-                    encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                    m_logtype_dict_entry.add_dictionary_var();
-                } else {
-                    m_logtype_dict_entry.add_float_var();
-                }
-                m_encoded_vars.push_back(encoded_var);
-                break;
-            }
-            default: {
-                // Variable string looks like a dictionary variable, so encode it as so
-                encoded_variable_t encoded_var;
-                variable_dictionary_id_t id;
-                m_var_dict.add_entry(token.to_string(), id);
-                encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                m_var_ids.push_back(id);
-
-                m_logtype_dict_entry.add_dictionary_var();
-                m_encoded_vars.push_back(encoded_var);
-                break;
-            }
-        }
-    }
-    if (!m_logtype_dict_entry.get_value().empty()) {
-        logtype_dictionary_id_t logtype_id;
-        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-        m_file->write_encoded_msg(
-                timestamp,
-                logtype_id,
-                m_encoded_vars,
-                m_var_ids,
-                num_uncompressed_bytes
-        );
-
-        update_segment_indices(logtype_id, m_var_ids);
-    }
-}
-
 template <typename encoded_variable_t>
 void Archive::write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_event) {
     vector<eight_byte_encoded_variable_t> encoded_vars;
     vector<variable_dictionary_id_t> var_ids;
     size_t original_num_bytes{0};
     EncodedVariableInterpreter::encode_and_add_to_dictionary(
-            log_event,
+            log_event.get_message(),
             m_logtype_dict_entry,
             m_var_dict,
             encoded_vars,
@@ -557,8 +416,6 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
 
     m_metadata_db.update_files(files);
 
-    m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
-
     // Mark files' metadata as clean
     for (auto file : files) {
         file->mark_metadata_as_clean();
@@ -593,16 +450,12 @@ void Archive::close_segment_and_persist_file_metadata(
 
     for (auto file : files) {
         file->mark_as_in_committed_segment();
+        m_file_metadata_for_global_update.emplace_back(file);
     }
 
-    m_global_metadata_db->open();
     persist_file_metadata(files);
-    update_metadata();
-    m_global_metadata_db->close();
+    update_local_metadata();
 
-    for (auto file : files) {
-        delete file;
-    }
     files.clear();
 }
 
@@ -628,23 +481,33 @@ uint64_t Archive::get_dynamic_compressed_size() {
     return on_disk_size;
 }
 
-void Archive::update_metadata() {
+auto Archive::print_archive_stats_progress() -> void {
+    nlohmann::json json_msg;
+    json_msg["id"] = m_id_as_string;
+    json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
+    json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
+    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
+}
+
+void Archive::update_local_metadata() {
     m_local_metadata->set_dynamic_uncompressed_size(0);
     m_local_metadata->set_dynamic_compressed_size(get_dynamic_compressed_size());
     // Rewrite (overwrite) the metadata file
     m_metadata_file_writer.seek_from_begin(0);
     m_local_metadata->write_to_file(m_metadata_file_writer);
+}
 
-    m_global_metadata_db->update_archive_metadata(m_id_as_string, *m_local_metadata);
-
-    if (m_print_archive_stats_progress) {
-        nlohmann::json json_msg;
-        json_msg["id"] = m_id_as_string;
-        json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
-        json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
-        std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
-                  << std::endl;
+auto Archive::update_global_metadata() -> void {
+    m_global_metadata_db->open();
+    if (false == m_local_metadata.has_value()) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
+    m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
+    m_global_metadata_db->update_metadata_for_files(
+            m_id_as_string,
+            m_file_metadata_for_global_update
+    );
+    m_global_metadata_db->close();
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this

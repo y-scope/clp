@@ -7,10 +7,14 @@
 #include <set>
 
 #include <boost/url.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
+#include <string_utils/string_utils.hpp>
 
+#if CLP_BUILD_CLP_S_ENABLE_CURL
+    #include "../clp/NetworkReader.hpp"
+#endif
 #include "archive_constants.hpp"
 
 using std::string;
@@ -149,6 +153,65 @@ bool FileUtils::get_last_non_empty_path_component(std::string_view const path, s
     return false;
 }
 
+#if CLP_BUILD_CLP_S_ENABLE_CURL
+auto
+NetworkUtils::check_and_log_curl_error(std::string_view path, clp::ReaderInterface const* reader)
+        -> bool {
+    auto const* network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
+    if (nullptr == network_reader) {
+        return false;
+    }
+    if (auto const curl_error_info = network_reader->get_curl_error_info();
+        curl_error_info.has_value())
+    {
+        SPDLOG_ERROR(
+                "Encountered curl error while reading {} - Code: {} - Message: {}",
+                path,
+                static_cast<int64_t>(curl_error_info->code()),
+                curl_error_info->message()
+        );
+        return true;
+    }
+    return false;
+}
+
+auto NetworkUtils::is_retryable_curl_error(clp::ReaderInterface const* reader) -> bool {
+    auto const* network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
+    if (nullptr == network_reader) {
+        return false;
+    }
+    auto const curl_error_info = network_reader->get_curl_error_info();
+    if (false == curl_error_info.has_value()) {
+        return false;
+    }
+    auto const code{curl_error_info->code()};
+    // NOTE: CURLE_HTTP_RETURNED_ERROR (22) triggers for HTTP errors >= 400 (both 4xx and 5xx)
+    // when CURLOPT_FAILONERROR is enabled. We treat it as retryable since we cannot distinguish
+    // server errors (5xx) from client errors (4xx) without the HTTP response code. In practice,
+    // the most common errors are transient S3 503/500 responses.
+    //
+    // CURLE_SSL_CONNECT_ERROR (35): SSL connection reset by peer
+    // CURLE_GOT_NOTHING (52): Empty reply from server
+    // CURLE_RECV_ERROR (56): Failure in receiving network data
+    // CURLE_OPERATION_TIMEDOUT (28): Operation timed out
+    return CURLE_HTTP_RETURNED_ERROR == code || CURLE_SSL_CONNECT_ERROR == code
+           || CURLE_GOT_NOTHING == code || CURLE_RECV_ERROR == code
+           || CURLE_OPERATION_TIMEDOUT == code;
+}
+#else
+auto NetworkUtils::check_and_log_curl_error(
+        [[maybe_unused]] std::string_view path,
+        [[maybe_unused]] clp::ReaderInterface const* reader
+) -> bool {
+    return false;
+}
+
+auto NetworkUtils::is_retryable_curl_error([[maybe_unused]] clp::ReaderInterface const* reader)
+        -> bool {
+    return false;
+}
+#endif
+
 bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& name) {
     auto parsed_result = boost::urls::parse_uri(uri);
     if (false == parsed_result.has_value()) {
@@ -163,424 +226,18 @@ bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& n
     return true;
 }
 
-bool StringUtils::get_bounds_of_next_var(string const& msg, size_t& begin_pos, size_t& end_pos) {
-    auto const msg_length = msg.length();
-    if (end_pos >= msg_length) {
-        return false;
+void SimdJsonStringEscaper::escape(std::string& destination, std::string_view const source) {
+    m_builder.clear();
+    m_builder.escape_and_append(source);
+
+    std::string_view escaped_source;
+    auto const status = m_builder.view().get(escaped_source);
+    if (simdjson::SUCCESS == status) {
+        destination.append(escaped_source);
+        return;
     }
 
-    while (true) {
-        begin_pos = end_pos;
-        // Find next non-delimiter
-        for (; begin_pos < msg_length; ++begin_pos) {
-            if (false == is_delim(msg[begin_pos])) {
-                break;
-            }
-        }
-        if (msg_length == begin_pos) {
-            // Early exit for performance
-            return false;
-        }
-
-        bool contains_decimal_digit = false;
-        bool contains_alphabet = false;
-
-        // Find next delimiter
-        end_pos = begin_pos;
-        for (; end_pos < msg_length; ++end_pos) {
-            char c = msg[end_pos];
-            if (is_decimal_digit(c)) {
-                contains_decimal_digit = true;
-            } else if (is_alphabet(c)) {
-                contains_alphabet = true;
-            } else if (is_delim(c)) {
-                break;
-            }
-        }
-
-        // Treat token as variable if:
-        // - it contains a decimal digit, or
-        // - it's directly preceded by an equals sign and contains an alphabet, or
-        // - it could be a multi-digit hex value
-        if (contains_decimal_digit
-            || (begin_pos > 0 && '=' == msg[begin_pos - 1] && contains_alphabet)
-            || could_be_multi_digit_hex_value(msg, begin_pos, end_pos))
-        {
-            break;
-        }
-    }
-
-    return (msg_length != begin_pos);
-}
-
-size_t StringUtils::find_first_of(
-        string const& haystack,
-        char const* needles,
-        size_t search_start_pos,
-        size_t& needle_ix
-) {
-    size_t haystack_length = haystack.length();
-    size_t needles_length = strlen(needles);
-    for (size_t i = search_start_pos; i < haystack_length; ++i) {
-        for (needle_ix = 0; needle_ix < needles_length; ++needle_ix) {
-            if (haystack[i] == needles[needle_ix]) {
-                return i;
-            }
-        }
-    }
-
-    return string::npos;
-}
-
-string StringUtils::replace_characters(
-        char const* characters_to_escape,
-        char const* replacement_characters,
-        string const& value,
-        bool escape
-) {
-    string new_value;
-    size_t search_start_pos = 0;
-    while (true) {
-        size_t replace_char_ix;
-        size_t char_to_replace_pos
-                = find_first_of(value, characters_to_escape, search_start_pos, replace_char_ix);
-        if (string::npos == char_to_replace_pos) {
-            new_value.append(value, search_start_pos, string::npos);
-            break;
-        } else {
-            new_value.append(value, search_start_pos, char_to_replace_pos - search_start_pos);
-            if (escape) {
-                new_value += "\\";
-            }
-            new_value += replacement_characters[replace_char_ix];
-            search_start_pos = char_to_replace_pos + 1;
-        }
-    }
-    return new_value;
-}
-
-void StringUtils::to_lower(string& str) {
-    std::transform(str.cbegin(), str.cend(), str.begin(), [](unsigned char c) {
-        return std::tolower(c);
-    });
-}
-
-bool StringUtils::is_wildcard(char c) {
-    static constexpr char cWildcards[] = "?*";
-    for (size_t i = 0; i < strlen(cWildcards); ++i) {
-        if (cWildcards[i] == c) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool StringUtils::has_unescaped_wildcards(std::string const& str) {
-    for (size_t i = 0; i < str.size(); ++i) {
-        if ('*' == str[i] || '?' == str[i]) {
-            return true;
-        }
-        if ('\\' == str[i]) {
-            ++i;
-        }
-    }
-    return false;
-}
-
-string StringUtils::clean_up_wildcard_search_string(string_view str) {
-    string cleaned_str;
-
-    bool is_escaped = false;
-    auto str_end = str.cend();
-    for (auto current = str.cbegin(); current != str_end;) {
-        auto c = *current;
-        if (is_escaped) {
-            is_escaped = false;
-
-            if (is_wildcard(c) || '\\' == c) {
-                // Keep escaping if c is a wildcard character or an escape character
-                cleaned_str += '\\';
-            }
-            cleaned_str += c;
-            ++current;
-        } else if ('*' == c) {
-            cleaned_str += c;
-
-            // Skip over all '*' to find the next non-'*'
-            do {
-                ++current;
-            } while (current != str_end && '*' == *current);
-        } else {
-            if ('\\' == c) {
-                is_escaped = true;
-            } else {
-                cleaned_str += c;
-            }
-            ++current;
-        }
-    }
-
-    return cleaned_str;
-}
-
-bool StringUtils::advance_tame_to_next_match(
-        char const*& tame_current,
-        char const*& tame_bookmark,
-        char const* tame_end,
-        char const*& wild_current,
-        char const*& wild_bookmark
-) {
-    auto w = *wild_current;
-    if ('?' != w) {
-        // No need to check for '*' since the caller ensures wild doesn't
-        // contain consecutive '*'
-
-        // Handle escaped characters
-        if ('\\' == w) {
-            ++wild_current;
-            // This is safe without a bounds check since this the caller
-            // ensures there are no dangling escape characters
-            w = *wild_current;
-        }
-
-        // Advance tame_current until it matches wild_current
-        while (true) {
-            if (tame_end == tame_current) {
-                // Wild group is longer than last group in tame, so
-                // can't match
-                // e.g. "*abc" doesn't match "zab"
-                return false;
-            }
-            auto t = *tame_current;
-            if (t == w) {
-                break;
-            }
-            ++tame_current;
-        }
-    }
-
-    tame_bookmark = tame_current;
-
-    return true;
-}
-
-bool
-StringUtils::wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) {
-    if (case_sensitive_match) {
-        return wildcard_match_unsafe_case_sensitive(tame, wild);
-    } else {
-        // We convert to lowercase (rather than uppercase) anticipating that
-        // callers use lowercase more frequently, so little will need to change.
-        string lowercase_tame(tame);
-        to_lower(lowercase_tame);
-        string lowercase_wild(wild);
-        to_lower(lowercase_wild);
-        return wildcard_match_unsafe_case_sensitive(lowercase_tame, lowercase_wild);
-    }
-}
-
-/**
- * The algorithm basically works as follows:
- * Given a wild string "*abc*def*ghi*", it can be broken into groups of
- * characters delimited by one or more '*' characters. The goal of the
- * algorithm is then to determine whether the tame string contains each of
- * those groups in the same order.
- *
- * Thus, the algorithm:
- * 1. searches for the start of one of these groups in wild,
- * 2. searches for a group in tame starting with the same character, and then
- * 3. checks if the two match. If not, the search repeats with the next group in
- *    tame.
- */
-bool StringUtils::wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
-    auto const tame_length = tame.length();
-    auto const wild_length = wild.length();
-    char const* tame_current = tame.data();
-    char const* wild_current = wild.data();
-    char const* tame_bookmark = nullptr;
-    char const* wild_bookmark = nullptr;
-    char const* tame_end = tame_current + tame_length;
-    char const* wild_end = wild_current + wild_length;
-
-    // Handle wild or tame being empty
-    if (0 == wild_length) {
-        return 0 == tame_length;
-    } else {
-        if (0 == tame_length) {
-            return "*" == wild;
-        }
-    }
-
-    char w;
-    char t;
-    bool is_escaped = false;
-    while (true) {
-        w = *wild_current;
-        if ('*' == w) {
-            ++wild_current;
-            if (wild_end == wild_current) {
-                // Trailing '*' means everything remaining in tame will match
-                return true;
-            }
-
-            // Set wild and tame bookmarks
-            wild_bookmark = wild_current;
-            if (!advance_tame_to_next_match(
-                        tame_current,
-                        tame_bookmark,
-                        tame_end,
-                        wild_current,
-                        wild_bookmark
-                ))
-            {
-                return false;
-            }
-        } else {
-            // Handle escaped characters
-            if ('\\' == w) {
-                is_escaped = true;
-                ++wild_current;
-                // This is safe without a bounds check since this the caller
-                // ensures there are no dangling escape characters
-                w = *wild_current;
-            }
-
-            // Handle a mismatch
-            t = *tame_current;
-            if (false == ((false == is_escaped && '?' == w) || t == w)) {
-                if (nullptr == wild_bookmark) {
-                    // No bookmark to return to
-                    return false;
-                }
-
-                wild_current = wild_bookmark;
-                tame_current = tame_bookmark + 1;
-                if (!advance_tame_to_next_match(
-                            tame_current,
-                            tame_bookmark,
-                            tame_end,
-                            wild_current,
-                            wild_bookmark
-                    ))
-                {
-                    return false;
-                }
-            }
-        }
-
-        ++tame_current;
-        ++wild_current;
-
-        // Handle reaching the end of tame or wild
-        if (tame_end == tame_current) {
-            return (wild_end == wild_current
-                    || ('*' == *wild_current && (wild_current + 1) == wild_end));
-        } else {
-            if (wild_end == wild_current) {
-                if (nullptr == wild_bookmark) {
-                    // No bookmark to return to
-                    return false;
-                } else {
-                    wild_current = wild_bookmark;
-                    tame_current = tame_bookmark + 1;
-                    if (!advance_tame_to_next_match(
-                                tame_current,
-                                tame_bookmark,
-                                tame_end,
-                                wild_current,
-                                wild_bookmark
-                        ))
-                    {
-                        return false;
-                    }
-                }
-            }
-        }
-    }
-}
-
-bool StringUtils::convert_string_to_int64(std::string_view raw, int64_t& converted) {
-    auto raw_end = raw.cend();
-    auto result = std::from_chars(raw.cbegin(), raw_end, converted);
-    if (raw_end != result.ptr) {
-        return false;
-    } else {
-        return result.ec == std::errc();
-    }
-}
-
-bool StringUtils::convert_string_to_double(std::string const& raw, double& converted) {
-    if (raw.empty()) {
-        // Can't convert an empty string
-        return false;
-    }
-
-    char const* c_str = raw.c_str();
-    char* end_ptr;
-    // Reset errno so we can detect a new error
-    errno = 0;
-    double raw_as_double = strtod(c_str, &end_ptr);
-    if (ERANGE == errno || (end_ptr - c_str) < raw.length()) {
-        return false;
-    }
-    converted = raw_as_double;
-    return true;
-}
-
-bool StringUtils::tokenize_column_descriptor(
-        std::string const& descriptor,
-        std::vector<std::string>& tokens
-) {
-    std::string cur_tok;
-    bool escaped{false};
-    for (size_t i = 0; i < descriptor.size(); ++i) {
-        if (false == escaped) {
-            if ('\\' == descriptor[i]) {
-                escaped = true;
-            } else if ('.' == descriptor[i]) {
-                if (cur_tok.empty()) {
-                    return false;
-                }
-                std::string unescaped_token;
-                if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
-                    tokens.push_back(unescaped_token);
-                    cur_tok.clear();
-                } else {
-                    return false;
-                }
-            } else {
-                cur_tok.push_back(descriptor[i]);
-            }
-            continue;
-        }
-
-        escaped = false;
-        switch (descriptor[i]) {
-            case '.':
-                cur_tok.push_back('.');
-                break;
-            default:
-                cur_tok.push_back('\\');
-                cur_tok.push_back(descriptor[i]);
-                break;
-        }
-    }
-
-    if (escaped) {
-        return false;
-    }
-
-    if (cur_tok.empty()) {
-        return false;
-    }
-
-    std::string unescaped_token;
-    if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
-        tokens.push_back(unescaped_token);
-    } else {
-        return false;
-    }
-    return true;
+    StringUtils::escape_json_string(destination, source);
 }
 
 void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
@@ -635,143 +292,5 @@ void StringUtils::escape_json_string(std::string& destination, std::string_view 
         }
     }
     append_unescaped_slice(source.size());
-}
-
-namespace {
-/**
- * Converts a four byte hex sequence to utf8. We perform the conversion in this cumbersome way
- * because c++20 deprecates most of the much more convenient std::codecvt utilities.
- */
-bool convert_four_byte_hex_to_utf8(std::string_view const hex, std::string& destination) {
-    std::string buf = "\"\\u";
-    buf += hex;
-    buf.push_back('"');
-    buf.reserve(buf.size() + simdjson::SIMDJSON_PADDING);
-    simdjson::ondemand::parser parser;
-    auto value = parser.iterate(buf);
-    try {
-        if (false == value.is_scalar()) {
-            return false;
-        }
-
-        if (simdjson::ondemand::json_type::string != value.type()) {
-            return false;
-        }
-
-        std::string_view unescaped_utf8 = value.get_string(false);
-        destination.append(unescaped_utf8);
-    } catch (std::exception const& e) {
-        return false;
-    }
-    return true;
-}
-}  // namespace
-
-bool StringUtils::unescape_kql_value(std::string const& value, std::string& unescaped) {
-    return unescape_kql_internal(value, unescaped, true);
-}
-
-bool StringUtils::unescape_kql_internal(
-        std::string const& value,
-        std::string& unescaped,
-        bool is_value
-) {
-    bool escaped{false};
-    for (size_t i = 0; i < value.size(); ++i) {
-        if (false == escaped) {
-            if ('\\' == value[i]) {
-                escaped = true;
-            } else {
-                unescaped.push_back(value[i]);
-            }
-            continue;
-        }
-
-        escaped = false;
-        switch (value[i]) {
-            case '\\':
-                unescaped.append("\\\\");
-                break;
-            case '"':
-                unescaped.push_back('"');
-                break;
-            case 't':
-                unescaped.push_back('\t');
-                break;
-            case 'r':
-                unescaped.push_back('\r');
-                break;
-            case 'n':
-                unescaped.push_back('\n');
-                break;
-            case 'b':
-                unescaped.push_back('\b');
-                break;
-            case 'f':
-                unescaped.push_back('\f');
-                break;
-            case 'u': {
-                size_t last_char_in_codepoint = i + 4;
-                if (value.size() <= last_char_in_codepoint) {
-                    return false;
-                }
-
-                auto four_byte_hex = std::string_view{value}.substr(i + 1, 4);
-                i += 4;
-
-                std::string tmp;
-                if (false == convert_four_byte_hex_to_utf8(four_byte_hex, tmp)) {
-                    return false;
-                }
-
-                // Make sure unicode escape sequences are always treated as literal characters
-                if ("\\" == tmp) {
-                    unescaped.append("\\\\");
-                } else if ("?" == tmp && is_value) {
-                    unescaped.append("\\?");
-                } else if ("*" == tmp) {
-                    unescaped.append("\\*");
-                } else {
-                    unescaped.append(tmp);
-                }
-                break;
-            }
-            case '{':
-                unescaped.push_back('{');
-                break;
-            case '}':
-                unescaped.push_back('}');
-                break;
-            case '(':
-                unescaped.push_back('(');
-                break;
-            case ')':
-                unescaped.push_back(')');
-                break;
-            case '<':
-                unescaped.push_back('<');
-                break;
-            case '>':
-                unescaped.push_back('>');
-                break;
-            case '*':
-                unescaped.append("\\*");
-                break;
-            case '?':
-                if (is_value) {
-                    unescaped.append("\\?");
-                } else {
-                    unescaped.push_back('?');
-                }
-                break;
-            default:
-                return false;
-        }
-    }
-
-    if (escaped) {
-        return false;
-    }
-    return true;
 }
 }  // namespace clp_s

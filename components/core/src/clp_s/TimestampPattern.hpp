@@ -11,7 +11,7 @@
 #include <utility>
 
 #include "Defs.hpp"
-#include "FileWriter.hpp"
+#include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
@@ -70,27 +70,6 @@ public:
               m_format(std::move(format)) {}
 
     // Methods
-    /**
-     * Static initializer for class. This must be called before using the class.
-     */
-    static void init();
-
-    /**
-     * Searches for a known timestamp pattern which can parse the timestamp from the given line, and
-     * if found, parses the timestamp
-     * @param line
-     * @param timestamp Parsed timestamp
-     * @param timestamp_begin_pos
-     * @param timestamp_end_pos
-     * @return pointer to the timestamp pattern if found, nullptr otherwise
-     */
-    static TimestampPattern const* search_known_ts_patterns(
-            std::string_view line,
-            epochtime_t& timestamp,
-            size_t& timestamp_begin_pos,
-            size_t& timestamp_end_pos
-    );
-
     /**
      * Gets the timestamp pattern's format string
      * @return See description

@@ -1,0 +1,56 @@
+services:
+  presto-coordinator:
+    image: "ghcr.io/y-scope/presto/coordinator:${CLP_PRESTO_COORDINATOR_IMAGE_TAG:-clp-v0.10.0}"
+    entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
+    env_file:
+      - ".env"
+      - "coordinator-common.env"
+      - "coordinator.env"
+    volumes:
+      - "./coordinator/config-template:/configs:ro"
+      - "./coordinator/scripts:/scripts:ro"
+      - "coordinator-config:/opt/presto-server/etc"
+    networks:
+      - "clp-package"
+    ports:
+      - "8889:8080"
+    healthcheck:
+      test:
+        - "CMD"
+        - "curl"
+        - "-f"
+        - "${PRESTO_COORDINATOR_CONFIGPROPERTIES_DISCOVERY_URI}/v1/info"
+      interval: "10s"
+      retries: 30
+
+  presto-worker:
+    image: >-
+      ghcr.io/y-scope/presto/prestissimo-worker:${CLP_PRESTO_WORKER_IMAGE_TAG:-clp-v0.10.0-fix.1}
+    depends_on:
+      presto-coordinator:
+        condition: "service_healthy"
+    entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
+    env_file:
+      - ".env"
+      - "coordinator-common.env"
+      - "worker.env"
+    volumes:
+      - "${CLP_ARCHIVES_DIR:-empty}:/var/data/archives:ro"
+      - "${CLP_STAGED_ARCHIVES_DIR:-empty}:/var/data/staged-archives:ro"
+      - "./worker/config-template:/configs:ro"
+      - "./worker/scripts:/scripts:ro"
+      - "worker-config:/opt/presto-server/etc"
+    networks:
+      - "clp-package"
+
+volumes:
+  # Dummy volume to use when a bind mount is not desired.
+  empty:
+
+  coordinator-config:
+  worker-config:
+
+networks:
+  clp-package:
+    name: "${CLP_PACKAGE_NETWORK_NAME:-clp-package_default}"
+    external: true

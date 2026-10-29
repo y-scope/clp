@@ -1,20 +1,21 @@
 #include "FileCompressor.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
+#include <memory>
 #include <set>
+#include <utility>
 
 #include <archive_entry.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
+#include "../BufferedReader.hpp"
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ir/types.hpp"
 #include "../ir/utils.hpp"
-#include "../LogSurgeonReader.hpp"
-#include "../Profiler.hpp"
 #include "../streaming_archive/writer/utils.hpp"
 #include "../utf8_utils.hpp"
 #include "utils.hpp"
@@ -27,11 +28,6 @@ using clp::ParsedMessage;
 using clp::streaming_archive::writer::split_archive;
 using clp::streaming_archive::writer::split_file;
 using clp::streaming_archive::writer::split_file_and_archive;
-using log_surgeon::LogEventView;
-using log_surgeon::Reader;
-using log_surgeon::ReaderParser;
-using std::cout;
-using std::endl;
 using std::set;
 using std::string;
 using std::vector;
@@ -113,18 +109,14 @@ bool FileCompressor::compress_file(
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
         size_t target_encoded_file_size,
         FileToCompress const& file_to_compress,
-        streaming_archive::writer::Archive& archive_writer,
-        bool use_heuristic
+        streaming_archive::writer::Archive& archive_writer
 ) {
-    std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
+    PROFILE_SCOPE("compress.parse_log_file");
 
-    PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
-
-    m_file_reader.open(file_to_compress.get_path());
+    BufferedReader buffered_file_reader{std::make_unique<FileReader>(file_to_compress.get_path())};
 
     // Check that file is UTF-8 encoded
-    if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
+    if (auto error_code = buffered_file_reader.try_refill_buffer_if_empty();
         ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
     {
         if (ErrorCode_errno == error_code) {
@@ -144,31 +136,19 @@ bool FileCompressor::compress_file(
     }
     char const* utf8_validation_buf{nullptr};
     size_t peek_size{0};
-    m_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
+    buffered_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
     bool succeeded = true;
     auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
     if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
-        if (use_heuristic) {
-            parse_and_encode_with_heuristic(
-                    target_data_size_of_dicts,
-                    archive_user_config,
-                    target_encoded_file_size,
-                    file_to_compress.get_path_for_compression(),
-                    file_to_compress.get_group_id(),
-                    archive_writer,
-                    m_file_reader
-            );
-        } else {
-            parse_and_encode_with_library(
-                    target_data_size_of_dicts,
-                    archive_user_config,
-                    target_encoded_file_size,
-                    file_to_compress.get_path_for_compression(),
-                    file_to_compress.get_group_id(),
-                    archive_writer,
-                    m_file_reader
-            );
-        }
+        parse_and_encode(
+                target_data_size_of_dicts,
+                archive_user_config,
+                target_encoded_file_size,
+                file_to_compress.get_path_for_compression(),
+                file_to_compress.get_group_id(),
+                archive_writer,
+                buffered_file_reader
+        );
     } else {
         if (false
             == try_compressing_as_archive(
@@ -177,23 +157,17 @@ bool FileCompressor::compress_file(
                     target_encoded_file_size,
                     file_to_compress,
                     archive_writer,
-                    use_heuristic
+                    buffered_file_reader
             ))
         {
             succeeded = false;
         }
     }
 
-    m_file_reader.close();
-
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
-    PROFILER_SPDLOG_INFO("Done parsing {}", file_name)
-
     return succeeded;
 }
 
-void FileCompressor::parse_and_encode_with_library(
+auto FileCompressor::parse_and_encode(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
         size_t target_encoded_file_size,
@@ -201,41 +175,7 @@ void FileCompressor::parse_and_encode_with_library(
         group_id_t group_id,
         streaming_archive::writer::Archive& archive_writer,
         ReaderInterface& reader
-) {
-    archive_writer.m_target_data_size_of_dicts = target_data_size_of_dicts;
-    archive_writer.m_archive_user_config = archive_user_config;
-    archive_writer.m_path_for_compression = path_for_compression;
-    archive_writer.m_group_id = group_id;
-    archive_writer.m_target_encoded_file_size = target_encoded_file_size;
-    // Open compressed file
-    archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator());
-    archive_writer.m_old_ts_pattern = nullptr;
-    LogSurgeonReader log_surgeon_reader(reader);
-    m_reader_parser->reset_and_set_reader(log_surgeon_reader);
-    while (false == m_reader_parser->done()) {
-        if (log_surgeon::ErrorCode err{m_reader_parser->parse_next_event()};
-            log_surgeon::ErrorCode::Success != err)
-        {
-            SPDLOG_ERROR("Parsing Failed");
-            throw(std::runtime_error("Parsing Failed"));
-        }
-        LogEventView const& log_view = m_reader_parser->get_log_parser().get_log_event_view();
-        archive_writer.write_msg_using_schema(log_view);
-    }
-    close_file_and_append_to_segment(archive_writer);
-    // archive_writer_config needs to persist between files
-    archive_user_config = archive_writer.m_archive_user_config;
-}
-
-void FileCompressor::parse_and_encode_with_heuristic(
-        size_t target_data_size_of_dicts,
-        streaming_archive::writer::Archive::UserConfig& archive_user_config,
-        size_t target_encoded_file_size,
-        string const& path_for_compression,
-        group_id_t group_id,
-        streaming_archive::writer::Archive& archive_writer,
-        ReaderInterface& reader
-) {
+) -> void {
     m_parsed_message.clear();
 
     // Open compressed file
@@ -274,14 +214,14 @@ bool FileCompressor::try_compressing_as_archive(
         size_t target_encoded_file_size,
         FileToCompress const& file_to_compress,
         streaming_archive::writer::Archive& archive_writer,
-        bool use_heuristic
+        ReaderInterface& file_reader
 ) {
     auto file_boost_path = boost::filesystem::path(file_to_compress.get_path_for_compression());
     auto parent_boost_path = file_boost_path.parent_path();
 
     // Determine path without extension (used if file is a single compressed file, e.g., syslog.gz
     // -> syslog)
-    std::string filename_if_compressed;
+    string filename_if_compressed;
     if (file_boost_path.has_stem()) {
         filename_if_compressed = file_boost_path.stem().string();
     } else {
@@ -289,7 +229,7 @@ bool FileCompressor::try_compressing_as_archive(
     }
 
     // Check if it's an archive
-    auto error_code = m_libarchive_reader.try_open(m_file_reader, filename_if_compressed);
+    auto error_code = m_libarchive_reader.try_open(file_reader, filename_if_compressed);
     if (ErrorCode_Success != error_code) {
         SPDLOG_ERROR(
                 "Cannot compress {} - failed to open with libarchive.",
@@ -363,32 +303,20 @@ bool FileCompressor::try_compressing_as_archive(
         auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
         if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
             auto boost_path_for_compression = parent_boost_path / file_path;
-            if (use_heuristic) {
-                parse_and_encode_with_heuristic(
-                        target_data_size_of_dicts,
-                        archive_user_config,
-                        target_encoded_file_size,
-                        boost_path_for_compression.string(),
-                        file_to_compress.get_group_id(),
-                        archive_writer,
-                        m_libarchive_file_reader
-                );
-            } else {
-                parse_and_encode_with_library(
-                        target_data_size_of_dicts,
-                        archive_user_config,
-                        target_encoded_file_size,
-                        boost_path_for_compression.string(),
-                        file_to_compress.get_group_id(),
-                        archive_writer,
-                        m_libarchive_file_reader
-                );
-            }
+            parse_and_encode(
+                    target_data_size_of_dicts,
+                    archive_user_config,
+                    target_encoded_file_size,
+                    boost_path_for_compression.string(),
+                    file_to_compress.get_group_id(),
+                    archive_writer,
+                    m_libarchive_file_reader
+            );
         } else if (has_ir_stream_magic_number({utf8_validation_buf, peek_size})) {
             // Remove .clp suffix if found
             static constexpr char cIrStreamExtension[] = ".clp";
             if (boost::iends_with(file_path, cIrStreamExtension)) {
-                file_path.resize(file_path.length() - strlen(cIrStreamExtension));
+                file_path.resize(file_path.length() - std::strlen(cIrStreamExtension));
             }
             auto boost_path_for_compression = parent_boost_path / file_path;
 
@@ -433,12 +361,18 @@ bool FileCompressor::compress_ir_stream(
         streaming_archive::writer::Archive& archive_writer,
         ReaderInterface& reader
 ) {
-    bool uses_four_byte_encoding{false};
-    auto ir_error_code = ffi::ir_stream::get_encoding_type(reader, uses_four_byte_encoding);
-    if (ffi::ir_stream::IRErrorCode_Success != ir_error_code) {
-        SPDLOG_ERROR("Cannot compress {}, IR error={}", path, static_cast<int>(ir_error_code));
+    auto const encoding_type_result{ffi::ir_stream::get_encoding_type(reader)};
+    if (encoding_type_result.has_error()) {
+        SPDLOG_ERROR(
+                "Cannot compress {}, IR error={}",
+                path,
+                encoding_type_result.error().message()
+        );
         return false;
     }
+    bool const uses_four_byte_encoding{
+            ffi::ir_stream::EncodingType::FourByte == encoding_type_result.value()
+    };
 
     try {
         std::error_code error_code{};
@@ -530,7 +464,7 @@ std::error_code FileCompressor::compress_ir_stream_by_encoding(
         auto result = log_event_deserializer.deserialize_log_event();
         if (result.has_error()) {
             auto error = result.error();
-            if (std::errc::no_message_available != error) {
+            if (std::errc::no_message != error) {
                 error_code = error;
             }
             break;
