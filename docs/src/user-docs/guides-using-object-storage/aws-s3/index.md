@@ -103,11 +103,14 @@ Profile configurations are stored in your AWS config directory (typically `~/.aw
 clp-json can authenticate using [long-term IAM user credentials](#long-term-iam-user-credentials)
 specified through the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
-#### EC2 instance IAM roles
+#### Default credential provider chain
 
-clp-json can authenticate using IAM roles attached to an EC2 instance (that CLP is hosted on).
+clp-json can authenticate using the AWS SDK's default credential provider chain, which automatically
+discovers credentials from multiple sources in priority order. This includes:
 
-Follow [this guide][aws-ec2-attach-iam-role] to attach an IAM role to an instance.
+* [IRSA (IAM Roles for Service Accounts)](eks-irsa-setup.md) web identity tokens (on Amazon EKS)
+* Container credentials (on Amazon ECS)
+* EC2 instance IAM roles (follow [this guide][aws-ec2-attach-iam-role] to attach a role)
 
 ## Configuration
 
@@ -151,6 +154,7 @@ Using CLP to compress, search, and view log files from AWS S3.
 
 aws-s3-config
 clp-config
+eks-irsa-setup
 using-clp-with-aws-s3
 :::
 

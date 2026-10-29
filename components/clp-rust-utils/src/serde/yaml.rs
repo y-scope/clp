@@ -14,8 +14,8 @@ use crate::Error;
 /// Returns an [`Error`] if:
 ///
 /// * Forwards [`std::fs::File::open`]'s return values on failure.
-/// * Forwards [`serde_yaml::from_reader`]'s return values on failure.
+/// * Forwards [`yaml_serde::from_reader`]'s return values on failure.
 pub fn from_path<T: DeserializeOwned, P: AsRef<std::path::Path>>(path: P) -> Result<T, Error> {
     let file = std::fs::File::open(path)?;
-    Ok(serde_yaml::from_reader(file)?)
+    Ok(yaml_serde::from_reader(file)?)
 }

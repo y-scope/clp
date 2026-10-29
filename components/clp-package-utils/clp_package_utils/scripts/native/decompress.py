@@ -12,6 +12,7 @@ from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CLP_DEFAULT_DATASET_NAME,
     ClpConfig,
     ClpDbNameType,
     ClpDbUserType,
@@ -36,7 +37,7 @@ from clp_package_utils.general import (
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
     submit_query_job,
-    validate_dataset_exists,
+    validate_datasets_exist,
     wait_for_query_job,
 )
 
@@ -144,11 +145,9 @@ def handle_extract_stream_cmd(
         )
     elif EXTRACT_JSON_CMD == command:
         dataset = parsed_args.dataset
-        if dataset is None:
-            logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
-            return -1
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
         try:
-            validate_dataset_exists(clp_config.database, dataset)
+            validate_datasets_exist(clp_config.database, [dataset])
         except Exception as e:
             logger.error(e)
             return -1

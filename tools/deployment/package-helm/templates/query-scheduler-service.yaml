@@ -1,3 +1,4 @@
+{{- if and .Values.clpConfig.query_scheduler (not .Values.spider.enabled) }}
 apiVersion: "v1"
 kind: "Service"
 metadata:
@@ -13,3 +14,4 @@ spec:
   ports:
     - port: 7000
       targetPort: "query-scheduler"
+{{- end }}

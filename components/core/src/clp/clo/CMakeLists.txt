@@ -27,6 +27,8 @@ set(
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/IrDeserializationError.cpp
+        ../ffi/ir_stream/IrDeserializationError.hpp
         ../ffi/ir_stream/IrSerializationError.cpp
         ../ffi/ir_stream/IrSerializationError.hpp
         ../ffi/ir_stream/utils.cpp
@@ -42,8 +44,6 @@ set(
         ../Grep.hpp
         ../GrepCore.cpp
         ../GrepCore.hpp
-        ../SchemaSearcher.cpp
-        ../SchemaSearcher.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
@@ -53,8 +53,6 @@ set(
         ../ir/parsing.hpp
         ../ir/parsing.inc
         ../ir/types.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryEntryReq.hpp
@@ -67,8 +65,6 @@ set(
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../Platform.hpp
-        ../Profiler.cpp
-        ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
         ../QueryToken.cpp
@@ -82,8 +78,6 @@ set(
         ../SQLiteDB.hpp
         ../SQLitePreparedStatement.cpp
         ../SQLitePreparedStatement.hpp
-        ../Stopwatch.cpp
-        ../Stopwatch.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -168,8 +162,14 @@ set(
         ../../reducer/types.hpp
 )
 
+set(
+        CLP_S_MONGODB_UTILS_SOURCES
+        ../../clp_s/MongoDBUtils.cpp
+        ../../clp_s/MongoDBUtils.hpp
+)
+
 if(CLP_BUILD_EXECUTABLES)
-        add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
+        add_executable(clo ${CLO_SOURCES} ${CLP_S_MONGODB_UTILS_SOURCES} ${REDUCER_SOURCES})
         target_compile_features(clo PRIVATE cxx_std_20)
         target_include_directories(clo
                 PRIVATE
@@ -182,7 +182,6 @@ if(CLP_BUILD_EXECUTABLES)
                 Boost::filesystem Boost::program_options
                 date::date
                 fmt::fmt
-                log_surgeon::log_surgeon
                 ${MONGOCXX_TARGET}
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
@@ -190,6 +189,7 @@ if(CLP_BUILD_EXECUTABLES)
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 ${STD_FS_LIBS}
                 clp::string_utils
+                utils::profiling
                 ystdlib::containers
                 ystdlib::error_handling
                 zstd::libzstd_static

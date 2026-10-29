@@ -90,10 +90,10 @@ def get_credential_env_vars(auth: AwsAuthentication) -> dict[str, str]:
         if aws_credentials is None:
             raise ValueError(f"Failed to authenticate with profile {auth.profile}")
 
-    elif AwsAuthType.ec2 == auth.type:
+    elif AwsAuthType.default == auth.type:
         aws_credentials = _get_session_credentials()
         if aws_credentials is None:
-            raise ValueError("Failed to authenticate with EC2 metadata.")
+            raise ValueError("Failed to authenticate with the default credential provider chain.")
     else:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
@@ -206,7 +206,7 @@ def _create_s3_client(
             region_name=region_code,
             aws_session_token=credentials.session_token,
         )
-    elif AwsAuthType.env_vars == s3_auth.type or AwsAuthType.ec2 == s3_auth.type:
+    elif AwsAuthType.env_vars == s3_auth.type or AwsAuthType.default == s3_auth.type:
         # Use default session which will use environment variables or instance role
         aws_session = boto3.Session(region_name=region_code)
     else:

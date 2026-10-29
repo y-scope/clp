@@ -2,6 +2,7 @@
 #define CLP_S_SEARCH_LITERAL_HPP
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <type_traits>
 

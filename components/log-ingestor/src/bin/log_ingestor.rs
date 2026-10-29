@@ -1,7 +1,9 @@
 use anyhow::Context;
 use clap::Parser;
-use clp_rust_utils::{clp_config::package, serde::yaml};
-use log_ingestor::{ingestion_job_manager::IngestionJobManagerState, routes::create_router};
+use clp_rust_utils::clp_config::package;
+use clp_rust_utils::serde::yaml;
+use log_ingestor::ingestion_job_manager::IngestionJobManagerState;
+use log_ingestor::routes::create_router;
 
 #[derive(Parser)]
 #[command(version, about = "log-ingestor for CLP.")]
@@ -58,6 +60,8 @@ async fn main() -> anyhow::Result<()> {
 
     let (config, credentials) = read_config_and_credentials(&args)?;
     let _guard = clp_rust_utils::logging::set_up_logging("log_ingestor.log");
+
+    let _tel_guard = clp_rust_utils::telemetry::init_telemetry(&config.telemetry)?;
 
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr)

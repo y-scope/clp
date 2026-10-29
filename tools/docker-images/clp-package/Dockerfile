@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM ubuntu:jammy AS base
+ARG UBUNTU_VERSION_CODENAME=jammy
+FROM ubuntu:${UBUNTU_VERSION_CODENAME} AS base
 
 WORKDIR /root
 
@@ -18,12 +19,14 @@ COPY --link --from=base / /
 
 ARG UID=1000
 ENV CLP_HOME="/opt/clp"
-ENV LD_LIBRARY_PATH="${CLP_HOME}/lib" \
-    PATH="${CLP_HOME}/sbin:${CLP_HOME}/bin:${PATH}" \
+ENV PATH="${CLP_HOME}/sbin:${CLP_HOME}/bin:${PATH}" \
     PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
     USER="clp-user"
 
-RUN useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
+RUN existing_user="$(getent passwd "${UID}" | cut --delimiter=: --fields=1)" || true; \
+    [ -z "${existing_user}" ] || userdel --remove "${existing_user}" \
+    || { echo "ERROR: Cannot delete user '${existing_user}' that occupies UID ${UID}"; exit 1; }; \
+    useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
 USER ${USER}
 WORKDIR ${CLP_HOME}
 
@@ -35,12 +38,10 @@ COPY --link --chown=${UID} ./build/core/clp-s bin/
 COPY --link --chown=${UID} ./build/core/indexer bin/
 COPY --link --chown=${UID} ./build/core/log-converter bin/
 COPY --link --chown=${UID} ./build/core/reducer-server bin/
-COPY --link --chown=${UID} ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* \
-    lib/
-COPY --link --chown=${UID} ./build/spider/spider-build/src/spider/spider_scheduler bin/
-COPY --link --chown=${UID} ./build/spider/spider-build/src/spider/spider_worker bin/
-COPY --link --chown=${UID} ./build/nodejs-22/bin/node bin/node-22
+COPY --link --chown=${UID} ./build/nodejs/bin/node bin/node
 COPY --link --chown=${UID} ./build/python-libs/ lib/python3/site-packages/
 COPY --link --chown=${UID} ./build/rust-targets/release/api_server bin/
+COPY --link --chown=${UID} ./build/rust-targets/release/compression-coordinator bin/
 COPY --link --chown=${UID} ./build/rust-targets/release/log-ingestor bin/
+COPY --link --chown=${UID} ./build/rust-targets/release/query-coordinator bin/
 COPY --link --chown=${UID} ./build/webui/ var/www/webui/

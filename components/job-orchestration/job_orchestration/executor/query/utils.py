@@ -1,17 +1,23 @@
 import datetime
+import hashlib
+import logging
 import os
 import signal
 import subprocess
 import sys
 from contextlib import closing
-from logging import Logger
 from pathlib import Path
 from typing import Any
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
 from clp_py_utils.sql_adapter import SqlAdapter
 
+from job_orchestration.executor.utils import log_file_contents
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
+
+
+def get_query_hash(query_string: str) -> str:
+    return hashlib.sha256(query_string.encode("utf-8")).hexdigest()
 
 
 def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Path:
@@ -41,7 +47,7 @@ def report_task_failure(
 
 def run_query_task(
     sql_adapter: SqlAdapter,
-    logger: Logger,
+    logger: logging.Logger,
     clp_logs_dir: Path,
     task_command: list[str],
     env_vars: dict[str, str] | None,
@@ -90,14 +96,16 @@ def run_query_task(
     return_code = task_proc.returncode
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
-        logger.error(
-            f"{task_name} task {task_id} failed for job {job_id} - return_code={return_code}"
-        )
+        logger.error("%s task failed - return_code=%s", task_name, return_code)
     else:
         task_status = QueryTaskStatus.SUCCEEDED
-        logger.info(f"{task_name} task {task_id} completed for job {job_id}")
+        logger.info("%s task completed", task_name)
 
     clo_log_file.close()
+    if 0 != return_code:
+        log_file_contents(logger, clo_log_path)
+    else:
+        log_file_contents(logger, clo_log_path, logging.INFO)
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     update_query_task_metadata(
@@ -109,9 +117,6 @@ def run_query_task(
         task_id=task_id,
         duration=duration,
     )
-
-    if QueryTaskStatus.FAILED == task_status:
-        task_result.error_log_path = str(clo_log_path)
 
     return task_result, stdout_data.decode("utf-8")
 

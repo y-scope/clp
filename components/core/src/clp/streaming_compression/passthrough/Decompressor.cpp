@@ -22,7 +22,7 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
                     num_bytes_to_read,
                     m_compressed_data_buf_len - m_decompressed_stream_pos
             );
-            memcpy(buf, &m_compressed_data_buf[m_decompressed_stream_pos], num_bytes_read);
+            std::memcpy(buf, &m_compressed_data_buf[m_decompressed_stream_pos], num_bytes_read);
             break;
         case InputType::ReaderInterface: {
             auto error_code = m_reader->try_read(buf, num_bytes_to_read, num_bytes_read);

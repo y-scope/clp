@@ -72,19 +72,24 @@ To configure CLP for multi-host deployment, you'll need to:
      project) vs. external.
 
      ```yaml
-     bundled:
+     bundled: [
        # Remove services you want to run on specific hosts or use external instances
-       - database      # Remove if running on a dedicated host or using external MySQL-compatible DB
-       - queue         # Remove if running on a dedicated host or using external RabbitMQ
-       - redis         # Remove if running on a dedicated host or using external Redis
-       - results_cache # Remove if running on a dedicated host or using external MongoDB
+       "database",       # Remove if running on a dedicated host or using external MariaDB/MySQL
+       "queue",          # Remove if running on a dedicated host or using external RabbitMQ
+       "redis",          # Remove if running on a dedicated host or using external Redis
+       "results_cache",  # Remove if running on a dedicated host or using external MongoDB
+     ]
      ```
 
    * For each service, set the `host` and `port` fields to the actual hostname/IP and port where you
      plan to run the specific service.
-   * When using local filesystem storage (i.e., not S3), set `logs_input.storage.directory`,
+   * When using local filesystem storage (i.e., not S3), set `logs_input.directory`,
      `archive_output.storage.directory`, and `stream_output.storage.directory` to directories on the
      shared filesystem.
+   * (Optional) set `scheduler_concurrency` under `query_scheduler` to control
+     the size of the process pool used by the query scheduler. Higher
+     concurrency can help improve throughput when many query jobs can be
+     run concurrently in larger clusters.
 
 4. Set up the CLP package's environment:
 
@@ -98,7 +103,7 @@ To configure CLP for multi-host deployment, you'll need to:
    * Create any necessary directories
    * Generate an `.env` file with all necessary environment variables
    * Create `var/log/.clp-config.yaml` (the container-specific configuration file)
-   * Create `var/www/webui/server/dist/settings.json` (the `webui` server's configuration file)
+   * Create `etc/webui/settings.json` (the `webui` server's configuration file)
 
 ### Distributing the set-up package
 
@@ -132,7 +137,7 @@ services.
 
 :::{note}
 For **clp-json + Presto** deployments (`package.storage_engine`: `clp-s` with
-`package.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
+`webui.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
 `reducer` services.
 :::
 
@@ -161,13 +166,13 @@ docker compose \
   up db-table-creator \
     --no-deps
 
-# Start queue (if using Celery)
+# Start queue
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up queue \
     --no-deps --wait
 
-# Start redis (if using Celery)
+# Start redis
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up redis \
@@ -195,12 +200,6 @@ docker compose \
   up compression-scheduler \
     --no-deps --wait
     
-# Start Spider scheduler (optional, only if using Spider)
-docker compose \
-    --project-name "clp-package-$(cat var/log/instance-id)" \
-    up spider-scheduler \
-      --no-deps --wait
-
 # Start query scheduler
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
@@ -241,16 +240,10 @@ docker compose \
 # Worker services (can be started on multiple hosts)
 ################################################################################
 
-# Start compression worker (if using Celery)
+# Start compression worker
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up compression-worker \
-    --no-deps --wait
-    
-# Start Spider compression worker (optional, only if using Spider)
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up spider-compression-worker \
     --no-deps --wait
 
 # Start query worker

@@ -1,8 +1,11 @@
 pub mod s3 {
     use non_empty_string::NonEmptyString;
-    use serde::{Deserialize, Serialize};
+    use serde::Deserialize;
+    use serde::Serialize;
     use thiserror::Error;
     use utoipa::ToSchema;
+
+    use crate::dataset::DatasetName;
 
     #[derive(Error, Debug)]
     pub enum ConfigError {
@@ -26,6 +29,14 @@ pub mod s3 {
             match self {
                 Self::SqsListener(config) => &config.base,
                 Self::S3Scanner(config) => &config.base,
+            }
+        }
+
+        #[must_use]
+        pub const fn as_buffer_config(&self) -> &BufferConfig {
+            match self {
+                Self::SqsListener(config) => &config.buffer_config,
+                Self::S3Scanner(config) => &config.buffer_config,
             }
         }
     }
@@ -52,10 +63,15 @@ pub mod s3 {
         #[schema(value_type = String, min_length = 1)]
         pub endpoint_url: Option<NonEmptyString>,
 
-        /// The dataset to ingest into. Defaults to `None` (which uses the default dataset).
+        /// The dataset to ingest into. Defaults to the default dataset.
         #[serde(default)]
-        #[schema(value_type = String, min_length = 1)]
-        pub dataset: Option<NonEmptyString>,
+        #[schema(
+            value_type = String,
+            min_length = 1,
+            max_length = 44,
+            default = DatasetName::default_name
+        )]
+        pub dataset: DatasetName,
 
         /// The optional key for extracting timestamps from object metadata. Defaults to `None`.
         #[serde(default)]
@@ -72,6 +88,10 @@ pub mod s3 {
     pub struct SqsListenerConfig {
         #[serde(flatten)]
         pub base: BaseConfig,
+
+        /// Per-job ingestion buffer config.
+        #[serde(default)]
+        pub buffer_config: BufferConfig,
 
         /// The SQS queue URL to poll for S3 event notifications. The given queue must be dedicated
         /// to this ingestion job.
@@ -149,6 +169,10 @@ pub mod s3 {
         #[serde(flatten)]
         pub base: BaseConfig,
 
+        /// Per-job ingestion buffer config.
+        #[serde(default)]
+        pub buffer_config: BufferConfig,
+
         /// The scan interval in seconds. Defaults to 30 seconds.
         #[serde(default = "default_scanning_interval_sec")]
         pub scanning_interval_sec: u32,
@@ -158,6 +182,50 @@ pub mod s3 {
         #[serde(default)]
         #[schema(value_type = String, min_length = 1)]
         pub start_after: Option<NonEmptyString>,
+    }
+
+    /// Configuration for buffer behavior.
+    #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+    #[serde(default)]
+    pub struct BufferConfig {
+        /// Size-based flush threshold in bytes.
+        ///
+        /// The buffer is flushed to create a compression job once the total size of buffered
+        /// objects exceeds this threshold.
+        ///
+        /// Defaults to 4 GiB.
+        pub flush_threshold_bytes: u64,
+
+        /// Time-based flush threshold in seconds.
+        ///
+        /// This is a hard timeout. The buffer is flushed to create a compression job when the
+        /// oldest buffered object has remained in the buffer for at least this duration,
+        /// regardless of the total buffered size. The timer is not reset by newly ingested
+        /// objects.
+        ///
+        /// Defaults to 300 seconds (5 minutes).
+        pub timeout_sec: u64,
+
+        /// Capacity of the internal buffer channel.
+        ///
+        /// Defines the maximum number of objects that can be queued before being processed by the
+        /// buffer. Increasing this value may improve throughput at the cost of higher memory
+        /// usage.
+        ///
+        /// Defaults to 16. Must be a positive integer. The behavior for values less than 1 is
+        /// undefined.
+        #[schema(minimum = 1)]
+        pub channel_capacity: usize,
+    }
+
+    impl Default for BufferConfig {
+        fn default() -> Self {
+            Self {
+                flush_threshold_bytes: 4 * 1024 * 1024 * 1024,
+                timeout_sec: 300,
+                channel_capacity: 16,
+            }
+        }
     }
 
     const fn default_unstructured() -> bool {
@@ -174,5 +242,39 @@ pub mod s3 {
 
     const fn default_sqs_wait_time_sec() -> u16 {
         20
+    }
+}
+
+/// Represents the unique identifier for an ingestion job in CLP DB.
+pub type JobId = u64;
+
+#[cfg(test)]
+mod tests {
+    use super::s3::BufferConfig;
+
+    #[test]
+    fn test_buffer_config_partial_override() -> Result<(), serde_json::Error> {
+        let config: BufferConfig = serde_json::from_str(r#"{"timeout_sec": 60}"#)?;
+        let default_config = BufferConfig::default();
+        assert_eq!(config.timeout_sec, 60);
+        assert_eq!(
+            config.flush_threshold_bytes,
+            default_config.flush_threshold_bytes
+        );
+        assert_eq!(config.channel_capacity, default_config.channel_capacity);
+        Ok(())
+    }
+
+    #[test]
+    fn test_buffer_config_empty_object_uses_defaults() -> Result<(), serde_json::Error> {
+        let config: BufferConfig = serde_json::from_str("{}")?;
+        let default_config = BufferConfig::default();
+        assert_eq!(
+            config.flush_threshold_bytes,
+            default_config.flush_threshold_bytes
+        );
+        assert_eq!(config.timeout_sec, default_config.timeout_sec);
+        assert_eq!(config.channel_capacity, default_config.channel_capacity);
+        Ok(())
     }
 }

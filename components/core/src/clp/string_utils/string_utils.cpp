@@ -78,7 +78,7 @@ auto
 find_first_of(string_view haystack, char const* needles, size_t search_start_pos, size_t& needle_ix)
         -> size_t {
     auto const haystack_length = haystack.length();
-    auto const needles_length = strlen(needles);
+    auto const needles_length = std::strlen(needles);
     for (size_t i{search_start_pos}; i < haystack_length; ++i) {
         for (needle_ix = 0; needle_ix < needles_length; ++needle_ix) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)

@@ -19,16 +19,24 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "redis"
     spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "redis"
+        ) | nindent 6 }}
       containers:
         - name: "redis"
-          image: "redis:7.2.4"
-          imagePullPolicy: "Always"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "redis") | quote }}
+          imagePullPolicy: {{ .Values.image.redis.pullPolicy | quote }}
           env:
             - name: "REDIS_PASSWORD"
               valueFrom:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-redis
                   key: "password"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "redis"
+            ) | nindent 10 }}
           ports:
             - name: "redis"
               containerPort: 6379

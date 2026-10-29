@@ -1,9 +1,9 @@
 #include "QueryRunner.hpp"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "../../clp/Defs.h"
@@ -20,6 +20,7 @@
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/SearchUtils.hpp"
+#include "ColumnScan.hpp"
 #include "EvaluateTimestampIndex.hpp"
 
 using clp_s::search::ast::AndExpr;
@@ -108,6 +109,33 @@ void QueryRunner::init(SchemaReader* reader, std::vector<BaseColumnReader*> cons
         auto column_id = column_reader->get_id();
         initialize_reader(column_id, column_reader);
     }
+}
+
+auto QueryRunner::prepare_filter(SchemaReader& reader) -> FilterClass& {
+    m_column_scan.reset();
+    if (EvaluatedValue::Unknown != m_expression_value) {
+        return *this;
+    }
+
+    reader.initialize_filter(*this);
+
+    auto column_scan = ColumnScan::try_create(
+            m_expr,
+            m_basic_readers,
+            m_clp_string_readers,
+            m_var_string_readers,
+            m_timestamp_readers,
+            m_deprecated_datestring_reader,
+            m_expr_clp_query,
+            m_expr_var_match_map,
+            reader.get_num_messages()
+    );
+    if (column_scan.has_value()) {
+        m_column_scan = std::make_unique<ColumnScan>(std::move(column_scan.value()));
+        return *m_column_scan;
+    }
+
+    return *this;
 }
 
 std::string& QueryRunner::get_cached_decompressed_unstructured_array(int32_t column_id) {
@@ -887,7 +915,6 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
 
             // search on log type dictionary
             clp::epochtime_t placeholder_timestamp{};
-            log_surgeon::lexers::ByteLexer placeholder_lexer;
             m_string_query_map.emplace(
                     query_string,
                     clp::GrepCore::process_raw_query(
@@ -896,9 +923,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                             query_string,
                             placeholder_timestamp,
                             placeholder_timestamp,
-                            m_ignore_case,
-                            placeholder_lexer,
-                            true
+                            m_ignore_case
                     )
             );
         }

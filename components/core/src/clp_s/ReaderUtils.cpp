@@ -1,9 +1,11 @@
 #include "ReaderUtils.hpp"
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 
 #include "archive_constants.hpp"
+#include "ErrorCode.hpp"
 
 namespace clp_s {
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) {
@@ -14,29 +16,34 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
             = adaptor.checkout_reader_for_section(constants::cArchiveSchemaTreeFile);
     schema_tree_decompressor.open(*schema_tree_reader, cDecompressorFileReadBufferCapacity);
 
-    size_t num_nodes;
+    uint64_t num_nodes{0};
     auto error_code = schema_tree_decompressor.try_read_numeric_value(num_nodes);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 
     std::string key;
-    for (size_t i = 0; i < num_nodes; i++) {
-        int32_t parent_id;
-        size_t key_length;
-        uint8_t node_type;
+    for (uint64_t i{0}; i < num_nodes; i++) {
+        int32_t parent_id{0};
+        uint64_t key_length_u64{0};
+        uint8_t node_type{0};
 
         error_code = schema_tree_decompressor.try_read_numeric_value(parent_id);
         if (ErrorCodeSuccess != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        error_code = schema_tree_decompressor.try_read_numeric_value(key_length);
+        error_code = schema_tree_decompressor.try_read_numeric_value(key_length_u64);
         if (ErrorCodeSuccess != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        error_code = schema_tree_decompressor.try_read_string(key_length, key);
+        auto const key_length_result{try_uint64_to_size_t(key_length_u64)};
+        if (key_length_result.has_error()) {
+            throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+        }
+
+        error_code = schema_tree_decompressor.try_read_string(key_length_result.value(), key);
         if (ErrorCodeSuccess != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
@@ -87,16 +94,16 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
     auto schema_id_reader = adaptor.checkout_reader_for_section(constants::cArchiveSchemaMapFile);
     schema_id_decompressor.open(*schema_id_reader, cDecompressorFileReadBufferCapacity);
 
-    size_t schema_size;
-    auto error_code = schema_id_decompressor.try_read_numeric_value(schema_size);
+    uint64_t schema_size{0};
+    auto error_code{schema_id_decompressor.try_read_numeric_value(schema_size)};
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 
     // TODO: consider decompressing all schemas into the same buffer and providing access to them
     // via const spans.
-    for (size_t i = 0; i < schema_size; i++) {
-        int32_t schema_id;
+    for (uint64_t i{0}; i < schema_size; i++) {
+        int32_t schema_id{0};
         error_code = schema_id_decompressor.try_read_numeric_value(schema_id);
         if (ErrorCodeSuccess != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);

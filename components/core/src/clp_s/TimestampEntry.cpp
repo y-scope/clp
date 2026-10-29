@@ -1,8 +1,10 @@
 #include "TimestampEntry.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <sstream>
 
+#include "ReaderUtils.hpp"
 #include "search/ast/FilterOperation.hpp"
 #include "Utils.hpp"
 
@@ -47,26 +49,32 @@ void TimestampEntry::write_to_stream(std::stringstream& stream) const {
 }
 
 ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor) {
-    ErrorCode error_code;
+    ErrorCode error_code{ErrorCodeSuccess};
 
-    uint64_t column_len;
-    error_code = decompressor.try_read_numeric_value<uint64_t>(column_len);
+    uint64_t column_len_u64{0};
+    error_code = decompressor.try_read_numeric_value<uint64_t>(column_len_u64);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
 
-    error_code = decompressor.try_read_string(column_len, m_key_name);
+    auto const column_len_result{ReaderUtils::try_uint64_to_size_t(column_len_u64)};
+    if (column_len_result.has_error()) {
+        return ErrorCodeOutOfBounds;
+    }
+
+    error_code = decompressor.try_read_string(column_len_result.value(), m_key_name);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
 
-    uint64_t column_ids_size;
+    uint64_t column_ids_size{0};
     error_code = decompressor.try_read_numeric_value<uint64_t>(column_ids_size);
     if (ErrorCodeSuccess != error_code) {
         return error_code;
     }
-    for (int i = 0; i < column_ids_size; ++i) {
-        int32_t id;
+
+    for (uint64_t i{0}; i < column_ids_size; ++i) {
+        int32_t id{0};
         error_code = decompressor.try_read_numeric_value<int32_t>(id);
         if (ErrorCodeSuccess != error_code) {
             return error_code;
@@ -74,7 +82,6 @@ ErrorCode TimestampEntry::try_read_from_file(ZstdDecompressor& decompressor) {
         m_column_ids.insert(id);
     }
 
-    uint64_t encoding;
     error_code = decompressor.try_read_numeric_value<TimestampEncoding>(m_encoding);
     if (ErrorCodeSuccess != error_code) {
         return error_code;

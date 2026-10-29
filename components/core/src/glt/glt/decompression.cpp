@@ -1,5 +1,6 @@
 #include "decompression.hpp"
 
+#include <cstring>
 #include <iostream>
 
 #include <boost/filesystem/operations.hpp>
@@ -32,7 +33,11 @@ bool decompress(
     auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
     error_code = create_directory(output_dir.parent_path().string(), 0700, true);
     if (ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
+        SPDLOG_ERROR(
+                "Failed to create {} - {}",
+                output_dir.parent_path().c_str(),
+                std::strerror(errno)
+        );
         return false;
     }
 

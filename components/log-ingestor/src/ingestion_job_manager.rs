@@ -1,27 +1,26 @@
 mod clp_ingestion;
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub use clp_ingestion::*;
-use clp_rust_utils::{
-    clp_config::{
-        AwsAuthentication,
-        AwsCredentials,
-        package::{
-            config::{Config as ClpConfig, LogsInput},
-            credentials::Credentials as ClpCredentials,
-        },
-    },
-    job_config::ingestion::s3::{ConfigError, S3IngestionJobConfig, ValidatedSqsListenerConfig},
-};
+use clp_rust_utils::clp_config::AwsAuthentication;
+use clp_rust_utils::clp_config::package::config::Config as ClpConfig;
+use clp_rust_utils::clp_config::package::config::LogsInput;
+use clp_rust_utils::clp_config::package::credentials::Credentials as ClpCredentials;
+use clp_rust_utils::job_config::ingestion::s3::ConfigError;
+use clp_rust_utils::job_config::ingestion::s3::S3IngestionJobConfig;
+use clp_rust_utils::job_config::ingestion::s3::ValidatedSqsListenerConfig;
 use serde::Serialize;
 use tokio::sync::Mutex;
 use utoipa::ToSchema;
 
-use crate::{
-    aws_client_manager::{S3ClientWrapper, SqsClientWrapper},
-    ingestion_job::{IngestionJob, IngestionJobId, IngestionJobState, S3Scanner},
-};
+use crate::aws_client_manager::S3ClientWrapper;
+use crate::aws_client_manager::SqsClientWrapper;
+use crate::ingestion_job::IngestionJob;
+use crate::ingestion_job::IngestionJobId;
+use crate::ingestion_job::IngestionJobState;
+use crate::ingestion_job::S3Scanner;
 
 /// Errors for ingestion job manager operations.
 #[derive(thiserror::Error, Debug)]
@@ -82,10 +81,8 @@ impl IngestionJobManagerState {
         clp_config: ClpConfig,
         clp_credentials: ClpCredentials,
     ) -> anyhow::Result<Self> {
-        let aws_credentials = match &clp_config.logs_input {
-            LogsInput::S3 { config } => match config.aws_authentication.clone() {
-                AwsAuthentication::Credentials { credentials } => credentials,
-            },
+        let aws_authentication = match &clp_config.logs_input {
+            LogsInput::S3 { config } => config.aws_authentication.clone(),
             LogsInput::Fs { .. } => {
                 return Err(anyhow::anyhow!(
                     "Invalid CLP config: Unsupported logs input type. The current implementation \
@@ -99,7 +96,7 @@ impl IngestionJobManagerState {
         let inner = Arc::new(IngestionJobManager {
             job_table: Mutex::new(HashMap::new()),
             clp_db_ingestion_connector,
-            aws_credentials,
+            aws_authentication,
         });
         let ingestion_job_manager = Self { inner };
 
@@ -294,8 +291,7 @@ impl IngestionJobManagerState {
             S3IngestionJobConfig::SqsListener(config) => {
                 let sqs_client_manager = SqsClientWrapper::create(
                     config.base.region.as_ref(),
-                    self.inner.aws_credentials.access_key_id.as_str(),
-                    self.inner.aws_credentials.secret_access_key.as_str(),
+                    &self.inner.aws_authentication,
                 )
                 .await;
                 let validated_config = ValidatedSqsListenerConfig::validate_and_create(config)?;
@@ -310,9 +306,8 @@ impl IngestionJobManagerState {
             S3IngestionJobConfig::S3Scanner(config) => {
                 let s3_client_manager = S3ClientWrapper::create(
                     config.base.region.as_ref(),
-                    self.inner.aws_credentials.access_key_id.as_str(),
-                    self.inner.aws_credentials.secret_access_key.as_str(),
                     config.base.endpoint_url.as_ref(),
+                    &self.inner.aws_authentication,
                 )
                 .await;
                 ingestion_state.start().await?;
@@ -343,7 +338,7 @@ impl IngestionJobManagerState {
 struct IngestionJobManager {
     job_table: Mutex<HashMap<IngestionJobId, IngestionJobTableEntry>>,
     clp_db_ingestion_connector: ClpDbIngestionConnector,
-    aws_credentials: AwsCredentials,
+    aws_authentication: AwsAuthentication,
 }
 
 /// Represents an entry in the ingestion job table.

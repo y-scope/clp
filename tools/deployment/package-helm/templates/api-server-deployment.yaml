@@ -18,7 +18,11 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "api-server"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "apiServer"
+        ) | nindent 6 }}
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 60
       initContainers:
         - {{- include "clp.waitFor" (dict
@@ -26,16 +30,13 @@ spec:
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
-        - {{- include "clp.waitFor" (dict
-            "root" .
-            "type" "job"
-            "name" "results-cache-indices-creator"
-          ) | nindent 10 }}
+        - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "api-server"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
@@ -46,8 +47,14 @@ spec:
                 secretKeyRef:
                   name: {{ include "clp.fullname" . }}-database
                   key: "username"
+            - name: "OTEL_SERVICE_NAME"
+              value: "api-server"
             - name: "RUST_LOG"
               value: "INFO"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "apiServer"
+            ) | nindent 10 }}
           ports:
             - name: "api-server"
               containerPort: 3001
@@ -56,6 +63,9 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
+            {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
@@ -81,6 +91,9 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
+        {{- end }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .

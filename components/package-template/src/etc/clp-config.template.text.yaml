@@ -1,11 +1,30 @@
 # yaml-language-server: $schema=../usr/share/config-schemas/clp-config.schema.json
 
+# Anonymous usage telemetry.
+# See: https://docs.yscope.com/clp/main/user-docs/reference-telemetry
+telemetry:
+  disable: false
+  endpoint: "https://telemetry.yscope.io"
+
 package:
   storage_engine: "clp"
-  query_engine: "clp"
 
-# API server config
-api_server: null
+webui:
+  query_engine: "clp"
+#  host: "localhost"
+#  port: 4000
+#  results_metadata_collection_name: "results-metadata"
+#  rate_limit: 1000
+#  presto_max_num_search_results: 1000
+
+## API server config
+#api_server:
+#  host: "localhost"
+#  port: 3001
+#  query_job_polling:
+#    initial_backoff_ms: 100
+#    max_backoff_ms: 5000
+#  stream_file_extraction_timeout_secs: 270
 
 # log-ingestor is not supported in clp-text
 log_ingestor: null
@@ -23,11 +42,13 @@ log_ingestor: null
 #credentials_file_path: "etc/credentials.yaml"
 #
 ## Remove any bundled services below if you wish to use your own.
-#bundled:
-#  - "database"
-#  - "queue"
-#  - "redis"
-#  - "results_cache"
+#bundled: [
+#  "database",
+#  "queue",
+#  "redis",
+#  "results_cache",
+#  "otel_collector",
+#]
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
@@ -35,17 +56,17 @@ log_ingestor: null
 #  port: 3306
 #  names:
 #    clp: "clp-db"
-#    spider: "spider-db"
 #
 #compression_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
 #  logging_level: "INFO"
-#  type: "celery"  # "celery" or "spider"
+#  telemetry_update_interval_ms: 60000
 #
-#spider_scheduler:
-#  host: "localhost"
-#  port: 6000
-#  logging_level: "INFO"
+## `spider`, `compression_coordinator` and `query_coordinator` are unsupported with CLP Text and
+## must stay `null`.
+#spider: null
+#compression_coordinator: null
+#query_coordinator: null
 #
 #query_scheduler:
 #  host: "localhost"
@@ -54,6 +75,8 @@ log_ingestor: null
 #  max_datasets_per_query: 10  # Set to null to disable the limit
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
+#  scheduler_concurrency: 4
+#  telemetry_update_interval_ms: 60000
 #
 #queue:
 #  host: "localhost"
@@ -80,17 +103,22 @@ log_ingestor: null
 #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
 #  retention_period: 60
 #
+#otel_collector:
+#  host: "localhost"
+#  port: 4318
+#
 #compression_worker:
 #  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
+#  telemetry_update_interval_ms: 60000
 #
 #query_worker:
 #  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
 #
-#webui:
-#  host: "localhost"
-#  port: 4000
-#  results_metadata_collection_name: "results-metadata"
-#  rate_limit: 1000
+
 #
 #mcp_server: null
 #

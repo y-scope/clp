@@ -10,6 +10,7 @@
 #include <spdlog/spdlog.h>
 
 #include <clp_s/timestamp_parser/TimestampParser.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
 void TimestampDictionaryWriter::write(std::stringstream& stream) {
@@ -71,7 +72,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
     )};
     if (false == parsing_result.has_value()) {
         SPDLOG_ERROR("Failed to parse timestamp `{}` against known timestamp patterns.", timestamp);
-        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 
     auto const [epoch_timestamp, pattern] = parsing_result.value();
@@ -84,7 +85,7 @@ auto TimestampDictionaryWriter::ingest_string_timestamp(
                 error.category().name(),
                 error.message()
         );
-        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 
     auto const new_pattern_id{m_next_id++};
@@ -126,7 +127,7 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
     )};
     if (false == optional_parsed_timestamp.has_value()) {
         SPDLOG_ERROR("Failed to parse timestamp `{}` against known timestamp patterns.", timestamp);
-        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 
     auto const [epoch_timestamp, pattern] = optional_parsed_timestamp.value();
@@ -139,7 +140,7 @@ auto TimestampDictionaryWriter::ingest_numeric_json_timestamp(
                 error.category().name(),
                 error.message()
         );
-        throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 
     auto const new_pattern_id{m_next_id++};
@@ -172,7 +173,7 @@ auto TimestampDictionaryWriter::ingest_unknown_precision_epoch_timestamp(
                     error.category().name(),
                     error.message()
             );
-            throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__);
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
         auto const new_pattern_id{m_next_id++};
         pattern_it

@@ -69,23 +69,17 @@ tasks:
         . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
         ct lint \
           --chart-dirs="tools/deployment" \
+          --chart-repos="spider=https://github.com/y-scope/spider/raw/gh-pages" \
           --chart-yaml-schema="{{.G_HELM_TOOLCHAIN_DIR}}/etc/chart_schema.yaml" \
           --lint-conf="tools/yscope-dev-utils/exports/lint-configs/.yamllint.yml"
 
   check-js:
-    sources: &js_source_files
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.G_WEBUI_SRC_DIR}}/**/*"
-      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/*"
-      - "{{.ROOT_TASKFILE}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "js"
         vars:
           LINT_CMD: "check"
 
   fix-js:
-    sources: *js_source_files
     cmds:
       - task: "js"
         vars:
@@ -174,7 +168,7 @@ tasks:
     aliases: ["fix-cpp-static-diff"]
     sources: *cpp_source_files
     deps:
-      - ":core-generate"
+      - ":core-generate-profiling"
       - "cpp-lint-configs"
       - "venv"
     cmds:
@@ -193,7 +187,7 @@ tasks:
     aliases: ["fix-cpp-static-full"]
     sources: *cpp_source_files
     deps:
-      - ":core-generate"
+      - ":core-generate-profiling"
       - "cpp-lint-configs"
       - "venv"
     cmds:
@@ -313,8 +307,6 @@ tasks:
             - "clp/LibarchiveFileReader.hpp"
             - "clp/LibarchiveReader.cpp"
             - "clp/LibarchiveReader.hpp"
-            - "clp/LogSurgeonReader.cpp"
-            - "clp/LogSurgeonReader.hpp"
             - "clp/LogTypeDictionaryEntry.cpp"
             - "clp/LogTypeDictionaryEntry.hpp"
             - "clp/LogTypeDictionaryWriter.cpp"
@@ -408,7 +400,6 @@ tasks:
             - "clp_s/BufferViewReader.hpp"
             - "clp_s/clp-s.cpp"
             - "clp_s/ColumnWriter.cpp"
-            - "clp_s/ColumnWriter.hpp"
             - "clp_s/CommandLineArguments.cpp"
             - "clp_s/CommandLineArguments.hpp"
             - "clp_s/Compressor.hpp"
@@ -445,7 +436,6 @@ tasks:
             - "clp_s/ReaderUtils.cpp"
             - "clp_s/ReaderUtils.hpp"
             - "clp_s/Schema.cpp"
-            - "clp_s/Schema.hpp"
             - "clp_s/SchemaMap.cpp"
             - "clp_s/SchemaMap.hpp"
             - "clp_s/SchemaReader.cpp"
@@ -458,8 +448,6 @@ tasks:
             - "clp_s/search/AddTimestampConditions.hpp"
             - "clp_s/search/ast/AndExpr.cpp"
             - "clp_s/search/ast/AndExpr.hpp"
-            - "clp_s/search/ast/BooleanLiteral.cpp"
-            - "clp_s/search/ast/BooleanLiteral.hpp"
             - "clp_s/search/ast/ColumnDescriptor.cpp"
             - "clp_s/search/ast/ColumnDescriptor.hpp"
             - "clp_s/search/ast/ConstantProp.cpp"
@@ -471,21 +459,15 @@ tasks:
             - "clp_s/search/ast/Expression.cpp"
             - "clp_s/search/ast/Expression.hpp"
             - "clp_s/search/ast/FilterOperation.hpp"
-            - "clp_s/search/ast/Integral.cpp"
-            - "clp_s/search/ast/Integral.hpp"
             - "clp_s/search/ast/Literal.hpp"
             - "clp_s/search/ast/NarrowTypes.cpp"
             - "clp_s/search/ast/NarrowTypes.hpp"
-            - "clp_s/search/ast/NullLiteral.cpp"
-            - "clp_s/search/ast/NullLiteral.hpp"
             - "clp_s/search/ast/OrExpr.cpp"
             - "clp_s/search/ast/OrExpr.hpp"
             - "clp_s/search/ast/OrOfAndForm.cpp"
             - "clp_s/search/ast/OrOfAndForm.hpp"
             - "clp_s/search/ast/SearchUtils.cpp"
             - "clp_s/search/ast/SearchUtils.hpp"
-            - "clp_s/search/ast/StringLiteral.cpp"
-            - "clp_s/search/ast/StringLiteral.hpp"
             - "clp_s/search/ast/TimestampLiteral.cpp"
             - "clp_s/search/ast/TimestampLiteral.hpp"
             - "clp_s/search/ast/Transformation.hpp"
@@ -737,7 +719,6 @@ tasks:
             - "test-kql.cpp"
             - "test-math_utils.cpp"
             - "test-NetworkReader.cpp"
-            - "test-ParserWithUserSchema.cpp"
             - "test-query_methods.cpp"
             - "test-Segment.cpp"
             - "test-SQLiteDB.cpp"
@@ -759,11 +740,11 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_CMD"]
-    deps: [":webui-node-modules"]
+    deps: [":toolchains:nodejs"]
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     cmds:
-      - |-
-        cd "{{.G_WEBUI_SRC_DIR}}"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run "lint:{{.LINT_CMD}}"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm install --frozen-lockfile"
+      - "PATH='{{.G_NODEJS_BIN_DIR}}':$PATH pnpm run lint:{{.LINT_CMD}}"
 
   py:
     internal: true

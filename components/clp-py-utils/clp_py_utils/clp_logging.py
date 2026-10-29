@@ -1,7 +1,13 @@
+"""Shared logging helpers for CLP Python components."""
+
 import logging
 import os
 import pathlib
 from typing import get_args, Literal
+
+import structlog
+from structlog.stdlib import BoundLogger
+from structlog.typing import Processor
 
 LoggingLevel = Literal[
     "INFO",
@@ -12,12 +18,107 @@ LoggingLevel = Literal[
     "CRITICAL",
 ]
 
+# Processor chain for events emitted through structlog loggers before they reach
+# `ProcessorFormatter`.
+_STRUCTLOG_PROCESSORS: tuple[Processor, ...] = (
+    structlog.stdlib.filter_by_level,
+    structlog.contextvars.merge_contextvars,
+    structlog.stdlib.add_logger_name,
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.PositionalArgumentsFormatter(),
+    structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.format_exc_info,
+    structlog.processors.UnicodeDecoder(),
+    structlog.processors.CallsiteParameterAdder(
+        {
+            structlog.processors.CallsiteParameter.FILENAME,
+            structlog.processors.CallsiteParameter.FUNC_NAME,
+            structlog.processors.CallsiteParameter.LINENO,
+        }
+    ),
+)
 
-def get_logging_formatter():
-    return logging.Formatter("%(asctime)s %(name)s [%(levelname)s] %(message)s")
+# Processor chain for stdlib `LogRecord` objects that did not originate from structlog.
+_FOREIGN_PRE_CHAIN: tuple[Processor, ...] = (
+    structlog.contextvars.merge_contextvars,
+    structlog.stdlib.add_logger_name,
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.ExtraAdder(),
+    structlog.stdlib.PositionalArgumentsFormatter(),
+    structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.format_exc_info,
+    structlog.processors.UnicodeDecoder(),
+    structlog.processors.CallsiteParameterAdder(
+        {
+            structlog.processors.CallsiteParameter.FILENAME,
+            structlog.processors.CallsiteParameter.FUNC_NAME,
+            structlog.processors.CallsiteParameter.LINENO,
+        }
+    ),
+)
 
 
-def get_logger(name: str):
+def configure_structlog() -> None:
+    """Configure structlog with CLP's default processor chain if it is not already configured."""
+    if not structlog.is_configured():
+        structlog.configure(
+            processors=[
+                *_STRUCTLOG_PROCESSORS,
+                structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+            ],
+            logger_factory=structlog.stdlib.LoggerFactory(),
+            wrapper_class=BoundLogger,
+            cache_logger_on_first_use=True,
+        )
+
+
+def get_structlog_logger(name: str) -> BoundLogger:
+    """
+    Configure CLP's structured logging defaults and return a structlog logger for a component.
+
+    CLP uses structlog's stdlib integration, so this first configures the stdlib logger's
+    handlers with structlog's `ProcessorFormatter`. Use the returned structlog logger for log calls.
+
+    :param name: Name of the logger to create or retrieve.
+    :return: A structlog logger configured to emit through CLP's JSON formatter.
+    """
+    configure_structlog()
+    stdlib_logger = get_logger(name)
+    configure_logging(stdlib_logger, name)
+    return structlog.stdlib.get_logger(name)
+
+
+def get_logging_formatter() -> logging.Formatter:
+    """:return: A JSON log formatter configured with CLP's structlog processors."""
+    return structlog.stdlib.ProcessorFormatter(
+        # foreign_pre_chain is run for stdlib LogRecord objects that do not go through
+        # structlog's processor chain.
+        foreign_pre_chain=_FOREIGN_PRE_CHAIN,
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            structlog.processors.JSONRenderer(),
+        ],
+    )
+
+
+def set_json_formatter_on_handlers(logger: logging.Logger) -> None:
+    """
+    Set CLP's JSON log formatter on all handlers currently attached to the logger.
+
+    :param logger: Logger whose handlers should use CLP's JSON formatter.
+    """
+    formatter = get_logging_formatter()
+    for handler in logger.handlers:
+        handler.setFormatter(formatter)
+
+
+def get_logger(name: str) -> logging.Logger:
+    """
+    :param name: Name of the logger to create or retrieve.
+    :return: A logger configured with CLP's JSON console formatter.
+    """
     logger = logging.getLogger(name)
     # Setup console logging
     logging_console_handler = logging.StreamHandler()
@@ -28,12 +129,19 @@ def get_logger(name: str):
     return logger
 
 
-def set_logging_level(logger: logging.Logger, level: str | None):
+def set_logging_level(logger: logging.Logger, level: str | None) -> None:
+    """
+    Set a logger to the requested logging level, defaulting to INFO when the level is unset or
+    invalid.
+
+    :param logger: Logger whose level should be updated.
+    :param level: Requested logging level, or `None` to use INFO.
+    """
     if level is None:
         logger.setLevel(logging.INFO)
         return
     if level not in get_args(LoggingLevel):
-        logger.warning(f"Invalid logging level: {level}, using INFO as default")
+        logger.warning("Invalid logging level: %s, using INFO as default", level)
         logger.setLevel(logging.INFO)
         return
 
@@ -43,7 +151,7 @@ def set_logging_level(logger: logging.Logger, level: str | None):
 def configure_logging(
     logger: logging.Logger,
     component_name: str,
-):
+) -> None:
     """
     Configures file logging and the logging level for a logger using environment variables.
 
