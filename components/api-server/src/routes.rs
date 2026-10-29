@@ -96,6 +96,9 @@ mod api_doc {
     use super::__path_query;
     use super::__path_query_results;
     use super::CompressionUsage;
+    use super::OpenApi;
+    use super::OpenApiRouter;
+    use super::webui;
     use crate::client::CompressionJobStatus;
 
     #[derive(utoipa::OpenApi)]
@@ -109,6 +112,18 @@ mod api_doc {
         components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
+
+    /// The `WebUI`'s `OpenAPI` document: [`ApiDoc`] extended with the routes that back the `WebUI`.
+    pub struct WebUiApiDoc;
+
+    impl OpenApi for WebUiApiDoc {
+        fn openapi() -> utoipa::openapi::OpenApi {
+            let (_, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+                .merge(webui::router())
+                .split_for_parts();
+            api
+        }
+    }
 }
 pub use api_doc::*;
 
