@@ -1,3 +1,156 @@
+//! Shared types and extensions used across CLP components.
+
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::num::NonZeroU64;
+use std::str::FromStr;
+
+use serde::Deserialize;
+use serde::Serialize;
+use sqlx::MySql;
+use sqlx::encode::IsNull;
+use sqlx::error::BoxDynError;
+use sqlx::mysql::MySqlTypeInfo;
+use sqlx::mysql::MySqlValueRef;
+
+/// An archive's UUID. External storage keys and database values use its canonical text form.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+pub struct ArchiveId {
+    value: uuid::Uuid,
+}
+
+impl FromStr for ArchiveId {
+    type Err = ParseArchiveIdError;
+
+    /// Creates an archive ID from a UUID string accepted by [`uuid::Uuid::parse_str`].
+    ///
+    /// # Returns
+    ///
+    /// The parsed archive ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ParseArchiveIdError`] if `value` is not a valid UUID.
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let id = uuid::Uuid::parse_str(value).map_err(|source| ParseArchiveIdError {
+            value: value.to_owned(),
+            source,
+        })?;
+        Ok(Self { value: id })
+    }
+}
+
+impl Display for ArchiveId {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        self.value.fmt(formatter)
+    }
+}
+
+impl sqlx::Type<MySql> for ArchiveId {
+    fn type_info() -> MySqlTypeInfo {
+        <str as sqlx::Type<MySql>>::type_info()
+    }
+
+    fn compatible(ty: &MySqlTypeInfo) -> bool {
+        <str as sqlx::Type<MySql>>::compatible(ty)
+    }
+}
+
+impl sqlx::Encode<'_, MySql> for ArchiveId {
+    fn encode_by_ref(&self, buf: &mut Vec<u8>) -> Result<IsNull, BoxDynError> {
+        <String as sqlx::Encode<MySql>>::encode(self.to_string(), buf)
+    }
+}
+
+impl<'decode> sqlx::Decode<'decode, MySql> for ArchiveId {
+    fn decode(value: MySqlValueRef<'decode>) -> Result<Self, BoxDynError> {
+        let value = <&str as sqlx::Decode<MySql>>::decode(value)?;
+        value.parse::<Self>().map_err(Into::into)
+    }
+}
+
+/// An error returned when parsing an invalid external archive ID string.
+#[derive(Debug, thiserror::Error)]
+#[error("invalid archive ID {value:?}: {source}")]
+pub struct ParseArchiveIdError {
+    value: String,
+    source: uuid::Error,
+}
+
+/// The token that identifies a session to the query tasks streaming results to it.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+pub struct SessionToken {
+    value: uuid::Uuid,
+}
+
+impl From<uuid::Uuid> for SessionToken {
+    fn from(value: uuid::Uuid) -> Self {
+        Self { value }
+    }
+}
+
+impl Display for SessionToken {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        self.value.fmt(formatter)
+    }
+}
+
+/// A strictly positive `i64`, in the range `[1, i64::MAX]`.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(try_from = "NonZeroU64", into = "i64")]
+pub struct PositiveI64 {
+    value: i64,
+}
+
+impl PositiveI64 {
+    /// # Returns
+    ///
+    /// The wrapped value if `value` is positive, or `None` otherwise.
+    #[must_use]
+    pub const fn new(value: i64) -> Option<Self> {
+        if value > 0 {
+            Some(Self { value })
+        } else {
+            None
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The wrapped value.
+    #[must_use]
+    pub const fn get(self) -> i64 {
+        self.value
+    }
+}
+
+impl TryFrom<NonZeroU64> for PositiveI64 {
+    type Error = PositiveI64OverflowError;
+
+    fn try_from(value: NonZeroU64) -> Result<Self, Self::Error> {
+        let converted =
+            i64::try_from(value.get()).map_err(|_| PositiveI64OverflowError { value })?;
+        Ok(Self { value: converted })
+    }
+}
+
+impl From<PositiveI64> for i64 {
+    fn from(value: PositiveI64) -> Self {
+        value.value
+    }
+}
+
+/// An error returned when a [`NonZeroU64`] exceeds `i64::MAX`.
+#[derive(Debug, thiserror::Error)]
+#[error("{value} exceeds i64::MAX")]
+pub struct PositiveI64OverflowError {
+    value: NonZeroU64,
+}
+
 pub mod non_empty_string {
     use non_empty_string::NonEmptyString;
 
@@ -29,4 +182,116 @@ pub mod non_empty_string {
     }
 
     impl ExpectedNonEmpty for NonEmptyString {}
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroU64;
+
+    use super::*;
+
+    #[test]
+    fn archive_id_encodes_as_mysql_text() {
+        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+        let id = ARCHIVE_ID
+            .parse::<ArchiveId>()
+            .expect("valid UUID should parse");
+        let mut buffer = Vec::new();
+        let is_null = <ArchiveId as sqlx::Encode<sqlx::MySql>>::encode_by_ref(&id, &mut buffer)
+            .expect("archive ID should encode");
+        assert!(matches!(is_null, sqlx::encode::IsNull::No));
+        assert_eq!(usize::from(buffer[0]), ARCHIVE_ID.len());
+        assert_eq!(&buffer[1..], ARCHIVE_ID.as_bytes());
+        assert!(<ArchiveId as sqlx::Type<sqlx::MySql>>::compatible(
+            &<str as sqlx::Type<sqlx::MySql>>::type_info()
+        ));
+        assert!(!<ArchiveId as sqlx::Type<sqlx::MySql>>::compatible(
+            &<[u8] as sqlx::Type<sqlx::MySql>>::type_info()
+        ));
+    }
+
+    #[test]
+    fn parse_archive_id_accepts_valid_uuid_representations() {
+        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+        for value in [
+            ARCHIVE_ID.to_owned(),
+            ARCHIVE_ID.to_ascii_uppercase(),
+            ARCHIVE_ID.replace('-', ""),
+            format!("{{{ARCHIVE_ID}}}"),
+            format!("urn:uuid:{ARCHIVE_ID}"),
+        ] {
+            let parsed = value.parse::<ArchiveId>().expect("valid UUID should parse");
+            assert_eq!(parsed.to_string(), ARCHIVE_ID);
+        }
+    }
+
+    #[test]
+    fn parse_archive_id_rejects_invalid_uuids() {
+        for value in ["", "not-a-uuid", "018e90e5-8b2a-4a61-a2fc-cac799936cag"] {
+            let error = value
+                .parse::<ArchiveId>()
+                .expect_err("invalid UUID should be rejected");
+            assert_eq!(error.value, value);
+            assert!(
+                error.to_string().contains(&format!("{value:?}")),
+                "parse error should include the invalid archive ID"
+            );
+        }
+    }
+
+    #[test]
+    fn positive_i64_new_accepts_only_positive_values() {
+        for value in [1, i64::MAX] {
+            let positive = PositiveI64::new(value).expect("positive value should be accepted");
+            assert_eq!(positive.get(), value);
+        }
+        for value in [0, -1, i64::MIN] {
+            assert_eq!(PositiveI64::new(value), None);
+        }
+    }
+
+    #[test]
+    fn positive_i64_try_from_non_zero_u64_rejects_values_above_i64_max() {
+        for value in [1, i64::MAX] {
+            let non_zero = NonZeroU64::new(value.cast_unsigned()).expect("value should be nonzero");
+            let positive =
+                PositiveI64::try_from(non_zero).expect("value within range should convert");
+            assert_eq!(positive.get(), value);
+        }
+        for value in [i64::MAX.cast_unsigned() + 1, u64::MAX] {
+            let non_zero = NonZeroU64::new(value).expect("value should be nonzero");
+            let error = PositiveI64::try_from(non_zero)
+                .expect_err("value above i64::MAX should be rejected");
+            assert_eq!(error.value, non_zero);
+            assert_eq!(error.to_string(), format!("{value} exceeds i64::MAX"));
+        }
+    }
+
+    #[test]
+    fn positive_i64_round_trips_as_msgpack_integer() {
+        for value in [1, i64::MAX] {
+            let positive = PositiveI64::new(value).expect("positive value should be accepted");
+            let serialized = rmp_serde::to_vec(&positive).expect("positive i64 should serialize");
+            assert_eq!(
+                serialized,
+                rmp_serde::to_vec(&value).expect("i64 should serialize")
+            );
+            let deserialized = rmp_serde::from_slice::<PositiveI64>(&serialized)
+                .expect("positive i64 should deserialize");
+            assert_eq!(deserialized, positive);
+        }
+    }
+
+    #[test]
+    fn positive_i64_msgpack_deserialization_rejects_out_of_range_values() {
+        for serialized in [
+            rmp_serde::to_vec(&0_i64),
+            rmp_serde::to_vec(&-1_i64),
+            rmp_serde::to_vec(&(i64::MAX.cast_unsigned() + 1)),
+        ] {
+            let serialized = serialized.expect("integer should serialize");
+            rmp_serde::from_slice::<PositiveI64>(&serialized)
+                .expect_err("out-of-range integer should be rejected");
+        }
+    }
 }

@@ -26,9 +26,11 @@ from clp_py_utils.clp_config import (
     ClpConfig,
     ClpDbNameType,
     ClpDbUserType,
+    COMPRESSION_COORDINATOR_COMPONENT_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    CompressionOrchestration,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DatabaseEngine,
     DB_COMPONENT_NAME,
@@ -36,6 +38,7 @@ from clp_py_utils.clp_config import (
     LOG_INGESTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     OTEL_COLLECTOR_COMPONENT_NAME,
+    QUERY_COORDINATOR_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -44,6 +47,9 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_COMPONENT_NAME,
+    SpiderResourceGroupRoundRobin,
+    SpiderRoundRobin,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -64,12 +70,14 @@ from clp_package_utils.general import (
     generate_docker_compose_container_config,
     get_clp_home,
     http_request,
+    is_log_ingestor_enabled,
     is_retention_period_configured,
     validate_db_config,
     validate_mcp_server_config,
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
+    validate_spider_config,
     validate_webui_config,
 )
 
@@ -523,6 +531,167 @@ class BaseController(ABC):
 
         return env_vars
 
+    def _set_up_env_for_spider(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for Spider's components.
+
+        :return: Dictionary of environment variables necessary to launch the components.
+        """
+        component_name = SPIDER_COMPONENT_NAME
+        spider_config = self._clp_config.spider
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or spider_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        validate_spider_config(self._clp_config)
+
+        storage = spider_config.storage
+        scheduler = spider_config.scheduler
+        worker = spider_config.worker
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "SPIDER_STORAGE_PUBLISHED_IP": _get_ip_from_hostname(spider_config.host),
+            "SPIDER_STORAGE_PUBLISHED_PORT": str(spider_config.port),
+        }
+
+        # Storage config
+        env_vars |= {
+            "SPIDER_STORAGE_LOG_LEVEL": storage.log_level,
+            "SPIDER_STORAGE_DB_MAX_CONNECTIONS": _str_or_none(storage.db_max_connections),
+            "SPIDER_STORAGE_INBOUND_QUEUE_CLEANUP_CAPACITY": _str_or_none(
+                storage.inbound_queue.cleanup_capacity
+            ),
+            "SPIDER_STORAGE_INBOUND_QUEUE_COMMIT_CAPACITY": _str_or_none(
+                storage.inbound_queue.commit_capacity
+            ),
+            "SPIDER_STORAGE_INBOUND_QUEUE_TASK_CAPACITY": _str_or_none(
+                storage.inbound_queue.task_capacity
+            ),
+            "SPIDER_STORAGE_JOB_CACHE_GC_INTERVAL_SEC": _str_or_none(
+                storage.job_cache_gc.gc_interval_sec
+            ),
+            "SPIDER_STORAGE_JOB_CACHE_TERMINATED_JOB_RETENTION_SEC": _str_or_none(
+                storage.job_cache_gc.terminated_job_retention_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_EXECUTION_MANAGER_STALE_CUTOFF_SEC": _str_or_none(
+                storage.task_instance_pool.execution_manager_stale_cutoff_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_GC_INTERVAL_SEC": _str_or_none(
+                storage.task_instance_pool.gc_interval_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_MESSAGE_CHANNEL_CAPACITY": _str_or_none(
+                storage.task_instance_pool.message_channel_capacity
+            ),
+        }
+
+        # Scheduler config
+        env_vars |= {
+            "SPIDER_SCHEDULER_LOG_LEVEL": scheduler.log_level,
+            "SPIDER_SCHEDULER_POLICY": scheduler.policy,
+            "SPIDER_SCHEDULER_CONNECTION_POOL_SIZE": _str_or_none(scheduler.connection_pool_size),
+            "SPIDER_SCHEDULER_STOP_TIMEOUT_SEC": _str_or_none(scheduler.stop_timeout_sec),
+            "SPIDER_SCHEDULER_EM_REGISTRY_DEAD_EM_CUTOFF_SEC": _str_or_none(
+                scheduler.em_registry.dead_em_cutoff_sec
+            ),
+            "SPIDER_SCHEDULER_EM_REGISTRY_LIVENESS_TRACKING_INTERVAL_MS": _str_or_none(
+                scheduler.em_registry.liveness_tracking_interval_ms
+            ),
+        }
+        env_vars |= _get_spider_scheduler_policy_env_vars(scheduler.config)
+
+        # Worker config
+        env_vars |= {
+            "SPIDER_WORKER_REPLICAS": str(worker.pools.general.replicas),
+            "CLP_SPIDER_COMPRESSION_WORKER_REPLICAS": str(worker.pools.compression.replicas),
+            "CLP_SPIDER_QUERY_WORKER_REPLICAS": str(worker.pools.query.replicas),
+            "SPIDER_WORKER_LOG_LEVEL": worker.log_level,
+            "SPIDER_WORKER_CONNECTION_POOL_SIZE": _str_or_none(worker.connection_pool_size),
+            "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _str_or_none(worker.scheduler_poll_wait_ms),
+            "SPIDER_WORKER_MAX_LOG_LINE_BYTES": _str_or_none(worker.max_log_line_bytes),
+            "SPIDER_WORKER_LIVENESS_SCHEDULER_HEARTBEAT_INTERVAL_SEC": _str_or_none(
+                worker.liveness.scheduler_heartbeat_interval_sec
+            ),
+            "SPIDER_WORKER_LIVENESS_STORAGE_HEARTBEAT_INTERVAL_SEC": _str_or_none(
+                worker.liveness.storage_heartbeat_interval_sec
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_compression_coordinator(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the compression coordinator component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = COMPRESSION_COORDINATOR_COMPONENT_NAME
+        coordinator_config = self._clp_config.compression_coordinator
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Runtime config
+        env_vars |= {
+            "CLP_COMPRESSION_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
+        }
+
+        # Credentials
+        env_vars |= {
+            "CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_query_coordinator(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the query coordinator component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUERY_COORDINATOR_COMPONENT_NAME
+        coordinator_config = self._clp_config.query_coordinator
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Runtime config
+        env_vars |= {
+            "CLP_QUERY_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
+        }
+
+        # Credentials
+        env_vars |= {
+            "CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
+        }
+
+        return env_vars
+
     def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
         """
         Sets up environment variables for the compression worker component.
@@ -675,14 +844,8 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = LOG_INGESTOR_COMPONENT_NAME
-        if self._clp_config.log_ingestor is None:
-            logger.info("%s is not configured, skipping environment setup...", component_name)
-            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
-        if self._clp_config.logs_input.type != StorageType.S3:
-            logger.info(
-                "%s is only applicable for S3 logs input type, skipping environment setup...",
-                component_name,
-            )
+        if self._clp_config.log_ingestor is None or not is_log_ingestor_enabled(self._clp_config):
+            logger.info("%s is not enabled, skipping environment setup...", component_name)
             return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
         logger.info("Setting up environment for %s...", component_name)
 
@@ -763,11 +926,20 @@ class BaseController(ABC):
         if self._clp_config.query_scheduler is not None:
             max_datasets_per_query = self._clp_config.query_scheduler.max_datasets_per_query
 
+        log_ingestor_url = (
+            f"http://{container_clp_config.log_ingestor.host}"
+            f":{container_clp_config.log_ingestor.port}"
+            if container_clp_config.log_ingestor is not None
+            and is_log_ingestor_enabled(container_clp_config)
+            else None
+        )
+
         public_settings_updates = {
             "ClpQueryEngine": self._clp_config.webui.query_engine,
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "LogsInputRootDir": logs_input_root_dir,
             "LogsInputType": self._clp_config.logs_input.type,
+            "LogIngestorEnabled": is_log_ingestor_enabled(container_clp_config),
             "MaxDatasetsPerQuery": max_datasets_per_query,
             "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "SqlDbClpArchivesTableName": archives_table_name,
@@ -781,6 +953,7 @@ class BaseController(ABC):
         }
 
         server_settings_updates = {
+            "LogIngestorUrl": log_ingestor_url,
             "ApiServerUrl": (
                 f"http://{container_clp_config.api_server.host}"
                 f":{container_clp_config.api_server.port}"
@@ -1097,6 +1270,7 @@ class DockerComposeController(BaseController):
         # Restart Policy
         env_vars |= {
             "CLP_RESTART_POLICY": self._restart_policy,
+            "SPIDER_RESTART_POLICY": self._restart_policy,
         }
 
         # Credentials
@@ -1132,9 +1306,8 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_telemetry()
 
         # Paths
-        aws_config_dir = self._clp_config.aws_config_directory
         env_vars |= {
-            "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
+            "CLP_AWS_CONFIG_DIR_HOST": _str_or_none(self._clp_config.aws_config_directory),
             "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
             "CLP_TMP_DIR_HOST": str(self._clp_config.tmp_directory),
@@ -1171,6 +1344,9 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_otel_collector()
         env_vars |= self._set_up_env_for_compression_scheduler()
+        env_vars |= self._set_up_env_for_compression_coordinator()
+        env_vars |= self._set_up_env_for_query_coordinator()
+        env_vars |= self._set_up_env_for_spider()
         env_vars |= self._set_up_env_for_query_scheduler()
         env_vars |= self._set_up_env_for_compression_worker(num_workers)
         env_vars |= self._set_up_env_for_query_worker(num_workers)
@@ -1202,7 +1378,7 @@ class DockerComposeController(BaseController):
         logger.info("Starting CLP using Docker Compose...")
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
-        cmd += ["--file", "docker-compose.yaml"]
+        cmd += ["--file", self._get_docker_file_name()]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
@@ -1239,11 +1415,28 @@ class DockerComposeController(BaseController):
             logger.info("Stopping all CLP containers using Docker Compose...")
 
         subprocess.run(
-            ["docker", "compose", "--project-name", self._project_name, "down"],
+            [
+                "docker",
+                "compose",
+                "--project-name",
+                self._project_name,
+                "--file",
+                self._get_docker_file_name(),
+                "down",
+                "--remove-orphans",
+            ],
             cwd=self._clp_home,
             check=True,
         )
         logger.info("Stopped CLP.")
+
+    def _get_docker_file_name(self) -> str:
+        """
+        :return: The Docker Compose file name to use based on the config.
+        """
+        if CompressionOrchestration.SPIDER == self._clp_config.package.scheduler:
+            return "docker-compose-spider.yaml"
+        return "docker-compose.yaml"
 
     @staticmethod
     def _get_num_workers() -> int:
@@ -1360,6 +1553,101 @@ def _chown_recursively(
     """
     chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
+
+
+def _get_spider_round_robin_scheduler_env_vars(round_robin: SpiderRoundRobin) -> EnvVarsDict:
+    """
+    :param round_robin:
+    :return: Dictionary of environment variables necessary to tune the round-robin policy.
+    """
+    return EnvVarsDict(
+        {
+            "SPIDER_SCHEDULER_ROUND_ROBIN_ACTIVE_JOB_QUEUE_CAPACITY": _str_or_none(
+                round_robin.active_job_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
+                round_robin.dispatch_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.commit_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.cleanup_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
+                round_robin.storage_poll_timeout_ms
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
+                round_robin.tick_interval_ms
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": _str_or_none(
+                round_robin.finalizing_job_expiration_timeout_sec
+            ),
+        }
+    )
+
+
+def _get_spider_resource_group_round_robin_scheduler_env_vars(
+    rg_round_robin: SpiderResourceGroupRoundRobin,
+) -> EnvVarsDict:
+    """
+    :param rg_round_robin:
+    :return: Dictionary of environment variables necessary to tune the resource-group round-robin
+        policy.
+    """
+    return EnvVarsDict(
+        {
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_ACTIVE_JOB_LIST_CAPACITY": _str_or_none(
+                rg_round_robin.active_job_list_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
+                rg_round_robin.dispatch_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.commit_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.cleanup_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
+                rg_round_robin.storage_poll_timeout_ms
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
+                rg_round_robin.tick_interval_ms
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": (
+                _str_or_none(rg_round_robin.finalizing_job_expiration_timeout_sec)
+            ),
+        }
+    )
+
+
+def _get_spider_scheduler_policy_env_vars(
+    config: SpiderRoundRobin | SpiderResourceGroupRoundRobin,
+) -> EnvVarsDict:
+    """
+    :param config: The selected scheduler policy's config.
+    :return: Dictionary of environment variables necessary to tune the selected scheduler policy.
+    """
+    if isinstance(config, SpiderRoundRobin):
+        return _get_spider_round_robin_scheduler_env_vars(config)
+    if isinstance(config, SpiderResourceGroupRoundRobin):
+        return _get_spider_resource_group_round_robin_scheduler_env_vars(config)
+    raise NotImplementedError("unknown Spider scheduler policy")
+
+
+def _str_or_none(value: int | pathlib.Path | None) -> str | None:
+    """
+    :param value:
+    :return: `value` as a string, or None if `value` is None.
+    """
+    return None if value is None else str(value)
 
 
 def _get_ip_from_hostname(hostname: str) -> str:
