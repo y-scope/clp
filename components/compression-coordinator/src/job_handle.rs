@@ -344,7 +344,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             }
         }
 
-        let manifests = Vec::<S3InputSource>::from(input_builder);
+        let manifests = input_builder.build();
         if manifests.is_empty() {
             return Err(Error::NoTaskInputs);
         }
