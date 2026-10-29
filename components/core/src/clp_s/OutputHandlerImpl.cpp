@@ -1,9 +1,11 @@
 #include "OutputHandlerImpl.hpp"
 
+#include <cerrno>
 #include <cstdint>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -17,6 +19,8 @@
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
+#include <clp/ErrorCode.hpp>
+#include <clp_s/ErrorCode.hpp>
 #include <clp_s/MongoDBUtils.hpp>
 #include <clp_s/ResultsCacheUtils.hpp>
 
@@ -26,7 +30,6 @@
 #include "../reducer/Record.hpp"
 #include "archive_constants.hpp"
 #include "search/OutputHandler.hpp"
-#include "TraceableException.hpp"
 
 using std::string;
 using std::string_view;
@@ -46,21 +49,16 @@ auto FileOutputHandler::write(
 }
 
 NetworkOutputHandler::NetworkOutputHandler(
-        string const& host,
+        string host,
         int port,
         string session_token,
-        uint64_t task_idx,
-        bool should_output_timestamp
+        uint64_t task_idx
 )
-        : ::clp_s::search::OutputHandler(should_output_timestamp, true),
+        : ::clp_s::search::OutputHandler{true, true},
+          m_host{std::move(host)},
+          m_port{std::to_string(port)},
           m_session_token{std::move(session_token)},
-          m_task_idx{task_idx} {
-    m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
-    if (-1 == m_socket_fd) {
-        SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
-    }
-}
+          m_task_idx{task_idx} {}
 
 auto NetworkOutputHandler::write(
         string_view message,
@@ -68,16 +66,69 @@ auto NetworkOutputHandler::write(
         string_view archive_id,
         int64_t log_event_idx
 ) -> ErrorCode {
+    constexpr uint32_t cNumHandshakeFields{4};
     static constexpr string_view cOrigFilePathPlaceholder{""};
+
+    if (m_has_failed) {
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+
+    if (-1 == m_socket_fd) {
+        if (auto const ecode{connect()}; ErrorCode::ErrorCodeSuccess != ecode) {
+            return ecode;
+        }
+        msgpack::packer<msgpack::sbuffer> packer{m_buffer};
+        packer.pack_array(cNumHandshakeFields);
+        packer.pack_uint8(cProtocolVersion);
+        packer.pack(m_session_token);
+        packer.pack_uint64(m_task_idx);
+        packer.pack(archive_id);
+    }
     msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
             src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
-    msgpack::sbuffer m;
-    msgpack::pack(m, src);
+    msgpack::pack(m_buffer, src);
+    return send_buffer();
+}
 
-    if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILENAME__, __LINE__);
+auto NetworkOutputHandler::write([[maybe_unused]] string_view message) -> ErrorCode {
+    SPDLOG_ERROR("The network output handler requires each result's timestamp and archive ID.");
+    return ErrorCode::ErrorCodeUnsupported;
+}
+
+auto NetworkOutputHandler::connect() -> ErrorCode {
+    m_socket_fd = clp::networking::connect_to_server(m_host, m_port);
+    if (-1 == m_socket_fd) {
+        auto const error{std::error_code{errno, std::generic_category()}};
+        SPDLOG_ERROR(
+                "Failed to connect to {}:{} - ({}) {}",
+                m_host,
+                m_port,
+                error.value(),
+                error.message()
+        );
+        m_has_failed = true;
+        return ErrorCode::ErrorCodeFailureNetwork;
     }
-    return ErrorCodeSuccess;
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+auto NetworkOutputHandler::send_buffer() -> ErrorCode {
+    if (clp::ErrorCode_Success
+        != clp::networking::try_send(m_socket_fd, m_buffer.data(), m_buffer.size()))
+    {
+        auto const error{std::error_code{errno, std::generic_category()}};
+        SPDLOG_ERROR(
+                "Failed to send search results to {}:{} - ({}) {}",
+                m_host,
+                m_port,
+                error.value(),
+                error.message()
+        );
+        m_has_failed = true;
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    m_buffer.clear();
+    return ErrorCode::ErrorCodeSuccess;
 }
 
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(

@@ -21,6 +21,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/options/insert.hpp>
+#include <msgpack.hpp>
 
 #include <clp_s/AggregationSink.hpp>
 #include <clp_s/aggregators.hpp>
@@ -32,7 +33,6 @@
 #include "Defs.hpp"
 #include "FileWriter.hpp"
 #include "search/OutputHandler.hpp"
-#include "TraceableException.hpp"
 
 namespace clp_s {
 /**
@@ -96,22 +96,11 @@ private:
  */
 class NetworkOutputHandler : public ::clp_s::search::OutputHandler {
 public:
-    // Types
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
+    // Constants
+    static constexpr uint8_t cProtocolVersion{1};
 
     // Constructors
-    NetworkOutputHandler(
-            std::string const& host,
-            int port,
-            std::string session_token,
-            uint64_t task_idx,
-            bool should_output_metadata = false
-    );
+    NetworkOutputHandler(std::string host, int port, std::string session_token, uint64_t task_idx);
 
     // Destructor
     ~NetworkOutputHandler() override {
@@ -120,7 +109,19 @@ public:
         }
     }
 
+    // Delete copy & move constructors and assignment operators
+    NetworkOutputHandler(NetworkOutputHandler const&) = delete;
+    NetworkOutputHandler(NetworkOutputHandler&&) = delete;
+    auto operator=(NetworkOutputHandler const&) -> NetworkOutputHandler& = delete;
+    auto operator=(NetworkOutputHandler&&) -> NetworkOutputHandler& = delete;
+
     // Methods inherited from OutputHandler
+    /**
+     * Connects to the network destination and sends the handshake before the first result.
+     *
+     * @return ErrorCodeFailureNetwork if connecting or sending to the network destination fails, or
+     * if an earlier call failed to.
+     */
     [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp,
@@ -128,16 +129,40 @@ public:
             int64_t log_event_idx
     ) -> ErrorCode override;
 
-    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override {
-        return write(message, 0, {}, 0);
-    }
+    /**
+     * Unsupported, since the handshake must carry the archive ID and each result its timestamp.
+     *
+     * @return ErrorCodeUnsupported unconditionally.
+     */
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override;
 
 private:
+    // Methods
+    /**
+     * Connects to the network destination.
+     *
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if the connection fails.
+     */
+    [[nodiscard]] auto connect() -> ErrorCode;
+
+    /**
+     * Sends the serialized messages in the buffer to the network destination, and then clears the
+     * buffer.
+     *
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if sending fails.
+     */
+    [[nodiscard]] auto send_buffer() -> ErrorCode;
+
+    // Variables
     std::string m_host;
     std::string m_port;
-    int m_socket_fd;
     std::string m_session_token;
     uint64_t m_task_idx{};
+    int m_socket_fd{-1};
+    bool m_has_failed{false};
+    msgpack::sbuffer m_buffer;
 };
 
 /**
