@@ -43,8 +43,8 @@ pub trait Source {
     ///
     /// # Parameters
     ///
-    /// * `partitions` - File partitions, each containing between 1 and
-    ///   [`MAX_PARTITION_ENTRIES`] paths.
+    /// * `partitions` - File partitions, each containing between 1 and [`MAX_PARTITION_ENTRIES`]
+    ///   paths.
     ///
     /// # Returns
     ///
@@ -118,6 +118,17 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
         Ok(())
     }
 
+    /// Finishes partitioning the buffered inputs.
+    ///
+    /// # Returns
+    ///
+    /// The complete task manifests for the source.
+    #[must_use]
+    pub fn build(mut self) -> Vec<SourceType::Manifest> {
+        self.partition(true);
+        self.source.build_manifests(self.partitioned_paths)
+    }
+
     /// Partitions buffered objects into target-sized compression task inputs.
     ///
     /// When `flush_buffer` is false, objects that cannot fill another target-sized partition
@@ -149,13 +160,6 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
         }
 
         self.buffer = rr_iterator.into();
-    }
-}
-
-impl<SourceType: Source> From<CompressionInputBuilder<SourceType>> for Vec<SourceType::Manifest> {
-    fn from(mut builder: CompressionInputBuilder<SourceType>) -> Self {
-        builder.partition(true);
-        builder.source.build_manifests(builder.partitioned_paths)
     }
 }
 
@@ -494,7 +498,7 @@ mod tests {
         /// target size.
         fn assert_partitions(self) -> Vec<SourceType::Manifest> {
             let target_archive_size = self.builder.target_archive_size;
-            let manifests = Vec::<SourceType::Manifest>::from(self.builder);
+            let manifests = self.builder.build();
             let mut path_counts: BTreeMap<&str, usize> = BTreeMap::new();
             for path in manifests.iter().flat_map(ManifestEntries::file_paths) {
                 *path_counts.entry(path.as_ref()).or_default() += 1;
