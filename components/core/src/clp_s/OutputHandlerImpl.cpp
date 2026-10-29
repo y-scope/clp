@@ -1,7 +1,14 @@
 #include "OutputHandlerImpl.hpp"
 
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include <array>
 #include <cerrno>
+#include <climits>
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -35,6 +42,44 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
+namespace {
+constexpr uint8_t cAckArrayHeader{0x91};
+constexpr uint8_t cAckUint64Marker{0xcf};
+constexpr size_t cAckPrefixSize{2};
+constexpr size_t cAckSize{cAckPrefixSize + sizeof(uint64_t)};
+
+/**
+ * Receives exactly enough bytes over the socket to fill the given buffer, retrying interrupted
+ * receives.
+ *
+ * @param fd
+ * @param buf
+ * @return ErrorCode_EndOfFile if the peer closes the connection before the buffer is filled.
+ * @return ErrorCode_errno if receiving fails.
+ * @return ErrorCode_Success otherwise.
+ */
+[[nodiscard]] auto receive_exact(int fd, std::span<char> buf) -> clp::ErrorCode {
+    auto remaining_buf{buf};
+    while (false == remaining_buf.empty()) {
+        size_t num_bytes_received{};
+        auto const error_code{clp::networking::try_receive(
+                fd,
+                remaining_buf.data(),
+                remaining_buf.size(),
+                num_bytes_received
+        )};
+        if (clp::ErrorCode_errno == error_code && EINTR == errno) {
+            continue;
+        }
+        if (clp::ErrorCode_Success != error_code) {
+            return error_code;
+        }
+        remaining_buf = remaining_buf.subspan(num_bytes_received);
+    }
+    return clp::ErrorCode_Success;
+}
+}  // namespace
+
 auto FileOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
@@ -100,6 +145,44 @@ auto NetworkOutputHandler::write([[maybe_unused]] string_view message) -> ErrorC
     return ErrorCode::ErrorCodeUnsupported;
 }
 
+auto NetworkOutputHandler::finish() -> ErrorCode {
+    if (m_has_failed) {
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    if (-1 == m_socket_fd) {
+        return ErrorCode::ErrorCodeSuccess;
+    }
+
+    constexpr uint32_t cNumTrailerFields{1};
+
+    msgpack::packer<msgpack::sbuffer> packer{m_buffer};
+    packer.pack_array(cNumTrailerFields);
+    packer.pack_uint64(m_next_result_idx);
+    if (auto const ecode{send_buffer()}; ErrorCode::ErrorCodeSuccess != ecode) {
+        return ecode;
+    }
+
+    if (0 != shutdown(m_socket_fd, SHUT_WR)) {
+        auto const error{std::error_code{errno, std::generic_category()}};
+        SPDLOG_ERROR(
+                "Failed to shut down the connection to {}:{} for writing - ({}) {}",
+                m_host,
+                m_port,
+                error.value(),
+                error.message()
+        );
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+
+    if (auto const ecode{receive_ack()}; ErrorCode::ErrorCodeSuccess != ecode) {
+        return ecode;
+    }
+
+    close(m_socket_fd);
+    m_socket_fd = -1;
+    return ErrorCode::ErrorCodeSuccess;
+}
+
 auto NetworkOutputHandler::connect() -> ErrorCode {
     m_socket_fd = clp::networking::connect_to_server(m_host, m_port);
     if (-1 == m_socket_fd) {
@@ -133,6 +216,59 @@ auto NetworkOutputHandler::send_buffer() -> ErrorCode {
         return ErrorCode::ErrorCodeFailureNetwork;
     }
     m_buffer.clear();
+    return ErrorCode::ErrorCodeSuccess;
+}
+
+auto NetworkOutputHandler::receive_ack() const -> ErrorCode {
+    std::array<char, cAckSize> ack{};
+    auto const error_code{receive_exact(m_socket_fd, ack)};
+    if (clp::ErrorCode_EndOfFile == error_code) {
+        SPDLOG_ERROR(
+                "Failed to receive the acknowledgement from {}:{} - connection closed by the peer",
+                m_host,
+                m_port
+        );
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+    if (clp::ErrorCode_Success != error_code) {
+        auto const error{std::error_code{errno, std::generic_category()}};
+        SPDLOG_ERROR(
+                "Failed to receive the acknowledgement from {}:{} - ({}) {}",
+                m_host,
+                m_port,
+                error.value(),
+                error.message()
+        );
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+
+    if (cAckArrayHeader != static_cast<uint8_t>(ack[0])
+        || cAckUint64Marker != static_cast<uint8_t>(ack[1]))
+    {
+        SPDLOG_ERROR(
+                "Failed to validate the acknowledgement from {}:{} - bad prefix 0x{:02x}{:02x}",
+                m_host,
+                m_port,
+                static_cast<uint8_t>(ack[0]),
+                static_cast<uint8_t>(ack[1])
+        );
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+
+    uint64_t num_acked_results{};
+    for (auto const byte : std::span{ack}.subspan(cAckPrefixSize)) {
+        num_acked_results = (num_acked_results << CHAR_BIT) | static_cast<uint8_t>(byte);
+    }
+    if (m_next_result_idx != num_acked_results) {
+        SPDLOG_ERROR(
+                "Failed to validate the acknowledgement from {}:{} - expected {} results, got {}",
+                m_host,
+                m_port,
+                m_next_result_idx,
+                num_acked_results
+        );
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
     return ErrorCode::ErrorCodeSuccess;
 }
 
