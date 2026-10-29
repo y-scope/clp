@@ -160,6 +160,7 @@ private:
     std::string m_port;
     std::string m_session_token;
     uint64_t m_task_idx{};
+    uint64_t m_next_result_idx{};
     int m_socket_fd{-1};
     bool m_has_failed{false};
     msgpack::sbuffer m_buffer;

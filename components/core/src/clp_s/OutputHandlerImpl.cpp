@@ -64,30 +64,35 @@ auto NetworkOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
         string_view archive_id,
-        int64_t log_event_idx
+        [[maybe_unused]] int64_t log_event_idx
 ) -> ErrorCode {
     constexpr uint32_t cNumHandshakeFields{4};
-    static constexpr string_view cOrigFilePathPlaceholder{""};
+    constexpr uint32_t cNumResultFields{3};
 
     if (m_has_failed) {
         return ErrorCode::ErrorCodeFailureNetwork;
     }
 
+    msgpack::packer<msgpack::sbuffer> packer{m_buffer};
     if (-1 == m_socket_fd) {
         if (auto const ecode{connect()}; ErrorCode::ErrorCodeSuccess != ecode) {
             return ecode;
         }
-        msgpack::packer<msgpack::sbuffer> packer{m_buffer};
         packer.pack_array(cNumHandshakeFields);
         packer.pack_uint8(cProtocolVersion);
         packer.pack(m_session_token);
         packer.pack_uint64(m_task_idx);
         packer.pack(archive_id);
     }
-    msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
-            src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
-    msgpack::pack(m_buffer, src);
-    return send_buffer();
+    packer.pack_array(cNumResultFields);
+    packer.pack_uint64(m_next_result_idx);
+    packer.pack_int64(timestamp);
+    packer.pack(message);
+    if (auto const ecode{send_buffer()}; ErrorCode::ErrorCodeSuccess != ecode) {
+        return ecode;
+    }
+    ++m_next_result_idx;
+    return ErrorCode::ErrorCodeSuccess;
 }
 
 auto NetworkOutputHandler::write([[maybe_unused]] string_view message) -> ErrorCode {
