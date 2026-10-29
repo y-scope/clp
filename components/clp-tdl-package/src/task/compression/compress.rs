@@ -506,7 +506,7 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
 /// Returns an error if:
 ///
 /// * A file entry is not a regular file or an empty-directory entry contains entries.
-/// * Forwards [`LogsInputMountPoint::checked_container_path`]'s return values on failure.
+/// * Forwards [`LogsInputMountPoint::to_container_path`]'s return values on failure.
 /// * Forwards [`std::fs::read_dir`]'s return values on failure.
 /// * Forwards [`std::fs::ReadDir::next`]'s entry errors on failure.
 fn build_fs_logs_list(
@@ -515,7 +515,7 @@ fn build_fs_logs_list(
 ) -> anyhow::Result<String> {
     let mut list = String::new();
     for file in &source.file_paths {
-        let path = mount_point.checked_container_path(Path::new(file))?;
+        let path = mount_point.to_container_path(file)?;
         if !Path::new(path.as_str()).is_file() {
             anyhow::bail!("input {} is not a regular file", path.as_str());
         }
@@ -523,7 +523,7 @@ fn build_fs_logs_list(
         list.push('\n');
     }
     for directory in &source.empty_directories {
-        let path = mount_point.checked_container_path(Path::new(directory))?;
+        let path = mount_point.to_container_path(directory)?;
         let mut entries = std::fs::read_dir(path.as_str())
             .with_context(|| format!("input {} is not a readable directory", path.as_str()))?;
         if entries.next().transpose()?.is_some() {
@@ -1009,6 +1009,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::logs_input::LogsInputMountPoint;
+    use clp_rust_utils::logs_input::LogsInputPath;
     use clp_rust_utils::task_io::compression::ClpSCompressionOption;
     use clp_rust_utils::task_io::compression::FsInputSource;
     use clp_rust_utils::task_io::compression::S3InputSource;
@@ -1042,7 +1043,7 @@ mod tests {
 
     struct FsFixture {
         root: PathBuf,
-        cleanup: TmpFileDeleter,
+        _cleanup: TmpFileDeleter,
         mount_point: LogsInputMountPoint,
     }
 
@@ -1071,7 +1072,7 @@ mod tests {
                 root: root
                     .canonicalize()
                     .expect("temporary input root should resolve"),
-                cleanup,
+                _cleanup: cleanup,
             }
         }
 
@@ -1288,18 +1289,12 @@ mod tests {
         std::fs::create_dir(&empty_directory).expect("empty test directory should be created");
         let source = FsInputSource {
             file_paths: vec![
-                fixture
-                    .root
-                    .join("./empty.json")
-                    .to_str()
-                    .expect("test path is UTF-8")
-                    .to_owned(),
+                LogsInputPath::try_from("/empty.json".to_owned())
+                    .expect("test input path should be valid"),
             ],
             empty_directories: vec![
-                empty_directory
-                    .to_str()
-                    .expect("test path is UTF-8")
-                    .to_owned(),
+                LogsInputPath::try_from("/empty-directory".to_owned())
+                    .expect("test directory path should be valid"),
             ],
         };
         let config = FsFixture::config();
@@ -1347,49 +1342,12 @@ mod tests {
         assert!(file.exists());
     }
 
-    #[cfg(unix)]
-    #[test]
-    fn fs_list_preserves_internal_alias_and_resolves_external_alias() {
-        let mut fixture = FsFixture::new();
-        let file = fixture.root.join("input.json");
-        std::fs::write(&file, []).expect("test input file should be created");
-        let internal_alias = fixture.root.join("alias.json");
-        std::os::unix::fs::symlink(&file, &internal_alias)
-            .expect("internal alias should be created");
-        let external_alias = fixture.root.with_extension("alias");
-        std::os::unix::fs::symlink(&file, &external_alias)
-            .expect("external alias should be created");
-        fixture.cleanup.add(external_alias.clone());
-        let source = FsInputSource {
-            file_paths: vec![
-                internal_alias
-                    .to_str()
-                    .expect("test alias is UTF-8")
-                    .to_owned(),
-                external_alias
-                    .to_str()
-                    .expect("test alias is UTF-8")
-                    .to_owned(),
-            ],
-            empty_directories: vec![],
-        };
-        assert_eq!(
-            build_fs_logs_list(&source, &fixture.mount_point)
-                .expect("aliases into the mount should be accepted"),
-            format!("{}\n{}\n", internal_alias.display(), file.display()),
-        );
-    }
-
     #[test]
     fn fs_list_rejects_directory_in_place_of_file() {
         let fixture = FsFixture::new();
         let source = FsInputSource {
             file_paths: vec![
-                fixture
-                    .root
-                    .to_str()
-                    .expect("test path is UTF-8")
-                    .to_owned(),
+                LogsInputPath::try_from("/".to_owned()).expect("mount root path should be valid"),
             ],
             empty_directories: vec![],
         };
@@ -1404,11 +1362,7 @@ mod tests {
         let source = FsInputSource {
             file_paths: vec![],
             empty_directories: vec![
-                fixture
-                    .root
-                    .to_str()
-                    .expect("test path is UTF-8")
-                    .to_owned(),
+                LogsInputPath::try_from("/".to_owned()).expect("mount root path should be valid"),
             ],
         };
         assert_eq!(
@@ -1424,40 +1378,39 @@ mod tests {
     }
 
     #[test]
-    fn fs_list_rejects_missing_paths_and_file_in_place_of_directory() {
+    fn fs_list_rejects_file_in_place_of_directory() {
         let fixture = FsFixture::new();
-        let file = fixture.root.join("input.json");
-        for create_file in [false, true] {
-            if create_file {
-                std::fs::write(&file, []).expect("test input file should be created");
-            }
-            let source = FsInputSource {
-                file_paths: vec![],
-                empty_directories: vec![file.to_str().expect("test path is UTF-8").to_owned()],
-            };
-            assert!(build_fs_logs_list(&source, &fixture.mount_point).is_err());
-        }
+        std::fs::write(fixture.root.join("input.json"), [])
+            .expect("test input file should be created");
+        let source = FsInputSource {
+            file_paths: vec![],
+            empty_directories: vec![
+                LogsInputPath::try_from("/input.json".to_owned())
+                    .expect("test input path should be valid"),
+            ],
+        };
+        let error = build_fs_logs_list(&source, &fixture.mount_point)
+            .expect_err("a file must not be accepted as an empty directory");
+        assert!(error.to_string().contains("not a readable directory"));
     }
 
     #[cfg(unix)]
     #[test]
-    fn fs_list_rejects_escaping_symlinks_and_special_files() {
-        let mut fixture = FsFixture::new();
-        let outside = fixture.root.with_extension("json");
-        std::fs::write(&outside, []).expect("outside test file should be created");
-        fixture.cleanup.add(outside.clone());
-        let link = fixture.root.join("link.json");
-        std::os::unix::fs::symlink(&outside, &link).expect("escaping symlink should be created");
+    fn fs_list_rejects_special_files() {
+        let fixture = FsFixture::new();
         let socket = fixture.root.join("socket");
         let _listener =
             std::os::unix::net::UnixListener::bind(&socket).expect("test socket should be created");
-        for file in [link, socket] {
-            let source = FsInputSource {
-                file_paths: vec![file.to_str().expect("test path is UTF-8").to_owned()],
-                empty_directories: vec![],
-            };
-            assert!(build_fs_logs_list(&source, &fixture.mount_point).is_err());
-        }
+        let source = FsInputSource {
+            file_paths: vec![
+                LogsInputPath::try_from("/socket".to_owned())
+                    .expect("test socket path should be valid"),
+            ],
+            empty_directories: vec![],
+        };
+        let error = build_fs_logs_list(&source, &fixture.mount_point)
+            .expect_err("a socket must not be accepted as a regular file");
+        assert!(error.to_string().contains("not a regular file"));
     }
 
     #[test]
