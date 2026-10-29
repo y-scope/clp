@@ -80,6 +80,25 @@ pub struct ParseArchiveIdError {
     source: uuid::Error,
 }
 
+/// The token that identifies a session to the query tasks streaming results to it.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+pub struct SessionToken {
+    value: uuid::Uuid,
+}
+
+impl From<uuid::Uuid> for SessionToken {
+    fn from(value: uuid::Uuid) -> Self {
+        Self { value }
+    }
+}
+
+impl Display for SessionToken {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        self.value.fmt(formatter)
+    }
+}
+
 /// A strictly positive `i64`, in the range `[1, i64::MAX]`.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(try_from = "NonZeroU64", into = "i64")]
