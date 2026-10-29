@@ -16,13 +16,16 @@ namespace clp::networking {
 int connect_to_server(std::string const& host, std::string const& port);
 
 /**
- * Tries to send a buffer of data over the socket
+ * Tries to send an entire buffer of data over the socket. Sending over a connection closed by the
+ * peer fails with `EPIPE` instead of raising `SIGPIPE` on platforms that support `MSG_NOSIGNAL`,
+ * and for sockets opened by `connect_to_server` on platforms that support `SO_NOSIGPIPE`.
+ *
  * @param fd
  * @param buf
  * @param buf_len
- * @return ErrorCode_BadParam if the file descriptor or buffer pointer is invalid
- * @return ErrorCode_errno if sending failed
- * @return ErrorCode_Success otherwise
+ * @return ErrorCode_BadParam if the file descriptor or buffer pointer is invalid.
+ * @return ErrorCode_errno if sending failed.
+ * @return ErrorCode_Success otherwise.
  */
 ErrorCode try_send(int fd, char const* buf, size_t buf_len);
 /**
