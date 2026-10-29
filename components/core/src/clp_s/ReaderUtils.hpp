@@ -1,6 +1,17 @@
 #ifndef CLP_S_READERUTILS_HPP
 #define CLP_S_READERUTILS_HPP
 
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <map>
+#include <memory>
+#include <string>
+#include <system_error>
+
+#include <ystdlib/error_handling/Result.hpp>
+
+#include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
 #include "Schema.hpp"
 #include "SchemaReader.hpp"
@@ -19,59 +30,64 @@ public:
     };
 
     using SchemaMap = std::map<int32_t, Schema>;
-    static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
 
     /**
-     * Reads the schema tree from the given archive directory
-     * @param archives_dir
+     * Reads the schema tree from an archive
+     * @param adaptor
      * @return The schema tree
      */
-    static std::shared_ptr<SchemaTree> read_schema_tree(std::string const& archives_dir);
+    static std::shared_ptr<SchemaTree> read_schema_tree(ArchiveReaderAdaptor& adaptor);
 
     /**
-     * Reads the schema map from the given archive directory
-     * @param archive_dir
+     * Reads the schema map from an archive
+     * @param adaptor
      * @return the schema map
      */
-    static std::shared_ptr<SchemaMap> read_schemas(std::string const& archives_dir);
+    static std::shared_ptr<SchemaMap> read_schemas(ArchiveReaderAdaptor& archives_dir);
 
     /**
-     * Opens and gets the variable dictionary reader for the given archive path
-     * @param archive_path
+     * Gets the variable dictionary reader for an archive
+     * @param adaptor
      * @return the variable dictionary reader
      */
     static std::shared_ptr<VariableDictionaryReader> get_variable_dictionary_reader(
-            std::string const& archive_path
+            ArchiveReaderAdaptor& adaptor
     );
 
     /**
-     * Opens and gets the log type dictionary reader for the given archive path
-     * @param archive_path
+     * Gets the log type dictionary reader for an archive
+     * @param adaptor
      * @return the log type dictionary reader
      */
     static std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary_reader(
-            std::string const& archive_path
+            ArchiveReaderAdaptor& adaptor
     );
 
     /**
-     * Opens and gets the array dictionary reader for the given archive path
-     * @param archive_path
+     * Gets the array dictionary reader for an archive
+     * @param adaptor
      * @return the array dictionary reader
      */
     static std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary_reader(
-            std::string const& archive_path
-    );
-
-    static std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary_reader(
-            std::string const& archive_path
+            ArchiveReaderAdaptor& adaptor
     );
 
     /**
-     * Gets the list of archives in the given archive directory
-     * @param archives_dir
-     * @return the list of archives
+     * Converts a serialized 64-bit numeric value into `size_t` with bounds checking.
+     * @param value The 64-bit value deserialized from archive metadata.
+     * @return Converted `size_t` on success.
+     * @return A result containing the converted value on success, or an error code indicating the
+     * failure:
+     * - std::errc::value_too_large if the value cannot fit in `size_t`.
      */
-    static std::vector<std::string> get_archives(std::string const& archives_dir);
+    [[nodiscard]] static auto try_uint64_to_size_t(uint64_t value)
+            -> ystdlib::error_handling::Result<size_t> {
+        if (value > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+            return std::errc::value_too_large;
+        }
+        return static_cast<size_t>(value);
+    }
 
 private:
     /**

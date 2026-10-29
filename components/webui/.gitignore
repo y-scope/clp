@@ -1,4 +1,9 @@
-docs/
+# Dependencies
 node_modules/
+yscope-log-viewer/
 
-linter/package-lock.json
+# Build
+.turbo/
+
+# Local development
+.env.local

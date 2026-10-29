@@ -4,14 +4,15 @@
 /**
  * TODO Technically, the methods in this file are more general than for their use in generating
  * CLP's IR. However, introducing a parsing namespace in the root source directory would be
- * confusing since we also have the compressor_frontend namespace. Once most of
- * compressor_frontend is moved into https://github.com/y-scope/log-surgeon, we should reconsider
- * the placement of the methods in this file.
+ * confusing since we also have the compressor_frontend namespace.
  */
 
 #include <cstddef>
 #include <string>
 #include <string_view>
+
+#include "../type_utils.hpp"
+#include "types.hpp"
 
 namespace clp::ir {
 /**
@@ -23,10 +24,16 @@ namespace clp::ir {
 bool is_delim(signed char c);
 
 /**
+ * NOTE: This method is marked inline for a ~50% performance improvement to
+ * `append_constant_to_logtype`.
  * @param c
  * @return Whether the character is a variable placeholder
  */
-bool is_variable_placeholder(char c);
+inline bool is_variable_placeholder(char c) {
+    return (enum_to_underlying_type(VariablePlaceholder::Integer) == c)
+           || (enum_to_underlying_type(VariablePlaceholder::Dictionary) == c)
+           || (enum_to_underlying_type(VariablePlaceholder::Float) == c);
+}
 
 /**
  * NOTE: This method is marked inline for a 1-2% performance improvement

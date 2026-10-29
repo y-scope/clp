@@ -214,7 +214,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
     open_dictionary_for_reading(
             dictionary_path,
             segment_index_path,

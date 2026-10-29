@@ -32,6 +32,8 @@ constexpr char ReferenceTimestampKey[] = "REFERENCE_TIMESTAMP";
 
 constexpr char VariablesSchemaIdKey[] = "VARIABLES_SCHEMA_ID";
 constexpr char VariableEncodingMethodsIdKey[] = "VARIABLE_ENCODING_METHODS_ID";
+
+constexpr std::string_view UserDefinedMetadataKey{"USER_DEFINED_METADATA"};
 }  // namespace Metadata
 
 namespace Payload {
@@ -94,7 +96,8 @@ constexpr int8_t EightByteEncodingMagicNumber[]
         = {static_cast<int8_t>(0xFD), 0x2F, static_cast<int8_t>(0xB5), 0x30};
 constexpr std::enable_if<
         sizeof(EightByteEncodingMagicNumber) == sizeof(FourByteEncodingMagicNumber),
-        size_t>::type MagicNumberLength
+        size_t
+>::type MagicNumberLength
         = sizeof(EightByteEncodingMagicNumber);
 constexpr int8_t Eof = 0x0;
 }  // namespace clp::ffi::ir_stream::cProtocol

@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -37,8 +38,7 @@ public:
               m_ignore_case(false),
               m_search_begin_ts(cEpochTimeMin),
               m_search_end_ts(cEpochTimeMax),
-              m_batch_size(1000),
-              m_max_num_results(1000) {}
+              m_batch_size(1000) {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
@@ -48,6 +48,8 @@ public:
     [[nodiscard]] auto get_archive_path() const -> std::string_view { return m_archive_path; }
 
     // IR extraction arguments
+    [[nodiscard]] auto print_ir_stats() const -> bool { return m_print_ir_stats; }
+
     [[nodiscard]] auto get_file_split_id() const -> std::string const& { return m_file_split_id; }
 
     [[nodiscard]] size_t get_ir_target_size() const { return m_ir_target_size; }
@@ -77,7 +79,7 @@ public:
 
     uint64_t get_batch_size() const { return m_batch_size; }
 
-    uint64_t get_max_num_results() const { return m_max_num_results; }
+    auto get_max_num_results() const -> std::optional<uint64_t> { return m_max_num_results; }
 
     std::string const& get_network_dest_host() const { return m_network_dest_host; }
 
@@ -180,6 +182,7 @@ private:
     std::string m_archive_path;
 
     // Variables for IR extraction
+    bool m_print_ir_stats{false};
     std::string m_file_split_id;
     size_t m_ir_target_size{128ULL * 1024 * 1024};
     std::string m_ir_output_dir;
@@ -200,7 +203,7 @@ private:
     std::string m_mongodb_uri;
     std::string m_mongodb_collection;
     uint64_t m_batch_size;
-    uint64_t m_max_num_results;
+    std::optional<uint64_t> m_max_num_results;
 
     // Reducer output variables
     std::string m_reducer_host;

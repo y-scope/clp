@@ -4,10 +4,7 @@
 #include <system_error>
 
 #include <boost/uuid/random_generator.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
 
-#include "../BufferedFileReader.hpp"
 #include "../ir/LogEventDeserializer.hpp"
 #include "../LibarchiveFileReader.hpp"
 #include "../LibarchiveReader.hpp"
@@ -23,16 +20,12 @@ namespace clp::clp {
 class FileCompressor {
 public:
     // Constructors
-    FileCompressor(
-            boost::uuids::random_generator& uuid_generator,
-            std::unique_ptr<log_surgeon::ReaderParser> reader_parser
-    )
-            : m_uuid_generator(uuid_generator),
-              m_reader_parser(std::move(reader_parser)) {}
+    explicit FileCompressor(boost::uuids::random_generator& uuid_generator)
+            : m_uuid_generator(uuid_generator) {}
 
     // Methods
     /**
-     * Compresses a file with the given path into the archive
+     * Parses and encodes the log messages in the given file into the given archive.
      * @param target_data_size_of_dicts
      * @param archive_user_config
      * @param target_encoded_file_size
@@ -45,8 +38,7 @@ public:
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
             size_t target_encoded_file_size,
             FileToCompress const& file_to_compress,
-            streaming_archive::writer::Archive& archive_writer,
-            bool use_heuristic
+            streaming_archive::writer::Archive& archive_writer
     );
 
 private:
@@ -55,7 +47,7 @@ private:
 
     // Methods
     /**
-     * Parses and encodes content from the given reader into the given archive_writer
+     * Parses and encodes content from the given reader into the given archive_writer.
      * @param target_data_size_of_dicts
      * @param archive_user_config
      * @param target_encoded_file_size
@@ -64,7 +56,7 @@ private:
      * @param archive_writer
      * @param reader
      */
-    void parse_and_encode_with_library(
+    auto parse_and_encode(
             size_t target_data_size_of_dicts,
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
             size_t target_encoded_file_size,
@@ -72,17 +64,7 @@ private:
             group_id_t group_id,
             streaming_archive::writer::Archive& archive_writer,
             ReaderInterface& reader
-    );
-
-    void parse_and_encode_with_heuristic(
-            size_t target_data_size_of_dicts,
-            streaming_archive::writer::Archive::UserConfig& archive_user_config,
-            size_t target_encoded_file_size,
-            std::string const& path_for_compression,
-            group_id_t group_id,
-            streaming_archive::writer::Archive& archive_writer,
-            ReaderInterface& reader
-    );
+    ) -> void;
 
     /**
      * Tries to compress the given file as if it were a generic archive_writer
@@ -91,7 +73,7 @@ private:
      * @param target_encoded_file_size
      * @param file_to_compress
      * @param archive_writer
-     * @param use_heuristic
+     * @param file_reader
      * @return true if all files were compressed successfully, false otherwise
      */
     bool try_compressing_as_archive(
@@ -100,7 +82,7 @@ private:
             size_t target_encoded_file_size,
             FileToCompress const& file_to_compress,
             streaming_archive::writer::Archive& archive_writer,
-            bool use_heuristic
+            ReaderInterface& file_reader
     );
 
     /**
@@ -150,12 +132,10 @@ private:
 
     // Variables
     boost::uuids::random_generator& m_uuid_generator;
-    BufferedFileReader m_file_reader;
     LibarchiveReader m_libarchive_reader;
     LibarchiveFileReader m_libarchive_file_reader;
     MessageParser m_message_parser;
     ParsedMessage m_parsed_message;
-    std::unique_ptr<log_surgeon::ReaderParser> m_reader_parser;
 };
 }  // namespace clp::clp
 

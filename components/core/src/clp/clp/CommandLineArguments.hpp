@@ -1,6 +1,7 @@
 #ifndef CLP_CLP_COMMANDLINEARGUMENTS_HPP
 #define CLP_CLP_COMMANDLINEARGUMENTS_HPP
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -39,10 +40,6 @@ public:
 
     std::string const& get_output_dir() const { return m_output_dir; }
 
-    std::string const& get_schema_file_path() const { return m_schema_file_path; }
-
-    bool get_use_heuristic() const { return (m_schema_file_path.empty()); }
-
     bool show_progress() const { return m_show_progress; }
 
     bool sort_input_files() const { return m_sort_input_files; }
@@ -73,7 +70,9 @@ public:
 
     size_t get_ir_target_size() const { return m_ir_target_size; }
 
-    GlobalMetadataDBConfig const& get_metadata_db_config() const { return m_metadata_db_config; }
+    std::optional<GlobalMetadataDBConfig> const& get_metadata_db_config() const {
+        return m_metadata_db_config;
+    }
 
 private:
     // Methods
@@ -90,7 +89,6 @@ private:
     size_t m_ir_target_size{128ULL * 1024 * 1024};
     bool m_sort_input_files;
     std::string m_output_dir;
-    std::string m_schema_file_path;
     bool m_show_progress;
     bool m_print_archive_stats_progress;
     size_t m_target_encoded_file_size;
@@ -100,7 +98,7 @@ private:
     Command m_command;
     std::string m_archives_dir;
     std::vector<std::string> m_input_paths;
-    GlobalMetadataDBConfig m_metadata_db_config;
+    std::optional<GlobalMetadataDBConfig> m_metadata_db_config;
 };
 }  // namespace clp::clp
 

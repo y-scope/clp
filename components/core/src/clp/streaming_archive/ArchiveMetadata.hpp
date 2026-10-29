@@ -2,9 +2,11 @@
 #define CLP_STREAMING_ARCHIVE_ARCHIVEMETADATA_HPP
 
 #include <cstdint>
+#include <string_view>
+
+#include <msgpack.hpp>
 
 #include "../Defs.h"
-#include "../FileReader.hpp"
 #include "../FileWriter.hpp"
 #include "Constants.hpp"
 
@@ -28,6 +30,10 @@ public:
     };
 
     // Constructors
+    // We need a default constructor to convert from a msgpack::object in `create_from_file`. See
+    // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_adaptor
+    ArchiveMetadata() = default;
+
     /**
      * Constructs a metadata object with the given parameters
      * @param archive_format_version
@@ -40,13 +46,20 @@ public:
             uint64_t creation_idx
     );
 
-    /**
-     * Constructs a metadata object and initializes it from the given file reader
-     * @param file_reader
-     */
-    explicit ArchiveMetadata(FileReader& file_reader);
-
     // Methods
+    /**
+     * Reads serialized MessagePack data from a file and unpacks it into an `ArchiveMetadata`
+     * instance.
+     *
+     * @param file_path
+     * @return The created instance.
+     * @throw `ArchiveMetadata::OperationFailed` if `stat` fails or the file couldn't be read.
+     * @throw `msgpack::unpack_error` if the data cannot be unpacked into a MessagePack object.
+     * @throw `msgpack::type_error` if the MessagePack object can't be converted to an
+     * `ArchiveMetadata` instance.
+     */
+    [[nodiscard]] static auto create_from_file(std::string_view file_path) -> ArchiveMetadata;
+
     [[nodiscard]] auto get_archive_format_version() const { return m_archive_format_version; }
 
     [[nodiscard]] auto get_creator_id() const -> std::string const& { return m_creator_id; }
@@ -86,13 +99,27 @@ public:
      */
     void expand_time_range(epochtime_t begin_timestamp, epochtime_t end_timestamp);
 
+    /**
+     * Packs this instance into a MessagePack object and writes it to the open file.
+     *
+     * @param file_writer
+     */
     void write_to_file(FileWriter& file_writer) const;
+
+    MSGPACK_DEFINE_MAP(
+            MSGPACK_NVP("archive_format_version", m_archive_format_version),
+            MSGPACK_NVP("creator_id", m_creator_id),
+            MSGPACK_NVP("creation_idx", m_creation_idx),
+            MSGPACK_NVP("begin_timestamp", m_begin_timestamp),
+            MSGPACK_NVP("end_timestamp", m_end_timestamp),
+            MSGPACK_NVP("uncompressed_size", m_uncompressed_size),
+            MSGPACK_NVP("compressed_size", m_compressed_size)
+    );
 
 private:
     // Variables
-    archive_format_version_t m_archive_format_version{cArchiveFormatVersion};
+    archive_format_version_t m_archive_format_version{cArchiveFormatVersion::Version};
     std::string m_creator_id;
-    uint16_t m_creator_id_len{0};
     uint64_t m_creation_idx{0};
     epochtime_t m_begin_timestamp{cEpochTimeMax};
     epochtime_t m_end_timestamp{cEpochTimeMin};

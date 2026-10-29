@@ -17,66 +17,53 @@ expression
     ;
 
 column_range_expression
-    : col=column RANGE_OPERATOR ( date_lit=DATE_LITERAL | lit=LITERAL )
+    : col=column RANGE_OPERATOR ( timestamp=timestamp_expression | lit=literal )
     ;
 
 column_value_expression
-    : col=column ':' ( list=list_of_values | date_lit=DATE_LITERAL | lit=LITERAL )
+    : col=column ':' ( list=list_of_values | timestamp=timestamp_expression | lit=literal )
     ;
 
 column: 
-    LITERAL
+    literal
     ;
 
 value_expression
-    : LITERAL
+    : literal
     ;
 
 list_of_values
-    : '(' condition=(AND | OR | NOT)? (literals+=LITERAL)* ')'
+    : '(' condition=(AND | OR | NOT)? (literals+=literal)* ')'
     ;
+
+timestamp_expression
+    : 'timestamp(' timestamp=QUOTED_STRING (',' pattern=QUOTED_STRING )? ')';
+
+literal: QUOTED_STRING | UNQUOTED_LITERAL ;
 
 AND:        [Aa] [Nn] [Dd] ;
 OR:         [Oo] [Rr] ;
 NOT:        [Nn] [Oo] [Tt] ;
 
-DATE_LITERAL: 'date(' (('"' QUOTED_CHARACTER+ '"') | QUOTED_CHARACTER+) ')' ;
-
-LITERAL: QUOTED_STRING | UNQUOTED_LITERAL ;
-
 QUOTED_STRING: '"' QUOTED_CHARACTER* '"' ;
 
 UNQUOTED_LITERAL: UNQUOTED_CHARACTER+ ;
 
-// TODO handle unicode
 fragment QUOTED_CHARACTER
     : ESCAPED_SPACE
     | '\\"'
     | ~'"'
     ;
 
-// TODO:  handle unicode
 fragment UNQUOTED_CHARACTER
     : ESCAPED_SPACE
     | ESCAPED_SPECIAL_CHARACTER
-    | ESCAPED_KEYWORD
     | WILDCARD
+    | UNICODE
     |  ~[\\():<>"{} \r\n\t]
     ;
 
 fragment WILDCARD:   '*' | '?';
-
-// TODO: unescape keywords
-fragment ESCAPED_KEYWORD
-    : '\\' KEYWORD
-    ;
-
-fragment KEYWORD
-    : AND
-    | OR
-    | NOT
-    ;
-
 
 RANGE_OPERATOR
     : '<='
@@ -96,12 +83,11 @@ fragment ESCAPED_SPACE
     ;
 
 fragment SPECIAL_CHARACTER
-    : [\\():<>"*?{}.]
+    : [\\():<>"*?{}.@$!#]
     ;
 
-
 // For unicode hex
-//UNICODE: 'u' HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT ;
-//fragment HEXDIGIT: [0-9a-fA-F]+ ;
+fragment UNICODE: '\\u' HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT ;
+fragment HEXDIGIT: [0-9a-fA-F] ;
 
 SPACE:  [ \t\r\n] -> skip ;

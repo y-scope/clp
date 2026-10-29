@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+"""Initializes the global MySQL metadata database for CLP."""
+
 import argparse
 import logging
-import mariadb
-import yaml
+import os
 import sys
+
+import mariadb
 
 # Setup logging
 # Create logger
@@ -16,55 +19,63 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def main(argv):
-    args_parser = argparse.ArgumentParser(description="Setup a global MySQL metadata database for CLP.")
-    args_parser.add_argument("--config-file", required=True, help="Metadata database basic config file.")
+def main(argv: list[str]) -> int:
+    """
+    Main.
+
+    :param argv:
+    :return: Exit code
+    """
+    args_parser = argparse.ArgumentParser(
+        description="Setup a global MySQL metadata database for CLP."
+    )
+    args_parser.add_argument("--db-host", default="127.0.0.1", help="Database host")
+    args_parser.add_argument("--db-port", type=int, default=3306, help="Database port")
+    args_parser.add_argument("--db-name", default="clp-db", help="Database name")
+    args_parser.add_argument("--db-table-prefix", default="clp_", help="Database table prefix")
+
     parsed_args = args_parser.parse_args(argv[1:])
 
-    config_file_path = parsed_args.config_file
+    host = parsed_args.db_host
+    port = parsed_args.db_port
+    db_name = parsed_args.db_name
+    table_prefix = parsed_args.db_table_prefix
 
-    with open(config_file_path, 'r') as f:
-        config = yaml.safe_load(f)
-    if config is None:
-        raise Exception(f"Unable to parse configuration from {config_file_path}.")
-
-    required_keys = ["host", "port", "username", "password", "name"]
-    for key in required_keys:
-        if key not in config:
-            raise Exception(f"'{key}' missing from config file.")
-
-    host = config["host"]
-    port = config["port"]
-    username = config["username"]
-    password = config["password"]
-    db_name = config["name"]
-    table_prefix = config["table_prefix"]
+    try:
+        username = os.environ["CLP_DB_USER"]
+        password = os.environ["CLP_DB_PASS"]
+    except KeyError as e:
+        msg = f"Environment variable {e} hasn't been set."
+        raise OSError(msg) from e
 
     try:
         mysql_conn = mariadb.connect(host=host, port=port, username=username, password=password)
         mysql_cursor = mysql_conn.cursor()
     except mariadb.Error as err:
-        logger.error("Failed to connect - {}".format(err.msg))
+        logger.exception("Failed to connect - %s", err.msg)
         return -1
 
     try:
         # Create database
         try:
-            mysql_cursor.execute("CREATE DATABASE IF NOT EXISTS {} DEFAULT CHARACTER SET 'utf8'".format(db_name))
+            mysql_cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{db_name}` DEFAULT CHARACTER SET 'utf8'"
+            )
         except mariadb.Error as err:
-            logger.error("Failed to create database - {}".format(err.msg))
+            logger.exception("Failed to create database - %s", err.msg)
             return -1
 
         # Use database
         try:
-            mysql_cursor.execute("USE {}".format(db_name))
+            mysql_cursor.execute(f"USE `{db_name}`")
         except mariadb.Error as err:
-            logger.error("Failed to use database - {}".format(err.msg))
+            logger.exception("Failed to use database - %s", err.msg)
             return -1
 
         # Create tables
         try:
-            mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
+            mysql_cursor.execute(
+                f"""CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
                 `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
                 `id` VARCHAR(64) NOT NULL,
                 `begin_timestamp` BIGINT NOT NULL,
@@ -76,9 +87,11 @@ def main(argv):
                 KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
                 UNIQUE KEY `archive_id` (`id`) USING BTREE,
                 PRIMARY KEY (`pagination_id`)
-            )""")
+            )"""
+            )
 
-            mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `{table_prefix}files` (
+            mysql_cursor.execute(
+                f"""CREATE TABLE IF NOT EXISTS `{table_prefix}files` (
                 `id` VARCHAR(64) NOT NULL,
                 `orig_file_id` VARCHAR(64) NOT NULL,
                 `path` VARCHAR(12288) NOT NULL,
@@ -91,9 +104,10 @@ def main(argv):
                 KEY `files_path` (`path`(768)) USING BTREE,
                 KEY `files_archive_id` (`archive_id`) USING BTREE,
                 PRIMARY KEY (`id`)
-            ) ROW_FORMAT=DYNAMIC""")
+            ) ROW_FORMAT=DYNAMIC"""
+            )
         except mariadb.Error as err:
-            logger.error("Failed to create table - {}".format(err.msg))
+            logger.exception("Failed to create table - %s", err.msg)
             return -1
 
         mysql_conn.commit()

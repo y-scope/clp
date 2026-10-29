@@ -63,8 +63,8 @@ public:
      * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] auto
-    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override;
 
     /**
      * Tries to seek to the given position, relative to the beginning of the buffer
@@ -88,12 +88,9 @@ public:
      * @param str Returns the content read from the buffer
      * @return Same as BufferReader::try_read_to_delimiter(char, bool, std::string&, bool&, size_t&)
      */
-    [[nodiscard]] auto try_read_to_delimiter(
-            char delim,
-            bool keep_delimiter,
-            bool append,
-            std::string& str
-    ) -> ErrorCode override;
+    [[nodiscard]] auto
+    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+            -> ErrorCode override;
 
 private:
     // Methods

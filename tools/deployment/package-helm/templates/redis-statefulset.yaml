@@ -1,0 +1,80 @@
+{{- if has "redis" .Values.clpConfig.bundled }}
+apiVersion: "apps/v1"
+kind: "StatefulSet"
+metadata:
+  name: {{ include "clp.fullname" . }}-redis
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "redis"
+spec:
+  serviceName: {{ include "clp.fullname" . }}-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "redis"
+  template:
+    metadata:
+      labels:
+        {{- include "clp.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "redis"
+    spec:
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "redis"
+        ) | nindent 6 }}
+      containers:
+        - name: "redis"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "redis") | quote }}
+          imagePullPolicy: {{ .Values.image.redis.pullPolicy | quote }}
+          env:
+            - name: "REDIS_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp.fullname" . }}-redis
+                  key: "password"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "redis"
+            ) | nindent 10 }}
+          ports:
+            - name: "redis"
+              containerPort: 6379
+          volumeMounts:
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "redis"
+                "name" "data"
+              ) | quote }}
+              mountPath: "/data"
+            - name: "config"
+              mountPath: "/etc/redis/redis.conf"
+              subPath: "redis.conf"
+              readOnly: true
+          command: [
+            "redis-server",
+            "/etc/redis/redis.conf",
+            "--requirepass", "$(REDIS_PASSWORD)"
+          ]
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            exec: &redis-health-check
+              command: [
+                "redis-cli",
+                "-h", "127.0.0.1",
+                "-p", "6379",
+                "-a", "$(REDIS_PASSWORD)",
+                "PING"
+              ]
+          livenessProbe:
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
+            exec: *redis-health-check
+      volumes:
+        - name: {{ include "clp.volumeName" (dict
+            "component_category" "redis"
+            "name" "data"
+          ) | quote }}
+          emptyDir: {}
+        - name: "config"
+          configMap:
+            name: {{ include "clp.fullname" . }}-config
+{{- end }}

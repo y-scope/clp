@@ -6,8 +6,9 @@
 # - g++
 # NOTE: Dependencies should be installed outside the script to allow the script to be largely distro-agnostic
 
-# Exit on any error
-set -e
+set -o errexit
+set -o nounset
+set -o pipefail
 
 cUsage="Usage: ${BASH_SOURCE[0]} <version>[ <.deb output directory>]"
 if [ "$#" -lt 1 ] ; then
@@ -38,14 +39,14 @@ if [ $installed -eq 0 ] ; then
 fi
 
 echo "Checking for elevated privileges..."
-privileged_command_prefix=""
+install_cmd_args=()
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
-  privileged_command_prefix="${privileged_command_prefix} sudo"
+  install_cmd_args+=("sudo")
 fi
 
-# Get number of cpu cores
-num_cpus=$(grep -c ^processor /proc/cpuinfo)
+# Get number of cpu cores (memory-capped parallelism is handled in taskfile-driven builds)
+num_cpus=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 1)
 
 # Download
 mkdir -p $temp_dir
@@ -74,11 +75,22 @@ checkinstall_installed=$?
 set -e
 
 # Install
-install_command_prefix="${privileged_command_prefix}"
 if [ $checkinstall_installed -eq 0 ] ; then
-  install_command_prefix="${install_command_prefix} checkinstall --pkgname '${package_name}' --pkgversion '${version}' --provides '${package_name}' --nodoc -y --pakdir \"${deb_output_dir}\""
+  install_cmd_args+=(
+    checkinstall
+    --default
+    --fstrans=no
+    --nodoc
+    --pkgname "${package_name}"
+    --pkgversion "${version}"
+    --provides "${package_name}"
+    --pakdir "${deb_output_dir}"
+  )
 fi
-${install_command_prefix} make install
+install_cmd_args+=(
+  make install
+)
+"${install_cmd_args[@]}"
 
 # Clean up
 rm -rf $temp_dir

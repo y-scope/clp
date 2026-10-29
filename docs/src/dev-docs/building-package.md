@@ -1,0 +1,103 @@
+# Building the package
+
+This page describes the requirements and steps to build the CLP package. If you're looking for a
+prebuilt version instead, check out the [releases](https://github.com/y-scope/clp/releases) page.
+
+## Requirements
+
+* An amd64 or arm64 Ubuntu machine or container
+  * The package build creates a runtime image using the host Ubuntu version codename by default, so
+    host-built artifacts and the runtime image use matching Ubuntu environments.
+  * To reproduce official release package tarballs, use an amd64 Ubuntu 22.04 (Jammy) environment.
+* [Docker]
+  * `containerd.io` >= 1.7.18
+  * `docker-buildx-plugin` >= 0.15.1
+  * `docker-ce` >= 27.0.3
+  * `docker-ce-cli` >= 27.0.3
+* Python >= 3.10
+* python3-dev
+* python3-venv (for the version of Python installed)
+* [Task] >= 3.48.0
+* [uv] >= 0.8
+
+## Setup
+
+Initialize the project
+
+```shell
+tools/scripts/deps-download/init.sh
+```
+
+Install CLP core's dependencies
+
+```shell
+components/core/tools/scripts/lib_install/ubuntu-jammy/install-all.sh
+```
+
+## Build
+
+There are two flavors of the CLP package:
+
+1. `clp-json` for managing JSON logs
+2. `clp-text` for managing text logs
+
+:::{note}
+Both flavors contain the same binaries but are configured with different values for the
+`package.storage_engine` and `webui.query_engine` keys.
+:::
+
+To build the package, run:
+
+```shell
+task
+```
+
+The build will be in `build/clp-package` and defaults to using the storage and query engines for
+`clp-json`.
+
+:::{note}
+The `task` command runs `task package` under the hood. In addition to the build, a Docker image
+named `clp-package:dev-<user>-<unique-id>` will also be created.
+:::
+
+:::{note}
+The package includes a `docker-compose.yaml` file that can be used to deploy CLP using [Docker
+Compose][docker-compose]. If you want to manually deploy with Docker Compose instead of using the
+package scripts, see the [Deployment orchestration][design-deployment-orchestration] design doc for
+more information.
+:::
+
+To build a releasable tar of either flavor, run:
+
+```shell
+task clp-<flavor>-pkg-tar
+```
+
+where `<flavor>` is `json` or `text`.
+
+The tar will be written to `build/clp-<flavor>-<os>-<arch>-v<version>.tar.gz`, with appropriate
+values for the fields in angle brackets.
+
+## Config overrides
+
+To persist custom config or credentials across rebuilds, place overrides in
+`components/package-template/src/etc/`:
+
+* `clp-config.yaml` overrides the template-generated config.
+* `credentials.yaml` overrides the auto-generated credentials.
+
+These files are git-ignored.
+
+## Cleanup
+
+To clean up all build artifacts, run:
+
+```shell
+task clean
+```
+
+[Docker]: https://docs.docker.com/engine/install/
+[docker-compose]: https://docs.docker.com/compose/
+[design-deployment-orchestration]: design-deployment-orchestration.md
+[Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv/

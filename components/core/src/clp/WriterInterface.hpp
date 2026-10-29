@@ -21,6 +21,9 @@ public:
         char const* what() const noexcept override { return "WriterInterface operation failed"; }
     };
 
+    // Destructor
+    virtual ~WriterInterface() = default;
+
     // Methods
     /**
      * Writes the given data to the underlying medium

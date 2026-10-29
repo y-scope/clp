@@ -1,0 +1,17 @@
+version: "3"
+
+tasks:
+  package:
+    dir: "{{.ROOT_DIR}}/tools/docker-images/clp-package"
+    deps:
+      - ":package-build-deps"
+    cmds:
+      - "./build.sh"
+
+  spider-worker:
+    dir: "{{.ROOT_DIR}}/tools/docker-images/clp-spider-worker"
+    deps:
+      - ":clp-tdl-package"
+      - ":core"
+    cmds:
+      - "./build.sh"

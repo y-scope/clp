@@ -4,18 +4,21 @@
 #include <cstring>
 
 namespace clp {
-BufferReader::BufferReader(char const* data, size_t data_size, size_t pos) {
-    if (nullptr == data) {
+BufferReader::BufferReader(char const* data, size_t data_size, size_t pos)
+        : m_internal_buf{data},
+          m_internal_buf_size{data_size},
+          m_internal_buf_pos{pos} {
+    if (nullptr == data && (data_size != 0 || pos != 0)) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
-    m_internal_buf = data;
-    m_internal_buf_size = data_size;
-    m_internal_buf_pos = pos;
+    if (pos > data_size) {
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
 }
 
 auto BufferReader::peek_buffer(char const*& buf, size_t& peek_size) const -> void {
     peek_size = get_remaining_data_size();
-    buf = m_internal_buf + m_internal_buf_pos;
+    buf = 0 == peek_size ? nullptr : m_internal_buf + m_internal_buf_pos;
 }
 
 auto BufferReader::try_read_to_delimiter(
@@ -34,7 +37,7 @@ auto BufferReader::try_read_to_delimiter(
     // Find the delimiter
     auto const* buffer_head = m_internal_buf + m_internal_buf_pos;
     auto const* delim_ptr
-            = static_cast<char const*>(memchr(buffer_head, delim, remaining_data_size));
+            = static_cast<char const*>(std::memchr(buffer_head, delim, remaining_data_size));
 
     size_t append_length{0};
     if (delim_ptr != nullptr) {
@@ -62,6 +65,10 @@ auto BufferReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
 
     auto remaining_data_size = get_remaining_data_size();
     if (0 == remaining_data_size) {
+        if (0 == num_bytes_to_read) {
+            num_bytes_read = 0;
+            return ErrorCode_Success;
+        }
         return ErrorCode_EndOfFile;
     }
 
@@ -86,12 +93,9 @@ auto BufferReader::try_get_pos(size_t& pos) -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto BufferReader::try_read_to_delimiter(
-        char delim,
-        bool keep_delimiter,
-        bool append,
-        std::string& str
-) -> ErrorCode {
+auto
+BufferReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+        -> ErrorCode {
     if (false == append) {
         str.clear();
     }

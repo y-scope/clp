@@ -9,13 +9,13 @@
 #include <spdlog/spdlog.h>
 
 #include "../../ErrorCode.hpp"
-#include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../../type_utils.hpp"
+#include "../../WriterInterface.hpp"
 
 namespace clp::streaming_compression::lzma {
-auto Compressor::open(FileWriter& file_writer) -> void {
-    if (nullptr != m_compressed_stream_file_writer) {
+auto Compressor::open(WriterInterface& writer) -> void {
+    if (nullptr != m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
@@ -28,12 +28,12 @@ auto Compressor::open(FileWriter& file_writer) -> void {
     {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    m_compressed_stream_file_writer = &file_writer;
+    m_compressed_stream_writer = &writer;
     m_uncompressed_stream_pos = 0;
 }
 
 auto Compressor::close() -> void {
-    if (nullptr == m_compressed_stream_file_writer) {
+    if (nullptr == m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
@@ -43,11 +43,11 @@ auto Compressor::close() -> void {
 
     flush_lzma(LZMA_FINISH);
     m_lzma_stream.end_and_detach_output();
-    m_compressed_stream_file_writer = nullptr;
+    m_compressed_stream_writer = nullptr;
 }
 
 auto Compressor::write(char const* data, size_t data_length) -> void {
-    if (nullptr == m_compressed_stream_file_writer) {
+    if (nullptr == m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
     if (false
@@ -62,14 +62,14 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
 }
 
 auto Compressor::flush() -> void {
-    if (nullptr == m_compressed_stream_file_writer) {
+    if (nullptr == m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
     flush_lzma(LZMA_SYNC_FLUSH);
 }
 
 auto Compressor::try_get_pos(size_t& pos) const -> ErrorCode {
-    if (nullptr == m_compressed_stream_file_writer) {
+    if (nullptr == m_compressed_stream_writer) {
         return ErrorCode_NotInit;
     }
     pos = m_uncompressed_stream_pos;
@@ -86,8 +86,9 @@ auto Compressor::encode_lzma() -> void {
             case LZMA_OK:
                 break;
             case LZMA_BUF_ERROR:
-                SPDLOG_ERROR("LZMA compressor input stream is corrupt. No encoding "
-                             "progress can be made.");
+                SPDLOG_ERROR(
+                        "LZMA compressor input stream is corrupt. No encoding progress can be made."
+                );
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
             default:
                 SPDLOG_ERROR(
@@ -125,8 +126,9 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
             case LZMA_BUF_ERROR:
                 // NOTE: this can happen if we are using LZMA_FULL_FLUSH or LZMA_FULL_BARRIER. These
                 // two actions keeps encoding input data alongside flushing buffered encoded data.
-                SPDLOG_ERROR("LZMA compressor input stream is corrupt. No encoding "
-                             "progress can be made.");
+                SPDLOG_ERROR(
+                        "LZMA compressor input stream is corrupt. No encoding progress can be made."
+                );
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
             default:
                 SPDLOG_ERROR(
@@ -143,7 +145,7 @@ auto Compressor::flush_stream_output_block_buffer() -> void {
     if (cCompressedStreamBlockBufferSize == m_lzma_stream.avail_out()) {
         return;
     }
-    m_compressed_stream_file_writer->write(
+    m_compressed_stream_writer->write(
             clp::size_checked_pointer_cast<char>(m_compressed_stream_block_buffer.data()),
             cCompressedStreamBlockBufferSize - m_lzma_stream.avail_out()
     );

@@ -1,0 +1,1677 @@
+import ipaddress
+import json
+import logging
+import multiprocessing
+import os
+import pathlib
+import socket
+import stat
+import subprocess
+import time
+import uuid
+from abc import ABC, abstractmethod
+from typing import Any
+
+from clp_py_utils.clp_config import (
+    API_SERVER_COMPONENT_NAME,
+    AwsAuthType,
+    BundledService,
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_PASS_ENV_VAR_NAME,
+    CLP_DB_ROOT_USER_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
+    CLP_QUEUE_PASS_ENV_VAR_NAME,
+    CLP_QUEUE_USER_ENV_VAR_NAME,
+    CLP_REDIS_PASS_ENV_VAR_NAME,
+    ClpConfig,
+    ClpDbNameType,
+    ClpDbUserType,
+    COMPRESSION_COORDINATOR_COMPONENT_NAME,
+    COMPRESSION_JOBS_TABLE_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+    CompressionOrchestration,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
+    DatabaseEngine,
+    DB_COMPONENT_NAME,
+    GARBAGE_COLLECTOR_COMPONENT_NAME,
+    LOG_INGESTOR_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
+    OTEL_COLLECTOR_COMPONENT_NAME,
+    QUERY_COORDINATOR_COMPONENT_NAME,
+    QUERY_JOBS_TABLE_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
+    QueryEngine,
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_COMPONENT_NAME,
+    SpiderResourceGroupRoundRobin,
+    SpiderRoundRobin,
+    StorageEngine,
+    StorageType,
+    WEBUI_COMPONENT_NAME,
+)
+from clp_py_utils.clp_metadata_db_utils import (
+    get_archives_table_name,
+    get_datasets_table_name,
+    get_files_table_name,
+)
+from clp_py_utils.core import resolve_host_path_in_container
+
+from clp_package_utils.general import (
+    check_docker_dependencies,
+    CONTAINER_CLP_HOME,
+    DockerComposeProjectNotRunningError,
+    DockerDependencyError,
+    dump_shared_container_config,
+    generate_docker_compose_container_config,
+    get_clp_home,
+    http_request,
+    is_log_ingestor_enabled,
+    is_retention_period_configured,
+    validate_db_config,
+    validate_mcp_server_config,
+    validate_queue_config,
+    validate_redis_config,
+    validate_results_cache_config,
+    validate_spider_config,
+    validate_webui_config,
+)
+
+LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+
+DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
+THIRD_PARTY_SERVICE_UID = 999
+THIRD_PARTY_SERVICE_GID = 999
+THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_GID}"
+
+logger = logging.getLogger(__name__)
+
+
+class EnvVarsDict(dict[str, str | None]):
+    def __ior__(self, other: "EnvVarsDict") -> "EnvVarsDict":
+        """
+        Overloads the `|=` operator for static type checking on `other`.
+        """
+        super().__ior__(other)
+        return self
+
+
+class BaseController(ABC):
+    """
+    Base controller for orchestrating CLP components. Derived classes should implement any
+    orchestrator-specific logic. This class provides common logic for preparing environment
+    variables, directories, and configuration files for each component.
+    """
+
+    def __init__(self, clp_config: ClpConfig) -> None:
+        self._clp_config = clp_config
+        self._clp_home = get_clp_home()
+        self._conf_dir = self._clp_home / "etc"
+
+    @abstractmethod
+    def set_up_env(self) -> None:
+        """
+        Sets up all components to run by preparing environment variables, directories, and
+        configuration files.
+        """
+
+    @abstractmethod
+    def start(self) -> None:
+        """
+        Starts the components.
+        """
+
+    @abstractmethod
+    def stop(self) -> None:
+        """
+        Stops the components.
+        """
+
+    def _set_up_env_for_database_bundling(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for bundling the database component.
+
+        :return: Dictionary of environment variables necessary to bundle the component.
+        """
+        component_name = DB_COMPONENT_NAME
+
+        if BundledService.DATABASE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_DATABASE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
+
+        conf_logging_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
+        data_dir = self._clp_config.data_directory / component_name
+        logs_dir = self._clp_config.logs_directory / component_name
+        validate_db_config(self._clp_config, conf_logging_file, data_dir, logs_dir)
+
+        resolved_data_dir = resolve_host_path_in_container(data_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+
+        resolved_data_dir.mkdir(exist_ok=True, parents=True)
+        resolved_logs_dir.mkdir(exist_ok=True, parents=True)
+        _chown_paths_if_root(resolved_data_dir, resolved_logs_dir)
+
+        env_vars = EnvVarsDict()
+
+        # Paths
+        env_vars |= {
+            "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
+            "CLP_DB_DATA_DIR_HOST": str(data_dir),
+            "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        # Runtime config
+        env_vars |= {
+            "CLP_DB_CONTAINER_IMAGE_REF": (
+                "mysql:8.0.46"
+                if self._clp_config.database.type == DatabaseEngine.MYSQL
+                else "mariadb:10.11.16"
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_database(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the database component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = DB_COMPONENT_NAME
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_DB_NAME": self._clp_config.database.names[ClpDbNameType.CLP],
+        }
+        if BundledService.DATABASE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_DB_CONNECT_PORT": str(self._clp_config.database.port),
+                "CLP_EXTRA_HOST_DATABASE_NAME": DB_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_DATABASE_ADDR": _resolve_external_host(
+                    self._clp_config.database.host
+                ),
+            }
+        else:
+            env_vars |= {
+                "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
+                "CLP_DB_PORT": str(self._clp_config.database.port),
+            }
+
+        # Credentials
+        credentials = self._clp_config.database.credentials
+        env_vars |= {
+            CLP_DB_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].password,
+            CLP_DB_ROOT_PASS_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].password,
+            CLP_DB_ROOT_USER_ENV_VAR_NAME: credentials[ClpDbUserType.ROOT].username,
+            CLP_DB_USER_ENV_VAR_NAME: credentials[ClpDbUserType.CLP].username,
+        }
+
+        return env_vars
+
+    def _set_up_env_for_queue_bundling(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for bundling the queue component.
+
+        :return: Dictionary of environment variables necessary to bundle the component.
+        """
+        component_name = QUEUE_COMPONENT_NAME
+
+        if self._clp_config.queue is None or BundledService.QUEUE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not configured or part of the 'bundled' configuration, skipping "
+                "service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_QUEUE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        validate_queue_config(self._clp_config, logs_dir)
+
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(exist_ok=True, parents=True)
+        _chown_paths_if_root(resolved_logs_dir)
+
+        env_vars = EnvVarsDict()
+
+        # Paths
+        env_vars |= {
+            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_queue(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the message queue component.
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUEUE_COMPONENT_NAME
+        if self._clp_config.queue is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        if BundledService.QUEUE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_QUEUE_CONNECT_PORT": str(self._clp_config.queue.port),
+                "CLP_EXTRA_HOST_QUEUE_NAME": QUEUE_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_QUEUE_ADDR": _resolve_external_host(self._clp_config.queue.host),
+            }
+        else:
+            env_vars |= {
+                "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
+                "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
+            }
+
+        # Credentials
+        env_vars |= {
+            CLP_QUEUE_PASS_ENV_VAR_NAME: self._clp_config.queue.password,
+            CLP_QUEUE_USER_ENV_VAR_NAME: self._clp_config.queue.username,
+        }
+
+        return env_vars
+
+    def _set_up_env_for_redis_bundling(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for bundling the redis component.
+
+        :return: Dictionary of environment variables necessary to bundle the component.
+        """
+        component_name = REDIS_COMPONENT_NAME
+
+        if self._clp_config.redis is None or BundledService.REDIS not in self._clp_config.bundled:
+            logger.info(
+                "%s is not configured or part of the 'bundled' configuration, skipping "
+                "service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_REDIS_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
+
+        conf_file = self._conf_dir / "redis" / "redis.conf"
+        data_dir = self._clp_config.data_directory / component_name
+        logs_dir = self._clp_config.logs_directory / component_name
+        validate_redis_config(self._clp_config, conf_file, data_dir, logs_dir)
+
+        resolved_data_dir = resolve_host_path_in_container(data_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+
+        resolved_data_dir.mkdir(exist_ok=True, parents=True)
+        resolved_logs_dir.mkdir(exist_ok=True, parents=True)
+        _chown_paths_if_root(resolved_data_dir, resolved_logs_dir)
+
+        env_vars = EnvVarsDict()
+
+        # Backend databases
+        env_vars |= {
+            "CLP_REDIS_BACKEND_DB_COMPRESSION": str(
+                self._clp_config.redis.compression_backend_database
+            ),
+            "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
+        }
+
+        # Paths
+        env_vars |= {
+            "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
+            "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
+            "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_redis(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the Redis component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = REDIS_COMPONENT_NAME
+        if self._clp_config.redis is None:
+            logger.info(
+                "%s is not configured, skipping environment setup...",
+                component_name,
+            )
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        if BundledService.REDIS not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_REDIS_CONNECT_PORT": str(self._clp_config.redis.port),
+                "CLP_EXTRA_HOST_REDIS_NAME": REDIS_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_REDIS_ADDR": _resolve_external_host(self._clp_config.redis.host),
+            }
+        else:
+            env_vars |= {
+                "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
+                "CLP_REDIS_PORT": str(self._clp_config.redis.port),
+            }
+
+        # Credentials
+        env_vars |= {
+            CLP_REDIS_PASS_ENV_VAR_NAME: self._clp_config.redis.password,
+        }
+
+        return env_vars
+
+    def _set_up_env_for_results_cache_bundling(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for bundling the results cache component.
+
+        :return: Dictionary of environment variables necessary to bundle the component.
+        """
+        component_name = RESULTS_CACHE_COMPONENT_NAME
+
+        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_RESULTS_CACHE_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
+
+        conf_file = self._conf_dir / "mongo" / "mongod.conf"
+        data_dir = self._clp_config.data_directory / component_name
+        logs_dir = self._clp_config.logs_directory / component_name
+        validate_results_cache_config(self._clp_config, conf_file, data_dir, logs_dir)
+
+        resolved_data_dir = resolve_host_path_in_container(data_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+
+        resolved_data_dir.mkdir(exist_ok=True, parents=True)
+        resolved_logs_dir.mkdir(exist_ok=True, parents=True)
+        _chown_paths_if_root(resolved_data_dir, resolved_logs_dir)
+
+        env_vars = EnvVarsDict()
+
+        # Collections
+        env_vars |= {
+            "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": (
+                self._clp_config.results_cache.stream_collection_name
+            ),
+        }
+        # Paths
+        env_vars |= {
+            "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
+            "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
+            "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_results_cache(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the results cache (MongoDB) component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = RESULTS_CACHE_COMPONENT_NAME
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
+        }
+        if BundledService.RESULTS_CACHE not in self._clp_config.bundled:
+            env_vars |= {
+                "CLP_RESULTS_CACHE_CONNECT_PORT": str(self._clp_config.results_cache.port),
+                "CLP_EXTRA_HOST_RESULTS_CACHE_NAME": RESULTS_CACHE_COMPONENT_NAME,
+                "CLP_EXTRA_HOST_RESULTS_CACHE_ADDR": _resolve_external_host(
+                    self._clp_config.results_cache.host
+                ),
+            }
+        else:
+            env_vars |= {
+                "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(
+                    self._clp_config.results_cache.host
+                ),
+                "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
+            }
+
+        return env_vars
+
+    def _set_up_env_for_compression_scheduler(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and files for the compression scheduler component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Logging config
+        env_vars |= {
+            "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": (
+                self._clp_config.compression_scheduler.logging_level
+            ),
+        }
+
+        # Telemetry config
+        env_vars |= {
+            "CLP_COMPRESSION_SCHEDULER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.compression_scheduler.telemetry_update_interval_ms
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and files for the query scheduler component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUERY_SCHEDULER_COMPONENT_NAME
+        if self._clp_config.query_scheduler is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_QUERY_SCHEDULER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_QUERY_SCHEDULER_ENABLED": "1",
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
+        }
+
+        # Telemetry config
+        env_vars |= {
+            "CLP_QUERY_SCHEDULER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.query_scheduler.telemetry_update_interval_ms
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_spider(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for Spider's components.
+
+        :return: Dictionary of environment variables necessary to launch the components.
+        """
+        component_name = SPIDER_COMPONENT_NAME
+        spider_config = self._clp_config.spider
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or spider_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        validate_spider_config(self._clp_config)
+
+        storage = spider_config.storage
+        scheduler = spider_config.scheduler
+        worker = spider_config.worker
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "SPIDER_STORAGE_PUBLISHED_IP": _get_ip_from_hostname(spider_config.host),
+            "SPIDER_STORAGE_PUBLISHED_PORT": str(spider_config.port),
+        }
+
+        # Storage config
+        env_vars |= {
+            "SPIDER_STORAGE_LOG_LEVEL": storage.log_level,
+            "SPIDER_STORAGE_DB_MAX_CONNECTIONS": _str_or_none(storage.db_max_connections),
+            "SPIDER_STORAGE_INBOUND_QUEUE_CLEANUP_CAPACITY": _str_or_none(
+                storage.inbound_queue.cleanup_capacity
+            ),
+            "SPIDER_STORAGE_INBOUND_QUEUE_COMMIT_CAPACITY": _str_or_none(
+                storage.inbound_queue.commit_capacity
+            ),
+            "SPIDER_STORAGE_INBOUND_QUEUE_TASK_CAPACITY": _str_or_none(
+                storage.inbound_queue.task_capacity
+            ),
+            "SPIDER_STORAGE_JOB_CACHE_GC_INTERVAL_SEC": _str_or_none(
+                storage.job_cache_gc.gc_interval_sec
+            ),
+            "SPIDER_STORAGE_JOB_CACHE_TERMINATED_JOB_RETENTION_SEC": _str_or_none(
+                storage.job_cache_gc.terminated_job_retention_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_EXECUTION_MANAGER_STALE_CUTOFF_SEC": _str_or_none(
+                storage.task_instance_pool.execution_manager_stale_cutoff_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_GC_INTERVAL_SEC": _str_or_none(
+                storage.task_instance_pool.gc_interval_sec
+            ),
+            "SPIDER_STORAGE_TASK_INSTANCE_POOL_MESSAGE_CHANNEL_CAPACITY": _str_or_none(
+                storage.task_instance_pool.message_channel_capacity
+            ),
+        }
+
+        # Scheduler config
+        env_vars |= {
+            "SPIDER_SCHEDULER_LOG_LEVEL": scheduler.log_level,
+            "SPIDER_SCHEDULER_POLICY": scheduler.policy,
+            "SPIDER_SCHEDULER_CONNECTION_POOL_SIZE": _str_or_none(scheduler.connection_pool_size),
+            "SPIDER_SCHEDULER_STOP_TIMEOUT_SEC": _str_or_none(scheduler.stop_timeout_sec),
+            "SPIDER_SCHEDULER_EM_REGISTRY_DEAD_EM_CUTOFF_SEC": _str_or_none(
+                scheduler.em_registry.dead_em_cutoff_sec
+            ),
+            "SPIDER_SCHEDULER_EM_REGISTRY_LIVENESS_TRACKING_INTERVAL_MS": _str_or_none(
+                scheduler.em_registry.liveness_tracking_interval_ms
+            ),
+        }
+        env_vars |= _get_spider_scheduler_policy_env_vars(scheduler.config)
+
+        # Worker config
+        env_vars |= {
+            "SPIDER_WORKER_REPLICAS": str(worker.pools.general.replicas),
+            "CLP_SPIDER_COMPRESSION_WORKER_REPLICAS": str(worker.pools.compression.replicas),
+            "CLP_SPIDER_QUERY_WORKER_REPLICAS": str(worker.pools.query.replicas),
+            "SPIDER_WORKER_LOG_LEVEL": worker.log_level,
+            "SPIDER_WORKER_CONNECTION_POOL_SIZE": _str_or_none(worker.connection_pool_size),
+            "SPIDER_WORKER_SCHEDULER_POLL_WAIT_MS": _str_or_none(worker.scheduler_poll_wait_ms),
+            "SPIDER_WORKER_MAX_LOG_LINE_BYTES": _str_or_none(worker.max_log_line_bytes),
+            "SPIDER_WORKER_LIVENESS_SCHEDULER_HEARTBEAT_INTERVAL_SEC": _str_or_none(
+                worker.liveness.scheduler_heartbeat_interval_sec
+            ),
+            "SPIDER_WORKER_LIVENESS_STORAGE_HEARTBEAT_INTERVAL_SEC": _str_or_none(
+                worker.liveness.storage_heartbeat_interval_sec
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_compression_coordinator(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the compression coordinator component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = COMPRESSION_COORDINATOR_COMPONENT_NAME
+        coordinator_config = self._clp_config.compression_coordinator
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Runtime config
+        env_vars |= {
+            "CLP_COMPRESSION_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
+        }
+
+        # Credentials
+        env_vars |= {
+            "CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_query_coordinator(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the query coordinator component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUERY_COORDINATOR_COMPONENT_NAME
+        coordinator_config = self._clp_config.query_coordinator
+        if (
+            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
+            or coordinator_config is None
+        ):
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Runtime config
+        env_vars |= {
+            "CLP_QUERY_COORDINATOR_LOGGING_LEVEL": coordinator_config.logging_level,
+        }
+
+        # Credentials
+        env_vars |= {
+            "CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD": (
+                coordinator_config.resource_group_password
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
+        """
+        Sets up environment variables for the compression worker component.
+
+        :param num_workers: Number of worker processes to run.
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = COMPRESSION_WORKER_COMPONENT_NAME
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Logging config
+        env_vars |= {
+            "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": (
+                self._clp_config.compression_worker.logging_level
+            ),
+        }
+
+        # Resources
+        env_vars |= {
+            "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
+        }
+
+        # Telemetry config
+        env_vars |= {
+            "CLP_COMPRESSION_WORKER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.compression_worker.telemetry_update_interval_ms
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_query_worker(self, num_workers: int) -> EnvVarsDict:
+        """
+        Sets up environment variables for the query worker component.
+
+        :param num_workers: Number of worker processes to run.
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = QUERY_WORKER_COMPONENT_NAME
+        if self._clp_config.query_worker is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_QUERY_WORKER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_QUERY_WORKER_ENABLED": "1",
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
+        }
+
+        # Resources
+        env_vars |= {
+            "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
+        }
+
+        # Telemetry config
+        env_vars |= {
+            "CLP_QUERY_WORKER_METRIC_EXPORT_INTERVAL": str(
+                self._clp_config.query_worker.telemetry_update_interval_ms
+            ),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_reducer(self, num_workers: int) -> EnvVarsDict:
+        """
+        Sets up environment variables for the reducer component.
+
+        :param num_workers: Number of worker processes to run.
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = REDUCER_COMPONENT_NAME
+        if self._clp_config.reducer is None:
+            logger.info("%s is not configured, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_REDUCER_ENABLED": "0"})
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_REDUCER_ENABLED": "1",
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.reducer.logging_level,
+        }
+
+        # Resources
+        env_vars |= {
+            "CLP_REDUCER_CONCURRENCY": str(num_workers),
+            "CLP_REDUCER_UPSERT_INTERVAL": str(self._clp_config.reducer.upsert_interval),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_api_server(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the API server component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = API_SERVER_COMPONENT_NAME
+        if self._clp_config.api_server is None:
+            logger.info("The API Server is not configured, skipping %s creation...", component_name)
+            return EnvVarsDict({"CLP_API_SERVER_ENABLED": "0"})
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_API_SERVER_HOST": _get_ip_from_hostname(self._clp_config.api_server.host),
+            "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_log_ingestor(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the log ingestor component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = LOG_INGESTOR_COMPONENT_NAME
+        if self._clp_config.log_ingestor is None or not is_log_ingestor_enabled(self._clp_config):
+            logger.info("%s is not enabled, skipping environment setup...", component_name)
+            return EnvVarsDict({"CLP_LOG_INGESTOR_ENABLED": "0"})
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_HOST": _get_ip_from_hostname(self._clp_config.log_ingestor.host),
+            "CLP_LOG_INGESTOR_PORT": str(self._clp_config.log_ingestor.port),
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_LOG_INGESTOR_LOGGING_LEVEL": self._clp_config.log_ingestor.logging_level,
+        }
+
+        return env_vars
+
+    def _set_up_env_for_webui(self, container_clp_config: ClpConfig) -> EnvVarsDict:
+        """
+        Sets up environment variables and settings for the Web UI component.
+
+        :param container_clp_config: CLP configuration inside the containers.
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = WEBUI_COMPONENT_NAME
+        logger.info("Setting up environment for %s...", component_name)
+
+        container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
+        settings_json_path = self._clp_home / "etc" / "webui" / "settings.json"
+        validate_webui_config(self._clp_config, settings_json_path)
+
+        # Read, update, and write back the Web UI settings.json
+        clp_db_connection_params = self._clp_config.database.get_clp_connection_params_and_type(
+            True
+        )
+        table_prefix = clp_db_connection_params["table_prefix"]
+        if StorageEngine.CLP_S == self._clp_config.package.storage_engine:
+            archives_table_name = ""
+            files_table_name = ""
+        else:
+            archives_table_name = get_archives_table_name(table_prefix, None)
+            files_table_name = get_files_table_name(table_prefix, None)
+
+        logs_input_root_dir = (
+            str(CONTAINER_INPUT_LOGS_ROOT_DIR)
+            if StorageType.FS == self._clp_config.logs_input.type
+            else None
+        )
+
+        stream_storage = self._clp_config.stream_output.storage
+        stream_files_dir = None
+        stream_files_s3_path_prefix = None
+        stream_files_s3_profile = None
+        stream_files_s3_region = None
+        if StorageType.FS == stream_storage.type:
+            stream_files_dir = str(container_clp_config.stream_output.get_directory())
+        elif StorageType.S3 == stream_storage.type:
+            s3_config = stream_storage.s3_config
+            stream_files_s3_path_prefix = f"{s3_config.bucket}/{s3_config.key_prefix}"
+
+            auth = s3_config.aws_authentication
+            stream_files_s3_profile = auth.profile if AwsAuthType.profile == auth.type else None
+            stream_files_s3_region = s3_config.region_code
+
+        query_engine = self._clp_config.webui.query_engine
+        presto_host = None
+        presto_port = None
+        if QueryEngine.PRESTO == query_engine:
+            presto_host = container_clp_config.presto.host
+            presto_port = container_clp_config.presto.port
+
+        max_datasets_per_query = None
+        if self._clp_config.query_scheduler is not None:
+            max_datasets_per_query = self._clp_config.query_scheduler.max_datasets_per_query
+
+        log_ingestor_url = (
+            f"http://{container_clp_config.log_ingestor.host}"
+            f":{container_clp_config.log_ingestor.port}"
+            if container_clp_config.log_ingestor is not None
+            and is_log_ingestor_enabled(container_clp_config)
+            else None
+        )
+
+        public_settings_updates = {
+            "ClpQueryEngine": self._clp_config.webui.query_engine,
+            "ClpStorageEngine": self._clp_config.package.storage_engine,
+            "LogsInputRootDir": logs_input_root_dir,
+            "LogsInputType": self._clp_config.logs_input.type,
+            "LogIngestorEnabled": is_log_ingestor_enabled(container_clp_config),
+            "MaxDatasetsPerQuery": max_datasets_per_query,
+            "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
+            "SqlDbClpArchivesTableName": archives_table_name,
+            "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
+            "SqlDbClpFilesTableName": files_table_name,
+            "SqlDbClpTablePrefix": table_prefix,
+            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
+            "MongoDbSearchResultsMetadataCollectionName": (
+                self._clp_config.webui.results_metadata_collection_name
+            ),
+        }
+
+        server_settings_updates = {
+            "LogIngestorUrl": log_ingestor_url,
+            "ApiServerUrl": (
+                f"http://{container_clp_config.api_server.host}"
+                f":{container_clp_config.api_server.port}"
+            ),
+            "SqlDbHost": container_clp_config.database.host,
+            "SqlDbName": self._clp_config.database.names[ClpDbNameType.CLP],
+            "SqlDbPort": container_clp_config.database.port,
+            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+            "MongoDbHost": container_clp_config.results_cache.host,
+            "MongoDbName": self._clp_config.results_cache.db_name,
+            "MongoDbPort": container_clp_config.results_cache.port,
+            "MongoDbStreamFilesCollectionName": (
+                self._clp_config.results_cache.stream_collection_name
+            ),
+            "ClientDir": str(container_webui_dir / "client"),
+            "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
+            "StreamFilesDir": stream_files_dir,
+            "StreamFilesS3PathPrefix": stream_files_s3_path_prefix,
+            "StreamFilesS3Profile": stream_files_s3_profile,
+            "StreamFilesS3Region": stream_files_s3_region,
+            "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
+            "ArchiveOutputCompressionLevel": self._clp_config.archive_output.compression_level,
+            "ArchiveOutputTargetArchiveSize": self._clp_config.archive_output.target_archive_size,
+            "ArchiveOutputTargetDictionariesSize": (
+                self._clp_config.archive_output.target_dictionaries_size
+            ),
+            "ArchiveOutputTargetEncodedFileSize": (
+                self._clp_config.archive_output.target_encoded_file_size
+            ),
+            "ArchiveOutputTargetSegmentSize": self._clp_config.archive_output.target_segment_size,
+            "PrestoHost": presto_host,
+            "PrestoPort": presto_port,
+        }
+
+        settings_json_updates = {
+            "public": public_settings_updates,
+            "server": server_settings_updates,
+        }
+        resolved_settings_json_path = resolve_host_path_in_container(settings_json_path)
+        settings_json = self._read_and_update_settings_json(
+            resolved_settings_json_path, settings_json_updates
+        )
+        with resolved_settings_json_path.open("w") as settings_json_file:
+            settings_json_file.write(json.dumps(settings_json))
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_WEBUI_HOST": _get_ip_from_hostname(self._clp_config.webui.host),
+            "CLP_WEBUI_PORT": str(self._clp_config.webui.port),
+        }
+
+        # Security config
+        env_vars |= {
+            "CLP_WEBUI_RATE_LIMIT": str(self._clp_config.webui.rate_limit),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_mcp_server(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the MCP server component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = MCP_SERVER_COMPONENT_NAME
+        if self._clp_config.mcp_server is None:
+            logger.info("The MCP Server is not configured, skipping %s creation...", component_name)
+            return EnvVarsDict()
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        validate_mcp_server_config(self._clp_config, logs_dir)
+
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_MCP_SERVER_ENABLED": "1",
+        }
+
+        # Connection config
+        env_vars |= {
+            "CLP_MCP_HOST": _get_ip_from_hostname(self._clp_config.mcp_server.host),
+            "CLP_MCP_PORT": str(self._clp_config.mcp_server.port),
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_MCP_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
+        }
+
+        return env_vars
+
+    def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the garbage collector component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
+        if not is_retention_period_configured(self._clp_config):
+            logger.info(
+                f"Retention period is not configured, skipping {component_name} creation..."
+            )
+            return EnvVarsDict(
+                {
+                    "CLP_GARBAGE_COLLECTOR_ENABLED": "0",
+                }
+            )
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Logging config
+        env_vars |= {
+            "CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level
+        }
+
+        return env_vars
+
+    def _set_up_env_for_otel_collector_bundling(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for bundling the OpenTelemetry Collector component.
+
+        :return: Dictionary of environment variables necessary to bundle the component.
+        """
+        component_name = OTEL_COLLECTOR_COMPONENT_NAME
+
+        if self._clp_config.telemetry.disable:
+            logger.info("Telemetry is disabled, skipping otel-collector service bundling...")
+            # Bundling
+            return EnvVarsDict({"CLP_OTEL_COLLECTOR_ENABLED": "0"})
+
+        if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
+            logger.info(
+                "%s is not included in the 'bundled' configuration, skipping service bundling...",
+                component_name,
+            )
+            # Bundling
+            return EnvVarsDict({"CLP_OTEL_COLLECTOR_ENABLED": "0"})
+
+        logger.info("Setting up environment for bundling %s...", component_name)
+
+        conf_file = self._conf_dir / "otel-collector" / "config.yaml"
+
+        env_vars = EnvVarsDict()
+
+        # Paths
+        env_vars |= EnvVarsDict(
+            {
+                "CLP_OTEL_COLLECTOR_CONF_FILE_HOST": str(conf_file),
+            }
+        )
+
+        return env_vars
+
+    def _set_up_env_for_otel_collector(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for the OpenTelemetry Collector component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = OTEL_COLLECTOR_COMPONENT_NAME
+        if self._clp_config.telemetry.disable:
+            logger.info("Telemetry is disabled, skipping %s environment setup...", component_name)
+            return EnvVarsDict()
+
+        logger.info("Setting up environment for %s...", component_name)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        if BundledService.OTEL_COLLECTOR not in self._clp_config.bundled:
+            env_vars |= EnvVarsDict(
+                {
+                    "CLP_OTEL_COLLECTOR_CONNECT_PORT": str(self._clp_config.otel_collector.port),
+                    "CLP_EXTRA_HOST_OTEL_COLLECTOR_NAME": OTEL_COLLECTOR_COMPONENT_NAME,
+                    "CLP_EXTRA_HOST_OTEL_COLLECTOR_ADDR": _resolve_external_host(
+                        self._clp_config.otel_collector.host
+                    ),
+                }
+            )
+        else:
+            env_vars |= EnvVarsDict(
+                {
+                    "CLP_OTEL_COLLECTOR_HOST": _get_ip_from_hostname(
+                        self._clp_config.otel_collector.host
+                    ),
+                    "CLP_OTEL_COLLECTOR_PORT": str(self._clp_config.otel_collector.port),
+                }
+            )
+
+        return env_vars
+
+    def _set_up_env_for_telemetry(self) -> EnvVarsDict:
+        """
+        Sets up environment variables for telemetry.
+
+        :return: Dictionary of environment variables necessary to configure telemetry.
+        """
+        if self._clp_config.telemetry.disable:
+            logger.info("Telemetry is disabled, skipping telemetry environment setup...")
+            # Telemetry
+            return EnvVarsDict({"CLP_DISABLE_TELEMETRY": "true"})
+
+        logger.info("Setting up environment for telemetry...")
+
+        env_vars = EnvVarsDict()
+
+        # Telemetry
+        env_vars |= EnvVarsDict(
+            {
+                "CLP_DISABLE_TELEMETRY": "false",
+                "CLP_TELEMETRY_ENDPOINT": self._clp_config.telemetry.endpoint,
+            }
+        )
+
+        # Resource attributes
+        version_file_path = self._clp_home / "VERSION"
+        clp_version = (
+            version_file_path.read_text().strip() if version_file_path.exists() else "unknown"
+        )
+        resource_attrs = {
+            "clp.deployment.id": self._instance_id,
+            "service.version": clp_version,
+            "clp.deployment.method": "docker-compose",
+            "clp.storage.engine": self._clp_config.package.storage_engine,
+        }
+        env_vars |= EnvVarsDict(
+            {
+                "OTEL_RESOURCE_ATTRIBUTES": ",".join(f"{k}={v}" for k, v in resource_attrs.items()),
+            }
+        )
+
+        return env_vars
+
+    def _read_and_update_settings_json(
+        self, settings_file_path: pathlib.Path, updates: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Reads and updates a settings JSON file.
+
+        :param settings_file_path:
+        :param updates:
+        """
+        with settings_file_path.open("r") as settings_json_file:
+            settings_object = json.loads(settings_json_file.read())
+        self._update_settings_object("", settings_object, updates)
+
+        return settings_object
+
+    def _update_settings_object(
+        self,
+        parent_key_prefix: str,
+        settings: dict[str, Any],
+        updates: dict[str, Any],
+    ) -> None:
+        """
+        Recursively updates the given settings object with the values from `updates`.
+
+        :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
+        :param settings: The settings to update.
+        :param updates: The updates.
+        :raise ValueError: If a key in `updates` doesn't exist in `settings`.
+        """
+        for key, value in updates.items():
+            if key not in settings:
+                error_msg = (
+                    f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
+                )
+                raise ValueError(error_msg)
+            if isinstance(value, dict):
+                self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
+            else:
+                settings[key] = value
+
+
+class DockerComposeController(BaseController):
+    """
+    Controller for orchestrating CLP components using Docker Compose.
+    """
+
+    def __init__(
+        self, clp_config: ClpConfig, instance_id: str, restart_policy: str = "on-failure:3"
+    ) -> None:
+        """Initializes the DockerComposeController."""
+        self._instance_id = instance_id
+        self._project_name = f"clp-package-{instance_id}"
+        self._restart_policy = restart_policy
+        super().__init__(clp_config)
+
+    def set_up_env(self) -> None:
+        """
+        Sets up environment variables and directories for all components and writes them to the
+        `.env` file.
+        """
+        # Generate container-specific config.
+        container_clp_config = generate_docker_compose_container_config(self._clp_config)
+        num_workers = self._get_num_workers()
+        dump_shared_container_config(container_clp_config, self._clp_config)
+
+        env_vars = EnvVarsDict()
+
+        # Restart Policy
+        env_vars |= {
+            "CLP_RESTART_POLICY": self._restart_policy,
+            "SPIDER_RESTART_POLICY": self._restart_policy,
+        }
+
+        # Credentials
+        if self._clp_config.stream_output.storage.type == StorageType.S3:
+            stream_output_aws_auth = (
+                self._clp_config.stream_output.storage.s3_config.aws_authentication
+            )
+            if stream_output_aws_auth.type == AwsAuthType.credentials:
+                env_vars |= {
+                    "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID": (
+                        stream_output_aws_auth.credentials.access_key_id
+                    ),
+                    "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY": (
+                        stream_output_aws_auth.credentials.secret_access_key
+                    ),
+                }
+
+        # Identity config
+        env_vars |= {
+            "CLP_FIRST_PARTY_SERVICE_UID_GID": DEFAULT_UID_GID,
+            "CLP_THIRD_PARTY_SERVICE_UID_GID": (
+                THIRD_PARTY_SERVICE_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID
+            ),
+        }
+
+        # Package config
+        env_vars |= {
+            "CLP_PACKAGE_CONTAINER_IMAGE_REF": self._clp_config.container_image_ref,
+            "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
+        }
+
+        # Telemetry
+        env_vars |= self._set_up_env_for_telemetry()
+
+        # Paths
+        env_vars |= {
+            "CLP_AWS_CONFIG_DIR_HOST": _str_or_none(self._clp_config.aws_config_directory),
+            "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
+            "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
+            "CLP_TMP_DIR_HOST": str(self._clp_config.tmp_directory),
+        }
+
+        # Input config
+        if self._clp_config.logs_input.type == StorageType.FS:
+            env_vars["CLP_LOGS_INPUT_DIR_CONTAINER"] = str(
+                container_clp_config.logs_input.directory
+            )
+            env_vars["CLP_LOGS_INPUT_DIR_HOST"] = str(self._clp_config.logs_input.directory)
+
+        # Output config
+        archive_output_dir_str = str(self._clp_config.archive_output.get_directory())
+        stream_output_dir_str = str(self._clp_config.stream_output.get_directory())
+        if self._clp_config.archive_output.storage.type == StorageType.FS:
+            env_vars["CLP_ARCHIVE_OUTPUT_DIR_HOST"] = archive_output_dir_str
+        if self._clp_config.archive_output.storage.type == StorageType.S3:
+            env_vars["CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST"] = archive_output_dir_str
+        if self._clp_config.stream_output.storage.type == StorageType.FS:
+            env_vars["CLP_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
+        if self._clp_config.stream_output.storage.type == StorageType.S3:
+            env_vars["CLP_STAGED_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
+
+        # Component-specific config
+        env_vars |= self._set_up_env_for_database_bundling()
+        env_vars |= self._set_up_env_for_queue_bundling()
+        env_vars |= self._set_up_env_for_redis_bundling()
+        env_vars |= self._set_up_env_for_results_cache_bundling()
+        env_vars |= self._set_up_env_for_otel_collector_bundling()
+        env_vars |= self._set_up_env_for_database()
+        env_vars |= self._set_up_env_for_queue()
+        env_vars |= self._set_up_env_for_redis()
+        env_vars |= self._set_up_env_for_results_cache()
+        env_vars |= self._set_up_env_for_otel_collector()
+        env_vars |= self._set_up_env_for_compression_scheduler()
+        env_vars |= self._set_up_env_for_compression_coordinator()
+        env_vars |= self._set_up_env_for_query_coordinator()
+        env_vars |= self._set_up_env_for_spider()
+        env_vars |= self._set_up_env_for_query_scheduler()
+        env_vars |= self._set_up_env_for_compression_worker(num_workers)
+        env_vars |= self._set_up_env_for_query_worker(num_workers)
+        env_vars |= self._set_up_env_for_reducer(num_workers)
+        env_vars |= self._set_up_env_for_api_server()
+        env_vars |= self._set_up_env_for_log_ingestor()
+        env_vars |= self._set_up_env_for_webui(container_clp_config)
+        env_vars |= self._set_up_env_for_mcp_server()
+        env_vars |= self._set_up_env_for_garbage_collector()
+
+        # Write the environment variables to the `.env` file.
+        with open(f"{self._clp_home}/.env", "w") as env_file:
+            for key, value in env_vars.items():
+                if value is None:
+                    continue
+                env_file.write(f"{key}={value}\n")
+
+    def start(self) -> None:
+        """
+        Starts CLP's components using Docker Compose.
+
+        :raise: Propagates `check_docker_dependencies`'s exceptions.
+        :raise: Propagates `subprocess.run`'s exceptions.
+        """
+        check_docker_dependencies(
+            should_compose_project_be_running=False, project_name=self._project_name
+        )
+
+        logger.info("Starting CLP using Docker Compose...")
+
+        cmd = ["docker", "compose", "--project-name", self._project_name]
+        cmd += ["--file", self._get_docker_file_name()]
+        cmd += ["up", "--detach", "--wait"]
+        subprocess.run(
+            cmd,
+            cwd=self._clp_home,
+            check=True,
+        )
+        if not self._clp_config.telemetry.disable:
+            self._emit_topology_metrics()
+        logger.info("Started CLP.")
+
+    def stop(self) -> None:
+        """
+        Stops CLP components deployed via Docker Compose.
+
+        :raise: Propagates `subprocess.run`'s exceptions.
+        """
+        try:
+            check_docker_dependencies(
+                should_compose_project_be_running=True, project_name=self._project_name
+            )
+        except DockerComposeProjectNotRunningError:
+            logger.info(
+                "Docker Compose project '%s' is not running. Nothing to stop.",
+                self._project_name,
+            )
+            return
+        except DockerDependencyError as e:
+            logger.warning(
+                'Docker dependencies check failed: "%s". Attempting to stop CLP containers '
+                "anyway...",
+                e,
+            )
+        else:
+            logger.info("Stopping all CLP containers using Docker Compose...")
+
+        subprocess.run(
+            [
+                "docker",
+                "compose",
+                "--project-name",
+                self._project_name,
+                "--file",
+                self._get_docker_file_name(),
+                "down",
+                "--remove-orphans",
+            ],
+            cwd=self._clp_home,
+            check=True,
+        )
+        logger.info("Stopped CLP.")
+
+    def _get_docker_file_name(self) -> str:
+        """
+        :return: The Docker Compose file name to use based on the config.
+        """
+        if CompressionOrchestration.SPIDER == self._clp_config.package.scheduler:
+            return "docker-compose-spider.yaml"
+        return "docker-compose.yaml"
+
+    @staticmethod
+    def _get_num_workers() -> int:
+        """
+        :return: Number of worker processes to run.
+        """
+        # This will change when we move from single to multi-container workers. See y-scope/clp#1424
+        return max(1, multiprocessing.cpu_count() // 2)
+
+    def _emit_topology_metrics(self) -> None:
+        timestamp_ns = int(time.time() * 1e9)
+        metrics = []
+
+        def add_gauge(name: str, value: int):
+            metrics.append(
+                {
+                    "name": name,
+                    "gauge": {
+                        "dataPoints": [{"asInt": str(value), "timeUnixNano": str(timestamp_ns)}]
+                    },
+                }
+            )
+
+        num_workers = self._get_num_workers()
+
+        # NOTE: Replicas are hardcoded to 1 until multi-container workers land (see #1424).
+        add_gauge("clp.deployment.compression_worker_replicas", 1)
+        add_gauge("clp.deployment.compression_worker_concurrency", num_workers)
+
+        query_worker_replicas = 0 if self._clp_config.query_worker is None else 1
+        query_worker_concurrency = 0 if self._clp_config.query_worker is None else num_workers
+        add_gauge("clp.deployment.query_worker_replicas", query_worker_replicas)
+        add_gauge("clp.deployment.query_worker_concurrency", query_worker_concurrency)
+
+        reducer_replicas = 0 if self._clp_config.reducer is None else 1
+        reducer_concurrency = 0 if self._clp_config.reducer is None else num_workers
+        add_gauge("clp.deployment.reducer_replicas", reducer_replicas)
+        add_gauge("clp.deployment.reducer_concurrency", reducer_concurrency)
+
+        payload = {
+            "resourceMetrics": [
+                {
+                    "resource": {"attributes": []},
+                    "scopeMetrics": [{"scope": {"name": "clp.controller"}, "metrics": metrics}],
+                }
+            ]
+        }
+
+        payload["resourceMetrics"][0]["resource"]["attributes"].append(
+            {"key": "service.name", "value": {"stringValue": "controller"}}
+        )
+
+        try:
+            payload_bytes = json.dumps(payload).encode("utf-8")
+            otel_collector_host = self._clp_config.otel_collector.host
+            if BundledService.OTEL_COLLECTOR in self._clp_config.bundled:
+                otel_collector_host = _get_ip_from_hostname(otel_collector_host)
+            with http_request(
+                f"http://{otel_collector_host}:{self._clp_config.otel_collector.port}/v1/metrics",
+                method="POST",
+                data=payload_bytes,
+                headers={"Content-Type": "application/json"},
+            ) as response:
+                response.read()
+        except Exception as e:
+            logger.warning("Failed to emit topology metrics: %s", e)
+
+
+def get_or_create_instance_id(clp_config: ClpConfig) -> str:
+    """
+    Gets or creates a unique instance ID for this CLP instance.
+
+    :param clp_config:
+    :return: The instance ID.
+    """
+    instance_id_file_path = clp_config.logs_directory / "instance-id"
+    resolved_instance_id_file_path = resolve_host_path_in_container(instance_id_file_path)
+
+    if resolved_instance_id_file_path.exists():
+        with open(resolved_instance_id_file_path, "r") as f:
+            instance_id = f.readline()
+    else:
+        instance_id = str(uuid.uuid4())
+        with open(resolved_instance_id_file_path, "w") as f:
+            f.write(instance_id)
+
+    return instance_id
+
+
+def _chown_paths_if_root(*paths: pathlib.Path) -> None:
+    """
+    Changes ownership of the given paths to the default service container user/group IDs if the
+    current process is running as root.
+
+    :param paths:
+    """
+    if os.getuid() != 0:
+        return
+    for path in paths:
+        _chown_recursively(path, THIRD_PARTY_SERVICE_UID, THIRD_PARTY_SERVICE_GID)
+
+
+def _chown_recursively(
+    path: pathlib.Path,
+    user_id: int,
+    group_id: int,
+) -> None:
+    """
+    Recursively changes the owner of the given path to the given user ID and group ID.
+
+    :param path:
+    :param user_id:
+    :param group_id:
+    """
+    chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
+    subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
+
+
+def _get_spider_round_robin_scheduler_env_vars(round_robin: SpiderRoundRobin) -> EnvVarsDict:
+    """
+    :param round_robin:
+    :return: Dictionary of environment variables necessary to tune the round-robin policy.
+    """
+    return EnvVarsDict(
+        {
+            "SPIDER_SCHEDULER_ROUND_ROBIN_ACTIVE_JOB_QUEUE_CAPACITY": _str_or_none(
+                round_robin.active_job_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
+                round_robin.dispatch_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.commit_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
+                round_robin.cleanup_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
+                round_robin.storage_poll_timeout_ms
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
+                round_robin.tick_interval_ms
+            ),
+            "SPIDER_SCHEDULER_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": _str_or_none(
+                round_robin.finalizing_job_expiration_timeout_sec
+            ),
+        }
+    )
+
+
+def _get_spider_resource_group_round_robin_scheduler_env_vars(
+    rg_round_robin: SpiderResourceGroupRoundRobin,
+) -> EnvVarsDict:
+    """
+    :param rg_round_robin:
+    :return: Dictionary of environment variables necessary to tune the resource-group round-robin
+        policy.
+    """
+    return EnvVarsDict(
+        {
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_ACTIVE_JOB_LIST_CAPACITY": _str_or_none(
+                rg_round_robin.active_job_list_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_DISPATCH_QUEUE_CAPACITY": _str_or_none(
+                rg_round_robin.dispatch_queue_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_COMMIT_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.commit_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_CLEANUP_READY_TASK_CAPACITY": _str_or_none(
+                rg_round_robin.cleanup_ready_task_capacity
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_STORAGE_POLL_TIMEOUT_MS": _str_or_none(
+                rg_round_robin.storage_poll_timeout_ms
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_TICK_INTERVAL_MS": _str_or_none(
+                rg_round_robin.tick_interval_ms
+            ),
+            "SPIDER_SCHEDULER_RESOURCE_GROUP_ROUND_ROBIN_FINALIZING_JOB_EXPIRATION_TIMEOUT_SEC": (
+                _str_or_none(rg_round_robin.finalizing_job_expiration_timeout_sec)
+            ),
+        }
+    )
+
+
+def _get_spider_scheduler_policy_env_vars(
+    config: SpiderRoundRobin | SpiderResourceGroupRoundRobin,
+) -> EnvVarsDict:
+    """
+    :param config: The selected scheduler policy's config.
+    :return: Dictionary of environment variables necessary to tune the selected scheduler policy.
+    """
+    if isinstance(config, SpiderRoundRobin):
+        return _get_spider_round_robin_scheduler_env_vars(config)
+    if isinstance(config, SpiderResourceGroupRoundRobin):
+        return _get_spider_resource_group_round_robin_scheduler_env_vars(config)
+    raise NotImplementedError("unknown Spider scheduler policy")
+
+
+def _str_or_none(value: int | pathlib.Path | None) -> str | None:
+    """
+    :param value:
+    :return: `value` as a string, or None if `value` is None.
+    """
+    return None if value is None else str(value)
+
+
+def _get_ip_from_hostname(hostname: str) -> str:
+    """
+    Resolves a hostname to an IPv4 IP address.
+
+    :param hostname:
+    :return: The resolved IP address.
+    """
+    return socket.gethostbyname(hostname)
+
+
+def _resolve_external_host(hostname: str) -> str:
+    """
+    Resolves a hostname to an address suitable for Docker's ``extra_hosts``.
+
+    When the hostname resolves to a loopback address, returns Docker's ``host-gateway`` token so
+    that containers can reach services running on the Docker host. For any other hostname, falls
+    back to standard DNS resolution.
+
+    :param hostname:
+    :return: The resolved address.
+    """
+    resolved_ip = _get_ip_from_hostname(hostname)
+    if ipaddress.ip_address(resolved_ip).is_loopback:
+        return "host-gateway"
+    return resolved_ip

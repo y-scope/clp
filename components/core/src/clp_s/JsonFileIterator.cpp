@@ -7,28 +7,19 @@
 
 namespace clp_s {
 JsonFileIterator::JsonFileIterator(
-        std::string const& file_name,
+        clp::ReaderInterface& reader,
         size_t max_document_size,
         size_t buf_size
 )
         : m_buf_size(buf_size),
           m_max_document_size(max_document_size),
-          m_buf(new char[buf_size + simdjson::SIMDJSON_PADDING]) {
-    try {
-        m_reader.open(file_name);
-    } catch (FileReader::OperationFailed& e) {
-        SPDLOG_ERROR("Failed to open {} for reading - {}", file_name, e.what());
-        return;
-    }
-
+          m_buf(new char[buf_size + simdjson::SIMDJSON_PADDING]),
+          m_reader(reader) {
     read_new_json();
 }
 
 JsonFileIterator::~JsonFileIterator() {
     delete[] m_buf;
-    if (m_reader.is_open()) {
-        m_reader.close();
-    }
 }
 
 bool JsonFileIterator::read_new_json() {
@@ -38,13 +29,13 @@ bool JsonFileIterator::read_new_json() {
             // double buffer size to attempt to capture long json object
             size_t new_buf_size = m_buf_size * 2;
             char* new_buf = new char[new_buf_size + simdjson::SIMDJSON_PADDING];
-            memcpy(new_buf, m_buf, m_buf_size);
+            std::memcpy(new_buf, m_buf, m_buf_size);
             delete[] m_buf;
             m_buf = new_buf;
             m_buf_size = new_buf_size;
         } else if (m_truncated_bytes > 0) {
             // move bytes to start of buffer
-            memmove(m_buf, m_buf + (m_buf_occupied - m_truncated_bytes), m_truncated_bytes);
+            std::memmove(m_buf, m_buf + (m_buf_occupied - m_truncated_bytes), m_truncated_bytes);
             m_buf_occupied = m_truncated_bytes;
         } else {
             m_buf_occupied = 0;
@@ -59,9 +50,9 @@ bool JsonFileIterator::read_new_json() {
         m_buf_occupied += size_read;
         m_bytes_read += size_read;
 
-        if (ErrorCodeEndOfFile == file_error) {
+        if (clp::ErrorCode::ErrorCode_EndOfFile == file_error) {
             m_eof = true;
-        } else if (ErrorCodeSuccess != file_error) {
+        } else if (clp::ErrorCode::ErrorCode_Success != file_error) {
             m_error_code = simdjson::error_code::IO_ERROR;
             return false;
         }

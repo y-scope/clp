@@ -61,8 +61,8 @@ public:
      * @return ErrorCode_EndOfFile on EOF or trying to read after hitting checkpoint
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] auto
-    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override;
 
     /**
      * This function is unsupported because BoundedReader can not delegate to a potentially

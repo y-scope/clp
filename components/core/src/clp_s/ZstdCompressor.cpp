@@ -1,11 +1,13 @@
 // Code from CLP
 #include "ZstdCompressor.hpp"
 
+#include <spdlog/spdlog.h>
+
 namespace clp_s {
 ZstdCompressor::ZstdCompressor()
-        : Compressor(CompressorType::ZSTD),
-          m_compression_stream_contains_data(false),
-          m_compressed_stream_file_writer(nullptr) {
+        : Compressor{CompressorType::ZSTD},
+          m_compressed_stream_file_writer{nullptr},
+          m_compression_stream_contains_data{false} {
     m_compression_stream = ZSTD_createCStream();
     if (nullptr == m_compression_stream) {
         SPDLOG_ERROR("ZstdCompressor: ZSTD_createCStream() error");

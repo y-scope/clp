@@ -183,11 +183,8 @@ bool Archive::get_next_message(File& file, Message& msg) {
     return file.get_next_message(msg);
 }
 
-bool Archive::decompress_message(
-        File& file,
-        Message const& compressed_msg,
-        string& decompressed_msg
-) {
+bool
+Archive::decompress_message(File& file, Message const& compressed_msg, string& decompressed_msg) {
     decompressed_msg.clear();
 
     // Build original message content
@@ -468,8 +465,8 @@ size_t Archive::decompress_messages_and_output(
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && wildcard_required[ix])
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             bool matched = wildcard_match_unsafe(
                     decompressed_msg,

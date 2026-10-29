@@ -14,8 +14,8 @@ constexpr size_t cCharBitarraySize = 128;
  * @param char_str A string that contains the characters to look up.
  * @return The lookup table as bit array.
  */
-[[nodiscard]] constexpr auto create_char_bit_array(std::string_view char_str
-) -> std::array<bool, cCharBitarraySize> {
+[[nodiscard]] constexpr auto create_char_bit_array(std::string_view char_str)
+        -> std::array<bool, cCharBitarraySize> {
     std::array<bool, cCharBitarraySize> bit_array{};
     bit_array.fill(false);
     for (auto const ch : char_str) {
@@ -23,10 +23,6 @@ constexpr size_t cCharBitarraySize = 128;
     }
     return bit_array;
 }
-
-// Wildcard meta characters
-constexpr char cZeroOrMoreCharsWildcard{'*'};
-constexpr char cSingleCharWildcard{'?'};
 
 // Regex meta characters
 constexpr char cRegexZeroOrMore{'*'};

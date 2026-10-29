@@ -1,0 +1,118 @@
+use std::num::NonZeroU16;
+use std::num::NonZeroU32;
+
+use non_empty_string::NonEmptyString;
+use num_enum::IntoPrimitive;
+use num_enum::TryFromPrimitive;
+use serde::Deserialize;
+use serde::Serialize;
+use strum::EnumString;
+use utoipa::ToSchema;
+
+use crate::dataset::DatasetName;
+use crate::types::SessionToken;
+
+pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
+
+pub const QUERY_TASKS_TABLE_NAME: &str = "query_tasks";
+
+pub type QueryJobId = i32;
+
+/// Mirror of `job_orchestration.scheduler.job_config.AggregationConfig`. Must be kept in sync.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct AggregationConfig {
+    pub job_id: Option<i64>,
+    pub reducer_host: Option<String>,
+    pub reducer_port: Option<u16>,
+    pub do_count_aggregation: Option<bool>,
+    /// Milliseconds
+    pub count_by_time_bucket_size: Option<i64>,
+}
+
+/// The TCP listener that a query job's results are streamed to.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct NetworkOutput {
+    pub host: NonEmptyString,
+    pub port: NonZeroU16,
+    pub session_token: SessionToken,
+}
+
+/// The configuration of a search or aggregation query job, as stored in the query jobs table.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct SearchJobConfig {
+    pub datasets: Option<Vec<DatasetName>>,
+    pub query_string: String,
+    pub max_num_results: Option<NonZeroU32>,
+    pub begin_timestamp: Option<i64>,
+    pub end_timestamp: Option<i64>,
+    pub ignore_case: bool,
+    pub path_filter: Option<String>,
+    pub network_output: Option<NetworkOutput>,
+    pub aggregation_config: Option<AggregationConfig>,
+    pub write_to_file: bool,
+}
+
+/// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    EnumString,
+    Eq,
+    IntoPrimitive,
+    PartialEq,
+    Serialize,
+    ToSchema,
+    TryFromPrimitive,
+    sqlx::Type,
+)]
+#[repr(i32)]
+#[strum(ascii_case_insensitive)]
+pub enum QueryJobStatus {
+    Pending = 0,
+    Running = 1,
+    Succeeded = 2,
+    Failed = 3,
+    CancelRequested = 4,
+    Cancelling = 5,
+    Cancelled = 6,
+    Killed = 7,
+}
+
+impl QueryJobStatus {
+    /// # Returns
+    ///
+    /// Whether the status is terminal, i.e., whether the job has finished and its status will no
+    /// longer change.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(
+            self,
+            Self::Succeeded | Self::Failed | Self::Cancelled | Self::Killed
+        )
+    }
+}
+
+/// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    IntoPrimitive,
+    PartialEq,
+    Serialize,
+    TryFromPrimitive,
+    sqlx::Type,
+)]
+#[repr(i32)]
+pub enum QueryJobType {
+    SearchOrAggregation = 0,
+    ExtractIr = 1,
+    ExtractJson = 2,
+}

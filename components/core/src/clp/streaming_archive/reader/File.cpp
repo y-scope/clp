@@ -252,14 +252,21 @@ bool File::find_message_in_time_range(
 SubQuery const* File::find_message_matching_query(Query const& query, Message& msg) {
     SubQuery const* matching_sub_query = nullptr;
     while (m_msgs_ix < m_num_messages && nullptr == matching_sub_query) {
-        auto logtype_id = m_logtypes[m_msgs_ix];
+        auto const curr_msg_ix{m_msgs_ix};
+        auto logtype_id = m_logtypes[curr_msg_ix];
 
         // Get number of variables in logtype
         auto const& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
         auto const num_vars = logtype_dictionary_entry.get_num_variables();
 
+        auto const vars_begin_ix{m_variables_ix};
         auto const vars_end_ix{m_variables_ix + num_vars};
-        auto const timestamp{m_timestamps[m_msgs_ix]};
+
+        // Advance indices
+        ++m_msgs_ix;
+        m_variables_ix = vars_end_ix;
+
+        auto const timestamp{m_timestamps[curr_msg_ix]};
         if (false == query.timestamp_is_in_search_time_range(timestamp)) {
             continue;
         }
@@ -270,7 +277,7 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
             }
 
             msg.clear_vars();
-            for (auto vars_ix{m_variables_ix}; vars_ix < vars_end_ix; ++vars_ix) {
+            for (auto vars_ix{vars_begin_ix}; vars_ix < vars_end_ix; ++vars_ix) {
                 msg.add_var(m_variables[vars_ix]);
             }
             if (false == sub_query->matches_vars(msg.get_vars())) {
@@ -279,14 +286,10 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
 
             msg.set_logtype_id(logtype_id);
             msg.set_timestamp(timestamp);
-            msg.set_msg_ix(m_begin_message_ix, m_msgs_ix);
+            msg.set_msg_ix(m_begin_message_ix, curr_msg_ix);
             matching_sub_query = sub_query;
             break;
         }
-
-        // Advance indices
-        ++m_msgs_ix;
-        m_variables_ix += num_vars;
     }
 
     return matching_sub_query;

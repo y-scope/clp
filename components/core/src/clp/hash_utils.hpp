@@ -69,9 +69,8 @@ private:
  * @return Same as `EvpDigestContext::digest_final` if `EvpDigestContext::digest_final` fails.
  * @throw HashUtilsOperationFailed if an OpenSSL EVP digest couldn't be created.
  */
-[[nodiscard]] auto get_sha256_hash(
-        std::span<unsigned char const> input,
-        std::vector<unsigned char>& hash
-) -> ErrorCode;
+[[nodiscard]] auto
+get_sha256_hash(std::span<unsigned char const> input, std::vector<unsigned char>& hash)
+        -> ErrorCode;
 }  // namespace clp
 #endif  // CLP_HASH_UTILS_HPP

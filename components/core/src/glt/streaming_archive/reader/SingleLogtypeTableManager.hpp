@@ -11,7 +11,8 @@
 namespace glt::streaming_archive::reader {
 class SingleLogtypeTableManager : public streaming_archive::reader::LogtypeTableManager {
 public:
-    SingleLogtypeTableManager() : m_logtype_table_loaded(false) {};
+    SingleLogtypeTableManager() : m_logtype_table_loaded(false) {}
+
     void open_logtype_table(logtype_dictionary_id_t logtype_id);
     void close_logtype_table();
 

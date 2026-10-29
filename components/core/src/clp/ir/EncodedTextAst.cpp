@@ -50,8 +50,8 @@ auto EncodedTextAst<encoded_variable_t>::decode_and_unparse() const -> optional<
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
-template auto EncodedTextAst<eight_byte_encoded_variable_t>::decode_and_unparse(
-) const -> optional<string>;
-template auto EncodedTextAst<four_byte_encoded_variable_t>::decode_and_unparse(
-) const -> optional<string>;
+template auto EncodedTextAst<eight_byte_encoded_variable_t>::decode_and_unparse() const
+        -> optional<string>;
+template auto EncodedTextAst<four_byte_encoded_variable_t>::decode_and_unparse() const
+        -> optional<string>;
 }  // namespace clp::ir

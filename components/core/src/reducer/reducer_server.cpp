@@ -1,12 +1,13 @@
 #include <cassert>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <utility>
 
 #include <boost/asio.hpp>
-#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../clp/spdlog_with_specializations.hpp"
@@ -171,7 +172,7 @@ void SchedulerUpdateListenerTask::operator()(
         return;
     }
 
-    memcpy(&header_size, buf_read_head, sizeof(header_size));
+    std::memcpy(&header_size, buf_read_head, sizeof(header_size));
     if (header_size > cMaxMessageSize) {
         SPDLOG_ERROR("Message from scheduler too large {}B", header_size);
         m_server_ctx->set_status(ServerStatus::RecoverableFailure);
@@ -205,8 +206,9 @@ void SchedulerUpdateListenerTask::operator()(
 
         if (m_server_ctx->is_timeline_aggregation()) {
             auto& upsert_timer = m_server_ctx->get_upsert_timer();
-            upsert_timer.expires_after(std::chrono::milliseconds(m_server_ctx->get_upsert_interval()
-            ));
+            upsert_timer.expires_after(
+                    std::chrono::milliseconds(m_server_ctx->get_upsert_interval())
+            );
             upsert_timer.async_wait(PeriodicUpsertTask(m_server_ctx));
         }
 

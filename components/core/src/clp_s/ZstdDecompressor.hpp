@@ -3,12 +3,13 @@
 #ifndef CLP_S_ZSTDDECOMPRESSOR_HPP
 #define CLP_S_ZSTDDECOMPRESSOR_HPP
 
-#include <memory>
+#include <optional>
 #include <string>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <zstd.h>
 
+#include "../clp/ReaderInterface.hpp"
+#include "../clp/ReadOnlyMemoryMappedFile.hpp"
 #include "Decompressor.hpp"
 #include "TraceableException.hpp"
 
@@ -41,6 +42,8 @@ public:
     void open(char const* compressed_data_buf, size_t compressed_data_buf_size) override;
 
     void open(FileReader& file_reader, size_t file_read_buffer_capacity) override;
+
+    void open(clp::ReaderInterface& reader, size_t file_read_buffer_capacity) override;
 
     void close() override;
 
@@ -109,7 +112,8 @@ private:
                          // parameter is not initialized properly
         CompressedDataBuf,
         MemoryMappedCompressedFile,
-        File
+        File,
+        ClpReader
     };
 
     // Methods
@@ -125,8 +129,9 @@ private:
     // Compressed stream variables
     ZSTD_DStream* m_decompression_stream;
 
-    boost::iostreams::mapped_file_source m_memory_mapped_compressed_file;
+    std::optional<clp::ReadOnlyMemoryMappedFile> m_memory_mapped_file;
     FileReader* m_file_reader;
+    clp::ReaderInterface* m_reader;
     size_t m_file_reader_initial_pos;
     std::unique_ptr<char[]> m_file_read_buffer;
     size_t m_file_read_buffer_length;

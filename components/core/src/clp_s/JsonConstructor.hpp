@@ -7,12 +7,8 @@
 #include <utility>
 
 #include "ArchiveReader.hpp"
-#include "ColumnReader.hpp"
-#include "DictionaryReader.hpp"
 #include "ErrorCode.hpp"
-#include "FileWriter.hpp"
-#include "SchemaReader.hpp"
-#include "SchemaTree.hpp"
+#include "InputConfig.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
@@ -26,12 +22,13 @@ struct MetadataDbOption {
 };
 
 struct JsonConstructorOption {
-    std::string archives_dir;
-    std::string archive_id;
+    Path archive_path{};
+    NetworkAuthOption network_auth{};
     std::string output_dir;
     bool ordered{false};
+    bool print_ordered_chunk_stats{false};
     size_t target_ordered_chunk_size{};
-    std::optional<MetadataDbOption> metadata_db;
+    std::optional<MetadataDbOption> metadata_db{std::nullopt};
 };
 
 class JsonConstructor {

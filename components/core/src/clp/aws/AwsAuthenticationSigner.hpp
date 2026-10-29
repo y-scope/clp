@@ -2,6 +2,8 @@
 #define CLP_AWS_AWSAUTHENTICATIONSIGNER_HPP
 
 #include <chrono>
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -38,10 +40,17 @@ public:
         std::string m_message;
     };
 
+    enum class Style : uint8_t {
+        VirtualHost,
+        Path
+    };
+
     // Constructor
     explicit S3Url(std::string const& url);
 
     // Methods
+    [[nodiscard]] auto get_style() const -> Style { return m_style; }
+
     [[nodiscard]] auto get_region() const -> std::string_view { return m_region; }
 
     [[nodiscard]] auto get_bucket() const -> std::string_view { return m_bucket; }
@@ -50,12 +59,16 @@ public:
 
     [[nodiscard]] auto get_host() const -> std::string_view { return m_host; }
 
+    [[nodiscard]] auto get_scheme() const -> std::string_view { return m_scheme; }
+
 private:
+    Style m_style{Style::VirtualHost};
     std::string m_region;
     std::string m_end_point;
     std::string m_bucket;
     std::string m_key;
     std::string m_host;
+    std::string m_scheme;
 };
 
 /**
@@ -69,9 +82,14 @@ public:
     static constexpr std::string_view cHttpGetMethod{"GET"};
 
     // Constructors
-    AwsAuthenticationSigner(std::string access_key_id, std::string secret_access_key)
+    AwsAuthenticationSigner(
+            std::string access_key_id,
+            std::string secret_access_key,
+            std::optional<std::string> session_token
+    )
             : m_access_key_id{std::move(access_key_id)},
-              m_secret_access_key{std::move(secret_access_key)} {}
+              m_secret_access_key{std::move(secret_access_key)},
+              m_session_token{std::move(session_token)} {}
 
     // Methods
     /**
@@ -82,8 +100,8 @@ public:
      * @return ErrorCode_Success on success.
      * @return Same as `get_sha256_hash` and `AwsAuthenticationSigner::get_signature` on failure.
      */
-    [[nodiscard]] auto
-    generate_presigned_url(S3Url const& s3_url, std::string& presigned_url) const -> ErrorCode;
+    [[nodiscard]] auto generate_presigned_url(S3Url const& s3_url, std::string& presigned_url) const
+            -> ErrorCode;
 
 private:
     /**
@@ -92,10 +110,9 @@ private:
      * @param timestamp
      * @return The canonical query string.
      */
-    [[nodiscard]] auto get_canonical_query_string(
-            std::string_view scope,
-            std::string_view timestamp
-    ) const -> std::string;
+    [[nodiscard]] auto
+    get_canonical_query_string(std::string_view scope, std::string_view timestamp) const
+            -> std::string;
 
     /**
      * Gets the signature signing key for the request.
@@ -130,6 +147,7 @@ private:
     // Variables
     std::string m_access_key_id;
     std::string m_secret_access_key;
+    std::optional<std::string> m_session_token;
 };
 }  // namespace clp::aws
 

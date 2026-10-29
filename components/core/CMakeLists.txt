@@ -1,10 +1,32 @@
-cmake_minimum_required(VERSION 3.16.3)
+# ystdlib requires CMake v3.23 or higher
+cmake_minimum_required(VERSION 3.23)
+
 project(CLP LANGUAGES CXX C)
+
+# Toolchain validation
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
+
+validate_compiler_versions()
+
+# Include options for CLP build
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
+
+validate_and_setup_all_clp_dependency_flags()
+convert_clp_dependency_properties_to_variables()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
     message(STATUS "No build type specified. Setting to '${default_build_type}'.")
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
+endif()
+
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT)
+    if(IPO_SUPPORTED)
+        message(STATUS "Link-time optimization enabled.")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -33,8 +55,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
-# Profiling options
-add_definitions(-DPROF_ENABLED=0)
+set(CLP_ENABLE_PROFILING "0" CACHE STRING "Profiling level (unset/0 = off, 1 = base, 2 = debug)")
+if(NOT CLP_ENABLE_PROFILING MATCHES "^(0|1|2)$")
+    message(FATAL_ERROR
+        "Unsupported CLP_ENABLE_PROFILING value '${CLP_ENABLE_PROFILING}'. "
+        "Supported values: 0 (off), 1 (base), 2 (debug)."
+    )
+endif()
 
 # Compile-in debug logging statements
 #add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
@@ -58,7 +85,15 @@ if (CLP_USE_STATIC_LIBS)
     if (APPLE)
         set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
     elseif (EXISTS "/etc/centos-release")
-        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        # NOTE:
+        # 1. We don't support static linking on any CentOS-based distro except manylinux_2_28 (which
+        #    shows up as "AlmaLinux").
+        # 2. A release called "AlmaLinux" doesn't guarantee we're running on a manylinux distro, but
+        #    we can improve this check when someone reports an issue.
+        file(READ "/etc/centos-release" CENTOS_RELEASE_CONTENT)
+        if(NOT "${CENTOS_RELEASE_CONTENT}" MATCHES "AlmaLinux")
+            set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        endif()
     endif()
 
     if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
@@ -88,202 +123,247 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+if(PROJECT_IS_TOP_LEVEL)
+    # Include dependency settings if the project isn't being included as a subproject.
+    # NOTE: We mark the file optional since it's not required if the user happens to have the
+    # dependencies installed already.
+    set(CLP_DEPS_CPP_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/cpp")
+    include("${CLP_DEPS_CPP_DIR}/cmake-settings/all-core.cmake"
+            OPTIONAL
+            RESULT_VARIABLE CLP_DEPS_CPP_CORE_SETTINGS_FILE_PATH
+    )
+
+    if(NOT CLP_DEPS_CPP_CORE_SETTINGS_FILE_PATH STREQUAL "NOTFOUND")
+        # Set CMP0144 since our minimum required CMake version is less than 3.27.
+        if(POLICY "CMP0144")
+            cmake_policy(SET "CMP0144" "NEW")
+        endif()
+    endif()
+
+    # If previously undefined, `BUILD_TESTING` will be set to ON.
+    include(CTest)
+endif()
+
+if(BUILD_TESTING AND CLP_BUILD_TESTING)
+    set(CLP_ENABLE_TESTS ON)
+endif()
+
+if(CLP_NEED_ABSL)
+    find_package(absl REQUIRED)
+    if (absl_FOUND)
+        message(STATUS "Found absl ${absl_VERSION}")
+    endif()
+endif()
+
 # Find and setup ANTLR Library
-# We build and link to the static library
-find_package(ANTLR REQUIRED)
-if (ANTLR_FOUND)
-    message(STATUS "Found ANTLR ${ANTLR_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+if(CLP_NEED_ANTLR)
+    find_package(antlr4-runtime REQUIRED)
+    if (antlr4-runtime_FOUND)
+        message(STATUS "Found antlr4-runtime ${antlr4-runtime_VERSION}")
+    endif()
 endif()
 
 # Find and setup Boost Library
-if(CLP_USE_STATIC_LIBS)
-    set(Boost_USE_STATIC_LIBS ON)
-endif()
-find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
-if(Boost_FOUND)
+if(CLP_NEED_BOOST)
+    if(CLP_USE_STATIC_LIBS)
+        set(Boost_USE_STATIC_LIBS ON)
+    endif()
+    find_package(
+        Boost
+        1.81...1.88
+        REQUIRED
+            filesystem
+            iostreams
+            program_options
+            regex
+            system
+            url
+    )
     message(STATUS "Found Boost ${Boost_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
 endif()
 
-# Find and setup spdlog and fmt transitive dependency
-
-# Specify the minimum required spdlog version (can be overridden by the user)
-set (spdlog_MIN_VERSION "1.9.0" CACHE STRING "Minimum required version of spdlog")
-if(CLP_USE_STATIC_LIBS)
-    # NOTE: On some Linux distributions (e.g. Ubuntu), the spdlog package only contains a dynamic
-    # library. If the `find_package(spdlog)` call below fails, re-run
-    # `tools/scripts/lib_install/<dist_name>/install-packages-from-source.sh` to build spdlog from
-    # source.
-    set(spdlog_USE_STATIC_LIBS ON)
+if(CLP_NEED_CATCH2)
+    find_package(Catch2 3.8.0 REQUIRED)
+    message(STATUS "Found Catch2 ${Catch2_VERSION}")
 endif()
-find_package(spdlog ${spdlog_MIN_VERSION} REQUIRED)
-if(spdlog_FOUND)
-    message(STATUS "Found spdlog ${spdlog_VERSION}")
-else()
-    message("You may want to re-run `components/core/tools/scripts/lib_install/<dist>/install-packages-from-source.sh`")
-    if (CLP_USE_STATIC_LIBS)
-        message(FATAL_ERROR "Could not find static libraries for spdlog.")
-    else()
-        message(FATAL_ERROR "Could not find libraries for spdlog.")
+
+if(CLP_NEED_DATE)
+    find_package(date REQUIRED)
+    if (date_FOUND)
+        message(STATUS "Found date ${date_VERSION}")
     endif()
 endif()
 
-# Determine the lower bound version compatibility of fmt w.r.t to spdlog
-if(spdlog_VERSION VERSION_GREATER_EQUAL "1.15.0")
-    set(FMT_MIN_VERSION "11.0.0")
-elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.12.0")
-    set(FMT_MIN_VERSION "10.0.0")
-elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.11.0")
-    set(FMT_MIN_VERSION "9.0.0")
-elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.9.0")
-    set(FMT_MIN_VERSION "8.0.0")
-else()
-    message(FATAL_ERROR "Unsupported spdlog version (${spdlog_VERSION}). Minimum supported version is 1.9.0.")
-endif()
-
-# Find fmt with the compatible version
-# NOTE:
-# - We only try to link to the static library
-find_package(fmt ${FMT_MIN_VERSION} REQUIRED)
-if(fmt_FOUND)
-    # Determine the upper bound version compatibility of fmt w.r.t to spdlog
-    if(spdlog_VERSION VERSION_GREATER_EQUAL "1.15.0")
-        # Empty block, no upper version limit
-    elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.12.0")
-        if (fmt_VERSION VERSION_GREATER_EQUAL "11.0.0")
-            message(FATAL_ERROR "Unsupported fmt version (${fmt_VERSION}). Support version: 10.0.0 <= version < 11.0.0")
-        endif()
-    elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.11.0")
-        if (fmt_VERSION VERSION_GREATER_EQUAL "10.0.0")
-            message(FATAL_ERROR "Unsupported fmt version (${fmt_VERSION}). Support version: 9.0.0 <= version < 10.0.0")
-        endif()
-    elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.9.0")
-        if (fmt_VERSION VERSION_GREATER_EQUAL "9.0.0")
-            message(FATAL_ERROR "Unsupported fmt version (${fmt_VERSION}). Support version: 8.0.0 <= version < 9.0.0")
-        endif()
+if(CLP_NEED_FMT)
+    find_package(fmt REQUIRED)
+    if(fmt_FOUND)
+        message(STATUS "Found fmt ${fmt_VERSION}")
     endif()
-    message(STATUS "Found fmt ${fmt_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find static libraries for fmt")
 endif()
 
-# Print the selected versions for debugging
-message(STATUS "Using spdlog version ${spdlog_VERSION}")
-message(STATUS "Using fmt version ${fmt_VERSION}")
+if(CLP_NEED_LOG_SURGEON)
+    find_package(log_surgeon REQUIRED)
+    if(log_surgeon_FOUND)
+        message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_NLOHMANN_JSON)
+    find_package(nlohmann_json REQUIRED)
+    if(nlohmann_json_FOUND)
+        message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_OPENTELEMETRY_CPP)
+    # NOTE: We don't restrict the discovery to specific `COMPONENTS` because the OTLP HTTP exporter
+    # and trace SDK targets are required in addition to the API, and the package config exports all
+    # built targets regardless.
+    find_package(opentelemetry-cpp CONFIG REQUIRED)
+    if(opentelemetry-cpp_FOUND)
+        message(STATUS "Found opentelemetry-cpp ${opentelemetry-cpp_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_SIMDJSON)
+    find_package(simdjson REQUIRED)
+    if(simdjson_FOUND)
+        if(simdjson_VERSION VERSION_LESS 4.0.0)
+            message(FATAL_ERROR "simdjson >= 4.0.0 is required, found ${simdjson_VERSION}")
+        endif()
+        message(STATUS "Found simdjson ${simdjson_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_SPDLOG)
+    find_package(spdlog REQUIRED)
+    if(spdlog_FOUND)
+        message(STATUS "Found spdlog ${spdlog_VERSION}")
+    endif()
+endif()
+
+# Check the packages actually selected by CMake rather than maintaining a version matrix.
+# Embedded builds may provide non-imported targets that cannot be used by try_compile.
+if(PROJECT_IS_TOP_LEVEL AND CLP_NEED_FMT AND CLP_NEED_SPDLOG)
+    include(CheckSpdlogFmtCompatibility)
+    clp_check_spdlog_fmt_compatibility()
+endif()
 
 # Find and setup libarchive
-if(CLP_USE_STATIC_LIBS)
-    set(LibArchive_USE_STATIC_LIBS ON)
-endif()
-find_package(LibArchive REQUIRED)
-if(LibArchive_FOUND)
-    message(STATUS "Found LibArchive ${LibArchive_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
+if(CLP_NEED_LIBARCHIVE)
+    if(CLP_USE_STATIC_LIBS)
+        set(LibArchive_USE_STATIC_LIBS ON)
+    endif()
+    find_package(LibArchive REQUIRED)
+    if(LibArchive_FOUND)
+        message(STATUS "Found LibArchive ${LibArchive_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
+    endif()
 endif()
 
 # Find and setup libcurl
 # By default, CURL does not provide static libraries
-find_package(CURL 7.68.0 REQUIRED)
-if(CURL_FOUND)
-    message(STATUS "Found CURL ${CURL_VERSION_STRING}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
+if(CLP_NEED_CURL)
+    find_package(CURL 7.61.1 REQUIRED)
+    if(CURL_FOUND)
+        message(STATUS "Found CURL ${CURL_VERSION_STRING}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
+    endif()
 endif()
 
 # Find OpenSSL
-find_package(OpenSSL REQUIRED)
-if (OPENSSL_FOUND)
-    message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
-else ()
-    message(FATAL_ERROR "OpenSSL not found")
-endif ()
-
-# Add log surgeon
-add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
+if(CLP_NEED_OPENSSL)
+    find_package(OpenSSL REQUIRED)
+    if(OPENSSL_FOUND)
+        message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
+    else()
+        message(FATAL_ERROR "OpenSSL not found")
+    endif()
+endif()
 
 # Find and setup MariaDBClient library
-if(CLP_USE_STATIC_LIBS)
-    # NOTE: We can't statically link to MariaDBClient since it's GPL
-    message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
-endif()
-find_package(MariaDBClient 3.1.0 REQUIRED)
-if(MariaDBClient_FOUND)
-    message(STATUS "Found MariaDBClient ${MariaDBClient_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
+if(CLP_NEED_MARIADB)
+    if(CLP_USE_STATIC_LIBS)
+        # NOTE: We can't statically link to MariaDBClient since it's GPL
+        message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
+    endif()
+    find_package(MariaDBClient 3.1.0 REQUIRED)
+    if(MariaDBClient_FOUND)
+        message(STATUS "Found MariaDBClient ${MariaDBClient_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
+    endif()
 endif()
 
 # Find and setup mongocxx
-if(CLP_USE_STATIC_LIBS)
-    set(MONGOCXX_TARGET mongo::mongocxx_static)
-else()
-    set(MONGOCXX_TARGET mongo::mongocxx_shared)
-endif()
-
-find_package(mongocxx REQUIRED)
-if(mongocxx_FOUND)
+if(CLP_NEED_MONGOCXX)
+    find_package(mongocxx REQUIRED)
     message(STATUS "Found mongocxx ${mongocxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for mongocxx")
+    if(CLP_USE_STATIC_LIBS)
+        set(MONGOCXX_TARGET mongo::mongocxx_static)
+    else()
+        set(MONGOCXX_TARGET mongo::mongocxx_shared)
+    endif()
 endif()
 
-# Find and setup msgpack
-find_package(msgpack-cxx 7.0.0 REQUIRED)
-if(msgpack-cxx_FOUND)
+# Find and setup msgpack-cxx
+if(CLP_NEED_MSGPACKCXX)
+    find_package(msgpack-cxx 7.0.0 REQUIRED)
     message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find msgpack-cxx")
 endif()
-
-# Add abseil-cpp
-set(ABSL_PROPAGATE_CXX_STD ON)
-add_subdirectory(submodules/abseil-cpp EXCLUDE_FROM_ALL)
-
-# Add simdjson
-add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)
 
 find_package(Threads REQUIRED)
 
-# Add yaml-cpp
-add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
-
-# Find and setup ZStd Library
-if(CLP_USE_STATIC_LIBS)
-    set(ZStd_USE_STATIC_LIBS ON)
-endif()
-find_package(ZStd 1.4.4 REQUIRED)
-if(ZStd_FOUND)
-    message(STATUS "Found ZStd ${ZStd_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+if(CLP_NEED_YAMLCPP)
+    find_package(yaml-cpp REQUIRED)
+    if(yaml-cpp_FOUND)
+        message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
+    endif()
 endif()
 
-# Find and setup LZMA Library
-# TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
-if(CLP_USE_STATIC_LIBS)
-    set(LIBLZMA_USE_STATIC_LIBS ON)
+# Add ystdlib
+if(CLP_NEED_YSTDLIB)
+    find_package(ystdlib REQUIRED)
+    message(STATUS "Found ystdlib-cpp ${ystdlib_VERSION}")
 endif()
-find_package(LibLZMA REQUIRED)
-if(LIBLZMA_FOUND)
-    message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
-    message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
-    message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
+
+if(CLP_NEED_ZSTD)
+    # v1.4.8 is the lowest version available in the package managers of the OSes we support.
+    find_package(zstd 1.4.8 REQUIRED)
+    message(STATUS "Found zstd ${zstd_VERSION}")
 endif()
-include_directories(${LIBLZMA_INCLUDE_DIRS})
+
+if(CLP_NEED_LIBLZMA)
+    if(CLP_USE_STATIC_LIBS)
+        set(LibLZMA_ROOT ${LibLZMA-static_ROOT})
+        set(LibLZMA_USE_STATIC_LIBS ON)
+    else()
+        set(LibLZMA_ROOT ${LibLZMA-shared_ROOT})
+    endif()
+    # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
+    find_package(LibLZMA 5.8.1 REQUIRED)
+    message(STATUS "Found LibLZMA ${LibLZMA_VERSION}")
+endif()
 
 # sqlite dependencies
-set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
-include(cmake/Modules/FindLibraryDependencies.cmake)
-FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+if(CLP_NEED_SQLITE)
+    set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
+    include(cmake/Modules/FindLibraryDependencies.cmake)
+    FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+endif()
+
+if(CLP_NEED_XXHASH)
+    find_package(xxHash 0.8.3 CONFIG REQUIRED)
+    if(xxHash_FOUND)
+        message(STATUS "Found xxHash ${xxHash_VERSION}")
+    endif()
+endif()
 
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
+add_subdirectory(src/utils)
 
 add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
@@ -293,104 +373,38 @@ add_subdirectory(src/clp/make_dictionaries_readable)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
-set(SOURCE_FILES_clp_s_unitTest
-    src/clp_s/ArchiveReader.cpp
-    src/clp_s/ArchiveReader.hpp
-    src/clp_s/ArchiveWriter.cpp
-    src/clp_s/ArchiveWriter.hpp
-    src/clp_s/ColumnReader.cpp
-    src/clp_s/ColumnReader.hpp
-    src/clp_s/ColumnWriter.cpp
-    src/clp_s/ColumnWriter.hpp
-    src/clp_s/DictionaryEntry.cpp
-    src/clp_s/DictionaryEntry.hpp
-    src/clp_s/DictionaryWriter.cpp
-    src/clp_s/DictionaryWriter.hpp
-    src/clp_s/FileReader.cpp
-    src/clp_s/FileReader.hpp
-    src/clp_s/FileWriter.cpp
-    src/clp_s/FileWriter.hpp
-    src/clp_s/JsonConstructor.cpp
-    src/clp_s/JsonConstructor.hpp
-    src/clp_s/JsonFileIterator.cpp
-    src/clp_s/JsonFileIterator.hpp
-    src/clp_s/JsonParser.cpp
-    src/clp_s/JsonParser.hpp
-    src/clp_s/PackedStreamReader.cpp
-    src/clp_s/PackedStreamReader.hpp
-    src/clp_s/ReaderUtils.cpp
-    src/clp_s/ReaderUtils.hpp
-    src/clp_s/Schema.cpp
-    src/clp_s/Schema.hpp
-    src/clp_s/SchemaMap.cpp
-    src/clp_s/SchemaMap.hpp
-    src/clp_s/SchemaReader.cpp
-    src/clp_s/SchemaReader.hpp
-    src/clp_s/SchemaTree.cpp
-    src/clp_s/SchemaTree.hpp
-    src/clp_s/SchemaWriter.cpp
-    src/clp_s/SchemaWriter.hpp
-    src/clp_s/search/AndExpr.cpp
-    src/clp_s/search/AndExpr.hpp
-    src/clp_s/search/BooleanLiteral.cpp
-    src/clp_s/search/BooleanLiteral.hpp
-    src/clp_s/search/clp_search/Query.cpp
-    src/clp_s/search/clp_search/Query.hpp
-    src/clp_s/search/ColumnDescriptor.cpp
-    src/clp_s/search/ColumnDescriptor.hpp
-    src/clp_s/search/DateLiteral.cpp
-    src/clp_s/search/DateLiteral.hpp
-    src/clp_s/search/EmptyExpr.cpp
-    src/clp_s/search/EmptyExpr.hpp
-    src/clp_s/search/Expression.cpp
-    src/clp_s/search/Expression.hpp
-    src/clp_s/search/FilterExpr.cpp
-    src/clp_s/search/FilterExpr.hpp
-    src/clp_s/search/FilterOperation.hpp
-    src/clp_s/search/Integral.cpp
-    src/clp_s/search/Integral.hpp
-    src/clp_s/search/Literal.hpp
-    src/clp_s/search/NullLiteral.cpp
-    src/clp_s/search/NullLiteral.hpp
-    src/clp_s/search/OrExpr.cpp
-    src/clp_s/search/OrExpr.hpp
-    src/clp_s/search/OrOfAndForm.cpp
-    src/clp_s/search/OrOfAndForm.hpp
-    src/clp_s/search/SearchUtils.cpp
-    src/clp_s/search/SearchUtils.hpp
-    src/clp_s/search/StringLiteral.cpp
-    src/clp_s/search/StringLiteral.hpp
-    src/clp_s/search/Transformation.hpp
-    src/clp_s/search/Value.hpp
-    src/clp_s/TimestampDictionaryReader.cpp
-    src/clp_s/TimestampDictionaryReader.hpp
-    src/clp_s/TimestampDictionaryWriter.cpp
-    src/clp_s/TimestampDictionaryWriter.hpp
-    src/clp_s/TimestampEntry.cpp
-    src/clp_s/TimestampEntry.hpp
-    src/clp_s/TimestampPattern.cpp
-    src/clp_s/TimestampPattern.hpp
-    src/clp_s/Utils.cpp
-    src/clp_s/Utils.hpp
-    src/clp_s/VariableDecoder.cpp
-    src/clp_s/VariableDecoder.hpp
-    src/clp_s/VariableEncoder.cpp
-    src/clp_s/VariableEncoder.hpp
-    src/clp_s/ZstdCompressor.cpp
-    src/clp_s/ZstdCompressor.hpp
-    src/clp_s/ZstdDecompressor.cpp
-    src/clp_s/ZstdDecompressor.hpp
-)
+set(SOURCE_FILES_reducer_unitTest
+    src/reducer/BufferedSocketWriter.cpp
+    src/reducer/BufferedSocketWriter.hpp
+    src/reducer/ConstRecordIterator.hpp
+    src/reducer/CountOperator.cpp
+    src/reducer/CountOperator.hpp
+    src/reducer/DeserializedRecordGroup.cpp
+    src/reducer/DeserializedRecordGroup.hpp
+    src/reducer/GroupTags.hpp
+    src/reducer/network_utils.cpp
+    src/reducer/network_utils.hpp
+    src/reducer/Operator.cpp
+    src/reducer/Operator.hpp
+    src/reducer/Pipeline.cpp
+    src/reducer/Pipeline.hpp
+    src/reducer/Record.hpp
+    src/reducer/RecordGroup.hpp
+    src/reducer/RecordGroupIterator.hpp
+    src/reducer/RecordTypedKeyIterator.hpp
+    src/reducer/types.hpp
+    )
 
 set(SOURCE_FILES_unitTest
-        src/clp/Array.hpp
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
+        src/clp/aws/test/test_AwsAuthenticationSigner.cpp
         src/clp/BoundedReader.cpp
         src/clp/BoundedReader.hpp
-        src/clp/BufferedFileReader.cpp
-        src/clp/BufferedFileReader.hpp
+        src/clp/BufferedReader.cpp
+        src/clp/BufferedReader.hpp
         src/clp/BufferReader.cpp
         src/clp/BufferReader.hpp
         src/clp/clp/CommandLineArguments.cpp
@@ -423,29 +437,56 @@ set(SOURCE_FILES_unitTest
         src/clp/DictionaryEntry.hpp
         src/clp/DictionaryReader.hpp
         src/clp/DictionaryWriter.hpp
-        src/clp/error_handling/ErrorCode.hpp
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
         src/clp/ErrorCode.hpp
+        src/clp/ffi/EncodedTextAst.hpp
+        src/clp/ffi/EncodedTextAstError.cpp
+        src/clp/ffi/EncodedTextAstError.hpp
         src/clp/ffi/encoding_methods.cpp
         src/clp/ffi/encoding_methods.hpp
         src/clp/ffi/encoding_methods.inc
+        src/clp/ffi/test/test_EncodedTextAst.cpp
+        src/clp/ffi/test/test_StringBlob.cpp
         src/clp/ffi/ir_stream/byteswap.hpp
         src/clp/ffi/ir_stream/Deserializer.hpp
+        src/clp/ffi/ir_stream/DeserializerImpl.cpp
+        src/clp/ffi/ir_stream/DeserializerImpl.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
         src/clp/ffi/ir_stream/decoding_methods.hpp
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
-        src/clp/ffi/ir_stream/IrErrorCode.cpp
-        src/clp/ffi/ir_stream/IrErrorCode.hpp
-        src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+        src/clp/ffi/ir_stream/IrDeserializationError.cpp
+        src/clp/ffi/ir_stream/IrDeserializationError.hpp
+        src/clp/ffi/ir_stream/IrSerializationError.cpp
+        src/clp/ffi/ir_stream/IrSerializationError.hpp
+        src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
+        src/clp/ffi/ir_stream/KvIrDeserializerImpl.cpp
+        src/clp/ffi/ir_stream/KvIrDeserializerImpl.hpp
+        src/clp/ffi/ir_stream/UnstructuredIrDeserializerImpl.cpp
+        src/clp/ffi/ir_stream/UnstructuredIrDeserializerImpl.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/ir_stream/Serializer.cpp
         src/clp/ffi/ir_stream/Serializer.hpp
+        src/clp/ffi/ir_stream/search/AstEvaluationResult.hpp
+        src/clp/ffi/ir_stream/search/ErrorCode.cpp
+        src/clp/ffi/ir_stream/search/ErrorCode.hpp
+        src/clp/ffi/ir_stream/search/NewProjectedSchemaTreeNodeCallbackReq.hpp
+        src/clp/ffi/ir_stream/search/QueryHandler.hpp
+        src/clp/ffi/ir_stream/search/QueryHandlerImpl.cpp
+        src/clp/ffi/ir_stream/search/QueryHandlerImpl.hpp
+        src/clp/ffi/ir_stream/search/QueryHandlerReq.hpp
+        src/clp/ffi/ir_stream/search/test/test_deserializer_integration.cpp
+        src/clp/ffi/ir_stream/search/test/test_QueryHandlerImpl.cpp
+        src/clp/ffi/ir_stream/search/test/test_utils.cpp
+        src/clp/ffi/ir_stream/search/test/utils.cpp
+        src/clp/ffi/ir_stream/search/test/utils.hpp
+        src/clp/ffi/ir_stream/search/utils.cpp
+        src/clp/ffi/ir_stream/search/utils.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/KeyValuePairLogEvent.cpp
@@ -466,6 +507,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/ffi/StringBlob.hpp
         src/clp/ffi/utils.cpp
         src/clp/ffi/utils.hpp
         src/clp/ffi/Value.hpp
@@ -477,6 +519,8 @@ set(SOURCE_FILES_unitTest
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
         src/clp/FileWriter.hpp
+        src/clp/global_metadata_db_utils.hpp
+        src/clp/global_metadata_db_utils.cpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -486,6 +530,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/GrepCore.cpp
+        src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
@@ -506,11 +552,11 @@ set(SOURCE_FILES_unitTest
         src/clp/LibarchiveFileReader.hpp
         src/clp/LibarchiveReader.cpp
         src/clp/LibarchiveReader.hpp
-        src/clp/LogSurgeonReader.cpp
-        src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
         src/clp/LogTypeDictionaryEntry.hpp
+        src/clp/LogTypeDictionaryEntryReq.hpp
         src/clp/LogTypeDictionaryReader.hpp
+        src/clp/LogTypeDictionaryReaderReq.hpp
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
         src/clp/math_utils.hpp
@@ -522,16 +568,18 @@ set(SOURCE_FILES_unitTest
         src/clp/MySQLParamBindings.hpp
         src/clp/MySQLPreparedStatement.cpp
         src/clp/MySQLPreparedStatement.hpp
+        src/clp/networking/socket_utils.cpp
+        src/clp/networking/socket_utils.hpp
         src/clp/NetworkReader.cpp
         src/clp/NetworkReader.hpp
         src/clp/PageAllocatedVector.hpp
         src/clp/ParsedMessage.cpp
         src/clp/ParsedMessage.hpp
         src/clp/Platform.hpp
-        src/clp/Profiler.cpp
-        src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/QueryToken.cpp
+        src/clp/QueryToken.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
@@ -541,8 +589,6 @@ set(SOURCE_FILES_unitTest
         src/clp/SQLiteDB.hpp
         src/clp/SQLitePreparedStatement.cpp
         src/clp/SQLitePreparedStatement.hpp
-        src/clp/Stopwatch.cpp
-        src/clp/Stopwatch.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
         src/clp/streaming_archive/ArchiveMetadata.hpp
         src/clp/streaming_archive/Constants.hpp
@@ -571,6 +617,8 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/Decompressor.hpp
         src/clp/streaming_compression/lzma/Compressor.cpp
         src/clp/streaming_compression/lzma/Compressor.hpp
+        src/clp/streaming_compression/lzma/Decompressor.cpp
+        src/clp/streaming_compression/lzma/Decompressor.hpp
         src/clp/streaming_compression/lzma/Constants.hpp
         src/clp/streaming_compression/passthrough/Compressor.cpp
         src/clp/streaming_compression/passthrough/Compressor.hpp
@@ -597,76 +645,114 @@ set(SOURCE_FILES_unitTest
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
         src/clp/VariableDictionaryEntry.hpp
+        src/clp/VariableDictionaryEntryReq.hpp
         src/clp/VariableDictionaryReader.hpp
+        src/clp/VariableDictionaryReaderReq.hpp
         src/clp/VariableDictionaryWriter.cpp
         src/clp/VariableDictionaryWriter.hpp
+        src/clp/VariableDictionaryWriterReq.hpp
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
-        submodules/sqlite3/sqlite3.c
-        submodules/sqlite3/sqlite3.h
-        submodules/sqlite3/sqlite3ext.h
+        src/utils/profiling/test/test_Profiler.cpp
+        src/utils/profiling/test/test_Reporter.cpp
+        src/utils/profiling/test/test_ScopedProfiler.cpp
+        src/utils/profiling/test/emitters.hpp
         tests/LogSuppressor.hpp
-        tests/test-Array.cpp
+        tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
-        tests/test-BufferedFileReader.cpp
-        tests/test-clp_s-end_to_end.cpp
+        tests/test-BufferedReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
-        tests/test-error_handling.cpp
-        tests/test-ffi_IrUnitHandlerInterface.cpp
+        tests/test-ffi_IrUnitHandlerReq.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
-        tests/test-Grep.cpp
+        tests/test-GlobalMetadataDBConfig.cpp
+        tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
-        tests/test-kql.cpp
-        tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
-        tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-regex_utils.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
-        tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
         )
-add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
-target_include_directories(unitTest
-        PRIVATE
-        ${CMAKE_SOURCE_DIR}/submodules
-        )
-target_link_libraries(unitTest
-        PRIVATE
-        absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
-        ${CURL_LIBRARIES}
-        fmt::fmt
-        kql
-        log_surgeon::log_surgeon
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
-        ${MONGOCXX_TARGET}
-        simdjson
-        spdlog::spdlog
-        OpenSSL::Crypto
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        ${STD_FS_LIBS}
-        clp::regex_utils
-        clp::string_utils
-        yaml-cpp::yaml-cpp
-        ${LIBLZMA_LIBRARIES}
-        ZStd::ZStd
-        )
-target_compile_features(unitTest
-        PRIVATE cxx_std_20
-        )
+
+if(CLP_ENABLE_TESTS)
+    # Runtime dependencies built by clp-core for unit tests. Keep in sync with flags required by
+    # `CLP_BUILD_TESTING` in options.cmake.
+    add_library(clp_unit_test_runtime INTERFACE)
+    add_library(clp::unit_test_runtime ALIAS clp_unit_test_runtime)
+    target_link_libraries(clp_unit_test_runtime
+            INTERFACE
+            clp::regex_utils
+            clp::string_utils
+            clp_s::archive_reader
+            clp_s::archive_writer
+            clp_s::ffi::sfa
+            clp_s::filter
+            clp_s::json_constructor
+            clp_s::search
+            clp_s::search::ast
+            clp_s::search::kql
+            clp_s::search::sql
+            clp_s::timestamp_parser
+            clp_s::timestamp_pattern
+            utils::profiling
+            )
+
+    add_executable(unitTest
+            ${SOURCE_FILES_unitTest}
+            ${SOURCE_FILES_reducer_unitTest}
+            )
+    target_include_directories(unitTest
+            PRIVATE
+            ${CLP_SQLITE3_INCLUDE_DIRECTORY}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+            )
+    target_link_libraries(unitTest
+            PRIVATE
+            absl::flat_hash_map
+            Boost::filesystem
+            Boost::iostreams
+            Boost::program_options
+            Boost::regex
+            Boost::url
+            Catch2::Catch2WithMain
+            clp::unit_test_runtime
+            clp_s::unit_test_sources
+            ${CURL_LIBRARIES}
+            date::date
+            fmt::fmt
+            LibArchive::LibArchive
+            LibLZMA::LibLZMA
+            MariaDBClient::MariaDBClient
+            ${MONGOCXX_TARGET}
+            msgpack-cxx
+            nlohmann_json::nlohmann_json
+            simdjson::simdjson
+            spdlog::spdlog
+            OpenSSL::Crypto
+            ${sqlite_LIBRARY_DEPENDENCIES}
+            ${STD_FS_LIBS}
+            ystdlib::containers
+            ystdlib::error_handling
+            zstd::libzstd_static
+            )
+    target_compile_features(unitTest
+            PRIVATE cxx_std_20
+            )
+    target_compile_definitions(unitTest
+            PRIVATE CLP_ENABLE_TESTS
+            )
+endif()

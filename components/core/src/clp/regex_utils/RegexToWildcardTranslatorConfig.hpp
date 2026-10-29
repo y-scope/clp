@@ -16,7 +16,7 @@ public:
             bool add_prefix_suffix_wildcards
     )
             : m_case_insensitive_wildcard{case_insensitive_wildcard},
-              m_add_prefix_suffix_wildcards{add_prefix_suffix_wildcards} {};
+              m_add_prefix_suffix_wildcards{add_prefix_suffix_wildcards} {}
 
     /**
      * @return True if the final translated wildcard string will be fed into a case-insensitive

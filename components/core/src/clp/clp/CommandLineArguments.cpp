@@ -41,7 +41,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         config_file_path += '/';
     }
     config_file_path += cDefaultConfigFilename;
-    string global_metadata_db_config_file_path;
+    // clang-format off
     options_general.add_options()
             ("help,h", "Print help")
             ("version,V", "Print version")
@@ -51,14 +51,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                             ->value_name("FILE")
                             ->default_value(config_file_path),
                     "Use configuration options from FILE"
-            )
-            (
-                    "db-config-file",
-                    po::value<string>(&global_metadata_db_config_file_path)
-                            ->value_name("FILE")
-                            ->default_value(global_metadata_db_config_file_path),
-                    "Global metadata DB YAML config"
             );
+    // clang-format on
+    m_metadata_db_config.emplace(options_general);
 
     // Define functional options
     po::options_description options_functional("Input Options");
@@ -121,15 +116,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             return ParsingResult::InfoCommand;
         }
 
-        // Parse and validate global metadata DB config
-        if (false == global_metadata_db_config_file_path.empty()) {
-            try {
-                m_metadata_db_config.parse_config_file(global_metadata_db_config_file_path);
-            } catch (std::exception& e) {
-                SPDLOG_ERROR("Failed to validate metadata database config - {}", e.what());
-                return ParsingResult::Failure;
-            }
-        }
+        // Initialize and validate global metadata DB config
+        m_metadata_db_config->read_credentials_from_env_if_needed();
+        m_metadata_db_config->validate();
 
         // Validate command
         if (parsed_command_line_options.count("command") == 0) {
@@ -357,7 +346,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     po::value<int>(&m_compression_level)
                             ->value_name("LEVEL")
                             ->default_value(m_compression_level),
-                    "1 (fast/low compression) to 9 (slow/high compression)"
+                    "1 (fast/low compression) to 19 (slow/high compression)"
             )(
                     "print-archive-stats-progress",
                     po::bool_switch(&m_print_archive_stats_progress),
@@ -366,13 +355,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     "progress",
                     po::bool_switch(&m_show_progress),
                     "Show progress during compression"
-            )(
-                    "schema-path",
-                    po::value<string>(&m_schema_file_path)
-                            ->value_name("FILE")
-                            ->default_value(m_schema_file_path),
-                    "Path to a schema file. If not specified, heuristics are used to determine "
-                    "dictionary variables. See README-Schema.md for details."
             );
 
             po::options_description all_compression_options;
@@ -440,18 +422,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 throw invalid_argument(R"(sort-input-files must be either "true" or "false")");
             }
             m_sort_input_files = "true" == sort_input_files_str;
-
-            if (false == m_schema_file_path.empty()) {
-                if (false == boost::filesystem::exists(m_schema_file_path)) {
-                    throw invalid_argument("Specified schema file does not exist.");
-                }
-                if (false == boost::filesystem::is_regular_file(m_schema_file_path)) {
-                    throw invalid_argument(
-                            "Specified schema file '" + m_schema_file_path
-                            + "' is not a regular file."
-                    );
-                }
-            }
         }
 
         // Validate an output directory was specified

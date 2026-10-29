@@ -19,8 +19,10 @@ namespace clp::ir {
 template <typename encoded_variable_t>
 LogEventSerializer<encoded_variable_t>::~LogEventSerializer() {
     if (m_is_open) {
-        SPDLOG_ERROR("clp::ir::LogEventSerializer not closed before being destroyed - output maybe "
-                     "corrupted.");
+        SPDLOG_ERROR(
+                "clp::ir::LogEventSerializer not closed before being destroyed - output maybe "
+                "corrupted."
+        );
     }
 }
 
@@ -139,10 +141,10 @@ auto LogEventSerializer<encoded_variable_t>::close_writer() -> void {
 // file
 template LogEventSerializer<eight_byte_encoded_variable_t>::~LogEventSerializer();
 template LogEventSerializer<four_byte_encoded_variable_t>::~LogEventSerializer();
-template auto LogEventSerializer<eight_byte_encoded_variable_t>::open(string const& file_path
-) -> bool;
-template auto LogEventSerializer<four_byte_encoded_variable_t>::open(string const& file_path
-) -> bool;
+template auto LogEventSerializer<eight_byte_encoded_variable_t>::open(string const& file_path)
+        -> bool;
+template auto LogEventSerializer<four_byte_encoded_variable_t>::open(string const& file_path)
+        -> bool;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<four_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::close() -> void;

@@ -4,10 +4,9 @@
 #include <list>
 #include <set>
 #include <sstream>
+#include <string>
 #include <unordered_set>
 #include <vector>
-
-#include <log_surgeon/Lexer.hpp>
 
 #include "Defs.h"
 #include "ErrorCode.hpp"
@@ -36,28 +35,6 @@ ErrorCode create_directory(std::string const& path, mode_t mode, bool exist_ok);
 ErrorCode create_directory_structure(std::string const& path, mode_t mode);
 
 /**
- * Gets the parent directory path for a given path
- * Corner cases:
- * - get_dirname("abc") = "."
- * - get_dirname(".") = "."
- * - get_dirname("..") = "."
- * - get_dirname("/") = "/"
- * - get_dirname("/.") = "/"
- * - get_dirname("/..") = "/"
- * - get_dirname("/abc") = "/"
- * @param path
- * @return Parent directory path
- */
-std::string get_parent_directory_path(std::string const& path);
-
-/**
- * Removes ".", "..", and consecutive "/" from a given path and returns the result
- * @param path The given path
- * @return The unambiguous path
- */
-std::string get_unambiguous_path(std::string const& path);
-
-/**
  * Read a list of paths from a file
  * @param list_path
  * @param paths
@@ -65,18 +42,6 @@ std::string get_unambiguous_path(std::string const& path);
  * @return Otherwise, same as FileReader::try_open and FileReader::try_read_to_delimiter
  */
 ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::string>& paths);
-
-/**
- * Loads a lexer from a file
- * @param schema_file_path
- * @param done
- * @param forward_lexer_ptr
- */
-void load_lexer_from_file(
-        std::string const& schema_file_path,
-        bool done,
-        log_surgeon::lexers::ByteLexer& forward_lexer_ptr
-);
 }  // namespace clp
 
 #endif  // CLP_UTILS_HPP

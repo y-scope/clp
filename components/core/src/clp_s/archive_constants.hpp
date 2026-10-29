@@ -2,10 +2,14 @@
 #define CLP_S_ARCHIVE_CONSTANTS_HPP
 
 #include <cstdint>
+#include <string_view>
 
 namespace clp_s::constants {
 // Single file archive
 constexpr char cTmpPostfix[] = ".tmp";
+
+// Header and metadata section
+constexpr char cArchiveHeaderFile[] = "/header";
 
 // Schema files
 constexpr char cArchiveSchemaMapFile[] = "/schema_ids";
@@ -13,12 +17,11 @@ constexpr char cArchiveSchemaTreeFile[] = "/schema_tree";
 
 // Encoded record table files
 constexpr char cArchiveTableMetadataFile[] = "/table_metadata";
-constexpr char cArchiveTablesFile[] = "/tables";
+constexpr char cArchiveTablesFile[] = "/0";
 
 // Dictionary files
 constexpr char cArchiveArrayDictFile[] = "/array.dict";
 constexpr char cArchiveLogDictFile[] = "/log.dict";
-constexpr char cArchiveTimestampDictFile[] = "/timestamp.dict";
 constexpr char cArchiveVarDictFile[] = "/var.dict";
 
 // Schema tree constants
@@ -26,6 +29,20 @@ constexpr char cRootNodeName[] = "";
 constexpr int32_t cRootNodeId = -1;
 constexpr char cMetadataSubtreeName[] = "";
 constexpr char cLogEventIdxName[] = "log_event_idx";
+constexpr std::string_view cAutogenNamespace{"@"};
+constexpr std::string_view cDefaultNamespace{""};
+constexpr std::string_view cRangeIndexNamespace{"$"};
+constexpr std::string_view cReservedNamespace1{"!"};
+constexpr std::string_view cReservedNamespace2{"#"};
+constexpr std::string_view cObjectSubtreeType{"object"};
+constexpr std::string_view cMetadataSubtreeType{"metadata"};
+
+// Metadata constants
+namespace range_index {
+constexpr std::string_view cFilename{"_filename"};
+constexpr std::string_view cFileSplitNumber{"_file_split_number"};
+constexpr std::string_view cArchiveCreatorId{"_archive_creator_id"};
+}  // namespace range_index
 
 namespace results_cache::decompression {
 constexpr char cPath[]{"path"};
@@ -36,12 +53,18 @@ constexpr char cIsLastChunk[]{"is_last_chunk"};
 }  // namespace results_cache::decompression
 
 namespace results_cache::search {
+constexpr char cId[]{"_id"};
 constexpr char cOrigFilePath[]{"orig_file_path"};
-constexpr char cLogEventIx[]{"log_event_ix"};
+constexpr char cLogEventIdx[]{"log_event_idx"};
 constexpr char cTimestamp[]{"timestamp"};
 constexpr char cMessage[]{"message"};
 constexpr char cArchiveId[]{"archive_id"};
+constexpr std::string_view cDataset{"dataset"};
+constexpr char cCount[]{"count"};
+constexpr char cMin[]{"min"};
+constexpr char cMax[]{"max"};
+constexpr char cField[]{"field"};
+constexpr char cValue[]{"value"};
 }  // namespace results_cache::search
-
 }  // namespace clp_s::constants
 #endif  // CLP_S_ARCHIVE_CONSTANTS_HPP

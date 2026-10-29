@@ -716,10 +716,8 @@ bool Grep::get_bounds_of_next_potential_var(
     return (value_length != begin_pos);
 }
 
-void Grep::calculate_sub_queries_relevant_to_file(
-        File const& compressed_file,
-        vector<Query>& queries
-) {
+void
+Grep::calculate_sub_queries_relevant_to_file(File const& compressed_file, vector<Query>& queries) {
     for (auto& query : queries) {
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
     }
@@ -765,8 +763,8 @@ size_t Grep::search_and_output(
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             bool matched = wildcard_match_unsafe(
                     decompressed_msg,
@@ -822,8 +820,8 @@ bool Grep::search_and_decompress(
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             matched = wildcard_match_unsafe(
                     decompressed_msg,
@@ -864,8 +862,8 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             // Decompress match
             bool decompress_successful
@@ -1277,5 +1275,4 @@ size_t Grep::search_segment_optimized_and_output(
 
     return num_matches;
 }
-
 }  // namespace glt

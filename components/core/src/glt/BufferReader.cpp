@@ -34,7 +34,7 @@ auto BufferReader::try_read_to_delimiter(
     // Find the delimiter
     auto const* buffer_head = m_internal_buf + m_internal_buf_pos;
     auto const* delim_ptr
-            = static_cast<char const*>(memchr(buffer_head, delim, remaining_data_size));
+            = static_cast<char const*>(std::memchr(buffer_head, delim, remaining_data_size));
 
     size_t append_length{0};
     if (delim_ptr != nullptr) {
@@ -86,12 +86,9 @@ auto BufferReader::try_get_pos(size_t& pos) -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto BufferReader::try_read_to_delimiter(
-        char delim,
-        bool keep_delimiter,
-        bool append,
-        std::string& str
-) -> ErrorCode {
+auto
+BufferReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+        -> ErrorCode {
     if (false == append) {
         str.clear();
     }

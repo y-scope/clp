@@ -179,12 +179,17 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     // Define IR extraction options
     po::options_description options_ir_extraction("IR Extraction Options");
     // clang-format off
-    options_ir_extraction
-            .add_options()(
-                    "target-size",
-                    po::value<size_t>(&m_ir_target_size)->value_name("SIZE"),
-                    "Target size (B) for each IR chunk before a new chunk is created"
-            );
+    options_ir_extraction.add_options()(
+            "target-size",
+            po::value<size_t>(&m_ir_target_size)
+                    ->value_name("SIZE")
+                    ->default_value(m_ir_target_size),
+            "Target size (B) for each IR chunk before a new chunk is created"
+    )(
+            "print-ir-stats",
+            po::bool_switch(&m_print_ir_stats),
+            "Print statistics (ndjson) about each IR file after it's extracted"
+    );
     // clang-format on
 
     // Define visible options
@@ -383,8 +388,7 @@ auto CommandLineArguments::parse_search_arguments(
             "The number of documents to insert into MongoDB per batch"
     )(
             "max-num-results,m",
-            po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
-                    default_value(m_max_num_results),
+            po::value<uint64_t>()->value_name("NUM"),
             "The maximum number of results to output"
     );
     // clang-format on
@@ -594,8 +598,10 @@ auto CommandLineArguments::parse_search_arguments(
     }
     if ((false == aggregation_was_specified && OutputHandlerType::Reducer == m_output_handler_type))
     {
-        throw invalid_argument("The reducer output handler currently only supports count and "
-                               "count-by-time aggregations.");
+        throw invalid_argument(
+                "The reducer output handler currently only supports count and count-by-time"
+                " aggregations."
+        );
     }
 
     if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
@@ -684,6 +690,9 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
         throw invalid_argument("batch-size cannot be 0.");
     }
 
+    if (0 != parsed_options.count("max-num-results")) {
+        m_max_num_results.emplace(parsed_options["max-num-results"].as<uint64_t>());
+    }
     if (0 == m_max_num_results) {
         throw invalid_argument("max-num-results cannot be 0.");
     }

@@ -1,0 +1,58 @@
+name: "clp-rust-checks"
+
+on:
+  pull_request:
+    paths: &monitored_paths
+      - ".cargo/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - ".github/workflows/clp-rust-checks.yaml"
+      - "components/api-server/**"
+      - "components/clp-rust-utils/**"
+      - "components/clp-tdl-package/**"
+      - "components/compression-coordinator/**"
+      - "components/log-ingestor/**"
+      - "components/query-coordinator/**"
+      - "taskfile.yaml"
+      - "taskfiles/**"
+      - "tools/scripts/localstack/**"
+      - "tools/yscope-dev-utils"
+  push:
+    paths: *monitored_paths
+  schedule:
+    # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  rust-checks:
+    runs-on: "ubuntu-22.04"
+    steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
+
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
+        with:
+          version: "0.8"
+
+      - name: "Validate lock files"
+        shell: "bash"
+        run: "task deps:lock:check-rust"
+
+      - name: "Lint"
+        shell: "bash"
+        run: "task lint:check-rust"
+
+      - name: "Test"
+        shell: "bash"
+        run: "task tests:rust-all"

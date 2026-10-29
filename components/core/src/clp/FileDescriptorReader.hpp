@@ -65,8 +65,8 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] auto
-    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override;
 
     /**
      * Tries to seek to the given position, relative to the beginning of the file.

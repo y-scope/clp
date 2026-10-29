@@ -5,9 +5,11 @@ from contextlib import closing
 
 import msgpack
 from clp_py_utils.clp_config import (
+    Database,
     QUERY_JOBS_TABLE_NAME,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.clp_metadata_db_utils import fetch_existing_datasets
+from clp_py_utils.sql_adapter import SqlAdapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.scheduler_data import QueryJobConfig
 
@@ -48,7 +50,7 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
 
 
 def submit_query_job(
-    sql_adapter: SQL_Adapter, job_config: QueryJobConfig, job_type: QueryJobType
+    sql_adapter: SqlAdapter, job_config: QueryJobConfig, job_type: QueryJobType
 ) -> int:
     """
     Submits a query job.
@@ -57,28 +59,52 @@ def submit_query_job(
     :param job_type:
     :return: The job's ID.
     """
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         # Create job
         db_cursor.execute(
             f"INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (%s, %s)",
-            (msgpack.packb(job_config.dict()), job_type),
+            (msgpack.packb(job_config.model_dump()), job_type),
         )
         db_conn.commit()
         return db_cursor.lastrowid
 
 
-def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
+def validate_datasets_exist(db_config: Database, datasets: list[str]) -> None:
+    """
+    Validates that all datasets in `datasets` exist in the metadata database.
+
+    :param db_config:
+    :param datasets:
+    :raise: ValueError if any dataset doesn't exist.
+    """
+    sql_adapter = SqlAdapter(db_config)
+    clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
+    table_prefix = clp_db_connection_params["table_prefix"]
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
+        existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+        missing = [ds for ds in datasets if ds not in existing_datasets]
+        if len(missing) > 0:
+            err_msg = f"Dataset(s) {missing} don't exist."
+            raise ValueError(err_msg)
+
+
+def wait_for_query_job(sql_adapter: SqlAdapter, job_id: int) -> QueryJobStatus:
     """
     Waits for the query job with the given ID to complete.
     :param sql_adapter:
     :param job_id:
     :return: The job's status on completion.
     """
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         # Wait for the job to be marked complete
         while True:
             db_cursor.execute(
@@ -92,6 +118,7 @@ def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
                 QueryJobStatus.SUCCEEDED,
                 QueryJobStatus.FAILED,
                 QueryJobStatus.CANCELLED,
+                QueryJobStatus.KILLED,
             ):
                 return new_status
 

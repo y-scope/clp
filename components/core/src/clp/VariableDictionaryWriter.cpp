@@ -1,10 +1,14 @@
 #include "VariableDictionaryWriter.hpp"
 
+#include <string>
+#include <string_view>
+
+#include "Defs.h"
 #include "dictionary_utils.hpp"
 #include "spdlog_with_specializations.hpp"
 
 namespace clp {
-bool VariableDictionaryWriter::add_entry(std::string const& value, variable_dictionary_id_t& id) {
+bool VariableDictionaryWriter::add_entry(std::string_view value, variable_dictionary_id_t& id) {
     bool new_entry = false;
 
     auto const ix = m_value_to_id.find(value);
@@ -23,7 +27,7 @@ bool VariableDictionaryWriter::add_entry(std::string const& value, variable_dict
         ++m_next_id;
 
         // Insert the ID obtained from the database into the dictionary
-        auto entry = VariableDictionaryEntry(value, id);
+        auto entry = VariableDictionaryEntry(std::string{value}, id);
         m_value_to_id[value] = id;
 
         new_entry = true;

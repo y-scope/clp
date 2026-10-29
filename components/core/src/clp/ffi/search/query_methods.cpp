@@ -61,15 +61,14 @@ static void tokenize_query(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<encoded_variable_t>,
-                        CompositeWildcardToken<encoded_variable_t>>>& tokens,
+                        CompositeWildcardToken<encoded_variable_t>>
+        >& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
 
 template <typename encoded_variable_t>
-void generate_subqueries(
-        string_view wildcard_query,
-        vector<Subquery<encoded_variable_t>>& sub_queries
-) {
+void
+generate_subqueries(string_view wildcard_query, vector<Subquery<encoded_variable_t>>& sub_queries) {
     if (wildcard_query.empty()) {
         throw QueryMethodFailed(
                 ErrorCode_BadParam,
@@ -81,7 +80,8 @@ void generate_subqueries(
 
     vector<
             variant<ExactVariableToken<encoded_variable_t>,
-                    CompositeWildcardToken<encoded_variable_t>>>
+                    CompositeWildcardToken<encoded_variable_t>>
+    >
             tokens;
     vector<size_t> composite_wildcard_token_indexes;
     tokenize_query(wildcard_query, tokens, composite_wildcard_token_indexes);
@@ -167,7 +167,8 @@ void tokenize_query(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<encoded_variable_t>,
-                        CompositeWildcardToken<encoded_variable_t>>>& tokens,
+                        CompositeWildcardToken<encoded_variable_t>>
+        >& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 ) {
     // Tokenize query using delimiters to get definite variables and tokens containing wildcards
@@ -204,7 +205,7 @@ void tokenize_query(
                 composite_wildcard_token_indexes.push_back(tokens.size() - 1);
             }
         } else {
-            string_view variable(wildcard_query.cbegin() + begin_pos, end_pos - begin_pos);
+            auto const variable = wildcard_query.substr(begin_pos, end_pos - begin_pos);
             // Treat token as variable if:
             // - it contains a decimal digit, or
             // - it's directly preceded by an equals sign and contains an alphabet, or
@@ -306,14 +307,16 @@ template void tokenize_query<eight_byte_encoded_variable_t>(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<eight_byte_encoded_variable_t>,
-                        CompositeWildcardToken<eight_byte_encoded_variable_t>>>& tokens,
+                        CompositeWildcardToken<eight_byte_encoded_variable_t>>
+        >& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
 template void tokenize_query<four_byte_encoded_variable_t>(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<four_byte_encoded_variable_t>,
-                        CompositeWildcardToken<four_byte_encoded_variable_t>>>& tokens,
+                        CompositeWildcardToken<four_byte_encoded_variable_t>>
+        >& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
 }  // namespace clp::ffi::search

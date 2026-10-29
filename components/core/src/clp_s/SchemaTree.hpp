@@ -1,14 +1,20 @@
 #ifndef CLP_S_SCHEMATREE_HPP
 #define CLP_S_SCHEMATREE_HPP
 
+#include <cstring>
 #include <functional>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <absl/container/btree_map.h>
 #include <absl/container/flat_hash_map.h>
+
+#include "archive_constants.hpp"
+#include "search/ast/Literal.hpp"
 
 namespace clp_s {
 /**
@@ -33,11 +39,22 @@ enum class NodeType : uint8_t {
     Object,
     UnstructuredArray,
     NullValue,
-    DateString,
+    DeprecatedDateString,
     StructuredArray,
     Metadata,
+    DeltaInteger,
+    FormattedFloat,
+    DictionaryFloat,
+    Timestamp,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
+
+/**
+ * Converts a node type to a literal type.
+ * @param type
+ * @return A literal type
+ */
+auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType;
 
 /**
  * This class represents a single node in the SchemaTree.
@@ -64,7 +81,7 @@ public:
               m_type(type),
               m_count(0),
               m_depth(depth) {
-        memcpy(m_key_name_buf.get(), key_name.begin(), key_name.size());
+        std::memcpy(m_key_name_buf.get(), key_name.data(), key_name.size());
     }
 
     /**
@@ -98,8 +115,8 @@ public:
     void add_child(int32_t child_id) { m_children_ids.push_back(child_id); }
 
 private:
-    int32_t m_id;
     int32_t m_parent_id;
+    int32_t m_id;
     std::vector<int32_t> m_children_ids;
     // We use a buffer so that references to this key name are stable after this SchemaNode is move
     // constructed
@@ -127,24 +144,44 @@ public:
     }
 
     /**
-     * @return the Id of the root of the Object sub-tree that records the structure of JSON data.
+     * Gets the root of the object sub-tree within a namespace.
+     * @param subtree_namespace
+     * @return the Id of the root of the Object sub-tree for the given namespace.
      * @return -1 if the Object sub-tree does not exist.
      */
-    int32_t get_object_subtree_node_id() const { return m_object_subtree_id; }
+    int32_t get_object_subtree_node_id_for_namespace(std::string_view subtree_namespace) const {
+        return get_subtree_node_id(subtree_namespace, NodeType::Object);
+    }
 
     /**
-     * Get the field Id for a specified field within the Metadata subtree.
+     * Gets the field Id for a specified field within the Metadata subtree.
      * @param field_name
      *
      * @return the field Id if the field exists within the Metadata sub-tree, -1 otherwise.
      */
-    int32_t get_metadata_field_id(std::string_view const field_name);
+    int32_t get_metadata_field_id(std::string_view const field_name) const;
+
+    /**
+     * Gets the Id of the root for a subtree identified by a namespace and type.
+     * @param subtree_namespace
+     * @param type
+     * @return the Id of the subtree identified by the given namespace and type or -1 if the
+     * requested subtree does not exist.
+     */
+    auto get_subtree_node_id(std::string_view subtree_namespace, NodeType type) const -> int32_t;
+
+    auto get_subtrees() const
+            -> absl::btree_map<std::pair<std::string_view, NodeType>, int32_t> const& {
+        return m_namespace_and_type_to_subtree_id;
+    }
 
     /**
      * @return the Id of the root of the Metadata sub-tree.
      * @return -1 if the Metadata sub-tree does not exist.
      */
-    int32_t get_metadata_subtree_node_id() { return m_metadata_subtree_id; }
+    int32_t get_metadata_subtree_node_id() const {
+        return get_subtree_node_id(constants::cDefaultNamespace, NodeType::Metadata);
+    }
 
     std::vector<SchemaNode> const& get_nodes() const { return m_nodes; }
 
@@ -154,7 +191,7 @@ public:
      * @param compression_level
      * @return the compressed size of the SchemaTree in bytes
      */
-    [[nodiscard]] size_t store(std::string const& archives_dir, int compression_level);
+    [[nodiscard]] auto store(std::string const& archives_dir, int compression_level) -> size_t;
 
     /**
      * Clear the schema tree
@@ -162,6 +199,7 @@ public:
     void clear() {
         m_nodes.clear();
         m_node_map.clear();
+        m_namespace_and_type_to_subtree_id.clear();
     }
 
     /**
@@ -181,8 +219,8 @@ public:
 private:
     std::vector<SchemaNode> m_nodes;
     absl::flat_hash_map<std::tuple<int32_t, std::string_view const, NodeType>, int32_t> m_node_map;
-    int32_t m_object_subtree_id{-1};
-    int32_t m_metadata_subtree_id{-1};
+    absl::btree_map<std::pair<std::string_view, NodeType>, int32_t>
+            m_namespace_and_type_to_subtree_id;
 };
 }  // namespace clp_s
 

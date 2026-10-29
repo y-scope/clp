@@ -1,21 +1,28 @@
 #ifndef CLP_S_ARCHIVEREADER_HPP
 #define CLP_S_ARCHIVEREADER_HPP
 
+#include <cstddef>
 #include <map>
-#include <set>
+#include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
-#include <boost/filesystem.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
-#include "DictionaryReader.hpp"
-#include "PackedStreamReader.hpp"
-#include "ReaderUtils.hpp"
-#include "SchemaReader.hpp"
-#include "search/Projection.hpp"
-#include "TimestampDictionaryReader.hpp"
-#include "Utils.hpp"
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryReader.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/PackedStreamReader.hpp>
+#include <clp_s/ReaderUtils.hpp>
+#include <clp_s/SchemaReader.hpp>
+#include <clp_s/search/Projection.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s {
 class ArchiveReader {
@@ -32,15 +39,31 @@ public:
 
     /**
      * Opens an archive for reading.
-     * @param archives_dir
-     * @param archive_id
+     * @param archive_path
+     * @param network_auth
      */
-    void open(std::string_view archives_dir, std::string_view archive_id);
+    void open(Path const& archive_path, NetworkAuthOption const& network_auth);
+
+    /**
+     * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
+     * @param single_file_archive_reader The already opened archive reader
+     * @param archive_id The unique name or identifier for the archive
+     */
+    auto open(
+            std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
+            std::string_view archive_id
+    ) -> void;
 
     /**
      * Reads the dictionaries and metadata.
+     * @throws OperationFailed if reading or decompressing metadata fails.
      */
     void read_dictionaries_and_metadata();
+
+    /**
+     * Opens packed streams for reading.
+     */
+    void open_packed_streams();
 
     /**
      * Reads the variable dictionary from the archive.
@@ -48,7 +71,7 @@ public:
      * @return the variable dictionary reader
      */
     std::shared_ptr<VariableDictionaryReader> read_variable_dictionary(bool lazy = false) {
-        m_var_dict->read_new_entries(lazy);
+        m_var_dict->read_entries(lazy);
         return m_var_dict;
     }
 
@@ -58,7 +81,7 @@ public:
      * @return the log type dictionary reader
      */
     std::shared_ptr<LogTypeDictionaryReader> read_log_type_dictionary(bool lazy = false) {
-        m_log_dict->read_new_entries(lazy);
+        m_log_dict->read_entries(lazy);
         return m_log_dict;
     }
 
@@ -68,23 +91,20 @@ public:
      * @return the array dictionary reader
      */
     std::shared_ptr<LogTypeDictionaryReader> read_array_dictionary(bool lazy = false) {
-        m_array_dict->read_new_entries(lazy);
+        m_array_dict->read_entries(lazy);
         return m_array_dict;
     }
 
     /**
      * Reads the metadata from the archive.
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `ArchiveReader::read_single_schema_metadata`'s return values on failure.
+     * - Forwards `PackedStreamReader::read_metadata`'s return values on failure.
+     * @throws OperationFailed if archive metadata is empty or corrupt.
+     * @throws OperationFailed if archive metadata stream offset is not strictly incremental.
+     * @throws OperationFailed if reading or decompressing metadata fails.
      */
-    void read_metadata();
-
-    /**
-     * Reads the local timestamp dictionary from the archive.
-     * @return the timestamp dictionary reader
-     */
-    std::shared_ptr<TimestampDictionaryReader> read_timestamp_dictionary() {
-        m_timestamp_dict->read_new_entries();
-        return m_timestamp_dict;
-    }
+    [[nodiscard]] auto read_metadata() -> ystdlib::error_handling::Result<void>;
 
     /**
      * Reads a table from the archive.
@@ -114,12 +134,20 @@ public:
     std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
-        return m_timestamp_dict;
+        return m_archive_reader_adaptor->get_timestamp_dictionary();
     }
 
     std::shared_ptr<SchemaTree> get_schema_tree() { return m_schema_tree; }
 
     std::shared_ptr<ReaderUtils::SchemaMap> get_schema_map() { return m_schema_map; }
+
+    auto get_range_index() const -> std::vector<RangeIndexEntry> const& {
+        return m_archive_reader_adaptor->get_range_index();
+    }
+
+    [[nodiscard]] auto get_header() const -> ArchiveHeader const& {
+        return m_archive_reader_adaptor->get_header();
+    }
 
     /**
      * Writes decoded messages to a file.
@@ -133,10 +161,19 @@ public:
     void close();
 
     /**
-     * @return The schema ids in the archive. It also defines the order that tables should be read
-     * in to avoid seeking backwards.
+     * @return The schema ids in the archive. It also defines the order that tables should be
+     * read in to avoid seeking backwards.
      */
     [[nodiscard]] std::vector<int32_t> const& get_schema_ids() const { return m_schema_ids; }
+
+    /**
+     * @param schema_id
+     * @return The number of messages stored under the given schema in the archive.
+     * @throw std::out_of_range if `schema_id` is not found in the schema metadata.
+     */
+    [[nodiscard]] auto get_num_messages_for_schema(int32_t schema_id) const -> uint64_t {
+        return m_id_to_schema_metadata.at(schema_id).num_messages();
+    }
 
     void set_projection(std::shared_ptr<search::Projection> projection) {
         m_projection = projection;
@@ -145,9 +182,45 @@ public:
     /**
      * @return true if this archive has log ordering information, and false otherwise.
      */
-    bool has_log_order() { return m_log_event_idx_column_id >= 0; }
+    [[nodiscard]] auto has_log_order() const -> bool { return m_log_event_idx_column_id >= 0; }
+
+    /**
+     * @return Whether this archive can contain columns with the deprecated DateString timestamp
+     * format.
+     */
+    [[nodiscard]] auto has_deprecated_timestamp_format() const -> bool {
+        return get_header().has_deprecated_timestamp_format();
+    }
+
+    /**
+     * @param log_event_idx
+     * @return The file-level metadata associated with the record at `log_event_idx`.
+     * @throws ArchiveReaderAdaptor::OperationFailed when `log_event_idx` cannot be mapped to
+     * any metadata.
+     */
+    [[nodiscard]] auto get_metadata_for_log_event(int64_t log_event_idx) -> nlohmann::json const& {
+        return m_archive_reader_adaptor->get_metadata_for_log_event(log_event_idx);
+    }
 
 private:
+    /**
+     * Reads archive metadata and prepares the archive reader for subsequent archive reads.
+     */
+    auto initialize_archive_reader() -> void;
+
+    /**
+     * Reads a single schema table entry from the table metadata stream.
+     * @return A result containing a pair:
+     * - The schema ID.
+     * - The schema metadata with `uncompressed_size` not yet computed.
+     * on success, or an error code indicating the failure:
+     * - std::errc::io_error if reading from the metadata stream fails.
+     * - std::errc::illegal_byte_sequence if the stream offset exceeds the stream size.
+     * - Forwards `ReaderUtils::try_uint64_to_size_t`'s return values on failure.
+     */
+    [[nodiscard]] auto read_single_schema_metadata()
+            -> ystdlib::error_handling::Result<std::pair<int32_t, SchemaReader::SchemaMetadata>>;
+
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.
      * @param reader
@@ -186,13 +259,14 @@ private:
     );
 
     /**
-     * Reads a table with given ID from the packed stream reader. If read_stream is called multiple
-     * times in a row for the same stream_id a cached buffer is returned. This function allows the
-     * caller to ask for the same buffer to be reused to read multiple different tables: this can
-     * save memory allocations, but can only be used when tables are read one at a time.
+     * Reads a table with given ID from the packed stream reader. If read_stream is called
+     * multiple times in a row for the same stream_id a cached buffer is returned. This function
+     * allows the caller to ask for the same buffer to be reused to read multiple different
+     * tables: this can save memory allocations, but can only be used when tables are read one
+     * at a time.
      * @param stream_id
-     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting data
-     * returned previous calls to read_stream
+     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting
+     * data returned previous calls to read_stream
      * @return a buffer containing the decompressed stream identified by stream_id
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
@@ -202,7 +276,7 @@ private:
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
-    std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
+    std::shared_ptr<ArchiveReaderAdaptor> m_archive_reader_adaptor;
 
     std::shared_ptr<SchemaTree> m_schema_tree;
     std::shared_ptr<ReaderUtils::SchemaMap> m_schema_map;
@@ -213,7 +287,6 @@ private:
     };
 
     PackedStreamReader m_stream_reader;
-    FileReader m_table_metadata_file_reader;
     ZstdDecompressor m_table_metadata_decompressor;
     SchemaReader m_schema_reader;
     std::shared_ptr<char[]> m_stream_buffer{};

@@ -1,6 +1,7 @@
 #ifndef CLP_SQLITEPREPAREDSTATEMENT_HPP
 #define CLP_SQLITEPREPAREDSTATEMENT_HPP
 
+#include <cstdint>
 #include <string>
 
 #include <sqlite3/sqlite3.h>

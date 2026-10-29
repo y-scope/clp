@@ -34,7 +34,8 @@ std::enable_if_t<
         sizeof(Destination) == sizeof(Source)
                 && std::is_trivially_copyable_v<Destination> && std::is_trivially_copyable_v<Source>
                 && std::is_trivially_constructible_v<Destination>,
-        Destination>
+        Destination
+>
 bit_cast(Source const& src) {
     Destination dst;
     std::memcpy(&dst, &src, sizeof(Destination));

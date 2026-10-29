@@ -10,7 +10,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../ir/types.hpp"
@@ -276,11 +276,8 @@ void Archive::change_ts_pattern(TimestampPattern const* pattern) {
     m_file->change_ts_pattern(pattern);
 }
 
-void Archive::write_msg(
-        epochtime_t timestamp,
-        string const& message,
-        size_t num_uncompressed_bytes
-) {
+void
+Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_uncompressed_bytes) {
     // Encode message and add components to dictionaries
     vector<encoded_variable_t> encoded_vars;
     vector<variable_dictionary_id_t> var_ids;

@@ -5,17 +5,18 @@
 #include <cstdint>
 
 #include <lzma.h>
+#include <ystdlib/containers/Array.hpp>
 
-#include "../../Array.hpp"
 #include "../../ErrorCode.hpp"
-#include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
+#include "../../WriterInterface.hpp"
 #include "../Compressor.hpp"
 #include "Constants.hpp"
 
 namespace clp::streaming_compression::lzma {
 /**
- * Implements a LZMA compressor that compresses byte input data to a file.
+ * Implements a LZMA compressor that compresses byte input data to a `clp::WriterInterface`
+ * instance.
  */
 class Compressor : public ::clp::streaming_compression::Compressor {
 public:
@@ -36,7 +37,8 @@ public:
     Compressor() : Compressor{cDefaultCompressionLevel, cDefaultDictionarySize, LZMA_CHECK_CRC64} {}
 
     Compressor(int compression_level, size_t dict_size, lzma_check check)
-            : m_lzma_stream{compression_level, dict_size, check} {}
+            : m_compressed_stream_block_buffer(cCompressedStreamBlockBufferSize),
+              m_lzma_stream{compression_level, dict_size, check} {}
 
     // Destructor
     ~Compressor() override = default;
@@ -58,7 +60,8 @@ public:
     auto write(char const* data, size_t data_length) -> void override;
 
     /**
-     * Writes any internally buffered data to file and ends the current frame
+     * Writes any internally buffered data to the underlying `clp::WriterInterface` instance and
+     * ends the current frame.
      *
      * Forces all the encoded data buffered by LZMA to be available at output
      */
@@ -79,11 +82,11 @@ public:
     auto close() -> void override;
 
     /**
-     * Open the compression stream for encoding to the file_writer.
+     * Opens the compression stream for encoding to the writer.
      *
-     * @param file_writer
+     * @param writer
      */
-    auto open(FileWriter& file_writer) -> void override;
+    auto open(WriterInterface& writer) -> void override;
 
 private:
     /**
@@ -211,17 +214,18 @@ private:
     auto flush_lzma(lzma_action flush_action) -> void;
 
     /**
-     * Flushes the current compressed data in the output block buffer to the output file handler.
+     * Flushes the current compressed data in the output block buffer to the underlying
+     * `clp::WriterInterface` instance.
      *
      * Also resets the output block buffer to receive new data.
      */
     auto flush_stream_output_block_buffer() -> void;
 
     // Variables
-    FileWriter* m_compressed_stream_file_writer{nullptr};
+    WriterInterface* m_compressed_stream_writer{nullptr};
 
     // Compressed stream variables
-    Array<uint8_t> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
+    ystdlib::containers::Array<uint8_t> m_compressed_stream_block_buffer;
     LzmaStream m_lzma_stream;
     size_t m_uncompressed_stream_pos{0};
 };

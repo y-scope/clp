@@ -69,8 +69,6 @@ set(
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../Platform.hpp
-        ../Profiler.cpp
-        ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
         ../ReaderInterface.cpp
@@ -80,8 +78,6 @@ set(
         ../SQLiteDB.hpp
         ../SQLitePreparedStatement.cpp
         ../SQLitePreparedStatement.hpp
-        ../Stopwatch.cpp
-        ../Stopwatch.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -151,8 +147,7 @@ set(
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         glt.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
@@ -172,25 +167,35 @@ set(
         utils.hpp
 )
 
-add_executable(glt ${GLT_SOURCES})
-target_compile_features(glt PRIVATE cxx_std_20)
-target_include_directories(glt PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(glt
-        PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options
-        fmt::fmt
-        spdlog::spdlog
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
-        ${STD_FS_LIBS}
-        clp::string_utils
-        yaml-cpp::yaml-cpp
-        ZStd::ZStd
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        glt
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(glt ${GLT_SOURCES})
+        target_compile_features(glt PRIVATE cxx_std_20)
+        target_include_directories(glt
+                PRIVATE
+                ../../
+                "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
+        )
+        target_link_libraries(glt
+                PRIVATE
+                Boost::filesystem Boost::iostreams Boost::program_options
+                date::date
+                fmt::fmt
+                spdlog::spdlog
+                ${sqlite_LIBRARY_DEPENDENCIES}
+                LibArchive::LibArchive
+                MariaDBClient::MariaDBClient
+                nlohmann_json::nlohmann_json
+                ${STD_FS_LIBS}
+                clp::string_utils
+                utils::profiling
+                yaml-cpp
+                ystdlib::error_handling
+                zstd::libzstd_static
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                glt
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

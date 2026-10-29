@@ -19,14 +19,7 @@ using logtype_dictionary_id_t = int64_t;
 constexpr logtype_dictionary_id_t cLogtypeDictionaryIdMax
         = std::numeric_limits<logtype_dictionary_id_t>::max();
 
-using archive_format_version_t = uint16_t;
-// This flag is used to maintain two separate streams of archive format
-// versions:
-// - Development versions (which can change frequently as necessary) which
-//   should have the flag
-// - Production versions (which should be changed with care and as infrequently
-//   as possible) which should not have the flag
-constexpr archive_format_version_t cArchiveFormatDevVersionFlag = 0x8000;
+using archive_format_version_t = uint32_t;
 
 using segment_id_t = uint64_t;
 constexpr segment_id_t cInvalidSegmentId = std::numeric_limits<segment_id_t>::max();

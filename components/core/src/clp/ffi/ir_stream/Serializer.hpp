@@ -2,15 +2,18 @@
 #define CLP_FFI_IR_STREAM_SERIALIZER_HPP
 
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
 
 #include <msgpack.hpp>
-#include <outcome/single-header/outcome.hpp>
+#include <nlohmann/json.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
+#include "IrSerializationError.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
@@ -39,11 +42,17 @@ public:
     // Factory functions
     /**
      * Creates an IR serializer and serializes the stream's preamble.
+     * @param optional_user_defined_metadata Stream-level user-defined metadata, given as a JSON
+     * object.
      * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::protocol_error on failure to serialize the preamble.
+     * - IrSerializationErrorEnum::MetadataSerializationFailure if the stream's metadata couldn't be
+     *   serialized.
+     * - IrSerializationErrorEnum::UnsupportedUserDefinedMetadata if the given user-defined metadata
+     *   is not a JSON object.
      */
     [[nodiscard]] static auto create(
-    ) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
+            std::optional<nlohmann::json> optional_user_defined_metadata = std::nullopt
+    ) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>>;
 
     // Disable copy constructor/assignment operator
     Serializer(Serializer const&) = delete;
@@ -82,11 +91,17 @@ public:
     auto change_utc_offset(UtcOffset utc_offset) -> void;
 
     /**
-     * Serializes the given msgpack map as a key-value pair log event.
-     * @param msgpack_map
-     * @return Whether serialization succeeded.
+     * Serializes the given msgpack maps as a key-value pair log event.
+     * @param auto_gen_kv_pairs_map
+     * @param user_gen_kv_pairs_map
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `serialize_schema_tree_node`'s return values on failure.
+     * - Forwards `serialize_msgpack_map_using_dfs`'s return values on failure.
      */
-    [[nodiscard]] auto serialize_msgpack_map(msgpack::object_map const& msgpack_map) -> bool;
+    [[nodiscard]] auto serialize_msgpack_map(
+            msgpack::object_map const& auto_gen_kv_pairs_map,
+            msgpack::object_map const& user_gen_kv_pairs_map
+    ) -> ystdlib::error_handling::Result<void>;
 
 private:
     // Constructors
@@ -95,35 +110,27 @@ private:
     // Methods
     /**
      * Serializes a schema tree node identified by the given locator into `m_schema_tree_node_buf`.
+     * @tparam is_auto_generated_node
      * @param locator
-     * @return Whether serialization succeeded.
+     * @return A void result on success, or an error code indicating the failure:
+     * - IrSerializationErrorEnum::UnknownSchemaTreeNodeType if the node type is unsupported.
+     * - IrSerializationErrorEnum::SchemaTreeNodeSerializationFailure if the key name couldn't be
+     *   serialized.
+     * - Forwards `encode_and_serialize_schema_tree_node_id`'s return value on failure.
      */
-    [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator) -> bool;
-
-    /**
-     * Serializes the given key ID into `m_key_group_buf`.
-     * @param id
-     * @return Forwards `encode_and_serialize_schema_tree_node_id`'s return values.
-     */
-    [[nodiscard]] auto serialize_key(SchemaTree::Node::id_t id) -> bool;
-
-    /**
-     * Serializes the given MessagePack value into `m_value_group_buf`.
-     * @param val
-     * @param schema_tree_node_type The type of the schema tree node that corresponds to `val`.
-     * @return Whether serialization succeeded.
-     */
-    [[nodiscard]] auto
-    serialize_val(msgpack::object const& val, SchemaTree::Node::Type schema_tree_node_type) -> bool;
+    template <bool is_auto_generated_node>
+    [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator)
+            -> ystdlib::error_handling::Result<void>;
 
     UtcOffset m_curr_utc_offset{0};
     Buffer m_ir_buf;
-    SchemaTree m_schema_tree;
+    SchemaTree m_auto_gen_keys_schema_tree;
+    SchemaTree m_user_gen_keys_schema_tree;
 
     std::string m_logtype_buf;
     Buffer m_schema_tree_node_buf;
-    Buffer m_key_group_buf;
-    Buffer m_value_group_buf;
+    Buffer m_sequential_serialization_buf;
+    Buffer m_user_gen_val_group_buf;
 };
 }  // namespace clp::ffi::ir_stream
 

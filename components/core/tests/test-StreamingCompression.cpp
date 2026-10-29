@@ -8,32 +8,33 @@
 #include <utility>
 
 #include <boost/filesystem/operations.hpp>
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <ystdlib/containers/Array.hpp>
 #include <zstd.h>
 
-#include "../src/clp/Array.hpp"
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/FileWriter.hpp"
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
 #include "../src/clp/streaming_compression/Compressor.hpp"
 #include "../src/clp/streaming_compression/Decompressor.hpp"
 #include "../src/clp/streaming_compression/lzma/Compressor.hpp"
+#include "../src/clp/streaming_compression/lzma/Decompressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Compressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Decompressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Decompressor.hpp"
 
-using clp::Array;
 using clp::ErrorCode_Success;
 using clp::FileWriter;
 using clp::streaming_compression::Compressor;
 using clp::streaming_compression::Decompressor;
 using std::string;
 using std::string_view;
+using ystdlib::containers::Array;
 
 namespace {
 constexpr string_view cCompressedFilePath{"test_streaming_compressed_file.bin"};
-constexpr size_t cBufferSize{128L * 1024 * 1024};  // 128MB
+constexpr size_t cBufferSize{128L * 1024 * 1024};  // 128 MiB
 constexpr auto cCompressionChunkSizes = std::to_array<size_t>(
         {0,
          cBufferSize / 100,
@@ -69,7 +70,10 @@ auto decompress_and_compare(
         Array<char> const& uncompressed_buffer,
         Array<char>& decompressed_buffer
 ) -> void {
-    clp::ReadOnlyMemoryMappedFile const memory_mapped_compressed_file{string(cCompressedFilePath)};
+    auto result{clp::ReadOnlyMemoryMappedFile::create(string(cCompressedFilePath))};
+    REQUIRE_FALSE(result.has_error());
+    auto const memory_mapped_compressed_file{std::move(result.value())};
+
     auto const compressed_file_view{memory_mapped_compressed_file.get_view()};
     decompressor->open(compressed_file_view.data(), compressed_file_view.size());
 
@@ -110,8 +114,8 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     std::unique_ptr<Compressor> compressor;
     std::unique_ptr<Decompressor> decompressor;
 
-    Array<char> decompressed_buffer{cBufferSize};
-    Array<char> uncompressed_buffer{cBufferSize};
+    Array<char> decompressed_buffer(cBufferSize);
+    Array<char> uncompressed_buffer(cBufferSize);
     for (size_t i{0}; i < cBufferSize; ++i) {
         uncompressed_buffer.at(i) = static_cast<char>(('a' + (i % cAlphabetLength)));
     }
@@ -133,6 +137,7 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     SECTION("LZMA compression") {
         compressor = std::make_unique<clp::streaming_compression::lzma::Compressor>();
         compress(std::move(compressor), uncompressed_buffer.data());
+        decompressor = std::make_unique<clp::streaming_compression::lzma::Decompressor>();
     }
 
     boost::filesystem::remove(string(cCompressedFilePath));

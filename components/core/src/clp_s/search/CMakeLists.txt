@@ -1,0 +1,57 @@
+add_subdirectory(ast)
+add_subdirectory(kql)
+add_subdirectory(sql)
+
+set(
+        CLP_S_SEARCH_SOURCES
+        AddTimestampConditions.cpp
+        AddTimestampConditions.hpp
+        ColumnScan.cpp
+        ColumnScan.hpp
+        EvaluateRangeIndexFilters.cpp
+        EvaluateRangeIndexFilters.hpp
+        EvaluateTimestampIndex.cpp
+        EvaluateTimestampIndex.hpp
+        Output.cpp
+        Output.hpp
+        OutputHandler.hpp
+        Projection.cpp
+        Projection.hpp
+        QueryRunner.cpp
+        QueryRunner.hpp
+        SchemaMatch.cpp
+        SchemaMatch.hpp
+        SearchTelemetry.cpp
+        SearchTelemetry.hpp
+        TelemetryContext.cpp
+        TelemetryContext.hpp
+)
+
+if(CLP_BUILD_CLP_S_SEARCH)
+        add_library(
+                clp_s_search
+                ${CLP_S_SEARCH_SOURCES}
+        )
+        add_library(clp_s::search ALIAS clp_s_search)
+        target_compile_features(clp_s_search PRIVATE cxx_std_20)
+        target_include_directories(clp_s_search PUBLIC ../../)
+        target_link_libraries(
+                clp_s_search
+                PUBLIC
+                absl::flat_hash_map
+                clp_s::archive_reader
+                clp_s::search::ast
+                simdjson::simdjson
+                utils::profiling
+                PRIVATE
+                clp::string_utils
+                clp_s::clp_dependencies
+                clp_s::io
+                opentelemetry-cpp::api
+                opentelemetry-cpp::otlp_http_exporter
+                opentelemetry-cpp::resources
+                opentelemetry-cpp::trace
+                spdlog::spdlog
+                xxHash::xxhash
+        )
+endif()
