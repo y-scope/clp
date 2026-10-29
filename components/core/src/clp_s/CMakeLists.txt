@@ -71,16 +71,12 @@ set(
         ../clp/FileWriter.hpp
         ../clp/GrepCore.cpp
         ../clp/GrepCore.hpp
-        ../clp/SchemaSearcher.cpp
-        ../clp/SchemaSearcher.hpp
         ../clp/ir/constants.hpp
         ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
-        ../clp/LogSurgeonReader.cpp
-        ../clp/LogSurgeonReader.hpp
         ../clp/LogTypeDictionaryEntryReq.hpp
         ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/networking/socket_utils.cpp
@@ -163,8 +159,10 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         target_link_libraries(
                 clp_s_clp_dependencies
                 PUBLIC
+                absl::flat_hash_map
+                absl::flat_hash_set
                 clp::string_utils
-                log_surgeon::log_surgeon
+                utils::profiling
                 ystdlib::containers
                 zstd::libzstd_static
                 PRIVATE
@@ -489,6 +487,8 @@ set(
         ErrorCode.hpp
         kv_ir_search.cpp
         kv_ir_search.hpp
+        MongoDBUtils.cpp
+        MongoDBUtils.hpp
         OutputHandlerImpl.cpp
         OutputHandlerImpl.hpp
         ResultsCacheUtils.cpp

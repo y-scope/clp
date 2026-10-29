@@ -1,5 +1,6 @@
 use std::num::NonZeroU32;
 use std::num::NonZeroU64;
+use std::num::NonZeroUsize;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -8,7 +9,15 @@ use serde::Deserialize;
 
 use crate::clp_config::AwsAuthentication;
 use crate::clp_config::S3Config;
-use crate::dataset::resolve_dataset_name;
+use crate::dataset::DatasetName;
+use crate::types::ArchiveId;
+use crate::types::non_empty_string::ExpectedNonEmpty;
+
+/// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`. Must be kept in sync.
+pub const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
+
+/// The directory where the package mounts the logs input in its containers.
+pub const LOGS_INPUT_MOUNT_POINT: &str = "/mnt/logs";
 
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
@@ -32,6 +41,7 @@ pub struct Config {
     pub telemetry: Telemetry,
     pub spider: Option<Spider>,
     pub compression_coordinator: Option<CompressionCoordinator>,
+    pub query_coordinator: Option<QueryCoordinator>,
 }
 
 impl Default for Config {
@@ -51,6 +61,7 @@ impl Default for Config {
             telemetry: Telemetry::default(),
             spider: None,
             compression_coordinator: None,
+            query_coordinator: None,
         }
     }
 }
@@ -60,6 +71,7 @@ impl Default for Config {
 #[serde(default)]
 pub struct SpiderTaskExecutorConfig {
     pub package: Package,
+    pub logs_input: LogsInput,
     pub archive_output: ArchiveOutput,
     pub tmp_directory: String,
     pub database: Database,
@@ -99,6 +111,9 @@ impl Default for SpiderTaskExecutorConfig {
     fn default() -> Self {
         Self {
             package: Package::default(),
+            logs_input: LogsInput::Fs {
+                config: FsIngestion::default(),
+            },
             database: Database::default(),
             archive_output: ArchiveOutput::default(),
             tmp_directory: "var/tmp".to_owned(),
@@ -118,14 +133,12 @@ impl Default for SpiderTaskExecutorConfig {
 #[serde(deny_unknown_fields)]
 pub struct ClpDbNames {
     pub clp: String,
-    pub spider: String,
 }
 
 impl Default for ClpDbNames {
     fn default() -> Self {
         Self {
             clp: "clp-db".to_owned(),
-            spider: "spider-db".to_owned(),
         }
     }
 }
@@ -137,8 +150,8 @@ impl Default for ClpDbNames {
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
-/// * `table_prefix` is a fixed constant mirroring `CLP_METADATA_TABLE_PREFIX` (`"clp_"`) and is
-///   excluded from (de)serialization.
+/// * `table_prefix` is fixed to [`CLP_METADATA_TABLE_PREFIX`] and is excluded from
+///   (de)serialization.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Database {
@@ -152,8 +165,6 @@ pub struct Database {
 
 impl Default for Database {
     fn default() -> Self {
-        /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`.
-        const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
         Self {
             host: "localhost".to_owned(),
             port: 3306,
@@ -168,24 +179,16 @@ impl Database {
     ///
     /// The archives table name (`<prefix><dataset>_archives`).
     #[must_use]
-    pub fn archives_table_name(&self, dataset: Option<&str>) -> String {
-        format!(
-            "{}{}_archives",
-            self.table_prefix,
-            resolve_dataset_name(dataset)
-        )
+    pub fn archives_table_name(&self, dataset: &DatasetName) -> String {
+        format!("{}{dataset}_archives", self.table_prefix)
     }
 
     /// # Returns
     ///
     /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
     #[must_use]
-    pub fn column_metadata_table_name(&self, dataset: Option<&str>) -> String {
-        format!(
-            "{}{}_column_metadata",
-            self.table_prefix,
-            resolve_dataset_name(dataset)
-        )
+    pub fn column_metadata_table_name(&self, dataset: &DatasetName) -> String {
+        format!("{}{dataset}_column_metadata", self.table_prefix)
     }
 
     /// # Returns
@@ -195,6 +198,31 @@ impl Database {
     pub fn datasets_table_name(&self) -> String {
         format!("{}datasets", self.table_prefix)
     }
+
+    /// # Returns
+    ///
+    /// The files table name (`<prefix><dataset>_files`).
+    #[must_use]
+    pub fn files_table_name(&self, dataset: &DatasetName) -> String {
+        format!("{}{dataset}_files", self.table_prefix)
+    }
+
+    /// # Returns
+    ///
+    /// The archives table name without a dataset (`<prefix>archives`), used by the CLP storage
+    /// engine.
+    #[must_use]
+    pub fn unscoped_archives_table_name(&self) -> String {
+        format!("{}archives", self.table_prefix)
+    }
+
+    /// # Returns
+    ///
+    /// The files table name without a dataset (`<prefix>files`), used by the CLP storage engine.
+    #[must_use]
+    pub fn unscoped_files_table_name(&self) -> String {
+        format!("{}files", self.table_prefix)
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -203,7 +231,7 @@ pub struct ApiServer {
     pub host: String,
     pub port: u16,
     pub query_job_polling: QueryJobPollingConfig,
-    pub default_max_num_query_results: u32,
+    pub stream_file_extraction_timeout_secs: NonZeroU64,
 }
 
 impl Default for ApiServer {
@@ -212,7 +240,8 @@ impl Default for ApiServer {
             host: "localhost".to_owned(),
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
-            default_max_num_query_results: 1000,
+            stream_file_extraction_timeout_secs: NonZeroU64::new(270)
+                .expect("default stream file extraction timeout should not be zero"),
         }
     }
 }
@@ -279,6 +308,18 @@ pub struct ResultsCache {
     pub host: String,
     pub port: u16,
     pub db_name: String,
+    pub stream_collection_name: String,
+}
+
+impl ResultsCache {
+    /// Returns the MongoDB URI for the results cache database.
+    #[must_use]
+    pub fn uri(&self) -> NonEmptyString {
+        NonEmptyString::from_string(format!(
+            "mongodb://{}:{}/{}",
+            self.host, self.port, self.db_name
+        ))
+    }
 }
 
 impl Default for ResultsCache {
@@ -287,6 +328,7 @@ impl Default for ResultsCache {
             host: "localhost".to_owned(),
             port: 27017,
             db_name: "clp-query-results".to_owned(),
+            stream_collection_name: "stream-files".to_owned(),
         }
     }
 }
@@ -296,10 +338,21 @@ impl Default for ResultsCache {
 /// # NOTE
 ///
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Clone, Default, Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct StreamOutput {
     pub storage: StreamOutputStorage,
+    pub target_uncompressed_size: NonZeroU64,
+}
+
+impl Default for StreamOutput {
+    fn default() -> Self {
+        Self {
+            storage: StreamOutputStorage::default(),
+            target_uncompressed_size: NonZeroU64::new(128 * 1024 * 1024)
+                .expect("default target uncompressed size should not be zero"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -362,6 +415,7 @@ pub struct ArchiveOutput {
     pub target_encoded_file_size: u64,
     pub target_segment_size: u64,
     pub compression_level: u8,
+    pub retention_period: Option<NonZeroU64>,
 }
 
 impl ArchiveOutput {
@@ -370,17 +424,39 @@ impl ArchiveOutput {
     /// # Returns
     ///
     /// The dataset's storage base (`s3_config.key_prefix` for S3, `directory` for `Fs`) joined with
-    /// `dataset`, where a `None` dataset resolves to `default`.
+    /// `dataset`.
     #[must_use]
-    pub fn dataset_archive_storage_directory(&self, dataset: Option<&str>) -> String {
+    pub fn dataset_archive_storage_directory(&self, dataset: &DatasetName) -> String {
         let base = match &self.storage {
             ArchiveOutputStorage::Fs { directory } => directory.as_str(),
             ArchiveOutputStorage::S3 { s3_config, .. } => s3_config.key_prefix.as_str(),
         };
         Path::new(base)
-            .join(resolve_dataset_name(dataset))
+            .join(dataset.as_str())
             .to_string_lossy()
             .into_owned()
+    }
+
+    /// Derives the S3 object key of an archive in a dataset.
+    ///
+    /// # Returns
+    ///
+    /// The dataset's archive storage directory joined with `archive_id`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the derived object key is empty. This should never happen since the key always
+    /// contains at least the `/` separator.
+    #[must_use]
+    pub fn dataset_archive_object_key(
+        &self,
+        dataset: &DatasetName,
+        archive_id: &ArchiveId,
+    ) -> NonEmptyString {
+        NonEmptyString::from_string(format!(
+            "{}/{archive_id}",
+            self.dataset_archive_storage_directory(dataset)
+        ))
     }
 }
 
@@ -393,6 +469,7 @@ impl Default for ArchiveOutput {
             target_encoded_file_size: 256 * 1024 * 1024,
             target_segment_size: 256 * 1024 * 1024,
             compression_level: 3,
+            retention_period: None,
         }
     }
 }
@@ -478,12 +555,44 @@ impl Default for Telemetry {
     }
 }
 
+/// Query coordinator configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
+pub struct QueryCoordinator {
+    pub database_connection_pool_size: NonZeroU32,
+    pub job_polling_interval_millisecs: NonZeroU64,
+    pub max_concurrent_jobs: NonZeroUsize,
+    pub max_datasets_per_query: Option<NonZeroUsize>,
+    pub query_task_max_retry: u32,
+    pub result_polling_interval_millisecs: NonZeroU64,
+    pub termination_timeout_secs: NonZeroU64,
+}
+
+impl Default for QueryCoordinator {
+    fn default() -> Self {
+        Self {
+            database_connection_pool_size: NonZeroU32::new(10)
+                .expect("default database connection pool size should not be zero"),
+            job_polling_interval_millisecs: NonZeroU64::new(100)
+                .expect("default jobs poll delay should not be zero"),
+            max_concurrent_jobs: NonZeroUsize::new(1000)
+                .expect("default maximum number of concurrent jobs should not be zero"),
+            max_datasets_per_query: NonZeroUsize::new(10),
+            query_task_max_retry: 1,
+            result_polling_interval_millisecs: NonZeroU64::new(100)
+                .expect("default result polling interval should not be zero"),
+            termination_timeout_secs: NonZeroU64::new(30)
+                .expect("default termination timeout should not be zero"),
+        }
+    }
+}
+
 /// Compression coordinator configuration.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct CompressionCoordinator {
-    pub resource_group: SpiderResourceGroup,
     pub job_polling_interval_millisecs: NonZeroU64,
+    pub max_concurrent_jobs: NonZeroUsize,
     pub result_polling: PollingBackoff,
     pub compression_task_max_retry: u32,
     pub commit_task_max_retry: u32,
@@ -496,12 +605,10 @@ pub struct CompressionCoordinator {
 impl Default for CompressionCoordinator {
     fn default() -> Self {
         Self {
-            resource_group: SpiderResourceGroup {
-                name: NonEmptyString::new("compression-coordinator".to_owned())
-                    .expect("default resource group name should not be empty"),
-            },
             job_polling_interval_millisecs: NonZeroU64::new(100)
                 .expect("default jobs poll delay should not be zero"),
+            max_concurrent_jobs: NonZeroUsize::new(1000)
+                .expect("default maximum number of concurrent jobs should not be zero"),
             result_polling: PollingBackoff {
                 init_backoff_millisecs: NonZeroU64::new(100)
                     .expect("default result polling init backoff should not be zero"),
@@ -527,12 +634,6 @@ impl Default for CompressionCoordinator {
 pub struct Spider {
     pub host: NonEmptyString,
     pub port: u16,
-}
-
-/// Spider resource group configuration.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-pub struct SpiderResourceGroup {
-    pub name: NonEmptyString,
 }
 
 /// Polling backoff configuration.
@@ -566,6 +667,7 @@ mod tests {
     use super::Database;
     use super::LogsInput;
     use super::SpiderTaskExecutorConfig;
+    use crate::dataset::DatasetName;
 
     #[test]
     fn deserialize_logs_input_s3_config() {
@@ -653,13 +755,16 @@ mod tests {
             },
             ..ArchiveOutput::default()
         };
+        let dataset: DatasetName = "mydataset"
+            .parse()
+            .expect("name should be a valid dataset name");
 
         assert_eq!(
-            archive_output.dataset_archive_storage_directory(Some("mydataset")),
+            archive_output.dataset_archive_storage_directory(&dataset),
             "/var/data/archives/mydataset"
         );
         assert_eq!(
-            archive_output.dataset_archive_storage_directory(None),
+            archive_output.dataset_archive_storage_directory(&DatasetName::default()),
             "/var/data/archives/default"
         );
     }
@@ -686,14 +791,60 @@ mod tests {
             },
             ..ArchiveOutput::default()
         };
+        let dataset: DatasetName = "mydataset"
+            .parse()
+            .expect("name should be a valid dataset name");
 
         assert_eq!(
-            archive_output.dataset_archive_storage_directory(Some("mydataset")),
+            archive_output.dataset_archive_storage_directory(&dataset),
             "prefix/mydataset"
         );
         assert_eq!(
-            archive_output.dataset_archive_storage_directory(None),
+            archive_output.dataset_archive_storage_directory(&DatasetName::default()),
             "prefix/default"
+        );
+    }
+
+    #[test]
+    fn dataset_archive_object_key_joins_prefix_dataset_and_id() {
+        use non_empty_string::NonEmptyString;
+
+        use crate::clp_config::AwsAuthentication;
+        use crate::clp_config::S3Config;
+        use crate::types::ArchiveId;
+        use crate::types::non_empty_string::ExpectedNonEmpty;
+
+        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+
+        let archive_id = ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID");
+        let archive_output = ArchiveOutput {
+            storage: ArchiveOutputStorage::S3 {
+                staging_directory: "var/data/staged-archives".to_owned(),
+                s3_config: S3Config {
+                    bucket: NonEmptyString::from_static_str("bucket"),
+                    region_code: None,
+                    key_prefix: NonEmptyString::from_static_str("LIB1/"),
+                    endpoint_url: None,
+                    aws_authentication: AwsAuthentication::Default,
+                },
+            },
+            ..ArchiveOutput::default()
+        };
+        let dataset: DatasetName = "mydataset"
+            .parse()
+            .expect("name should be a valid dataset name");
+
+        assert_eq!(
+            archive_output
+                .dataset_archive_object_key(&DatasetName::default(), &archive_id)
+                .as_str(),
+            format!("LIB1/default/{ARCHIVE_ID}")
+        );
+        assert_eq!(
+            archive_output
+                .dataset_archive_object_key(&dataset, &archive_id)
+                .as_str(),
+            format!("LIB1/mydataset/{ARCHIVE_ID}")
         );
     }
 
@@ -704,7 +855,6 @@ mod tests {
             "port": 3306,
             "names": {
                 "clp": "clp-db",
-                "spider": "spider-db",
             },
             "table_prefix": "custom_"
         });

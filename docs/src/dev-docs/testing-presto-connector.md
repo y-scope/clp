@@ -49,7 +49,8 @@ See the [Using Presto with CLP][using-presto] user guide for the full setup.
 ## Helm (kind)
 
 `--clp-connector-image` loads a local image into the `kind` cluster and sets
-`image.clpConnector.{repository,tag,pullPolicy=Never}` for you:
+`image.clpConnector.{repository,tag,pullPolicy=Never}` for you, clearing the default digest so the
+local tag is used:
 
 ```shell
 tools/deployment/package-helm/set-up-test.sh --presto \

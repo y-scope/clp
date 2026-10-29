@@ -74,8 +74,9 @@ get_image_helm_args() {
         echo "Error: '${image}' is not a valid image reference (expected repo:tag)." >&2
         return 1
     fi
-    echo "--set" "image.${component}.repository=${repo}" \
-         "--set" "image.${component}.tag=${tag}" \
+    echo "--set-string" "image.${component}.repository=${repo}" \
+         "--set-string" "image.${component}.tag=${tag}" \
+         "--set-string" "image.${component}.digest=" \
          "--set" "image.${component}.pullPolicy=Never"
 }
 

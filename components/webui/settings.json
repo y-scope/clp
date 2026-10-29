@@ -5,6 +5,7 @@
 
         "LogsInputRootDir": "/",
         "LogsInputType": "fs",
+        "LogIngestorEnabled": false,
 
         "MaxDatasetsPerQuery": 10,
 
@@ -19,6 +20,9 @@
         "MongoDbSearchResultsMetadataCollectionName": "results-metadata"
     },
     "server": {
+        "ApiServerUrl": "http://localhost:3001",
+        "LogIngestorUrl": null,
+
         "SqlDbHost": "localhost",
         "SqlDbName": "clp-db",
         "SqlDbPort": 3306,

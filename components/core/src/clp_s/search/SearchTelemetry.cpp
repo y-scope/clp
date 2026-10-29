@@ -1,5 +1,6 @@
 #include "SearchTelemetry.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
@@ -16,6 +17,7 @@
 #include <opentelemetry/trace/span.h>
 #include <opentelemetry/trace/span_metadata.h>
 #include <opentelemetry/trace/tracer.h>  // IWYU pragma: keep
+#include <utils/profiling/Stopwatch.hpp>
 #include <xxhash.h>
 
 #include <clp_s/Defs.hpp>
@@ -72,6 +74,9 @@ constexpr std::string_view cAttrNumArchiveRecordsMatchingQuery{
 constexpr std::string_view cAttrNumMatchedSchemas{"clp.query.num_matched_schemas"};
 constexpr std::string_view cAttrNumSchemasWithMatches{"clp.query.num_schemas_with_matches"};
 constexpr std::string_view cAttrTerminationStage{"clp.query.termination_stage"};
+
+constexpr std::string_view cAttrProfilerPhaseCallCountSuffix{".call_count"};
+constexpr std::string_view cAttrProfilerPhaseDurationSuffix{".duration_millisecs"};
 
 /**
  * @param sv
@@ -339,6 +344,19 @@ public:
         );
     }
 
+    auto set_profiler_measurement(std::string_view name, utils::profiling::Measurement measurement)
+            -> void {
+        auto const base{std::string{cTracerName} + "." + std::string{name}};
+        m_span->SetAttribute(
+                to_nostd_string_view(base + std::string{cAttrProfilerPhaseDurationSuffix}),
+                std::chrono::duration_cast<std::chrono::milliseconds>(measurement.duration).count()
+        );
+        m_span->SetAttribute(
+                to_nostd_string_view(base + std::string{cAttrProfilerPhaseCallCountSuffix}),
+                static_cast<int64_t>(measurement.call_count)
+        );
+    }
+
 private:
     // Data members
     opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> m_span;
@@ -371,6 +389,13 @@ auto SearchTelemetrySpan::set_search_result_metrics(SearchResultMetrics const& m
 
 auto SearchTelemetrySpan::set_termination_stage(std::string_view termination_stage) -> void {
     m_impl->set_termination_stage(termination_stage);
+}
+
+auto SearchTelemetrySpan::set_profiler_measurement(
+        std::string_view name,
+        utils::profiling::Measurement measurement
+) -> void {
+    m_impl->set_profiler_measurement(name, measurement);
 }
 
 auto QueryShapeMetrics::create(

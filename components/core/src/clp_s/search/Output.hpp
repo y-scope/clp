@@ -16,7 +16,6 @@
 #include "../SchemaReader.hpp"
 #include "../Utils.hpp"
 #include "ast/Expression.hpp"
-#include "ast/StringLiteral.hpp"
 #include "OutputHandler.hpp"
 #include "QueryRunner.hpp"
 #include "SchemaMatch.hpp"

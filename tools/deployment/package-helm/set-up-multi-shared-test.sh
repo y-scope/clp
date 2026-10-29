@@ -48,6 +48,7 @@ sleep 2
 clp_package_args=$(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}") || exit 1
 clp_connector_args=$(get_image_helm_args "${CLUSTER_NAME}" "clpConnector" "${CLP_PRESTO_CONNECTOR_IMAGE}") || exit 1
 
+helm dependency update "${script_dir}"
 # Word splitting is intentional: helper functions return multiple --set flags.
 # shellcheck disable=SC2086,SC2046
 helm install test "${script_dir}" \

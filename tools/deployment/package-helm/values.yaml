@@ -1,5 +1,6 @@
-nameOverride: ""
-fullnameOverride: ""
+global:
+  fullnameOverride: ""
+  nameOverride: ""
 
 # Whether to allow scripts in `sbin` access to services on the host.
 allowHostAccessForSbinScripts: true
@@ -109,8 +110,10 @@ scheduling:
   resultsCache: {}
 
   # Core
+  compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
+  queryCoordinator: {}
   queryScheduler: {}
   prestoCoordinator: {}
   garbageCollector: {}
@@ -139,8 +142,10 @@ resources:
   resultsCache: {}
 
   # Core
+  compressionCoordinator: {}
   compressionScheduler: {}
   logIngestor: {}
+  queryCoordinator: {}
   queryScheduler: {}
   prestoCoordinator: {}
   garbageCollector: {}
@@ -161,13 +166,14 @@ clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
   # Remove a service from this list to use an external instance instead, and configure its host/port
   # accordingly in the service-specific sections below.
-  bundled:
-    - "database"
-    - "queue"
-    - "redis"
-    - "results_cache"
-    - "otel_collector"
-    - "presto"
+  bundled: [
+    "database",
+    "queue",
+    "redis",
+    "results_cache",
+    "otel_collector",
+    "presto",
+  ]
 
   package:
     storage_engine: "clp-s"
@@ -176,10 +182,10 @@ clpConfig:
   api_server:
     serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30301  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
-    default_max_num_query_results: 1000
     query_job_polling:
       initial_backoff_ms: 100
       max_backoff_ms: 5000
+    stream_file_extraction_timeout_secs: 270
 
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.
@@ -199,13 +205,36 @@ clpConfig:
     port: 30306
     names:
       clp: "clp-db"
-      spider: "spider-db"
+
+  compression_coordinator:
+    commit_task_hard_timeout_secs: 60
+    commit_task_max_retry: 1
+    commit_task_soft_timeout_secs: 45
+    compression_task_max_retry: 1
+    database_connection_pool_size: 10
+    job_polling_interval_millisecs: 100
+    logging_level: "INFO"
+    max_concurrent_jobs: 1000
+    result_polling:
+      init_backoff_millisecs: 100
+      max_backoff_millisecs: 1000
+    termination_timeout_secs: 30
 
   compression_scheduler:
     jobs_poll_delay: 0.1  # seconds
     logging_level: "INFO"
     max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
     telemetry_update_interval_ms: 60000
+
+  query_coordinator:
+    database_connection_pool_size: 10
+    job_polling_interval_millisecs: 100
+    logging_level: "INFO"
+    max_concurrent_jobs: 1000
+    max_datasets_per_query: 10  # Set to null to disable the limit
+    query_task_max_retry: 1
+    result_polling_interval_millisecs: 100
+    termination_timeout_secs: 30
 
   query_scheduler:
     jobs_poll_delay: 0.1  # seconds
@@ -373,7 +402,91 @@ credentials:
   redis:
     password: "pass"
 
+  spiderResourceGroups:
+    compression: "compression-pass"
+    query: "query-pass"
+
 serviceAccount:
   annotations:
   # For IRSA on EKS, set:
   #   eks.amazonaws.com/role-arn: "arn:aws:iam::<ACCOUNT_ID>:role/<role-name>"
+
+# Overrides for the Spider subchart's `values.yaml`
+spider:
+  enabled: false
+  image:
+    # Temporary pin: upcoming Spider `main` changes may break, and its next release is a while away.
+    scheduler:
+      tag: "sha-278d06f"
+    storage:
+      tag: "sha-278d06f"
+    worker:
+      repository: "ghcr.io/y-scope/clp/clp-spider-worker"
+      tag: "main"
+  spiderConfig:
+    # List of third-party services bundled (deployed) as part of the Spider subchart.
+    # Remove a service from this list to use an external instance instead, and configure its
+    # connection details accordingly in the service-specific sections below.
+    bundled: [
+      "database",
+    ]
+
+    # Connection config for the Spider database service; defaults to the Spider subchart's
+    # `values.yaml`. When "database" is in `bundled`, the host is automatically set to the bundled
+    # service name (ignored). When external, set these to the external service's address and
+    # credentials.
+    # database:
+    #   host: "localhost"
+    #   port: 3306
+    #   name: "spider-db"
+    #   username: "spider-user"
+    #   password: "spider-password"
+
+    worker:
+      extra_envs:
+        - name: "CLP_CONFIG_PATH"
+          value: "/etc/clp-config.yaml"
+        - name: "CLP_DB_USER"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include \"clp.fullname\" . }}-database"
+              key: "username"
+        - name: "CLP_DB_PASS"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ include \"clp.fullname\" . }}-database"
+              key: "password"
+      extra_volume_mounts:
+        - name: "clp-config"
+          mountPath: "/etc/clp-config.yaml"
+          subPath: "clp-config.yaml"
+          readOnly: true
+        - name: "staged-archives"
+          mountPath: "/var/data/staged-archives"
+      extra_volumes:
+        - name: "clp-config"
+          configMap:
+            name: "{{ include \"clp.fullname\" . }}-config"
+        - name: "staged-archives"
+          emptyDir: {}
+      service_account_name: "{{ include \"clp.fullname\" . }}-service-account"
+      pools:
+        - name: "general"
+          replicas: 2
+          resource_group: null
+        - name: "compression"
+          replicas: 2
+          resource_group:
+            external_id: "compression"
+            password:
+              secretKeyRef:
+                name: "{{ include \"clp.fullname\" . }}-spider-resource-groups"
+                key: "compression"
+        - name: "query"
+          replicas: 4
+          resource_group:
+            external_id: "query"
+            password:
+              secretKeyRef:
+                name: "{{ include \"clp.fullname\" . }}-spider-resource-groups"
+                key: "query"
