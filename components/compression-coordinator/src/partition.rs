@@ -43,12 +43,13 @@ pub trait Source {
     ///
     /// # Parameters
     ///
-    /// * `partitions` - File partitions, each containing between 1 and 4,096 paths.
+    /// * `partitions` - File partitions, each containing between 1 and
+    ///   [`MAX_PARTITION_ENTRIES`] paths.
     ///
     /// # Returns
     ///
-    /// Manifests containing at most 4,096 entries each. Retained entries are emitted in separate
-    /// manifests from files.
+    /// Manifests containing at most [`MAX_PARTITION_ENTRIES`] entries each. Retained entries
+    /// are emitted in separate manifests from files.
     fn build_manifests(self, partitions: Vec<Vec<Self::Path>>) -> Vec<Self::Manifest>;
 }
 
