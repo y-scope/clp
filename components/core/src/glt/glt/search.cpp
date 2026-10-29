@@ -11,7 +11,6 @@
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
-#include "../Profiler.hpp"
 #include "CommandLineArguments.hpp"
 
 using glt::combined_table_id_t;
@@ -23,7 +22,6 @@ using glt::GlobalMetadataDB;
 using glt::GlobalMetadataDBConfig;
 using glt::Grep;
 using glt::LogtypeQueries;
-using glt::Profiler;
 using glt::Query;
 using glt::segment_id_t;
 using glt::streaming_archive::MetadataDB;
@@ -549,8 +547,6 @@ bool search(CommandLineArguments& command_line_args) {
             return false;
         }
 
-        // Generate lexer if schema file exists
-        auto schema_file_path = archive_path / streaming_archive::cSchemaFileName;
         // Perform search
         if (!search(search_strings, command_line_args, archive_reader, num_matches)) {
             return false;

@@ -4,7 +4,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
-use clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX;
+use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
@@ -48,7 +49,7 @@ pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
 
     input_config: InputConfig,
     clp_s_compression_option: ClpSCompressionOption,
-    dataset: Option<String>,
+    dataset: DatasetName,
     target_archive_size: u64,
 
     spider_option: Arc<SpiderOption>,
@@ -68,7 +69,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::UnsupportedInputConfig`] if `clp_io_config`'s input config is not an
     ///   [`InputConfig::S3ObjectMetadataInputConfig`].
-    /// * [`Error::InvalidDataset`] if the configured dataset name is not a valid dataset name.
     pub fn new(
         db_pool: MySqlPool,
         db_config: Database,
@@ -85,12 +85,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         else {
             return Err(Error::UnsupportedInputConfig);
         };
-        let dataset: Option<String> = s3_object_metadata_config.dataset.clone().map(String::from);
-        if let Some(dataset_name) = dataset.as_ref()
-            && !VALID_DATASET_NAME_REGEX.is_match(dataset_name)
-        {
-            return Err(Error::InvalidDataset(dataset_name.clone()));
-        }
+        let dataset = s3_object_metadata_config.dataset.clone();
 
         let output_config = clp_io_config.output;
         let clp_s_compression_option = ClpSCompressionOption {
@@ -297,10 +292,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             });
         }
 
-        let mut input_builder = CompressionInputBuilder::from_s3_config(
-            config.s3_config.clone(),
-            self.target_archive_size,
-        );
+        let mut input_builder =
+            CompressionInputBuilder::new(config.s3_config.clone(), self.target_archive_size);
         for chunk in sorted_metadata_ids.chunks(FETCH_CHUNK_SIZE) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
                 "SELECT `id`, `bucket`, `key`, `size` FROM \
@@ -351,29 +344,28 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             }
         }
 
-        let input_sources = input_builder.into_task_input_sources();
-        if input_sources.is_empty() {
+        let manifests = input_builder.build();
+        if manifests.is_empty() {
             return Err(Error::NoTaskInputs);
         }
 
-        Ok(input_sources
+        Ok(manifests
             .into_iter()
-            .map(|input_source| {
+            .map(|manifest| {
                 // NOTE: The timeout policy scales with the number of objects assigned to the task.
                 // Each object contributes three minutes to the soft timeout and five minutes to
                 // the hard timeout. This heuristic does not account for object size and can be
                 // refined in the future.
-                let num_objects = input_source.object_keys.len() as u64;
-                let timeout_policy = TimeoutPolicy {
-                    soft_timeout_ms: num_objects * 3 * 60 * 1000,
-                    hard_timeout_ms: num_objects * 5 * 60 * 1000,
-                };
+                let num_objects = manifest.object_keys.len() as u64;
                 let execution_policy = ExecutionPolicy {
                     max_num_retry: self.spider_option.compression_task_max_retry,
-                    timeout_policy,
+                    timeout_policy: TimeoutPolicy {
+                        soft_timeout_ms: num_objects * 3 * 60 * 1000,
+                        hard_timeout_ms: num_objects * 5 * 60 * 1000,
+                    },
                     ..ExecutionPolicy::default()
                 };
-                (input_source, execution_policy)
+                (manifest, execution_policy)
             })
             .collect())
     }
@@ -391,10 +383,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::MetadataTableCreation`] if either table cannot be created.
     async fn upsert_metadata_tables(&self) -> Result<(), Error> {
-        let archives_table = self.db_config.archives_table_name(self.dataset.as_deref());
-        let column_metadata_table = self
-            .db_config
-            .column_metadata_table_name(self.dataset.as_deref());
+        let archives_table = self.db_config.archives_table_name(&self.dataset);
+        let column_metadata_table = self.db_config.column_metadata_table_name(&self.dataset);
 
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS `{archives_table}` (
@@ -460,8 +450,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         let num_tasks =
             i32::try_from(num_tasks).map_err(|_| Error::TooManyCompressionTasks(num_tasks))?;
         sqlx::query(formatcp!(
-            "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, `num_tasks` \
-             = ?, `start_time` = CURRENT_TIMESTAMP(3), `dispatch_time` = \
+            "UPDATE `{COMPRESSION_JOBS_TABLE_NAME}` SET `spider_id` = ?, `status` = ?, \
+             `num_tasks` = ?, `start_time` = CURRENT_TIMESTAMP(3), `dispatch_time` = \
              COALESCE(`dispatch_time`, CURRENT_TIMESTAMP()) WHERE `id` = ?"
         ))
         .bind(spider_job_id.get())
@@ -551,7 +541,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     /// * Forwards [`sqlx::query::QueryScalar::fetch_one`]'s return values on failure.
     async fn get_job_status(&self) -> Result<CompressionJobStatus, Error> {
         let job_status: CompressionJobStatus = sqlx::query_scalar(formatcp!(
-            "SELECT `status` FROM `{COMPRESSION_JOB_TABLE_NAME}` WHERE `id` = ?"
+            "SELECT `status` FROM `{COMPRESSION_JOBS_TABLE_NAME}` WHERE `id` = ?"
         ))
         .bind(self.compression_job_id)
         .fetch_one(&self.db_pool)
@@ -574,7 +564,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ) -> Result<(), Error> {
         let status_message = status_message.as_ref().map_or("", String::as_str);
         sqlx::query(formatcp!(
-            "UPDATE `{COMPRESSION_JOB_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` \
+            "UPDATE `{COMPRESSION_JOBS_TABLE_NAME}` SET `status` = ?, `status_msg` = ? WHERE `id` \
              = ?"
         ))
         .bind(job_status)
@@ -587,7 +577,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     }
 }
 
-const COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
 const INGESTED_S3_OBJECT_METADATA_TABLE_NAME: &str = "ingested_s3_object_metadata";
 
 /// A projection of the columns read from an ingested S3 object metadata row.

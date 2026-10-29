@@ -2,6 +2,7 @@
 
 use clp_rust_utils::job_config::ingestion::JobId as IngestionJobId;
 use clp_rust_utils::s3::S3ObjectMetadataId;
+use spider_core::types::resource_group::ExternalResourceGroupCredentialsError;
 
 /// Errors returned by the compression coordinator.
 #[derive(Debug, thiserror::Error)]
@@ -20,8 +21,8 @@ pub enum Error {
         field: &'static str,
     },
 
-    #[error("invalid dataset: {0}")]
-    InvalidDataset(String),
+    #[error("invalid configuration: {0}")]
+    InvalidConfiguration(String),
 
     #[error("invalid endpoint: {0}")]
     InvalidEndpoint(String),
@@ -45,6 +46,9 @@ pub enum Error {
     #[error("no S3 objects were partitioned into compression task inputs")]
     NoTaskInputs,
 
+    #[error("failed to load the resource group credentials: {0}")]
+    ResourceGroupCredentials(#[from] ExternalResourceGroupCredentialsError),
+
     #[error("S3 bucket mismatch: expected `{0}`, but got `{1}`")]
     S3BucketMismatch(String, String),
 
@@ -57,13 +61,16 @@ pub enum Error {
     #[error("sqlx error: {0}")]
     Sqlx(#[from] sqlx::Error),
 
+    #[error("semaphore error: {0}")]
+    Semaphore(String),
+
     /// Failed to build or serialize the compression task graph.
     #[error("failed to build the compression task graph: {0}")]
     TaskGraph(#[from] spider_core::task::Error),
 
     /// Failed to msgpack-serialize a task input.
     #[error("failed to serialize a task input: {0}")]
-    TaskInputSerialization(#[from] rmp_serde::encode::Error),
+    TaskInputSerialization(#[from] spider_core::types::io::TaskGraphInputError),
 
     #[error("number of compression tasks {0} exceeds `i32::MAX`")]
     TooManyCompressionTasks(usize),

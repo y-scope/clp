@@ -7,7 +7,7 @@ import {message} from "antd";
 
 import {
     cancelQuery,
-    clearQueryResults,
+    type QueryConfig,
     submitQuery,
 } from "../../../../api/search";
 import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
@@ -17,40 +17,31 @@ import {unquoteString} from "./utils";
 
 
 /**
- * Clears current search and aggregation query results on server.
+ * Builds an API server query config from a query job creation payload.
+ *
+ * @param payload
+ * @return
  */
-const handleClearResults = () => {
-    const {searchUiState, searchJobId, aggregationJobId} = useSearchStore.getState();
-
-    // In the starting state, there are no results to clear.
-    if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
-        return;
-    }
-
-    if (null === searchJobId) {
-        console.error("Cannot clear results: searchJobId is not set.");
-
-        return;
-    }
-
-    if (null === aggregationJobId) {
-        console.error("Cannot clear results: aggregationJobId is not set.");
-
-        return;
-    }
-
-    clearQueryResults(
-        {
-            searchJobId: Number(searchJobId),
-            aggregationJobId: Number(aggregationJobId),
-        }
-    ).catch((err: unknown) => {
-        console.error("Failed to clear query results:", err);
-    });
-};
+const buildQueryConfig = (payload: QueryJobCreation): QueryConfig => ({
+    // Buffer results in MongoDB so that the results contain structured metadata (e.g.,
+    // timestamps and original file paths). Also, the `clp` storage engine doesn't support
+    // writing search results to files.
+    buffer_results_in_mongodb: true,
+    datasets: 0 < payload.datasets.length ?
+        payload.datasets :
+        null,
+    ignore_case: payload.ignoreCase,
+    ...("undefined" === typeof payload.maxNumResults ?
+        {} :
+        {max_num_results: payload.maxNumResults}),
+    query_string: payload.queryString,
+    time_range_begin_millisecs: payload.timestampBegin,
+    time_range_end_millisecs: payload.timestampEnd,
+});
 
 /**
- * Submits a new search query to server.
+ * Submits a new search query to the API server. Two query jobs are submitted: a search job and a
+ * count-by-time aggregation job for the results timeline.
  *
  * @param payload
  */
@@ -89,16 +80,20 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
         }
     }
 
-    handleClearResults();
-
     store.updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
     store.updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
     store.updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
-    submitQuery(payload)
-        .then((result) => {
-            const {searchJobId, aggregationJobId} = result.data;
+    const queryConfig = buildQueryConfig(payload);
+    Promise.all([
+        submitQuery(queryConfig),
+        submitQuery({
+            ...queryConfig,
+            count_by_time_bucket_size_millisecs: payload.timeRangeBucketSizeMillis,
+        }),
+    ])
+        .then(([searchJobId, aggregationJobId]) => {
             store.updateSearchJobId(searchJobId.toString());
             store.updateAggregationJobId(aggregationJobId.toString());
             store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
@@ -106,7 +101,7 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
                 payload.maxNumResults ?? SEARCH_STATE_DEFAULT.submittedMaxNumResults
             );
             console.debug(
-                "Search job created - ",
+                "Search jobs created - ",
                 "Search job ID:",
                 searchJobId,
                 "Aggregation job ID:",
@@ -115,11 +110,12 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
         })
         .catch((err: unknown) => {
             console.error("Failed to submit query:", err);
+            store.updateSearchUiState(SEARCH_UI_STATE.FAILED);
         });
 };
 
 /**
- * Cancels an ongoing search query on server.
+ * Cancels an ongoing search query on the API server.
  *
  * @param payload
  */
@@ -133,11 +129,13 @@ const handleQueryCancel = (payload: QueryJob) => {
     }
 
     store.updateSearchUiState(SEARCH_UI_STATE.DONE);
-    cancelQuery(
-        payload
-    ).then(() => {
-        console.debug("Query cancelled successfully");
-    })
+    Promise.all([
+        cancelQuery(payload.searchJobId),
+        cancelQuery(payload.aggregationJobId),
+    ])
+        .then(() => {
+            console.debug("Query cancelled successfully");
+        })
         .catch((err: unknown) => {
             console.error("Failed to cancel query:", err);
         });

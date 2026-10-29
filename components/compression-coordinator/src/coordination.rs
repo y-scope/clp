@@ -1,5 +1,20 @@
 //! The coordinator poll loop that discovers pending CLP compression jobs and dispatches them to
 //! Spider.
+//!
+//! The coordinator is responsible for the compression jobs in the `compression_jobs` table that
+//! are in one of the following states:
+//!
+//! | `status` | `spider_id` | `dispatch_time` | Description                                      |
+//! |----------|-------------|-----------------|--------------------------------------------------|
+//! | PENDING  | NULL        | NULL            | New jobs awaiting dispatch.                      |
+//! | PENDING  | NULL        | NOT NULL        | Jobs dispatched but not yet submitted to Spider. |
+//! | RUNNING  | NOT NULL    | NOT NULL        | Jobs submitted to Spider.                        |
+//!
+//! NOTE:
+//!
+//! * These are the only legal states for a job that hasn't terminated.
+//! * A non-NULL `dispatch_time` indicates that the coordinator has picked up the job and granted it
+//!   permission to run under the concurrency limit.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -7,18 +22,20 @@ use std::time::Duration;
 use clp_rust_utils::clp_config::package::config::CompressionCoordinator as CoordinatorConfig;
 use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
 use clp_rust_utils::clp_config::package::config::Spider as SpiderConfig;
-use clp_rust_utils::clp_config::package::config::SpiderResourceGroup;
+use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
-use clp_rust_utils::serde::BrotliMsgpack;
+use clp_rust_utils::serde::ZstdMsgpack;
 use const_format::formatcp;
 use spider_client::SpiderClient;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
 use spider_core::types::id::JobId as SpiderJobId;
 use spider_core::types::id::ResourceGroupId;
+use spider_core::types::resource_group::ExternalResourceGroupCredentials;
 use tokio::select;
+use tokio::sync::Semaphore;
 use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Endpoint;
@@ -37,6 +54,7 @@ pub struct Coordinator {
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
+    job_handler_sem: Arc<Semaphore>,
 }
 
 impl Coordinator {
@@ -57,9 +75,11 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::InvalidConfiguration`] if the compression coordinator configuration is invalid.
     /// * [`Error::InvalidEndpoint`] if the Spider host and port do not form a valid endpoint.
     /// * Forwards [`SpiderClient::builder`]'s connection return values on failure.
-    /// * Forwards [`get_or_create_resource_group_id`]'s return values on failure.
+    /// * Forwards [`ExternalResourceGroupCredentials::from_env`]'s return values on failure.
+    /// * Forwards [`SpiderClient::add_or_verify_resource_group`]'s return values on failure.
     /// * Forwards [`Self::fetch_submitted_running_jobs`]'s return values on failure.
     pub async fn new(
         coordinator_config: &CoordinatorConfig,
@@ -67,6 +87,14 @@ impl Coordinator {
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
     ) -> Result<(Self, CancellationToken), Error> {
+        let max_concurrent_jobs = coordinator_config.max_concurrent_jobs.get();
+        if max_concurrent_jobs > Semaphore::MAX_PERMITS {
+            return Err(Error::InvalidConfiguration(format!(
+                "`max_concurrent_jobs` must not exceed {}, got {max_concurrent_jobs}",
+                Semaphore::MAX_PERMITS,
+            )));
+        }
+
         let spider_host = spider_config.host.as_str();
         let spider_port = spider_config.port;
         let endpoint_str = format!("http://{spider_host}:{spider_port}");
@@ -81,15 +109,12 @@ impl Coordinator {
             .inspect_err(|e| {
                 tracing::error!(error = % e, "Failed to connect to Spider.");
             })?;
-        let resource_group_id = get_or_create_resource_group_id(
-            &coordinator_config.resource_group,
-            &spider_client,
-            &db_pool,
-        )
-        .await
-        .inspect_err(|e| {
-            tracing::error!(error = % e, "Failed to get or create resource group.");
-        })?;
+        let resource_group_id = spider_client
+            .add_or_verify_resource_group(ExternalResourceGroupCredentials::from_env()?)
+            .await
+            .inspect_err(|e| {
+                tracing::error!(error = % e, "Failed to add or verify resource group.");
+            })?;
 
         let spider_option = Arc::new(SpiderOption {
             compression_task_max_retry: coordinator_config.compression_task_max_retry,
@@ -128,8 +153,11 @@ impl Coordinator {
                 coordinator_config.job_polling_interval_millisecs.get(),
             ),
             cancellation_token: cancellation_token.clone(),
+            job_handler_sem: Arc::new(Semaphore::new(max_concurrent_jobs)),
         };
 
+        // NOTE: The current implementation does not enforce concurrency limits for recovered jobs
+        // since they were already submitted to Spider. See #2472.
         for (job_id, spider_job_id, clp_io_config) in
             coordinator.fetch_submitted_running_jobs().await?
         {
@@ -211,7 +239,7 @@ impl Coordinator {
         const QUERY: &str = formatcp!(
             "UPDATE `{table}` SET `status` = ?, `status_msg` = ?, `update_time` = \
              CURRENT_TIMESTAMP() WHERE `id` = ?;",
-            table = COMPRESSION_JOB_TABLE_NAME,
+            table = COMPRESSION_JOBS_TABLE_NAME,
         );
         tracing::info!(job_id = % job_id, "Failing the compression job.");
         if let Err(e) = sqlx::query(QUERY)
@@ -229,8 +257,8 @@ impl Coordinator {
         }
     }
 
-    /// Fetches the pending compression jobs and spawns a detached handle to drive each one.
-    ///
+    /// Fetches pending compression jobs and spawns a detached handle to drive each one as permitted
+    /// by the job-handler semaphore.
     ///
     /// A job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`] and
     /// skipped; a job whose handle cannot be constructed is skipped as well (and marked
@@ -245,17 +273,23 @@ impl Coordinator {
     ///
     /// Returns an error if:
     ///
+    /// * [`Error::Semaphore`] if acquiring a job handler permit from `job_handler_sem` fails.
     /// * Forwards [`Self::fetch_new_job_rows`]'s return values on failure.
     async fn schedule_new_jobs(&mut self) -> Result<Vec<CompressionJobId>, Error> {
+        if self.job_handler_sem.available_permits() == 0 {
+            return Ok(Vec::new());
+        }
+
         let new_job_rows = self.fetch_new_job_rows().await.inspect_err(|e| {
             tracing::error!(error = % e, "Failed to fetch new jobs from database.");
         })?;
+
         let dispatched_job_ids: Vec<CompressionJobId> =
             new_job_rows.iter().map(|row| row.id).collect();
         for job_row in new_job_rows {
             let job_id = job_row.id;
             let clp_io_config: ClpIoConfig =
-                match BrotliMsgpack::deserialize(&job_row.serialized_clp_io_config) {
+                match ZstdMsgpack::deserialize(&job_row.serialized_clp_io_config) {
                     Ok(clp_io_config) => clp_io_config,
                     Err(e) => {
                         tracing::error!(
@@ -275,7 +309,18 @@ impl Coordinator {
             let Ok(job_handle) = self.create_job_handle(job_id, clp_io_config).await else {
                 continue;
             };
+
+            let permit = self
+                .job_handler_sem
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|e| {
+                    Error::Semaphore(format!("failed to acquire a job handler permit: {e}"))
+                })?;
+
             tokio::spawn(async move {
+                let _permit = permit;
                 let _ = job_handle.run().await.inspect_err(|e| {
                     tracing::error!(
                         error = % e,
@@ -307,7 +352,7 @@ impl Coordinator {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
                 "UPDATE `{table}` SET `dispatch_time` = COALESCE(`dispatch_time`, \
                  CURRENT_TIMESTAMP()) WHERE `id` IN (",
-                table = COMPRESSION_JOB_TABLE_NAME,
+                table = COMPRESSION_JOBS_TABLE_NAME,
             ));
             let mut separated_ids = query_builder.separated(", ");
             for job_id in chunk {
@@ -375,12 +420,20 @@ impl Coordinator {
         result
     }
 
-    /// Fetches the pending compression jobs to dispatch.
+    /// Fetches pending compression jobs eligible for dispatch.
     ///
-    /// The first fetch after startup returns every [`CompressionJobStatus::Pending`] job so that
-    /// jobs a previous coordinator instance had already dispatched but not started are
-    /// re-dispatched. Every subsequent fetch returns only [`CompressionJobStatus::Pending`] jobs
-    /// whose dispatch time is still not set.
+    /// The first fetch after startup returns every [`CompressionJobStatus::Pending`] job whose
+    /// `dispatch_time` is set, so that jobs dispatched but not started by the previous coordinator
+    /// instance can be re-dispatched. No explicit limit is imposed because:
+    ///
+    /// * This query runs only once, so limiting it could leave previously dispatched jobs
+    ///   unfetched.
+    /// * The recovery set is bounded by the previous coordinator's concurrency limit.
+    ///
+    /// Every subsequent fetch returns only [`CompressionJobStatus::Pending`] jobs whose dispatch
+    /// time is not set. The available permit count determines how many rows are fetched, ensuring
+    /// that the coordinator does not fetch more jobs than it can dispatch during the current
+    /// polling iteration.
     ///
     /// # Returns
     ///
@@ -394,25 +447,30 @@ impl Coordinator {
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_new_job_rows(&mut self) -> Result<Vec<PendingJobRowProjection>, Error> {
         const FIRST_FETCH_QUERY: &str = formatcp!(
-            "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? ORDER BY `id` ASC;",
-            table = COMPRESSION_JOB_TABLE_NAME,
+            "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? AND `dispatch_time` IS \
+             NOT NULL ORDER BY `id` ASC;",
+            table = COMPRESSION_JOBS_TABLE_NAME,
         );
         const SUBSEQUENT_FETCH_QUERY: &str = formatcp!(
             "SELECT `id`, `clp_config` FROM `{table}` WHERE `status` = ? AND `dispatch_time` IS \
-             NULL ORDER BY `id` ASC;",
-            table = COMPRESSION_JOB_TABLE_NAME,
+             NULL ORDER BY `id` ASC LIMIT ?;",
+            table = COMPRESSION_JOBS_TABLE_NAME,
         );
 
         let query = if self.is_first_fetch {
             self.is_first_fetch = false;
-            FIRST_FETCH_QUERY
+            sqlx::query_as::<_, PendingJobRowProjection>(FIRST_FETCH_QUERY)
+                .bind(CompressionJobStatus::Pending)
         } else {
-            SUBSEQUENT_FETCH_QUERY
+            sqlx::query_as::<_, PendingJobRowProjection>(SUBSEQUENT_FETCH_QUERY)
+                .bind(CompressionJobStatus::Pending)
+                .bind(
+                    i64::try_from(self.job_handler_sem.available_permits())
+                        .expect("limit is bounded by Semaphore::MAX_PERMITS, which fits in i64"),
+                )
         };
-        let rows = sqlx::query_as::<_, PendingJobRowProjection>(query)
-            .bind(CompressionJobStatus::Pending)
-            .fetch_all(&self.db_pool)
-            .await?;
+
+        let rows = query.fetch_all(&self.db_pool).await?;
 
         Ok(rows)
     }
@@ -442,7 +500,7 @@ impl Coordinator {
         const QUERY: &str = formatcp!(
             "SELECT `id`, `spider_id`, `clp_config` FROM `{table}` WHERE `status` = ? AND \
              `spider_id` IS NOT NULL;",
-            table = COMPRESSION_JOB_TABLE_NAME,
+            table = COMPRESSION_JOBS_TABLE_NAME,
         );
 
         let mut recovery_context = Vec::new();
@@ -452,7 +510,7 @@ impl Coordinator {
             .await?
         {
             let clp_io_config: ClpIoConfig =
-                match BrotliMsgpack::deserialize(&row.serialized_clp_io_config) {
+                match ZstdMsgpack::deserialize(&row.serialized_clp_io_config) {
                     Ok(clp_io_config) => clp_io_config,
                     Err(e) => {
                         tracing::error!(
@@ -476,8 +534,6 @@ impl Coordinator {
     }
 }
 
-const COMPRESSION_JOB_TABLE_NAME: &str = "compression_jobs";
-
 /// A projection of the columns read from a [`CompressionJobStatus::Pending`] compression job row.
 #[derive(Debug, sqlx::FromRow)]
 struct PendingJobRowProjection {
@@ -494,78 +550,4 @@ struct RunningJobRowProjection {
     spider_job_id: SpiderJobId,
     #[sqlx(rename = "clp_config")]
     serialized_clp_io_config: Vec<u8>,
-}
-
-/// Retrieves the Spider resource group ID for the configured resource group, registering it if it
-/// does not yet exist.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-/// * Forwards [`SpiderClient::add_resource_group`]'s return values on failure.
-async fn get_or_create_resource_group_id(
-    resource_group_config: &SpiderResourceGroup,
-    spider_client: &SpiderClient,
-    db_pool: &sqlx::MySqlPool,
-) -> Result<ResourceGroupId, Error> {
-    const SPIDER_RESOURCE_GROUP_TABLE_NAME: &str = "spider_resource_groups";
-
-    const CREATE_TABLE_QUERY: &str = formatcp!(
-        "CREATE TABLE IF NOT EXISTS `{table}` (
-            `rg_name` VARCHAR(255) NOT NULL,
-            `rg_id` BIGINT UNSIGNED NOT NULL,
-            PRIMARY KEY (`rg_name`) USING BTREE
-        ) ROW_FORMAT=DYNAMIC",
-        table = SPIDER_RESOURCE_GROUP_TABLE_NAME,
-    );
-    const SELECT_QUERY: &str = formatcp!(
-        "SELECT `rg_id` FROM `{table}` WHERE `rg_name` = ?;",
-        table = SPIDER_RESOURCE_GROUP_TABLE_NAME,
-    );
-    const INSERT_QUERY: &str = formatcp!(
-        "INSERT INTO `{table}` (`rg_name`, `rg_id`) VALUES (?, ?);",
-        table = SPIDER_RESOURCE_GROUP_TABLE_NAME,
-    );
-
-    sqlx::query(CREATE_TABLE_QUERY).execute(db_pool).await?;
-
-    let resource_group = resource_group_config.name.as_str();
-    let existing_rg_id: Option<u64> = sqlx::query_scalar(SELECT_QUERY)
-        .bind(resource_group)
-        .fetch_optional(db_pool)
-        .await?;
-    if let Some(spider_rg_id) = existing_rg_id {
-        tracing::info!(
-            resource_group = % resource_group,
-            spider_rg_id = % spider_rg_id,
-            "Resource group already registered. Returning Spider resource group ID."
-        );
-        return Ok(ResourceGroupId::from(spider_rg_id));
-    }
-
-    // NOTE: For now, Spider does not enforce resource group credential validation. The password is
-    // hardcoded to be the same as the username.
-    let resource_group_id = spider_client
-        .add_resource_group(
-            resource_group.to_owned(),
-            resource_group.as_bytes().to_vec(),
-        )
-        .await?;
-
-    sqlx::query(INSERT_QUERY)
-        .bind(resource_group)
-        .bind(resource_group_id.get())
-        .execute(db_pool)
-        .await
-        .inspect_err(|e| {
-            tracing::error!(
-                error = % e,
-                "Failed to insert resource group into database. This might be a race condition. \
-                 Restart the service to retry."
-            );
-        })?;
-
-    Ok(resource_group_id)
 }

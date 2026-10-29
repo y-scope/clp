@@ -45,8 +45,6 @@ set(
         ../Grep.hpp
         ../GrepCore.cpp
         ../GrepCore.hpp
-        ../SchemaSearcher.cpp
-        ../SchemaSearcher.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
@@ -54,8 +52,6 @@ set(
         ../ir/parsing.hpp
         ../ir/parsing.inc
         ../ir/types.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryEntryReq.hpp
@@ -71,8 +67,6 @@ set(
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../Platform.hpp
-        ../Profiler.cpp
-        ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
         ../QueryToken.cpp
@@ -86,8 +80,6 @@ set(
         ../SQLiteDB.hpp
         ../SQLitePreparedStatement.cpp
         ../SQLitePreparedStatement.hpp
-        ../Stopwatch.cpp
-        ../Stopwatch.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -158,7 +150,6 @@ if(CLP_BUILD_EXECUTABLES)
                 Boost::filesystem Boost::program_options
                 date::date
                 fmt::fmt
-                log_surgeon::log_surgeon
                 MariaDBClient::MariaDBClient
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
@@ -166,6 +157,7 @@ if(CLP_BUILD_EXECUTABLES)
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 ${STD_FS_LIBS}
                 clp::string_utils
+                utils::profiling
                 ystdlib::containers
                 ystdlib::error_handling
                 zstd::libzstd_static

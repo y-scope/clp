@@ -24,6 +24,12 @@ option(
 )
 
 option(
+    CLP_BUILD_UTILS_PROFILING
+    "Build utils::profiling."
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_ARCHIVEREADER
     "Build clp_s::archive_reader."
     ON
@@ -157,6 +163,7 @@ function(validate_clp_binaries_dependencies)
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+        CLP_BUILD_UTILS_PROFILING
     )
 endfunction()
 
@@ -197,6 +204,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_S_SEARCH_SQL
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
         CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+        CLP_BUILD_UTILS_PROFILING
     )
 endfunction()
 
@@ -209,7 +217,6 @@ function(set_clp_tests_dependencies)
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LIBLZMA
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_NLOHMANN_JSON
@@ -229,6 +236,18 @@ endfunction()
 
 function(set_clp_regex_utils_dependencies)
     set_property(DIRECTORY PROPERTY CLP_NEED_YSTDLIB TRUE)
+endfunction()
+
+function(validate_utils_profiling_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_UTILS_PROFILING
+    )
+endfunction()
+
+function(set_utils_profiling_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_ABSL
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_clp_s_archivereader_dependencies)
@@ -278,6 +297,7 @@ endfunction()
 function(validate_clp_s_clp_dependencies_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_STRING_UTILS
+        CLP_BUILD_UTILS_PROFILING
     )
 endfunction()
 
@@ -286,7 +306,6 @@ function(set_clp_s_clp_dependencies_dependencies)
         CLP_NEED_BOOST
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_SPDLOG
@@ -385,13 +404,13 @@ function(validate_clp_s_search_dependencies)
         CLP_BUILD_CLP_S_ARCHIVEREADER
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_SEARCH_AST
+        CLP_BUILD_UTILS_PROFILING
     )
 endfunction()
 
 function(set_clp_s_search_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_OPENTELEMETRY_CPP
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
@@ -480,6 +499,11 @@ function(validate_and_setup_all_clp_dependency_flags)
     endif()
 
     # clp::string_utils has no dependencies
+
+    if (CLP_BUILD_UTILS_PROFILING)
+        validate_utils_profiling_dependencies()
+        set_utils_profiling_dependencies()
+    endif()
 
     if (CLP_BUILD_CLP_S_ARCHIVEREADER)
         validate_clp_s_archivereader_dependencies()

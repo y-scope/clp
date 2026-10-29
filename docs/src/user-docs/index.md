@@ -82,6 +82,13 @@ Configuring retention periods
 ^^^
 Configure retention periods for archives and search results.
 :::
+
+:::{grid-item-card}
+:link: guides-using-compression-coordinator
+Using `compression-coordinator`
+^^^
+Using `compression-coordinator` to coordinate compression jobs.
+:::
 ::::
 
 ---
@@ -112,6 +119,24 @@ Integrate CLP with AI assistants using the Model Context Protocol.
 Using Presto
 ^^^
 Use Presto for distributed SQL queries on compressed logs.
+:::
+
+::::
+
+---
+
+## Scheduling & performance
+
+Configure how CLP schedules jobs and uses compute resources.
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: guides-using-spider-scheduler
+Using Spider scheduler
+^^^
+Use Spider to schedule and execute supported CLP jobs across distributed workers.
 :::
 
 ::::
@@ -203,13 +228,6 @@ Reference for the shell scripts in the package's `sbin/` directory.
 :::
 
 :::{grid-item-card}
-:link: reference-unstructured-schema-file
-Schema file syntax
-^^^
-Syntax reference for clp's schema file for parsing unstructured text logs.
-:::
-
-:::{grid-item-card}
 :link: reference-telemetry
 Telemetry
 ^^^
@@ -248,6 +266,7 @@ guides-using-object-storage/index
 guides-using-log-ingestor
 guides-external-database
 guides-retention
+guides-using-compression-coordinator
 :::
 
 :::{toctree}
@@ -257,6 +276,13 @@ guides-retention
 guides-using-the-api-server
 guides-mcp-server/index
 guides-using-presto
+:::
+
+:::{toctree}
+:hidden:
+:caption: Scheduling & performance
+
+guides-using-spider-scheduler
 :::
 
 :::{toctree}
@@ -282,6 +308,5 @@ resources-datasets
 reference-json-search-syntax
 reference-text-search-syntax
 reference-sbin-scripts/index
-reference-unstructured-schema-file
 reference-telemetry
 :::
