@@ -130,17 +130,18 @@ impl Source for FsInputSource {
 ///
 /// Returns an error if:
 ///
-/// * The configured storage engine is not CLP-S.
+/// * [`anyhow::Error`] if the configured storage engine is not CLP-S.
 /// * Forwards [`Source::prepare`]'s return values on failure.
 /// * Forwards [`InputList::new`]'s return values on failure.
 /// * Forwards [`extract_s3_output_config`]'s return values on failure.
 /// * Forwards [`PreparedInput::new`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
-/// * Returns the first error collected by [`drain_finishers`], if any.
+/// * Forwards [`drain_finishers`]'s collected error, if any.
 ///
 /// # Panics
 ///
-/// Panics if required package globals (the runtime or CLP home) have not been initialized.
+/// Panics if required package globals (the runtime or CLP home) have not been initialized or this
+/// function is called from an async runtime context.
 pub(super) fn compress<SourceType: Source>(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
@@ -692,8 +693,8 @@ fn build_clp_s_args<SourceType: Source>(
 ///
 /// Returns an error if:
 ///
-/// * clp-s exits with a non-zero status.
-/// * A line cannot be read from clp-s's stdout.
+/// * [`anyhow::Error`] if clp-s exits with a non-zero status.
+/// * Forwards [`std::io::Lines::next`]'s line-reading errors on failure.
 /// * Forwards `on_archive`'s return values on failure.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`parse_archive_stats`]'s return values on failure.
@@ -701,7 +702,8 @@ fn build_clp_s_args<SourceType: Source>(
 ///
 /// # Panics
 ///
-/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable).
+/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable), or the
+/// stderr-reader thread cannot be spawned.
 fn run_clp_s<SourceType: Source>(
     clp_s_bin: &Path,
     archive_dir: &Path,

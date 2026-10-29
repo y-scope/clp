@@ -24,7 +24,8 @@ mod compress;
 ///
 /// # Panics
 ///
-/// Panics if required package globals have not been initialized.
+/// Panics if required package globals have not been initialized or this function is called from
+/// an async runtime context.
 #[task(name = "compression::clp_s_s3_compress")]
 pub(crate) fn s3_compress_task(
     ctx: TaskContext,
@@ -54,7 +55,8 @@ pub(crate) fn s3_compress_task(
 ///
 /// # Panics
 ///
-/// Panics if required package globals have not been initialized.
+/// Panics if required package globals have not been initialized or this function is called from
+/// an async runtime context.
 #[task(name = "compression::clp_s_fs_compress")]
 pub(crate) fn fs_compress_task(
     ctx: TaskContext,
