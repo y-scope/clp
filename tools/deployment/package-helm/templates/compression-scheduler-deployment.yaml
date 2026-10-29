@@ -17,33 +17,40 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "compression-scheduler"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "compressionScheduler"
+        ) | nindent 6 }}
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 300
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
+        {{- if has "queue" .Values.clpConfig.bundled }}
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "queue"
           ) | nindent 10 }}
+        {{- end }}
+        {{- if has "redis" .Values.clpConfig.bundled }}
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "service"
             "name" "redis"
           ) | nindent 10 }}
+        {{- end }}
       containers:
         - name: "compression-scheduler"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
+            - name: "OTEL_METRIC_EXPORT_INTERVAL"
+              value: {{ .Values.clpConfig.compression_scheduler.telemetry_update_interval_ms | quote }}
+            {{- include "clp.telemetryEnv" . | nindent 12 }}
             - {{- include "clp.celeryBrokerUrlEnvVar" . | nindent 14 }}
             - {{- include "clp.celeryResultBackendEnvVar" (dict
                 "root" .
@@ -61,26 +68,25 @@ spec:
                   key: "username"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
-            - name: "CLP_LOGS_DIR"
-              value: "/var/log/compression_scheduler"
+            - name: "OTEL_SERVICE_NAME"
+              value: "compression-scheduler"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "compressionScheduler"
+            ) | nindent 10 }}
           volumeMounts:
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "compression-scheduler"
-                "name" "logs"
+                "name" "log"
               ) | quote }}
-              mountPath: "/var/log/compression_scheduler"
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "compression-scheduler"
-                "name" "user-logs"
-              ) | quote }}
-              mountPath: "/var/log/user"
+              mountPath: "/var/log"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            {{- if .Values.clpConfig.aws_config_directory }}
+            {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.logs_input.type "fs" }}
@@ -92,20 +98,15 @@ spec:
             "--config", "/etc/clp-config.yaml"
           ]
       volumes:
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
+        - name: {{ include "clp.volumeName" (dict
             "component_category" "compression-scheduler"
-            "name" "logs"
-          ) | nindent 10 }}
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "compression-scheduler"
-            "name" "user-logs"
-          ) | nindent 10 }}
+            "name" "log"
+          ) | quote }}
+          emptyDir: {}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}

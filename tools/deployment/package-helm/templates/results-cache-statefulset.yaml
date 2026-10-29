@@ -1,3 +1,4 @@
+{{- if has "results_cache" .Values.clpConfig.bundled }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
@@ -18,14 +19,18 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "results-cache"
     spec:
-      securityContext:
-        runAsUser: {{ .Values.securityContext.thirdParty.uid }}
-        runAsGroup: {{ .Values.securityContext.thirdParty.gid }}
-        fsGroup: {{ .Values.securityContext.thirdParty.gid }}
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "resultsCache"
+        ) | nindent 6 }}
       containers:
         - name: "results-cache"
-          image: "mongo:7.0.1"
-          imagePullPolicy: "Always"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "resultsCache") | quote }}
+          imagePullPolicy: {{ .Values.image.resultsCache.pullPolicy | quote }}
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "resultsCache"
+            ) | nindent 10 }}
           ports:
             - name: "results-cache"
               containerPort: 27017
@@ -35,11 +40,6 @@ spec:
                 "name" "data"
               ) | quote }}
               mountPath: "/data/db"
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "results-cache"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/mongodb"
             - name: "config"
               mountPath: "/etc/mongo/mongod.conf"
               subPath: "mongod.conf"
@@ -60,12 +60,40 @@ spec:
           livenessProbe:
             {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: *results-cache-health-check
+        - name: "results-cache-init"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
+          imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "resultsCacheIndicesCreator"
+            ) | nindent 10 }}
+          env:
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              set -e
+              until python3 -c "import socket; s=socket.socket(); s.settimeout(2); s.connect(('{{ include "clp.resultsCacheHost" . }}', {{ include "clp.resultsCachePort" . | int }})); s.close()" 2>/dev/null; do
+                sleep 1
+              done
+              python3 -u -m clp_py_utils.initialize-results-cache \
+                --uri "mongodb://{{ include "clp.resultsCacheHost" . }}:{{ include "clp.resultsCachePort" . | int }}/{{ .Values.clpConfig.results_cache.db_name }}" \
+                --stream-collection {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+              touch /tmp/init-complete
+              sleep infinity
+          readinessProbe:
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
+            exec:
+              command:
+                - "test"
+                - "-f"
+                - "/tmp/init-complete"
       volumes:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
         name: {{ include "clp.volumeName" (dict
@@ -74,26 +102,7 @@ spec:
           ) | quote }}
       spec:
         accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "results-cache"
         resources:
           requests:
-            storage: "20Gi"
-    - metadata:
-        name: {{ include "clp.volumeName" (dict
-            "component_category" "results-cache"
-            "name" "logs"
-          ) | quote }}
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        storageClassName: "local-storage"
-        selector:
-          matchLabels:
-            {{- include "clp.selectorLabels" . | nindent 12 }}
-            app.kubernetes.io/component: "results-cache"
-        resources:
-          requests:
-            storage: "5Gi"
+            storage: "10Gi"
+{{- end }}

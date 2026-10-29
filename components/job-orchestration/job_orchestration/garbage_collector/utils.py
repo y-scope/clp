@@ -1,8 +1,6 @@
-import logging
 import os
 import pathlib
 import shutil
-import time
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -12,20 +10,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.clp_logging import get_logging_formatter, set_logging_level
 from clp_py_utils.s3_utils import s3_delete_objects
-
-from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS
-
-
-def configure_logger(
-    logger: logging.Logger, logging_level: str, log_directory: pathlib.Path, handler_name: str
-):
-    log_file = log_directory / f"{handler_name}.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-    set_logging_level(logger, logging_level)
 
 
 def validate_storage_type(output_config: ArchiveOutput, storage_engine: str) -> None:
@@ -37,18 +22,6 @@ def validate_storage_type(output_config: ArchiveOutput, storage_engine: str) -> 
             )
     elif StorageType.FS != storage_type:
         raise ValueError(f"Unsupported Storage type: {storage_type}")
-
-
-def get_expiry_epoch_secs(retention_minutes: int) -> int:
-    """
-    Returns a cutoff `expiry_epoch` based on the current timestamp and `retention_minutes`. Any
-    candidate with a timestamp (`ts`) less than `expiry_epoch` is considered expired.
-    The `expiry_epoch` is calculated as `expiry_epoch = cur_time - retention_secs`.
-
-    :param retention_minutes: Retention period in minutes.
-    :return: The UTC epoch representing the expiry cutoff time.
-    """
-    return int(time.time() - retention_minutes * MIN_TO_SECONDS)
 
 
 def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:

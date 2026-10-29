@@ -60,7 +60,7 @@ class ClpConnector:
         job_config = msgpack.packb(
             {
                 "begin_timestamp": begin_ts,
-                "dataset": CLP_DEFAULT_DATASET_NAME,
+                "datasets": [CLP_DEFAULT_DATASET_NAME],
                 "end_timestamp": end_ts,
                 "ignore_case": True,
                 "max_num_results": SEARCH_MAX_NUM_RESULTS,
@@ -126,7 +126,12 @@ class ClpConnector:
         :raise: RuntimeError if the query fails or is cancelled.
         :raise: TimeoutError if the timeout is reached before the query completes.
         """
-        waiting_states = {QueryJobStatus.PENDING, QueryJobStatus.RUNNING, QueryJobStatus.CANCELLING}
+        waiting_states = {
+            QueryJobStatus.PENDING,
+            QueryJobStatus.RUNNING,
+            QueryJobStatus.CANCEL_REQUESTED,
+            QueryJobStatus.CANCELLING,
+        }
         error_states = {QueryJobStatus.FAILED, QueryJobStatus.CANCELLED, QueryJobStatus.KILLED}
         event_loop = asyncio.get_running_loop()
         start_time = event_loop.time()
@@ -161,11 +166,14 @@ class ClpConnector:
         results = []
 
         async for doc in collection.find({}, limit=SEARCH_MAX_NUM_RESULTS):
+            result_id = doc["_id"]
+            doc["archive_id"] = result_id["archive_id"]
+            doc["log_event_idx"] = result_id["log_event_idx"]
             doc["link"] = (
                 f"{self._webui_addr}/streamFile?type=json"
                 f"&streamId={doc['archive_id']}"
                 f"&dataset={CLP_DEFAULT_DATASET_NAME}"
-                f"&logEventIdx={doc['log_event_ix']}"
+                f"&logEventIdx={doc['log_event_idx']}"
             )
             doc["_id"] = None
             results.append(doc)

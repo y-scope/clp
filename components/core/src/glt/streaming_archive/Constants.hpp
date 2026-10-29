@@ -17,7 +17,6 @@ constexpr char cMetadataDBFileName[] = "metadata.db";
 constexpr char cVarSegmentFileName[] = "variable_segments";
 constexpr char cVarMetadataFileName[] = "metadata";
 constexpr char cVariablesFileExtension[] = ".var";
-constexpr char cSchemaFileName[] = "schema.txt";
 
 namespace cMetadataDB {
 constexpr char ArchivesTableName[] = "archives";

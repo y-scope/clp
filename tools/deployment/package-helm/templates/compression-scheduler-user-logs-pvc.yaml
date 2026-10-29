@@ -1,7 +1,0 @@
-{{- include "clp.createPvc" (dict
-  "root" .
-  "component_category" "compression-scheduler"
-  "name" "user-logs"
-  "capacity" "10Gi"
-  "accessModes" (list "ReadWriteOnce")
-) }}

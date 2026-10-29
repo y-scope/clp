@@ -14,6 +14,7 @@ build_dir="$1"
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 build_cmd=(
     docker build
+    --pull
     --tag clp-core-x86-ubuntu-jammy:dev
     "$build_dir"
     --file "${script_dir}/Dockerfile"

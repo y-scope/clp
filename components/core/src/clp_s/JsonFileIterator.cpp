@@ -36,13 +36,13 @@ bool JsonFileIterator::read_new_json() {
             // double buffer size to attempt to capture long json object
             size_t new_buf_size = m_buf_size * 2;
             char* new_buf = new char[new_buf_size + simdjson::SIMDJSON_PADDING];
-            memcpy(new_buf, m_buf, m_buf_size);
+            std::memcpy(new_buf, m_buf, m_buf_size);
             delete[] m_buf;
             m_buf = new_buf;
             m_buf_size = new_buf_size;
         } else if (m_truncated_bytes > 0) {
             // move bytes to start of buffer
-            memmove(m_buf, m_buf + (m_buf_occupied - m_truncated_bytes), m_truncated_bytes);
+            std::memmove(m_buf, m_buf + (m_buf_occupied - m_truncated_bytes), m_truncated_bytes);
             m_buf_occupied = m_truncated_bytes;
         } else {
             m_buf_occupied = 0;
@@ -115,7 +115,7 @@ bool JsonFileIterator::read_new_json() {
 
 size_t JsonFileIterator::skip_whitespace_and_get_truncated_bytes() {
     while (m_next_document_position < m_buf_occupied
-           && std::isspace(m_buf[m_next_document_position]))
+           && std::isspace(static_cast<unsigned char>(m_buf[m_next_document_position])))
     {
         ++m_next_document_position;
     }
@@ -213,7 +213,7 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
         m_first_read = false;
     }
 
-    do {
+    while (true) {
         bool maybe_utf8_edge_case{false};
         if (m_doc_it != m_stream.end()) {
             if (simdjson::error_code::SUCCESS == m_doc_it.error()) {
@@ -232,8 +232,12 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
             } else if (m_sanitize_invalid_json
                        && m_doc_it.error() == simdjson::error_code::UNESCAPED_CHARS)
             {
-                // Unescaped control characters detected during document iteration. Sanitize the
-                // buffer and re-setup the document stream to restart from the beginning.
+                // Retain only unread input before restarting so previously emitted documents
+                // cannot be returned a second time.
+                size_t const unread_bytes = skip_whitespace_and_get_truncated_bytes();
+                std::memmove(m_buf, m_buf + m_next_document_position, unread_bytes);
+                m_buf_occupied = unread_bytes;
+                m_next_document_position = 0;
                 if (false == sanitize_control_chars_and_log()) {
                     // Sanitization made no changes - report the original error to avoid infinite
                     // loop
@@ -285,8 +289,10 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
         } else if (maybe_utf8_edge_case) {
             m_truncated_bytes = skip_whitespace_and_get_truncated_bytes();
         }
-    } while (read_new_json());
-    return false;
+        if (false == read_new_json()) {
+            return false;
+        }
+    }
 }
 
 size_t JsonFileIterator::get_num_bytes_consumed() {

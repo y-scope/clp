@@ -99,9 +99,6 @@ def _generate_compress_cmd(
         compress_cmd.append(parsed_args.timestamp_key)
     if parsed_args.unstructured:
         compress_cmd.append("--unstructured")
-    if parsed_args.tags is not None:
-        compress_cmd.append("--tags")
-        compress_cmd.append(parsed_args.tags)
     if parsed_args.no_progress_reporting is True:
         compress_cmd.append("--no-progress-reporting")
 
@@ -157,9 +154,6 @@ def main(argv):
         "--unstructured",
         action="store_true",
         help="Treat all inputs as unstructured text logs.",
-    )
-    args_parser.add_argument(
-        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
     args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."

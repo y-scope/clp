@@ -15,13 +15,13 @@ jobs:
     # Runs only on Ubuntu Jammy (22.04) since the Rust components are only built on this platform.
     runs-on: "ubuntu-22.04"
     steps:
-      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
         with:
           submodules: "recursive"
 
-      - name: "Install task"
-        shell: "bash"
-        run: "npm install -g @go-task/cli@3.44.0"
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
 
       - name: "Generate OpenAPI docs"
         shell: "bash"
@@ -29,11 +29,13 @@ jobs:
 
       - name: "Check if the generated code is the latest"
         shell: "bash"
-        run:
-          |
-          git status --porcelain \
-            docs/src/_static/generated \
-            docs/src/_static/generated \
-            | grep . > /dev/null \
-              && exit 1 \
-              || exit 0
+        run: |-
+          stale_files="$(git status --porcelain docs/src/_static/generated)"
+          if [[ -n "${stale_files}" ]]; then
+            echo >&2 "ERROR: The following generated files are out of date:"
+            echo >&2 "${stale_files}"
+            echo >&2 ""
+            echo >&2 "Please run 'task codegen:openapi' locally and commit the updated files."
+            git diff >&2 docs/src/_static/generated
+            exit 1
+          fi

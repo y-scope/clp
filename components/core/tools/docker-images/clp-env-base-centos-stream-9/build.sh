@@ -7,6 +7,11 @@ set -o pipefail
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 component_root="${script_dir}/../../../"
 
+# Corporate proxy support — see corporate-proxy-host.sh for details.
+source "${script_dir}/../../scripts/corporate-proxy-host.sh"
+prepare_ca_cert_for_build "$component_root"
+trap 'cleanup_ca_cert "$component_root"' EXIT
+
 build_cmd=(
     docker build
     --tag clp-core-dependencies-x86-centos-stream-9:dev
@@ -14,12 +19,9 @@ build_cmd=(
     --file "${script_dir}/Dockerfile"
 )
 
-if command -v git >/dev/null && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null ;
-then
-    build_cmd+=(
-        --label "org.opencontainers.image.revision=$(git -C "$script_dir" rev-parse HEAD)"
-        --label "org.opencontainers.image.source=$(git -C "$script_dir" remote get-url origin)"
-    )
-fi
-
-"${build_cmd[@]}"
+# Optional env vars:
+#   HTTP_PROXY / HTTPS_PROXY / NO_PROXY / ALL_PROXY — Forwarded into the build container
+#   DNF_MIRROR_BASE_URL — Override CentOS Stream mirrors (organization-internal or regional)
+#   DOCKER_NETWORK      — Override Docker network mode (auto: host for localhost proxies)
+#   DOCKER_PULL=true    — Force pull the latest base image from the registry
+finalize_build build_cmd "$script_dir" DNF_MIRROR_BASE_URL

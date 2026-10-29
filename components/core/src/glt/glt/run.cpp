@@ -3,8 +3,9 @@
 #include <unordered_set>
 
 #include <spdlog/sinks/stdout_sinks.h>
+#include <utils/profiling/Reporter.hpp>
+#include <utils/profiling/ScopedProfiler.hpp>
 
-#include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -40,8 +41,9 @@ int run(int argc, char const* argv[]) {
         // NOTE: We can't log an exception if the logger couldn't be constructed
         return -1;
     }
-    Profiler::init();
     TimestampPattern::init();
+
+    utils::profiling::Reporter const profiler_reporter{"glt", utils::profiling::SpdlogEmitter{}};
 
     CommandLineArguments command_line_args("glt");
     auto parsing_result = command_line_args.parse_arguments(argc, argv);
@@ -55,7 +57,7 @@ int run(int argc, char const* argv[]) {
             break;
     }
 
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Execution>();
+    PROFILE_SCOPE("main");
 
     if (CommandLineArguments::Command::Compress == command_line_args.get_command()) {
         vector<string> input_paths;
@@ -147,9 +149,6 @@ int run(int argc, char const* argv[]) {
             return -1;
         }
     }
-
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Execution>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Execution)
 
     return 0;
 }

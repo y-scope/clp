@@ -2,7 +2,9 @@
 """Sphinx configuration file for CLP documentation."""
 
 from datetime import datetime, timezone
+from pathlib import Path
 
+import yaml
 from sphinx.application import Sphinx
 
 # Constants
@@ -61,7 +63,7 @@ html_theme = "pydata_sphinx_theme"
 # -- sphinxcontrib-mermaid options ---------------------------------------------
 # https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest/
 
-mermaid_include_elk = "0.1.7"
+mermaid_include_elk = True
 mermaid_version = "11.5.0"
 
 # -- Theme options -------------------------------------------------------------
@@ -120,6 +122,24 @@ def setup(app: Sphinx) -> None:
     app.connect("source-read", _replace_variable_placeholders)
 
 
+def _get_helm_version_flag() -> str:
+    """
+    Reads the Helm chart version from Chart.yaml and returns the appropriate version flag.
+
+    :return: "--version <version>" for stable releases, or "--devel" for dev versions.
+    """
+    chart_yaml_path = (
+        Path(__file__).parent.parent.parent / "tools" / "deployment" / "package-helm" / "Chart.yaml"
+    )
+    chart = yaml.safe_load(chart_yaml_path.read_text())
+
+    version = chart.get("version")
+    if version is not None and "-dev" not in version:
+        return f"--version {version}"
+
+    return "--devel"
+
+
 def _replace_variable_placeholders(_app: Sphinx, _docname: str, content: list[str]) -> None:
     """
     Replaces each variable placeholder in the docs with the relevant value.
@@ -130,6 +150,7 @@ def _replace_variable_placeholders(_app: Sphinx, _docname: str, content: list[st
     """
     placeholder_to_value = {
         "DOCS_VAR_CLP_GIT_REF": CLP_GIT_REF,
+        "DOCS_VAR_HELM_VERSION_FLAG": _get_helm_version_flag(),
     }
     for placeholder, value in placeholder_to_value.items():
         content[0] = content[0].replace(placeholder, value)

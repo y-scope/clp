@@ -2,13 +2,12 @@ import copy
 import pathlib
 from typing import Any
 
-import brotli
-import msgpack
 from clp_py_utils.compression import (
     FilesPartition,
     group_files_by_similar_filenames,
 )
 from clp_py_utils.core import FileMetadata
+from clp_py_utils.zstd_msgpack import serialize as serialize_zstd_msgpack
 
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 
@@ -21,7 +20,6 @@ class PathsToCompressBuffer:
         scheduling_job_id: int,
         clp_io_config: ClpIoConfig,
         clp_metadata_db_connection_config: dict,
-        tag_ids: list[int],
     ):
         self.__files: list[FileMetadata] = []
         self.__tasks: list[dict[str, Any]] = []
@@ -38,7 +36,6 @@ class PathsToCompressBuffer:
         self.num_tasks = 0
         self.__task_arguments = {
             "job_id": scheduling_job_id,
-            "tag_ids": tag_ids,
             "task_id": -1,
             "clp_io_config_json": clp_io_config.model_dump_json(exclude_none=True),
             "paths_to_compress_json": None,
@@ -71,9 +68,6 @@ class PathsToCompressBuffer:
             self.__empty_directories and len(self.__empty_directories) > 0
         )
 
-    def set_tag_ids(self, tag_ids: list[int]):
-        self.__task_arguments["tag_ids"] = tag_ids
-
     def __submit_partition_for_compression(self, partition: FilesPartition):
         files, file_paths, group_ids, st_sizes, partition_total_file_size = partition.pop_files()
         paths_to_compress = PathsToCompress(
@@ -87,8 +81,8 @@ class PathsToCompressBuffer:
         self.__partition_info.append(
             {
                 "partition_original_size": str(sum(st_sizes)),
-                "clp_paths_to_compress": brotli.compress(
-                    msgpack.packb(paths_to_compress.model_dump(exclude_none=True)), quality=4
+                "clp_paths_to_compress": serialize_zstd_msgpack(
+                    paths_to_compress.model_dump(exclude_none=True)
                 ),
             }
         )

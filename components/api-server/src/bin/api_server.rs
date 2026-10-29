@@ -1,11 +1,8 @@
 use anyhow::Context;
 use clap::Parser;
-use clp_rust_utils::{clp_config::package, serde::yaml};
-use tracing_appender::{
-    non_blocking::WorkerGuard,
-    rolling::{RollingFileAppender, Rotation},
-};
-use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
+use clp_rust_utils::clp_config::package;
+use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
+use clp_rust_utils::serde::yaml;
 
 #[derive(Parser)]
 #[command(version, about = "API Server for CLP.")]
@@ -24,10 +21,8 @@ fn read_config_and_credentials(
     args: &Args,
 ) -> anyhow::Result<(package::config::Config, package::credentials::Credentials)> {
     let config_path = std::path::Path::new(args.config.as_str());
-    let config: package::config::Config = yaml::from_path(config_path).context(format!(
-        "Config file {} does not exist",
-        config_path.display()
-    ))?;
+    let config: package::config::Config = yaml::from_path(config_path)
+        .context(format!("cannot load config file {}", config_path.display()))?;
 
     let credentials = package::credentials::Credentials {
         database: package::credentials::Database {
@@ -40,29 +35,6 @@ fn read_config_and_credentials(
         },
     };
     Ok((config, credentials))
-}
-
-fn set_up_logging() -> anyhow::Result<WorkerGuard> {
-    let logs_directory =
-        std::env::var("CLP_LOGS_DIR").context("Expect `CLP_LOGS_DIR` environment variable.")?;
-    let logs_directory = std::path::Path::new(logs_directory.as_str());
-    let file_appender =
-        RollingFileAppender::new(Rotation::HOURLY, logs_directory, "api_server.log");
-    let (non_blocking_writer, guard) = tracing_appender::non_blocking(file_appender);
-    tracing_subscriber::fmt()
-        .event_format(
-            tracing_subscriber::fmt::format()
-                .with_level(true)
-                .with_target(false)
-                .with_file(true)
-                .with_line_number(true)
-                .json(),
-        )
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .with_ansi(false)
-        .with_writer(std::io::stdout.and(non_blocking_writer))
-        .init();
-    Ok(guard)
 }
 
 async fn shutdown_signal() {
@@ -81,22 +53,47 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let (config, credentials) = read_config_and_credentials(&args)?;
-    let _guard = set_up_logging()?;
+    let _guard = clp_rust_utils::logging::set_up_logging("api_server.log");
 
+    let _tel_guard = clp_rust_utils::telemetry::init_telemetry(&config.telemetry)?;
+
+    let meter = opentelemetry::global::meter("api-server");
+    let startup_counter = meter.u64_counter("clp.service.event").build();
+
+    let api_server_config = config
+        .api_server
+        .as_ref()
+        .expect("api_server configuration is missing");
     let addr = format!(
         "{}:{}",
-        args.host.unwrap_or_else(|| config.api_server.host.clone()),
-        args.port.unwrap_or(config.api_server.port)
+        args.host.unwrap_or_else(|| api_server_config.host.clone()),
+        args.port.unwrap_or(api_server_config.port)
     );
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .context(format!("Cannot listen to {addr}"))?;
 
-    let client = api_server::client::Client::connect(&config, &credentials)
+    let sql_pool = create_clp_db_mysql_pool(&config.database, &credentials.database, 10)
         .await
-        .context("Cannot connect to CLP")?;
+        .context("cannot connect to MySQL")?;
+    let mongo_uri = format!(
+        "mongodb://{}:{}/{}?directConnection=true",
+        config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
+    );
+    let mongodb_client = mongodb::Client::with_uri_str(mongo_uri)
+        .await
+        .context("cannot connect to MongoDB")?;
 
-    let router = api_server::routes::from_client(client)?;
+    let client =
+        api_server::client::Client::new(config.clone(), mongodb_client.clone(), sql_pool.clone());
+    let webui_client =
+        api_server::webui_client::WebuiClient::new(config, sql_pool, mongodb_client).await;
+
+    let router = api_server::routes::from_app_state(api_server::routes::AppState {
+        client,
+        webui_client,
+    })?;
+    startup_counter.add(1, &[opentelemetry::KeyValue::new("type", "start")]);
 
     tracing::info!("Server started at {addr}");
     axum::serve(listener, router)

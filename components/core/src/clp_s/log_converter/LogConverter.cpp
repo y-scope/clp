@@ -26,31 +26,45 @@ namespace {
  * minus sign for timezone offsets.
  */
 constexpr std::string_view cTimestampSchema{
-        R"(timestamp:(\d{2,4}[ /\-]{0,1}[ 0-9]{2}[ /\-][ 0-9]{2})|([ 0-9]{2}[ /\-])"
+        R"(header:(?<timestamp>((\d{2,4}[ /\-]{0,1}[ 0-9]{2}[ /\-][ 0-9]{2})|([ 0-9]{2}[ /\-])"
         R"(((Jan(uary){0,1})|(Feb(ruary){0,1})|(Mar(ch){0,1})|(Apr(il){0,1})|(May)|(Jun(e){0,1})|)"
         R"((Jul(y){0,1})|(Aug(ust){0,1})|(Sep(tember){0,1})|(Oct(ober){0,1})|(Nov(ember){0,1})|)"
-        R"((Dec(ember){0,1}))[ /\-]\d{2,4})[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2})"
-        R"(([,\.:]\d{1,9}){0,1}([ ]{0,1}(UTC){0,1}[\+\-]\d{2}(:{0,1}\d{2}){0,1}Z{0,1}){0,1})"
+        R"((Dec(ember){0,1}))[ /\-]\d{2,4}))[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2}([,\.:]\d{1,9}){0,1})"
+        // Timezone matching:
+        R"(((( UTC){0,1}([\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})|)"
+        R"(((UTC){0,1}([\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})){0,1})|)"
+        R"((( [\+\-]\d{2}(:{0,1}\d{2}){0,1}){0,1}Z{0,1})|)"
+        R"((( Z){0,1}))"
 };
-constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n\[\(:)"};
+
+constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n[(:)"};
 }  // namespace
+
+auto LogConverter::create(size_t max_buffer_size) -> LogConverter {
+    log_surgeon::Schema schema;
+    schema.add_delimiters(cDelimiters);
+    schema.add_variable(cTimestampSchema, -1);
+    return LogConverter(
+            max_buffer_size,
+            log_surgeon::BufferParser{std::move(schema.release_schema_ast_ptr())}
+    );
+}
 
 auto LogConverter::convert_file(
         clp_s::Path const& path,
         clp::ReaderInterface* reader,
-        std::string_view output_dir
+        std::string_view output_dir,
+        bool compress_converted_file
 ) -> ystdlib::error_handling::Result<void> {
-    log_surgeon::Schema schema;
-    schema.add_delimiters(cDelimiters);
-    schema.add_variable(cTimestampSchema, -1);
-    log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
-    parser.reset();
+    m_parser.reset();
 
     // Reset internal buffer state.
     m_parser_offset = 0ULL;
     m_num_bytes_buffered = 0ULL;
 
-    auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(LogSerializer::create(output_dir, path.path))};
+    auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(
+            LogSerializer::create(output_dir, path.path, compress_converted_file)
+    )};
 
     bool reached_end_of_stream{false};
     while (false == reached_end_of_stream) {
@@ -58,7 +72,7 @@ auto LogConverter::convert_file(
         reached_end_of_stream = 0ULL == num_bytes_read;
 
         while (m_parser_offset < m_num_bytes_buffered) {
-            auto const err{parser.parse_next_event(
+            auto const err{m_parser.parse_next_event(
                     m_buffer.data(),
                     m_num_bytes_buffered,
                     m_parser_offset,
@@ -71,15 +85,14 @@ auto LogConverter::convert_file(
                 return std::errc::no_message;
             }
 
-            auto const& event{parser.get_log_parser().get_log_event_view()};
+            auto const& event{m_parser.get_log_parser().get_log_event_view()};
             auto const message{event.to_string()};
-            if (nullptr != event.get_timestamp()) {
-                auto const timestamp{event.get_timestamp()->to_string_view()};
+            if (auto timestamp{event.get_timestamp()}; timestamp.has_value()) {
                 auto const message_without_timestamp{
-                        std::string_view{message}.substr(timestamp.length())
+                        std::string_view{message}.substr(timestamp->length())
                 };
                 YSTDLIB_ERROR_HANDLING_TRYV(
-                        serializer.add_message(timestamp, message_without_timestamp)
+                        serializer.add_message(timestamp.value(), message_without_timestamp)
                 );
             } else {
                 YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
@@ -136,7 +149,7 @@ auto LogConverter::grow_buffer_if_full() -> ystdlib::error_handling::Result<void
     }
 
     size_t const new_size{2 * m_buffer.size()};
-    if (new_size > cMaxBufferSize) {
+    if (new_size > m_max_buffer_size) {
         return std::errc::result_out_of_range;
     }
     ystdlib::containers::Array<char> new_buffer(new_size);

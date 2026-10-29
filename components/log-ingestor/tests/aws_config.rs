@@ -1,4 +1,5 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
+use anyhow::anyhow;
 use non_empty_string::NonEmptyString;
 
 /// Default AWS configuration for local testing with `LocalStack`.
@@ -9,6 +10,7 @@ const DEFAULT_AWS_ACCOUNT_ID: &str = "000000000000";
 const DEFAULT_AWS_REGION: &str = "us-east-1";
 
 /// AWS service configuration for tests.
+#[derive(Clone)]
 pub struct AwsConfig {
     pub endpoint: NonEmptyString,
     pub access_key_id: String,

@@ -11,8 +11,6 @@
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
@@ -62,21 +60,8 @@ public:
         }
     };
 
-    TimestampPattern* m_old_ts_pattern;
-    size_t m_target_data_size_of_dicts;
-    UserConfig m_archive_user_config;
-    std::string m_path_for_compression;
-    group_id_t m_group_id;
-    size_t m_target_encoded_file_size;
-    std::string m_schema_file_path;
-
     // Constructors
-    Archive()
-            : m_segments_dir_fd(-1),
-              m_compression_level(0),
-              m_global_metadata_db(nullptr),
-              m_old_ts_pattern(nullptr),
-              m_schema_file_path() {}
+    Archive() : m_segments_dir_fd(-1), m_compression_level(0), m_global_metadata_db(nullptr) {}
 
     // Destructor
     ~Archive();
@@ -144,13 +129,6 @@ public:
      */
     void
     write_msg(epochtime_t timestamp, std::string const& message, size_t num_uncompressed_bytes);
-
-    /**
-     * Encodes and writes a message to the given file using schema file
-     * @param log_event_view
-     * @throw FileWriter::OperationFailed if any write fails
-     */
-    void write_msg_using_schema(log_surgeon::LogEventView const& log_event_view);
 
     /**
      * Writes an IR log event to the current encoded file
@@ -311,8 +289,6 @@ private:
     LogTypeDictionaryWriter m_logtype_dict;
     // Holds preallocated logtype dictionary entry for performance
     LogTypeDictionaryEntry m_logtype_dict_entry;
-    std::vector<encoded_variable_t> m_encoded_vars;
-    std::vector<variable_dictionary_id_t> m_var_ids;
     VariableDictionaryWriter m_var_dict;
 
     boost::uuids::random_generator m_uuid_generator;

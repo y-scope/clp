@@ -2,6 +2,9 @@ name: "clp-package-spider"
 
 include:
   - "docker-compose.utils.yaml"
+  - path:
+      - "usr/share/spider-compose/compose.yaml"
+      - "compose.clp-spider.yaml"
 
 services:
   database:
@@ -13,38 +16,6 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "db-table-creator"
-
-  spider-scheduler:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "spider-scheduler"
-
-  compression-scheduler:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "compression-scheduler"
-    # Override: Spider does NOT require `queue` or `redis`.
-    depends_on:
-      db-table-creator:
-        condition: "service_completed_successfully"
-    environment:
-      SPIDER_DB_PASS: "${SPIDER_DB_PASS:?Please set a value.}"
-      SPIDER_DB_USER: "${SPIDER_DB_USER:?Please set a value.}"
-
-  compression-worker:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "spider-compression-worker"
-
-  webui:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "webui"
-
-  garbage-collector:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "garbage-collector"
 
   queue:
     extends:
@@ -66,22 +37,60 @@ services:
       file: "docker-compose-all.yaml"
       service: "results-cache-indices-creator"
 
-  query-scheduler:
+  compression-scheduler:
     extends:
       file: "docker-compose-all.yaml"
-      service: "query-scheduler"
+      service: "compression-scheduler"
 
-  query-worker:
+  compression-worker:
     extends:
       file: "docker-compose-all.yaml"
-      service: "query-worker"
+      service: "compression-worker"
 
-  reducer:
+  compression-coordinator:
     extends:
       file: "docker-compose-all.yaml"
-      service: "reducer"
+      service: "compression-coordinator"
+    environment:
+      SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "compression"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "\
+        ${CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
+
+  webui:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "webui"
+
+  garbage-collector:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "garbage-collector"
+
+  api-server:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "api-server"
+
+  query-coordinator:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "query-coordinator"
+    environment:
+      SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "query"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "\
+        ${CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
+
+  mcp-server:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "mcp-server"
 
   log-ingestor:
     extends:
       file: "docker-compose-all.yaml"
       service: "log-ingestor"
+
+  otel-collector:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "otel-collector"

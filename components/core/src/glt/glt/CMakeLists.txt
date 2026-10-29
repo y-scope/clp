@@ -69,8 +69,6 @@ set(
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../Platform.hpp
-        ../Profiler.cpp
-        ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
         ../ReaderInterface.cpp
@@ -80,8 +78,6 @@ set(
         ../SQLiteDB.hpp
         ../SQLitePreparedStatement.cpp
         ../SQLitePreparedStatement.hpp
-        ../Stopwatch.cpp
-        ../Stopwatch.hpp
         ../streaming_archive/ArchiveMetadata.cpp
         ../streaming_archive/ArchiveMetadata.hpp
         ../streaming_archive/Constants.hpp
@@ -176,6 +172,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_compile_features(glt PRIVATE cxx_std_20)
         target_include_directories(glt
                 PRIVATE
+                ../../
                 "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(glt
@@ -190,9 +187,10 @@ if(CLP_BUILD_EXECUTABLES)
                 nlohmann_json::nlohmann_json
                 ${STD_FS_LIBS}
                 clp::string_utils
+                utils::profiling
                 yaml-cpp
                 ystdlib::error_handling
-                ${zstd_TARGET}
+                zstd::libzstd_static
         )
         # Put the built executable at the root of the build directory
         set_target_properties(

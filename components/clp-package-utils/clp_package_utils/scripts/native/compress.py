@@ -7,8 +7,6 @@ import sys
 import time
 from contextlib import closing
 
-import brotli
-import msgpack
 from clp_py_utils.clp_config import (
     AwsAuthentication,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -19,6 +17,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url
 from clp_py_utils.sql_adapter import SqlAdapter
+from clp_py_utils.zstd_msgpack import serialize as serialize_zstd_msgpack
 from job_orchestration.scheduler.constants import (
     CompressionJobCompletionStatus,
     CompressionJobStatus,
@@ -120,9 +119,8 @@ def handle_job(sql_adapter: SqlAdapter, clp_io_config: ClpIoConfig, no_progress_
         closing(db.cursor(dictionary=True)) as db_cursor,
     ):
         try:
-            compressed_clp_io_config = brotli.compress(
-                msgpack.packb(clp_io_config.model_dump(exclude_none=True, exclude_unset=True)),
-                quality=4,
+            compressed_clp_io_config = serialize_zstd_msgpack(
+                clp_io_config.model_dump(exclude_none=True, exclude_unset=True)
             )
             db_cursor.execute(
                 f"INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (%s)",
@@ -350,9 +348,6 @@ def main(argv):
         action="store_true",
         help="Treat all inputs as unstructured text logs.",
     )
-    args_parser.add_argument(
-        "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
-    )
     parsed_args = args_parser.parse_args(argv[1:])
     if parsed_args.verbose:
         logger.setLevel(logging.DEBUG)
@@ -381,10 +376,6 @@ def main(argv):
         return -1
 
     clp_output_config = OutputConfig.model_validate(clp_config.archive_output.model_dump())
-    if parsed_args.tags:
-        tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]
-        if len(tag_list) > 0:
-            clp_output_config.tags = tag_list
     clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
     mysql_adapter = SqlAdapter(clp_config.database)

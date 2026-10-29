@@ -89,7 +89,7 @@ void JsonConstructor::construct_in_order() {
             client = mongocxx::client{mongo_uri};
             collection = client[mongo_uri.database()][m_option.metadata_db->mongodb_collection];
         } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCodeBadParamDbUri, __FILE__, __LINE__, e.what());
+            throw OperationFailed(ErrorCodeBadParamDbUri, __FILENAME__, __LINE__, e.what());
         }
     }
 
@@ -104,7 +104,7 @@ void JsonConstructor::construct_in_order() {
         std::error_code ec;
         std::filesystem::rename(src_path, new_file_path, ec);
         if (ec) {
-            throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__, ec.message());
         }
 
         if (m_option.metadata_db.has_value()) {
@@ -177,7 +177,7 @@ void JsonConstructor::construct_in_order() {
         std::error_code ec;
         std::filesystem::remove(src_path, ec);
         if (ec) {
-            throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
+            throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__, ec.message());
         }
     }
 
@@ -185,7 +185,7 @@ void JsonConstructor::construct_in_order() {
         try {
             collection.insert_many(results);
         } catch (mongocxx::exception const& e) {
-            throw OperationFailed(ErrorCodeFailureDbBulkWrite, __FILE__, __LINE__, e.what());
+            throw OperationFailed(ErrorCodeFailureDbBulkWrite, __FILENAME__, __LINE__, e.what());
         }
     }
 }

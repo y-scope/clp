@@ -1,0 +1,55 @@
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+    timeout: "30s"
+    send_batch_size: 1024
+  resourcedetection:
+    # Use the Docker detector so the containerized collector reports Docker host metadata instead of
+    # only container metadata. This requires the /var/run/docker.sock mount in Docker Compose.
+    detectors: ["env", "docker", "system"]
+    docker:
+      resource_attributes:
+        host.name:
+          enabled: false
+    system:
+      resource_attributes:
+        host.arch:
+          enabled: true
+        host.cpu.family:
+          enabled: true
+        host.cpu.model.id:
+          enabled: true
+        host.cpu.vendor.id:
+          enabled: true
+        host.name:
+          enabled: false
+    override: false
+
+exporters:
+  otlp_http:
+    endpoint: "${env:CLP_TELEMETRY_ENDPOINT}"
+
+service:
+  extensions: ["health_check"]
+  pipelines:
+    metrics:
+      receivers: ["otlp"]
+      processors: ["resourcedetection", "batch"]
+      exporters: ["otlp_http"]
+    traces:
+      receivers: ["otlp"]
+      processors: ["resourcedetection", "batch"]
+      exporters: ["otlp_http"]
+    logs:
+      receivers: ["otlp"]
+      processors: ["resourcedetection", "batch"]
+      exporters: ["otlp_http"]

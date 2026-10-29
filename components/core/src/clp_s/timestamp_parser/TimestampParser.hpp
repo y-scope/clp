@@ -14,6 +14,14 @@
 #include "../Defs.hpp"
 
 namespace clp_s::timestamp_parser {
+struct TimezoneInfo {
+    // Length of the timezone content consumed/emitted in the timestamp.
+    size_t timestamp_length{};
+    // Length of the timezone specifier's `{...}` sequence in the pattern.
+    size_t pattern_length{};
+    int offset{};
+};
+
 /**
  * A class representing a validated timestamp pattern.
  */
@@ -44,9 +52,8 @@ public:
     // Methods
     [[nodiscard]] auto get_pattern() const -> std::string_view { return m_pattern; }
 
-    [[nodiscard]] auto get_optional_timezone_size_and_offset() const
-            -> std::optional<std::pair<size_t, int>> const& {
-        return m_optional_timezone_size_and_offset;
+    [[nodiscard]] auto get_optional_timezone_info() const -> std::optional<TimezoneInfo> const& {
+        return m_optional_timezone_info;
     }
 
     [[nodiscard]] auto uses_date_type_representation() const -> bool {
@@ -115,7 +122,7 @@ private:
     // Constructor
     TimestampPattern(
             std::string_view pattern,
-            std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset,
+            std::optional<TimezoneInfo> optional_timezone_info,
             std::vector<std::pair<uint16_t, uint16_t>> month_name_offsets_and_lengths,
             std::vector<std::pair<uint16_t, uint16_t>> weekday_name_offsets_and_lengths,
             uint16_t month_name_bracket_pattern_length,
@@ -125,7 +132,7 @@ private:
             bool is_quoted_pattern
     )
             : m_pattern{pattern},
-              m_optional_timezone_size_and_offset{std::move(optional_timezone_size_and_offset)},
+              m_optional_timezone_info{std::move(optional_timezone_info)},
               m_month_name_offsets_and_lengths{std::move(month_name_offsets_and_lengths)},
               m_weekday_name_offsets_and_lengths{std::move(weekday_name_offsets_and_lengths)},
               m_month_name_bracket_pattern_length{month_name_bracket_pattern_length},
@@ -136,7 +143,7 @@ private:
 
     // Variables
     std::string m_pattern;
-    std::optional<std::pair<size_t, int>> m_optional_timezone_size_and_offset;
+    std::optional<TimezoneInfo> m_optional_timezone_info;
     std::vector<std::pair<uint16_t, uint16_t>> m_month_name_offsets_and_lengths;
     std::vector<std::pair<uint16_t, uint16_t>> m_weekday_name_offsets_and_lengths;
     uint16_t m_month_name_bracket_pattern_length{};
@@ -194,11 +201,12 @@ private:
  * - \C Epoch miCroseconds.
  * - \N Epoch Nanoseconds.
  * - \z{...} Specific timezone, described by content between {}.
+ * - \o{...,...} Named time-zone with specific offset, described by name and offset between {}.
  * - \\ Literal backslash.
  *
  * We also support the following CAT sequences:
  *
- * - \Z Generic timezone -- resolves to literal content, and potentially \z{...}.
+ * - \Z Generic timezone -- resolves to literal content, and potentially \z{...} or \o{...,...}.
  * - \? Generic fractional second -- resolves to \3, \6, \9, or \T.
  * - \P Unknown-precision epoch time -- resolves to \E, \L, \C, or \N based on a heuristic.
  * - \O{...} One of several literal characters, described by content between {}.
@@ -273,6 +281,20 @@ marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::s
         bool is_json_literal,
         std::string& generated_pattern
 ) -> std::optional<std::pair<epochtime_t, std::string_view>>;
+
+/**
+ * Estimates the precision of an epoch timestamp based on its proximity to 1971 in different
+ * precisions.
+ *
+ * This heuristic works because one year in epoch nanoseconds is approximately 1000 years in epoch
+ * microseconds, and so on. Note that this heuristic can not distinguish the precision of timestamps
+ * with absolute value sufficiently close to zero.
+ *
+ * @param timestamp
+ * @return A pair containing the scaling factor needed to convert the timestamp into nanosecond
+ * precision, and a format specifier indicating the precision of the timestamp.
+ */
+[[nodiscard]] auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char>;
 
 /**
  * @return A result containing a vector of date-time timestamp patterns, or an error code indicating

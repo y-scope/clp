@@ -16,14 +16,11 @@
 #include "../../../../clp_s/archive_constants.hpp"
 #include "../../../../clp_s/search/ast/AndExpr.hpp"
 #include "../../../../clp_s/search/ast/ColumnDescriptor.hpp"
-#include "../../../../clp_s/search/ast/ConvertToExists.hpp"
 #include "../../../../clp_s/search/ast/EmptyExpr.hpp"
 #include "../../../../clp_s/search/ast/Expression.hpp"
 #include "../../../../clp_s/search/ast/FilterExpr.hpp"
 #include "../../../../clp_s/search/ast/Literal.hpp"
-#include "../../../../clp_s/search/ast/NarrowTypes.hpp"
 #include "../../../../clp_s/search/ast/OrExpr.hpp"
-#include "../../../../clp_s/search/ast/OrOfAndForm.hpp"
 #include "../../../../clp_s/search/ast/SearchUtils.hpp"
 #include "../../../../clp_s/search/ast/Value.hpp"
 #include "../../../TraceableException.hpp"
@@ -41,16 +38,6 @@ using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::literal_type_bitmask_t;
-
-/**
- * Pre-processes a search query by applying several transformation passes.
- * @param query
- * @return A result containing the transformed query on success, or an error code indicating the
- * failure:
- * - ErrorCodeEnum::QueryTransformationPassFailed if any of the transformation pass failed.
- */
-[[nodiscard]] auto preprocess_query(std::shared_ptr<Expression> query)
-        -> ystdlib::error_handling::Result<std::shared_ptr<Expression>>;
 
 /**
  * Creates column descriptors and column-to-original-key map from the given projections.
@@ -152,35 +139,6 @@ using clp_s::search::ast::literal_type_bitmask_t;
         SchemaTree const& schema_tree,
         bool case_sensitive_match
 ) -> ystdlib::error_handling::Result<AstEvaluationResult>;
-
-auto preprocess_query(std::shared_ptr<Expression> query)
-        -> ystdlib::error_handling::Result<std::shared_ptr<Expression>> {
-    if (nullptr == query) {
-        return query;
-    }
-
-    if (nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
-        return query;
-    }
-
-    try {
-        if (query = clp_s::search::ast::OrOfAndForm{}.run(query);
-            nullptr != std::dynamic_pointer_cast<EmptyExpr>(query))
-        {
-            return query;
-        }
-
-        if (query = clp_s::search::ast::NarrowTypes{}.run(query);
-            nullptr != std::dynamic_pointer_cast<EmptyExpr>(query))
-        {
-            return query;
-        }
-
-        return clp_s::search::ast::ConvertToExists{}.run(query);
-    } catch (std::exception const& ex) {
-        return ErrorCode{ErrorCodeEnum::QueryTransformationPassFailed};
-    }
-}
 
 auto create_projected_columns_and_projection_map(
         std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections,
@@ -417,7 +375,12 @@ auto QueryHandlerImpl::create(
         bool case_sensitive_match,
         bool allow_duplicate_projected_columns
 ) -> ystdlib::error_handling::Result<QueryHandlerImpl> {
-    query = YSTDLIB_ERROR_HANDLING_TRYX(preprocess_query(query));
+    try {
+        query = clp_s::search::ast::preprocess_query(query);
+    } catch (std::exception const&) {
+        return ErrorCode{ErrorCodeEnum::QueryTransformationPassFailed};
+    }
+
     auto [projected_columns, projected_column_to_original_key_and_index]
             = YSTDLIB_ERROR_HANDLING_TRYX(create_projected_columns_and_projection_map(
                     projections,

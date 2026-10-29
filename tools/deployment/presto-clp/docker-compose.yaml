@@ -1,6 +1,6 @@
 services:
   presto-coordinator:
-    image: "ghcr.io/y-scope/presto/coordinator:dev"
+    image: "ghcr.io/y-scope/presto/coordinator:${CLP_PRESTO_COORDINATOR_IMAGE_TAG:-clp-v0.10.0}"
     entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
     env_file:
       - ".env"
@@ -24,7 +24,8 @@ services:
       retries: 30
 
   presto-worker:
-    image: "ghcr.io/y-scope/presto/prestissimo-worker:dev"
+    image: >-
+      ghcr.io/y-scope/presto/prestissimo-worker:${CLP_PRESTO_WORKER_IMAGE_TAG:-clp-v0.10.0-fix.1}
     depends_on:
       presto-coordinator:
         condition: "service_healthy"

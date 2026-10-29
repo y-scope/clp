@@ -1,0 +1,3 @@
+delimiters: \r\n
+
+multicapture:text(?<group0>var0)text(?<group1>var1)text

@@ -20,26 +20,22 @@ spec:
         {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "garbage-collector"
     spec:
-      serviceAccountName: {{ include "clp.fullname" . }}-job-watcher
+      {{- include "clp.createSchedulingConfigs" (dict
+          "root" .
+          "component" "garbageCollector"
+        ) | nindent 6 }}
+      serviceAccountName: {{ include "clp.fullname" . }}-service-account
       terminationGracePeriodSeconds: 10
-      securityContext:
-        runAsUser: {{ .Values.securityContext.firstParty.uid }}
-        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
-        fsGroup: {{ .Values.securityContext.firstParty.gid }}
       initContainers:
         - {{- include "clp.waitFor" (dict
             "root" .
             "type" "job"
             "name" "db-table-creator"
           ) | nindent 10 }}
-        - {{- include "clp.waitFor" (dict
-            "root" .
-            "type" "job"
-            "name" "results-cache-indices-creator"
-          ) | nindent 10 }}
+        - {{- include "clp.waitForResultsCache" . | nindent 10 }}
       containers:
         - name: "garbage-collector"
-          image: "{{ include "clp.image.ref" . }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpPackage") | quote }}
           imagePullPolicy: "{{ .Values.image.clpPackage.pullPolicy }}"
           env:
             - name: "CLP_DB_PASS"
@@ -56,22 +52,22 @@ spec:
               value: "/opt/clp"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
-            - name: "CLP_LOGS_DIR"
-              value: "/var/log/garbage_collector"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "garbageCollector"
+            ) | nindent 10 }}
           volumeMounts:
-            - name: {{ include "clp.volumeName" (dict
-                "component_category" "garbage-collector"
-                "name" "logs"
-              ) | quote }}
-              mountPath: "/var/log/garbage_collector"
             - name: "config"
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            - name: "tmp"
-              mountPath: "/var/log"
+            - name: {{ include "clp.volumeName" (dict
+                "component_category" "garbage-collector"
+                "name" "tmp"
+              ) | quote }}
+              mountPath: "/var/tmp"
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
@@ -79,7 +75,7 @@ spec:
               ) | quote }}
               mountPath: "/var/data/archives"
             {{- end }}
-            {{- if .Values.clpConfig.aws_config_directory }}
+            {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
@@ -95,15 +91,13 @@ spec:
             "--config", "/etc/clp-config.yaml"
           ]
       volumes:
-        - {{- include "clp.pvcVolume" (dict
-            "root" .
-            "component_category" "garbage-collector"
-            "name" "logs"
-          ) | nindent 10 }}
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        - name: "tmp"
+        - name: {{ include "clp.volumeName" (dict
+            "component_category" "garbage-collector"
+            "name" "tmp"
+          ) | quote }}
           emptyDir: {}
         {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
         - {{- include "clp.pvcVolume" (dict
@@ -112,7 +106,7 @@ spec:
             "name" "archives"
           ) | nindent 10 }}
         {{- end }}
-        {{- if .Values.clpConfig.aws_config_directory }}
+        {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
