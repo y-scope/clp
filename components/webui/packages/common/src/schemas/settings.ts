@@ -14,6 +14,7 @@ const WebuiPublicSettingsSchema = Type.Object({
     ClpQueryEngine: Type.Enum(CLP_QUERY_ENGINES),
     ClpStorageEngine: Type.Enum(CLP_STORAGE_ENGINES),
 
+    LogIngestorEnabled: Type.Boolean({default: false}),
     LogsInputRootDir: Type.Union([
         Type.String(),
         Type.Null(),
@@ -37,6 +38,12 @@ const WebuiPublicSettingsSchema = Type.Object({
 });
 
 const WebuiServerSettingsSchema = Type.Object({
+    ApiServerUrl: Type.String(),
+    LogIngestorUrl: Type.Union([
+        Type.String(),
+        Type.Null(),
+    ], {default: null}),
+
     SqlDbHost: Type.String(),
     SqlDbName: Type.String(),
     SqlDbPort: Type.Integer({minimum: 1, maximum: 65535}),

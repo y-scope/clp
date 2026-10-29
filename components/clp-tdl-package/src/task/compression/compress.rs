@@ -10,26 +10,25 @@ use std::process::Command;
 use std::process::Stdio;
 
 use anyhow::Context;
-use aws_config::BehaviorVersion;
-use aws_sdk_s3::config::ProvideCredentials;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
-use clp_rust_utils::clp_config::AwsAuthentication;
 use clp_rust_utils::clp_config::S3Config;
-use clp_rust_utils::clp_config::package::config::ArchiveOutput;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
-use clp_rust_utils::dataset::resolve_dataset_name;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::s3::create_new_client;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::CompressionTaskOutput;
 use clp_rust_utils::task_io::compression::S3InputSource;
+use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
 use crate::common::runtime;
+use crate::task::utils::clp_binary_path;
+use crate::task::utils::s3_credential_env;
 
 /// Compresses the given S3 objects into archives, uploads them to S3, and returns their metadata
 /// for the commit task.
@@ -57,7 +56,7 @@ pub(super) fn compress(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
     clp_s_option: &ClpSCompressionOption,
-    dataset: Option<String>,
+    dataset: DatasetName,
     input_source: S3InputSource,
 ) -> anyhow::Result<CompressionTaskOutput> {
     let clp_home = clp_home();
@@ -101,7 +100,7 @@ pub(super) fn compress(
     let s3_config = extract_s3_output_config(config)?;
     let archive_dir = config
         .abs_archive_output_staging(clp_home)
-        .join(resolve_dataset_name(dataset.as_deref()));
+        .join(dataset.as_str());
 
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let indexer_bin = clp_binary_path(clp_home, "indexer");
@@ -124,18 +123,21 @@ pub(super) fn compress(
 
     let archive_dir_clone = archive_dir.clone();
     let archive_callback = |archive: ArchiveMetadata| {
-        let archive_staging_path = archive_dir_clone.join(&archive.id);
+        let archive_staging_path = archive_dir_clone.join(archive.id.to_string());
         tmp_file_deleter.add(archive_staging_path.clone());
         finishers.spawn_on(
             ArchiveFinisher {
                 client: client.clone(),
                 bucket: bucket.clone(),
-                key: create_archive_s3_key(&config.archive_output, dataset.as_deref(), &archive.id),
+                key: config
+                    .archive_output
+                    .dataset_archive_object_key(&dataset, &archive.id)
+                    .into_inner(),
                 indexer_bin: indexer_bin.clone(),
                 database: config.database.clone(),
                 dataset: dataset.clone(),
                 local_path: archive_staging_path,
-                archive_id: archive.id.clone(),
+                archive_id: archive.id,
             }
             .finish(),
             &runtime,
@@ -232,9 +234,9 @@ struct ArchiveFinisher {
     key: String,
     indexer_bin: PathBuf,
     database: Database,
-    dataset: Option<String>,
+    dataset: DatasetName,
     local_path: PathBuf,
-    archive_id: String,
+    archive_id: ArchiveId,
 }
 
 impl ArchiveFinisher {
@@ -261,7 +263,7 @@ impl ArchiveFinisher {
 
         let index_path = local_path.clone();
         let index = tokio::task::spawn_blocking(move || {
-            run_indexer(&indexer_bin, &database, dataset.as_deref(), &index_path)
+            run_indexer(&indexer_bin, &database, &dataset, &index_path)
         });
         let (upload_result, index_result) = tokio::join!(
             upload_file_to_s3(&client, &bucket, &key, &local_path),
@@ -343,74 +345,6 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
         list.push('\n');
     }
     Ok(list)
-}
-
-/// Resolves the AWS credential env vars clp-s needs to access the S3 objects.
-///
-/// # Returns
-///
-/// The env-var name-value pairs with the following environment variables set:
-///
-/// * `AWS_ACCESS_KEY_ID`
-/// * `AWS_SECRET_ACCESS_KEY`
-/// * `AWS_SESSION_TOKEN` (if any)
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * The default AWS SDK credential provider chain has no provider.
-/// * Forwards [`ProvideCredentials::provide_credentials`]'s return values on failure.
-fn s3_credential_env(
-    runtime: &tokio::runtime::Handle,
-    region: &str,
-    auth: &AwsAuthentication,
-) -> anyhow::Result<Vec<(&'static str, String)>> {
-    /// The env var holding the AWS access key ID.
-    const AWS_ACCESS_KEY_ID_ENV_VAR: &str = "AWS_ACCESS_KEY_ID";
-
-    /// The env var holding the AWS secret access key.
-    const AWS_SECRET_ACCESS_KEY_ENV_VAR: &str = "AWS_SECRET_ACCESS_KEY";
-
-    /// The env var holding the AWS session token.
-    const AWS_SESSION_TOKEN_ENV_VAR: &str = "AWS_SESSION_TOKEN";
-
-    let (access_key_id, secret_access_key, session_token) = match auth {
-        AwsAuthentication::Credentials { credentials } => (
-            credentials.access_key_id.clone(),
-            credentials.secret_access_key.clone(),
-            credentials.session_token.clone(),
-        ),
-        AwsAuthentication::Default => {
-            let sdk_config = runtime.block_on(
-                aws_config::defaults(BehaviorVersion::latest())
-                    .region(aws_sdk_s3::config::Region::new(region.to_string()))
-                    .load(),
-            );
-            let provider = sdk_config
-                .credentials_provider()
-                .context("default AWS SDK credential provider is unavailable")?;
-            let credentials = runtime
-                .block_on(provider.provide_credentials())
-                .context("failed to resolve credentials from the default AWS SDK provider chain")?;
-            (
-                credentials.access_key_id().to_string(),
-                credentials.secret_access_key().to_string(),
-                credentials
-                    .session_token()
-                    .map(std::string::ToString::to_string),
-            )
-        }
-    };
-
-    let mut env = vec![
-        (AWS_ACCESS_KEY_ID_ENV_VAR, access_key_id),
-        (AWS_SECRET_ACCESS_KEY_ENV_VAR, secret_access_key),
-    ];
-    if let Some(session_token) = session_token {
-        env.push((AWS_SESSION_TOKEN_ENV_VAR, session_token));
-    }
-    Ok(env)
 }
 
 /// Parses a single clp-s `--print-archive-stats` stdout line into an [`ArchiveMetadata`].
@@ -585,15 +519,6 @@ fn build_log_converter_args(output_dir: &Path, inputs_from_path: &Path) -> Vec<O
     ]
 }
 
-/// Resolves the path of a CLP binary under `clp_home`, joining `bin/{binary}`.
-///
-/// # Returns
-///
-/// The path to the named binary under the CLP installation.
-fn clp_binary_path(clp_home: &Path, binary: &str) -> PathBuf {
-    clp_home.join("bin").join(binary)
-}
-
 /// Resolves the S3 config the archives are uploaded to from `config`.
 ///
 /// # Returns
@@ -612,23 +537,6 @@ fn extract_s3_output_config(config: &SpiderTaskExecutorConfig) -> anyhow::Result
             anyhow::bail!("S3 archive output is required for the S3 compression flow")
         }
     }
-}
-
-/// Builds the S3 object key for an archive by appending `archive_id` to
-/// [`ArchiveOutput::dataset_archive_storage_directory`].
-///
-/// # Returns
-///
-/// The archive's S3 object key.
-fn create_archive_s3_key(
-    archive_output: &ArchiveOutput,
-    dataset: Option<&str>,
-    archive_id: &str,
-) -> String {
-    format!(
-        "{}/{archive_id}",
-        archive_output.dataset_archive_storage_directory(dataset)
-    )
 }
 
 /// Uploads a local file to S3 through `PutObject`.
@@ -667,7 +575,7 @@ async fn upload_file_to_s3(
 /// The ordered `indexer` arguments.
 fn build_indexer_args(
     database: &Database,
-    dataset: Option<&str>,
+    dataset: &DatasetName,
     archive_path: &Path,
 ) -> Vec<OsString> {
     vec![
@@ -682,7 +590,7 @@ fn build_indexer_args(
         OsString::from(&database.names.clp),
         OsString::from("--db-table-prefix"),
         OsString::from(&database.table_prefix),
-        OsString::from(resolve_dataset_name(dataset)),
+        OsString::from(dataset.as_str()),
         archive_path.as_os_str().to_os_string(),
     ]
 }
@@ -702,7 +610,7 @@ fn build_indexer_args(
 fn run_indexer(
     indexer_bin: &Path,
     database: &Database,
-    dataset: Option<&str>,
+    dataset: &DatasetName,
     archive_path: &Path,
 ) -> anyhow::Result<()> {
     let status = Command::new(indexer_bin)
@@ -900,30 +808,28 @@ fn kill_clp_s_and_read_stderr(
 
 #[cfg(test)]
 mod tests {
+    //! Tests for compression arguments, archive statistics, and storage keys.
+
     use std::ffi::OsString;
     use std::path::Path;
     use std::path::PathBuf;
 
     use clp_rust_utils::clp_config::AwsAuthentication;
-    use clp_rust_utils::clp_config::AwsCredentials;
-    use clp_rust_utils::clp_config::S3Config;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutput;
-    use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
     use clp_rust_utils::clp_config::package::config::ClpDbNames;
     use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::task_io::compression::ArchiveMetadata;
     use clp_rust_utils::task_io::compression::ClpSCompressionOption;
     use clp_rust_utils::task_io::compression::S3InputSource;
     use non_empty_string::NonEmptyString;
 
+    use super::ArchiveId;
     use super::ClpSInput;
     use super::build_clp_s_args;
     use super::build_indexer_args;
     use super::build_log_converter_args;
     use super::build_s3_logs_list;
-    use super::create_archive_s3_key;
     use super::parse_archive_stats;
-    use super::s3_credential_env;
 
     #[test]
     fn build_s3_logs_list_default_endpoint() -> anyhow::Result<()> {
@@ -948,38 +854,22 @@ mod tests {
     }
 
     #[test]
-    fn s3_credential_env_credentials() {
-        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let auth = AwsAuthentication::Credentials {
-            credentials: AwsCredentials {
-                access_key_id: "the-access-key".to_string(),
-                secret_access_key: "the-secret-key".to_string(),
-                session_token: Some("the-session-token".to_string()),
-            },
-        };
-
-        assert_eq!(
-            s3_credential_env(runtime.handle(), "us-east-1", &auth)
-                .expect("failed to resolve credentials"),
-            vec![
-                ("AWS_ACCESS_KEY_ID", "the-access-key".to_string()),
-                ("AWS_SECRET_ACCESS_KEY", "the-secret-key".to_string()),
-                ("AWS_SESSION_TOKEN", "the-session-token".to_string()),
-            ]
-        );
-    }
-
-    #[test]
     fn parse_archive_stats_ignores_extra_keys() {
-        let line = concat!(
-            r#"{"id":"abc","begin_timestamp":10,"end_timestamp":20,"#,
-            r#""uncompressed_size":100,"size":40,"is_split":false,"range_index":{}}"#,
-        );
+        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+        let line = r#"{
+            "id": "018e90e5-8b2a-4a61-a2fc-cac799936caf",
+            "begin_timestamp": 10,
+            "end_timestamp": 20,
+            "uncompressed_size": 100,
+            "size": 40,
+            "is_split": false,
+            "range_index": {}
+        }"#;
 
         assert_eq!(
             parse_archive_stats(line).expect("valid archive stats line"),
             ArchiveMetadata {
-                id: "abc".to_string(),
+                id: ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
                 begin_timestamp: 10,
                 end_timestamp: 20,
                 size: 40,
@@ -1106,30 +996,6 @@ mod tests {
     }
 
     #[test]
-    fn archive_s3_key_joins_prefix_dataset_and_id() {
-        let archive_output = ArchiveOutput {
-            storage: ArchiveOutputStorage::S3 {
-                staging_directory: "var/data/staged-archives".to_owned(),
-                s3_config: S3Config {
-                    bucket: NonEmptyString::try_from("bucket".to_string())
-                        .expect("bucket is non-empty"),
-                    region_code: None,
-                    key_prefix: NonEmptyString::try_from("LIB1/".to_string())
-                        .expect("key prefix is non-empty"),
-                    endpoint_url: None,
-                    aws_authentication: AwsAuthentication::Default,
-                },
-            },
-            ..ArchiveOutput::default()
-        };
-
-        assert_eq!(
-            create_archive_s3_key(&archive_output, None, "abc"),
-            "LIB1/default/abc"
-        );
-    }
-
-    #[test]
     fn build_indexer_args_uses_mysql_and_expected_order() {
         let database = Database {
             host: "db-host".to_string(),
@@ -1141,7 +1007,11 @@ mod tests {
         };
 
         assert_eq!(
-            build_indexer_args(&database, None, Path::new("/archives/abc")),
+            build_indexer_args(
+                &database,
+                &DatasetName::default(),
+                Path::new("/archives/abc")
+            ),
             vec![
                 OsString::from("--db-type"),
                 OsString::from("mysql"),

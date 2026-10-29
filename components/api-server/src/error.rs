@@ -1,5 +1,12 @@
+//! Error types for the API server.
+
+use aws_sdk_s3::error::DisplayErrorContext;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
+use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::logs_input::LogsInputError;
+use clp_rust_utils::types::ArchiveId;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
@@ -20,26 +27,47 @@ pub enum ClientError {
     #[error("Malformed data")]
     MalformedData,
 
+    #[error("background task failed: {0}")]
+    TaskJoin(#[from] tokio::task::JoinError),
+
     #[error("`AwsError`: {description}")]
     Aws { description: String },
 
-    #[error("api_server configuration is missing")]
-    ConfigIsNone,
+    #[error("query job not found: {0}")]
+    QueryJobNotFound(u64),
 
-    #[error("Search job not found: {0}")]
-    SearchJobNotFound(u64),
-
-    #[error("Invalid dataset name")]
-    InvalidDatasetName,
+    #[error("query job already terminated: {0}")]
+    QueryJobAlreadyTerminated(u64),
 
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
-    #[error("Dataset not found: {0}")]
-    DatasetNotFound(String),
+    #[error("stream extraction timed out after {0} seconds")]
+    StreamExtractionTimeout(u64),
 
-    #[error("Invalid search job config: {0}")]
-    InvalidSearchJobConfig(String),
+    #[error("extraction job {job_id} ended with status {status:?}")]
+    ExtractionJobFailed { job_id: u64, status: QueryJobStatus },
+
+    #[error("extraction job {0} not found in the query jobs table")]
+    ExtractionJobNotFound(u64),
+
+    #[error("log event {log_event_idx} not found in the stream files of archive {archive_id}")]
+    LogEventNotFound {
+        archive_id: ArchiveId,
+        log_event_idx: u64,
+    },
+
+    #[error("Dataset not found: {0}")]
+    DatasetNotFound(DatasetName),
+
+    #[error(transparent)]
+    LogsInput(#[from] LogsInputError),
+
+    #[error("compression job ID {0} is out of range")]
+    CompressionJobIdOutOfRange(u64),
+
+    #[error("invalid query job config: {0}")]
+    InvalidQueryJobConfig(String),
 
     #[error(transparent)]
     Telemetry(#[from] opentelemetry_otlp::ExporterBuildError),
@@ -62,10 +90,10 @@ impl<T: IsMalformedData> From<T> for ClientError {
     }
 }
 
-impl<AwsSdkErrorType> From<SdkError<AwsSdkErrorType>> for ClientError {
+impl<AwsSdkErrorType: std::error::Error + 'static> From<SdkError<AwsSdkErrorType>> for ClientError {
     fn from(value: SdkError<AwsSdkErrorType>) -> Self {
         Self::Aws {
-            description: value.to_string(),
+            description: DisplayErrorContext(&value).to_string(),
         }
     }
 }
@@ -83,7 +111,8 @@ impl From<clp_rust_utils::Error> for ClientError {
         match value {
             clp_rust_utils::Error::MsgpackEncode(_)
             | clp_rust_utils::Error::MsgpackDecode(_)
-            | clp_rust_utils::Error::SerdeYaml(_) => Self::MalformedData,
+            | clp_rust_utils::Error::SerdeYaml(_)
+            | clp_rust_utils::Error::Zstd(_) => Self::MalformedData,
             clp_rust_utils::Error::UnsupportedS3Endpoint(_) => {
                 Self::InvalidInput(value.to_string())
             }

@@ -1,14 +1,14 @@
-import {brotliDecompressSync} from "node:zlib";
+import {zstdDecompressSync} from "node:zlib";
 
 import {decode} from "@msgpack/msgpack";
 import {Value} from "@sinclair/typebox/value";
-import {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
+import type {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
 import {
-    ClpIoConfig,
+    type ClpIoConfig,
     ClpIoPartialConfigSchema,
 } from "@webui/common/schemas/compression";
 
-import {CompressionMetadataQueryRow} from "./sql.js";
+import type {CompressionMetadataQueryRow} from "./sql.js";
 
 
 /**
@@ -28,7 +28,7 @@ const decodeJobConfig = (
     try {
         const decodedClpConfig = Value.Parse(
             ClpIoPartialConfigSchema,
-            decode(brotliDecompressSync(jobConfig))
+            decode(zstdDecompressSync(jobConfig))
         );
 
         return {clp_config: decodedClpConfig as ClpIoConfig};
