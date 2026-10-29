@@ -1,11 +1,8 @@
 #include "run.hpp"
 
-#include <fstream>
-#include <memory>
 #include <string>
 #include <unordered_set>
 
-#include <log_surgeon/LogParser.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <utils/profiling/Reporter.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
@@ -61,37 +58,6 @@ int run(int argc, char const* argv[]) {
 
     auto command = command_line_args.get_command();
     if (CommandLineArguments::Command::Compress == command) {
-        /// TODO: make this not a unique_ptr and test performance difference
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser;
-        if (!command_line_args.get_use_heuristic()) {
-            std::string const& schema_file_path = command_line_args.get_schema_file_path();
-            reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
-            // Capture groups are temporarily disabled, until NFA intersection support for search.
-            auto const& lexer{reader_parser->get_log_parser().m_lexer};
-            for (auto const& [rule_id, rule_name] : lexer.m_id_symbol) {
-                auto optional_captures{lexer.get_captures_from_rule_id(rule_id)};
-                if (false == optional_captures.has_value()) {
-                    continue;
-                }
-
-                auto const& captures{optional_captures.value()};
-                if (captures.empty()) {
-                    continue;
-                }
-
-                if ("header" == rule_name && 1 == captures.size()
-                    && "timestamp" == captures[0]->get_name())
-                {
-                    continue;
-                }
-
-                throw std::runtime_error(
-                        schema_file_path + ": error: the schema rule '" + rule_name
-                        + "' has a regex pattern containing capture groups.\n"
-                );
-            }
-        }
-
         boost::filesystem::path path_prefix_to_remove(
                 command_line_args.get_path_prefix_to_remove()
         );
@@ -133,9 +99,7 @@ int run(int argc, char const* argv[]) {
                     files_to_compress,
                     empty_directory_paths,
                     grouped_files_to_compress,
-                    command_line_args.get_target_encoded_file_size(),
-                    std::move(reader_parser),
-                    command_line_args.get_use_heuristic()
+                    command_line_args.get_target_encoded_file_size()
             );
         } catch (TraceableException& e) {
             ErrorCode error_code = e.get_error_code();
