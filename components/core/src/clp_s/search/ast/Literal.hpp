@@ -12,6 +12,12 @@
 namespace clp_s::search::ast {
 /**
  * An enum representing all of the Literal types that can show up in the AST.
+ *
+ * `ClpStringT` and `VarStringT` are the string types of the clp-s flavour: a `NodeType::ClpString`
+ * value contains a space and a `NodeType::VarString` value doesn't. `StringT` is the string type of
+ * the clpp flavour (`NodeType::UnstructurizedText`, `NodeType::StructurizedText` and
+ * `NodeType::ParentRule`); it carries no invariant about a value's content, so a string literal can
+ * always match it and the node type decides how the match is evaluated.
  */
 enum LiteralType : uint32_t {
     TypesBegin = 1,
@@ -23,7 +29,7 @@ enum LiteralType : uint32_t {
     ArrayT = 1 << 5,
     NullT = 1 << 6,
     TimestampT = 1 << 7,
-    ClppDecomposeT = 1 << 8,
+    StringT = 1 << 8,
     TypesEnd = 1 << 9,
     UnknownT = ((uint32_t)1) << 31
 };
@@ -77,8 +83,8 @@ public:
                 return "null";
             case LiteralType::TimestampT:
                 return "timestamp";
-            case LiteralType::ClppDecomposeT:
-                return "clppdecompose";
+            case LiteralType::StringT:
+                return "string";
             default:
                 return "errtype";
         }
@@ -93,6 +99,10 @@ public:
      */
     virtual bool as_clp_string(std::string& ret, FilterOperation op) { return false; }
 
+    /**
+     * Casts the literal to a string matched whole against a variable dictionary value, i.e.
+     * against a `VarStringT` or `StringT` column.
+     */
     virtual bool as_var_string(std::string& ret, FilterOperation op) { return false; }
 
     virtual bool as_float(double& ret, FilterOperation op) { return false; }

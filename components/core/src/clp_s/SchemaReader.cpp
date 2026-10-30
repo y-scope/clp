@@ -534,7 +534,8 @@ auto SchemaReader::generate_structured_array_template(
                 break;
             }
             case NodeType::ClpString:
-            case NodeType::VarString: {
+            case NodeType::VarString:
+            case NodeType::UnstructurizedText: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringValue);
                 m_reordered_columns.push_back(m_columns.at(column_idx++));
                 break;
@@ -672,7 +673,8 @@ auto SchemaReader::generate_structured_object_template(
                 break;
             }
             case NodeType::ClpString:
-            case NodeType::VarString: {
+            case NodeType::VarString:
+            case NodeType::UnstructurizedText: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_columns.at(column_idx++));
                 break;
@@ -908,6 +910,7 @@ auto SchemaReader::generate_json_template(int32_t id) -> ystdlib::error_handling
             }
             case NodeType::ClpString:
             case NodeType::VarString:
+            case NodeType::UnstructurizedText:
             case NodeType::DeprecatedDateString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
@@ -1150,7 +1153,8 @@ auto SchemaReader::add_grouped_leaf_array_ops(std::vector<DecompositionTarget>& 
                     break;
                 }
                 case NodeType::ClpString:
-                case NodeType::VarString: {
+                case NodeType::VarString:
+                case NodeType::UnstructurizedText: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringValue);
                     break;
                 }

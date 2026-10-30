@@ -97,7 +97,7 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
 /**
  * Determines whether a pure wildcard filter can be rewritten as per-node filters over decomposable
  * nodes. The following filters cannot:
- * - Columns that no longer match `ClppDecomposeT` (already expanded on an earlier pass).
+ * - Columns that exclude decomposable nodes (already expanded on an earlier pass).
  * - NEXISTS and inverted EXISTS (an OR of per-node non-existence would be too permissive).
  * - Inverted filters whose operand is not a string (no per-node filter can be built, and the
  *   negated expansion requires one for every node).
@@ -196,7 +196,8 @@ auto is_expandable_over_decomposable_nodes(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter
 ) -> bool {
-    if (false == column.matches_type(LiteralType::ClppDecomposeT)) {
+    if (column.excludes_decomposable_nodes() || false == column.matches_type(LiteralType::StringT))
+    {
         return false;
     }
     auto const op{filter.get_operation()};
@@ -423,8 +424,12 @@ auto SchemaMatch::resolve_pure_wildcard_by_node_type(
     // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
     // namespaces.
     // TODO: consider removing this imprecise loop when we resolve issue #907.
+    bool const excludes_decomposable_nodes{column->excludes_decomposable_nodes()};
     bool const matched{
             std::ranges::any_of(m_tree->get_nodes(), [&](SchemaNode const& node) -> bool {
+                if (excludes_decomposable_nodes && node.is_decomposable()) {
+                    return false;
+                }
                 return column->matches_type(SchemaNode::node_to_literal_type(node.get_type()));
             })
     };
@@ -551,7 +556,7 @@ auto SchemaMatch::populate_column_mapping(
     std::priority_queue<state, std::vector<state>, std::greater<state>> work_list;
     std::set<std::pair<DescriptorList::iterator, int32_t>> visited_states;
     if (column->is_bound()) {
-        if (false == column->is_decomposed_leaf()) {
+        if (false == column->is_bound_by_decomposition()) {
             record_column_at_node(column, column->get_bound_node_id());
         }
         return true;
@@ -872,7 +877,7 @@ auto SchemaMatch::compute_candidate_types(
         ast::ColumnDescriptor const& column,
         std::set<int32_t> const& schemas
 ) const -> ast::literal_type_bitmask_t {
-    if (column.is_decomposed_leaf()) {
+    if (column.is_bound_by_decomposition()) {
         return SchemaNode::node_to_literal_type(
                 m_tree->get_node(column.get_bound_node_id()).get_type()
         );
@@ -1005,6 +1010,7 @@ auto SchemaMatch::get_required_dictionaries(SchemaView const& schema) const
         switch (m_tree->get_node(node_id).get_type()) {
             case NodeType::DictionaryFloat:
             case NodeType::VarString:
+            case NodeType::UnstructurizedText:
                 dictionaries |= DictionaryType::VarDict;
                 break;
             case NodeType::ClpString:
@@ -1402,6 +1408,12 @@ auto SchemaMatch::build_decomposable_node_filter(
     }
 
     m_expr_rewritten = true;
+    if (false == can_match_structurized_text(decomposition_root, filter, query)) {
+        if (false == filter.is_inverted()) {
+            return nullptr;
+        }
+        return narrow_to_schemas(find_schemas_containing_node(decomposition_root));
+    }
     return build_decomposed_query_filter(
             column,
             decomposition_root,
@@ -1409,6 +1421,27 @@ auto SchemaMatch::build_decomposable_node_filter(
             query,
             filter.is_inverted()
     );
+}
+
+auto SchemaMatch::can_match_structurized_text(
+        mpt_node_id_t decomposition_root,
+        ast::FilterExpr const& filter,
+        std::string_view query
+) -> bool {
+    if (NodeType::StructurizedText != m_tree->get_node(decomposition_root).get_type()
+        || filter.get_operand()->has_wildcard())
+    {
+        return true;
+    }
+    auto const should_structurize{m_clpp_matcher.should_structurize(query)};
+    if (should_structurize.has_error()) {
+        throw std::runtime_error{fmt::format(
+                "Failed to read the archive's parsing spec - ({}) {}",
+                should_structurize.error().category().name(),
+                should_structurize.error().message()
+        )};
+    }
+    return should_structurize.value();
 }
 
 auto SchemaMatch::build_resolved_decomposable_column(
@@ -1462,10 +1495,7 @@ auto SchemaMatch::build_non_decomposable_wildcard_filter(
         return nullptr;
     }
     auto non_decomposable_column{column.copy()};
-    non_decomposable_column->remove_matching_type(LiteralType::ClppDecomposeT);
-    if (0 == non_decomposable_column->get_matching_types()) {
-        return nullptr;
-    }
+    non_decomposable_column->set_excludes_decomposable_nodes();
     return copy_filter_with_column(std::move(non_decomposable_column), filter);
 }
 

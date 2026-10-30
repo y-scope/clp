@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <optional>
 #include <set>
@@ -121,6 +122,14 @@ auto compress_and_search_float(
         std::vector<std::pair<std::string, std::vector<int64_t>>> const& queries_and_results
 ) -> void;
 
+/**
+ * Collects the node types of every MPT node (excluding the subtree roots) across all archives in
+ * `archive_directory`.
+ * @param archive_directory
+ * @return The set of node types.
+ */
+auto collect_node_types(std::string_view archive_directory) -> std::set<clp_s::NodeType>;
+
 auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
         -> std::filesystem::path {
     return std::filesystem::path{cTestInputFileDirectory} / test_input_path;
@@ -164,6 +173,26 @@ auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search
     auto expr = clp_s::search::ast::OrExpr::create(matching_filter, non_matching_filter);
     expr->add_operand(object_subtree_non_matching_filter);
     return expr;
+}
+
+auto collect_node_types(std::string_view archive_directory) -> std::set<clp_s::NodeType> {
+    std::set<clp_s::NodeType> node_types;
+    for (auto const& entry : std::filesystem::directory_iterator(archive_directory)) {
+        clp_s::ArchiveReader archive_reader{
+                clp_s::Path{
+                        .source = clp_s::InputSource::Filesystem,
+                        .path = entry.path().string()
+                },
+                clp_s::ArchiveReader::Options{}
+        };
+        REQUIRE(false == archive_reader.read_metadata().has_error());
+        for (auto const& node : archive_reader.get_schema_tree()->get_nodes()) {
+            if (node.get_id() >= 0 && node.get_parent_id() >= 0) {
+                node_types.insert(node.get_type());
+            }
+        }
+    }
+    return node_types;
 }
 
 void validate_results(
@@ -493,10 +522,38 @@ TEST_CASE("clp-s-search-literal-operation-compatibility", "[clp-s][search]") {
                     false
             },
             std::tuple{
-                    "int 1 as ClppDecomposeT",
+                    "string word as StringT",
+                    ValueLiteral::create_from_string("word"),
+                    LiteralType::StringT,
+                    true,
+                    false
+            },
+            std::tuple{
+                    "string two words as StringT",
+                    ValueLiteral::create_from_string("two words"),
+                    LiteralType::StringT,
+                    true,
+                    false
+            },
+            std::tuple{
+                    "int 1 as StringT",
                     ValueLiteral::create_from_int(1),
-                    LiteralType::ClppDecomposeT,
-                    false,
+                    LiteralType::StringT,
+                    true,
+                    false
+            },
+            std::tuple{
+                    "float 1.5 as StringT",
+                    ValueLiteral::create_from_float(1.5),
+                    LiteralType::StringT,
+                    true,
+                    false
+            },
+            std::tuple{
+                    "bool true as StringT",
+                    ValueLiteral::create_from_bool(true),
+                    LiteralType::StringT,
+                    true,
                     false
             }
     );
@@ -530,7 +587,7 @@ TEST_CASE("clp-s-search-non-value-literal-operation-compatibility", "[clp-s][sea
           LiteralType::BooleanT,
           LiteralType::ArrayT,
           LiteralType::NullT,
-          LiteralType::ClppDecomposeT,
+          LiteralType::StringT,
           LiteralType::UnknownT})
     {
         auto const expected{
@@ -923,15 +980,19 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
             {R"aa(msg: *)aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT msg: *)aa", {0, 7, 8, 9, 10, 11, 12, 13, 14}},
             {R"aa(shape(msg): *)aa", {1, 2, 3, 4, 5, 6}},
-            {R"aa(NOT shape(msg): "xxx")aa", {1, 2, 3, 4, 5, 6}}
+            {R"aa(NOT shape(msg): "xxx")aa", {1, 2, 3, 4, 5, 6}},
+            // A wildcard-free query the parsing spec wouldn't structurize can't match a
+            // StructurizedText, so it is resolved without decomposition.
+            {R"aa(msg: "xxx")aa", {}},
+            {R"aa(NOT msg: "xxx")aa", {1, 2, 3, 4, 5, 6}},
+            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
+            {R"aa(idx: 0 OR NOT msg: "xxx")aa", {0, 1, 2, 3, 4, 5, 6}}
     };
     std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
             {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
-            {R"aa(NOT msg: "xxx")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(NOT msg: "Msg 1*")aa", {2, 3, 4, 5, 6}},
-            {R"aa(NOT *: "zzz")aa", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
-            {R"aa(idx: 0 OR NOT msg: "xxx")aa", {0, 1, 2, 3, 4, 5, 6}}
+            {R"aa(NOT msg: "xx:xx")aa", {1, 2, 3, 4, 5, 6}}
     };
     auto const single_file_archive = GENERATE(true, false);
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
@@ -954,7 +1015,9 @@ TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
 // below cover value, inverted-value, existence, wildcard-path, and shape() filters over these
 // nodes, including the `NarrowTypes` OR-EXISTS rewrite for inverted string filters — and the
 // `NOT *: <value>` cases pin that the rewrite leaves pure wildcard columns untouched. Value filters
-// against StructurizedText require decomposition support and must fail cleanly without it.
+// against StructurizedText require decomposition support and must fail cleanly without it, unless
+// the value has no wildcards and the parsing spec wouldn't structurize it (it then can't match any
+// StructurizedText, so no decomposition is attempted).
 //
 // TODO: `NOT (msg: "Msg 0*" OR msg: "Msg 1*")` should return {1, 5, 6, 7} but drops idx 6 because
 // `NarrowTypes::narrow()` emits a single EXISTS for all siblings under the normalized AND.
@@ -966,17 +1029,19 @@ TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
             {R"aa(NOT *.msg: *)aa", {2}},
             {R"aa(shape(msg): *)aa", {0, 7}},
             {R"aa(NOT shape(msg): "xxx")aa", {0, 7}},
-    };
-    std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
             {R"aa(msg: 42)aa", {1}},
             {R"aa(msg: 2)aa", {5}},
             {R"aa(msg: plain)aa", {6}},
-            {R"aa(msg: "Msg 0*")aa", {0}},
-            {R"aa(NOT msg: "Msg 0*")aa", {1, 5, 6, 7}},
             {R"aa(NOT msg: 42)aa", {0, 5, 6, 7}},
             {R"aa(NOT msg: plain)aa", {0, 5, 7}},
-            {R"aa(NOT msg: "two words")aa", {0, 5, 6}},
             {R"aa(*.msg: 7)aa", {4}},
+    };
+    // `NOT *: plain` is also expanded over the `msg.key_value` ParentRule node, which is never
+    // narrowed by the structurization decision and so still requires decomposition.
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
+            {R"aa(msg: "Msg 0*")aa", {0}},
+            {R"aa(NOT msg: "Msg 0*")aa", {1, 5, 6, 7}},
+            {R"aa(NOT msg: "two words")aa", {0, 5, 6}},
             {R"aa(NOT *.msg: "Msg 0*")aa", {1, 3, 4, 5, 6, 7}},
             {R"aa(NOT *: "Msg 0*")aa", {1, 2, 3, 4, 5, 6, 7}},
             {R"aa(NOT *: plain)aa", {0, 1, 2, 3, 4, 5, 7}},
@@ -990,6 +1055,125 @@ TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
             queries_and_results,
             decomposed_queries_and_results
     );
+}
+
+// In the clpp flavour, `clpp::ParsingSpec::should_structurize` decides whether a string becomes a
+// StructurizedText or an UnstructurizedText, for top-level fields and for strings in structurized
+// arrays alike. This test pins the current rule (a string is structurized iff it contains a
+// delimiter of the parsing spec) against the heuristic spec: `kv` is a StructurizedText at idx 0
+// and 1 and an UnstructurizedText at idx 2; `word` is an UnstructurizedText at idx 0 and 1 and a
+// StructurizedText at idx 2 (a space is a delimiter). A clpp archive never contains ClpString or
+// VarString nodes, and a clp-s archive never contains StructurizedText or UnstructurizedText nodes.
+TEST_CASE("clp-s-search-clpp-structurization-decision", "[clp-s][search][clpp]") {
+    constexpr std::string_view cInputFile{"test_search_clpp_delimiters.jsonl"};
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(shape(kv): *)aa", {0, 1}},
+            {R"aa(NOT shape(kv): *)aa", {2}},
+            {R"aa(kv: plain)aa", {2}},
+            {R"aa(NOT kv: plain)aa", {0, 1}},
+            {R"aa(shape(word): *)aa", {2}},
+            {R"aa(word: nodelimiter)aa", {0}},
+            {R"aa(NOT word: nodelimiter)aa", {1, 2}},
+            {R"aa(shape(arr): *)aa", {0}},
+            {R"aa(arr: nodelimiter)aa", {0}},
+            {R"aa(arr: another)aa", {1}},
+    };
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
+            {R"aa(kv: "key:value")aa", {0}},
+            {R"aa(kv: "key=value")aa", {1}},
+            {R"aa(NOT kv: "key:value")aa", {1, 2}},
+            {R"aa(word: "with space")aa", {2}},
+            {R"aa(arr: "key:value")aa", {0}},
+    };
+    auto const single_file_archive = GENERATE(true, false);
+    CAPTURE(single_file_archive);
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cInputFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    true,
+                    get_heuristic_parsing_spec_path()
+            )
+    );
+    search_clpp(queries_and_results, decomposed_queries_and_results);
+
+    auto const clpp_node_types{collect_node_types(cTestSearchArchiveDirectory)};
+    REQUIRE(clpp_node_types.contains(clp_s::NodeType::StructurizedText));
+    REQUIRE(clpp_node_types.contains(clp_s::NodeType::UnstructurizedText));
+    REQUIRE_FALSE(clpp_node_types.contains(clp_s::NodeType::ClpString));
+    REQUIRE_FALSE(clpp_node_types.contains(clp_s::NodeType::VarString));
+
+    std::filesystem::remove_all(cTestSearchArchiveDirectory);
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cInputFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    true
+            )
+    );
+    auto const clps_node_types{collect_node_types(cTestSearchArchiveDirectory)};
+    REQUIRE(clps_node_types.contains(clp_s::NodeType::ClpString));
+    REQUIRE(clps_node_types.contains(clp_s::NodeType::VarString));
+    REQUIRE_FALSE(clps_node_types.contains(clp_s::NodeType::StructurizedText));
+    REQUIRE_FALSE(clps_node_types.contains(clp_s::NodeType::UnstructurizedText));
+}
+
+// An UnstructurizedText carries no invariant about its content beyond not being structurized by the
+// parsing spec; in particular it may contain a space. With a spec whose delimiters include neither
+// a space nor `:`, `"with space"` and `"key:value"` are UnstructurizedTexts (only `"key=value"` is
+// structurized), and both positive and negated equality filters on them must match exactly.
+TEST_CASE("clp-s-search-clpp-spec-without-space-delimiter", "[clp-s][search][clpp]") {
+    constexpr std::string_view cInputFile{"test_search_clpp_delimiters.jsonl"};
+    constexpr std::string_view cSpecFile{"test-clp-s-no-space-delimiter-spec.txt"};
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(word: "with space")aa", {2}},
+            {R"aa(NOT word: "with space")aa", {0, 1}},
+            {R"aa(word: "with*")aa", {2}},
+            {R"aa(NOT word: "with*")aa", {0, 1}},
+            {R"aa(kv: "key:value")aa", {0}},
+            {R"aa(NOT kv: "key:value")aa", {1, 2}},
+            {R"aa(arr: "key:value")aa", {0}},
+            {R"aa(shape(kv): *)aa", {1}},
+            {R"aa(NOT shape(kv): *)aa", {0, 2}},
+            {R"aa(*: "with space")aa", {2}},
+            {R"aa(NOT *: "with space")aa", {0, 1}},
+    };
+    auto const single_file_archive = GENERATE(true, false);
+    CAPTURE(single_file_archive);
+    TestOutputCleaner const test_cleanup{
+            {std::string{cTestSearchArchiveDirectory}, std::string{cSpecFile}}
+    };
+    {
+        std::ofstream spec_writer{std::string{cSpecFile}};
+        spec_writer << "delimiters: \"\\t\\r\\n=\"\n\nnum: \"\\d+\"\n";
+    }
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cInputFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    true,
+                    std::filesystem::path{cSpecFile}
+            )
+    );
+    search_clpp(queries_and_results, {});
+
+    auto const node_types{collect_node_types(cTestSearchArchiveDirectory)};
+    REQUIRE(node_types.contains(clp_s::NodeType::StructurizedText));
+    REQUIRE(node_types.contains(clp_s::NodeType::UnstructurizedText));
+    REQUIRE_FALSE(node_types.contains(clp_s::NodeType::ClpString));
+    REQUIRE_FALSE(node_types.contains(clp_s::NodeType::VarString));
 }
 
 /**

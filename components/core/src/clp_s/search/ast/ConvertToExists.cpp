@@ -73,7 +73,8 @@ std::shared_ptr<Expression> ConvertToExists::convert(std::shared_ptr<Expression>
                 m_needs_standard_form = true;
                 new_col->remove_matching_types(
                         cAllTypes
-                        & ~(LiteralType::ArrayT | LiteralType::ClpStringT | LiteralType::VarStringT)
+                        & ~(LiteralType::ArrayT | LiteralType::ClpStringT | LiteralType::VarStringT
+                            | LiteralType::StringT)
                 );
                 new_col_null->remove_matching_types(cAllTypes & ~LiteralType::NullT);
                 std::shared_ptr<Expression> non_null_filter;

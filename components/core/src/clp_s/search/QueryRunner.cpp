@@ -54,6 +54,12 @@ using clp_s::search::ast::OrExpr;
 
 namespace clp_s::search {
 namespace {
+// The column types whose values are matched through the variable dictionary: a `VarString`
+// (`VarStringT`) or an `UnstructurizedText` (`StringT`) column.
+constexpr literal_type_bitmask_t cVarDictStringTypes{
+        LiteralType::VarStringT | LiteralType::StringT
+};
+
 /**
  * Evaluates a filter with a wildcard operand against numeric columns by matching the pattern
  * against each value's text. Readers that retain the value's original text (`FormattedFloat`,
@@ -455,7 +461,7 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
         }
     }
 
-    if (column->matches_type(LiteralType::VarStringT)) {
+    if (column->matches_any(cVarDictStringTypes)) {
         std::unordered_set<int64_t>* matching_vars = m_expr_var_match_map[expr];
         for (auto const& entry : m_var_string_readers) {
             if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
@@ -551,6 +557,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
                     m_clp_string_readers.try_emplace(node_id).first->second
             );
         case LiteralType::VarStringT:
+        case LiteralType::StringT:
             matching_vars = m_expr_var_match_map.at(expr);
             return evaluate_var_string_filter(
                     expr->get_operation(),
@@ -1095,7 +1102,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
             );
         }
 
-        if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
+        if (filter->get_column()->matches_any(cVarDictStringTypes)) {
             std::string query_string;
             filter->get_operand()->as_var_string(query_string, filter->get_operation());
             if (false == m_string_var_match_map.contains(query_string)) {
@@ -1158,11 +1165,18 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             if (m_metadata_columns.contains(node)) {
                 return;
             }
-            auto tree_node_type = m_schema_tree->get_node(node).get_type();
+            auto const& tree_node{m_schema_tree->get_node(node)};
+            // Decomposable nodes have no column reader; schema matching has already expanded the
+            // filter over them.
+            if (tree_node.is_decomposable()) {
+                return;
+            }
+            auto const tree_node_type{tree_node.get_type()};
             if (col->matches_type(SchemaNode::node_to_literal_type(tree_node_type))) {
                 auto literal_type = SchemaNode::node_to_literal_type(tree_node_type);
                 matching_types |= literal_type;
                 if (NodeType::ClpString != tree_node_type && NodeType::VarString != tree_node_type
+                    && NodeType::UnstructurizedText != tree_node_type
                     && NodeType::DeprecatedDateString != tree_node_type)
                 {
                     m_wildcard_to_searched_basic_columns[col].insert(node);
@@ -1261,7 +1275,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             }
         } else if (filter->get_column()->is_pure_wildcard()
                    && filter->get_column()->matches_any(
-                           LiteralType::ClpStringT | LiteralType::VarStringT
+                           LiteralType::ClpStringT | cVarDictStringTypes
                    ))
         {
             auto wildcard = filter->get_column().get();
@@ -1298,9 +1312,9 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 }
                 has_clp_string = wildcard->matches_type(LiteralType::ClpStringT);
             }
-            if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
+            if (filter->get_column()->matches_any(cVarDictStringTypes)) {
                 m_expr_var_match_map[expr.get()] = &m_string_var_match_map.at(filter_string);
-                has_var_string = wildcard->matches_type(LiteralType::VarStringT);
+                has_var_string = wildcard->matches_any(cVarDictStringTypes);
                 matches_var_string = !m_expr_var_match_map.at(expr.get())->empty();
             }
 
@@ -1309,7 +1323,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                     wildcard->remove_matching_type(LiteralType::ClpStringT);
                 }
                 if (false == matches_var_string) {
-                    wildcard->remove_matching_type(LiteralType::VarStringT);
+                    wildcard->remove_matching_types(cVarDictStringTypes);
                 }
 
                 if (has_other) {
@@ -1359,7 +1373,7 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
                 // FIXME: throw
                 return EvaluatedValue::False;
             }
-        } else if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
+        } else if (filter->get_column()->matches_any(cVarDictStringTypes)) {
             std::string filter_string;
             filter->get_operand()->as_var_string(filter_string, filter->get_operation());
 

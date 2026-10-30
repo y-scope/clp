@@ -1,4 +1,4 @@
-#include "utils.hpp"
+#include "ParsingSpec.hpp"
 
 #include <cstddef>
 #include <string>
@@ -14,36 +14,39 @@
 #include <clpp/ErrorCode.hpp>
 
 namespace clpp {
-auto build_parser(clp::ReaderInterface& reader)
-        -> ystdlib::error_handling::Result<std::pair<log_surgeon::Parser, std::string>> {
+auto ParsingSpec::create_from_reader(clp::ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<ParsingSpec> {
     constexpr size_t cReadChunkSize{4096};
-    std::string spec_str;
+    std::string spec_text;
     while (true) {
-        auto const prev_size{spec_str.size()};
-        spec_str.resize(prev_size + cReadChunkSize);
+        auto const prev_size{spec_text.size()};
+        spec_text.resize(prev_size + cReadChunkSize);
         size_t bytes_read{};
         auto const error_code{
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-                reader.try_read(spec_str.data() + prev_size, cReadChunkSize, bytes_read)
+                reader.try_read(spec_text.data() + prev_size, cReadChunkSize, bytes_read)
         };
         if (clp::ErrorCode_EndOfFile == error_code) {
-            spec_str.resize(prev_size);
+            spec_text.resize(prev_size);
             break;
         }
         if (clp::ErrorCode_Success != error_code) {
-            spec_str.resize(prev_size);
             SPDLOG_ERROR("Failed to read parsing specification from reader.");
             return ClppErrorCode{ClppErrorCodeEnum::BadParam};
         }
-        spec_str.resize(prev_size + bytes_read);
+        spec_text.resize(prev_size + bytes_read);
     }
+    return create_from_text(std::move(spec_text));
+}
 
-    if (spec_str.empty()) {
+auto ParsingSpec::create_from_text(std::string spec_text)
+        -> ystdlib::error_handling::Result<ParsingSpec> {
+    if (spec_text.empty()) {
         SPDLOG_ERROR("Parsing specification is empty.");
         return ClppErrorCode{ClppErrorCodeEnum::BadParam};
     }
 
-    log_surgeon::ParsingSpecBuilder builder{spec_str};
+    log_surgeon::ParsingSpecBuilder builder{spec_text};
     for (auto const& encoding : cEncodingPatterns) {
         if (false == builder.add_encoding(encoding.name, encoding.pattern)) {
             SPDLOG_ERROR(
@@ -54,7 +57,6 @@ auto build_parser(clp::ReaderInterface& reader)
             return ClppErrorCode{ClppErrorCodeEnum::BadParam};
         }
     }
-
-    return std::make_pair(builder.build().create_parser(), std::move(spec_str));
+    return ParsingSpec{builder.build(), std::move(spec_text)};
 }
 }  // namespace clpp

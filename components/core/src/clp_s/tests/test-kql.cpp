@@ -520,7 +520,7 @@ TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnD
     column->bind_as_decomposed_leaf(cNodeId, cLeafPosition, cOccurrenceIdx, {cSchemaId});
 
     REQUIRE(column->is_bound());
-    REQUIRE(column->is_decomposed_leaf());
+    REQUIRE(column->is_bound_by_decomposition());
     REQUIRE(cNodeId == column->get_bound_node_id());
     REQUIRE(cLeafPosition == column->get_leaf_position());
     REQUIRE(cOccurrenceIdx == column->get_structurized_text_occurrence_idx());
@@ -537,7 +537,7 @@ TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnD
         auto copied{column->copy()};
         REQUIRE(copied.get() != column.get());
         REQUIRE(*column == *copied);
-        REQUIRE(copied->is_decomposed_leaf());
+        REQUIRE(copied->is_bound_by_decomposition());
         REQUIRE(cNodeId == copied->get_bound_node_id());
         REQUIRE(cLeafPosition == copied->get_leaf_position());
         REQUIRE(cOccurrenceIdx == copied->get_structurized_text_occurrence_idx());
@@ -548,7 +548,7 @@ TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnD
     SECTION("Rebinding preserves the leaf and occurrence but clears resolved nodes") {
         auto rebound{column->copy_bound_to(cOtherNodeId, LiteralType::IntegerT)};
         REQUIRE(rebound->is_bound());
-        REQUIRE(rebound->is_decomposed_leaf());
+        REQUIRE(rebound->is_bound_by_decomposition());
         REQUIRE(cOtherNodeId == rebound->get_bound_node_id());
         REQUIRE(rebound->matches_exactly(LiteralType::IntegerT));
         REQUIRE(cLeafPosition == rebound->get_leaf_position());
@@ -560,7 +560,7 @@ TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnD
     SECTION("Unbound copy clears both the leaf and occurrence") {
         auto unbound{column->copy_unbound()};
         REQUIRE_FALSE(unbound->is_bound());
-        REQUIRE_FALSE(unbound->is_decomposed_leaf());
+        REQUIRE_FALSE(unbound->is_bound_by_decomposition());
         REQUIRE_FALSE(unbound->get_leaf_position().has_value());
         REQUIRE_FALSE(unbound->get_structurized_text_occurrence_idx().has_value());
         REQUIRE(unbound->resolved_nodes().schema_to_node_id.empty());

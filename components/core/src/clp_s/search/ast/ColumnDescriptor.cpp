@@ -122,7 +122,8 @@ ColumnDescriptor::ColumnDescriptor(ColumnDescriptor const& other)
           m_function{other.m_function},
           m_bound_node_id{other.m_bound_node_id},
           m_pinned_leaf{other.m_pinned_leaf},
-          m_is_decomposed_leaf{other.m_is_decomposed_leaf} {}
+          m_bound_by_decomposition{other.m_bound_by_decomposition},
+          m_excludes_decomposable_nodes{other.m_excludes_decomposable_nodes} {}
 
 auto ColumnDescriptor::copy() const -> std::shared_ptr<ColumnDescriptor> {
     std::shared_ptr<ColumnDescriptor> copied{new ColumnDescriptor{*this}};
@@ -134,7 +135,7 @@ auto ColumnDescriptor::copy_unbound() const -> std::shared_ptr<ColumnDescriptor>
     std::shared_ptr<ColumnDescriptor> unbound{new ColumnDescriptor{*this}};
     unbound->m_bound_node_id.reset();
     unbound->m_pinned_leaf.reset();
-    unbound->m_is_decomposed_leaf = false;
+    unbound->m_bound_by_decomposition = false;
     return unbound;
 }
 
@@ -152,7 +153,7 @@ auto ColumnDescriptor::bind_as_decomposed_leaf(
         size_t occurrence_idx,
         std::unordered_set<int32_t> const& schema_ids
 ) -> void {
-    m_is_decomposed_leaf = true;
+    m_bound_by_decomposition = true;
     m_bound_node_id = node_id;
     m_pinned_leaf = LeafPosition{.occurrence_idx = occurrence_idx, .leaf_position = leaf_position};
     m_resolved_nodes = {};
@@ -242,6 +243,7 @@ bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
            && m_flags == rhs.m_flags && m_function == rhs.m_function
            && m_pinned_leaf == rhs.m_pinned_leaf && m_namespace == rhs.m_namespace
            && m_pure_wildcard == rhs.m_pure_wildcard && m_subtree_type == rhs.m_subtree_type
+           && m_excludes_decomposable_nodes == rhs.m_excludes_decomposable_nodes
            && m_unresolved_descriptors == rhs.m_unresolved_descriptors
            && m_unresolved_tokens == rhs.m_unresolved_tokens;
 }

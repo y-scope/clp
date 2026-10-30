@@ -440,9 +440,26 @@ public:
     [[nodiscard]] auto get_bound_node_id() const -> mpt_node_id_t;
 
     /**
-     * @return Whether this column is a leaf rule column created by query decomposition.
+     * @return Whether this column's binding and schema mapping were fixed by query decomposition
+     * (see `bind_as_decomposed_leaf`). Column resolution must neither re-resolve such a column nor
+     * recompute its schema mapping.
      */
-    [[nodiscard]] auto is_decomposed_leaf() const -> bool { return m_is_decomposed_leaf; }
+    [[nodiscard]] auto is_bound_by_decomposition() const -> bool {
+        return m_bound_by_decomposition;
+    }
+
+    /**
+     * @return Whether this column must not resolve to decomposable nodes (`StructurizedText` and
+     * `ParentRule`), i.e. its filter has already been expanded over them.
+     */
+    [[nodiscard]] auto excludes_decomposable_nodes() const -> bool {
+        return m_excludes_decomposable_nodes;
+    }
+
+    /**
+     * Marks this column as not resolving to decomposable nodes.
+     */
+    auto set_excludes_decomposable_nodes() -> void { m_excludes_decomposable_nodes = true; }
 
     /**
      * Makes this column a leaf rule column created by query decomposition: bound to `node_id` at
@@ -485,7 +502,8 @@ private:
     // The single MPT node this column has been bound to, if any.
     std::optional<mpt_node_id_t> m_bound_node_id;
     std::optional<LeafPosition> m_pinned_leaf;
-    bool m_is_decomposed_leaf{false};
+    bool m_bound_by_decomposition{false};
+    bool m_excludes_decomposable_nodes{false};
     ResolvedNodes m_resolved_nodes;
 
     // Constructors

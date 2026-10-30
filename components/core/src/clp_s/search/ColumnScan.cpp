@@ -451,7 +451,8 @@ auto ColumnScan::can_build_filter(
             return is_equality_operation(operation);
         case LiteralType::ClpStringT:
             return is_equality_operation(operation) && clp_queries.contains(filter);
-        case LiteralType::VarStringT: {
+        case LiteralType::VarStringT:
+        case LiteralType::StringT: {
             if (false == is_equality_operation(operation)) {
                 return false;
             }
@@ -462,7 +463,6 @@ auto ColumnScan::can_build_filter(
             // null checks are always turned into existence operators --
             // no need to evaluate here
         case LiteralType::ArrayT:
-        case LiteralType::ClppDecomposeT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
             return false;
@@ -638,7 +638,8 @@ auto ColumnScan::build_filter(
                     query
             );
         }
-        case LiteralType::VarStringT: {
+        case LiteralType::VarStringT:
+        case LiteralType::StringT: {
             auto const* matching_vars = var_matches.at(filter);
             return build_var_string_filter(
                     m_num_messages,
@@ -674,7 +675,6 @@ auto ColumnScan::build_filter(
             // null checks are always turned into existence operators --
             // no need to evaluate here
         case LiteralType::ArrayT:
-        case LiteralType::ClppDecomposeT:
         case LiteralType::UnknownT:
         case LiteralType::TypesEnd:
             return bitmap;

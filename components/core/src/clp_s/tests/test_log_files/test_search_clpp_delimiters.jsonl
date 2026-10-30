@@ -1,0 +1,3 @@
+{"idx": 0, "kv": "key:value", "word": "nodelimiter", "arr": ["nodelimiter", "key:value"]}
+{"idx": 1, "kv": "key=value", "word": "another", "arr": ["another"]}
+{"idx": 2, "kv": "plain", "word": "with space"}

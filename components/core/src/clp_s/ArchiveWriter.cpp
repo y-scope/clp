@@ -387,6 +387,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 );
                 break;
             case NodeType::VarString:
+            case NodeType::UnstructurizedText:
                 writer->append_column(std::make_unique<VariableStringColumnWriter>(m_var_dict));
                 break;
             case NodeType::Boolean:

@@ -448,7 +448,8 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
             break;
         case NodeType::VarString:
-            column_reader = new VariableStringColumnReader(column_id, m_var_dict);
+        case NodeType::UnstructurizedText:
+            column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
             break;
         case NodeType::Boolean:
             column_reader = new BooleanColumnReader(column_id);
@@ -546,8 +547,9 @@ auto ArchiveReader::append_unordered_reader_columns(
                 );
                 break;
             case NodeType::VarString:
+            case NodeType::UnstructurizedText:
                 reader.append_unordered_column(
-                        std::make_unique<VariableStringColumnReader>(node_id, m_var_dict)
+                        std::make_unique<VariableStringColumnReader>(node_id, m_var_dict, node_type)
                 );
                 break;
             case NodeType::Boolean:

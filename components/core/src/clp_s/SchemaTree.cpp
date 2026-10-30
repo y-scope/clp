@@ -28,7 +28,8 @@ auto SchemaNode::node_to_literal_type(NodeType type) -> clp_s::search::ast::Lite
             return clp_s::search::ast::LiteralType::FloatT;
         case NodeType::StructurizedText:
         case NodeType::ParentRule:
-            return clp_s::search::ast::LiteralType::ClppDecomposeT;
+        case NodeType::UnstructurizedText:
+            return clp_s::search::ast::LiteralType::StringT;
         case NodeType::ClpString:
             return clp_s::search::ast::LiteralType::ClpStringT;
         case NodeType::VarString:

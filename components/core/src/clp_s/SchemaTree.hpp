@@ -32,10 +32,22 @@ namespace clp_s {
  * the implementation may create a special subtree of the MPT which contains fields used to record
  * things like original log order.
  *
- * The following NodeTypes are only used by the clpp flavour:
+ * The clp-s flavour stores a string value as a `ClpString` if it contains a space and as a
+ * `VarString` otherwise; search relies on these invariants.
+ *
+ * The following NodeTypes are only used by the clpp flavour, which in turn never uses `ClpString`
+ * or `VarString`. These MPT types all map to `LiteralType::StringT`.
  *
  * `StructurizedText`: Stores a structurized representation of unstructured text. It is made up of
- * `ParentRule`s and primitive type nodes that are in the text.
+ * `ParentRule`s and primitive type nodes that are in the text. Whether a string is structurized is
+ * decided by the parsing spec (`clpp::ParsingSpec::should_structurize`), so every
+ * `StructurizedText`'s original text satisfies that decision.
+ *
+ * `ParentRule`: A scope within a `StructurizedText` matched by a parent rule of the parsing spec.
+ *
+ * `UnstructurizedText`: A string stored whole in the variable dictionary rather than structurized:
+ * either a string value the parsing spec decided not to structurize, or a leaf rule match within a
+ * `StructurizedText` that has no numeric encoding.
  */
 enum class NodeType : uint8_t {
     Integer = 0,
@@ -55,7 +67,8 @@ enum class NodeType : uint8_t {
     Timestamp = 14,
     StructurizedText = 15,
     ParentRule = 16,
-    Unknown = 17
+    UnstructurizedText = 17,
+    Unknown = 18
 };
 
 /**
@@ -72,6 +85,7 @@ enum class NodeType : uint8_t {
         case NodeType::DictionaryFloat:
         case NodeType::ClpString:
         case NodeType::VarString:
+        case NodeType::UnstructurizedText:
         case NodeType::Boolean:
             return true;
         case NodeType::UnstructuredArray:

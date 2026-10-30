@@ -28,6 +28,7 @@
 #include <clp_s/Schema.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/TraceableException.hpp>
+#include <clpp/ParsingSpec.hpp>
 
 namespace clp_s {
 /**
@@ -63,6 +64,11 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    /**
+     * @param option
+     * @throw OperationFailed (ErrorCodeBadParam) if `option.timestamp_key` contains wildcards, or
+     * if the flavour is clpp and the parsing specification is missing or can't be built.
+     */
     explicit JsonParser(JsonParserOption const& option);
 
     /**
@@ -228,17 +234,41 @@ private:
     auto add_metadata_field(std::string_view const field_name, NodeType type) -> mpt_node_id_t;
 
     /**
-     * Parses a string field as unstructured text using log-surgeon and stores its structurized
-     * components in the current parsed message, clp-s schema, and dictionaries.
+     * Adds a string value to the current parsed message and schema. In the clpp flavour, the value
+     * is handed to `parse_unstructured_text`. In the clp-s flavour, a value containing a space is
+     * stored as a `ClpString` and any other value as a `VarString`.
+     * @tparam ordered Whether the field is a top-level field (added to the ordered region of the
+     * schema) or nested in an array (added to the unordered region).
      * @param parent_node_id
      * @param field_key
      * @param field_value
-     * @return A result containing an error code indicating the failure:
-     * - ClppErrorCodeEnum::Failure if parsing fails.
-     * - Forwards `store_capture_groups`'s return values on failure.
+     * @throw std::runtime_error if `parse_unstructured_text` fails.
+     */
+    template <bool ordered>
+    auto add_string_value(
+            mpt_node_id_t parent_node_id,
+            std::string_view field_key,
+            std::string_view field_value
+    ) -> void;
+
+    /**
+     * Adds a string value in the clpp flavour. If the parsing spec decides to structurize the value
+     * (`clpp::ParsingSpec::should_structurize`), it is parsed with log-surgeon and stored as a
+     * `StructurizedText` with its structurized components; otherwise it is stored whole as an
+     * `UnstructurizedText`.
+     * @tparam ordered Whether an `UnstructurizedText` is added to the ordered region of the schema
+     * (top-level fields) or to the unordered region (fields nested in arrays). A `StructurizedText`
+     * is always an unordered object.
+     * @param parent_node_id
+     * @param field_key
+     * @param field_value
+     * @return A void result on success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Unsupported if the parsing spec or parser don't exist.
+     * - ClppErrorCodeEnum::Failure if log-surgeon fails to parse the value.
      * - Forwards `m_archive_writer->update_log_shape_dict`'s return values on failure.
      * - Forwards `m_archive_writer->update_parent_rule_shapes`'s return values on failure.
      */
+    template <bool ordered>
     auto parse_unstructured_text(
             mpt_node_id_t parent_node_id,
             std::string_view field_key,
@@ -289,6 +319,8 @@ private:
 
     std::vector<ArchiveStats> m_archive_stats;
 
+    // Both are set iff the flavour is clpp.
+    std::optional<clpp::ParsingSpec> m_parsing_spec;
     std::optional<log_surgeon::Parser> m_log_surgeon_parser;
 };
 }  // namespace clp_s

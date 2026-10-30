@@ -303,17 +303,27 @@ private:
     bool m_is_array;
 };
 
+/**
+ * Reads a column of variable dictionary IDs. Both `NodeType::VarString` and
+ * `NodeType::UnstructurizedText` columns are stored this way; `type` records which one so that
+ * `get_type()` reports the node type the column was written with.
+ */
 class VariableStringColumnReader : public BaseColumnReader {
 public:
-    // Constructor
-    VariableStringColumnReader(int32_t id, std::shared_ptr<VariableDictionaryReader> var_dict)
+    // Constructors
+    VariableStringColumnReader(
+            int32_t id,
+            std::shared_ptr<VariableDictionaryReader> var_dict,
+            NodeType type = NodeType::VarString
+    )
             : BaseColumnReader(id),
-              m_var_dict(std::move(var_dict)) {}
+              m_var_dict(std::move(var_dict)),
+              m_type(type) {}
 
     // Methods inherited from BaseColumnReader
     auto load(BufferViewReader& reader, uint64_t num_messages) -> void override;
 
-    auto get_type() -> NodeType override { return NodeType::VarString; }
+    auto get_type() -> NodeType override { return m_type; }
 
     auto extract_value(uint64_t cur_message)
             -> std::variant<int64_t, double, std::string, uint8_t> override;
@@ -330,6 +340,7 @@ public:
             SimdJsonStringEscaper& escaper
     ) -> void override;
 
+    // Methods
     /**
      * Gets the encoded id of the variable
      * @param cur_message
@@ -338,7 +349,9 @@ public:
     auto get_variable_id(uint64_t cur_message) -> uint64_t;
 
 private:
+    // Data members
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
+    NodeType m_type;
 
     UnalignedMemSpan<uint64_t> m_variables;
 };

@@ -62,7 +62,8 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
                     LiteralType::BooleanT,
                     LiteralType::ArrayT,
                     LiteralType::NullT,
-                    LiteralType::TimestampT
+                    LiteralType::TimestampT,
+                    LiteralType::StringT
             };
             for (auto const type : cNarrowableLiteralTypes) {
                 // A wildcard is matched against numeric text, so under a negated equality the
@@ -77,9 +78,6 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
                 column->remove_matching_type(type);
                 narrowed_clp_string |= LiteralType::ClpStringT == type;
                 narrowed_var_string |= LiteralType::VarStringT == type;
-            }
-            if (narrowed_clp_string && narrowed_var_string) {
-                column->remove_matching_type(LiteralType::ClppDecomposeT);
             }
         }
 

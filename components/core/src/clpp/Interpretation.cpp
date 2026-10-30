@@ -11,6 +11,7 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clpp/ErrorCode.hpp>
+#include <clpp/ParsingSpec.hpp>
 #include <clpp/TextShape.hpp>
 
 namespace clpp {
@@ -23,7 +24,7 @@ auto supports_decomposition() noexcept -> bool {
 }
 
 auto decompose_by_rule_name(
-        log_surgeon::ParsingSpec& parsing_spec,
+        ParsingSpec const& parsing_spec,
         std::string_view query,
         std::string_view rule_name
 ) -> ystdlib::error_handling::Result<std::vector<Interpretation>> {
@@ -50,7 +51,7 @@ auto decompose_by_rule_name(
 }
 
 auto decompose_by_log_shapes(
-        log_surgeon::ParsingSpec& parsing_spec,
+        ParsingSpec const& parsing_spec,
         std::string_view query,
         std::vector<log_surgeon::CCharArray> const& log_shapes
 ) -> ystdlib::error_handling::Result<std::vector<std::vector<std::vector<LeafQuery>>>> {

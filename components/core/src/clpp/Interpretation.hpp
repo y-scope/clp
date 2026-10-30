@@ -10,6 +10,7 @@
 #include <log_surgeon/log_surgeon.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clpp/ParsingSpec.hpp>
 #include <clpp/TextShape.hpp>
 
 namespace clpp {
@@ -65,10 +66,10 @@ struct Interpretation {
  * @return A result containing the interpretations for `query` on `rule_name`, or an error code
  * indicating the failure:
  * - ClppErrorCodeEnum::UnsupportedDecomposition if decomposition is unsupported.
- * @throw Propagates `log_surgeon::ParsingSpec::search_by_name`'s exceptions.
+ * @throw Propagates `ParsingSpec::search_by_name`'s exceptions.
  */
 [[nodiscard]] auto decompose_by_rule_name(
-        log_surgeon::ParsingSpec& parsing_spec,
+        ParsingSpec const& parsing_spec,
         std::string_view query,
         std::string_view rule_name
 ) -> ystdlib::error_handling::Result<std::vector<Interpretation>>;
@@ -89,10 +90,10 @@ struct Interpretation {
  * @return A result containing the interpretations for every shape in `log_shapes`, or an error code
  * indicating the failure:
  * - ClppErrorCodeEnum::UnsupportedDecomposition if decomposition is unsupported.
- * @throw Propagates `log_surgeon::ParsingSpec::search_by_log_shapes`'s exceptions.
+ * @throw Propagates `ParsingSpec::search_by_log_shapes`'s exceptions.
  */
 [[nodiscard]] auto decompose_by_log_shapes(
-        log_surgeon::ParsingSpec& parsing_spec,
+        ParsingSpec const& parsing_spec,
         std::string_view query,
         std::vector<log_surgeon::CCharArray> const& log_shapes
 ) -> ystdlib::error_handling::Result<std::vector<std::vector<std::vector<LeafQuery>>>>;

@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -18,6 +17,7 @@
 #include <clp_s/Defs.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
+#include <clpp/ParsingSpec.hpp>
 #include <clpp/TextShape.hpp>
 
 namespace clp_s::search {
@@ -105,6 +105,15 @@ public:
             std::string_view rule_name
     ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>>;
 
+    /**
+     * @param value
+     * @return `clpp::ParsingSpec::should_structurize(value)` for the archive's parsing spec, or an
+     * error code indicating the failure:
+     * - Forwards `ensure_parsing_spec`'s return values.
+     */
+    [[nodiscard]] auto should_structurize(std::string_view value)
+            -> ystdlib::error_handling::Result<bool>;
+
 private:
     // Types
     /**
@@ -131,11 +140,12 @@ private:
             -> InterpretationMatch::Occurrences;
 
     /**
-     * Builds the log-surgeon parser from the archive's parsing spec if it hasn't been built yet.
+     * Builds the parsing spec from the archive's parsing spec text if it hasn't been built yet.
      * @return A void result on success, or an error code indicating the failure:
      * - Forwards `ArchiveReader::read_parsing_spec`'s return values.
+     * - Forwards `clpp::ParsingSpec::create_from_text`'s return values.
      */
-    [[nodiscard]] auto ensure_parser() -> ystdlib::error_handling::Result<void>;
+    [[nodiscard]] auto ensure_parsing_spec() -> ystdlib::error_handling::Result<void>;
 
     /**
      * Decomposes `query` against the log shapes returning interpretations that matched a log shape.
@@ -185,7 +195,7 @@ private:
     ArchiveReader* m_archive_reader;
     bool m_case_sensitive{false};
     std::vector<std::vector<StructurizedTextRef>> m_structurized_texts_per_log_shape;
-    std::unique_ptr<log_surgeon::ParsingSpec> m_parsing_spec;
+    std::optional<clpp::ParsingSpec> m_parsing_spec;
 };
 
 template <OccurrenceMatchHandlerReq<ClppMatcher::InterpretationMatch::Occurrences> OnMatch>

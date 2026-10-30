@@ -82,13 +82,12 @@ public:
 private:
     // Static methods
     /**
-     * Builds a copy of a pure wildcard `filter` narrowed to every non-decomposable column type,
-     * i.e., with `ClppDecomposeT` removed from the column's matching types. Decomposable nodes are
-     * covered separately by per-node filters.
+     * Builds a copy of a pure wildcard `filter` whose column excludes decomposable nodes.
+     * Decomposable nodes are covered separately by per-node filters.
      * @param column The pure wildcard column.
      * @param filter The pure wildcard filter to copy.
      * @return The filter, or nullptr if `column` is a shape() column (shapes exist only on
-     * decomposable nodes) or matches no other type.
+     * decomposable nodes).
      */
     [[nodiscard]] static auto build_non_decomposable_wildcard_filter(
             ast::ColumnDescriptor const& column,
@@ -294,11 +293,13 @@ private:
      * is matched against whole log shapes, and at a ParentRule node only against that rule's
      * shapes.
      *
-     * There are 3 possible filter cases:
+     * There are 4 possible filter cases:
      * 1. EXISTS/NEXISTS: narrows to the schemas that contain the node, or to their complement when
      *    the filter holds for events lacking the node (NEXISTS, or inverted EXISTS).
      * 2. shape(): narrows to the schemas containing shapes satisfying the query.
-     * 3. Any other operation: the query is decomposed into interpretations, each expanded into
+     * 3. A query that can't match any StructurizedText (see `can_match_structurized_text`): treated
+     *    as a decomposition with no interpretations, without invoking log-surgeon.
+     * 4. Any other operation: the query is decomposed into interpretations, each expanded into
      *    leaf filters.
      *
      * @param column The column triggering query decomposition.
@@ -307,12 +308,31 @@ private:
      * @return The transformed expression on success, or nullptr if no schema matches, the filter
      * has no operand, or the operand can not be converted to a string for the filter's operation
      * (e.g. a range operation).
+     * @throws std::runtime_error if `ClppMatcher::should_structurize` returns an error.
      */
     auto build_decomposable_node_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             mpt_node_id_t decomposition_root,
             ast::FilterExpr const& filter
     ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Determines whether `query` can match the text of a StructurizedText node rooted at
+     * `decomposition_root`. Every StructurizedText's original text satisfies
+     * `clpp::ParsingSpec::should_structurize`, so a query without wildcards that doesn't satisfy it
+     * can never equal one. A ParentRule's text is a substring of the StructurizedText's and need
+     * not satisfy it, so the query is always considered a possible match there.
+     * @param decomposition_root The decomposable node where the query's decomposition is rooted.
+     * @param filter The filter whose operand is `query`.
+     * @param query The filter's operand as a string.
+     * @return Whether `query` can match `decomposition_root`'s text.
+     * @throws std::runtime_error if `ClppMatcher::should_structurize` returns an error.
+     */
+    [[nodiscard]] auto can_match_structurized_text(
+            mpt_node_id_t decomposition_root,
+            ast::FilterExpr const& filter,
+            std::string_view query
+    ) -> bool;
 
     /**
      * Builds a fully resolved column descriptor whose token path targets the decomposable MPT node

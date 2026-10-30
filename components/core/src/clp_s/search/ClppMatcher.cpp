@@ -4,10 +4,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
-#include <memory>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
@@ -21,6 +21,7 @@
 #include <clp_s/Defs.hpp>
 #include <clpp/Defs.hpp>
 #include <clpp/Interpretation.hpp>
+#include <clpp/ParsingSpec.hpp>
 
 namespace clp_s::search {
 namespace {
@@ -115,13 +116,19 @@ auto ClppMatcher::decompose_query(
     return decompose_by_rule_name(structurized_text_id, query, rule_name);
 }
 
-auto ClppMatcher::ensure_parser() -> ystdlib::error_handling::Result<void> {
-    if (nullptr != m_parsing_spec) {
+auto ClppMatcher::should_structurize(std::string_view value)
+        -> ystdlib::error_handling::Result<bool> {
+    YSTDLIB_ERROR_HANDLING_TRYV(ensure_parsing_spec());
+    return m_parsing_spec->should_structurize(value);
+}
+
+auto ClppMatcher::ensure_parsing_spec() -> ystdlib::error_handling::Result<void> {
+    if (m_parsing_spec.has_value()) {
         return ystdlib::error_handling::success();
     }
-    auto const spec{YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec())};
-    m_parsing_spec = std::make_unique<log_surgeon::ParsingSpec>(
-            log_surgeon::ParsingSpecBuilder{spec}.build()
+    auto const spec_text{YSTDLIB_ERROR_HANDLING_TRYX(m_archive_reader->read_parsing_spec())};
+    m_parsing_spec.emplace(
+            YSTDLIB_ERROR_HANDLING_TRYX(clpp::ParsingSpec::create_from_text(std::string{spec_text}))
     );
     return ystdlib::error_handling::success();
 }
@@ -136,7 +143,7 @@ ClppMatcher::decompose_by_log_shapes(mpt_node_id_t structurized_text_id, std::st
         log_shapes.emplace_back(log_surgeon::CCharArray::from_string_view(log_shape.get_value()));
     }
 
-    YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
+    YSTDLIB_ERROR_HANDLING_TRYV(ensure_parsing_spec());
     auto interpretations_per_shape{YSTDLIB_ERROR_HANDLING_TRYX(
             clpp::decompose_by_log_shapes(*m_parsing_spec, query, log_shapes)
     )};
@@ -177,7 +184,7 @@ auto ClppMatcher::decompose_by_rule_name(
         std::string_view query,
         std::string_view rule_name
 ) -> ystdlib::error_handling::Result<std::vector<InterpretationMatch>> {
-    YSTDLIB_ERROR_HANDLING_TRYV(ensure_parser());
+    YSTDLIB_ERROR_HANDLING_TRYV(ensure_parsing_spec());
     auto interpretations{YSTDLIB_ERROR_HANDLING_TRYX(
             clpp::decompose_by_rule_name(*m_parsing_spec, query, rule_name)
     )};

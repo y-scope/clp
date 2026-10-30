@@ -10,9 +10,9 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 LogShapeStats.hpp
                 ParentRuleShapes.cpp
                 ParentRuleShapes.hpp
+                ParsingSpec.cpp
+                ParsingSpec.hpp
                 TextShape.hpp
-                utils.cpp
-                utils.hpp
         )
         add_library(clpp::core ALIAS clpp_core)
         target_compile_features(clpp_core PRIVATE cxx_std_20)

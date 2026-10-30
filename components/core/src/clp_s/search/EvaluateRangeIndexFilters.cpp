@@ -206,6 +206,7 @@ auto EvaluateRangeIndexFilters::evaluate_filter(
                     if (false
                         == col->matches_any(
                                 ast::LiteralType::VarStringT | ast::LiteralType::ClpStringT
+                                | ast::LiteralType::StringT
                         ))
                     {
                         break;
