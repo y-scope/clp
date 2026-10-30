@@ -292,10 +292,8 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             });
         }
 
-        let mut input_builder = CompressionInputBuilder::from_s3_config(
-            config.s3_config.clone(),
-            self.target_archive_size,
-        );
+        let mut input_builder =
+            CompressionInputBuilder::new(config.s3_config.clone(), self.target_archive_size);
         for chunk in sorted_metadata_ids.chunks(FETCH_CHUNK_SIZE) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
                 "SELECT `id`, `bucket`, `key`, `size` FROM \
@@ -346,29 +344,28 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             }
         }
 
-        let input_sources = input_builder.into_task_input_sources();
-        if input_sources.is_empty() {
+        let manifests = input_builder.build();
+        if manifests.is_empty() {
             return Err(Error::NoTaskInputs);
         }
 
-        Ok(input_sources
+        Ok(manifests
             .into_iter()
-            .map(|input_source| {
+            .map(|manifest| {
                 // NOTE: The timeout policy scales with the number of objects assigned to the task.
                 // Each object contributes three minutes to the soft timeout and five minutes to
                 // the hard timeout. This heuristic does not account for object size and can be
                 // refined in the future.
-                let num_objects = input_source.object_keys.len() as u64;
-                let timeout_policy = TimeoutPolicy {
-                    soft_timeout_ms: num_objects * 3 * 60 * 1000,
-                    hard_timeout_ms: num_objects * 5 * 60 * 1000,
-                };
+                let num_objects = manifest.object_keys.len() as u64;
                 let execution_policy = ExecutionPolicy {
                     max_num_retry: self.spider_option.compression_task_max_retry,
-                    timeout_policy,
+                    timeout_policy: TimeoutPolicy {
+                        soft_timeout_ms: num_objects * 3 * 60 * 1000,
+                        hard_timeout_ms: num_objects * 5 * 60 * 1000,
+                    },
                     ..ExecutionPolicy::default()
                 };
-                (input_source, execution_policy)
+                (manifest, execution_policy)
             })
             .collect())
     }
