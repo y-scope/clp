@@ -336,14 +336,13 @@ private:
 
     /**
      * Builds a fully resolved column descriptor whose token path targets the decomposable MPT node
-     * `node_id`, typed as `node_id`'s literal type and keeping `column`'s namespace, subtree type
-     * and function.
+     * `node_id`, typed as `node_id`'s literal type and keeping `column`'s subtree type and
+     * function.
      *
-     * Decomposable nodes only ever exist within the object subtree (see
-     * `JsonParser::parse_unstructured_text`), so the token path is built by walking from `node_id`
-     * up to the root of the object subtree for `column`'s namespace. Non-decomposable nodes are
-     * bound directly by node ID instead (see `build_resolved_node_filter`) and must not be passed
-     * here.
+     * The token path is built by walking from `node_id` up to the root of its subtree. That root
+     * names the subtree's namespace, so it becomes the resolved column's namespace rather than a
+     * token. Non-decomposable nodes are bound directly by node ID instead (see
+     * `build_resolved_node_filter`) and must not be passed here.
      * @param column The unbound column that `node_id` was matched from.
      * @param node_id A decomposable node.
      * @return The resolved column descriptor.

@@ -1564,11 +1564,8 @@ auto SchemaMatch::build_resolved_decomposable_column(
 ) const -> std::shared_ptr<ast::ColumnDescriptor> {
     auto const* node{&m_tree->get_node(node_id)};
     auto const literal_type{SchemaNode::node_to_literal_type(node->get_type())};
-    auto const subtree_root_node_id{
-            m_tree->get_object_subtree_node_id_for_namespace(column.get_namespace())
-    };
     DescriptorList descriptors;
-    while (node->get_id() != subtree_root_node_id) {
+    while (constants::cRootNodeId != node->get_parent_id()) {
         descriptors.emplace_back(
                 DescriptorToken::create_descriptor_from_literal_token(node->get_key_name())
         );
@@ -1577,7 +1574,7 @@ auto SchemaMatch::build_resolved_decomposable_column(
     std::reverse(descriptors.begin(), descriptors.end());
     auto resolved_column{ColumnDescriptor::create_from_descriptors(
             descriptors,
-            column.get_namespace(),
+            node->get_key_name(),
             column.get_function()
     )};
     resolved_column->set_matching_type(literal_type);
