@@ -4,13 +4,24 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cerrno>
+#include <cstddef>
 #include <cstdio>
+#include <span>
 #include <string>
 
 #include "../Defs.h"
 #include "SocketOperationFailed.hpp"
 
 namespace clp::networking {
+namespace {
+#if defined(MSG_NOSIGNAL)
+constexpr int cSendFlags{MSG_NOSIGNAL};
+#else
+constexpr int cSendFlags{0};
+#endif
+}  // namespace
+
 int connect_to_server(std::string const& host, std::string const& port) {
     // Get address info
     struct addrinfo hints = {};
@@ -54,9 +65,18 @@ ErrorCode try_send(int fd, char const* buf, size_t buf_len) {
         return ErrorCode_BadParam;
     }
 
-    ssize_t num_bytes_sent = ::send(fd, buf, buf_len, 0);
-    if (-1 == num_bytes_sent) {
-        return ErrorCode_errno;
+    std::span<char const> remaining_buf{buf, buf_len};
+    while (false == remaining_buf.empty()) {
+        auto const num_bytes_sent{
+                ::send(fd, remaining_buf.data(), remaining_buf.size(), cSendFlags)
+        };
+        if (-1 == num_bytes_sent) {
+            if (EINTR == errno) {
+                continue;
+            }
+            return ErrorCode_errno;
+        }
+        remaining_buf = remaining_buf.subspan(static_cast<size_t>(num_bytes_sent));
     }
 
     return ErrorCode_Success;

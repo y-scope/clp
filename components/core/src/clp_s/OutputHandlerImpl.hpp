@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cstdint>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -20,6 +22,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/options/insert.hpp>
+#include <msgpack.hpp>
 
 #include <clp_s/AggregationSink.hpp>
 #include <clp_s/aggregators.hpp>
@@ -31,7 +34,6 @@
 #include "Defs.hpp"
 #include "FileWriter.hpp"
 #include "search/OutputHandler.hpp"
-#include "TraceableException.hpp"
 
 namespace clp_s {
 /**
@@ -91,24 +93,66 @@ private:
 };
 
 /**
- * Output handler that writes to a network destination.
+ * Output handler that streams the results of searching a single archive to a network destination.
+ *
+ * The handler connects to the destination when the first result is written, so a search without
+ * results never opens a connection. Each message is a msgpack array:
+ * - the handshake, sent once before the first result:
+ *   `[protocol_version, session_token, task_index, archive_id]`;
+ * - one result message per result, `[result_index, timestamp, message]`, where `result_index`
+ *   counts the results from 0 and `timestamp` is in epoch milliseconds;
+ * - the trailer, sent once after the last result: `[num_results]`.
+ *
+ * After sending the trailer, the handler shuts down the write side of the connection and waits for
+ * the destination's acknowledgement, `[num_results]` encoded as `0x91 0xcf` followed by the count
+ * as a big-endian u64.
+ *
+ * Failures are sticky: once a method fails, the handler sends nothing more, and every later call
+ * returns the same error.
  */
 class NetworkOutputHandler : public ::clp_s::search::OutputHandler {
 public:
     // Types
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
+    /**
+     * Function that opens a connection to the network destination.
+     * @return The connected socket's file descriptor on success, or -1 on failure.
+     */
+    using Connector = std::function<int()>;
+
+    // Constants
+    static constexpr uint8_t cProtocolVersion{1};
 
     // Constructors
-    explicit NetworkOutputHandler(
+    /**
+     * @param host
+     * @param port
+     * @param session_token Token identifying the destination's session.
+     * @param task_idx Index of the search task within its query job.
+     */
+    NetworkOutputHandler(
             std::string const& host,
             int port,
-            bool should_output_metadata = false
+            std::string session_token,
+            uint64_t task_idx
     );
+
+    /**
+     * @param connector Function to open the connection with, when the first result is written.
+     * @param destination Name of the network destination, for log messages.
+     * @param session_token Token identifying the destination's session.
+     * @param task_idx Index of the search task within its query job.
+     */
+    NetworkOutputHandler(
+            Connector connector,
+            std::string destination,
+            std::string session_token,
+            uint64_t task_idx
+    )
+            : ::clp_s::search::OutputHandler{true, true},
+              m_connector{std::move(connector)},
+              m_destination{std::move(destination)},
+              m_session_token{std::move(session_token)},
+              m_task_idx{task_idx} {}
 
     // Destructor
     ~NetworkOutputHandler() override {
@@ -117,7 +161,24 @@ public:
         }
     }
 
+    // Delete copy & move constructors and assignment operators
+    NetworkOutputHandler(NetworkOutputHandler const&) = delete;
+    NetworkOutputHandler(NetworkOutputHandler&&) = delete;
+    auto operator=(NetworkOutputHandler const&) -> NetworkOutputHandler& = delete;
+    auto operator=(NetworkOutputHandler&&) -> NetworkOutputHandler& = delete;
+
     // Methods inherited from OutputHandler
+    /**
+     * Sends a result to the network destination, connecting to it and sending the handshake first
+     * if this is the first result.
+     * @param message
+     * @param timestamp
+     * @param archive_id
+     * @param log_event_idx Unused.
+     * @return ErrorCodeSuccess on success.
+     * @return The error of an earlier failure, if any.
+     * @return Forwards `send_result`'s return values otherwise.
+     */
     [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp,
@@ -125,14 +186,82 @@ public:
             int64_t log_event_idx
     ) -> ErrorCode override;
 
-    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override {
-        return write(message, 0, {}, 0);
-    }
+    /**
+     * Unsupported, since every result must carry its timestamp and archive ID.
+     * @param message
+     * @return The error of an earlier failure, if any.
+     * @return ErrorCodeUnsupported otherwise.
+     */
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override;
+
+    // Methods overriding OutputHandler
+    /**
+     * Sends the trailer, shuts down the write side of the connection, and waits for the network
+     * destination to acknowledge the results. Does nothing if no result was written.
+     * @return ErrorCodeSuccess on success.
+     * @return The error of an earlier failure, if any.
+     * @return Forwards `send_trailer_and_receive_ack`'s return values otherwise.
+     */
+    [[nodiscard]] auto finish() -> ErrorCode override;
 
 private:
-    std::string m_host;
-    std::string m_port;
-    int m_socket_fd;
+    // Methods
+    /**
+     * Connects to the network destination.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if connecting fails.
+     */
+    [[nodiscard]] auto connect() -> ErrorCode;
+
+    /**
+     * Sends a result to the network destination, connecting to it and sending the handshake first
+     * if this is the first result.
+     * @param message
+     * @param timestamp
+     * @param archive_id
+     * @return ErrorCodeSuccess on success.
+     * @return Forwards `connect`'s and `send_buffer`'s return values on failure.
+     */
+    [[nodiscard]] auto
+    send_result(std::string_view message, epochtime_t timestamp, std::string_view archive_id)
+            -> ErrorCode;
+
+    /**
+     * Sends the trailer, shuts down the write side of the connection, waits for the network
+     * destination's acknowledgement, and then closes the connection.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if shutting down the connection fails.
+     * @return Forwards `send_buffer`'s and `receive_ack`'s return values on any other failure.
+     */
+    [[nodiscard]] auto send_trailer_and_receive_ack() -> ErrorCode;
+
+    /**
+     * Sends the serialized messages in the buffer to the network destination, and then clears the
+     * buffer.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if sending fails.
+     */
+    [[nodiscard]] auto send_buffer() -> ErrorCode;
+
+    /**
+     * Receives the network destination's acknowledgement and validates it against the number of
+     * results sent.
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if receiving fails, the connection is closed before the whole
+     * acknowledgement is received, or the acknowledgement is malformed or doesn't count the number
+     * of results sent.
+     */
+    [[nodiscard]] auto receive_ack() const -> ErrorCode;
+
+    // Variables
+    Connector m_connector;
+    std::string m_destination;
+    std::string m_session_token;
+    uint64_t m_task_idx{};
+    uint64_t m_num_results_sent{};
+    int m_socket_fd{-1};
+    msgpack::sbuffer m_buffer;
+    ErrorCode m_error_code{ErrorCodeSuccess};
 };
 
 /**
