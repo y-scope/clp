@@ -108,7 +108,7 @@ runs:
         tags: "${{steps.deps_image_meta.outputs.tags}}"
         outputs: "${{steps.get_image_props.outputs.output}}"
         # Disable provenance to create a simple image instead of a manifest list.
-        # This allows `docker manifest create` to combine the per-arch images later.
+        # The multi-arch action combines the per-arch images later.
         provenance: false
 
     - if: "inputs.push_deps_image == 'false'"

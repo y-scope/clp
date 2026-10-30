@@ -104,7 +104,7 @@ runs:
         file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
         platforms: "${{steps.map-arch.outputs.platform}}"
         # Disable provenance to create a simple image instead of a manifest list.
-        # This allows `docker manifest create` to combine the per-arch images later.
+        # The multi-arch action combines the per-arch images later.
         provenance: false
         pull: "${{inputs.pull == 'true'}}"
         push: "${{inputs.push == 'true'}}"
