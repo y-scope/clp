@@ -1,5 +1,11 @@
 {{- $logIngestorEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
     (eq .Values.clpConfig.logs_input.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
+{{- if not (has .Values.global.archiveOutputStorageType (list "fs" "s3")) }}
+{{- fail (printf
+  "global.archiveOutputStorageType (%v) must be \"fs\" or \"s3\""
+  .Values.global.archiveOutputStorageType
+) }}
+{{- end }}
 apiVersion: "v1"
 kind: "ConfigMap"
 metadata:
@@ -21,15 +27,14 @@ data:
     {{- end }}
     archive_output:
       compression_level: {{ .Values.clpConfig.archive_output.compression_level | int }}
-      {{- with .Values.clpConfig.archive_output.storage }}
       storage:
-        {{- if eq .type "fs" }}
+        {{- if eq .Values.global.archiveOutputStorageType "fs" }}
         directory: "/var/data/archives"
         type: "fs"
-        {{- else if eq .type "s3" }}
+        {{- else if eq .Values.global.archiveOutputStorageType "s3" }}
         type: "s3"
         staging_directory: "/var/data/staged-archives"
-        {{- with .s3_config }}
+        {{- with .Values.clpConfig.archive_output.storage.s3_config }}
         s3_config:
           {{- if .endpoint_url }}
           endpoint_url: {{ .endpoint_url | quote }}
@@ -54,9 +59,8 @@ data:
               {{- end }}
             {{- end }}
           {{- end }}{{/* with .aws_authentication */}}
-        {{- end }}{{/* with .s3_config */}}
-        {{- end }}{{/* if eq .type "fs" */}}
-      {{- end }}{{/* with .Values.clpConfig.archive_output.storage */}}
+        {{- end }}{{/* with .Values.clpConfig.archive_output.storage.s3_config */}}
+        {{- end }}{{/* if eq .Values.global.archiveOutputStorageType "fs" */}}
       {{- if .Values.clpConfig.archive_output.retention_period }}
       retention_period: {{ .Values.clpConfig.archive_output.retention_period | int }}
       {{- else }}
@@ -470,7 +474,7 @@ data:
   presto-worker-catalog-clp.properties: |
     connector.name=clp
     {{- with $.Values.clpConfig.archive_output.storage }}
-    {{- if eq .type "s3" }}
+    {{- if eq $.Values.global.archiveOutputStorageType "s3" }}
     clp.storage-type=s3
     clp.s3-auth-provider=clp_package
     clp.s3-access-key-id={{ .s3_config.aws_authentication.credentials.access_key_id }}
@@ -481,7 +485,7 @@ data:
     clp.s3-end-point=https://s3.{{ .s3_config.region_code }}.amazonaws.com
     {{- end }}
     clp.s3-secret-access-key={{ .s3_config.aws_authentication.credentials.secret_access_key }}
-    {{- end }}{{/* if eq .type "s3" */}}
+    {{- end }}{{/* if eq $.Values.global.archiveOutputStorageType "s3" */}}
     {{- end }}{{/* with $.Values.clpConfig.archive_output.storage */}}
 
   presto-worker-config-config.properties: |
