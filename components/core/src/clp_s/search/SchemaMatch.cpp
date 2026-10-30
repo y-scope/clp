@@ -418,25 +418,7 @@ auto SchemaMatch::resolve_pure_wildcard(
         return resolve_pure_wildcard_by_node_type(column, expr);
     }
 
-    std::set<mpt_node_id_t> decomposable_node_ids;
-    if (auto const subtree_root_node_id{
-                m_tree->get_object_subtree_node_id_for_namespace(column->get_namespace())
-        };
-        constants::cRootNodeId != subtree_root_node_id)
-    {
-        std::vector<mpt_node_id_t> work_list{subtree_root_node_id};
-        while (false == work_list.empty()) {
-            auto const node_id{work_list.back()};
-            work_list.pop_back();
-            auto const& node{m_tree->get_node(node_id)};
-            if (node.is_decomposable()) {
-                decomposable_node_ids.emplace(node_id);
-            }
-            for (auto const child_id : node.get_children_ids()) {
-                work_list.push_back(child_id);
-            }
-        }
-    }
+    auto const decomposable_node_ids{collect_pure_wildcard_decomposable_node_ids(*column)};
     if (decomposable_node_ids.empty()) {
         if (column->is_shape_query()) {
             return nullptr;
@@ -460,25 +442,81 @@ auto SchemaMatch::resolve_pure_wildcard_by_node_type(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         std::shared_ptr<ast::Expression> const& expr
 ) const -> std::shared_ptr<ast::Expression> {
-    // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
-    // namespaces.
-    // TODO: consider removing this imprecise loop when we resolve issue #907.
-    bool const excludes_decomposable_nodes{column->excludes_decomposable_nodes()};
-    bool const matched{
-            std::ranges::any_of(m_tree->get_nodes(), [&](SchemaNode const& node) -> bool {
-                if (excludes_decomposable_nodes && node.is_decomposable()) {
-                    return false;
-                }
-                return column->matches_type(SchemaNode::node_to_literal_type(node.get_type()));
-            })
-    };
-    if (matched) {
+    // TODO: This check is imprecise because it is archive-wide: the column is accepted when some
+    // node anywhere in the selected subtrees has a matching type, without narrowing the schemas it
+    // can match to those containing such a node. Consider removing it when we resolve issue #907
+    // (pruning a pure wildcard that expands to no column of a schema during evaluation).
+    if (pure_wildcard_matches_any_node_type(*column)) {
         return expr;
     }
     if (dynamic_cast<FilterExpr const&>(*expr).is_inverted()) {
         return EmptyExpr::create_constant(true, expr->get_parent());
     }
     return nullptr;
+}
+
+auto SchemaMatch::pure_wildcard_matches_any_node_type(ast::ColumnDescriptor const& column) const
+        -> bool {
+    bool const excludes_decomposable_nodes{column.excludes_decomposable_nodes()};
+    return std::ranges::any_of(
+            select_pure_wildcard_subtree_roots(column),
+            [&](mpt_node_id_t const subtree_root_node_id) -> bool {
+                return walk_subtree(subtree_root_node_id, [&](SchemaNode const& node) -> bool {
+                    if (excludes_decomposable_nodes && node.is_decomposable()) {
+                        return false;
+                    }
+                    return column.matches_type(SchemaNode::node_to_literal_type(node.get_type()));
+                });
+            }
+    );
+}
+
+auto SchemaMatch::collect_pure_wildcard_decomposable_node_ids(
+        ast::ColumnDescriptor const& column
+) const -> std::set<mpt_node_id_t> {
+    std::set<mpt_node_id_t> decomposable_node_ids;
+    for (auto const subtree_root_node_id : select_pure_wildcard_subtree_roots(column)) {
+        walk_subtree(subtree_root_node_id, [&](SchemaNode const& node) -> bool {
+            if (node.is_decomposable()) {
+                decomposable_node_ids.emplace(node.get_id());
+            }
+            return false;
+        });
+    }
+    return decomposable_node_ids;
+}
+
+auto SchemaMatch::select_pure_wildcard_subtree_roots(ast::ColumnDescriptor const& column) const
+        -> std::vector<mpt_node_id_t> {
+    // TODO: consider making pure wildcard resolution (and dynamic wildcard expansion in general)
+    // respect namespaces. Ignoring them keeps a query against every field of a dataset with
+    // several namespaces easy to write.
+    return select_subtree_roots(column.get_subtree_type(), std::nullopt);
+}
+
+auto SchemaMatch::select_subtree_roots(
+        std::optional<std::string> const& subtree_type,
+        std::optional<std::string_view> required_namespace
+) const -> std::vector<mpt_node_id_t> {
+    std::optional<NodeType> required_type;
+    if (subtree_type.has_value()) {
+        required_type = get_subtree_node_type(subtree_type.value());
+    }
+    std::vector<mpt_node_id_t> subtree_root_node_ids;
+    for (auto const& [namespace_and_type, subtree_root_node_id] : m_tree->get_subtrees()) {
+        auto const& [subtree_namespace, type]{namespace_and_type};
+        if (required_namespace.has_value() && required_namespace.value() != subtree_namespace) {
+            continue;
+        }
+        bool const type_selected{
+                required_type.has_value() ? required_type.value() == type
+                                          : NodeType::Metadata != type
+        };
+        if (type_selected) {
+            subtree_root_node_ids.push_back(subtree_root_node_id);
+        }
+    }
+    return subtree_root_node_ids;
 }
 
 auto SchemaMatch::populate_column_mapping(
@@ -492,31 +530,11 @@ auto SchemaMatch::populate_column_mapping(
     column->resolved_nodes().wildcard_node_ids.clear();
     bool matched_node{false};
     std::set<mpt_node_id_t> leaf_node_ids;
-    auto resolve_against_subtree{[&](SchemaNode const& root_node) -> void {
-        for (auto const child_node_id : root_node.get_children_ids()) {
+    for (auto const subtree_root_node_id :
+         select_subtree_roots(column->get_subtree_type(), column->get_namespace()))
+    {
+        for (auto const child_node_id : m_tree->get_node(subtree_root_node_id).get_children_ids()) {
             matched_node |= populate_column_mapping(column, child_node_id, leaf_node_ids);
-        }
-    }};
-
-    if (auto const& subtree_type{column->get_subtree_type()}; subtree_type.has_value()) {
-        // Resolve against the subtree with matching namespace and type if it exists.
-        auto const node_type{get_subtree_node_type(subtree_type.value())};
-        if (auto const subtree_root_node_id
-            = m_tree->get_subtree_node_id(column->get_namespace(), node_type);
-            -1 != subtree_root_node_id)
-        {
-            resolve_against_subtree(m_tree->get_node(subtree_root_node_id));
-        }
-    } else {
-        // Resolve against every subtree that has matching namespaces except for the
-        // `NodeType::Metadata` subtree.
-        for (auto const& [namespace_type_pair, subtree_root_node_id] : m_tree->get_subtrees()) {
-            if (NodeType::Metadata == namespace_type_pair.second
-                || namespace_type_pair.first != column->get_namespace())
-            {
-                continue;
-            }
-            resolve_against_subtree(m_tree->get_node(subtree_root_node_id));
         }
     }
 

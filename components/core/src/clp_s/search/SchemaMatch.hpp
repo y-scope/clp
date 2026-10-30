@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_SCHEMAMATCH_HPP
 #define CLP_S_SEARCH_SCHEMAMATCH_HPP
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -8,6 +9,7 @@
 #include <optional>
 #include <set>
 #include <span>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
@@ -421,8 +423,8 @@ private:
      * resolved filter per decomposable node.
      * @param column The pure wildcard column.
      * @param filter The non-inverted filter.
-     * @param decomposable_node_ids Every decomposable node in `column`'s namespace. Must be
-     * non-empty.
+     * @param decomposable_node_ids Every decomposable node `column` may expand over (see
+     * `collect_pure_wildcard_decomposable_node_ids`). Must be non-empty.
      * @return The expanded expression, or nullptr if no schema can match.
      */
     [[nodiscard]] auto build_pure_wildcard_expansion(
@@ -438,8 +440,8 @@ private:
      * schema would blow up under OrOfAndForm.
      * @param column The pure wildcard column.
      * @param filter The inverted filter.
-     * @param decomposable_node_ids Every decomposable node in `column`'s namespace. Must be
-     * non-empty.
+     * @param decomposable_node_ids Every decomposable node `column` may expand over (see
+     * `collect_pure_wildcard_decomposable_node_ids`). Must be non-empty.
      * @return The expanded expression, or nullptr if no schema can match.
      */
     [[nodiscard]] auto build_negated_pure_wildcard_expansion(
@@ -521,8 +523,8 @@ private:
      * Handles the special case of a pure wildcard column (`*`). An existence filter on an
      * unrestricted `*` is left unchanged, since it doesn't depend on any column (see
      * `find_pure_wildcard_candidate_schemas`). Otherwise, since a pure wildcard has no MPT node of
-     * its own, the object subtree of `column`'s namespace is walked to collect every decomposable
-     * node:
+     * its own, the subtrees it may expand over (see `select_pure_wildcard_subtree_roots`) are
+     * walked to collect every decomposable node:
      * - If the filter is expandable over decomposable nodes and such nodes exist, it is rewritten
      *   into an expression with one filter per node plus a non-decomposable wildcard filter over
      *   every other column type (or `EmptyExpr` if no schema can match).
@@ -540,8 +542,9 @@ private:
 
     /**
      * Resolves a pure wildcard by checking that at least one MPT node has a type the column can
-     * match. If the filter is inverted and no node type matches, nothing can satisfy it, so its
-     * negation holds for every record and the filter is rewritten to always match.
+     * match (see `pure_wildcard_matches_any_node_type`). If the filter is inverted and no node type
+     * matches, nothing can satisfy it, so its negation holds for every record and the filter is
+     * rewritten to always match.
      * @param column The pure wildcard column.
      * @param expr The FilterExpr containing `column`.
      * @return `expr` if some node type matched, an inverted (always-true) `EmptyExpr` if none did
@@ -551,6 +554,73 @@ private:
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             std::shared_ptr<ast::Expression> const& expr
     ) const -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Determines whether some MPT node in the subtrees `column` may expand over (see
+     * `select_pure_wildcard_subtree_roots`) has a type `column` can match. Decomposable nodes are
+     * skipped when `column` excludes them.
+     * @param column The pure wildcard column.
+     * @return Whether such a node exists.
+     */
+    [[nodiscard]] auto pure_wildcard_matches_any_node_type(
+            ast::ColumnDescriptor const& column
+    ) const -> bool;
+
+    /**
+     * Collects every decomposable node in the subtrees `column` may expand over (see
+     * `select_pure_wildcard_subtree_roots`).
+     * @param column The pure wildcard column.
+     * @return The decomposable nodes' IDs.
+     */
+    [[nodiscard]] auto collect_pure_wildcard_decomposable_node_ids(
+            ast::ColumnDescriptor const& column
+    ) const -> std::set<mpt_node_id_t>;
+
+    /**
+     * Selects the subtrees a pure wildcard column may expand over: those matching `column`'s
+     * subtree type if it has one, and otherwise every subtree except the Metadata subtree. Unlike
+     * other columns, a pure wildcard ignores its namespace (see `select_subtree_roots`).
+     * @param column The pure wildcard column.
+     * @return The selected subtrees' root node IDs.
+     */
+    [[nodiscard]] auto select_pure_wildcard_subtree_roots(ast::ColumnDescriptor const& column) const
+            -> std::vector<mpt_node_id_t>;
+
+    /**
+     * Selects the subtrees of the MPT a column is resolved against.
+     * @param subtree_type The column's subtree type. When set, only subtrees of the matching
+     * `NodeType` are selected; otherwise every subtree except the Metadata subtree is.
+     * @param required_namespace When set, only subtrees in this namespace are selected.
+     * @return The selected subtrees' root node IDs.
+     */
+    [[nodiscard]] auto select_subtree_roots(
+            std::optional<std::string> const& subtree_type,
+            std::optional<std::string_view> required_namespace
+    ) const -> std::vector<mpt_node_id_t>;
+
+    /**
+     * Walks the subtree rooted at `subtree_root_node_id` (the root included), invoking `visitor`
+     * on each node until it asks to stop.
+     * @param subtree_root_node_id
+     * @param visitor Invoked on each node; returning true stops the walk.
+     * @return Whether `visitor` stopped the walk.
+     */
+    auto walk_subtree(
+            mpt_node_id_t subtree_root_node_id,
+            std::predicate<SchemaNode const&> auto const& visitor
+    ) const -> bool {
+        std::vector<mpt_node_id_t> work_list{subtree_root_node_id};
+        while (false == work_list.empty()) {
+            auto const& node{m_tree->get_node(work_list.back())};
+            work_list.pop_back();
+            if (visitor(node)) {
+                return true;
+            }
+            auto const& children_ids{node.get_children_ids()};
+            work_list.insert(work_list.end(), children_ids.begin(), children_ids.end());
+        }
+        return false;
+    }
 
     /**
      * Expands a filter on a column with unresolved wildcard tokens over the MPT nodes the column
@@ -608,10 +678,8 @@ private:
     ) -> bool;
 
     /**
-     * Resolves a single column against the MPT, choosing which subtree root(s) to start
-     * from. If the column has an explicit subtree type (e.g. `metadata`), only that subtree is
-     * searched; otherwise every subtree matching the column's namespace is searched (except the
-     * Metadata subtree).
+     * Resolves a single column against the MPT, starting from the roots of the subtrees in the
+     * column's namespace that match its subtree type (see `select_subtree_roots`).
      *
      * A fully resolved column may match several same-named leaf nodes of different types. If none
      * is decomposable, every match is recorded in `m_column_to_descriptor`. Otherwise `expr` is
