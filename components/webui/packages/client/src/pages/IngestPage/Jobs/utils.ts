@@ -1,10 +1,9 @@
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import type {CompressionMetadataDecoded} from "@webui/common/schemas/compress-metadata";
-import {
-    type ClpIoConfig,
-    type ClpIoFsInputConfig,
-    CompressionJobInputType,
-} from "@webui/common/schemas/compression";
+import type {
+    CompressionMetadata,
+    CompressionMetadataDisplayConfig,
+} from "@webui/common/schemas/compress-metadata";
+import {CompressionJobInputType} from "@webui/common/schemas/compression";
 import dayjs from "dayjs";
 
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
@@ -34,22 +33,20 @@ const stripPrefix = (path: string, prefix: string): string => {
  * @param clpIoConfig
  * @return
  */
-const extractPathsFromInput = (clpIoConfig: ClpIoConfig): string[] => {
+const extractPathsFromInput = (clpIoConfig: CompressionMetadataDisplayConfig): string[] => {
     const {input} = clpIoConfig;
 
     if (CompressionJobInputType.FS === input.type ||
 
         // Fallback for legacy/partial payloads that include paths but omit the FS type
-        "paths_to_compress" in input) {
-        const clpIoFsInputConfig = input as ClpIoFsInputConfig;
-        const prefixToRemove = clpIoFsInputConfig.path_prefix_to_remove;
+        "undefined" !== typeof input.paths_to_compress) {
+        const paths = input.paths_to_compress ?? [];
+        const prefixToRemove = input.path_prefix_to_remove;
         if (prefixToRemove) {
-            return clpIoFsInputConfig.paths_to_compress.map(
-                (path) => stripPrefix(path, prefixToRemove)
-            );
+            return paths.map((path) => stripPrefix(path, prefixToRemove));
         }
 
-        return clpIoFsInputConfig.paths_to_compress;
+        return paths;
     }
 
     // eslint-disable-next-line no-warning-comments
@@ -64,12 +61,12 @@ const extractPathsFromInput = (clpIoConfig: ClpIoConfig): string[] => {
  * @param clpIoConfig
  * @return
  */
-const extractDataFromIoConfig = (clpIoConfig: ClpIoConfig): {
+const extractDataFromIoConfig = (clpIoConfig: CompressionMetadataDisplayConfig): {
     dataset: string | null;
     paths: string[];
 } => {
     const dataset = CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE ?
-        clpIoConfig.input.dataset :
+        clpIoConfig.input.dataset ?? null :
         null;
     const paths = extractPathsFromInput(clpIoConfig);
     return {dataset, paths};
@@ -96,8 +93,8 @@ const mapCompressionJobResponseToTableData = ({
     start_time: startTime,
     status,
     uncompressed_size: uncompressedSize,
-}: CompressionMetadataDecoded): JobData => {
-    const {dataset, paths} = extractDataFromIoConfig(clpIoConfig as ClpIoConfig);
+}: CompressionMetadata): JobData => {
+    const {dataset, paths} = extractDataFromIoConfig(clpIoConfig);
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";

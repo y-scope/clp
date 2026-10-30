@@ -1,50 +1,48 @@
-import {QUERY_JOB_TYPE} from "@webui/common/query";
+import type {components} from "@webui/api-client";
 import {Nullable} from "@webui/common/utility-types";
-import axios, {
-    AxiosProgressEvent,
-    AxiosResponse,
-} from "axios";
 
-import {ExtractStreamResp} from "../../typings/query";
+import {apiClient} from "../search";
+import {createApiError} from "../utils";
 
+
+type StreamFileMetadata = components["schemas"]["StreamFileMetadata"];
 
 interface SubmitExtractStreamJobProps {
+    archiveId: string;
     dataset: Nullable<string>;
-    extractJobType: QUERY_JOB_TYPE;
-    streamId: string;
     logEventIdx: number;
-    onUploadProgress: (progressEvent: AxiosProgressEvent) => void;
 }
 
 /**
- * Submits a job to extract the stream that contains a given log event. The stream is extracted
- * either as a CLP IR or a JSON Lines file.
+ * Submits a job to extract the JSON Lines stream of the given archive that contains a given log
+ * event.
  *
  * @param props
+ * @param props.archiveId
  * @param props.dataset
- * @param props.extractJobType
- * @param props.streamId
  * @param props.logEventIdx
- * @param props.onUploadProgress
- * @return The API response.
+ * @return The metadata of the extracted stream file.
+ * @throws {Error} If the request fails or the API server returns an unexpected response.
  */
 const submitExtractStreamJob = async ({
+    archiveId,
     dataset,
-    extractJobType,
-    streamId,
     logEventIdx,
-    onUploadProgress,
-}: SubmitExtractStreamJobProps): Promise<AxiosResponse<ExtractStreamResp>> => {
-    return await axios.post(
-        "/api/stream-files/extract",
-        {
-            dataset,
-            extractJobType,
-            streamId,
-            logEventIdx,
+}: SubmitExtractStreamJobProps): Promise<StreamFileMetadata> => {
+    // eslint-disable-next-line new-cap
+    const {data, error, response} = await apiClient.POST("/stream_files/extract", {
+        body: {
+            archive_id: archiveId,
+            dataset: dataset,
+            log_event_idx: logEventIdx,
         },
-        {onUploadProgress}
-    );
+    });
+
+    if ("undefined" === typeof data) {
+        throw createApiError("Failed to extract stream file", response, error);
+    }
+
+    return data;
 };
 
 export {submitExtractStreamJob};

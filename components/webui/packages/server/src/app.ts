@@ -64,7 +64,8 @@ export default async function serviceApp (
         );
 
         if ("undefined" !== typeof err.statusCode &&
-            constants.HTTP_STATUS_INTERNAL_SERVER_ERROR > err.statusCode
+            (constants.HTTP_STATUS_INTERNAL_SERVER_ERROR > err.statusCode ||
+                constants.HTTP_STATUS_GATEWAY_TIMEOUT === err.statusCode)
         ) {
             reply.code(err.statusCode);
 
