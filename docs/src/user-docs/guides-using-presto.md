@@ -100,6 +100,15 @@ When using Kubernetes, Presto worker scheduling can be configured using the
 Kubernetes deployment guide for details.
 :::
 
+### Images
+
+The chart runs Presto coordinator and worker images that don't include CLP's connector, and installs
+the [CLP Presto connector][clp-presto-connector] into them when their pods start. These images are
+set using `image.prestoCoordinator`, `image.prestoWorker`, and `image.clpConnector`. Each accepts a
+`tag`, a `digest`, or both; when both are set, the digest selects the image. The default images are
+multi-architecture (`linux/amd64` and `linux/arm64`). The coordinator and worker must run the same
+Presto version, which the connector must support.
+
 ## Docker Compose
 
 ### Requirements
@@ -319,6 +328,7 @@ The Presto CLP integration has the following limitations at present:
 These limitations will be addressed in a future release of the Presto integration.
 
 [clp-connector-docs]: https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
+[clp-presto-connector]: https://github.com/y-scope/clp-plugin-presto-connector
 [clp-releases]: https://github.com/y-scope/clp/releases
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
