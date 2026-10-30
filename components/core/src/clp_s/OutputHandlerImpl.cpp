@@ -43,6 +43,9 @@ using std::string_view;
 
 namespace clp_s {
 namespace {
+// The acknowledgement is the msgpack encoding of `[num_results]`, with the count always encoded as
+// a uint64, so it's always 10 bytes: a fixarray header of length 1, the uint64 marker, and the
+// count in big-endian.
 constexpr uint8_t cAckArrayHeader{0x91};
 constexpr uint8_t cAckUint64Marker{0xcf};
 constexpr size_t cAckPrefixSize{2};
