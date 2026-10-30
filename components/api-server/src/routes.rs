@@ -11,6 +11,7 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::logs_input::LogsInputError;
 use futures::Stream;
 use futures::StreamExt;
@@ -212,7 +213,7 @@ struct QueryResultsParams {
     path = "/query_results/{query_job_id}",
     description = "Streams the results of a previously submitted query as Server-Sent Events \
         (SSE).",
-    params(QueryResultsParams),
+    params(QueryResultsParams, ("query_job_id" = u64, Path)),
     responses(
         (
             status = OK,
@@ -231,7 +232,7 @@ struct QueryResultsParams {
 )]
 async fn query_results(
     State(client): State<Client>,
-    Path(query_job_id): Path<u64>,
+    Path(query_job_id): Path<QueryJobId>,
     Query(params): Query<QueryResultsParams>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
     tracing::info!("Fetching results for query job ID: {}", query_job_id);
@@ -271,6 +272,7 @@ async fn query_results(
     delete,
     path = "/query/{query_job_id}",
     description = "Cancels a previously submitted query job.",
+    params(("query_job_id" = u64, Path)),
     responses(
         (
             status = OK,
@@ -289,7 +291,7 @@ async fn query_results(
 )]
 async fn cancel_query(
     State(client): State<Client>,
-    Path(query_job_id): Path<u64>,
+    Path(query_job_id): Path<QueryJobId>,
 ) -> Result<StatusCode, HandlerError> {
     tracing::info!("Cancelling query job ID: {}", query_job_id);
     match client.cancel_query_job(query_job_id).await {

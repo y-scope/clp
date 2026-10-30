@@ -16,7 +16,7 @@ pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 
 pub const QUERY_TASKS_TABLE_NAME: &str = "query_tasks";
 
-pub type QueryJobId = i32;
+pub type QueryJobId = u64;
 
 /// Mirror of `job_orchestration.scheduler.job_config.AggregationConfig`. Must be kept in sync.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]

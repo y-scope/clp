@@ -64,7 +64,7 @@ struct QuerySpeedParams {
     #[param(value_type = Option<String>)]
     datasets: Vec<DatasetName>,
     /// The query job ID whose scan speed should be computed.
-    #[param(value_type = i32)]
+    #[param(value_type = u64)]
     query_job_id: QueryJobId,
 }
 

@@ -166,7 +166,7 @@ fn build_query_task_graph(
             },
             execution_policy: Some(execution_policy),
             inputs: vec![
-                DataTypeDescriptor::Value(ValueTypeDescriptor::int32()),
+                DataTypeDescriptor::Value(ValueTypeDescriptor::int64()),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
                     "ClpSQueryOption",
                 )?),
