@@ -10,8 +10,7 @@ tasks:
       LOG_INGESTOR_BUCKET: "clp-log-ingestor-test-bucket"
       LOG_INGESTOR_QUEUE: "clp-log-ingestor-test-queue"
       LOCALSTACK_CONTAINER_NAME:
-        # Normalize UUID casing: macOS generates uppercase while Linux generates lowercase.
-        sh: "uuidgen | tr '[:upper:]' '[:lower:]' | sed 's/^/clp-localstack-rust-/'"
+        sh: "uv run python -c \"import uuid; print('clp-localstack-rust-' + str(uuid.uuid4()))\""
       LOCALSTACK_PORT:
         sh: "tools/scripts/localstack/get-free-port.py"
     dir: "{{.ROOT_DIR}}"
