@@ -4,6 +4,7 @@ use const_format::formatcp;
 
 use crate::job_config::Cancellability;
 use crate::job_config::QUERY_JOBS_TABLE_NAME;
+use crate::job_config::QueryJobId;
 use crate::job_config::QueryJobStatus;
 use crate::job_config::QueryJobType;
 use crate::job_config::SearchJobConfig;
@@ -23,7 +24,7 @@ use crate::job_config::SearchJobConfig;
 pub async fn submit(
     db_pool: &sqlx::MySqlPool,
     search_job_config: &SearchJobConfig,
-) -> Result<u64, crate::Error> {
+) -> Result<QueryJobId, crate::Error> {
     const QUERY: &str =
         formatcp!("INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (?, ?)");
 
@@ -53,7 +54,7 @@ pub async fn submit(
 /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
 pub async fn request_cancellation(
     db_pool: &sqlx::MySqlPool,
-    query_job_id: u64,
+    query_job_id: QueryJobId,
 ) -> Result<Option<Cancellability>, crate::Error> {
     const SELECT_QUERY: &str =
         formatcp!("SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ? FOR UPDATE");
@@ -94,7 +95,7 @@ pub async fn request_cancellation(
 /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
 pub async fn get_status(
     db_pool: &sqlx::MySqlPool,
-    query_job_id: u64,
+    query_job_id: QueryJobId,
 ) -> Result<Option<QueryJobStatus>, crate::Error> {
     const QUERY: &str = formatcp!("SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?");
 

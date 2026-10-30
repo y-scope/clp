@@ -131,7 +131,7 @@ def main(argv):
             scheduling_db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{QUERY_JOBS_TABLE_NAME}` (
-                    `id` INT NOT NULL AUTO_INCREMENT,
+                    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                     `type` INT NOT NULL,
                     `status` INT NOT NULL DEFAULT '{QueryJobStatus.PENDING}',
                     `status_msg` TEXT NULL DEFAULT NULL,
@@ -159,7 +159,7 @@ def main(argv):
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
-                    `job_id` INT NOT NULL,
+                    `job_id` BIGINT UNSIGNED NOT NULL,
                     `archive_id` VARCHAR(255) NULL DEFAULT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `job_id` (`job_id`) USING BTREE,
