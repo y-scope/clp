@@ -10,6 +10,11 @@ namespace clp_s::search::ast {
 /**
  * An expression with no sub-expressions that evaluates to a constant: false (the empty set), or
  * true when inverted. Useful for constant propagation and eliminating expressions.
+ *
+ * The query transformations that run before `SchemaMatch` splits the query by schema only ever
+ * produce the false constant, and their callers rely on it: they treat any `EmptyExpr` as a query
+ * that can't match. A true constant is only valid within the per-schema expressions `SchemaMatch`
+ * produces, where `QueryRunner` evaluates it through `as_constant`.
  */
 class EmptyExpr : public Expression {
 public:

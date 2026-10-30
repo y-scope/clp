@@ -449,9 +449,6 @@ auto SchemaMatch::resolve_pure_wildcard_by_node_type(
     if (pure_wildcard_matches_any_node_type(*column)) {
         return expr;
     }
-    if (dynamic_cast<FilterExpr const&>(*expr).is_inverted()) {
-        return EmptyExpr::create_constant(true, expr->get_parent());
-    }
     return nullptr;
 }
 

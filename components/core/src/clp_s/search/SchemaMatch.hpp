@@ -542,13 +542,12 @@ private:
 
     /**
      * Resolves a pure wildcard by checking that at least one MPT node has a type the column can
-     * match (see `pure_wildcard_matches_any_node_type`). If the filter is inverted and no node type
-     * matches, nothing can satisfy it, so its negation holds for every record and the filter is
-     * rewritten to always match.
+     * match (see `pure_wildcard_matches_any_node_type`). If none does, the column matches no node,
+     * whatever the filter's inversion: like any other column that resolves to nothing, the filter
+     * is then resolved as never matching.
      * @param column The pure wildcard column.
      * @param expr The FilterExpr containing `column`.
-     * @return `expr` if some node type matched, an inverted (always-true) `EmptyExpr` if none did
-     * and the filter is inverted, or nullptr if none did and the filter is not inverted.
+     * @return `expr` if some node type matched, or nullptr if none did.
      */
     [[nodiscard]] auto resolve_pure_wildcard_by_node_type(
             std::shared_ptr<ast::ColumnDescriptor> const& column,

@@ -57,6 +57,7 @@ constexpr std::string_view cTestInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestSearchInputFile{"test_search.jsonl"};
 constexpr std::string_view cTestSearchMixedTypesFile{"test_search_mixed_types.jsonl"};
 constexpr std::string_view cTestSearchPureWildcardFile{"test_search_pure_wildcard.jsonl"};
+constexpr std::string_view cTestSearchNoStringsFile{"test_search_no_strings.jsonl"};
 constexpr std::string_view cTestSearchClppOccurrencesFile{"test_search_clpp_occurrences.jsonl"};
 constexpr std::string_view cTestSearchFormattedFloatFile{"test_search_formatted_float.jsonl"};
 constexpr std::string_view cTestSearchFloatTimestampFile{"test_search_float_timestamp.jsonl"};
@@ -922,6 +923,42 @@ TEST_CASE("clp-s-search-pure-wildcard-existence", "[clp-s][search]") {
                     false,
                     single_file_archive,
                     structurize_arrays
+            )
+    );
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
+}
+
+// Pins how a pure wildcard resolves when no node in the archive has a type it can match: the
+// filter never matches, whether or not it is inverted, just like any other column that resolves to
+// no node. In particular `NOT *: "zzz"` must not be resolved as an always-true constant, which an
+// enclosing AND would otherwise drop. Type-matching pure wildcards are included as a control.
+TEST_CASE("clp-s-search-pure-wildcard-without-matching-node-type", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(*: "zzz")aa", {}},
+            {R"aa(NOT *: "zzz")aa", {}},
+            {R"aa(idx: 0 AND NOT *: "zzz")aa", {}},
+            {R"aa(idx: 0 OR NOT *: "zzz")aa", {0}},
+            {R"aa(*: 2.5)aa", {1}},
+            {R"aa(NOT *: 2.5)aa", {0, 2, 3}},
+            {R"aa(*: *)aa", {0, 1, 2, 3}},
+            {R"aa(NOT *: null)aa", {0, 1, 2, 3}},
+    };
+    auto const single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchNoStringsFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    false
             )
     );
 
