@@ -100,6 +100,39 @@ When using Kubernetes, Presto worker scheduling can be configured using the
 Kubernetes deployment guide for details.
 :::
 
+### Archives on S3
+
+When archives are stored on S3 (`clpConfig.archive_output.storage.type: "s3"`), Presto workers read
+them using the archive output's `aws_authentication` setting, whose `type` must be one of:
+
+* `credentials`: The workers use the configured access key.
+* `default`: The workers get credentials from the AWS default credential provider chain. For
+  example, on Amazon EKS, you can give CLP's pods an [IAM role for their service account][irsa]
+  (IRSA) by annotating it:
+
+  ```yaml
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::<account-id>:role/<role-name>"
+  ```
+
+  The role needs permission to read the archives (`s3:GetObject`).
+
+:::{note}
+`default` authentication requires a CLP Presto connector that supports it. The chart's default
+connector doesn't yet, so until it does, set `image.clpConnector` to a connector installer image
+that does.
+:::
+
+### Images
+
+The chart runs Presto coordinator and worker images that don't include CLP's connector, and installs
+the [CLP Presto connector][clp-presto-connector] into them when their pods start. These images are
+set using `image.prestoCoordinator`, `image.prestoWorker`, and `image.clpConnector`. Each accepts a
+`tag`, a `digest`, or both; when both are set, the digest selects the image. The default images are
+multi-architecture (`linux/amd64` and `linux/arm64`). The coordinator and worker must run the same
+Presto version, which the connector must support.
+
 ## Docker Compose
 
 ### Requirements
@@ -319,9 +352,11 @@ The Presto CLP integration has the following limitations at present:
 These limitations will be addressed in a future release of the Presto integration.
 
 [clp-connector-docs]: https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
+[clp-presto-connector]: https://github.com/y-scope/clp-plugin-presto-connector
 [clp-releases]: https://github.com/y-scope/clp/releases
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
+[irsa]: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
 [k8s-deployment]: guides-k8s-deployment.md
 [k8s-scheduling]: guides-k8s-deployment.md#component-scheduling
 [postgresql]: https://zenodo.org/records/10516401
