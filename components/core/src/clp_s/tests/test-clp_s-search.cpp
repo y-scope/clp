@@ -101,13 +101,15 @@ auto search_clpp(
  * @param queries_and_results Queries to run, paired with their expected record indices.
  * @param decomposed_queries_and_results Queries that require decomposition support, paired
  * with their expected record indices.
+ * @param structurize_arrays Whether to compress with `--structurize-arrays`.
  */
 auto compress_and_search_clpp(
         std::string const& input_file,
         bool single_file_archive,
         std::vector<std::pair<std::string, std::vector<int64_t>>> const& queries_and_results,
         std::vector<std::pair<std::string, std::vector<int64_t>>> const&
-                decomposed_queries_and_results
+                decomposed_queries_and_results,
+        bool structurize_arrays = false
 ) -> void;
 
 /**
@@ -314,9 +316,10 @@ auto compress_and_search_clpp(
         bool single_file_archive,
         std::vector<std::pair<std::string, std::vector<int64_t>>> const& queries_and_results,
         std::vector<std::pair<std::string, std::vector<int64_t>>> const&
-                decomposed_queries_and_results
+                decomposed_queries_and_results,
+        bool structurize_arrays
 ) -> void {
-    CAPTURE(single_file_archive);
+    CAPTURE(single_file_archive, structurize_arrays);
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
                     input_file,
@@ -324,7 +327,7 @@ auto compress_and_search_clpp(
                     std::string{cTestIdxKey},
                     false,
                     single_file_archive,
-                    false,
+                    structurize_arrays,
                     get_heuristic_parsing_spec_path()
             )
     );
@@ -1106,6 +1109,48 @@ TEST_CASE("clp-s-search-clpp-mixed-type-columns", "[clp-s][search][clpp]") {
             single_file_archive,
             queries_and_results,
             decomposed_queries_and_results
+    );
+}
+
+// With `--structurize-arrays`, a key within an array's elements gets one MPT node per value type,
+// and in the clpp flavour one of them can be a StructurizedText (`"a b 123"` contains a delimiter),
+// alongside an UnstructurizedText (`"plain"`, `"x"`) and an Integer. A filter whose column matches
+// a decomposable node is expanded over every matched node by `build_multi_node_filter`, so one
+// schema can hold several of the expanded nodes. A value filter holds if any node's value matches,
+// and an inverted value filter (which still requires the key to exist) holds only if no node's
+// value matches, i.e. the per-node negations are AND-ed within each schema rather than OR-ed.
+TEST_CASE("clp-s-search-clpp-structurized-array-mixed-types", "[clp-s][search][clpp]") {
+    constexpr std::string_view cInputFile{"test_search_clpp_structurized_array_mixed_types.jsonl"};
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(arr.k: plain)aa", {0, 1, 2}},
+            {R"aa(arr.k: x)aa", {3, 4}},
+            {R"aa(arr.k: 5)aa", {3, 4, 5}},
+            {R"aa(arr.k: *)aa", {0, 1, 2, 3, 4, 5}},
+            {R"aa(NOT arr.k: *)aa", {6}},
+            {R"aa(shape(arr.k): *)aa", {0, 1, 5}},
+            {R"aa(NOT shape(arr.k): *)aa", {2, 3, 4, 6}},
+            {R"aa(NOT arr.k: plain)aa", {3, 4, 5}},
+            {R"aa(NOT arr.k: x)aa", {0, 1, 2, 5}},
+            {R"aa(NOT arr.k: 5)aa", {0, 1, 2}},
+            {R"aa(NOT arr.k: nomatch)aa", {0, 1, 2, 3, 4, 5}},
+            {R"aa(NOT (arr.k: plain OR arr.k: 5))aa", {}},
+            {R"aa(NOT (arr.k: x OR arr.k: 5))aa", {0, 1, 2}},
+    };
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const decomposed_queries_and_results{
+            {R"aa(arr.k: "a b 123")aa", {0, 1, 5}},
+            {R"aa(arr.k: "a b *")aa", {0, 1, 5}},
+            {R"aa(NOT arr.k: "a b 123")aa", {2, 3, 4}},
+            {R"aa(NOT arr.k: "a b *")aa", {2, 3, 4}},
+            {R"aa(NOT arr.k: "a b 999")aa", {0, 1, 2, 3, 4, 5}},
+    };
+    auto const single_file_archive = GENERATE(true, false);
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+    compress_and_search_clpp(
+            get_test_input_local_path(cInputFile),
+            single_file_archive,
+            queries_and_results,
+            decomposed_queries_and_results,
+            true
     );
 }
 

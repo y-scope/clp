@@ -262,9 +262,10 @@ auto operand_as_string(ast::FilterExpr const& filter) -> std::optional<std::stri
 }
 
 auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool {
-    auto const op{filter.get_operation()};
-    bool const is_existence_filter{FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op};
-    return is_existence_filter && ((FilterOperation::NEXISTS == op) != filter.is_inverted());
+    if (filter.is_inverted()) {
+        return FilterOperation::EXISTS == filter.get_operation();
+    }
+    return FilterOperation::NEXISTS == filter.get_operation();
 }
 
 auto filter_holds_at_every_node(ast::FilterExpr const& filter) -> bool {
@@ -396,12 +397,9 @@ auto SchemaMatch::expand_unresolved_column(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter
 ) -> std::shared_ptr<Expression> {
-    auto const& node_ids{column.resolved_nodes().wildcard_node_ids};
-    auto expanded{build_multi_node_filter(
-            column,
-            std::vector<mpt_node_id_t>{node_ids.begin(), node_ids.end()},
-            filter
-    )};
+    auto expanded{
+            build_multi_node_filter(column, column.resolved_nodes().wildcard_node_ids, filter)
+    };
     if (nullptr == expanded) {
         return EmptyExpr::create(filter.get_parent());
     }
@@ -420,7 +418,7 @@ auto SchemaMatch::resolve_pure_wildcard(
         return resolve_pure_wildcard_by_node_type(column, expr);
     }
 
-    std::vector<mpt_node_id_t> decomposable_node_ids;
+    std::set<mpt_node_id_t> decomposable_node_ids;
     if (auto const subtree_root_node_id{
                 m_tree->get_object_subtree_node_id_for_namespace(column->get_namespace())
         };
@@ -432,7 +430,7 @@ auto SchemaMatch::resolve_pure_wildcard(
             work_list.pop_back();
             auto const& node{m_tree->get_node(node_id)};
             if (node.is_decomposable()) {
-                decomposable_node_ids.push_back(node_id);
+                decomposable_node_ids.emplace(node_id);
             }
             for (auto const child_id : node.get_children_ids()) {
                 work_list.push_back(child_id);
@@ -493,7 +491,7 @@ auto SchemaMatch::populate_column_mapping(
 
     column->resolved_nodes().wildcard_node_ids.clear();
     bool matched_node{false};
-    std::vector<mpt_node_id_t> leaf_node_ids;
+    std::set<mpt_node_id_t> leaf_node_ids;
     auto resolve_against_subtree{[&](SchemaNode const& root_node) -> void {
         for (auto const child_node_id : root_node.get_children_ids()) {
             matched_node |= populate_column_mapping(column, child_node_id, leaf_node_ids);
@@ -557,9 +555,13 @@ auto SchemaMatch::record_column_at_node(
 
 auto SchemaMatch::build_multi_node_filter(
         ast::ColumnDescriptor const& column,
-        std::vector<mpt_node_id_t> const& node_ids,
+        std::set<mpt_node_id_t> const& node_ids,
         ast::FilterExpr const& filter
 ) -> std::shared_ptr<ast::Expression> {
+    auto const op{filter.get_operation()};
+    if (filter.is_inverted() && FilterOperation::EXISTS != op && FilterOperation::NEXISTS != op) {
+        return build_negated_multi_node_filter(column, node_ids, filter);
+    }
     bool const holds_when_absent{existence_filter_holds_when_absent(filter)};
     std::shared_ptr<Expression> combined{holds_when_absent ? AndExpr::create() : OrExpr::create()};
     for (auto const node_id : node_ids) {
@@ -578,10 +580,61 @@ auto SchemaMatch::build_multi_node_filter(
     return combined;
 }
 
+auto SchemaMatch::build_negated_multi_node_filter(
+        ast::ColumnDescriptor const& column,
+        std::set<mpt_node_id_t> const& node_ids,
+        ast::FilterExpr const& filter
+) -> std::shared_ptr<ast::Expression> {
+    auto groups{OrExpr::create()};
+    for (auto const& [group_node_ids, schema_ids] : group_schemas_by_node_set(node_ids)) {
+        if (group_node_ids.empty()) {
+            continue;
+        }
+        auto group{AndExpr::create()};
+        group->add_operand(narrow_to_schemas(schema_ids));
+        bool any_node_filter_impossible{false};
+        for (auto const node_id : group_node_ids) {
+            auto negated_node_filter{build_resolved_node_filter(column, node_id, filter)};
+            if (nullptr == negated_node_filter) {
+                any_node_filter_impossible = true;
+                break;
+            }
+            group->add_operand(negated_node_filter);
+        }
+        if (false == any_node_filter_impossible) {
+            groups->add_operand(group);
+        }
+    }
+    if (groups->get_op_list().empty()) {
+        return nullptr;
+    }
+    return groups;
+}
+
+auto SchemaMatch::group_schemas_by_node_set(std::set<mpt_node_id_t> const& node_ids) const
+        -> std::map<std::set<mpt_node_id_t>, std::unordered_set<int32_t>> {
+    std::map<std::set<mpt_node_id_t>, std::unordered_set<int32_t>> schema_ids_by_node_ids;
+    std::set<mpt_node_id_t> contained_node_ids;
+    for (auto const& [schema_id, schema] : *m_schemas) {
+        contained_node_ids.clear();
+        auto const view{schema.get_view()};
+        for (auto const node_id : node_ids) {
+            if (view.any_node_id<true>([node_id](mpt_node_id_t const schema_node_id) -> bool {
+                    return schema_node_id == node_id;
+                }))
+            {
+                contained_node_ids.emplace(node_id);
+            }
+        }
+        schema_ids_by_node_ids[contained_node_ids].emplace(schema_id);
+    }
+    return schema_ids_by_node_ids;
+}
+
 auto SchemaMatch::populate_column_mapping(
         std::shared_ptr<ast::ColumnDescriptor> const& column,
         mpt_node_id_t subtree_root_id,
-        std::vector<mpt_node_id_t>& leaf_node_ids
+        std::set<mpt_node_id_t>& leaf_node_ids
 ) -> bool {
     /**
      * This function is the core of Column Resolution. The general idea is to walk down different
@@ -667,7 +720,7 @@ auto SchemaMatch::populate_column_mapping(
              * {"a": {"b": [{"c": "d"}]}}
              */
             column->add_unresolved_tokens(next_it);
-            leaf_node_ids.push_back(cur_node_id);
+            leaf_node_ids.emplace(cur_node_id);
             matched_node = true;
             continue;
         }
@@ -682,7 +735,7 @@ auto SchemaMatch::populate_column_mapping(
                 continue;
             }
             if (false == column->is_unresolved_descriptor()) {
-                leaf_node_ids.push_back(cur_node_id);
+                leaf_node_ids.emplace(cur_node_id);
             } else {
                 column->resolved_nodes().wildcard_node_ids.emplace(cur_node_id);
                 m_expr_rewritten = true;
@@ -1563,7 +1616,7 @@ auto SchemaMatch::build_non_decomposable_wildcard_filter(
 auto SchemaMatch::build_pure_wildcard_expansion(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter,
-        std::vector<mpt_node_id_t> const& decomposable_node_ids
+        std::set<mpt_node_id_t> const& decomposable_node_ids
 ) -> std::shared_ptr<ast::Expression> {
     auto expansion{OrExpr::create()};
     if (auto non_decomposable_filter{build_non_decomposable_wildcard_filter(column, filter)};
@@ -1585,24 +1638,10 @@ auto SchemaMatch::build_pure_wildcard_expansion(
 auto SchemaMatch::build_negated_pure_wildcard_expansion(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter,
-        std::vector<mpt_node_id_t> const& decomposable_node_ids
+        std::set<mpt_node_id_t> const& decomposable_node_ids
 ) -> std::shared_ptr<ast::Expression> {
-    std::map<int32_t, std::vector<mpt_node_id_t>> node_ids_by_schema;
-    for (auto const& [schema_id, _] : *m_schemas) {
-        node_ids_by_schema.try_emplace(schema_id);
-    }
-    for (auto const node_id : decomposable_node_ids) {
-        for (auto const schema_id : find_schemas_containing_node(node_id)) {
-            node_ids_by_schema.at(schema_id).push_back(node_id);
-        }
-    }
-    std::map<std::vector<mpt_node_id_t>, std::unordered_set<int32_t>> schema_ids_by_node_ids;
-    for (auto& [schema_id, node_ids] : node_ids_by_schema) {
-        schema_ids_by_node_ids[std::move(node_ids)].emplace(schema_id);
-    }
-
     auto groups{ast::OrExpr::create()};
-    for (auto const& [node_ids, schema_ids] : schema_ids_by_node_ids) {
+    for (auto const& [node_ids, schema_ids] : group_schemas_by_node_set(decomposable_node_ids)) {
         if (auto group{build_negated_decomposable_node_group(column, filter, node_ids, schema_ids)};
             nullptr != group)
         {
@@ -1618,7 +1657,7 @@ auto SchemaMatch::build_negated_pure_wildcard_expansion(
 auto SchemaMatch::build_negated_decomposable_node_group(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter,
-        std::vector<mpt_node_id_t> const& node_ids,
+        std::set<mpt_node_id_t> const& node_ids,
         std::unordered_set<int32_t> const& schema_ids
 ) -> std::shared_ptr<ast::Expression> {
     auto group{AndExpr::create()};

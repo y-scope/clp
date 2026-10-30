@@ -373,8 +373,9 @@ private:
      * the nodes matches, so the per-node filters are OR-ed together. When `filter` is an
      * existence filter that holds for events lacking the column (NEXISTS, or inverted EXISTS), it
      * holds only when the column is absent at every node, so the per-node filters are AND-ed
-     * together. (An inverted value filter does not hold for events lacking the column, so it is
-     * OR-ed like any other value filter.)
+     * together. An inverted value filter holds only when no node's value matches, but still
+     * requires the column to exist, so it is built per schema group by
+     * `build_negated_multi_node_filter`.
      * @param column The column that matched `node_ids`.
      * @param node_ids The MPT nodes matched from `column`.
      * @param filter The filter targeting `column`.
@@ -382,9 +383,39 @@ private:
      */
     [[nodiscard]] auto build_multi_node_filter(
             ast::ColumnDescriptor const& column,
-            std::vector<mpt_node_id_t> const& node_ids,
+            std::set<mpt_node_id_t> const& node_ids,
             ast::FilterExpr const& filter
     ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Builds an inverted value filter against every MPT node in `node_ids`. A schema may contain
+     * several of the nodes (e.g. the same key with different types within a structurized array's
+     * elements), and the filter holds for its events only if no node's value matches, so schemas
+     * are grouped by the exact set of nodes they contain (see `group_schemas_by_node_set`) and the
+     * result is an OR over the groups of an AND of a `NarrowSchemasExpr` for the group's schemas
+     * and the negated filter of each of its nodes. Schemas containing none of the nodes are left
+     * out: an inverted value filter does not hold for events lacking the column.
+     * @param column The column that matched `node_ids`.
+     * @param node_ids The MPT nodes matched from `column`.
+     * @param filter The inverted value filter targeting `column`.
+     * @return The combined expression, or nullptr if no schema can match.
+     */
+    [[nodiscard]] auto build_negated_multi_node_filter(
+            ast::ColumnDescriptor const& column,
+            std::set<mpt_node_id_t> const& node_ids,
+            ast::FilterExpr const& filter
+    ) -> std::shared_ptr<ast::Expression>;
+
+    /**
+     * Groups the archive's schemas by the exact subset of `node_ids` they contain, so that one
+     * expression can be built per distinct subset rather than per schema. Every schema is placed
+     * in exactly one group, including the group for schemas containing none of the nodes (keyed
+     * by the empty set).
+     * @param node_ids The MPT nodes to group by.
+     * @return The schemas containing each distinct subset of `node_ids`, keyed by that subset.
+     */
+    [[nodiscard]] auto group_schemas_by_node_set(std::set<mpt_node_id_t> const& node_ids) const
+            -> std::map<std::set<mpt_node_id_t>, std::unordered_set<int32_t>>;
 
     /**
      * Builds the pure wildcard expansion: an OR of the non-decomposable wildcard filter and one
@@ -398,7 +429,7 @@ private:
     [[nodiscard]] auto build_pure_wildcard_expansion(
             ast::ColumnDescriptor const& column,
             ast::FilterExpr const& filter,
-            std::vector<mpt_node_id_t> const& decomposable_node_ids
+            std::set<mpt_node_id_t> const& decomposable_node_ids
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
@@ -415,7 +446,7 @@ private:
     [[nodiscard]] auto build_negated_pure_wildcard_expansion(
             ast::ColumnDescriptor const& column,
             ast::FilterExpr const& filter,
-            std::vector<mpt_node_id_t> const& decomposable_node_ids
+            std::set<mpt_node_id_t> const& decomposable_node_ids
     ) -> std::shared_ptr<ast::Expression>;
 
     /**
@@ -431,7 +462,7 @@ private:
     [[nodiscard]] auto build_negated_decomposable_node_group(
             ast::ColumnDescriptor const& column,
             ast::FilterExpr const& filter,
-            std::vector<mpt_node_id_t> const& node_ids,
+            std::set<mpt_node_id_t> const& node_ids,
             std::unordered_set<int32_t> const& schema_ids
     ) -> std::shared_ptr<ast::Expression>;
 
@@ -556,12 +587,12 @@ private:
      *
      * Wildcard tokens may match any number of intermediate nodes (including zero). Matches are
      * recorded according to the column:
-     * - fully resolved column: each matched leaf node is appended to `leaf_node_ids` for the
-     *   caller to resolve;
+     * - fully resolved column: each matched leaf node is added to `leaf_node_ids` for the caller
+     *   to resolve;
      * - column with wildcard tokens: matches are recorded in the column's resolved nodes, from
      *   which the caller expands the column over the matched nodes;
      * - fully resolved column reaching an unstructured array: the remaining tokens are stored on
-     *   the column and the array node is appended to `leaf_node_ids`.
+     *   the column and the array node is added to `leaf_node_ids`.
      *
      * A bound column skips the walk. It is recorded in `m_column_to_descriptor` so that
      * `populate_schema_mapping` maps it to every schema containing its node, except for a
@@ -574,7 +605,7 @@ private:
     auto populate_column_mapping(
             std::shared_ptr<ast::ColumnDescriptor> const& column,
             mpt_node_id_t subtree_root_id,
-            std::vector<mpt_node_id_t>& leaf_node_ids
+            std::set<mpt_node_id_t>& leaf_node_ids
     ) -> bool;
 
     /**
