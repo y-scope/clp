@@ -1,6 +1,8 @@
 #ifndef CLP_S_JSONFILEITERATOR_HPP
 #define CLP_S_JSONFILEITERATOR_HPP
 
+#include <string>
+
 #include <simdjson.h>
 
 #include "../clp/ReaderInterface.hpp"
@@ -11,7 +13,7 @@ public:
     /**
      * An iterator over an input stream containing json objects. JSON is parsed
      * using simdjson::parse_many. This allows simdjson to efficiently find
-     * delimeters between JSON objects, and if enabled parse JSON ahead of time
+     * delimiters between JSON objects, and if enabled parse JSON ahead of time
      * in another thread while the JSON is being iterated over.
      *
      * The buffer grows automatically if there are JSON objects larger than the buffer size.
@@ -19,11 +21,15 @@ public:
 
      * @param reader the input stream containing JSON
      * @param max_document_size the maximum allowed size of a single document
+     * @param sanitize_invalid_json whether to sanitize invalid JSON (control chars, invalid UTF-8)
+     * @param path optional path to the file being read (used for logging)
      * @param buf_size the initial buffer size
      */
     explicit JsonFileIterator(
             clp::ReaderInterface& reader,
             size_t max_document_size,
+            bool sanitize_invalid_json,
+            std::string path = {},
             size_t buf_size = 1024 * 1024 /* 1 MiB default */
     );
     ~JsonFileIterator();
@@ -41,9 +47,11 @@ public:
     [[nodiscard]] size_t truncated_bytes() const { return m_truncated_bytes; }
 
     /**
-     * @return total number of bytes read from the file
+     * @return total number of bytes read from the file, plus any bytes added by sanitization
      */
-    [[nodiscard]] size_t get_num_bytes_read() const { return m_bytes_read; }
+    [[nodiscard]] size_t get_num_bytes_read() const {
+        return m_bytes_read + m_sanitization_bytes_added;
+    }
 
     /**
      * Note: this method can not be const because checking if a simdjson iterator is at the end
@@ -73,14 +81,40 @@ private:
      */
     [[nodiscard]] size_t skip_whitespace_and_get_truncated_bytes();
 
+    /**
+     * Sanitizes invalid UTF-8 sequences in the buffer by replacing them with U+FFFD,
+     * updates buffer tracking variables, and logs a warning if changes were made.
+     * @return true if sanitization made changes, false otherwise
+     * @note May reallocate m_buf if buffer expansion is needed. m_buf_size is updated accordingly.
+     */
+    [[nodiscard]] bool sanitize_invalid_utf8_and_log();
+
+    /**
+     * Sanitizes unescaped control characters in the buffer by escaping them to \\u00XX format,
+     * updates buffer tracking variables, and logs a warning if changes were made.
+     * @return true if sanitization made changes, false otherwise
+     * @note May reallocate m_buf if buffer expansion is needed. m_buf_size is updated accordingly.
+     */
+    [[nodiscard]] bool sanitize_control_chars_and_log();
+
+    /**
+     * Reinitializes the document stream after buffer sanitization.
+     * Resets iteration state to start from the beginning of the buffer.
+     * @return true on success, false if iteration setup fails (m_error_code is set on failure)
+     */
+    [[nodiscard]] bool reinitialize_document_stream();
+
     size_t m_truncated_bytes{0};
     size_t m_next_document_position{0};
     size_t m_bytes_read{0};
+    size_t m_sanitization_bytes_added{0};
     size_t m_buf_size{0};
     size_t m_buf_occupied{0};
     size_t m_max_document_size{0};
     char* m_buf{nullptr};
     clp::ReaderInterface& m_reader;
+    std::string m_path;
+    bool m_sanitize_invalid_json{false};
     simdjson::ondemand::parser m_parser;
     simdjson::ondemand::document_stream m_stream;
     bool m_eof{false};
