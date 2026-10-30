@@ -63,74 +63,75 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
             return EvaluatedValue::Unknown;
         }
 
-        for (auto range_it = m_timestamp_dict->tokenized_column_to_range_begin();
-             range_it != m_timestamp_dict->tokenized_column_to_range_end();
-             range_it++)
-        {
-            // Don't attempt to evaluate the timestamp index against columns with wildcard tokens.
-            if (column->is_unresolved_descriptor()) {
-                continue;
-            }
+        // Don't attempt to evaluate the timestamp index against columns with wildcard tokens.
+        if (column->is_unresolved_descriptor()) {
+            return EvaluatedValue::Unknown;
+        }
 
-            std::vector<std::string> const& tokens = range_it->first;
-            auto const& descriptors = column->get_descriptor_list();
-            if (tokens.size() != descriptors.size()) {
-                continue;
-            }
+        auto const& timestamp_entry{m_timestamp_dict->get_timestamp_entry()};
+        auto const& timestamp_column{
+                m_timestamp_dict->get_authoritative_timestamp_tokenized_column()
+        };
+        if (false == timestamp_entry.has_value() || false == timestamp_column.has_value()) {
+            return EvaluatedValue::Unknown;
+        }
 
-            bool matched = true;
-            for (size_t i{0ULL}; i < descriptors.size(); ++i) {
-                if (tokens[i] != descriptors[i].get_token()) {
-                    matched = false;
-                    break;
-                }
-            }
-            if (false == matched) {
-                continue;
-            }
+        std::vector<std::string> const& tokens{timestamp_column->first};
+        auto const& descriptors = column->get_descriptor_list();
+        if (tokens.size() != descriptors.size()) {
+            return EvaluatedValue::Unknown;
+        }
 
-            auto const literal{filter->get_operand()};
-            if (nullptr == literal) {
+        if (timestamp_column->second != column->get_namespace()) {
+            return EvaluatedValue::Unknown;
+        }
+
+        for (size_t i{0ULL}; i < descriptors.size(); ++i) {
+            if (tokens.at(i) != descriptors.at(i).get_token()) {
                 return EvaluatedValue::Unknown;
             }
+        }
 
-            EvaluatedValue ret{EvaluatedValue::Unknown};
-            auto const filter_op{filter->get_operation()};
-            int64_t int_literal{};
-            double float_literal{};
-
-            auto const encoding{range_it->second->get_timestamp_encoding()};
-            switch (encoding) {
-                case TimestampEntry::TimestampEncoding::DoubleEpoch:
-                    if (false == literal->as_float(float_literal, filter_op)) {
-                        return EvaluatedValue::Unknown;
-                    }
-                    ret = range_it->second->evaluate_filter(filter_op, float_literal);
-                    break;
-                case TimestampEntry::TimestampEncoding::Epoch:
-                    if (auto const timestamp_literal{
-                                std::dynamic_pointer_cast<TimestampLiteral>(literal)
-                        };
-                        nullptr != timestamp_literal)
-                    {
-                        int_literal = timestamp_literal->as_precision(
-                                TimestampLiteral::Precision::Milliseconds
-                        );
-                    } else if (false == literal->as_int(int_literal, filter_op)) {
-                        return EvaluatedValue::Unknown;
-                    }
-                    ret = range_it->second->evaluate_filter(filter_op, int_literal);
-                    break;
-                default:
-                    return EvaluatedValue::Unknown;
-            }
-
-            if (ret == EvaluatedValue::True) {
-                return filter->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
-            } else if (ret == EvaluatedValue::False) {
-                return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
-            }
+        auto const literal{filter->get_operand()};
+        if (nullptr == literal) {
             return EvaluatedValue::Unknown;
+        }
+
+        EvaluatedValue ret{EvaluatedValue::Unknown};
+        auto const filter_op{filter->get_operation()};
+        int64_t int_literal{};
+        double float_literal{};
+
+        auto const encoding{timestamp_entry->get_timestamp_encoding()};
+        switch (encoding) {
+            case TimestampEntry::TimestampEncoding::DoubleEpoch:
+                if (false == literal->as_float(float_literal, filter_op)) {
+                    return EvaluatedValue::Unknown;
+                }
+                ret = timestamp_entry->evaluate_filter(filter_op, float_literal);
+                break;
+            case TimestampEntry::TimestampEncoding::Epoch:
+                if (auto const timestamp_literal{
+                            std::dynamic_pointer_cast<TimestampLiteral>(literal)
+                    };
+                    nullptr != timestamp_literal)
+                {
+                    int_literal = timestamp_literal->as_precision(
+                            TimestampLiteral::Precision::Milliseconds
+                    );
+                } else if (false == literal->as_int(int_literal, filter_op)) {
+                    return EvaluatedValue::Unknown;
+                }
+                ret = timestamp_entry->evaluate_filter(filter_op, int_literal);
+                break;
+            default:
+                return EvaluatedValue::Unknown;
+        }
+
+        if (ret == EvaluatedValue::True) {
+            return filter->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
+        } else if (ret == EvaluatedValue::False) {
+            return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
         }
         return EvaluatedValue::Unknown;
     } else {

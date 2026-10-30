@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -286,6 +287,17 @@ public:
             m_range_open = false;
         }
         return rc;
+    }
+
+    /**
+     * Closes the time range of the current file split, resetting the accumulated time ranges for
+     * the next file split.
+     * @return An option containing a pair representing the start and end timestamp of the closed
+     * file split as milliseconds since the UNIX epoch.
+     */
+    [[nodiscard]] auto close_current_file_split_time_range()
+            -> std::optional<std::pair<epochtime_t, epochtime_t>> {
+        return m_timestamp_dict.close_current_file_split();
     }
 
 private:
