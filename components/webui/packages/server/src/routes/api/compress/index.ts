@@ -1,6 +1,9 @@
 import {join} from "node:path";
 
-import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
+import {
+    FastifyPluginAsyncTypebox,
+    TypeBoxValidatorCompiler,
+} from "@fastify/type-provider-typebox";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     ClpIoConfig,
@@ -47,6 +50,8 @@ const DEFAULT_COMPRESSION_JOB_CONFIG: ClpIoConfig = Object.freeze({
  */
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const {CompressionJobDbManager} = fastify;
+
+    fastify.setValidatorCompiler(TypeBoxValidatorCompiler);
 
     /**
      * Submits a compression job and initiates the compression process.
