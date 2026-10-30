@@ -1,4 +1,4 @@
-//! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP S3 compression jobs.
+//! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP compression jobs.
 
 use non_empty_string::NonEmptyString;
 use serde::Deserialize;
@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use crate::clp_config::AwsAuthentication;
 use crate::dataset::DatasetName;
+use crate::logs_input::LogsInputPath;
 use crate::types::ArchiveId;
 
 /// `clp-s` tuning and engine options for a compression job.
@@ -17,7 +18,15 @@ pub struct ClpSCompressionOption {
     pub unstructured: bool,
 }
 
-/// Input source for a compression task.
+/// A manifest is the complete explicit list of input entries assigned to one compression task.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "source", rename_all = "snake_case")]
+pub enum CompressionInputSource {
+    S3(S3InputSource),
+    Fs(FsInputSource),
+}
+
+/// A complete explicit list of S3 objects assigned to one compression task.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct S3InputSource {
     pub endpoint_url: Option<NonEmptyString>,
@@ -25,6 +34,16 @@ pub struct S3InputSource {
     pub bucket: NonEmptyString,
     pub aws_authentication: AwsAuthentication,
     pub object_keys: Vec<String>,
+}
+
+/// A complete explicit list of filesystem entries assigned to one compression task.
+///
+/// Paths are relative to the logs-input mount point: `/` denotes that mount point. They are not
+/// container paths; consumers must translate them through the logs-input mount point.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FsInputSource {
+    pub file_paths: Vec<LogsInputPath>,
+    pub empty_directories: Vec<LogsInputPath>,
 }
 
 /// Output of a compression task.
