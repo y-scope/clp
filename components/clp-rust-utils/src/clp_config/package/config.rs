@@ -75,6 +75,7 @@ pub struct SpiderTaskExecutorConfig {
     pub archive_output: ArchiveOutput,
     pub tmp_directory: String,
     pub database: Database,
+    pub results_cache: ResultsCache,
 }
 
 impl SpiderTaskExecutorConfig {
@@ -115,6 +116,7 @@ impl Default for SpiderTaskExecutorConfig {
                 config: FsIngestion::default(),
             },
             database: Database::default(),
+            results_cache: ResultsCache::default(),
             archive_output: ArchiveOutput::default(),
             tmp_directory: "var/tmp".to_owned(),
         }
@@ -863,6 +865,22 @@ mod tests {
             .expect("failed to deserialize `Database` from JSON");
 
         assert_eq!(db.table_prefix, "clp_");
+    }
+
+    #[test]
+    fn executor_config_reads_results_cache_destination() -> anyhow::Result<()> {
+        let config: SpiderTaskExecutorConfig = serde_json::from_value(serde_json::json!({
+            "results_cache": {
+                "host": "results-cache",
+                "port": 27018,
+                "db_name": "timeline-results",
+            },
+        }))?;
+        assert_eq!(
+            config.results_cache.uri().as_str(),
+            "mongodb://results-cache:27018/timeline-results"
+        );
+        Ok(())
     }
 
     #[test]
