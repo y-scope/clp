@@ -24,11 +24,13 @@ get_coordinator_version() {
 
     local discovery_uri
     discovery_uri=$(awk -F "=" '/^discovery.uri=/ {print $2}' "$config_properties_file")
-    if response=$(
-        wget --quiet --output-document - --timeout 10 "${discovery_uri}/v1/info" 2>/dev/null
-    ); then
-        version=$(echo "$response" | jq --raw-output '.nodeVersion.version')
-        if [[ "$version" = "null" ]]; then
+    if response=$(curl --fail --silent --max-time 10 "${discovery_uri}/v1/info"); then
+        if ! version=$(
+            echo "$response" \
+                | python3 -c \
+                    "import json, sys; print(json.load(sys.stdin)['nodeVersion']['version'])" \
+                    2>/dev/null
+        ); then
             log "ERROR" "Presto response is empty or doesn't contain version info."
             exit 1
         fi
@@ -58,8 +60,6 @@ update_config_file() {
     log "INFO" "Set ${key}=${value} in ${file_path}"
 }
 
-apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
-
 readonly PRESTO_CONFIG_DIR="/opt/presto-server/etc"
 
 # Substitute environment variables in config template
@@ -71,8 +71,8 @@ find /configs -type f | while read -r f; do
     ) | sh >"${PRESTO_CONFIG_DIR}/$(basename "$f")"
 done
 
-# Remove existing catalog files that exist in the image and add the CLP catalog
-rm -f "${PRESTO_CONFIG_DIR}/catalog/"*
+# Create the catalog directory and add the CLP catalog
+mkdir -p "${PRESTO_CONFIG_DIR}/catalog"
 mv "${PRESTO_CONFIG_DIR}/clp.properties" "${PRESTO_CONFIG_DIR}/catalog"
 
 # Update config.properties
@@ -82,6 +82,12 @@ log "INFO" "Detected Presto version: $version"
 update_config_file "$CONFIG_PROPERTIES_FILE" "presto.version" "$version"
 
 # Update node.properties
+#
+# NOTE: These are resolved through Python rather than `hostname`, which the Presto worker image
+# doesn't ship. Assigning them first ensures a resolution failure aborts the script instead of
+# silently writing empty values.
 readonly NODE_PROPERTIES_FILE="/opt/presto-server/etc/node.properties"
-update_config_file "$NODE_PROPERTIES_FILE" "node.internal-address" "$(hostname -i)"
-update_config_file "$NODE_PROPERTIES_FILE" "node.id" "$(hostname)"
+node_internal_address=$(python3 -c "import socket; print(socket.gethostbyname(socket.gethostname()))")
+node_id=$(python3 -c "import socket; print(socket.gethostname())")
+update_config_file "$NODE_PROPERTIES_FILE" "node.internal-address" "$node_internal_address"
+update_config_file "$NODE_PROPERTIES_FILE" "node.id" "$node_id"

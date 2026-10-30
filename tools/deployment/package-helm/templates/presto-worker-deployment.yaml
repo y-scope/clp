@@ -30,6 +30,19 @@ spec:
             "type" "service"
             "name" "presto-coordinator"
           ) | nindent 10 }}
+        - name: "install-clp-plugin"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "clpConnector") | quote }}
+          imagePullPolicy: {{ .Values.image.clpConnector.pullPolicy | quote }}
+          env:
+            - name: "WORKER_PLUGIN_INSTALL_PATH"
+              value: "/install/worker"
+          {{- include "clp.createResourceLimits" (dict
+              "root" .
+              "component" "prestoWorkerInstallPlugin"
+            ) | nindent 10 }}
+          volumeMounts:
+            - name: "presto-plugin"
+              mountPath: "/install/worker"
         - name: "setup-configs"
           image: {{ include "clp.imageRef" (dict "root" . "component" "kubectl") | quote }}
           imagePullPolicy: {{ .Values.image.kubectl.pullPolicy | quote }}
@@ -49,7 +62,7 @@ spec:
               readOnly: true
       containers:
         - name: "presto-worker"
-          image: "{{ .Values.image.prestoWorker.repository }}:{{ .Values.image.prestoWorker.tag }}"
+          image: {{ include "clp.imageRef" (dict "root" . "component" "prestoWorker") | quote }}
           imagePullPolicy: "{{ .Values.image.prestoWorker.pullPolicy }}"
           {{- include "clp.createResourceLimits" (dict
               "root" .
@@ -68,6 +81,9 @@ spec:
               readOnly: true
             - name: "presto-etc"
               mountPath: "/opt/presto-server/etc"
+            - name: "presto-plugin"
+              mountPath: "/opt/presto-server/plugin/clp"
+              readOnly: true
             {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
@@ -94,6 +110,8 @@ spec:
           configMap:
             name: {{ include "clp.fullname" . }}-config
         - name: "presto-etc"
+          emptyDir: {}
+        - name: "presto-plugin"
           emptyDir: {}
         - name: "presto-scripts"
           configMap:

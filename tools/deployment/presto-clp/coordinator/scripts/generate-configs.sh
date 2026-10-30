@@ -15,6 +15,6 @@ find /configs -type f | while read -r f; do
     ) | sh >"${PRESTO_CONFIG_DIR}/$(basename "$f")"
 done
 
-# Remove existing catalog files that exist in the image and add the CLP catalog
-rm -f "${PRESTO_CONFIG_DIR}/catalog/"*
+# Create the catalog directory and add the CLP catalog
+mkdir -p "${PRESTO_CONFIG_DIR}/catalog"
 mv "${PRESTO_CONFIG_DIR}/clp.properties" "${PRESTO_CONFIG_DIR}/catalog"
