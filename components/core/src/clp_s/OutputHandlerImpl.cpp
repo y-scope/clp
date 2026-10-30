@@ -3,12 +3,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <array>
 #include <cerrno>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
-#include <span>
+#include <exception>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -42,47 +40,6 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
-namespace {
-// The acknowledgement is the msgpack encoding of `[num_results]`, with the count always encoded as
-// a uint64, so it's always 10 bytes: a fixarray header of length 1, the uint64 marker, and the
-// count in big-endian.
-constexpr uint8_t cAckArrayHeader{0x91};
-constexpr uint8_t cAckUint64Marker{0xcf};
-constexpr size_t cAckPrefixSize{2};
-constexpr size_t cAckSize{cAckPrefixSize + sizeof(uint64_t)};
-
-/**
- * Receives exactly enough bytes over the socket to fill the given buffer, retrying interrupted
- * receives.
- *
- * @param fd
- * @param buf
- * @return ErrorCode_EndOfFile if the peer closes the connection before the buffer is filled.
- * @return ErrorCode_errno if receiving fails.
- * @return ErrorCode_Success otherwise.
- */
-[[nodiscard]] auto receive_exact(int fd, std::span<char> buf) -> clp::ErrorCode {
-    auto remaining_buf{buf};
-    while (false == remaining_buf.empty()) {
-        size_t num_bytes_received{};
-        auto const error_code{clp::networking::try_receive(
-                fd,
-                remaining_buf.data(),
-                remaining_buf.size(),
-                num_bytes_received
-        )};
-        if (clp::ErrorCode_errno == error_code && EINTR == errno) {
-            continue;
-        }
-        if (clp::ErrorCode_Success != error_code) {
-            return error_code;
-        }
-        remaining_buf = remaining_buf.subspan(num_bytes_received);
-    }
-    return clp::ErrorCode_Success;
-}
-}  // namespace
-
 auto FileOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
