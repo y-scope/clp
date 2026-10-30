@@ -971,6 +971,58 @@ TEST_CASE("clp-s-search-structurized-arrays", "[clp-s][search]") {
     }
 }
 
+// A key within a structurized array's elements gets one MPT node per value type, so one schema can
+// hold several nodes for the same column (e.g. `arr.k` as both a ClpString and a VarString). A
+// filter must be evaluated against every such node: a value filter holds if any element matches,
+// and an inverted value filter (which still requires the key to exist) holds only if no element
+// matches. `NOT arr.k: plain` drops idx 4 and 5 (`arr.k` only numeric): the `NarrowTypes` rewrite
+// for y-scope/clp#254 re-admits only the other string type, not non-string types.
+TEST_CASE("clp-s-search-structurized-array-mixed-types", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
+            {R"aa(arr.k: plain)aa", {0, 1, 2, 3}},
+            {R"aa(arr.k: "a b")aa", {0, 1, 2}},
+            {R"aa(arr.k: pla*)aa", {0, 1, 2, 3}},
+            {R"aa(arr.k: "*b")aa", {0, 1, 2}},
+            {R"aa(arr.k: gamma)aa", {2}},
+            {R"aa(arr.k > 2)aa", {4, 5, 6, 7}},
+            {R"aa(arr.k < 2)aa", {4, 5}},
+            {R"aa(arr.k: 3)aa", {4, 5}},
+            {R"aa(arr.k: 1.5)aa", {4, 5}},
+            {R"aa(arr.k: 5)aa", {6, 7}},
+            {R"aa(arr.k: x)aa", {6, 7}},
+            {R"aa(arr.k: true)aa", {8}},
+            {R"aa(arr.k: *)aa", {0, 1, 2, 3, 4, 5, 6, 7, 8}},
+            {R"aa(NOT arr.k: pla*)aa", {4, 5, 6, 7, 8}},
+            {R"aa(NOT arr.k: "*b")aa", {3, 4, 5, 6, 7, 8}},
+            {R"aa(NOT arr.k > 2)aa", {}},
+            {R"aa(NOT arr.k > 4)aa", {4, 5}},
+            {R"aa(NOT arr.k < 2)aa", {6, 7}},
+            {R"aa(NOT arr.k: plain)aa", {0, 1, 2, 6, 7, 8}},
+            {R"aa(NOT arr.k: 3)aa", {0, 1, 2, 3, 6, 7, 8}},
+            {R"aa(NOT arr.k: *)aa", {9}},
+            {R"aa(arr.k: plain AND arr.k: "a b")aa", {0, 1, 2}},
+            {R"aa(arr.k: gamma OR arr.k: 5)aa", {2, 6, 7}},
+            {R"aa(NOT (arr.k: pla* OR arr.k: 5))aa", {4, 5, 8}},
+    };
+    auto const single_file_archive{GENERATE(true, false)};
+    CAPTURE(single_file_archive);
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path("test_search_structurized_array_mixed_types.jsonl"),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    single_file_archive,
+                    true
+            )
+    );
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
+}
+
 TEST_CASE("clp-s-search-clpp", "[clp-s][search][clpp]") {
     std::vector<std::pair<std::string, std::vector<int64_t>>> const queries_and_results{
             {R"aa(arr.b > 1000)aa", {7, 8}},

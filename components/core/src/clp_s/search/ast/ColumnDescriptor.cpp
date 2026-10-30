@@ -8,6 +8,7 @@
 #include <string_view>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <simdjson.h>
 
@@ -158,7 +159,7 @@ auto ColumnDescriptor::bind_as_decomposed_leaf(
     m_pinned_leaf = LeafPosition{.occurrence_idx = occurrence_idx, .leaf_position = leaf_position};
     m_resolved_nodes = {};
     for (int32_t const schema_id : schema_ids) {
-        m_resolved_nodes.schema_to_node_id.emplace(schema_id, node_id);
+        m_resolved_nodes.schema_to_node_ids.emplace(schema_id, std::vector{node_id});
     }
 }
 

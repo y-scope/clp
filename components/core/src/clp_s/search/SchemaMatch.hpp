@@ -692,16 +692,22 @@ private:
      * Splits a filter for one schema: the copy's column is bound to the schema's node for that
      * column and matches only the node's type. The column is left unbound when the schema has no
      * such node, i.e. for a pure wildcard column or a NEXISTS filter on an absent column.
+     *
+     * When the schema holds several nodes for the column (the same key with different types within
+     * a structurized array's elements), one bound copy is made per node and they are combined so
+     * that the filter keeps its single-node semantics: an `OrExpr` when the filter holds if any
+     * node matches, an `AndExpr` when it must hold at every node (see
+     * `filter_holds_at_every_node`).
      * @param filter
      * @param schema_id
-     * @return The copy of `filter` to evaluate against `schema_id`.
+     * @return The expression to evaluate against `schema_id`.
      */
     [[nodiscard]] auto split_filter_for_schema(ast::FilterExpr const& filter, int32_t schema_id)
             -> std::shared_ptr<ast::Expression>;
 
     /**
      * Appends `operand` to the `AndExpr` for `schema_id` in `schema_expressions`, creating the
-     * `AndExpr` if absent.
+     * `AndExpr` if absent. A non-inverted `AndExpr` operand is spliced in rather than nested.
      * @param schema_expressions The per-schema expressions being built.
      * @param schema_id
      * @param operand
@@ -716,8 +722,8 @@ private:
 
     /**
      * Appends `operand` to the `OrExpr` for `schema_id` in `schema_expressions`. An absent
-     * expression becomes `operand` itself; an expression that is not an `OrExpr` is first wrapped
-     * in one.
+     * expression becomes `operand` itself; an expression that is not a non-inverted `OrExpr` is
+     * first wrapped in one. A non-inverted `OrExpr` operand is spliced in rather than nested.
      * @param schema_expressions The per-schema expressions being built.
      * @param schema_id
      * @param operand

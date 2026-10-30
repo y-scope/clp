@@ -167,8 +167,10 @@ public:
      * The MPT nodes a logical column matched when resolved against an archive.
      */
     struct ResolvedNodes {
-        // The MPT node this column resolves to in each schema that contains it.
-        std::map<int32_t, mpt_node_id_t> schema_to_node_id;
+        // The MPT nodes this column resolves to in each schema that contains it, in schema order.
+        // A schema holds several nodes for one column when the same key appears with different
+        // types within one structurized array's elements.
+        std::map<int32_t, std::vector<mpt_node_id_t>> schema_to_node_ids;
         // For a column with wildcard tokens: the MPT nodes its token path matched.
         std::set<mpt_node_id_t> wildcard_node_ids;
     };

@@ -37,6 +37,7 @@
 #include <clp_s/search/ast/NarrowSchemasExpr.hpp>
 #include <clp_s/search/ast/OrExpr.hpp>
 #include <clp_s/search/ast/OrOfAndForm.hpp>
+#include <clp_s/search/ast/SearchUtils.hpp>
 #include <clp_s/search/ast/ValueLiteral.hpp>
 #include <clp_s/search/ClppMatcher.hpp>
 #include <clpp/Defs.hpp>
@@ -95,6 +96,19 @@ struct ApplicableInterpretations {
 auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
 
 /**
+ * Adds `operand` to `expr`, splicing in `operand`'s operands instead when `operand` is itself a
+ * non-inverted `ExprType`. This keeps `expr` in Or-of-And form, which evaluation relies on.
+ * @tparam ExprType `AndExpr` or `OrExpr`; the type of `expr`.
+ * @param expr
+ * @param operand
+ */
+template <typename ExprType>
+auto add_operand_flattened(
+        std::shared_ptr<ast::Expression> const& expr,
+        std::shared_ptr<ast::Expression> const& operand
+) -> void;
+
+/**
  * Determines whether a pure wildcard filter can be rewritten as per-node filters over decomposable
  * nodes. The following filters cannot:
  * - Columns that exclude decomposable nodes (already expanded on an earlier pass).
@@ -124,6 +138,16 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType;
  * is absent, i.e. `NEXISTS` or inverted `EXISTS`.
  */
 [[nodiscard]] auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool;
+
+/**
+ * Determines whether `filter` must hold at every node its column resolves to within one schema
+ * rather than at any one of them. A value filter holds if any node's value matches, so its
+ * inversion holds only if no node's value matches; likewise NEXISTS and inverted EXISTS hold only
+ * if the key is absent at every node.
+ * @param filter
+ * @return Whether `filter` must hold at every node.
+ */
+[[nodiscard]] auto filter_holds_at_every_node(ast::FilterExpr const& filter) -> bool;
 
 /**
  * Determines whether `filter` is an existence filter on a pure wildcard column that can match every
@@ -192,6 +216,19 @@ auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     return NodeType::Unknown;
 }
 
+template <typename ExprType>
+auto add_operand_flattened(
+        std::shared_ptr<ast::Expression> const& expr,
+        std::shared_ptr<ast::Expression> const& operand
+) -> void {
+    if (nullptr != std::dynamic_pointer_cast<ExprType>(operand) && false == operand->is_inverted())
+    {
+        ast::splice_into(expr, operand, expr->op_end());
+        return;
+    }
+    expr->add_operand(operand);
+}
+
 auto is_expandable_over_decomposable_nodes(
         ast::ColumnDescriptor const& column,
         ast::FilterExpr const& filter
@@ -228,6 +265,10 @@ auto existence_filter_holds_when_absent(ast::FilterExpr const& filter) -> bool {
     auto const op{filter.get_operation()};
     bool const is_existence_filter{FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op};
     return is_existence_filter && ((FilterOperation::NEXISTS == op) != filter.is_inverted());
+}
+
+auto filter_holds_at_every_node(ast::FilterExpr const& filter) -> bool {
+    return (FilterOperation::NEXISTS == filter.get_operation()) != filter.is_inverted();
 }
 
 auto is_unrestricted_pure_wildcard_existence_filter(
@@ -686,7 +727,12 @@ void SchemaMatch::populate_schema_mapping() {
                 if (descriptor->is_pure_wildcard()) {
                     continue;
                 }
-                descriptor->resolved_nodes().schema_to_node_id.emplace(schema_id, node_id);
+                auto& node_ids{descriptor->resolved_nodes()
+                                       .schema_to_node_ids.try_emplace(schema_id)
+                                       .first->second};
+                if (node_ids.end() == std::ranges::find(node_ids, node_id)) {
+                    node_ids.push_back(node_id);
+                }
             }
         });
     }
@@ -723,11 +769,14 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
                 if (column->is_pure_wildcard()) {
                     continue;
                 }
-                auto const& schema_to_node_id{column->resolved_nodes().schema_to_node_id};
-                if (auto const node_id_it{schema_to_node_id.find(schema)};
-                    schema_to_node_id.end() != node_id_it)
+                auto const& schema_to_node_ids{column->resolved_nodes().schema_to_node_ids};
+                if (auto const node_ids_it{schema_to_node_ids.find(schema)};
+                    schema_to_node_ids.end() != node_ids_it)
                 {
-                    m_schema_to_searched_columns[schema].insert(node_id_it->second);
+                    m_schema_to_searched_columns[schema].insert(
+                            node_ids_it->second.begin(),
+                            node_ids_it->second.end()
+                    );
                 }
             }
         }
@@ -783,7 +832,7 @@ auto SchemaMatch::intersect_and_sub_expr(
                 return false;
             }
 
-            auto const& cur_schemas{column->resolved_nodes().schema_to_node_id};
+            auto const& cur_schemas{column->resolved_nodes().schema_to_node_ids};
             if (first) {
                 if (FilterOperation::NEXISTS == op) {
                     for (auto const& schema : *m_schemas) {
@@ -792,7 +841,7 @@ auto SchemaMatch::intersect_and_sub_expr(
                         }
                     }
                 } else {
-                    for (auto const& [schema_id, node_id] : cur_schemas) {
+                    for (auto const& [schema_id, node_ids] : cur_schemas) {
                         common_schema.insert(schema_id);
                     }
                 }
@@ -803,13 +852,9 @@ auto SchemaMatch::intersect_and_sub_expr(
                     return false == is_nexists_candidate_schema(*column, schema_id);
                 });
             } else {
-                std::set<int32_t> intersection;
-                for (int32_t schema : common_schema) {
-                    if (cur_schemas.count(schema)) {
-                        intersection.insert(schema);
-                    }
-                }
-                common_schema = intersection;
+                std::erase_if(common_schema, [&](int32_t const schema_id) -> bool {
+                    return false == cur_schemas.contains(schema_id);
+                });
             }
         }
     }
@@ -864,13 +909,15 @@ auto SchemaMatch::is_nexists_candidate_schema(
         ast::ColumnDescriptor const& column,
         int32_t schema_id
 ) const -> bool {
-    auto const& schema_to_node_id{column.resolved_nodes().schema_to_node_id};
-    auto const node_id_it{schema_to_node_id.find(schema_id)};
-    if (schema_to_node_id.end() == node_id_it) {
+    auto const& schema_to_node_ids{column.resolved_nodes().schema_to_node_ids};
+    auto const node_ids_it{schema_to_node_ids.find(schema_id)};
+    if (schema_to_node_ids.end() == node_ids_it) {
         return true;
     }
     return column.has_unresolved_tokens()
-           && NodeType::UnstructuredArray == m_tree->get_node(node_id_it->second).get_type();
+           && std::ranges::all_of(node_ids_it->second, [&](mpt_node_id_t const node_id) -> bool {
+                  return NodeType::UnstructuredArray == m_tree->get_node(node_id).get_type();
+              });
 }
 
 auto SchemaMatch::compute_candidate_types(
@@ -882,13 +929,15 @@ auto SchemaMatch::compute_candidate_types(
                 m_tree->get_node(column.get_bound_node_id()).get_type()
         );
     }
-    auto const& schema_mappings{column.resolved_nodes().schema_to_node_id};
+    auto const& schema_to_node_ids{column.resolved_nodes().schema_to_node_ids};
     ast::literal_type_bitmask_t types{0};
     for (auto const schema : schemas) {
-        if (schema_mappings.contains(schema)) {
-            types |= SchemaNode::node_to_literal_type(
-                    m_tree->get_node(schema_mappings.at(schema)).get_type()
-            );
+        auto const node_ids_it{schema_to_node_ids.find(schema)};
+        if (schema_to_node_ids.end() == node_ids_it) {
+            continue;
+        }
+        for (auto const node_id : node_ids_it->second) {
+            types |= SchemaNode::node_to_literal_type(m_tree->get_node(node_id).get_type());
         }
     }
     return types;
@@ -950,7 +999,7 @@ auto SchemaMatch::append_to_and(
     if (inserted) {
         expr_it->second = AndExpr::create(inverted);
     }
-    expr_it->second->add_operand(operand);
+    add_operand_flattened<AndExpr>(expr_it->second, operand);
 }
 
 auto SchemaMatch::append_to_or(
@@ -964,30 +1013,42 @@ auto SchemaMatch::append_to_or(
         return;
     }
     auto& expr{expr_it->second};
-    if (nullptr == std::dynamic_pointer_cast<OrExpr>(expr)) {
+    if (nullptr == std::dynamic_pointer_cast<OrExpr>(expr) || expr->is_inverted()) {
         auto or_expr{OrExpr::create()};
         or_expr->add_operand(expr);
         expr = or_expr;
     }
-    expr->add_operand(operand);
+    add_operand_flattened<OrExpr>(expr, operand);
 }
 
 auto SchemaMatch::split_filter_for_schema(ast::FilterExpr const& filter, int32_t schema_id)
         -> std::shared_ptr<ast::Expression> {
     auto const& column{*filter.get_column()};
-    auto const& schema_to_node_id{column.resolved_nodes().schema_to_node_id};
-    auto const node_id_it{schema_to_node_id.find(schema_id)};
-    if (schema_to_node_id.end() == node_id_it) {
+    auto const& schema_to_node_ids{column.resolved_nodes().schema_to_node_ids};
+    auto const node_ids_it{schema_to_node_ids.find(schema_id)};
+    if (schema_to_node_ids.end() == node_ids_it) {
         return copy_filter_with_column(column.copy_unbound(), filter);
     }
-    auto const node_id{node_id_it->second};
-    return copy_filter_with_column(
-            column.copy_bound_to(
-                    node_id,
-                    SchemaNode::node_to_literal_type(m_tree->get_node(node_id).get_type())
-            ),
-            filter
-    );
+    auto const& node_ids{node_ids_it->second};
+    auto const bind_filter_to_node{[&](mpt_node_id_t node_id) -> std::shared_ptr<Expression> {
+        return copy_filter_with_column(
+                column.copy_bound_to(
+                        node_id,
+                        SchemaNode::node_to_literal_type(m_tree->get_node(node_id).get_type())
+                ),
+                filter
+        );
+    }};
+    if (1 == node_ids.size()) {
+        return bind_filter_to_node(node_ids.front());
+    }
+    std::shared_ptr<Expression> combined{
+            filter_holds_at_every_node(filter) ? AndExpr::create() : OrExpr::create()
+    };
+    for (auto const node_id : node_ids) {
+        combined->add_operand(bind_filter_to_node(node_id));
+    }
+    return combined;
 }
 
 bool SchemaMatch::schema_matched(int32_t schema_id) {

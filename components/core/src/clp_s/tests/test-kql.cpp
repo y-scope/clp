@@ -541,8 +541,8 @@ TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnD
         REQUIRE(cNodeId == copied->get_bound_node_id());
         REQUIRE(cLeafPosition == copied->get_leaf_position());
         REQUIRE(cOccurrenceIdx == copied->get_structurized_text_occurrence_idx());
-        REQUIRE(column->resolved_nodes().schema_to_node_id
-                == copied->resolved_nodes().schema_to_node_id);
+        REQUIRE(column->resolved_nodes().schema_to_node_ids
+                == copied->resolved_nodes().schema_to_node_ids);
     }
 
     SECTION("Rebinding preserves the leaf and occurrence but clears resolved nodes") {
@@ -553,7 +553,7 @@ TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnD
         REQUIRE(rebound->matches_exactly(LiteralType::IntegerT));
         REQUIRE(cLeafPosition == rebound->get_leaf_position());
         REQUIRE(cOccurrenceIdx == rebound->get_structurized_text_occurrence_idx());
-        REQUIRE(rebound->resolved_nodes().schema_to_node_id.empty());
+        REQUIRE(rebound->resolved_nodes().schema_to_node_ids.empty());
         REQUIRE(rebound->resolved_nodes().wildcard_node_ids.empty());
     }
 
@@ -563,7 +563,7 @@ TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnD
         REQUIRE_FALSE(unbound->is_bound_by_decomposition());
         REQUIRE_FALSE(unbound->get_leaf_position().has_value());
         REQUIRE_FALSE(unbound->get_structurized_text_occurrence_idx().has_value());
-        REQUIRE(unbound->resolved_nodes().schema_to_node_id.empty());
+        REQUIRE(unbound->resolved_nodes().schema_to_node_ids.empty());
         REQUIRE(unbound->resolved_nodes().wildcard_node_ids.empty());
 
         auto expected{ColumnDescriptor::create_from_escaped_tokens({"message", "value"}, "")};
@@ -574,5 +574,5 @@ TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnD
     REQUIRE(cNodeId == column->get_bound_node_id());
     REQUIRE(cLeafPosition == column->get_leaf_position());
     REQUIRE(cOccurrenceIdx == column->get_structurized_text_occurrence_idx());
-    REQUIRE(cNodeId == column->resolved_nodes().schema_to_node_id.at(cSchemaId));
+    REQUIRE(std::vector{cNodeId} == column->resolved_nodes().schema_to_node_ids.at(cSchemaId));
 }
