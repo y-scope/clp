@@ -16,6 +16,9 @@ use crate::types::non_empty_string::ExpectedNonEmpty;
 /// Mirror of `clp_py_utils.clp_config.CLP_METADATA_TABLE_PREFIX`. Must be kept in sync.
 pub const CLP_METADATA_TABLE_PREFIX: &str = "clp_";
 
+/// The directory where the package mounts the logs input in its containers.
+pub const LOGS_INPUT_MOUNT_POINT: &str = "/mnt/logs";
+
 /// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
 /// # NOTE
@@ -68,6 +71,7 @@ impl Default for Config {
 #[serde(default)]
 pub struct SpiderTaskExecutorConfig {
     pub package: Package,
+    pub logs_input: LogsInput,
     pub archive_output: ArchiveOutput,
     pub tmp_directory: String,
     pub database: Database,
@@ -107,6 +111,9 @@ impl Default for SpiderTaskExecutorConfig {
     fn default() -> Self {
         Self {
             package: Package::default(),
+            logs_input: LogsInput::Fs {
+                config: FsIngestion::default(),
+            },
             database: Database::default(),
             archive_output: ArchiveOutput::default(),
             tmp_directory: "var/tmp".to_owned(),
@@ -233,7 +240,7 @@ impl Default for ApiServer {
             host: "localhost".to_owned(),
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
-            stream_file_extraction_timeout_secs: NonZeroU64::new(1800)
+            stream_file_extraction_timeout_secs: NonZeroU64::new(270)
                 .expect("default stream file extraction timeout should not be zero"),
         }
     }
