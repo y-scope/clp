@@ -1,0 +1,20 @@
+[package]
+name = "query-result-listener"
+version = { workspace = true }
+edition = { workspace = true }
+
+[lib]
+name = "query_result_listener"
+path = "src/lib.rs"
+
+[dependencies]
+bytes = { workspace = true }
+clp-rust-utils = { workspace = true }
+rmp = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+
+[features]
+test-utils = []

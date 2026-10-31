@@ -13,6 +13,7 @@ on:
       - "components/compression-coordinator/**"
       - "components/log-ingestor/**"
       - "components/query-coordinator/**"
+      - "components/query-result-listener/**"
       - "taskfile.yaml"
       - "taskfiles/**"
       - "tools/scripts/localstack/**"
