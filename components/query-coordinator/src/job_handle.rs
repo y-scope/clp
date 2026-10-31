@@ -72,7 +72,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// # Returns
     ///
     /// A newly created [`QueryJobHandle`] for the given query job, with the `clp-s`
-    /// query options derived from `search_job_config`.
+    /// query options derived from `search_job_config`. The job's results are sent to the network
+    /// output in `search_job_config` if it's set, or to `results_cache_output_handle` otherwise.
     ///
     /// # Errors
     ///
@@ -88,7 +89,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
         search_job_config: SearchJobConfig,
-        output_handle: OutputHandle,
+        results_cache_output_handle: OutputHandle,
         job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
         search_job_config.validate()?;
@@ -98,6 +99,11 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .archive_selection_options
             .archive_retention_period_millisecs
             .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
+
+        let output_handle = search_job_config
+            .network_output
+            .clone()
+            .map_or(results_cache_output_handle, OutputHandle::Network);
 
         Ok(Self {
             context,
