@@ -12,3 +12,9 @@ bytes = { workspace = true }
 clp-rust-utils = { workspace = true }
 rmp = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+
+[features]
+test-utils = []

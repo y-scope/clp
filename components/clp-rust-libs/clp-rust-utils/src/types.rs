@@ -271,6 +271,15 @@ mod tests {
     }
 
     #[test]
+    fn parse_session_token_rejects_invalid_uuids() {
+        const VALUE: &str = "not-a-uuid";
+        let error = VALUE
+            .parse::<SessionToken>()
+            .expect_err("invalid UUID should be rejected");
+        assert_eq!(error.value, VALUE);
+    }
+
+    #[test]
     fn positive_i64_new_accepts_only_positive_values() {
         for value in [1, i64::MAX] {
             let positive = PositiveI64::new(value).expect("positive value should be accepted");
