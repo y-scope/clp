@@ -50,7 +50,7 @@ image:
   resultsCache:
     repository: "mongo"
     pullPolicy: "Always"
-    tag: "8.0.21"
+    tag: "9.0.4"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
