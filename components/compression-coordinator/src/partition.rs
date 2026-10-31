@@ -11,7 +11,7 @@ use clp_rust_utils::task_io::compression::S3InputSource;
 
 use crate::Error;
 
-/// Source-specific entry validation and compression-task manifest construction.
+/// Validates input metadata and constructs compression-task inputs.
 pub trait Source {
     /// The entries accepted by this source.
     type Entry;
@@ -19,41 +19,36 @@ pub trait Source {
     /// The source's file-path or object-key representation.
     type Path: AsRef<str>;
 
-    /// The complete explicit list of input entries assigned to one compression task.
+    /// The input payload for one compression task.
     type Manifest;
 
-    /// Validates an entry and prepares its file metadata for partitioning.
+    /// Checks an entry and extracts its path and size for partitioning.
     ///
     /// # Returns
     ///
-    /// The entry's raw file metadata, or `None` if the source retains it for finalization, on
-    /// success.
+    /// The entry's path or object key and its size in bytes on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`Error`] if the entry violates the source's input constraints.
-    fn prepare_entry(
-        &mut self,
-        entry: Self::Entry,
-    ) -> Result<Option<InputMetadata<Self::Path>>, Error>;
+    /// * [`Error::S3BucketMismatch`] if an S3 object's bucket differs from the configured bucket.
+    /// * [`Error::S3KeyPrefixMismatch`] if an S3 object's key lacks the configured prefix.
+    fn prepare_entry(&self, entry: Self::Entry) -> Result<InputMetadata<Self::Path>, Error>;
 
-    /// Builds task manifests from file partitions and retained entries, preserving every entry.
+    /// Converts partitions into compression-task inputs.
     ///
     /// # Parameters
     ///
-    /// * `partitions` - File partitions, each containing between 1 and [`MAX_PARTITION_ENTRIES`]
-    ///   paths.
+    /// * `partitions` - Partitions of input paths or object keys.
     ///
     /// # Returns
     ///
-    /// Manifests containing at most [`MAX_PARTITION_ENTRIES`] entries each. Retained entries
-    /// are emitted in separate manifests from files.
+    /// One task input per supplied partition, preserving its paths.
     fn build_manifests(self, partitions: Vec<Vec<Self::Path>>) -> Vec<Self::Manifest>;
 }
 
-/// An input path or object key and its raw size.
+/// An input path or object key and its size in bytes.
 ///
 /// # Type Parameters
 ///
@@ -63,10 +58,8 @@ pub struct InputMetadata<PathType: AsRef<str>> {
     pub size: u64,
 }
 
-/// Builds inputs for compression tasks.
-///
-/// The builder buffers input objects internally and groups them into partitions. Each partition
-/// contains the inputs for a single compression task.
+/// Groups files or S3 objects into compression tasks by estimated uncompressed size and entry
+/// count.
 ///
 /// # Type Parameters
 ///
@@ -84,7 +77,7 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
     ///
     /// # Returns
     ///
-    /// A newly created [`CompressionInputBuilder`] with an empty buffer.
+    /// An empty builder using the given source and target archive size.
     #[must_use]
     pub const fn new(source: SourceType, target_archive_size: u64) -> Self {
         Self {
@@ -96,7 +89,7 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
         }
     }
 
-    /// Adds an input entry to the buffer.
+    /// Adds an entry to the compression inputs.
     ///
     /// # Errors
     ///
@@ -104,9 +97,7 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
     ///
     /// * Forwards [`Source::prepare_entry`]'s return values on failure.
     pub fn add(&mut self, entry: SourceType::Entry) -> Result<(), Error> {
-        let Some(input) = self.source.prepare_entry(entry)? else {
-            return Ok(());
-        };
+        let input = self.source.prepare_entry(entry)?;
         let file = FileMetadata::new(input.path, input.size);
         self.total_buffered_size += u128::from(file.estimated_size);
         self.buffer.push(file);
@@ -122,7 +113,7 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
     ///
     /// # Returns
     ///
-    /// The complete task manifests for the source.
+    /// Task inputs containing every added entry once, or an empty list if no entries were added.
     #[must_use]
     pub fn build(mut self) -> Vec<SourceType::Manifest> {
         self.partition(true);
@@ -168,10 +159,7 @@ impl Source for S3Config {
     type Manifest = S3InputSource;
     type Path = String;
 
-    fn prepare_entry(
-        &mut self,
-        metadata: Self::Entry,
-    ) -> Result<Option<InputMetadata<Self::Path>>, Error> {
+    fn prepare_entry(&self, metadata: Self::Entry) -> Result<InputMetadata<Self::Path>, Error> {
         if metadata.bucket != self.bucket {
             return Err(Error::S3BucketMismatch(
                 String::from(self.bucket.clone()),
@@ -184,10 +172,10 @@ impl Source for S3Config {
                 String::from(metadata.key),
             ));
         }
-        Ok(Some(InputMetadata {
+        Ok(InputMetadata {
             path: String::from(metadata.key),
             size: metadata.size,
-        }))
+        })
     }
 
     fn build_manifests(self, partitions: Vec<Vec<Self::Path>>) -> Vec<Self::Manifest> {
@@ -204,58 +192,33 @@ impl Source for S3Config {
     }
 }
 
-/// Filesystem entries supplied to the partition planner.
-///
-/// Paths are relative to the logs-input mount point, where `/` denotes that mount point.
-pub enum FsEntry {
-    File { path: LogsInputPath, size: u64 },
-    EmptyDirectory { path: LogsInputPath },
+/// A local file's [`LogsInputPath`] and size in bytes.
+pub struct FsEntry {
+    pub path: LogsInputPath,
+    pub size: u64,
 }
 
-/// Filesystem source for compression-task planning.
+/// Constructs [`FsInputSource`] task inputs from local files.
 #[derive(Default)]
-pub struct FsSource {
-    empty_directories: Vec<LogsInputPath>,
-}
+pub struct FsSource;
 
 impl Source for FsSource {
     type Entry = FsEntry;
     type Manifest = FsInputSource;
     type Path = LogsInputPath;
 
-    fn prepare_entry(
-        &mut self,
-        entry: Self::Entry,
-    ) -> Result<Option<InputMetadata<Self::Path>>, Error> {
-        match entry {
-            FsEntry::File { path, size } => Ok(Some(InputMetadata { path, size })),
-            FsEntry::EmptyDirectory { path } => {
-                self.empty_directories.push(path);
-                Ok(None)
-            }
-        }
+    fn prepare_entry(&self, entry: Self::Entry) -> Result<InputMetadata<Self::Path>, Error> {
+        Ok(InputMetadata {
+            path: entry.path,
+            size: entry.size,
+        })
     }
 
     fn build_manifests(self, partitions: Vec<Vec<Self::Path>>) -> Vec<Self::Manifest> {
-        let mut manifests: Vec<_> = partitions
+        partitions
             .into_iter()
-            .map(|file_paths| FsInputSource {
-                file_paths,
-                empty_directories: Vec::new(),
-            })
-            .collect();
-        let mut directories = self.empty_directories.into_iter();
-        loop {
-            let chunk: Vec<_> = directories.by_ref().take(MAX_PARTITION_ENTRIES).collect();
-            if chunk.is_empty() {
-                break;
-            }
-            manifests.push(FsInputSource {
-                file_paths: Vec::new(),
-                empty_directories: chunk,
-            });
-        }
-        manifests
+            .map(|file_paths| FsInputSource { file_paths })
+            .collect()
     }
 }
 
@@ -434,11 +397,6 @@ mod tests {
         ///
         /// The file paths or object keys assigned to the task.
         fn file_paths(&self) -> &[Self::Path];
-
-        /// # Returns
-        ///
-        /// The number of file and directory entries assigned to the task.
-        fn num_entries(&self) -> usize;
     }
 
     impl ManifestEntries for S3InputSource {
@@ -447,10 +405,6 @@ mod tests {
         fn file_paths(&self) -> &[Self::Path] {
             &self.object_keys
         }
-
-        fn num_entries(&self) -> usize {
-            self.object_keys.len()
-        }
     }
 
     impl ManifestEntries for FsInputSource {
@@ -458,10 +412,6 @@ mod tests {
 
         fn file_paths(&self) -> &[Self::Path] {
             &self.file_paths
-        }
-
-        fn num_entries(&self) -> usize {
-            self.file_paths.len() + self.empty_directories.len()
         }
     }
 
@@ -510,7 +460,7 @@ mod tests {
 
             for manifest in &manifests {
                 let paths = manifest.file_paths();
-                let num_entries = manifest.num_entries();
+                let num_entries = paths.len();
                 assert!((1..=MAX_PARTITION_ENTRIES).contains(&num_entries));
                 let Some((_, preceding_paths)) = paths.split_last() else {
                     continue;
@@ -554,18 +504,17 @@ mod tests {
     }
 
     impl Fixture<FsSource> {
-        /// Adds a filesystem entry and records a file's expected size.
+        /// Adds a local file and records its expected size.
         ///
         /// # Panics
         ///
         /// Panics if a file path was already added or the source rejects the entry.
         fn add(&mut self, entry: FsEntry) {
-            if let FsEntry::File { path, size } = &entry {
-                assert_eq!(
-                    self.path_to_size.insert(path.as_ref().to_owned(), *size),
-                    None
-                );
-            }
+            assert_eq!(
+                self.path_to_size
+                    .insert(entry.path.as_ref().to_owned(), entry.size),
+                None
+            );
             self.builder
                 .add(entry)
                 .expect("filesystem fixture entry should be accepted");
@@ -621,70 +570,43 @@ mod tests {
     }
 
     #[test]
-    fn fs_manifests_bound_zero_size_files_and_empty_directories() {
+    fn fs_manifests_bound_zero_size_files() {
         let count = MAX_PARTITION_ENTRIES + 17;
-        let directories: Vec<_> = (0..count)
-            .map(|index| {
-                LogsInputPath::try_from(format!("/empty/{index}"))
-                    .expect("test path should be valid")
-            })
-            .collect();
-        let mut fixture = Fixture::new(FsSource::default(), 1024);
-        for directory in &directories {
-            fixture.add(FsEntry::EmptyDirectory {
-                path: directory.clone(),
-            });
-        }
+        let mut fixture = Fixture::new(FsSource, 1024);
         for index in 0..count {
-            fixture.add(FsEntry::File {
+            fixture.add(FsEntry {
                 path: LogsInputPath::try_from(format!("/file/{index}"))
                     .expect("test path should be valid"),
                 size: 0,
             });
         }
         let manifests = fixture.assert_partitions();
-        let mut all_directories = Vec::new();
-        for manifest in manifests {
-            assert!(manifest.file_paths.is_empty() || manifest.empty_directories.is_empty());
-            all_directories.extend(manifest.empty_directories);
-        }
-        all_directories.sort_by(|left, right| left.as_ref().cmp(right.as_ref()));
-        let mut expected_directories = directories;
-        expected_directories.sort_by(|left, right| left.as_ref().cmp(right.as_ref()));
-        assert_eq!(all_directories, expected_directories);
+        assert_eq!(manifests.len(), count.div_ceil(MAX_PARTITION_ENTRIES));
+    }
 
-        let directory = LogsInputPath::try_from("//directory-only/./".to_owned())
-            .expect("test path should be valid");
-        let mut directory_fixture = Fixture::new(FsSource::default(), 1024);
-        directory_fixture.add(FsEntry::EmptyDirectory {
-            path: directory.clone(),
-        });
-        assert_eq!(
-            directory_fixture.assert_partitions(),
-            [FsInputSource {
-                file_paths: Vec::new(),
-                empty_directories: vec![directory],
-            }]
-        );
+    #[test]
+    fn fs_no_inputs_produce_no_manifests() {
+        let fixture = Fixture::new(FsSource, 1024);
+        assert_eq!(fixture.assert_partitions(), vec![]);
     }
 
     #[test]
     fn fs_extreme_sizes_partition_without_overflow_or_lost_inputs() {
-        let mut zero_target_fixture = Fixture::new(FsSource::default(), 0);
-        zero_target_fixture.add(FsEntry::File {
+        let mut zero_target_fixture = Fixture::new(FsSource, 0);
+        zero_target_fixture.add(FsEntry {
             path: LogsInputPath::try_from("/zero".to_owned()).expect("test path should be valid"),
             size: 0,
         });
         zero_target_fixture.assert_partitions();
 
-        let mut fixture = Fixture::new(FsSource::default(), u64::MAX);
+        let mut fixture = Fixture::new(FsSource, u64::MAX);
         let files = [
             ("/logs/a.gz", u64::MAX),
             ("/logs/b.zst", u64::MAX),
             ("/logs/c", 7),
         ];
         for (path, size) in files {
-            fixture.add(FsEntry::File {
+            fixture.add(FsEntry {
                 path: LogsInputPath::try_from(path.to_owned()).expect("test path should be valid"),
                 size,
             });
@@ -700,9 +622,9 @@ mod tests {
         assert_eq!(estimate_uncompressed_size("input.gz", u64::MAX), u64::MAX);
         assert_eq!(estimate_uncompressed_size("input.zst", u64::MAX), u64::MAX);
 
-        let mut fixture = Fixture::new(FsSource::default(), u64::MAX - 1);
+        let mut fixture = Fixture::new(FsSource, u64::MAX - 1);
         for path in ["/logs/a", "/logs/b", "/logs/c"] {
-            fixture.add(FsEntry::File {
+            fixture.add(FsEntry {
                 path: LogsInputPath::try_from(path.to_owned()).expect("test path should be valid"),
                 size: u64::MAX / 2,
             });
