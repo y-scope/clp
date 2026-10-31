@@ -3302,6 +3302,7 @@ dependencies = [
 name = "query-result-listener"
 version = "0.13.1-dev"
 dependencies = [
+ "anyhow",
  "bytes",
  "clp-rust-utils",
  "rmp",

@@ -318,3 +318,237 @@ fn read_str<'buffer>(
     std::str::from_utf8(bytes)
         .map_err(|e| ProtocolError::MalformedFrame(format!("invalid UTF-8 string: {e}")).into())
 }
+
+#[cfg(test)]
+mod tests {
+    use bytes::BytesMut;
+    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::SessionToken;
+
+    use super::Ack;
+    use super::Frame;
+    use super::Handshake;
+    use super::PROTOCOL_VERSION;
+    use super::ResultFrame;
+    use super::Trailer;
+    use crate::error::ProtocolError;
+    use crate::test_utils::encode_handshake;
+    use crate::test_utils::encode_result;
+    use crate::test_utils::encode_trailer;
+
+    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
+    const TASK_INDEX: u64 = 7;
+
+    /// # Returns
+    ///
+    /// The frames decoded from `bytes`, which must hold only complete frames.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `bytes` doesn't hold only complete, valid frames.
+    fn decode_frames(bytes: &[u8]) -> Vec<Frame> {
+        let mut buffer = BytesMut::from(bytes);
+        let mut frames = Vec::new();
+        while let Some(frame) = Frame::decode(&mut buffer).expect("frames should be valid") {
+            frames.push(frame);
+        }
+        assert_eq!(&buffer[..], &[] as &[u8]);
+        frames
+    }
+
+    #[test]
+    fn handshake_decodes_only_once_complete() -> anyhow::Result<()> {
+        let encoded = encode_handshake(PROTOCOL_VERSION, SESSION_TOKEN, TASK_INDEX, ARCHIVE_ID);
+        let mut buffer = BytesMut::new();
+        for &byte in &encoded[..encoded.len() - 1] {
+            buffer.extend_from_slice(&[byte]);
+            assert_eq!(Handshake::decode(&mut buffer)?, None);
+        }
+        assert_eq!(buffer.len(), encoded.len() - 1);
+
+        buffer.extend_from_slice(&encoded[encoded.len() - 1..]);
+        buffer.extend_from_slice(&[0x93]);
+        assert_eq!(
+            Handshake::decode(&mut buffer)?,
+            Some(Handshake {
+                session_token: SESSION_TOKEN.parse::<SessionToken>()?,
+                task_index: TASK_INDEX,
+                archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+            })
+        );
+        assert_eq!(&buffer[..], &[0x93]);
+        Ok(())
+    }
+
+    #[test]
+    fn handshake_without_fields_is_rejected() {
+        let mut buffer = BytesMut::from(&[0x90][..]);
+        let error = Handshake::decode(&mut buffer).expect_err("an empty array should be rejected");
+        assert!(
+            matches!(error, ProtocolError::MalformedFrame(_)),
+            "unexpected error: {error:?}"
+        );
+    }
+
+    #[test]
+    fn handshake_of_another_version_is_rejected_before_its_other_fields() {
+        for version in [0, 2] {
+            let mut buffer = BytesMut::from(
+                &encode_handshake(version, SESSION_TOKEN, TASK_INDEX, ARCHIVE_ID)[..2],
+            );
+            let error = Handshake::decode(&mut buffer).expect_err("the version should be rejected");
+            assert!(
+                matches!(error, ProtocolError::UnsupportedVersion(rejected) if version == rejected),
+                "unexpected error: {error:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn handshake_with_an_invalid_uuid_is_rejected() {
+        let mut buffer = BytesMut::from(
+            &encode_handshake(PROTOCOL_VERSION, "not-a-uuid", TASK_INDEX, ARCHIVE_ID)[..],
+        );
+        let error =
+            Handshake::decode(&mut buffer).expect_err("the session token should be rejected");
+        assert!(
+            matches!(error, ProtocolError::InvalidSessionToken(_)),
+            "unexpected error: {error:?}"
+        );
+
+        let mut buffer = BytesMut::from(
+            &encode_handshake(PROTOCOL_VERSION, SESSION_TOKEN, TASK_INDEX, "not-a-uuid")[..],
+        );
+        let error = Handshake::decode(&mut buffer).expect_err("the archive ID should be rejected");
+        assert!(
+            matches!(error, ProtocolError::InvalidArchiveId(_)),
+            "unexpected error: {error:?}"
+        );
+    }
+
+    #[test]
+    fn handshake_with_an_overlong_string_is_rejected_before_it_arrives() -> anyhow::Result<()> {
+        let mut bytes = Vec::new();
+        rmp::encode::write_array_len(&mut bytes, 4)?;
+        rmp::encode::write_uint(&mut bytes, PROTOCOL_VERSION)?;
+        rmp::encode::write_str_len(&mut bytes, 1 << 20)?;
+        let mut buffer = BytesMut::from(&bytes[..]);
+
+        let error = Handshake::decode(&mut buffer).expect_err("a 1 MiB token should be rejected");
+        assert!(
+            matches!(error, ProtocolError::MalformedFrame(_)),
+            "unexpected error: {error:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn result_accepts_a_negative_or_unsigned_encoded_timestamp() -> anyhow::Result<()> {
+        let mut bytes = encode_result(0, -5, "message\n");
+        // msgpack-c packs non-negative `int64_t` values with the smallest unsigned encoding.
+        rmp::encode::write_array_len(&mut bytes, 3)?;
+        rmp::encode::write_uint(&mut bytes, 1)?;
+        rmp::encode::write_u64(&mut bytes, 1_700_000_000_000)?;
+        rmp::encode::write_str(&mut bytes, "message\n")?;
+
+        let result = |result_index: u64, timestamp: i64| {
+            Frame::Result(ResultFrame {
+                result_index,
+                timestamp,
+                message: "message\n".to_owned(),
+            })
+        };
+        assert_eq!(
+            decode_frames(&bytes),
+            [result(0, -5), result(1, 1_700_000_000_000)]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn result_with_invalid_utf8_is_rejected() -> anyhow::Result<()> {
+        let mut bytes = Vec::new();
+        rmp::encode::write_array_len(&mut bytes, 3)?;
+        rmp::encode::write_uint(&mut bytes, 0)?;
+        rmp::encode::write_sint(&mut bytes, 0)?;
+        rmp::encode::write_str_len(&mut bytes, 1)?;
+        bytes.push(0xff);
+        let mut buffer = BytesMut::from(&bytes[..]);
+
+        let error = Frame::decode(&mut buffer).expect_err("invalid UTF-8 should be rejected");
+        assert!(
+            matches!(error, ProtocolError::MalformedFrame(_)),
+            "unexpected error: {error:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn trailer_with_a_multi_byte_count_decodes_only_once_complete() -> anyhow::Result<()> {
+        let encoded = encode_trailer(u64::MAX);
+        let mut buffer = BytesMut::new();
+        for &byte in &encoded[..encoded.len() - 1] {
+            buffer.extend_from_slice(&[byte]);
+            assert_eq!(Frame::decode(&mut buffer)?, None);
+        }
+        assert_eq!(buffer.len(), encoded.len() - 1);
+
+        buffer.extend_from_slice(&encoded[encoded.len() - 1..]);
+        buffer.extend_from_slice(&[0x93]);
+        assert_eq!(
+            Frame::decode(&mut buffer)?,
+            Some(Frame::Trailer(Trailer {
+                num_results: u64::MAX
+            }))
+        );
+        assert_eq!(&buffer[..], &[0x93]);
+        Ok(())
+    }
+
+    #[test]
+    fn malformed_frames_are_rejected() -> anyhow::Result<()> {
+        let mut malformed_frames = Vec::new();
+        for num_fields in [0, 2, 4] {
+            let mut bytes = Vec::new();
+            rmp::encode::write_array_len(&mut bytes, num_fields)?;
+            rmp::encode::write_uint(&mut bytes, 0)?;
+            malformed_frames.push(bytes);
+        }
+        let mut negative_count = Vec::new();
+        rmp::encode::write_array_len(&mut negative_count, 1)?;
+        rmp::encode::write_sint(&mut negative_count, -1)?;
+        malformed_frames.push(negative_count);
+        let mut string_count = Vec::new();
+        rmp::encode::write_array_len(&mut string_count, 1)?;
+        rmp::encode::write_str(&mut string_count, "1")?;
+        malformed_frames.push(string_count);
+        let mut not_an_array = Vec::new();
+        rmp::encode::write_uint(&mut not_an_array, 1)?;
+        malformed_frames.push(not_an_array);
+
+        for bytes in malformed_frames {
+            let mut buffer = BytesMut::from(&bytes[..]);
+            let error = Frame::decode(&mut buffer).expect_err("the frame should be rejected");
+            assert!(
+                matches!(error, ProtocolError::MalformedFrame(_)),
+                "{bytes:02x?}: unexpected error: {error:?}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn ack_is_a_one_element_array_of_its_count() -> anyhow::Result<()> {
+        const NUM_RESULTS: u64 = 20_000;
+        let encoded = Ack {
+            num_results: NUM_RESULTS,
+        }
+        .encode();
+        let mut reader = &encoded[..];
+        assert_eq!(rmp::decode::read_array_len(&mut reader)?, 1);
+        assert_eq!(rmp::decode::read_int::<u64, _>(&mut reader)?, NUM_RESULTS);
+        assert_eq!(reader, &[] as &[u8]);
+        Ok(())
+    }
+}
