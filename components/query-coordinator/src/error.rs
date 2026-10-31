@@ -62,7 +62,8 @@ impl From<SearchJobConfigError> for Error {
     fn from(error: SearchJobConfigError) -> Self {
         match error {
             SearchJobConfigError::AggregationUnsupported
-            | SearchJobConfigError::WriteToFileUnsupported => {
+            | SearchJobConfigError::WriteToFileUnsupported
+            | SearchJobConfigError::MaxNumResultsUnsupported => {
                 Self::UnsupportedJobConfig(error.to_string())
             }
             SearchJobConfigError::EmptyQuery => Self::QueryOption(QueryOptionError::EmptyQuery),
@@ -92,6 +93,12 @@ mod tests {
         assert!(
             matches!(error, Error::UnsupportedJobConfig(_)),
             "`WriteToFileUnsupported` mapped to {error:?}"
+        );
+
+        let error = Error::from(SearchJobConfigError::MaxNumResultsUnsupported);
+        assert!(
+            matches!(error, Error::UnsupportedJobConfig(_)),
+            "`MaxNumResultsUnsupported` mapped to {error:?}"
         );
 
         let error = Error::from(SearchJobConfigError::EmptyQuery);

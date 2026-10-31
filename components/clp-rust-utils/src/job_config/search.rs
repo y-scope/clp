@@ -64,6 +64,8 @@ impl SearchJobConfig {
     ///
     /// * [`SearchJobConfigError::AggregationUnsupported`] if `aggregation_config` is set.
     /// * [`SearchJobConfigError::WriteToFileUnsupported`] if `write_to_file` is set.
+    /// * [`SearchJobConfigError::MaxNumResultsUnsupported`] if both `network_output` and
+    ///   `max_num_results` are set.
     /// * [`SearchJobConfigError::EmptyQuery`] if `query_string` is empty.
     /// * [`SearchJobConfigError::ReversedTimeRange`] if `begin_timestamp` is later than
     ///   `end_timestamp`.
@@ -73,6 +75,9 @@ impl SearchJobConfig {
         }
         if self.write_to_file {
             return Err(SearchJobConfigError::WriteToFileUnsupported);
+        }
+        if self.network_output.is_some() && self.max_num_results.is_some() {
+            return Err(SearchJobConfigError::MaxNumResultsUnsupported);
         }
         if self.query_string.is_empty() {
             return Err(SearchJobConfigError::EmptyQuery);
@@ -99,6 +104,9 @@ pub enum SearchJobConfigError {
     #[error("writing query results to files is not supported")]
     WriteToFileUnsupported,
 
+    #[error("max_num_results must be unset for a streaming query, which streams every result")]
+    MaxNumResultsUnsupported,
+
     #[error("query string must not be empty")]
     EmptyQuery,
 
@@ -107,58 +115,6 @@ pub enum SearchJobConfigError {
         begin_timestamp: i64,
         end_timestamp: i64,
     },
-}
-
-/// A search job config that can be submitted as a query job whose results are streamed to its
-/// network output.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct StreamingQueryJobConfig {
-    search_job_config: SearchJobConfig,
-}
-
-impl StreamingQueryJobConfig {
-    /// Factory function.
-    ///
-    /// # Returns
-    ///
-    /// A newly created [`StreamingQueryJobConfig`] for `search_job_config` on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`StreamingQueryJobConfigError::MaxNumResultsUnsupported`] if `max_num_results` is set.
-    /// * Forwards [`SearchJobConfig::validate`]'s return values on failure.
-    pub fn validate_and_create(
-        search_job_config: SearchJobConfig,
-    ) -> Result<Self, StreamingQueryJobConfigError> {
-        search_job_config.validate()?;
-        if search_job_config.max_num_results.is_some() {
-            return Err(StreamingQueryJobConfigError::MaxNumResultsUnsupported);
-        }
-        Ok(Self { search_job_config })
-    }
-
-    /// # Returns
-    ///
-    /// The search job config, with its results streamed to `network_output`.
-    #[must_use]
-    pub fn into_search_job_config(self, network_output: NetworkOutput) -> SearchJobConfig {
-        SearchJobConfig {
-            network_output: Some(network_output),
-            ..self.search_job_config
-        }
-    }
-}
-
-/// Reasons a search job config can't be submitted as a streaming query job.
-#[derive(Debug, Eq, PartialEq, thiserror::Error)]
-pub enum StreamingQueryJobConfigError {
-    #[error("max_num_results must be unset for a streaming query, which streams every result")]
-    MaxNumResultsUnsupported,
-
-    #[error(transparent)]
-    SearchJobConfig(#[from] SearchJobConfigError),
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.
@@ -262,10 +218,19 @@ mod tests {
     use super::QueryJobStatus;
     use super::SearchJobConfig;
     use super::SearchJobConfigError;
-    use super::StreamingQueryJobConfig;
-    use super::StreamingQueryJobConfigError;
     use crate::types::SessionToken;
     use crate::types::non_empty_string::ExpectedNonEmpty;
+
+    /// # Returns
+    ///
+    /// A network output to a listener on `localhost`.
+    fn network_output() -> NetworkOutput {
+        NetworkOutput {
+            host: NonEmptyString::from_static_str("localhost"),
+            port: NonZeroU16::new(8080).expect("8080 is nonzero"),
+            session_token: SessionToken::from(uuid::Uuid::nil()),
+        }
+    }
 
     #[test]
     fn cancellability_from_status_covers_every_status() {
@@ -315,6 +280,24 @@ mod tests {
     }
 
     #[test]
+    fn validate_accepts_max_num_results_or_a_network_output_alone() {
+        for config in [
+            SearchJobConfig {
+                query_string: "*".to_owned(),
+                max_num_results: NonZeroU32::new(1),
+                ..SearchJobConfig::default()
+            },
+            SearchJobConfig {
+                query_string: "*".to_owned(),
+                network_output: Some(network_output()),
+                ..SearchJobConfig::default()
+            },
+        ] {
+            assert_eq!(config.validate(), Ok(()), "{config:?}");
+        }
+    }
+
+    #[test]
     fn validate_rejects_unsupported_settings() {
         let valid = SearchJobConfig {
             query_string: "*".to_owned(),
@@ -337,6 +320,14 @@ mod tests {
             ),
             (
                 SearchJobConfig {
+                    network_output: Some(network_output()),
+                    max_num_results: NonZeroU32::new(1),
+                    ..valid.clone()
+                },
+                SearchJobConfigError::MaxNumResultsUnsupported,
+            ),
+            (
+                SearchJobConfig {
                     query_string: String::new(),
                     ..valid.clone()
                 },
@@ -356,59 +347,5 @@ mod tests {
         ] {
             assert_eq!(config.validate(), Err(expected_error));
         }
-    }
-
-    #[test]
-    fn streaming_query_job_config_rejects_max_num_results_and_invalid_search_job_configs() {
-        let valid = SearchJobConfig {
-            query_string: "*".to_owned(),
-            ..SearchJobConfig::default()
-        };
-        for (config, expected_error) in [
-            (
-                SearchJobConfig {
-                    max_num_results: NonZeroU32::new(1),
-                    ..valid.clone()
-                },
-                StreamingQueryJobConfigError::MaxNumResultsUnsupported,
-            ),
-            (
-                SearchJobConfig {
-                    query_string: String::new(),
-                    ..valid
-                },
-                StreamingQueryJobConfigError::SearchJobConfig(SearchJobConfigError::EmptyQuery),
-            ),
-        ] {
-            assert_eq!(
-                StreamingQueryJobConfig::validate_and_create(config),
-                Err(expected_error)
-            );
-        }
-    }
-
-    #[test]
-    fn streaming_query_job_config_streams_results_to_the_given_network_output() {
-        let config = SearchJobConfig {
-            query_string: "*".to_owned(),
-            ..SearchJobConfig::default()
-        };
-        let network_output = NetworkOutput {
-            host: NonEmptyString::from_static_str("localhost"),
-            port: NonZeroU16::new(8080).expect("8080 is nonzero"),
-            session_token: SessionToken::from(uuid::Uuid::nil()),
-        };
-
-        let actual = StreamingQueryJobConfig::validate_and_create(config.clone())
-            .expect("valid config should be accepted")
-            .into_search_job_config(network_output.clone());
-
-        assert_eq!(
-            actual,
-            SearchJobConfig {
-                network_output: Some(network_output),
-                ..config
-            }
-        );
     }
 }
