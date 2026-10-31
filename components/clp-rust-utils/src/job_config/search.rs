@@ -97,6 +97,32 @@ impl QueryJobStatus {
     }
 }
 
+/// The cancellability of a query job, derived from its status.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Cancellability {
+    Cancellable,
+    CancellationRequested,
+    NotCancellable,
+}
+
+impl Cancellability {
+    /// # Returns
+    ///
+    /// The cancellability of a query job in the given status.
+    #[must_use]
+    pub const fn from_status(status: QueryJobStatus) -> Self {
+        match status {
+            QueryJobStatus::Pending | QueryJobStatus::Running => Self::Cancellable,
+            QueryJobStatus::CancelRequested
+            | QueryJobStatus::Cancelling
+            | QueryJobStatus::Cancelled => Self::CancellationRequested,
+            QueryJobStatus::Succeeded | QueryJobStatus::Failed | QueryJobStatus::Killed => {
+                Self::NotCancellable
+            }
+        }
+    }
+}
+
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
 #[derive(
     Clone,
@@ -115,4 +141,39 @@ pub enum QueryJobType {
     SearchOrAggregation = 0,
     ExtractIr = 1,
     ExtractJson = 2,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cancellability;
+    use super::QueryJobStatus;
+
+    #[test]
+    fn cancellability_from_status_covers_every_status() {
+        for (status, expected) in [
+            (QueryJobStatus::Pending, Cancellability::Cancellable),
+            (QueryJobStatus::Running, Cancellability::Cancellable),
+            (
+                QueryJobStatus::CancelRequested,
+                Cancellability::CancellationRequested,
+            ),
+            (
+                QueryJobStatus::Cancelling,
+                Cancellability::CancellationRequested,
+            ),
+            (
+                QueryJobStatus::Cancelled,
+                Cancellability::CancellationRequested,
+            ),
+            (QueryJobStatus::Succeeded, Cancellability::NotCancellable),
+            (QueryJobStatus::Failed, Cancellability::NotCancellable),
+            (QueryJobStatus::Killed, Cancellability::NotCancellable),
+        ] {
+            assert_eq!(
+                Cancellability::from_status(status),
+                expected,
+                "status: {status:?}"
+            );
+        }
+    }
 }
