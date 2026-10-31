@@ -72,16 +72,16 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// # Returns
     ///
     /// A newly created [`QueryJobHandle`] for the given query job, with the `clp-s`
-    /// query options derived from `search_job_config`.
+    /// query options derived from `search_job_config`. The job's results are sent to the network
+    /// output in `search_job_config` if it's set, or to `results_cache_output_handle` otherwise.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::UnsupportedJobConfig`] if:
-    ///   * The job carries an aggregation config.
-    ///   * The job writes its results to files.
-    /// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
+    /// * [`Error::UnsupportedJobConfig`], [`Error::QueryOption`] or
+    ///   [`Error::InvalidQueryJobConfig`] if [`SearchJobConfig::validate`] rejects
+    ///   `search_job_config`.
     /// * Forwards [`ClpSQueryOption::try_from`]'s return values on failure.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
@@ -89,35 +89,21 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
         search_job_config: SearchJobConfig,
-        output_handle: OutputHandle,
+        results_cache_output_handle: OutputHandle,
         job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
-        if search_job_config.aggregation_config.is_some() {
-            return Err(Error::UnsupportedJobConfig(
-                "aggregation jobs are not supported".to_owned(),
-            ));
-        }
-        if search_job_config.write_to_file {
-            return Err(Error::UnsupportedJobConfig(
-                "writing query results to files is not supported".to_owned(),
-            ));
-        }
-
+        search_job_config.validate()?;
         let clp_s_query_option = ClpSQueryOption::try_from(&search_job_config)?;
-        if let (Some(begin_timestamp), Some(end_timestamp)) = (
-            search_job_config.begin_timestamp,
-            search_job_config.end_timestamp,
-        ) && begin_timestamp > end_timestamp
-        {
-            return Err(Error::InvalidQueryJobConfig(format!(
-                "begin timestamp {begin_timestamp} is greater than end timestamp {end_timestamp}"
-            )));
-        }
 
         let archive_end_ts_lower_bound_millisecs = context
             .archive_selection_options
             .archive_retention_period_millisecs
             .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
+
+        let output_handle = search_job_config
+            .network_output
+            .clone()
+            .map_or(results_cache_output_handle, OutputHandle::Network);
 
         Ok(Self {
             context,
@@ -769,19 +755,147 @@ struct ArchiveRowProjection {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    use std::num::NonZeroU16;
     use std::num::NonZeroUsize;
+    use std::sync::Arc;
     use std::time::Duration;
 
+    use async_trait::async_trait;
     use clp_rust_utils::clp_config::package::config::Database;
     use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::job_config::NetworkOutput;
+    use clp_rust_utils::job_config::QueryJobId;
     use clp_rust_utils::job_config::SearchJobConfig;
+    use clp_rust_utils::task_io::query::ClpSQueryOption;
+    use clp_rust_utils::task_io::query::OutputHandle;
+    use clp_rust_utils::types::SessionToken;
+    use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+    use non_empty_string::NonEmptyString;
+    use spider_core::task::ExecutionPolicy;
+    use spider_core::types::id::JobId as SpiderJobId;
+    use spider_core::types::id::ResourceGroupId;
     use sqlx::mysql::MySqlPoolOptions;
 
     use super::ArchiveSelectionOptions;
     use super::ArchiveSelector;
+    use super::QueryJobHandle;
     use super::QueryJobHandleContext;
     use super::SpiderOption;
     use crate::Error;
+    use crate::query_job_submitter::ArchiveMetadata;
+    use crate::query_job_submitter::QueryJobOutcome;
+    use crate::query_job_submitter::QueryJobSubmitter;
+
+    const RESULTS_CACHE_URI: &str = "mongodb://results-cache:27017/clp-query-results";
+
+    /// A submitter for tests that only construct job handles and never submit or run a job.
+    #[derive(Clone)]
+    struct UnreachableSubmitter;
+
+    #[async_trait]
+    impl QueryJobSubmitter for UnreachableSubmitter {
+        async fn submit_query_job(
+            &self,
+            _query_job_id: QueryJobId,
+            _resource_group_id: ResourceGroupId,
+            _clp_s_query_option: ClpSQueryOption,
+            _output_handle: OutputHandle,
+            _archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        ) -> Result<SpiderJobId, Error> {
+            unreachable!("the test never submits a query job")
+        }
+
+        async fn run_query_job_to_completion(
+            &self,
+            _spider_job_id: SpiderJobId,
+            _poll_interval: Duration,
+        ) -> Result<QueryJobOutcome, Error> {
+            unreachable!("the test never runs a query job")
+        }
+
+        async fn cancel_query_job(&self, _spider_job_id: SpiderJobId) -> Result<(), Error> {
+            unreachable!("the test never cancels a query job")
+        }
+    }
+
+    /// # Returns
+    ///
+    /// A handle for a plain search job with the given network output, created with the results
+    /// cache at [`RESULTS_CACHE_URI`] as its results-cache output handle.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the handle can't be created.
+    fn new_search_job_handle(
+        network_output: Option<NetworkOutput>,
+    ) -> QueryJobHandle<UnreachableSubmitter> {
+        let context = Arc::new(QueryJobHandleContext {
+            db_pool: MySqlPoolOptions::new()
+                .connect_lazy("mysql://localhost/clp-db")
+                .expect("the database URL should be valid"),
+            db_config: Database::default(),
+            archive_selection_options: ArchiveSelectionOptions {
+                archive_retention_period_millisecs: None,
+                max_datasets_per_query: None,
+            },
+            spider_option: SpiderOption {
+                poll_interval: Duration::from_secs(1),
+                query_task_max_retry: 0,
+            },
+        });
+        let search_job_config = SearchJobConfig {
+            query_string: "*".to_owned(),
+            network_output,
+            ..SearchJobConfig::default()
+        };
+
+        QueryJobHandle::new(
+            context,
+            42,
+            UnreachableSubmitter,
+            ResourceGroupId::random(),
+            search_job_config,
+            OutputHandle::ResultsCache {
+                uri: NonEmptyString::from_static_str(RESULTS_CACHE_URI),
+            },
+            0,
+        )
+        .expect("a plain search job config should be accepted")
+    }
+
+    #[tokio::test]
+    async fn job_with_network_output_streams_to_it() -> anyhow::Result<()> {
+        let network_output = NetworkOutput {
+            host: NonEmptyString::from_static_str("10.0.0.7"),
+            port: NonZeroU16::new(40_123).expect("40,123 is nonzero"),
+            session_token: SessionToken::from(uuid::Uuid::parse_str(
+                "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13",
+            )?),
+        };
+
+        let job_handle = new_search_job_handle(Some(network_output.clone()));
+
+        assert_eq!(
+            job_handle.output_handle,
+            OutputHandle::Network(network_output)
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn job_without_network_output_writes_to_the_results_cache() -> anyhow::Result<()> {
+        let job_handle = new_search_job_handle(None);
+
+        assert_eq!(
+            job_handle.output_handle,
+            OutputHandle::ResultsCache {
+                uri: NonEmptyString::from_static_str(RESULTS_CACHE_URI),
+            }
+        );
+
+        Ok(())
+    }
 
     #[tokio::test]
     async fn duplicate_requested_datasets_count_once_toward_max_datasets_per_query() {

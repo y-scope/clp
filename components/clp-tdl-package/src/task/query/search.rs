@@ -13,12 +13,15 @@ use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
+use spider_core::task::TaskIndex;
+use spider_core::types::id::TaskId;
 
 use crate::common::clp_home;
 use crate::common::runtime;
@@ -36,8 +39,8 @@ use crate::task::utils::s3_credential_env;
 /// Returns an error if:
 ///
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
-/// * `output_handle` is not [`OutputHandle::ResultsCache`]. The current implementation only
-///   supports result cache output streaming.
+/// * `output_handle` is [`OutputHandle::File`], which the current implementation doesn't support.
+/// * `output_handle` is [`OutputHandle::Network`] and `ctx.task_id` isn't a [`TaskId::Index`].
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
 pub(super) fn search(
@@ -52,8 +55,21 @@ pub(super) fn search(
     if StorageEngine::ClpS != config.package.storage_engine {
         anyhow::bail!("the clp-s query task requires the `clp-s` storage engine");
     }
-    let OutputHandle::ResultsCache { uri } = output_handle else {
-        anyhow::bail!("unsupported query output handler");
+    let search_output = match output_handle {
+        OutputHandle::ResultsCache { uri } => SearchOutput::ResultsCache { uri },
+        OutputHandle::Network(network_output) => {
+            let TaskId::Index(task_index) = ctx.task_id else {
+                anyhow::bail!(
+                    "streaming to a network output requires a task index, got task ID {}",
+                    ctx.task_id
+                );
+            };
+            SearchOutput::Network {
+                network_output,
+                task_index,
+            }
+        }
+        OutputHandle::File => anyhow::bail!("unsupported query output handler"),
     };
 
     tracing::info!(
@@ -80,13 +96,24 @@ pub(super) fn search(
                 );
             },
         )?;
-    let args = build_clp_s_search_args_for_result_cache(
-        &archive_selector,
-        clp_s_query_option,
-        uri.as_str(),
-        query_job_id,
-        dataset.as_str(),
-    );
+    let args = match search_output {
+        SearchOutput::ResultsCache { uri } => build_clp_s_search_args_for_result_cache(
+            &archive_selector,
+            clp_s_query_option,
+            uri.as_str(),
+            query_job_id,
+            dataset.as_str(),
+        ),
+        SearchOutput::Network {
+            network_output,
+            task_index,
+        } => build_clp_s_search_args_for_network(
+            &archive_selector,
+            clp_s_query_option,
+            network_output,
+            task_index,
+        ),
+    };
     run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
 
     tracing::info!(
@@ -97,6 +124,25 @@ pub(super) fn search(
         "clp-s query task completed successfully.",
     );
     Ok(())
+}
+
+/// The output handler that clp-s writes a query task's results to.
+///
+/// # Lifetimes
+///
+/// * `'output_handle_lifetime` - The lifetime of the [`OutputHandle`] the output is resolved from.
+enum SearchOutput<'output_handle_lifetime> {
+    /// The results cache, addressed by its MongoDB URI.
+    ResultsCache {
+        uri: &'output_handle_lifetime NonEmptyString,
+    },
+
+    /// A TCP listener, and the task's index in the job's task graph, which identifies the task to
+    /// the listener.
+    Network {
+        network_output: &'output_handle_lifetime NetworkOutput,
+        task_index: TaskIndex,
+    },
 }
 
 /// Selector for clp-s to address the archive to search.
@@ -178,6 +224,59 @@ fn build_clp_s_search_args_for_result_cache(
     query_job_id: QueryJobId,
     dataset: &str,
 ) -> Vec<OsString> {
+    let mut args = build_clp_s_search_query_args(archive_selector, clp_s_query_option);
+    args.extend([
+        OsString::from("results-cache"),
+        OsString::from("--uri"),
+        OsString::from(result_cache_uri),
+        OsString::from("--collection"),
+        OsString::from(query_job_id.to_string()),
+    ]);
+    if let Some(max_num_results) = clp_s_query_option.max_num_results {
+        args.push(OsString::from("--max-num-results"));
+        args.push(OsString::from(max_num_results.to_string()));
+    }
+    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
+    args
+}
+
+/// Builds the clp-s command-line arguments for a single-archive search streaming to a network
+/// destination.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments.
+fn build_clp_s_search_args_for_network(
+    archive_selector: &ArchiveSelector,
+    clp_s_query_option: &ClpSQueryOption,
+    network_output: &NetworkOutput,
+    task_index: TaskIndex,
+) -> Vec<OsString> {
+    let mut args = build_clp_s_search_query_args(archive_selector, clp_s_query_option);
+    args.extend([
+        OsString::from("network"),
+        OsString::from("--host"),
+        OsString::from(network_output.host.as_str()),
+        OsString::from("--port"),
+        OsString::from(network_output.port.to_string()),
+        OsString::from("--session-token"),
+        OsString::from(network_output.session_token.to_string()),
+        OsString::from("--task-index"),
+        OsString::from(task_index.to_string()),
+    ]);
+    args
+}
+
+/// Builds the clp-s command-line arguments that select the archive and the query to run on it,
+/// shared by every output handler.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments, which the caller completes with an output handler.
+fn build_clp_s_search_query_args(
+    archive_selector: &ArchiveSelector,
+    clp_s_query_option: &ClpSQueryOption,
+) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
     match archive_selector {
         ArchiveSelector::Directory { path, archive_id } => {
@@ -204,19 +303,6 @@ fn build_clp_s_search_args_for_result_cache(
     if clp_s_query_option.ignore_case {
         args.push(OsString::from("--ignore-case"));
     }
-
-    args.extend([
-        OsString::from("results-cache"),
-        OsString::from("--uri"),
-        OsString::from(result_cache_uri),
-        OsString::from("--collection"),
-        OsString::from(query_job_id.to_string()),
-    ]);
-    if let Some(max_num_results) = clp_s_query_option.max_num_results {
-        args.push(OsString::from("--max-num-results"));
-        args.push(OsString::from(max_num_results.to_string()));
-    }
-    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
     args
 }
 
@@ -292,6 +378,7 @@ fn run_clp_s_search(
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
+    use std::num::NonZeroU16;
     use std::num::NonZeroU32;
     use std::path::Path;
     use std::path::PathBuf;
@@ -305,9 +392,11 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::job_config::NetworkOutput;
     use clp_rust_utils::task_io::query::ClpSQueryOption;
     use clp_rust_utils::task_io::query::OutputHandle;
     use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::SessionToken;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
     use spider_core::types::id::JobId;
@@ -316,11 +405,13 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ArchiveSelector;
+    use super::build_clp_s_search_args_for_network;
     use super::build_clp_s_search_args_for_result_cache;
     use super::resolve_archive_input;
     use super::search;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
 
     /// # Returns
     ///
@@ -389,6 +480,24 @@ mod tests {
                 ..ArchiveOutput::default()
             },
             ..SpiderTaskExecutorConfig::default()
+        }
+    }
+
+    /// # Returns
+    ///
+    /// A network output to a listener at `10.0.0.7:40123`, with [`SESSION_TOKEN`] as its session
+    /// token.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`SESSION_TOKEN`] isn't a valid UUID.
+    fn network_output() -> NetworkOutput {
+        NetworkOutput {
+            host: NonEmptyString::from_static_str("10.0.0.7"),
+            port: NonZeroU16::new(40_123).expect("40,123 is nonzero"),
+            session_token: SessionToken::from(
+                uuid::Uuid::parse_str(SESSION_TOKEN).expect("valid session token UUID"),
+            ),
         }
     }
 
@@ -551,6 +660,48 @@ mod tests {
     }
 
     #[test]
+    fn build_clp_s_search_args_for_network_fs_with_timestamps_and_ignore_case() {
+        let clp_s_query_option = ClpSQueryOption {
+            query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
+            max_num_results: Some(NonZeroU32::new(7).expect("7 is nonzero")),
+            begin_timestamp_millisecs: Some(1_310_138_944_000),
+            end_timestamp_millisecs: Some(1_311_208_074_120),
+            ignore_case: true,
+            count_by_time_bucket_size_millisecs: None,
+        };
+
+        assert_eq!(
+            build_clp_s_search_args_for_network(
+                &directory_selector(),
+                &clp_s_query_option,
+                &network_output(),
+                5,
+            ),
+            vec![
+                OsString::from("s"),
+                OsString::from("/archives/ds1"),
+                OsString::from("--archive-id"),
+                OsString::from(ARCHIVE_ID),
+                OsString::from("level: \"ERROR\""),
+                OsString::from("--tge"),
+                OsString::from("1310138944000"),
+                OsString::from("--tle"),
+                OsString::from("1311208074120"),
+                OsString::from("--ignore-case"),
+                OsString::from("network"),
+                OsString::from("--host"),
+                OsString::from("10.0.0.7"),
+                OsString::from("--port"),
+                OsString::from("40123"),
+                OsString::from("--session-token"),
+                OsString::from(SESSION_TOKEN),
+                OsString::from("--task-index"),
+                OsString::from("5"),
+            ]
+        );
+    }
+
+    #[test]
     fn resolve_archive_input_fs_joins_dataset_and_returns_no_credentials() -> anyhow::Result<()> {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = SpiderTaskExecutorConfig {
@@ -694,6 +845,37 @@ mod tests {
         .expect_err("the file output handler is unsupported");
 
         assert!(error.to_string().contains("unsupported"));
+    }
+
+    #[test]
+    fn search_rejects_network_output_without_task_index() {
+        let config = SpiderTaskExecutorConfig {
+            package: Package {
+                storage_engine: StorageEngine::ClpS,
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let cleanup_task_context = TaskContext::new(
+            JobId::random(),
+            TaskId::Cleanup,
+            1,
+            ResourceGroupId::random(),
+            None,
+        )
+        .expect("a cleanup task context without graph outputs is valid");
+
+        let error = search(
+            &cleanup_task_context,
+            &config,
+            42,
+            &unbounded_query_option(),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
+            &DatasetName::default(),
+            &OutputHandle::Network(network_output()),
+        )
+        .expect_err("a network output requires a task index");
+
+        assert!(error.to_string().contains("task index"));
     }
 
     #[test]

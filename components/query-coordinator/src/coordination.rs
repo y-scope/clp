@@ -59,7 +59,7 @@ pub struct Coordinator {
     spider_client: SpiderClient,
     db_pool: sqlx::MySqlPool,
     job_handle_context: Arc<QueryJobHandleContext>,
-    output_handle: OutputHandle,
+    results_cache_output_handle: OutputHandle,
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
@@ -161,7 +161,7 @@ impl Coordinator {
             spider_client,
             db_pool,
             job_handle_context,
-            output_handle: OutputHandle::ResultsCache {
+            results_cache_output_handle: OutputHandle::ResultsCache {
                 uri: results_cache_config.uri(),
             },
             is_first_fetch: true,
@@ -277,7 +277,7 @@ impl Coordinator {
                 self.spider_client.clone(),
                 self.resource_group_id,
                 search_job_config,
-                self.output_handle.clone(),
+                self.results_cache_output_handle.clone(),
                 job_creation_timestamp_millisecs,
             ) {
                 Ok(job_handle) => job_handle,
@@ -381,7 +381,7 @@ impl Coordinator {
                 self.spider_client.clone(),
                 self.resource_group_id,
                 search_job_config,
-                self.output_handle.clone(),
+                self.results_cache_output_handle.clone(),
                 job_row.job_creation_timestamp_millisecs,
             ) {
                 Ok(job_handle) => job_handle,

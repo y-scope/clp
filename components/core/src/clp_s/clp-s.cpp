@@ -309,7 +309,9 @@ bool search_archive(
                                 -> void {
                             output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
                                     options.host,
-                                    options.port
+                                    options.port,
+                                    options.session_token,
+                                    options.task_idx
                             );
                         },
                         [&](CommandLineArguments::ReducerOutputHandlerOptions const&) -> void {
