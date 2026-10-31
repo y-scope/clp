@@ -41,19 +41,19 @@ pub(super) trait Source {
     ///
     /// # Returns
     ///
-    /// The prepared inputs, or `None` when [`FsInputSource::file_paths`] is empty, on success.
+    /// The prepared inputs on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`anyhow::Error`] if source entries are invalid or cannot be read, or if S3 credentials
-    ///   cannot be resolved.
+    /// * [`anyhow::Error`] if the source has no inputs, entries are invalid or cannot be read, or
+    ///   S3 credentials cannot be resolved.
     ///
     /// # Panics
     ///
     /// Panics for S3 inputs if the package runtime has not been initialized.
-    fn prepare(self) -> anyhow::Result<Option<PreparedSource>>;
+    fn prepare(self) -> anyhow::Result<PreparedSource>;
 }
 
 /// Input-list contents and authentication for compression.
@@ -67,19 +67,23 @@ impl Source for S3InputSource {
     ///
     /// Returns an error if:
     ///
+    /// * [`anyhow::Error`] if the source has no object keys.
     /// * Forwards [`build_s3_logs_list`]'s return values on failure.
     /// * Forwards [`s3_credential_env`]'s return values on failure.
-    fn prepare(self) -> anyhow::Result<Option<PreparedSource>> {
+    fn prepare(self) -> anyhow::Result<PreparedSource> {
+        if self.object_keys.is_empty() {
+            anyhow::bail!("compression source must contain at least one input");
+        }
         let logs_list = build_s3_logs_list(&self)?;
         let input_region = self
             .region_code
             .as_ref()
             .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
         let credential_env = s3_credential_env(&runtime(), input_region, &self.aws_authentication)?;
-        Ok(Some(PreparedSource {
+        Ok(PreparedSource {
             logs_list,
             auth: InputAuth::S3 { credential_env },
-        }))
+        })
     }
 }
 
@@ -88,19 +92,20 @@ impl Source for FsInputSource {
     ///
     /// Returns an error if:
     ///
+    /// * [`anyhow::Error`] if the source has no file paths.
     /// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
     /// * Forwards [`build_fs_logs_list`]'s return values on failure.
-    fn prepare(self) -> anyhow::Result<Option<PreparedSource>> {
+    fn prepare(self) -> anyhow::Result<PreparedSource> {
         if self.file_paths.is_empty() {
-            return Ok(None);
+            anyhow::bail!("compression source must contain at least one input");
         }
         let mount_point =
             LogsInputMountPoint::resolve(NonEmptyString::from_static_str(LOGS_INPUT_MOUNT_POINT))?;
         let logs_list = build_fs_logs_list(&self, &mount_point)?;
-        Ok(Some(PreparedSource {
+        Ok(PreparedSource {
             logs_list,
             auth: InputAuth::None,
-        }))
+        })
     }
 }
 
@@ -140,12 +145,7 @@ pub(super) fn compress<SourceType: Source>(
     if StorageEngine::ClpS != config.package.storage_engine {
         anyhow::bail!("compression requires the clp-s storage engine");
     }
-    let Some(prepared_source) = input_source.prepare()? else {
-        return Ok(CompressionTaskOutput {
-            dataset,
-            archives: Vec::new(),
-        });
-    };
+    let prepared_source = input_source.prepare()?;
     let clp_home = clp_home();
     let list_path = config.abs_tmp_directory(clp_home).join(format!(
         "compression-{}-{}-{}-log-paths.txt",
@@ -1073,6 +1073,29 @@ mod tests {
     }
 
     #[test]
+    fn s3_empty_manifest_is_rejected() {
+        let source = S3InputSource {
+            endpoint_url: None,
+            region_code: None,
+            bucket: NonEmptyString::from_static_str("logs"),
+            aws_authentication: AwsAuthentication::Default,
+            object_keys: vec![],
+        };
+        let error = compress(
+            &task_context(),
+            &FsFixture::config(),
+            &BASE_OPTION,
+            DatasetName::default(),
+            source,
+        )
+        .expect_err("empty input must fail before runtime or output setup");
+        assert_eq!(
+            error.to_string(),
+            "compression source must contain at least one input"
+        );
+    }
+
+    #[test]
     fn s3_preparation_preserves_urls_credentials_and_auth() {
         use clp_rust_utils::clp_config::AwsCredentials;
 
@@ -1092,10 +1115,7 @@ mod tests {
             },
             object_keys: vec!["input.json".to_owned()],
         };
-        let prepared_source = source
-            .prepare()
-            .expect("valid source should be prepared")
-            .expect("s3 preparation produces an explicit list");
+        let prepared_source = source.prepare().expect("valid source should be prepared");
         let list_path = fixture.root.join("s3-list.txt");
         let mut cleanup = TmpFileDeleter::new();
         let input_list = InputList::new(list_path.clone(), prepared_source, &mut cleanup)
@@ -1310,18 +1330,20 @@ mod tests {
     }
 
     #[test]
-    fn fs_empty_manifest_produces_no_archives() {
+    fn fs_empty_manifest_is_rejected() {
         let source = FsInputSource { file_paths: vec![] };
-        let output = compress(
+        let error = compress(
             &task_context(),
             &FsFixture::config(),
             &BASE_OPTION,
             DatasetName::default(),
             source,
         )
-        .expect("file-free compression should succeed without input or output setup");
-        assert_eq!(output.archives, vec![]);
-        assert_eq!(output.dataset, DatasetName::default());
+        .expect_err("empty input must fail before mount or output setup");
+        assert_eq!(
+            error.to_string(),
+            "compression source must contain at least one input"
+        );
     }
 
     #[cfg(unix)]
