@@ -9,13 +9,12 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
-use clp_rust_utils::database::mysql::query_job;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::AggregationConfig;
-use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::job_config::QueryJobType;
 use clp_rust_utils::job_config::SearchJobConfig;
 use futures::Stream;
 use futures::StreamExt;
@@ -275,7 +274,8 @@ impl Client {
     ///
     /// * [`ClientError::InvalidInput`] if `count_by_time_bucket_size_millisecs` is set and is `<=
     ///   0`.
-    /// * Forwards [`query_job::submit`]'s return values on failure.
+    /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
         if let Some(bucket_size) = count_by_time_bucket_size
@@ -301,7 +301,17 @@ impl Client {
             query_job_config.write_to_file = false;
         }
 
-        Ok(query_job::submit(&self.sql_pool, &query_job_config).await?)
+        let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
+        let query_result = sqlx::query(&format!(
+            "INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (?, ?)"
+        ))
+        .bind(rmp_serde::to_vec_named(&query_job_config)?)
+        .bind(query_job_type_i32)
+        .execute(&self.sql_pool)
+        .await?;
+
+        let query_job_id = query_result.last_insert_id();
+        Ok(query_job_id)
     }
 
     /// Asynchronously fetches the results of a completed query job.
@@ -405,12 +415,36 @@ impl Client {
     /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
     /// * [`ClientError::QueryJobAlreadyTerminated`] if the job has already succeeded, failed, or
     ///   been killed.
-    /// * Forwards [`query_job::request_cancellation`]'s return values on failure.
+    /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
+    /// * Forwards [`sqlx::query::QueryScalar::fetch_optional`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
     pub async fn cancel_query_job(&self, query_job_id: u64) -> Result<(), ClientError> {
-        match query_job::request_cancellation(&self.sql_pool, query_job_id).await? {
-            None => Err(ClientError::QueryJobNotFound(query_job_id)),
-            Some(Cancellability::Cancellable | Cancellability::CancellationRequested) => Ok(()),
-            Some(Cancellability::NotCancellable) => {
+        let mut tx = self.sql_pool.begin().await?;
+        let Some(status) = sqlx::query_scalar::<_, QueryJobStatus>(&format!(
+            "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ? FOR UPDATE"
+        ))
+        .bind(query_job_id)
+        .fetch_optional(&mut *tx)
+        .await?
+        else {
+            return Err(ClientError::QueryJobNotFound(query_job_id));
+        };
+
+        match Cancellability::from_status(status) {
+            Cancellability::Cancellable => {
+                sqlx::query(&format!(
+                    "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ?"
+                ))
+                .bind(QueryJobStatus::CancelRequested)
+                .bind(query_job_id)
+                .execute(&mut *tx)
+                .await?;
+                tx.commit().await?;
+                Ok(())
+            }
+            Cancellability::CancellationRequested => Ok(()),
+            Cancellability::NotCancellable => {
                 Err(ClientError::QueryJobAlreadyTerminated(query_job_id))
             }
         }
@@ -426,12 +460,18 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
-    /// * Forwards [`query_job::get_status`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
+    /// * Forwards [`QueryJobStatus::try_from`]'s return values on failure.
     pub async fn get_status(&self, query_job_id: u64) -> Result<QueryJobStatus, ClientError> {
-        query_job::get_status(&self.sql_pool, query_job_id)
-            .await?
-            .ok_or(ClientError::QueryJobNotFound(query_job_id))
+        let row = sqlx::query(&format!(
+            "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
+        ))
+        .bind(query_job_id)
+        .fetch_one(&self.sql_pool)
+        .await?;
+        let status: i32 = row.try_get("status")?;
+        Ok(QueryJobStatus::try_from(status)?)
     }
 
     async fn get_job_config(&self, query_job_id: u64) -> Result<SearchJobConfig, ClientError> {
@@ -809,6 +849,31 @@ where
             tracing::error!("An error occurred when streaming results: {}", err);
         }
         poll
+    }
+}
+
+/// The cancellability of a query job, derived from its status.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Cancellability {
+    Cancellable,
+    CancellationRequested,
+    NotCancellable,
+}
+
+impl Cancellability {
+    /// # Returns
+    ///
+    /// The cancellability of a query job in the given status.
+    pub(crate) const fn from_status(status: QueryJobStatus) -> Self {
+        match status {
+            QueryJobStatus::Pending | QueryJobStatus::Running => Self::Cancellable,
+            QueryJobStatus::CancelRequested
+            | QueryJobStatus::Cancelling
+            | QueryJobStatus::Cancelled => Self::CancellationRequested,
+            QueryJobStatus::Succeeded | QueryJobStatus::Failed | QueryJobStatus::Killed => {
+                Self::NotCancellable
+            }
+        }
     }
 }
 

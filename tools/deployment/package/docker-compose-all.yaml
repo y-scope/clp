@@ -190,7 +190,7 @@ services:
 
   results-cache:
     <<: *service_defaults
-    image: "mongo:9.0.4"
+    image: "mongo:8.0.21"
     hostname: "results_cache"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the results cache.

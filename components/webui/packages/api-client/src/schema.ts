@@ -1099,13 +1099,6 @@ export interface operations {
                     "text/event-stream": string;
                 };
             };
-            /** @description No query job with the given ID was found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             500: {
                 headers: {
                     [name: string]: unknown;

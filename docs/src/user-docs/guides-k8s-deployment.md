@@ -211,7 +211,7 @@ image:
     tag: "7.4.8"
   resultsCache:
     repository: "mongo"
-    tag: "9.0.4"
+    tag: "8.0.21"
   kubectl:
     repository: "bitnami/kubectl"
     digest: "sha256:98736aabcecb8d3cbcdcd7b132d14b1d67ed99bac2f06d471f06235933103df3"  # v1.36.0
