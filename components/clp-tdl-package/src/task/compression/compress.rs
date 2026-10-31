@@ -37,18 +37,18 @@ use crate::task::utils::s3_credential_env;
 
 /// Source-specific validation and preparation for compression.
 pub(super) trait Source {
-    /// Validates the source and prepares its explicit input list and credentials.
+    /// Validates the inputs and prepares their paths or URLs and authentication.
     ///
     /// # Returns
     ///
-    /// The prepared source, or `None` for a validated file-free filesystem manifest, on success.
+    /// The prepared inputs, or `None` when [`FsInputSource::file_paths`] is empty, on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * Source entries are invalid or cannot be read.
-    /// * S3 credentials cannot be resolved.
+    /// * [`anyhow::Error`] if source entries are invalid or cannot be read, or if S3 credentials
+    ///   cannot be resolved.
     ///
     /// # Panics
     ///
@@ -56,7 +56,7 @@ pub(super) trait Source {
     fn prepare(self) -> anyhow::Result<Option<PreparedSource>>;
 }
 
-/// Validated input-list contents and their authentication.
+/// Input-list contents and authentication for compression.
 pub(super) struct PreparedSource {
     logs_list: String,
     auth: InputAuth,
@@ -91,12 +91,12 @@ impl Source for FsInputSource {
     /// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
     /// * Forwards [`build_fs_logs_list`]'s return values on failure.
     fn prepare(self) -> anyhow::Result<Option<PreparedSource>> {
+        if self.file_paths.is_empty() {
+            return Ok(None);
+        }
         let mount_point =
             LogsInputMountPoint::resolve(NonEmptyString::from_static_str(LOGS_INPUT_MOUNT_POINT))?;
         let logs_list = build_fs_logs_list(&self, &mount_point)?;
-        if logs_list.is_empty() {
-            return Ok(None);
-        }
         Ok(Some(PreparedSource {
             logs_list,
             auth: InputAuth::None,
@@ -104,12 +104,11 @@ impl Source for FsInputSource {
     }
 }
 
-/// Compresses the given inputs into archives, uploads them to S3, and returns their metadata
-/// for the commit task.
+/// Compresses the inputs, uploads the archives to S3, and returns their metadata.
 ///
 /// # Type Parameters
 ///
-/// * `SourceType` - The input manifest's validation and preparation implementation.
+/// * `SourceType` - The input type and its validation and preparation implementation.
 ///
 /// # Returns
 ///
@@ -402,7 +401,7 @@ impl ArchiveFinisher {
     ///
     /// Returns an error if:
     ///
-    /// * The indexer task panics.
+    /// * [`anyhow::Error`] if the indexer task panics or is cancelled.
     /// * Forwards [`upload_file_to_s3`]'s return values on failure.
     /// * Forwards [`run_indexer`]'s return values on failure.
     async fn finish(self) -> anyhow::Result<()> {
@@ -458,7 +457,7 @@ impl ArchiveFinisher {
 ///
 /// Returns an error if:
 ///
-/// * An object key in `input_source` is empty.
+/// * [`anyhow::Error`] if an object key in `input_source` is empty.
 /// * Forwards [`generate_s3_url`]'s return values on failure.
 fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
     let endpoint = input_source
@@ -485,21 +484,18 @@ fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
     Ok(list)
 }
 
-/// Revalidates filesystem entries against the logs-input mount point.
+/// Builds a list of container paths for regular files under the logs-input mount point.
 ///
 /// # Returns
 ///
-/// A newline-terminated list of checked regular-file paths on success. Empty directories are
-/// validated but omitted from the list.
+/// The newline-separated container paths, one per input file, on success.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * A file entry is not a regular file or an empty-directory entry contains entries.
+/// * [`anyhow::Error`] if a file entry is not a regular file.
 /// * Forwards [`LogsInputMountPoint::to_container_path`]'s return values on failure.
-/// * Forwards [`std::fs::read_dir`]'s return values on failure.
-/// * Forwards [`std::fs::ReadDir::next`]'s entry errors on failure.
 fn build_fs_logs_list(
     source: &FsInputSource,
     mount_point: &LogsInputMountPoint,
@@ -512,14 +508,6 @@ fn build_fs_logs_list(
         }
         list.push_str(path.as_str());
         list.push('\n');
-    }
-    for directory in &source.empty_directories {
-        let path = mount_point.to_container_path(directory)?;
-        let mut entries = std::fs::read_dir(path.as_str())
-            .with_context(|| format!("input {} is not a readable directory", path.as_str()))?;
-        if entries.next().transpose()?.is_some() {
-            anyhow::bail!("input directory {} is no longer empty", path.as_str());
-        }
     }
     Ok(list)
 }
@@ -534,7 +522,7 @@ fn build_fs_logs_list(
 ///
 /// Returns an error if:
 ///
-/// * `config`'s archive output is not S3-backed.
+/// * [`anyhow::Error`] if `config`'s archive output is not S3-backed.
 fn extract_s3_output_config(config: &SpiderTaskExecutorConfig) -> anyhow::Result<&S3Config> {
     match &config.archive_output.storage {
         ArchiveOutputStorage::S3 { s3_config, .. } => Ok(s3_config),
@@ -839,7 +827,7 @@ fn build_log_converter_args(output_dir: &Path, input_list: &InputList) -> Vec<Os
 ///
 /// Returns an error if:
 ///
-/// * log-converter exits with a non-zero status.
+/// * [`anyhow::Error`] if log-converter exits with a non-zero status.
 /// * Forwards [`Command::spawn`]'s return values on failure.
 /// * Forwards [`std::process::Child::wait`]'s return values on failure.
 ///
@@ -939,7 +927,7 @@ fn build_indexer_args(
 ///
 /// Returns an error if:
 ///
-/// * The indexer exits with a non-zero status.
+/// * [`anyhow::Error`] if the indexer exits with a non-zero status.
 /// * Forwards [`Command::status`]'s return values on failure.
 fn run_indexer(
     indexer_bin: &Path,
@@ -1259,16 +1247,10 @@ mod tests {
         let fixture = FsFixture::new();
         let file = fixture.root.join("empty.json");
         std::fs::write(&file, []).expect("test input file should be created");
-        let empty_directory = fixture.root.join("empty-directory");
-        std::fs::create_dir(&empty_directory).expect("empty test directory should be created");
         let source = FsInputSource {
             file_paths: vec![
                 LogsInputPath::try_from("/empty.json".to_owned())
                     .expect("test input path should be valid"),
-            ],
-            empty_directories: vec![
-                LogsInputPath::try_from("/empty-directory".to_owned())
-                    .expect("test directory path should be valid"),
             ],
         };
         let config = FsFixture::config();
@@ -1321,7 +1303,6 @@ mod tests {
             file_paths: vec![
                 LogsInputPath::try_from("/".to_owned()).expect("mount root path should be valid"),
             ],
-            empty_directories: vec![],
         };
         let error = build_fs_logs_list(&source, &fixture.mount_point)
             .expect_err("a directory must not be recursively compressed");
@@ -1329,41 +1310,18 @@ mod tests {
     }
 
     #[test]
-    fn fs_list_revalidates_empty_directories() {
-        let fixture = FsFixture::new();
-        let source = FsInputSource {
-            file_paths: vec![],
-            empty_directories: vec![
-                LogsInputPath::try_from("/".to_owned()).expect("mount root path should be valid"),
-            ],
-        };
-        assert_eq!(
-            build_fs_logs_list(&source, &fixture.mount_point)
-                .expect("validated empty directories should succeed"),
-            ""
-        );
-        std::fs::write(fixture.root.join("new.json"), [])
-            .expect("new input file should be created");
-        let error = build_fs_logs_list(&source, &fixture.mount_point)
-            .expect_err("a directory populated after planning must be rejected");
-        assert!(error.to_string().contains("no longer empty"));
-    }
-
-    #[test]
-    fn fs_list_rejects_file_in_place_of_directory() {
-        let fixture = FsFixture::new();
-        std::fs::write(fixture.root.join("input.json"), [])
-            .expect("test input file should be created");
-        let source = FsInputSource {
-            file_paths: vec![],
-            empty_directories: vec![
-                LogsInputPath::try_from("/input.json".to_owned())
-                    .expect("test input path should be valid"),
-            ],
-        };
-        let error = build_fs_logs_list(&source, &fixture.mount_point)
-            .expect_err("a file must not be accepted as an empty directory");
-        assert!(error.to_string().contains("not a readable directory"));
+    fn fs_empty_manifest_produces_no_archives() {
+        let source = FsInputSource { file_paths: vec![] };
+        let output = compress(
+            &task_context(),
+            &FsFixture::config(),
+            &BASE_OPTION,
+            DatasetName::default(),
+            source,
+        )
+        .expect("file-free compression should succeed without input or output setup");
+        assert_eq!(output.archives, vec![]);
+        assert_eq!(output.dataset, DatasetName::default());
     }
 
     #[cfg(unix)]
@@ -1378,7 +1336,6 @@ mod tests {
                 LogsInputPath::try_from("/socket".to_owned())
                     .expect("test socket path should be valid"),
             ],
-            empty_directories: vec![],
         };
         let error = build_fs_logs_list(&source, &fixture.mount_point)
             .expect_err("a socket must not be accepted as a regular file");
@@ -1456,10 +1413,7 @@ mod tests {
             &SpiderTaskExecutorConfig::default(),
             &BASE_OPTION,
             DatasetName::default(),
-            FsInputSource {
-                file_paths: vec![],
-                empty_directories: vec![],
-            },
+            FsInputSource { file_paths: vec![] },
         )
         .expect_err("unsupported engine must be rejected before input processing");
         assert!(error.to_string().contains("clp-s"));
