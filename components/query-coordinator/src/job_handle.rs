@@ -78,10 +78,9 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::UnsupportedJobConfig`] if:
-    ///   * The job carries an aggregation config.
-    ///   * The job writes its results to files.
-    /// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
+    /// * [`Error::UnsupportedJobConfig`], [`Error::QueryOption`] or
+    ///   [`Error::InvalidQueryJobConfig`] if [`SearchJobConfig::validate`] rejects
+    ///   `search_job_config`.
     /// * Forwards [`ClpSQueryOption::try_from`]'s return values on failure.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
@@ -92,27 +91,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         output_handle: OutputHandle,
         job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
-        if search_job_config.aggregation_config.is_some() {
-            return Err(Error::UnsupportedJobConfig(
-                "aggregation jobs are not supported".to_owned(),
-            ));
-        }
-        if search_job_config.write_to_file {
-            return Err(Error::UnsupportedJobConfig(
-                "writing query results to files is not supported".to_owned(),
-            ));
-        }
-
+        search_job_config.validate()?;
         let clp_s_query_option = ClpSQueryOption::try_from(&search_job_config)?;
-        if let (Some(begin_timestamp), Some(end_timestamp)) = (
-            search_job_config.begin_timestamp,
-            search_job_config.end_timestamp,
-        ) && begin_timestamp > end_timestamp
-        {
-            return Err(Error::InvalidQueryJobConfig(format!(
-                "begin timestamp {begin_timestamp} is greater than end timestamp {end_timestamp}"
-            )));
-        }
 
         let archive_end_ts_lower_bound_millisecs = context
             .archive_selection_options
