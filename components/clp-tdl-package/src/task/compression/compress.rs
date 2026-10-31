@@ -1,6 +1,7 @@
-//! The `clp-s` compression worker that turns an S3 input source into archives.
+//! The `clp-s` compression worker that turns filesystem or S3 inputs into archives.
 
 use std::ffi::OsString;
+use std::future::Future;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
@@ -14,15 +15,20 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::S3Config;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
+use clp_rust_utils::clp_config::package::config::LOGS_INPUT_MOUNT_POINT;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
+use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::logs_input::LogsInputMountPoint;
 use clp_rust_utils::s3::create_new_client;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::CompressionTaskOutput;
+use clp_rust_utils::task_io::compression::FsInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
 use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
 use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
@@ -30,155 +36,326 @@ use crate::common::runtime;
 use crate::task::utils::clp_binary_path;
 use crate::task::utils::s3_credential_env;
 
-/// Compresses the given S3 objects into archives, uploads them to S3, and returns their metadata
+/// Source-specific validation and preparation for compression.
+pub(super) trait Source {
+    /// Validates the inputs and prepares their paths or URLs and authentication.
+    ///
+    /// # Returns
+    ///
+    /// The prepared inputs, or `None` when [`FsInputSource::file_paths`] is empty, on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`anyhow::Error`] if source entries are invalid or cannot be read, or if S3 credentials
+    ///   cannot be resolved.
+    ///
+    /// # Panics
+    ///
+    /// Panics for S3 inputs if the package runtime has not been initialized.
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource>>;
+}
+
+/// Input-list contents and authentication for compression.
+pub(super) struct PreparedSource {
+    logs_list: String,
+    auth: InputAuth,
+}
+
+impl Source for S3InputSource {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`build_s3_logs_list`]'s return values on failure.
+    /// * Forwards [`s3_credential_env`]'s return values on failure.
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource>> {
+        let logs_list = build_s3_logs_list(&self)?;
+        let input_region = self
+            .region_code
+            .as_ref()
+            .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
+        let credential_env = s3_credential_env(&runtime(), input_region, &self.aws_authentication)?;
+        Ok(Some(PreparedSource {
+            logs_list,
+            auth: InputAuth::S3 { credential_env },
+        }))
+    }
+}
+
+impl Source for FsInputSource {
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
+    /// * Forwards [`build_fs_logs_list`]'s return values on failure.
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource>> {
+        if self.file_paths.is_empty() {
+            return Ok(None);
+        }
+        let mount_point =
+            LogsInputMountPoint::resolve(NonEmptyString::from_static_str(LOGS_INPUT_MOUNT_POINT))?;
+        let logs_list = build_fs_logs_list(&self, &mount_point)?;
+        Ok(Some(PreparedSource {
+            logs_list,
+            auth: InputAuth::None,
+        }))
+    }
+}
+
+/// Compresses the given inputs into archives, publishes them, and returns their metadata
 /// for the commit task.
 ///
-/// A pure worker function called by a spider-tdl task wrapper, which formats any returned
-/// `anyhow::Error` into a user-space TDL error.
+/// # Type Parameters
+///
+/// * `SourceType` - The input type and its validation and preparation implementation.
 ///
 /// # Returns
 ///
-/// The metadata of every archive this task produced.
+/// The metadata of every archive this task produced on success.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * A spawned archive finisher panics.
-/// * Forwards [`build_s3_logs_list`]'s return values on failure.
-/// * Forwards [`std::fs::write`]'s return values on failure.
-/// * Forwards [`s3_credential_env`]'s return values on failure.
-/// * Forwards [`extract_s3_output_config`]'s return values on failure.
-/// * Forwards [`prepare_clp_s_input`]'s return values on failure.
-/// * Forwards [`run_clp_s`]'s return values on failure.
-/// * Forwards [`ArchiveFinisher::finish`]'s return values on failure.
-pub(super) fn compress(
+/// * [`anyhow::Error`] if the configured storage engine is not CLP-S.
+/// * Forwards [`Source::prepare`]'s return values on failure.
+/// * Forwards [`InputList::new`]'s return values on failure.
+/// * Forwards [`std::fs::create_dir_all`]'s return values on failure.
+/// * Forwards [`std::fs::create_dir`]'s return values on failure.
+/// * Forwards [`ClpSInput::new`]'s return values on failure.
+/// * Forwards [`finish_compression`]'s return values on failure.
+///
+/// # Panics
+///
+/// Panics if required package globals (the runtime or CLP home) have not been initialized or this
+/// function is called from an async runtime context.
+pub(super) fn compress<SourceType: Source>(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
     clp_s_option: &ClpSCompressionOption,
     dataset: DatasetName,
-    input_source: S3InputSource,
+    input_source: SourceType,
 ) -> anyhow::Result<CompressionTaskOutput> {
+    if StorageEngine::ClpS != config.package.storage_engine {
+        anyhow::bail!("compression requires the clp-s storage engine");
+    }
+    let Some(prepared_source) = input_source.prepare()? else {
+        return Ok(CompressionTaskOutput {
+            dataset,
+            archives: Vec::new(),
+        });
+    };
     let clp_home = clp_home();
     let list_path = config.abs_tmp_directory(clp_home).join(format!(
         "compression-{}-{}-{}-log-paths.txt",
         ctx.job_id, ctx.task_id, ctx.task_instance_id,
     ));
-
-    tracing::info!(
-        job_id = % ctx.job_id,
-        task_id = % ctx.task_id,
-        task_instance_id = % ctx.task_instance_id,
-        list_path = % list_path.display(),
-        "CLP S3 compression task started.",
-    );
-
     let mut tmp_file_deleter = TmpFileDeleter::new();
-
-    std::fs::write(&list_path, build_s3_logs_list(&input_source)?)
-        .with_context(|| format!("failed to write S3 logs list to {}", list_path.display()))
-        .inspect_err(|e| {
-            tracing::error!(
-                error = % e,
-                list_path = % list_path.display(),
-                "Failed to write S3 logs list to tmp directory."
-            );
-        })?;
-    tmp_file_deleter.add(list_path.clone());
-
+    let input_list = InputList::new(list_path, prepared_source, &mut tmp_file_deleter)?;
     let runtime = runtime();
-    let S3InputSource {
-        region_code,
-        aws_authentication,
-        ..
-    } = input_source;
-    let input_region = region_code
-        .as_ref()
-        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-    let credential_env = s3_credential_env(&runtime, input_region, &aws_authentication)?;
 
-    let s3_config = extract_s3_output_config(config)?;
-    let archive_dir = config
+    let dataset_dir = config
         .abs_archive_output_staging(clp_home)
         .join(dataset.as_str());
+    let archive_dir = dataset_dir.join(format!(
+        ".compression-{}-{}-{}-{}",
+        ctx.job_id,
+        ctx.task_id,
+        ctx.task_instance_id,
+        uuid::Uuid::new_v4(),
+    ));
+    std::fs::create_dir_all(&dataset_dir).with_context(|| {
+        format!(
+            "failed to create dataset directory {}",
+            dataset_dir.display()
+        )
+    })?;
+    std::fs::create_dir(&archive_dir).with_context(|| {
+        format!(
+            "failed to create archive staging directory {}",
+            archive_dir.display()
+        )
+    })?;
+    tmp_file_deleter.add(archive_dir.clone());
 
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let indexer_bin = clp_binary_path(clp_home, "indexer");
 
-    let (clp_s_input, clp_s_credential_env) = prepare_clp_s_input(
+    let clp_s_input = ClpSInput::new(
         ctx,
         clp_home,
         config,
         clp_s_option,
-        &list_path,
-        credential_env,
+        input_list,
         &mut tmp_file_deleter,
     )?;
 
-    let client = build_s3_client(&runtime, s3_config);
-    let bucket = s3_config.bucket.to_string();
-
-    let mut archives = Vec::new();
-    let mut finishers = tokio::task::JoinSet::new();
-
-    let archive_dir_clone = archive_dir.clone();
-    let archive_callback = |archive: ArchiveMetadata| {
-        let archive_staging_path = archive_dir_clone.join(archive.id.to_string());
-        tmp_file_deleter.add(archive_staging_path.clone());
-        finishers.spawn_on(
-            ArchiveFinisher {
-                client: client.clone(),
-                bucket: bucket.clone(),
-                key: config
-                    .archive_output
-                    .dataset_archive_object_key(&dataset, &archive.id)
-                    .into_inner(),
-                indexer_bin: indexer_bin.clone(),
+    let archives = match &config.archive_output.storage {
+        ArchiveOutputStorage::Fs { .. } => finish_compression(
+            &runtime,
+            &clp_s_bin,
+            &archive_dir,
+            clp_s_option,
+            &clp_s_input,
+            &ArchiveFinisher {
+                destination: FsDestination {
+                    directory: dataset_dir,
+                },
+                indexer_bin,
                 database: config.database.clone(),
                 dataset: dataset.clone(),
-                local_path: archive_staging_path,
-                archive_id: archive.id,
-            }
-            .finish(),
+            },
+        ),
+        ArchiveOutputStorage::S3 { s3_config, .. } => finish_compression(
             &runtime,
-        );
-        archives.push(archive);
-        Ok(())
-    };
-
-    let clp_s_result = run_clp_s(
-        &clp_s_bin,
-        &archive_dir,
-        clp_s_option,
-        &clp_s_input,
-        &clp_s_credential_env,
-        archive_callback,
-    );
-
-    let finish_error = drain_finishers(&runtime, finishers);
-
-    clp_s_result?;
-    if let Some(e) = finish_error {
-        return Err(e);
-    }
+            &clp_s_bin,
+            &archive_dir,
+            clp_s_option,
+            &clp_s_input,
+            &ArchiveFinisher {
+                destination: S3Destination {
+                    client: build_s3_client(&runtime, s3_config),
+                    bucket: s3_config.bucket.to_string(),
+                    prefix: config
+                        .archive_output
+                        .dataset_archive_storage_directory(&dataset),
+                },
+                indexer_bin,
+                database: config.database.clone(),
+                dataset: dataset.clone(),
+            },
+        ),
+    }?;
 
     tracing::info!(
         job_id = % ctx.job_id,
         task_id = % ctx.task_id,
         task_instance_id = % ctx.task_instance_id,
-        "CLP S3 compression task completed successfully.",
+        "CLP compression task completed successfully.",
     );
     Ok(CompressionTaskOutput { dataset, archives })
 }
 
-/// Buffers tmp paths and deletes them when dropped, warning (rather than failing) on any deletion
-/// error.
-///
-/// # Note
-///
-/// * Deletion is sequential and blocking.
-/// * A path that cannot be deleted is logged as a warning and skipped rather than propagated, since
-///   a destructor cannot fail.
+/// How the original input list's entries are authenticated.
+enum InputAuth {
+    /// The entries are S3 object URLs read with the given credential env.
+    S3 {
+        credential_env: Vec<(&'static str, String)>,
+    },
+
+    /// The entries are local paths that need no authentication.
+    None,
+}
+
+impl InputAuth {
+    /// # Returns
+    ///
+    /// The credential env a subprocess reading the input list should run with.
+    fn credential_env(&self) -> &[(&'static str, String)] {
+        match self {
+            Self::S3 { credential_env } => credential_env,
+            Self::None => &[],
+        }
+    }
+}
+
+struct InputList {
+    path: PathBuf,
+    auth: InputAuth,
+}
+
+impl InputList {
+    /// Creates a temporary input list from a prepared source.
+    ///
+    /// # Returns
+    ///
+    /// The input-list path and its authentication on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`std::fs::write`]'s return values on failure.
+    fn new(
+        path: PathBuf,
+        prepared_source: PreparedSource,
+        tmp_file_deleter: &mut TmpFileDeleter,
+    ) -> anyhow::Result<Self> {
+        tmp_file_deleter.add(path.clone());
+        std::fs::write(&path, prepared_source.logs_list)
+            .with_context(|| format!("failed to write logs list to {}", path.display()))?;
+        Ok(Self {
+            path,
+            auth: prepared_source.auth,
+        })
+    }
+}
+
+/// How clp-s reads its input.
+enum ClpSInput {
+    /// An explicit `--files-from` list of local paths or S3 object URLs.
+    FilesFrom(InputList),
+
+    /// A local directory of converted logs.
+    Directory(PathBuf),
+}
+
+impl ClpSInput {
+    /// Factory function.
+    ///
+    /// Prepares structured input for compression, converting unstructured sources as needed.
+    ///
+    /// # Returns
+    ///
+    /// The clp-s input on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`std::fs::create_dir`]'s return values on failure.
+    /// * Forwards [`run_log_converter`]'s return values on failure.
+    fn new(
+        ctx: &spider_tdl::TaskContext,
+        clp_home: &Path,
+        config: &SpiderTaskExecutorConfig,
+        clp_s_option: &ClpSCompressionOption,
+        input_list: InputList,
+        tmp_file_deleter: &mut TmpFileDeleter,
+    ) -> anyhow::Result<Self> {
+        if !clp_s_option.unstructured {
+            return Ok(Self::FilesFrom(input_list));
+        }
+
+        let converted_dir = config.abs_tmp_directory(clp_home).join(format!(
+            "compression-{}-{}-{}-converted",
+            ctx.job_id, ctx.task_id, ctx.task_instance_id,
+        ));
+        std::fs::create_dir(&converted_dir)
+            .with_context(|| {
+                format!(
+                    "failed to create the log-converter output directory {}",
+                    converted_dir.display()
+                )
+            })
+            .inspect_err(|e| {
+                tracing::error!(
+                    error = % e,
+                    converted_dir = % converted_dir.display(),
+                    "Failed to create the log-converter output directory."
+                );
+            })?;
+        tmp_file_deleter.add(converted_dir.clone());
+        let log_converter_bin = clp_binary_path(clp_home, "log-converter");
+        run_log_converter(&log_converter_bin, &converted_dir, &input_list)?;
+        Ok(Self::Directory(converted_dir))
+    }
+}
+
+/// Attempts to remove registered temporary paths on drop, logging cleanup failures.
 struct TmpFileDeleter {
     paths: Vec<PathBuf>,
 }
@@ -218,78 +395,259 @@ impl Drop for TmpFileDeleter {
     }
 }
 
-/// How clp-s reads its input.
-enum ClpSInput {
-    /// A `--files-from` list file of S3 object URLs; clp-s reads the objects directly from S3.
-    FilesFrom(PathBuf),
+trait Destination: Clone + Send + 'static {
+    const SINGLE_FILE: bool;
 
-    /// A local directory of converted logs files passed positionally. clp-s reads the local files.
-    Directory(PathBuf),
-}
-
-/// An async finisher for publishing a single archive.
-struct ArchiveFinisher {
-    client: aws_sdk_s3::Client,
-    bucket: String,
-    key: String,
-    indexer_bin: PathBuf,
-    database: Database,
-    dataset: DatasetName,
-    local_path: PathBuf,
-    archive_id: ArchiveId,
-}
-
-impl ArchiveFinisher {
-    /// Publishes one produced archive: indexes it and uploads it to S3 concurrently.
+    /// Finishes indexing and publishes the archive.
+    ///
+    /// # Parameters
+    ///
+    /// * `local_path` - The staged archive to publish.
+    /// * `archive_id` - The archive's destination identifier.
+    /// * `indexing_task` - The indexer task, which must be awaited before returning so staging can
+    ///   be safely removed afterward.
+    ///
+    /// # Returns
+    ///
+    /// A future that completes after the archive is indexed and published on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * The indexer task panics.
-    /// * Forwards [`upload_file_to_s3`]'s return values on failure.
-    /// * Forwards [`run_indexer`]'s return values on failure.
-    async fn finish(self) -> anyhow::Result<()> {
-        let Self {
-            client,
-            bucket,
-            key,
-            indexer_bin,
-            database,
-            dataset,
-            local_path,
-            archive_id,
-        } = self;
+    /// * [`anyhow::Error`] if indexing or publication fails, or the indexer task cannot be joined.
+    ///
+    /// # Panics
+    ///
+    /// The returned future may panic if polled outside a Tokio runtime.
+    fn finish(
+        self,
+        local_path: PathBuf,
+        archive_id: ArchiveId,
+        indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
+    ) -> impl Future<Output = anyhow::Result<()>> + Send;
+}
 
-        let index_path = local_path.clone();
-        let index = tokio::task::spawn_blocking(move || {
-            run_indexer(&indexer_bin, &database, &dataset, &index_path)
-        });
-        let (upload_result, index_result) = tokio::join!(
-            upload_file_to_s3(&client, &bucket, &key, &local_path),
-            index
-        );
-        upload_result
-            .context("failed to upload archive to S3")
-            .inspect_err(|e| {
-                tracing::error!(
-                    error = % e,
-                    archive_id = % archive_id,
-                    bucket = % bucket,
-                    key = % key,
-                    "Failed to upload archive to S3."
-                );
-            })?;
-        index_result
-            .map_err(|e| anyhow::anyhow!("indexer task panicked: {e}"))
-            .inspect_err(|e| {
-                tracing::error!(
-                    error = % e,
-                    "indexer panicked."
-                );
-            })??;
-        anyhow::Ok(())
+#[derive(Clone)]
+struct FsDestination {
+    directory: PathBuf,
+}
+
+impl Destination for FsDestination {
+    const SINGLE_FILE: bool = false;
+
+    async fn finish(
+        self,
+        local_path: PathBuf,
+        archive_id: ArchiveId,
+        indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
+    ) -> anyhow::Result<()> {
+        indexing_task
+            .await
+            .context("failed to join indexing task")??;
+        tokio::fs::rename(&local_path, self.directory.join(archive_id.to_string()))
+            .await
+            .with_context(|| format!("failed to publish archive {archive_id}"))?;
+        Ok(())
     }
+}
+
+#[derive(Clone)]
+struct S3Destination {
+    client: aws_sdk_s3::Client,
+    bucket: String,
+    prefix: String,
+}
+
+impl Destination for S3Destination {
+    const SINGLE_FILE: bool = true;
+
+    async fn finish(
+        self,
+        local_path: PathBuf,
+        archive_id: ArchiveId,
+        indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
+    ) -> anyhow::Result<()> {
+        let key = format!("{}/{archive_id}", self.prefix);
+        let (publication_result, indexing_result) = tokio::join!(
+            upload_file_to_s3(&self.client, &self.bucket, &key, &local_path,),
+            indexing_task
+        );
+        publication_result?;
+        indexing_result.context("failed to join indexing task")??;
+        Ok(())
+    }
+}
+
+/// An async finisher for publishing archives.
+#[derive(Clone)]
+struct ArchiveFinisher<DestinationType: Destination> {
+    destination: DestinationType,
+    indexer_bin: PathBuf,
+    database: Database,
+    dataset: DatasetName,
+}
+
+impl<DestinationType: Destination> ArchiveFinisher<DestinationType> {
+    /// Finishes indexing and publication of one archive.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `DestinationType` - The [`Destination`] implementation that publishes the archive.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Destination::finish`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if polled outside a Tokio runtime.
+    async fn finish(self, local_path: PathBuf, archive_id: ArchiveId) -> anyhow::Result<()> {
+        let index_path = local_path.clone();
+        let indexing_task = tokio::task::spawn_blocking(move || {
+            run_indexer(
+                &self.indexer_bin,
+                &self.database,
+                &self.dataset,
+                &index_path,
+            )
+        });
+        self.destination
+            .finish(local_path, archive_id, indexing_task)
+            .await
+    }
+}
+
+/// Runs compression and waits for all archive indexing and publication to finish.
+///
+/// # Type Parameters
+///
+/// * `DestinationType` - Determines the archive format and publication implementation.
+///
+/// # Returns
+///
+/// The finished archives' metadata on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`tokio::task::JoinSet::join_next`]'s task-join errors on failure.
+/// * Forwards [`ArchiveFinisher::finish`]'s return values on failure.
+/// * Forwards [`run_clp_s`]'s return values on failure.
+/// * Forwards [`drain_finishers`]'s collected error, if any.
+///
+/// # Panics
+///
+/// Panics if called from an async runtime context, or if a full finisher set unexpectedly has no
+/// tasks (should be unreachable).
+fn finish_compression<DestinationType: Destination>(
+    runtime: &tokio::runtime::Handle,
+    clp_s_bin: &Path,
+    archive_dir: &Path,
+    clp_s_option: &ClpSCompressionOption,
+    input: &ClpSInput,
+    finisher: &ArchiveFinisher<DestinationType>,
+) -> anyhow::Result<Vec<ArchiveMetadata>> {
+    const MAX_FINISHERS: usize = 4;
+    let mut archives = Vec::new();
+    let mut finishers = tokio::task::JoinSet::new();
+    let archive_callback = |archive: ArchiveMetadata| {
+        if finishers.len() >= MAX_FINISHERS {
+            runtime
+                .block_on(finishers.join_next())
+                .expect("a full finisher set must contain a task")
+                .context("archive finisher panicked")??;
+        }
+        finishers.spawn_on(
+            finisher
+                .clone()
+                .finish(archive_dir.join(archive.id.to_string()), archive.id),
+            runtime,
+        );
+        archives.push(archive);
+        Ok(())
+    };
+    let clp_s_result = run_clp_s::<DestinationType>(
+        clp_s_bin,
+        archive_dir,
+        clp_s_option,
+        input,
+        archive_callback,
+    );
+    let finish_error = drain_finishers(runtime, finishers);
+    clp_s_result?;
+    if let Some(error) = finish_error {
+        return Err(error);
+    }
+    Ok(archives)
+}
+
+/// Builds the `--files-from` list of S3 object URLs for clp-s.
+///
+/// # Returns
+///
+/// The newline-terminated list of object URLs, one per object key in `input_source`, on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if an object key in `input_source` is empty.
+/// * Forwards [`generate_s3_url`]'s return values on failure.
+fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
+    let endpoint = input_source
+        .endpoint_url
+        .as_ref()
+        .map(NonEmptyString::as_str);
+    let region = input_source
+        .region_code
+        .as_ref()
+        .map(NonEmptyString::as_str);
+
+    let mut list = String::new();
+    for object_key in &input_source.object_keys {
+        let object_key = NonEmptyString::try_from(object_key.clone())
+            .map_err(|_| anyhow::anyhow!("s3 object key must not be empty"))?;
+        list.push_str(&generate_s3_url(
+            endpoint,
+            region,
+            &input_source.bucket,
+            &object_key,
+        )?);
+        list.push('\n');
+    }
+    Ok(list)
+}
+
+/// Builds a list of container paths for regular files under the logs-input mount point.
+///
+/// # Returns
+///
+/// The newline-separated container paths, one per input file, on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if a file entry is not a regular file.
+/// * Forwards [`LogsInputMountPoint::to_container_path`]'s return values on failure.
+fn build_fs_logs_list(
+    source: &FsInputSource,
+    mount_point: &LogsInputMountPoint,
+) -> anyhow::Result<String> {
+    let mut list = String::new();
+    for file in &source.file_paths {
+        let path = mount_point.to_container_path(file)?;
+        if !Path::new(path.as_str()).is_file() {
+            anyhow::bail!("input {} is not a regular file", path.as_str());
+        }
+        list.push_str(path.as_str());
+        list.push('\n');
+    }
+    Ok(list)
 }
 
 /// Builds an S3 client for the archive-output bucket, resolving the region to
@@ -308,235 +666,6 @@ fn build_s3_client(runtime: &tokio::runtime::Handle, s3_config: &S3Config) -> aw
         s3_config.endpoint_url.as_ref(),
         &s3_config.aws_authentication,
     ))
-}
-
-/// Builds the `--files-from` list of S3 object URLs for clp-s.
-///
-/// # Returns
-///
-/// The newline-terminated list of object URLs, one per object key in `input_source`.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * An object key in `input_source` is empty.
-/// * Forwards [`generate_s3_url`]'s return values on failure.
-fn build_s3_logs_list(input_source: &S3InputSource) -> anyhow::Result<String> {
-    let endpoint = input_source
-        .endpoint_url
-        .as_ref()
-        .map(NonEmptyString::as_str);
-    let region = input_source
-        .region_code
-        .as_ref()
-        .map(NonEmptyString::as_str);
-
-    let mut list = String::new();
-    for object_key in &input_source.object_keys {
-        let object_key = NonEmptyString::try_from(object_key.clone())
-            .map_err(|_| anyhow::anyhow!("S3 object key must not be empty"))?;
-        list.push_str(&generate_s3_url(
-            endpoint,
-            region,
-            &input_source.bucket,
-            &object_key,
-        )?);
-        list.push('\n');
-    }
-    Ok(list)
-}
-
-/// Parses a single clp-s `--print-archive-stats` stdout line into an [`ArchiveMetadata`].
-///
-/// NOTE: clp-s emits a superset of [`ArchiveMetadata`]'s fields per line; unknown fields are
-/// ignored.
-///
-/// # Returns
-///
-/// The parsed [`ArchiveMetadata`].
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`serde_json::from_str`]'s return values on failure.
-fn parse_archive_stats(line: &str) -> anyhow::Result<ArchiveMetadata> {
-    serde_json::from_str(line)
-        .with_context(|| format!("failed to parse clp-s archive stats: {line}"))
-}
-
-/// Waits for every spawned archive finisher to complete, returning the first error encountered. A
-/// panicked finisher is surfaced as an error.
-///
-/// # Returns
-///
-/// The first finisher error, or `None` if all finishers succeeded.
-fn drain_finishers(
-    runtime: &tokio::runtime::Handle,
-    mut finishers: tokio::task::JoinSet<anyhow::Result<()>>,
-) -> Option<anyhow::Error> {
-    runtime.block_on(async {
-        let mut first_error: Option<anyhow::Error> = None;
-        while let Some(joined) = finishers.join_next().await {
-            let result = joined
-                .map_err(|e| anyhow::anyhow!("archive callback panicked: {e}"))
-                .inspect_err(|e| {
-                    tracing::error!(
-                        error = % e,
-                        "Archive callback panicked."
-                    );
-                })
-                .and_then(|r| r);
-            if let Err(e) = result
-                && first_error.is_none()
-            {
-                first_error = Some(e);
-            }
-        }
-        first_error
-    })
-}
-
-/// Prepares clp-s's input. For unstructured logs, runs log-converter over `list_path` into a fresh
-/// tmp directory (registered with `tmp_file_deleter`) and returns that directory as the input; for
-/// structured logs, returns the S3 object list directly. clp-s needs the S3 credentials only in the
-/// structured case, so the unstructured case returns an empty credential env.
-///
-/// # Returns
-///
-/// The clp-s input and the credential env clp-s should run with.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`std::fs::create_dir`]'s return values on failure.
-/// * Forwards [`run_log_converter`]'s return values on failure.
-fn prepare_clp_s_input(
-    ctx: &spider_tdl::TaskContext,
-    clp_home: &Path,
-    config: &SpiderTaskExecutorConfig,
-    clp_s_option: &ClpSCompressionOption,
-    list_path: &Path,
-    credential_env: Vec<(&'static str, String)>,
-    tmp_file_deleter: &mut TmpFileDeleter,
-) -> anyhow::Result<(ClpSInput, Vec<(&'static str, String)>)> {
-    if !clp_s_option.unstructured {
-        return Ok((
-            ClpSInput::FilesFrom(list_path.to_path_buf()),
-            credential_env,
-        ));
-    }
-
-    let converted_dir = config.abs_tmp_directory(clp_home).join(format!(
-        "compression-{}-{}-{}-converted",
-        ctx.job_id, ctx.task_id, ctx.task_instance_id,
-    ));
-    std::fs::create_dir(&converted_dir)
-        .with_context(|| {
-            format!(
-                "failed to create the log-converter output directory {}",
-                converted_dir.display()
-            )
-        })
-        .inspect_err(|e| {
-            tracing::error!(
-                error = % e,
-                converted_dir = % converted_dir.display(),
-                "Failed to create the log-converter output directory."
-            );
-        })?;
-    tmp_file_deleter.add(converted_dir.clone());
-    let log_converter_bin = clp_binary_path(clp_home, "log-converter");
-    run_log_converter(
-        &log_converter_bin,
-        &converted_dir,
-        list_path,
-        &credential_env,
-    )?;
-    Ok((ClpSInput::Directory(converted_dir), Vec::new()))
-}
-
-/// Builds the clp-s command-line arguments for a single-file-archive compression run.
-///
-/// The unstructured path drops S3 auth (clp-s reads the local converted directory) and pins the
-/// timestamp key to `timestamp`.
-///
-/// # Returns
-///
-/// The ordered clp-s arguments.
-fn build_clp_s_args(
-    archive_output_dir: &Path,
-    input: &ClpSInput,
-    clp_s_option: &ClpSCompressionOption,
-) -> Vec<OsString> {
-    let mut args = vec![
-        OsString::from("c"),
-        archive_output_dir.as_os_str().to_os_string(),
-        OsString::from("--print-archive-stats"),
-        OsString::from("--target-encoded-size"),
-        OsString::from(clp_s_option.target_encoded_size.to_string()),
-        OsString::from("--compression-level"),
-        OsString::from(clp_s_option.compression_level.to_string()),
-        OsString::from("--single-file-archive"),
-    ];
-    match input {
-        ClpSInput::FilesFrom(path) => {
-            // Compressing from S3.
-            args.push(OsString::from("--auth"));
-            args.push(OsString::from("s3"));
-            if let Some(timestamp_key) = &clp_s_option.timestamp_key {
-                args.push(OsString::from("--timestamp-key"));
-                args.push(OsString::from(timestamp_key));
-            }
-            args.push(OsString::from("--files-from"));
-            args.push(path.as_os_str().to_os_string());
-        }
-        ClpSInput::Directory(path) => {
-            // Compressing from local converted files.
-            args.push(OsString::from("--timestamp-key"));
-            args.push(OsString::from("timestamp"));
-            args.push(path.as_os_str().to_os_string());
-        }
-    }
-    args
-}
-
-/// Builds the log-converter command-line arguments for converting S3-sourced unstructured logs.
-///
-/// # Returns
-///
-/// The ordered log-converter arguments.
-fn build_log_converter_args(output_dir: &Path, inputs_from_path: &Path) -> Vec<OsString> {
-    vec![
-        OsString::from("--output-dir"),
-        output_dir.as_os_str().to_os_string(),
-        OsString::from("--inputs-from"),
-        inputs_from_path.as_os_str().to_os_string(),
-        OsString::from("--auth"),
-        OsString::from("s3"),
-    ]
-}
-
-/// Resolves the S3 config the archives are uploaded to from `config`.
-///
-/// # Returns
-///
-/// The S3 config the archives are uploaded to.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * `config`'s archive output is not S3-backed.
-fn extract_s3_output_config(config: &SpiderTaskExecutorConfig) -> anyhow::Result<&S3Config> {
-    match &config.archive_output.storage {
-        ArchiveOutputStorage::S3 { s3_config, .. } => Ok(s3_config),
-        ArchiveOutputStorage::Fs { .. } => {
-            anyhow::bail!("S3 archive output is required for the S3 compression flow")
-        }
-    }
 }
 
 /// Uploads a local file to S3 through `PutObject`.
@@ -565,6 +694,331 @@ async fn upload_file_to_s3(
         .send()
         .await
         .with_context(|| format!("failed to upload to s3://{bucket}/{key}"))?;
+    Ok(())
+}
+
+/// Waits for all archive finishers, collecting the first execution or join error.
+///
+/// # Returns
+///
+/// The first finisher error, or `None` if all finishers succeeded.
+fn drain_finishers(
+    runtime: &tokio::runtime::Handle,
+    mut finishers: tokio::task::JoinSet<anyhow::Result<()>>,
+) -> Option<anyhow::Error> {
+    runtime.block_on(async {
+        let mut first_error: Option<anyhow::Error> = None;
+        while let Some(joined) = finishers.join_next().await {
+            let result = joined
+                .map_err(|e| anyhow::anyhow!("failed to join archive finisher: {e}"))
+                .inspect_err(|e| {
+                    tracing::error!(
+                        error = % e,
+                        "Failed to join archive finisher."
+                    );
+                })
+                .and_then(|r| r);
+            if let Err(e) = result
+                && first_error.is_none()
+            {
+                first_error = Some(e);
+            }
+        }
+        first_error
+    })
+}
+
+/// Builds the clp-s command-line arguments for the selected archive destination.
+///
+/// Converted inputs use local files and the `timestamp` key.
+///
+/// # Type Parameters
+///
+/// * `DestinationType` - Determines the archive output format.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments.
+fn build_clp_s_args<DestinationType: Destination>(
+    archive_output_dir: &Path,
+    input: &ClpSInput,
+    clp_s_option: &ClpSCompressionOption,
+) -> Vec<OsString> {
+    let mut args = vec![
+        OsString::from("c"),
+        archive_output_dir.as_os_str().to_os_string(),
+        OsString::from("--print-archive-stats"),
+        OsString::from("--target-encoded-size"),
+        OsString::from(clp_s_option.target_encoded_size.to_string()),
+        OsString::from("--compression-level"),
+        OsString::from(clp_s_option.compression_level.to_string()),
+    ];
+    if DestinationType::SINGLE_FILE {
+        args.push(OsString::from("--single-file-archive"));
+    }
+    match input {
+        ClpSInput::FilesFrom(input_list) => {
+            if matches!(input_list.auth, InputAuth::S3 { .. }) {
+                args.push(OsString::from("--auth"));
+                args.push(OsString::from("s3"));
+            }
+            if let Some(timestamp_key) = &clp_s_option.timestamp_key {
+                args.push(OsString::from("--timestamp-key"));
+                args.push(OsString::from(timestamp_key));
+            }
+            args.push(OsString::from("--files-from"));
+            args.push(input_list.path.as_os_str().to_os_string());
+        }
+        ClpSInput::Directory(path) => {
+            args.push(OsString::from("--timestamp-key"));
+            args.push(OsString::from("timestamp"));
+            args.push(path.as_os_str().to_os_string());
+        }
+    }
+    args
+}
+
+/// Runs clp-s, invoking `on_archive` for each archive it reports on stdout.
+///
+/// Attempts to stop and reap the process after a stdout or callback failure. Cleanup failures
+/// are logged without replacing the original error.
+///
+/// # Type Parameters
+///
+/// * `DestinationType` - Determines the archive output format.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if clp-s exits with a non-zero status.
+/// * Forwards [`std::io::Lines::next`]'s line-reading errors on failure.
+/// * Forwards `on_archive`'s return values on failure.
+/// * Forwards [`Command::spawn`]'s return values on failure.
+/// * Forwards [`parse_archive_stats`]'s return values on failure.
+/// * Forwards [`std::process::Child::wait`]'s return values on failure.
+///
+/// # Panics
+///
+/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable), or the
+/// stderr-reader thread cannot be spawned.
+fn run_clp_s<DestinationType: Destination>(
+    clp_s_bin: &Path,
+    archive_dir: &Path,
+    clp_s_option: &ClpSCompressionOption,
+    input: &ClpSInput,
+    mut on_archive: impl FnMut(ArchiveMetadata) -> anyhow::Result<()>,
+) -> anyhow::Result<()> {
+    let credential_env = match input {
+        ClpSInput::FilesFrom(input_list) => input_list.auth.credential_env(),
+        ClpSInput::Directory(_) => &[],
+    };
+    let mut child = Command::new(clp_s_bin)
+        .args(build_clp_s_args::<DestinationType>(
+            archive_dir,
+            input,
+            clp_s_option,
+        ))
+        .envs(credential_env.iter().map(|(key, value)| (*key, value)))
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| format!("failed to spawn clp-s at {}", clp_s_bin.display()))?;
+
+    let mut stderr = child
+        .stderr
+        .take()
+        .expect("piped stderr should always be present");
+    // Drain stderr concurrently so a full pipe cannot block stdout processing.
+    let stderr_reader = std::thread::spawn(move || {
+        let mut buffer = String::new();
+        stderr.read_to_string(&mut buffer).map(|_| buffer)
+    });
+
+    let stdout = child
+        .stdout
+        .take()
+        .expect("piped stdout should always be present");
+    for line in BufReader::new(stdout).lines() {
+        let line = match line.context("failed to read a line from clp-s stdout") {
+            Ok(line) => line,
+            Err(e) => {
+                let stderr = kill_clp_s_and_read_stderr(&mut child, stderr_reader);
+                tracing::error!(
+                    error = % e,
+                    stderr = % stderr,
+                    "Failed to read a line from clp-s stdout."
+                );
+                return Err(e.context("clp-s output processing failed"));
+            }
+        };
+        if let Err(e) = parse_archive_stats(&line).and_then(&mut on_archive) {
+            let stderr = kill_clp_s_and_read_stderr(&mut child, stderr_reader);
+            tracing::error!(
+                error = % e,
+                archive_stats = % line,
+                stderr = % stderr,
+                "Failed to execute per-archive callback."
+            );
+            return Err(e.context("clp-s output processing failed"));
+        }
+    }
+
+    let status = child.wait().context("failed to wait for clp-s to exit")?;
+    let stderr = match stderr_reader.join() {
+        Ok(Ok(stderr)) => stderr,
+        Ok(Err(error)) => {
+            tracing::warn!(error = % error, "Failed to read clp-s stderr.");
+            format!("failed to read clp-s stderr: {error}")
+        }
+        Err(_) => {
+            tracing::warn!("Clp-s stderr reader panicked.");
+            "clp-s stderr reader panicked".to_owned()
+        }
+    };
+    if !status.success() {
+        tracing::error!(
+            status = status.code(),
+            stderr = % stderr,
+            "Clp-s exited on failure."
+        );
+        anyhow::bail!("clp-s exited with {status}");
+    }
+    Ok(())
+}
+
+/// Attempts to stop and reap clp-s, logging failures, then collects captured stderr.
+///
+/// # Returns
+///
+/// The captured stderr, or a diagnostic if reading it fails or its reader panics.
+fn kill_clp_s_and_read_stderr(
+    child: &mut std::process::Child,
+    stderr_reader: std::thread::JoinHandle<std::io::Result<String>>,
+) -> String {
+    if let Err(error) = child.kill() {
+        tracing::warn!(error = % error, "Failed to kill clp-s during cleanup.");
+    }
+    if let Err(error) = child.wait() {
+        tracing::warn!(error = % error, "Failed to reap clp-s during cleanup.");
+    }
+    match stderr_reader.join() {
+        Ok(Ok(stderr)) => stderr,
+        Ok(Err(error)) => {
+            tracing::warn!(error = % error, "Failed to read clp-s stderr.");
+            format!("failed to read clp-s stderr: {error}")
+        }
+        Err(_) => {
+            tracing::warn!("Clp-s stderr reader panicked.");
+            "clp-s stderr reader panicked".to_owned()
+        }
+    }
+}
+
+/// Parses a single clp-s `--print-archive-stats` stdout line into an [`ArchiveMetadata`].
+///
+/// NOTE: clp-s emits a superset of [`ArchiveMetadata`]'s fields per line; unknown fields are
+/// ignored.
+///
+/// # Returns
+///
+/// The parsed [`ArchiveMetadata`] on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`serde_json::from_str`]'s return values on failure.
+fn parse_archive_stats(line: &str) -> anyhow::Result<ArchiveMetadata> {
+    serde_json::from_str(line)
+        .with_context(|| format!("failed to parse clp-s archive stats: {line}"))
+}
+
+/// Builds the log-converter command-line arguments for converting unstructured logs.
+///
+/// # Returns
+///
+/// The ordered log-converter arguments.
+fn build_log_converter_args(output_dir: &Path, input_list: &InputList) -> Vec<OsString> {
+    let mut args = vec![
+        OsString::from("--output-dir"),
+        output_dir.as_os_str().to_os_string(),
+        OsString::from("--inputs-from"),
+        input_list.path.as_os_str().to_os_string(),
+    ];
+    if matches!(input_list.auth, InputAuth::S3 { .. }) {
+        args.push(OsString::from("--auth"));
+        args.push(OsString::from("s3"));
+    }
+    args
+}
+
+/// Converts the listed unstructured logs into local kv-ir files.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if log-converter exits with a non-zero status.
+/// * Forwards [`Command::spawn`]'s return values on failure.
+/// * Forwards [`std::process::Child::wait`]'s return values on failure.
+///
+/// # Panics
+///
+/// Panics if log-converter's piped stderr is unexpectedly absent (should be unreachable).
+fn run_log_converter(
+    log_converter_bin: &Path,
+    output_dir: &Path,
+    input_list: &InputList,
+) -> anyhow::Result<()> {
+    let mut child = Command::new(log_converter_bin)
+        .args(build_log_converter_args(output_dir, input_list))
+        .envs(
+            input_list
+                .auth
+                .credential_env()
+                .iter()
+                .map(|(key, value)| (*key, value)),
+        )
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| {
+            format!(
+                "failed to spawn log-converter at {}",
+                log_converter_bin.display()
+            )
+        })?;
+
+    let mut stderr = child
+        .stderr
+        .take()
+        .expect("piped stderr should always be present");
+
+    let mut captured_stderr = String::new();
+    if let Err(error) = stderr.read_to_string(&mut captured_stderr) {
+        tracing::warn!(error = % error, "Failed to read log-converter stderr.");
+        captured_stderr = format!("failed to read log-converter stderr: {error}");
+    }
+
+    let status = child
+        .wait()
+        .context("failed to wait for log-converter to exit")
+        .inspect_err(|e| {
+            tracing::error!(
+                error = % e,
+                stderr = % captured_stderr,
+                "Failed to wait for log-converter."
+            );
+        })?;
+    if !status.success() {
+        tracing::error!(
+            status = status.code(),
+            stderr = % captured_stderr,
+            "Log-converter exited on failure."
+        );
+        anyhow::bail!("log-converter exited with {status}");
+    }
     Ok(())
 }
 
@@ -599,13 +1053,13 @@ fn build_indexer_args(
 ///
 /// # Returns
 ///
-/// `()` once the indexer exits successfully.
+/// `()` on success.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * The indexer exits with a non-zero status.
+/// * [`anyhow::Error`] if the indexer exits with a non-zero status.
 /// * Forwards [`Command::status`]'s return values on failure.
 fn run_indexer(
     indexer_bin: &Path,
@@ -621,7 +1075,7 @@ fn run_indexer(
         tracing::error!(
             status = status.code(),
             archive_path = % archive_path.display(),
-            "indexer exited on failure."
+            "Indexer exited on failure."
         );
         anyhow::bail!(
             "indexer exited with {status} for archive {}",
@@ -631,208 +1085,187 @@ fn run_indexer(
     Ok(())
 }
 
-/// Runs log-converter to convert the unstructured text logs listed in `inputs_from_path` into
-/// kv-ir under `output_dir` for clp-s ingestion.
-///
-/// stdout is discarded; stderr is captured so it can be surfaced if the converter fails.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * log-converter exits with a non-zero status.
-/// * Forwards [`Command::spawn`]'s return values on failure.
-/// * Forwards [`std::process::Child::wait`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if log-converter's piped stderr is unexpectedly absent (should be unreachable).
-fn run_log_converter(
-    log_converter_bin: &Path,
-    output_dir: &Path,
-    inputs_from_path: &Path,
-    credential_env: &[(&'static str, String)],
-) -> anyhow::Result<()> {
-    let mut child = Command::new(log_converter_bin)
-        .args(build_log_converter_args(output_dir, inputs_from_path))
-        .envs(credential_env.iter().cloned())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .spawn()
-        .with_context(|| {
-            format!(
-                "failed to spawn log-converter at {}",
-                log_converter_bin.display()
-            )
-        })?;
-
-    let mut stderr = child
-        .stderr
-        .take()
-        .expect("piped stderr should always be present");
-
-    let mut captured_stderr = String::new();
-    if let Err(e) = stderr.read_to_string(&mut captured_stderr) {
-        captured_stderr = format!("failed to read log-converter stderr: {e}");
-    }
-
-    let status = child
-        .wait()
-        .context("failed to wait for log-converter to exit")
-        .inspect_err(|e| {
-            tracing::error!(
-                error = % e,
-                stderr = % captured_stderr,
-                "Failed to wait log-converter."
-            );
-        })?;
-    if !status.success() {
-        tracing::error!(
-            status = status.code(),
-            stderr = % captured_stderr,
-            "log-converter exited on failure."
-        );
-        anyhow::bail!("log-converter exited with {status}");
-    }
-    Ok(())
-}
-
-/// Runs clp-s, invoking `on_archive` for each archive it reports on stdout.
-///
-/// Spawns clp-s with the resolved arguments and credential env vars, draining stderr on a dedicated
-/// thread to avoid a pipe deadlock while stdout is streamed line by line. Each stdout line is
-/// parsed into an [`ArchiveMetadata`] and forwarded to `on_archive`. If reading a stdout line,
-/// parsing it, or `on_archive` fails, clp-s is killed and reaped before the error is returned.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * clp-s exits with a non-zero status.
-/// * A line cannot be read from clp-s's stdout.
-/// * Forwards `on_archive`'s return values on failure.
-/// * Forwards [`Command::spawn`]'s return values on failure.
-/// * Forwards [`parse_archive_stats`]'s return values on failure.
-/// * Forwards [`std::process::Child::wait`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable).
-fn run_clp_s(
-    clp_s_bin: &Path,
-    archive_dir: &Path,
-    clp_s_option: &ClpSCompressionOption,
-    input: &ClpSInput,
-    credential_env: &[(&'static str, String)],
-    mut on_archive: impl FnMut(ArchiveMetadata) -> anyhow::Result<()>,
-) -> anyhow::Result<()> {
-    let mut child = Command::new(clp_s_bin)
-        .args(build_clp_s_args(archive_dir, input, clp_s_option))
-        .envs(credential_env.iter().cloned())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .with_context(|| format!("failed to spawn clp-s at {}", clp_s_bin.display()))?;
-
-    let mut stderr = child
-        .stderr
-        .take()
-        .expect("piped stderr should always be present");
-    let stderr_reader = std::thread::spawn(move || {
-        let mut buffer = String::new();
-        stderr.read_to_string(&mut buffer).map(|_| buffer)
-    });
-
-    let stdout = child
-        .stdout
-        .take()
-        .expect("piped stdout should always be present");
-    for line in BufReader::new(stdout).lines() {
-        let line = match line.context("failed to read a line from clp-s stdout") {
-            Ok(line) => line,
-            Err(e) => {
-                let stderr = kill_clp_s_and_read_stderr(&mut child, stderr_reader);
-                tracing::error!(
-                    error = % e,
-                    stderr = % stderr,
-                    "Failed to read a line from clp-s stdout. Killing clp-s."
-                );
-                return Err(e.context("clp-s killed on error"));
-            }
-        };
-        if let Err(e) = parse_archive_stats(&line).and_then(&mut on_archive) {
-            let stderr = kill_clp_s_and_read_stderr(&mut child, stderr_reader);
-            tracing::error!(
-                error = % e,
-                archive_stats = % line,
-                stderr = % stderr,
-                "Failed to execute per-archive callback. Killing clp-s."
-            );
-            return Err(e.context("clp-s killed on error"));
-        }
-    }
-
-    let status = child.wait().context("failed to wait for clp-s to exit")?;
-    let stderr = match stderr_reader.join() {
-        Ok(Ok(stderr)) => stderr,
-        _ => "Failed to read clp-s stderr.".to_string(),
-    };
-    if !status.success() {
-        tracing::error!(
-            status = status.code(),
-            stderr = % stderr,
-            "clp-s exited on failure."
-        );
-        anyhow::bail!("clp-s exited with {status}");
-    }
-    Ok(())
-}
-
-/// Kills and reaps clp-s, then joins the stderr-draining thread and returns its captured output.
-///
-/// # Returns
-///
-/// clp-s's captured stderr, or a placeholder if the stderr-draining thread cannot be joined or
-/// read.
-fn kill_clp_s_and_read_stderr(
-    child: &mut std::process::Child,
-    stderr_reader: std::thread::JoinHandle<std::io::Result<String>>,
-) -> String {
-    let _ = child.kill();
-    let _ = child.wait();
-    match stderr_reader.join() {
-        Ok(Ok(stderr)) => stderr,
-        _ => "Failed to read clp-s stderr.".to_string(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    //! Tests for compression arguments, archive statistics, and storage keys.
+    //! Tests for input preparation, compression arguments, and subprocess errors.
 
     use std::ffi::OsString;
     use std::path::Path;
     use std::path::PathBuf;
 
     use clp_rust_utils::clp_config::AwsAuthentication;
-    use clp_rust_utils::clp_config::package::config::ClpDbNames;
-    use clp_rust_utils::clp_config::package::config::Database;
+    use clp_rust_utils::clp_config::package::config::FsIngestion;
+    use clp_rust_utils::clp_config::package::config::LogsInput;
+    use clp_rust_utils::clp_config::package::config::Package;
+    use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
+    use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::task_io::compression::ArchiveMetadata;
+    use clp_rust_utils::logs_input::LogsInputMountPoint;
+    use clp_rust_utils::logs_input::LogsInputPath;
     use clp_rust_utils::task_io::compression::ClpSCompressionOption;
+    use clp_rust_utils::task_io::compression::FsInputSource;
     use clp_rust_utils::task_io::compression::S3InputSource;
+    use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
+    use spider_core::types::id::JobId;
+    use spider_core::types::id::ResourceGroupId;
+    use spider_core::types::id::TaskId;
+    use spider_tdl::TaskContext;
 
-    use super::ArchiveId;
     use super::ClpSInput;
+    use super::InputAuth;
+    use super::InputList;
+    use super::PreparedSource;
+    use super::S3Destination;
+    use super::Source;
+    use super::TmpFileDeleter;
     use super::build_clp_s_args;
+    use super::build_fs_logs_list;
     use super::build_indexer_args;
     use super::build_log_converter_args;
     use super::build_s3_logs_list;
+    use super::compress;
     use super::parse_archive_stats;
 
+    const BASE_OPTION: ClpSCompressionOption = ClpSCompressionOption {
+        target_encoded_size: 268_435_456,
+        compression_level: 3,
+        timestamp_key: None,
+        unstructured: false,
+    };
+
+    struct FsFixture {
+        root: PathBuf,
+        _cleanup: TmpFileDeleter,
+        mount_point: LogsInputMountPoint,
+    }
+
+    impl FsFixture {
+        /// Creates a temporary input root that is removed when the fixture is dropped.
+        ///
+        /// # Returns
+        ///
+        /// The temporary fixture.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the temporary root cannot be created, represented as UTF-8, or resolved.
+        fn new() -> Self {
+            let root = std::env::temp_dir().join(format!("clp-worker-input-{}", JobId::random()));
+            std::fs::create_dir(&root).expect("temporary input root should be created");
+            let mut cleanup = TmpFileDeleter::new();
+            cleanup.add(root.clone());
+            let mount_point = LogsInputMountPoint::resolve(
+                NonEmptyString::new(root.to_str().expect("test root is UTF-8").to_owned())
+                    .expect("test root is nonempty"),
+            )
+            .expect("test mount should resolve");
+            Self {
+                mount_point,
+                root: root
+                    .canonicalize()
+                    .expect("temporary input root should resolve"),
+                _cleanup: cleanup,
+            }
+        }
+
+        /// # Returns
+        ///
+        /// A CLP-S worker configuration with a host-side input path unavailable to the worker.
+        fn config() -> SpiderTaskExecutorConfig {
+            SpiderTaskExecutorConfig {
+                package: Package {
+                    storage_engine: StorageEngine::ClpS,
+                },
+                logs_input: LogsInput::Fs {
+                    config: FsIngestion {
+                        directory: "/host-only/input/path".to_owned(),
+                    },
+                },
+                ..SpiderTaskExecutorConfig::default()
+            }
+        }
+    }
+
+    /// # Returns
+    ///
+    /// A task context without graph outputs.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`TaskContext::new`] rejects the context.
+    fn task_context() -> TaskContext {
+        TaskContext::new(
+            JobId::random(),
+            TaskId::Index(0),
+            1,
+            ResourceGroupId::random(),
+            None,
+        )
+        .expect("a non-commit task context without graph outputs is valid")
+    }
+
     #[test]
-    fn build_s3_logs_list_default_endpoint() -> anyhow::Result<()> {
+    fn s3_preparation_preserves_urls_credentials_and_auth() {
+        use clp_rust_utils::clp_config::AwsCredentials;
+
+        crate::common::init_runtime().expect("test runtime should initialize");
+        let fixture = FsFixture::new();
+        let config = FsFixture::config();
+        let source = S3InputSource {
+            endpoint_url: Some(NonEmptyString::from_static_str("http://localhost:4566")),
+            region_code: None,
+            bucket: NonEmptyString::from_static_str("logs"),
+            aws_authentication: AwsAuthentication::Credentials {
+                credentials: AwsCredentials {
+                    access_key_id: "test-access-key".to_owned(),
+                    secret_access_key: "test-secret-key".to_owned(),
+                    session_token: None,
+                },
+            },
+            object_keys: vec!["input.json".to_owned()],
+        };
+        let prepared_source = source
+            .prepare()
+            .expect("valid source should be prepared")
+            .expect("s3 preparation produces an explicit list");
+        let list_path = fixture.root.join("s3-list.txt");
+        let mut cleanup = TmpFileDeleter::new();
+        let input_list = InputList::new(list_path.clone(), prepared_source, &mut cleanup)
+            .expect("input list should be written");
+        assert_eq!(
+            std::fs::read_to_string(&list_path).expect("input list should be readable"),
+            "http://localhost:4566/logs/input.json\n"
+        );
+        let clp_s_input = ClpSInput::new(
+            &task_context(),
+            &fixture.root,
+            &config,
+            &BASE_OPTION,
+            input_list,
+            &mut cleanup,
+        )
+        .expect("structured compressor input should be prepared");
+        let ClpSInput::FilesFrom(input_list) = &clp_s_input else {
+            panic!("structured compressor input should read the original list");
+        };
+        assert_eq!(
+            input_list.auth.credential_env(),
+            vec![
+                ("AWS_ACCESS_KEY_ID", "test-access-key".to_owned()),
+                ("AWS_SECRET_ACCESS_KEY", "test-secret-key".to_owned()),
+            ]
+        );
+        let args =
+            build_clp_s_args::<S3Destination>(Path::new("/archives"), &clp_s_input, &BASE_OPTION);
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == [OsString::from("--auth"), OsString::from("s3")])
+        );
+    }
+
+    #[test]
+    fn build_s3_logs_list_default_endpoint() {
         let input_source = S3InputSource {
             endpoint_url: None,
             region_code: Some(
@@ -845,57 +1278,28 @@ mod tests {
         };
 
         assert_eq!(
-            build_s3_logs_list(&input_source)?,
+            build_s3_logs_list(&input_source).expect("valid object keys should produce an S3 list"),
             "https://logs.s3.us-east-1.amazonaws.com/a/b.json\n\
              https://logs.s3.us-east-1.amazonaws.com/c/d.json\n"
         );
-
-        Ok(())
-    }
-
-    #[test]
-    fn parse_archive_stats_ignores_extra_keys() {
-        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
-        let line = r#"{
-            "id": "018e90e5-8b2a-4a61-a2fc-cac799936caf",
-            "begin_timestamp": 10,
-            "end_timestamp": 20,
-            "uncompressed_size": 100,
-            "size": 40,
-            "is_split": false,
-            "range_index": {}
-        }"#;
-
-        assert_eq!(
-            parse_archive_stats(line).expect("valid archive stats line"),
-            ArchiveMetadata {
-                id: ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-                begin_timestamp: 10,
-                end_timestamp: 20,
-                size: 40,
-                uncompressed_size: 100,
-            }
-        );
-    }
-
-    #[test]
-    fn parse_archive_stats_rejects_malformed_line() {
-        assert!(parse_archive_stats("not json").is_err());
     }
 
     #[test]
     fn build_clp_s_args_structured_with_timestamp_key() {
         let clp_s_option = ClpSCompressionOption {
-            target_encoded_size: 268_435_456,
-            compression_level: 3,
             timestamp_key: Some("ts".to_string()),
-            unstructured: false,
+            ..BASE_OPTION
         };
 
         assert_eq!(
-            build_clp_s_args(
+            build_clp_s_args::<S3Destination>(
                 Path::new("/archives"),
-                &ClpSInput::FilesFrom(PathBuf::from("/tmp/log-paths.txt")),
+                &ClpSInput::FilesFrom(InputList {
+                    path: PathBuf::from("/tmp/log-paths.txt"),
+                    auth: InputAuth::S3 {
+                        credential_env: vec![],
+                    },
+                }),
                 &clp_s_option
             ),
             vec![
@@ -903,9 +1307,9 @@ mod tests {
                 OsString::from("/archives"),
                 OsString::from("--print-archive-stats"),
                 OsString::from("--target-encoded-size"),
-                OsString::from("268435456"),
+                OsString::from(BASE_OPTION.target_encoded_size.to_string()),
                 OsString::from("--compression-level"),
-                OsString::from("3"),
+                OsString::from(BASE_OPTION.compression_level.to_string()),
                 OsString::from("--single-file-archive"),
                 OsString::from("--auth"),
                 OsString::from("s3"),
@@ -919,17 +1323,17 @@ mod tests {
 
     #[test]
     fn build_clp_s_args_structured_without_timestamp_key() {
-        let clp_s_option = ClpSCompressionOption {
-            target_encoded_size: 268_435_456,
-            compression_level: 3,
-            timestamp_key: None,
-            unstructured: false,
-        };
+        let clp_s_option = BASE_OPTION;
 
         assert_eq!(
-            build_clp_s_args(
+            build_clp_s_args::<S3Destination>(
                 Path::new("/archives"),
-                &ClpSInput::FilesFrom(PathBuf::from("/tmp/log-paths.txt")),
+                &ClpSInput::FilesFrom(InputList {
+                    path: PathBuf::from("/tmp/log-paths.txt"),
+                    auth: InputAuth::S3 {
+                        credential_env: vec![],
+                    },
+                }),
                 &clp_s_option
             ),
             vec![
@@ -937,9 +1341,9 @@ mod tests {
                 OsString::from("/archives"),
                 OsString::from("--print-archive-stats"),
                 OsString::from("--target-encoded-size"),
-                OsString::from("268435456"),
+                OsString::from(BASE_OPTION.target_encoded_size.to_string()),
                 OsString::from("--compression-level"),
-                OsString::from("3"),
+                OsString::from(BASE_OPTION.compression_level.to_string()),
                 OsString::from("--single-file-archive"),
                 OsString::from("--auth"),
                 OsString::from("s3"),
@@ -950,40 +1354,17 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_args_unstructured_uses_directory_and_no_s3_auth() {
-        let clp_s_option = ClpSCompressionOption {
-            target_encoded_size: 268_435_456,
-            compression_level: 3,
-            timestamp_key: Some("ignored".to_string()),
-            unstructured: true,
-        };
-
-        assert_eq!(
-            build_clp_s_args(
-                Path::new("/archives"),
-                &ClpSInput::Directory(PathBuf::from("/tmp/converted")),
-                &clp_s_option
-            ),
-            vec![
-                OsString::from("c"),
-                OsString::from("/archives"),
-                OsString::from("--print-archive-stats"),
-                OsString::from("--target-encoded-size"),
-                OsString::from("268435456"),
-                OsString::from("--compression-level"),
-                OsString::from("3"),
-                OsString::from("--single-file-archive"),
-                OsString::from("--timestamp-key"),
-                OsString::from("timestamp"),
-                OsString::from("/tmp/converted"),
-            ]
-        );
-    }
-
-    #[test]
     fn build_log_converter_args_expected_order() {
         assert_eq!(
-            build_log_converter_args(Path::new("/tmp/converted"), Path::new("/tmp/log-paths.txt")),
+            build_log_converter_args(
+                Path::new("/tmp/converted"),
+                &InputList {
+                    path: PathBuf::from("/tmp/log-paths.txt"),
+                    auth: InputAuth::S3 {
+                        credential_env: vec![],
+                    },
+                }
+            ),
             vec![
                 OsString::from("--output-dir"),
                 OsString::from("/tmp/converted"),
@@ -996,7 +1377,306 @@ mod tests {
     }
 
     #[test]
+    fn fs_preparation_preserves_zero_byte_files_and_omits_auth() {
+        let fixture = FsFixture::new();
+        let file = fixture.root.join("empty.json");
+        std::fs::write(&file, []).expect("test input file should be created");
+        let source = FsInputSource {
+            file_paths: vec![
+                LogsInputPath::try_from("/empty.json".to_owned())
+                    .expect("test input path should be valid"),
+            ],
+        };
+        let config = FsFixture::config();
+        let logs_list = build_fs_logs_list(&source, &fixture.mount_point)
+            .expect("valid source should be prepared");
+        assert!(
+            !logs_list.is_empty(),
+            "a zero-byte file still requires compression"
+        );
+        let prepared_source = PreparedSource {
+            logs_list,
+            auth: InputAuth::None,
+        };
+        let list_path = fixture.root.join("input-list.txt");
+        let mut cleanup = TmpFileDeleter::new();
+        let input_list = InputList::new(list_path.clone(), prepared_source, &mut cleanup)
+            .expect("input list should be written");
+        assert_eq!(
+            std::fs::read_to_string(&list_path).expect("input list should be readable"),
+            format!("{}\n", file.display())
+        );
+        let clp_s_input = ClpSInput::new(
+            &task_context(),
+            &fixture.root,
+            &config,
+            &BASE_OPTION,
+            input_list,
+            &mut cleanup,
+        )
+        .expect("structured compressor input should be prepared");
+        let ClpSInput::FilesFrom(input_list) = &clp_s_input else {
+            panic!("structured compressor input should read the original list");
+        };
+        assert_eq!(input_list.auth.credential_env(), vec![]);
+        let args =
+            build_clp_s_args::<S3Destination>(Path::new("/archives"), &clp_s_input, &BASE_OPTION);
+        assert!(!args.contains(&OsString::from("--auth")));
+        assert!(args.ends_with(&[
+            OsString::from("--files-from"),
+            list_path.as_os_str().to_owned()
+        ]));
+        drop(cleanup);
+        assert!(!list_path.exists());
+        assert!(file.exists());
+    }
+
+    #[test]
+    fn fs_list_rejects_directory_in_place_of_file() {
+        let fixture = FsFixture::new();
+        let source = FsInputSource {
+            file_paths: vec![
+                LogsInputPath::try_from("/".to_owned()).expect("mount root path should be valid"),
+            ],
+        };
+        let error = build_fs_logs_list(&source, &fixture.mount_point)
+            .expect_err("a directory must not be recursively compressed");
+        assert!(error.to_string().contains("not a regular file"));
+    }
+
+    #[test]
+    fn fs_empty_manifest_produces_no_archives() {
+        let source = FsInputSource { file_paths: vec![] };
+        let output = compress(
+            &task_context(),
+            &FsFixture::config(),
+            &BASE_OPTION,
+            DatasetName::default(),
+            source,
+        )
+        .expect("file-free compression should succeed without input or output setup");
+        assert_eq!(output.archives, vec![]);
+        assert_eq!(output.dataset, DatasetName::default());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn fs_list_rejects_special_files() {
+        let fixture = FsFixture::new();
+        let socket = fixture.root.join("socket");
+        let _listener =
+            std::os::unix::net::UnixListener::bind(&socket).expect("test socket should be created");
+        let source = FsInputSource {
+            file_paths: vec![
+                LogsInputPath::try_from("/socket".to_owned())
+                    .expect("test socket path should be valid"),
+            ],
+        };
+        let error = build_fs_logs_list(&source, &fixture.mount_point)
+            .expect_err("a socket must not be accepted as a regular file");
+        assert!(error.to_string().contains("not a regular file"));
+    }
+
+    #[test]
+    fn fs_arguments_use_explicit_lists_without_s3_auth() {
+        let input_list = PathBuf::from("/tmp/local-files.txt");
+        let args = build_clp_s_args::<S3Destination>(
+            Path::new("/archives"),
+            &ClpSInput::FilesFrom(InputList {
+                path: input_list.clone(),
+                auth: InputAuth::None,
+            }),
+            &ClpSCompressionOption {
+                timestamp_key: Some("ts".to_owned()),
+                ..BASE_OPTION
+            },
+        );
+        assert_eq!(
+            args,
+            vec![
+                OsString::from("c"),
+                OsString::from("/archives"),
+                OsString::from("--print-archive-stats"),
+                OsString::from("--target-encoded-size"),
+                OsString::from(BASE_OPTION.target_encoded_size.to_string()),
+                OsString::from("--compression-level"),
+                OsString::from(BASE_OPTION.compression_level.to_string()),
+                OsString::from("--single-file-archive"),
+                OsString::from("--timestamp-key"),
+                OsString::from("ts"),
+                OsString::from("--files-from"),
+                OsString::from("/tmp/local-files.txt")
+            ]
+        );
+        let input_list = InputList {
+            path: input_list,
+            auth: InputAuth::None,
+        };
+        assert_eq!(
+            build_log_converter_args(Path::new("/tmp/converted"), &input_list),
+            vec![
+                "--output-dir",
+                "/tmp/converted",
+                "--inputs-from",
+                "/tmp/local-files.txt"
+            ]
+            .into_iter()
+            .map(OsString::from)
+            .collect::<Vec<_>>()
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn fs_converter_failure_is_returned() {
+        let error = super::run_log_converter(
+            Path::new("/bin/false"),
+            Path::new("/unused/output"),
+            &InputList {
+                path: PathBuf::from("/unused/inputs"),
+                auth: InputAuth::None,
+            },
+        )
+        .expect_err("a failed converter must fail the compression task");
+        assert!(error.to_string().contains("log-converter exited with"));
+    }
+
+    #[test]
+    fn compression_rejects_non_clp_s_engine_even_for_file_free_input() {
+        let error = compress(
+            &task_context(),
+            &SpiderTaskExecutorConfig::default(),
+            &BASE_OPTION,
+            DatasetName::default(),
+            FsInputSource { file_paths: vec![] },
+        )
+        .expect_err("unsupported engine must be rejected before input processing");
+        assert!(error.to_string().contains("clp-s"));
+    }
+
+    #[test]
+    fn build_clp_s_args_unstructured_uses_directory_and_no_s3_auth() {
+        let clp_s_option = ClpSCompressionOption {
+            timestamp_key: Some("ignored".to_string()),
+            unstructured: true,
+            ..BASE_OPTION
+        };
+
+        let expected = vec![
+            OsString::from("c"),
+            OsString::from("/archives"),
+            OsString::from("--print-archive-stats"),
+            OsString::from("--target-encoded-size"),
+            OsString::from(BASE_OPTION.target_encoded_size.to_string()),
+            OsString::from("--compression-level"),
+            OsString::from(BASE_OPTION.compression_level.to_string()),
+            OsString::from("--single-file-archive"),
+            OsString::from("--timestamp-key"),
+            OsString::from("timestamp"),
+            OsString::from("/tmp/converted"),
+        ];
+        assert_eq!(
+            build_clp_s_args::<S3Destination>(
+                Path::new("/archives"),
+                &ClpSInput::Directory(PathBuf::from("/tmp/converted")),
+                &clp_s_option
+            ),
+            expected
+        );
+    }
+
+    #[test]
+    fn archive_format_depends_on_destination() {
+        let input = ClpSInput::FilesFrom(InputList {
+            path: PathBuf::from("/tmp/input-list"),
+            auth: InputAuth::S3 {
+                credential_env: vec![],
+            },
+        });
+        let args =
+            build_clp_s_args::<super::FsDestination>(Path::new("/archives"), &input, &BASE_OPTION);
+        assert!(!args.contains(&OsString::from("--single-file-archive")));
+        assert!(args.contains(&OsString::from("--auth")));
+        let args = build_clp_s_args::<S3Destination>(Path::new("/archives"), &input, &BASE_OPTION);
+        assert!(args.contains(&OsString::from("--single-file-archive")));
+    }
+
+    #[tokio::test]
+    async fn filesystem_publication_survives_staging_cleanup() {
+        let fixture = FsFixture::new();
+        let staging = fixture.root.join("staging");
+        std::fs::create_dir(&staging).expect("archive staging should be created");
+        let archive_id: clp_rust_utils::types::ArchiveId = "d545842b-f959-4f2f-9c12-206b107c6713"
+            .parse()
+            .expect("test archive id should be valid");
+        let staged_archive = staging.join(archive_id.to_string());
+        std::fs::create_dir(&staged_archive).expect("multi-file archive should be created");
+        std::fs::write(staged_archive.join("header"), b"archive header")
+            .expect("test archive header should be written");
+        std::fs::write(staging.join("unfinished"), b"partial archive")
+            .expect("partial archive should be written");
+        let mut cleanup = TmpFileDeleter::new();
+        cleanup.add(staging.clone());
+        super::Destination::finish(
+            super::FsDestination {
+                directory: fixture.root.clone(),
+            },
+            staged_archive,
+            archive_id,
+            tokio::spawn(async { Ok(()) }),
+        )
+        .await
+        .expect("indexed archive should be published");
+        drop(cleanup);
+        assert!(!staging.exists());
+        assert_eq!(
+            std::fs::read(fixture.root.join(archive_id.to_string()).join("header"))
+                .expect("published archive should survive scratch cleanup"),
+            b"archive header",
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn filesystem_publication_requires_successful_indexing() {
+        let fixture = FsFixture::new();
+        let staging = fixture.root.join("staging");
+        std::fs::create_dir(&staging).expect("archive staging should be created");
+        let archive_id: clp_rust_utils::types::ArchiveId = "d545842b-f959-4f2f-9c12-206b107c6713"
+            .parse()
+            .expect("test archive id should be valid");
+        let staged_archive = staging.join(archive_id.to_string());
+        std::fs::create_dir(&staged_archive).expect("multi-file archive should be created");
+        let error = super::ArchiveFinisher {
+            destination: super::FsDestination {
+                directory: fixture.root.clone(),
+            },
+            indexer_bin: PathBuf::from("/bin/false"),
+            database: super::Database::default(),
+            dataset: DatasetName::default(),
+        }
+        .finish(staged_archive.clone(), archive_id)
+        .await
+        .expect_err("failed indexing must prevent filesystem publication");
+        assert!(error.to_string().contains("indexer exited with"));
+        assert!(staged_archive.is_dir());
+        assert!(!fixture.root.join(archive_id.to_string()).exists());
+    }
+
+    #[test]
+    fn parse_archive_stats_reports_invalid_line() {
+        let error = parse_archive_stats("not json").expect_err("malformed stats must fail");
+        assert_eq!(
+            error.to_string(),
+            "failed to parse clp-s archive stats: not json"
+        );
+    }
+
+    #[test]
     fn build_indexer_args_uses_mysql_and_expected_order() {
+        use clp_rust_utils::clp_config::package::config::ClpDbNames;
+        use clp_rust_utils::clp_config::package::config::Database;
+
         let database = Database {
             host: "db-host".to_string(),
             port: 3306,
