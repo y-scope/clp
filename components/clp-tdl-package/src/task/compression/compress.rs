@@ -4,7 +4,6 @@ use std::ffi::OsString;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
-use std::marker::PhantomData;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -37,10 +36,7 @@ use crate::task::utils::clp_binary_path;
 use crate::task::utils::s3_credential_env;
 
 /// Source-specific validation and preparation for compression.
-pub(super) trait Source: Sized {
-    /// Whether the original input list requires S3 authentication.
-    const USE_S3_AUTH: bool;
-
+pub(super) trait Source {
     /// Validates the source and prepares its explicit input list and credentials.
     ///
     /// # Returns
@@ -57,26 +53,23 @@ pub(super) trait Source: Sized {
     /// # Panics
     ///
     /// Panics for S3 inputs if the package runtime has not been initialized.
-    fn prepare(self) -> anyhow::Result<Option<PreparedSource<Self>>>;
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource>>;
 }
 
-/// Validated input-list contents and their read credentials.
-pub(super) struct PreparedSource<SourceType: Source> {
+/// Validated input-list contents and their authentication.
+pub(super) struct PreparedSource {
     logs_list: String,
-    credential_env: Vec<(&'static str, String)>,
-    source_type: PhantomData<SourceType>,
+    auth: InputAuth,
 }
 
 impl Source for S3InputSource {
-    const USE_S3_AUTH: bool = true;
-
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`build_s3_logs_list`]'s return values on failure.
     /// * Forwards [`s3_credential_env`]'s return values on failure.
-    fn prepare(self) -> anyhow::Result<Option<PreparedSource<Self>>> {
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource>> {
         let logs_list = build_s3_logs_list(&self)?;
         let input_region = self
             .region_code
@@ -85,22 +78,19 @@ impl Source for S3InputSource {
         let credential_env = s3_credential_env(&runtime(), input_region, &self.aws_authentication)?;
         Ok(Some(PreparedSource {
             logs_list,
-            credential_env,
-            source_type: PhantomData,
+            auth: InputAuth::S3 { credential_env },
         }))
     }
 }
 
 impl Source for FsInputSource {
-    const USE_S3_AUTH: bool = false;
-
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
     /// * Forwards [`build_fs_logs_list`]'s return values on failure.
-    fn prepare(self) -> anyhow::Result<Option<PreparedSource<Self>>> {
+    fn prepare(self) -> anyhow::Result<Option<PreparedSource>> {
         let mount_point =
             LogsInputMountPoint::resolve(NonEmptyString::from_static_str(LOGS_INPUT_MOUNT_POINT))?;
         let logs_list = build_fs_logs_list(&self, &mount_point)?;
@@ -109,8 +99,7 @@ impl Source for FsInputSource {
         }
         Ok(Some(PreparedSource {
             logs_list,
-            credential_env: Vec::new(),
-            source_type: PhantomData,
+            auth: InputAuth::None,
         }))
     }
 }
@@ -134,7 +123,7 @@ impl Source for FsInputSource {
 /// * Forwards [`Source::prepare`]'s return values on failure.
 /// * Forwards [`InputList::new`]'s return values on failure.
 /// * Forwards [`extract_s3_output_config`]'s return values on failure.
-/// * Forwards [`PreparedInput::new`]'s return values on failure.
+/// * Forwards [`ClpSInput::new`]'s return values on failure.
 /// * Forwards [`run_clp_s`]'s return values on failure.
 /// * Forwards [`drain_finishers`]'s collected error, if any.
 ///
@@ -175,7 +164,7 @@ pub(super) fn compress<SourceType: Source>(
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let indexer_bin = clp_binary_path(clp_home, "indexer");
 
-    let prepared_input = PreparedInput::new(
+    let clp_s_input = ClpSInput::new(
         ctx,
         clp_home,
         config,
@@ -218,7 +207,7 @@ pub(super) fn compress<SourceType: Source>(
         &clp_s_bin,
         &archive_dir,
         clp_s_option,
-        &prepared_input,
+        &clp_s_input,
         archive_callback,
     );
 
@@ -238,31 +227,40 @@ pub(super) fn compress<SourceType: Source>(
     Ok(CompressionTaskOutput { dataset, archives })
 }
 
-/// How clp-s reads its input.
-enum ClpSInput {
-    /// An explicit `--files-from` list of local paths or S3 object URLs.
-    FilesFrom(PathBuf),
+/// How the original input list's entries are authenticated.
+enum InputAuth {
+    /// The entries are S3 object URLs read with the given credential env.
+    S3 {
+        credential_env: Vec<(&'static str, String)>,
+    },
 
-    /// A local directory of converted logs.
-    Directory(PathBuf),
+    /// The entries are local paths that need no authentication.
+    None,
 }
 
-struct InputList<SourceType: Source> {
+impl InputAuth {
+    /// # Returns
+    ///
+    /// The credential env a subprocess reading the input list should run with.
+    fn credential_env(&self) -> &[(&'static str, String)] {
+        match self {
+            Self::S3 { credential_env } => credential_env,
+            Self::None => &[],
+        }
+    }
+}
+
+struct InputList {
     path: PathBuf,
-    credential_env: Vec<(&'static str, String)>,
-    source_type: PhantomData<SourceType>,
+    auth: InputAuth,
 }
 
-impl<SourceType: Source> InputList<SourceType> {
+impl InputList {
     /// Creates a temporary input list from a prepared source.
-    ///
-    /// # Type Parameters
-    ///
-    /// * `SourceType` - The source associated with the prepared contents.
     ///
     /// # Returns
     ///
-    /// The input-list path and credentials on success.
+    /// The input-list path and its authentication on success.
     ///
     /// # Errors
     ///
@@ -271,7 +269,7 @@ impl<SourceType: Source> InputList<SourceType> {
     /// * Forwards [`std::fs::write`]'s return values on failure.
     fn new(
         path: PathBuf,
-        prepared_source: PreparedSource<SourceType>,
+        prepared_source: PreparedSource,
         tmp_file_deleter: &mut TmpFileDeleter,
     ) -> anyhow::Result<Self> {
         tmp_file_deleter.add(path.clone());
@@ -279,28 +277,28 @@ impl<SourceType: Source> InputList<SourceType> {
             .with_context(|| format!("failed to write logs list to {}", path.display()))?;
         Ok(Self {
             path,
-            credential_env: prepared_source.credential_env,
-            source_type: prepared_source.source_type,
+            auth: prepared_source.auth,
         })
     }
 }
 
-struct PreparedInput<SourceType: Source> {
-    input: ClpSInput,
-    credential_env: Vec<(&'static str, String)>,
-    source_type: PhantomData<SourceType>,
+/// How clp-s reads its input.
+enum ClpSInput {
+    /// An explicit `--files-from` list of local paths or S3 object URLs.
+    FilesFrom(InputList),
+
+    /// A local directory of converted logs.
+    Directory(PathBuf),
 }
 
-impl<SourceType: Source> PreparedInput<SourceType> {
+impl ClpSInput {
+    /// Factory function.
+    ///
     /// Prepares structured input for compression, converting unstructured sources as needed.
-    ///
-    /// # Type Parameters
-    ///
-    /// * `SourceType` - Determines authentication for the original input list.
     ///
     /// # Returns
     ///
-    /// The clp-s input and the credential env clp-s should run with, on success.
+    /// The clp-s input on success.
     ///
     /// # Errors
     ///
@@ -313,15 +311,11 @@ impl<SourceType: Source> PreparedInput<SourceType> {
         clp_home: &Path,
         config: &SpiderTaskExecutorConfig,
         clp_s_option: &ClpSCompressionOption,
-        input_list: InputList<SourceType>,
+        input_list: InputList,
         tmp_file_deleter: &mut TmpFileDeleter,
     ) -> anyhow::Result<Self> {
         if !clp_s_option.unstructured {
-            return Ok(Self {
-                input: ClpSInput::FilesFrom(input_list.path),
-                credential_env: input_list.credential_env,
-                source_type: input_list.source_type,
-            });
+            return Ok(Self::FilesFrom(input_list));
         }
 
         let converted_dir = config.abs_tmp_directory(clp_home).join(format!(
@@ -345,11 +339,7 @@ impl<SourceType: Source> PreparedInput<SourceType> {
         tmp_file_deleter.add(converted_dir.clone());
         let log_converter_bin = clp_binary_path(clp_home, "log-converter");
         run_log_converter(&log_converter_bin, &converted_dir, &input_list)?;
-        Ok(Self {
-            input: ClpSInput::Directory(converted_dir),
-            credential_env: Vec::new(),
-            source_type: input_list.source_type,
-        })
+        Ok(Self::Directory(converted_dir))
     }
 }
 
@@ -636,16 +626,12 @@ fn drain_finishers(
 ///
 /// Converted inputs use local files and the `timestamp` key.
 ///
-/// # Type Parameters
-///
-/// * `SourceType` - Determines authentication for the original input list.
-///
 /// # Returns
 ///
 /// The ordered clp-s arguments.
-fn build_clp_s_args<SourceType: Source>(
+fn build_clp_s_args(
     archive_output_dir: &Path,
-    prepared_input: &PreparedInput<SourceType>,
+    input: &ClpSInput,
     clp_s_option: &ClpSCompressionOption,
 ) -> Vec<OsString> {
     let mut args = vec![
@@ -658,9 +644,9 @@ fn build_clp_s_args<SourceType: Source>(
         OsString::from(clp_s_option.compression_level.to_string()),
         OsString::from("--single-file-archive"),
     ];
-    match &prepared_input.input {
-        ClpSInput::FilesFrom(path) => {
-            if SourceType::USE_S3_AUTH {
+    match input {
+        ClpSInput::FilesFrom(input_list) => {
+            if matches!(input_list.auth, InputAuth::S3 { .. }) {
                 args.push(OsString::from("--auth"));
                 args.push(OsString::from("s3"));
             }
@@ -669,7 +655,7 @@ fn build_clp_s_args<SourceType: Source>(
                 args.push(OsString::from(timestamp_key));
             }
             args.push(OsString::from("--files-from"));
-            args.push(path.as_os_str().to_os_string());
+            args.push(input_list.path.as_os_str().to_os_string());
         }
         ClpSInput::Directory(path) => {
             args.push(OsString::from("--timestamp-key"));
@@ -684,10 +670,6 @@ fn build_clp_s_args<SourceType: Source>(
 ///
 /// Attempts to stop and reap the process after a stdout or callback failure. Cleanup failures
 /// are logged without replacing the original error.
-///
-/// # Type Parameters
-///
-/// * `SourceType` - Determines authentication for the original input list.
 ///
 /// # Errors
 ///
@@ -704,21 +686,20 @@ fn build_clp_s_args<SourceType: Source>(
 ///
 /// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable), or the
 /// stderr-reader thread cannot be spawned.
-fn run_clp_s<SourceType: Source>(
+fn run_clp_s(
     clp_s_bin: &Path,
     archive_dir: &Path,
     clp_s_option: &ClpSCompressionOption,
-    prepared_input: &PreparedInput<SourceType>,
+    input: &ClpSInput,
     mut on_archive: impl FnMut(ArchiveMetadata) -> anyhow::Result<()>,
 ) -> anyhow::Result<()> {
+    let credential_env = match input {
+        ClpSInput::FilesFrom(input_list) => input_list.auth.credential_env(),
+        ClpSInput::Directory(_) => &[],
+    };
     let mut child = Command::new(clp_s_bin)
-        .args(build_clp_s_args(archive_dir, prepared_input, clp_s_option))
-        .envs(
-            prepared_input
-                .credential_env
-                .iter()
-                .map(|(key, value)| (*key, value)),
-        )
+        .args(build_clp_s_args(archive_dir, input, clp_s_option))
+        .envs(credential_env.iter().map(|(key, value)| (*key, value)))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -835,24 +816,17 @@ fn parse_archive_stats(line: &str) -> anyhow::Result<ArchiveMetadata> {
 
 /// Builds the log-converter command-line arguments for converting unstructured logs.
 ///
-/// # Type Parameters
-///
-/// * `SourceType` - Determines authentication for the original input list.
-///
 /// # Returns
 ///
 /// The ordered log-converter arguments.
-fn build_log_converter_args<SourceType: Source>(
-    output_dir: &Path,
-    input_list: &InputList<SourceType>,
-) -> Vec<OsString> {
+fn build_log_converter_args(output_dir: &Path, input_list: &InputList) -> Vec<OsString> {
     let mut args = vec![
         OsString::from("--output-dir"),
         output_dir.as_os_str().to_os_string(),
         OsString::from("--inputs-from"),
         input_list.path.as_os_str().to_os_string(),
     ];
-    if SourceType::USE_S3_AUTH {
+    if matches!(input_list.auth, InputAuth::S3 { .. }) {
         args.push(OsString::from("--auth"));
         args.push(OsString::from("s3"));
     }
@@ -860,10 +834,6 @@ fn build_log_converter_args<SourceType: Source>(
 }
 
 /// Converts the listed unstructured logs into local kv-ir files.
-///
-/// # Type Parameters
-///
-/// * `SourceType` - Determines authentication for the original input list.
 ///
 /// # Errors
 ///
@@ -876,16 +846,17 @@ fn build_log_converter_args<SourceType: Source>(
 /// # Panics
 ///
 /// Panics if log-converter's piped stderr is unexpectedly absent (should be unreachable).
-fn run_log_converter<SourceType: Source>(
+fn run_log_converter(
     log_converter_bin: &Path,
     output_dir: &Path,
-    input_list: &InputList<SourceType>,
+    input_list: &InputList,
 ) -> anyhow::Result<()> {
     let mut child = Command::new(log_converter_bin)
         .args(build_log_converter_args(output_dir, input_list))
         .envs(
             input_list
-                .credential_env
+                .auth
+                .credential_env()
                 .iter()
                 .map(|(key, value)| (*key, value)),
         )
@@ -999,7 +970,6 @@ mod tests {
     //! Tests for input preparation, compression arguments, and subprocess errors.
 
     use std::ffi::OsString;
-    use std::marker::PhantomData;
     use std::path::Path;
     use std::path::PathBuf;
 
@@ -1023,8 +993,8 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ClpSInput;
+    use super::InputAuth;
     use super::InputList;
-    use super::PreparedInput;
     use super::PreparedSource;
     use super::Source;
     use super::TmpFileDeleter;
@@ -1146,7 +1116,7 @@ mod tests {
             std::fs::read_to_string(&list_path).expect("input list should be readable"),
             "http://localhost:4566/logs/input.json\n"
         );
-        let prepared_input = PreparedInput::new(
+        let clp_s_input = ClpSInput::new(
             &task_context(),
             &fixture.root,
             &config,
@@ -1155,18 +1125,17 @@ mod tests {
             &mut cleanup,
         )
         .expect("structured compressor input should be prepared");
+        let ClpSInput::FilesFrom(input_list) = &clp_s_input else {
+            panic!("structured compressor input should read the original list");
+        };
         assert_eq!(
-            prepared_input.credential_env,
+            input_list.auth.credential_env(),
             vec![
                 ("AWS_ACCESS_KEY_ID", "test-access-key".to_owned()),
                 ("AWS_SECRET_ACCESS_KEY", "test-secret-key".to_owned()),
             ]
         );
-        let args = build_clp_s_args::<S3InputSource>(
-            Path::new("/archives"),
-            &prepared_input,
-            &BASE_OPTION,
-        );
+        let args = build_clp_s_args(Path::new("/archives"), &clp_s_input, &BASE_OPTION);
         assert!(
             args.windows(2)
                 .any(|pair| pair == [OsString::from("--auth"), OsString::from("s3")])
@@ -1201,13 +1170,14 @@ mod tests {
         };
 
         assert_eq!(
-            build_clp_s_args::<S3InputSource>(
+            build_clp_s_args(
                 Path::new("/archives"),
-                &PreparedInput {
-                    input: ClpSInput::FilesFrom(PathBuf::from("/tmp/log-paths.txt")),
-                    credential_env: vec![],
-                    source_type: PhantomData,
-                },
+                &ClpSInput::FilesFrom(InputList {
+                    path: PathBuf::from("/tmp/log-paths.txt"),
+                    auth: InputAuth::S3 {
+                        credential_env: vec![],
+                    },
+                }),
                 &clp_s_option
             ),
             vec![
@@ -1234,13 +1204,14 @@ mod tests {
         let clp_s_option = BASE_OPTION;
 
         assert_eq!(
-            build_clp_s_args::<S3InputSource>(
+            build_clp_s_args(
                 Path::new("/archives"),
-                &PreparedInput {
-                    input: ClpSInput::FilesFrom(PathBuf::from("/tmp/log-paths.txt")),
-                    credential_env: vec![],
-                    source_type: PhantomData,
-                },
+                &ClpSInput::FilesFrom(InputList {
+                    path: PathBuf::from("/tmp/log-paths.txt"),
+                    auth: InputAuth::S3 {
+                        credential_env: vec![],
+                    },
+                }),
                 &clp_s_option
             ),
             vec![
@@ -1263,12 +1234,13 @@ mod tests {
     #[test]
     fn build_log_converter_args_expected_order() {
         assert_eq!(
-            build_log_converter_args::<S3InputSource>(
+            build_log_converter_args(
                 Path::new("/tmp/converted"),
                 &InputList {
                     path: PathBuf::from("/tmp/log-paths.txt"),
-                    credential_env: vec![],
-                    source_type: PhantomData
+                    auth: InputAuth::S3 {
+                        credential_env: vec![],
+                    },
                 }
             ),
             vec![
@@ -1306,10 +1278,9 @@ mod tests {
             !logs_list.is_empty(),
             "a zero-byte file still requires compression"
         );
-        let prepared_source = PreparedSource::<FsInputSource> {
+        let prepared_source = PreparedSource {
             logs_list,
-            credential_env: vec![],
-            source_type: PhantomData,
+            auth: InputAuth::None,
         };
         let list_path = fixture.root.join("input-list.txt");
         let mut cleanup = TmpFileDeleter::new();
@@ -1319,7 +1290,7 @@ mod tests {
             std::fs::read_to_string(&list_path).expect("input list should be readable"),
             format!("{}\n", file.display())
         );
-        let prepared_input = PreparedInput::new(
+        let clp_s_input = ClpSInput::new(
             &task_context(),
             &fixture.root,
             &config,
@@ -1328,12 +1299,11 @@ mod tests {
             &mut cleanup,
         )
         .expect("structured compressor input should be prepared");
-        assert_eq!(prepared_input.credential_env, vec![]);
-        let args = build_clp_s_args::<FsInputSource>(
-            Path::new("/archives"),
-            &prepared_input,
-            &BASE_OPTION,
-        );
+        let ClpSInput::FilesFrom(input_list) = &clp_s_input else {
+            panic!("structured compressor input should read the original list");
+        };
+        assert_eq!(input_list.auth.credential_env(), vec![]);
+        let args = build_clp_s_args(Path::new("/archives"), &clp_s_input, &BASE_OPTION);
         assert!(!args.contains(&OsString::from("--auth")));
         assert!(args.ends_with(&[
             OsString::from("--files-from"),
@@ -1418,13 +1388,12 @@ mod tests {
     #[test]
     fn fs_arguments_use_explicit_lists_without_s3_auth() {
         let input_list = PathBuf::from("/tmp/local-files.txt");
-        let args = build_clp_s_args::<FsInputSource>(
+        let args = build_clp_s_args(
             Path::new("/archives"),
-            &PreparedInput {
-                input: ClpSInput::FilesFrom(input_list.clone()),
-                credential_env: vec![],
-                source_type: PhantomData,
-            },
+            &ClpSInput::FilesFrom(InputList {
+                path: input_list.clone(),
+                auth: InputAuth::None,
+            }),
             &ClpSCompressionOption {
                 timestamp_key: Some("ts".to_owned()),
                 ..BASE_OPTION
@@ -1447,10 +1416,9 @@ mod tests {
                 OsString::from("/tmp/local-files.txt")
             ]
         );
-        let input_list = InputList::<FsInputSource> {
+        let input_list = InputList {
             path: input_list,
-            credential_env: vec![],
-            source_type: PhantomData,
+            auth: InputAuth::None,
         };
         assert_eq!(
             build_log_converter_args(Path::new("/tmp/converted"), &input_list),
@@ -1469,13 +1437,12 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn fs_converter_failure_is_returned() {
-        let error = super::run_log_converter::<FsInputSource>(
+        let error = super::run_log_converter(
             Path::new("/bin/false"),
             Path::new("/unused/output"),
             &InputList {
                 path: PathBuf::from("/unused/inputs"),
-                credential_env: vec![],
-                source_type: PhantomData,
+                auth: InputAuth::None,
             },
         )
         .expect_err("a failed converter must fail the compression task");
@@ -1519,22 +1486,14 @@ mod tests {
             OsString::from("timestamp"),
             OsString::from("/tmp/converted"),
         ];
-        let s3_input = PreparedInput::<S3InputSource> {
-            input: ClpSInput::Directory(PathBuf::from("/tmp/converted")),
-            credential_env: vec![],
-            source_type: PhantomData,
-        };
-        let fs_input = PreparedInput::<FsInputSource> {
-            input: ClpSInput::Directory(PathBuf::from("/tmp/converted")),
-            credential_env: vec![],
-            source_type: PhantomData,
-        };
-        for args in [
-            build_clp_s_args(Path::new("/archives"), &s3_input, &clp_s_option),
-            build_clp_s_args(Path::new("/archives"), &fs_input, &clp_s_option),
-        ] {
-            assert_eq!(args, expected);
-        }
+        assert_eq!(
+            build_clp_s_args(
+                Path::new("/archives"),
+                &ClpSInput::Directory(PathBuf::from("/tmp/converted")),
+                &clp_s_option
+            ),
+            expected
+        );
     }
 
     #[test]
