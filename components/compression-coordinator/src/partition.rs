@@ -1,4 +1,4 @@
-//! Partitioning of discovered files and S3 objects into compression-task inputs.
+//! Partitioning of discovered files and S3 objects into compression task manifests.
 
 use std::collections::VecDeque;
 use std::path::Path;
@@ -11,7 +11,7 @@ use clp_rust_utils::task_io::compression::S3InputSource;
 
 use crate::Error;
 
-/// Validates input metadata and constructs compression-task inputs.
+/// Validates input metadata and constructs compression task manifests.
 pub trait Source {
     /// The entries accepted by this source.
     type Entry;
@@ -19,7 +19,7 @@ pub trait Source {
     /// The source's file-path or object-key representation.
     type Path: AsRef<str>;
 
-    /// The input payload for one compression task.
+    /// The manifest describing the inputs assigned to one compression task.
     type Manifest;
 
     /// Checks an entry and extracts its path and size for partitioning.
@@ -36,7 +36,7 @@ pub trait Source {
     /// * [`Error::S3KeyPrefixMismatch`] if an S3 object's key lacks the configured prefix.
     fn prepare_entry(&self, entry: Self::Entry) -> Result<InputMetadata<Self::Path>, Error>;
 
-    /// Converts partitions into compression-task inputs.
+    /// Converts partitions into compression task manifests.
     ///
     /// # Parameters
     ///
@@ -44,7 +44,7 @@ pub trait Source {
     ///
     /// # Returns
     ///
-    /// One task input per supplied partition, preserving its paths.
+    /// One task manifest per supplied partition, preserving its paths.
     fn build_manifests(self, partitions: Vec<Vec<Self::Path>>) -> Vec<Self::Manifest>;
 }
 
@@ -58,7 +58,7 @@ pub struct InputMetadata<PathType: AsRef<str>> {
     pub size: u64,
 }
 
-/// Groups files or S3 objects into compression tasks by estimated uncompressed size and entry
+/// Groups files or S3 objects into task manifests by estimated uncompressed size and entry
 /// count.
 ///
 /// # Type Parameters
@@ -113,14 +113,14 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
     ///
     /// # Returns
     ///
-    /// Task inputs containing every added entry once, or an empty list if no entries were added.
+    /// Task manifests containing every added entry once, or an empty list if no entries were added.
     #[must_use]
     pub fn build(mut self) -> Vec<SourceType::Manifest> {
         self.partition(true);
         self.source.build_manifests(self.partitioned_paths)
     }
 
-    /// Partitions buffered objects into target-sized compression task inputs.
+    /// Partitions buffered objects into target-sized partitions for compression tasks.
     ///
     /// When `flush_buffer` is false, objects that cannot fill another target-sized partition
     /// remain buffered. Otherwise, the final partial partition is also emitted.
@@ -198,7 +198,7 @@ pub struct FsEntry {
     pub size: u64,
 }
 
-/// Constructs [`FsInputSource`] task inputs from local files.
+/// Constructs [`FsInputSource`] task manifests from local files.
 #[derive(Default)]
 pub struct FsSource;
 

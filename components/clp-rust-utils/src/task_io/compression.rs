@@ -18,15 +18,7 @@ pub struct ClpSCompressionOption {
     pub unstructured: bool,
 }
 
-/// The S3 objects or local files assigned to one compression task.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", content = "source", rename_all = "snake_case")]
-pub enum CompressionInputSource {
-    S3(S3InputSource),
-    Fs(FsInputSource),
-}
-
-/// S3 connection settings and object keys for one compression task.
+/// A task manifest containing S3 connection settings and object keys.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct S3InputSource {
     pub endpoint_url: Option<NonEmptyString>,
@@ -36,7 +28,7 @@ pub struct S3InputSource {
     pub object_keys: Vec<String>,
 }
 
-/// Local files assigned to one compression task, identified by [`LogsInputPath`].
+/// A task manifest containing local files identified by [`LogsInputPath`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FsInputSource {
     pub file_paths: Vec<LogsInputPath>,
