@@ -106,6 +106,30 @@ impl SpiderTaskExecutorConfig {
         };
         make_config_path_absolute(clp_home, directory)
     }
+
+    /// Derives the archive storage directory for a dataset.
+    ///
+    /// # Returns
+    ///
+    /// The filesystem directory resolved against `clp_home`, or the S3 key prefix, joined with
+    /// `dataset`.
+    #[must_use]
+    pub fn dataset_archive_storage_directory(
+        &self,
+        clp_home: &Path,
+        dataset: &DatasetName,
+    ) -> String {
+        match &self.archive_output.storage {
+            ArchiveOutputStorage::Fs { .. } => self
+                .abs_archive_output_staging(clp_home)
+                .join(dataset.as_str())
+                .to_string_lossy()
+                .into_owned(),
+            ArchiveOutputStorage::S3 { .. } => self
+                .archive_output
+                .dataset_archive_storage_directory(dataset),
+        }
+    }
 }
 
 impl Default for SpiderTaskExecutorConfig {
@@ -910,6 +934,55 @@ mod tests {
         assert_eq!(
             config.abs_archive_output_staging(Path::new("/opt/clp")),
             Path::new("/abs/staged-archives")
+        );
+    }
+
+    #[test]
+    fn executor_dataset_archive_storage_directory_resolves_relative_fs_path() {
+        let config = SpiderTaskExecutorConfig {
+            archive_output: ArchiveOutput {
+                storage: ArchiveOutputStorage::Fs {
+                    directory: "var/data/archives".to_owned(),
+                },
+                ..ArchiveOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let dataset = DatasetName::try_from("logs".to_owned()).expect("valid dataset name");
+
+        assert_eq!(
+            config.dataset_archive_storage_directory(Path::new("/opt/clp"), &dataset),
+            "/opt/clp/var/data/archives/logs"
+        );
+    }
+
+    #[test]
+    fn executor_dataset_archive_storage_directory_preserves_absolute_fs_path() {
+        let config = SpiderTaskExecutorConfig {
+            archive_output: ArchiveOutput {
+                storage: ArchiveOutputStorage::Fs {
+                    directory: "/var/data/archives".to_owned(),
+                },
+                ..ArchiveOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let dataset = DatasetName::try_from("logs".to_owned()).expect("valid dataset name");
+
+        assert_eq!(
+            config.dataset_archive_storage_directory(Path::new("/opt/clp"), &dataset),
+            "/var/data/archives/logs"
+        );
+    }
+
+    #[test]
+    fn executor_dataset_archive_storage_directory_preserves_s3_prefix() {
+        let config = s3_config_with_staging_directory("var/staged-archives");
+        let dataset = DatasetName::try_from("logs".to_owned()).expect("valid dataset name");
+
+        assert_eq!(
+            config.dataset_archive_storage_directory(Path::new("/opt/clp"), &dataset),
+            "prefix/logs"
         );
     }
 

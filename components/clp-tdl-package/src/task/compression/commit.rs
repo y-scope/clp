@@ -13,6 +13,7 @@ use const_format::formatcp;
 use secrecy::SecretString;
 use spider_core::types::id::JobId;
 
+use crate::common::clp_home;
 use crate::common::spider_task_executor_config;
 
 /// Publishes a compression job's archives and marks it succeeded.
@@ -38,8 +39,8 @@ use crate::common::spider_task_executor_config;
 ///
 /// # Panics
 ///
-/// Panics if the executor configuration has not been initialized or an archive-size total
-/// overflows with overflow checks enabled.
+/// Panics if the executor configuration or CLP home has not been initialized, or an archive-size
+/// total overflows with overflow checks enabled.
 pub(super) async fn commit(
     spider_job_id: JobId,
     dataset: &DatasetName,
@@ -141,15 +142,17 @@ pub(super) fn collect_outputs(
 /// Returns an error if:
 ///
 /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+///
+/// # Panics
+///
+/// Panics if CLP home has not been initialized.
 async fn register_dataset(
     tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
     config: &clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig,
     dataset: &DatasetName,
 ) -> anyhow::Result<()> {
     let datasets_table = config.database.datasets_table_name();
-    let archive_storage_directory = config
-        .archive_output
-        .dataset_archive_storage_directory(dataset);
+    let archive_storage_directory = config.dataset_archive_storage_directory(clp_home(), dataset);
     sqlx::query(&format!(
         "INSERT INTO `{datasets_table}` (name, archive_storage_directory) VALUES (?, ?) ON \
          DUPLICATE KEY UPDATE archive_storage_directory = VALUES(archive_storage_directory)"
