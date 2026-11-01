@@ -167,8 +167,8 @@ impl Ack {
     #[must_use]
     pub fn encode(self) -> Vec<u8> {
         let mut encoded = rmp::encode::ByteBuf::new();
-        let Ok(_) = rmp::encode::write_array_len(&mut encoded, NUM_ACK_FIELDS);
-        let Ok(_) = rmp::encode::write_uint(&mut encoded, self.num_results);
+        rmp::encode::write_array_len(&mut encoded, NUM_ACK_FIELDS);
+        rmp::encode::write_uint(&mut encoded, self.num_results);
         encoded.into_vec()
     }
 }

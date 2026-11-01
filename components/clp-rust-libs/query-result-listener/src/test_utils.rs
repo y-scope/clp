@@ -11,11 +11,11 @@ pub fn encode_handshake(
     archive_id: &str,
 ) -> Vec<u8> {
     let mut bytes = rmp::encode::ByteBuf::new();
-    let Ok(_) = rmp::encode::write_array_len(&mut bytes, 4);
-    let Ok(_) = rmp::encode::write_uint(&mut bytes, version);
-    let Ok(()) = rmp::encode::write_str(&mut bytes, session_token);
-    let Ok(_) = rmp::encode::write_uint(&mut bytes, task_index);
-    let Ok(()) = rmp::encode::write_str(&mut bytes, archive_id);
+    rmp::encode::write_array_len(&mut bytes, 4);
+    rmp::encode::write_uint(&mut bytes, version);
+    rmp::encode::write_str(&mut bytes, session_token);
+    rmp::encode::write_uint(&mut bytes, task_index);
+    rmp::encode::write_str(&mut bytes, archive_id);
     bytes.into_vec()
 }
 
@@ -25,10 +25,10 @@ pub fn encode_handshake(
 #[must_use]
 pub fn encode_result(result_index: u64, timestamp_millisecs: i64, message: &str) -> Vec<u8> {
     let mut bytes = rmp::encode::ByteBuf::new();
-    let Ok(_) = rmp::encode::write_array_len(&mut bytes, 3);
-    let Ok(_) = rmp::encode::write_uint(&mut bytes, result_index);
-    let Ok(_) = rmp::encode::write_sint(&mut bytes, timestamp_millisecs);
-    let Ok(()) = rmp::encode::write_str(&mut bytes, message);
+    rmp::encode::write_array_len(&mut bytes, 3);
+    rmp::encode::write_uint(&mut bytes, result_index);
+    rmp::encode::write_sint(&mut bytes, timestamp_millisecs);
+    rmp::encode::write_str(&mut bytes, message);
     bytes.into_vec()
 }
 
@@ -38,7 +38,7 @@ pub fn encode_result(result_index: u64, timestamp_millisecs: i64, message: &str)
 #[must_use]
 pub fn encode_trailer(num_results: u64) -> Vec<u8> {
     let mut bytes = rmp::encode::ByteBuf::new();
-    let Ok(_) = rmp::encode::write_array_len(&mut bytes, 1);
-    let Ok(_) = rmp::encode::write_uint(&mut bytes, num_results);
+    rmp::encode::write_array_len(&mut bytes, 1);
+    rmp::encode::write_uint(&mut bytes, num_results);
     bytes.into_vec()
 }
