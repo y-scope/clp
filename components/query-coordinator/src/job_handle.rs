@@ -10,11 +10,12 @@ use std::time::Duration;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
+use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
-use clp_rust_utils::job_config::SearchJobConfig;
+use clp_rust_utils::job_config::QueryOutput;
+use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
-use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
 use const_format::formatcp;
 use spider_core::task::ExecutionPolicy;
@@ -60,9 +61,8 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     query_job_id: QueryJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
-    search_job_config: SearchJobConfig,
+    query_job_config: QueryJobConfig,
     clp_s_query_option: ClpSQueryOption,
-    output_handle: OutputHandle,
     archive_end_ts_lower_bound_millisecs: Option<i64>,
 }
 
@@ -71,48 +71,50 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// # Returns
     ///
-    /// A newly created [`QueryJobHandle`] for the given query job, with the `clp-s`
-    /// query options derived from `search_job_config`.
+    /// A newly created [`QueryJobHandle`] for the given query job, with the `clp-s` query options
+    /// derived from `query_job_config`.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * [`Error::UnsupportedJobConfig`] if:
-    ///   * The job carries an aggregation config.
+    ///   * The job carries an aggregation.
     ///   * The job writes its results to files.
-    /// * [`Error::InvalidQueryJobConfig`] if the begin timestamp exceeds the end timestamp.
-    /// * Forwards [`ClpSQueryOption::try_from`]'s return values on failure.
+    ///   * The job streams its results to a network listener.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
-        search_job_config: SearchJobConfig,
-        output_handle: OutputHandle,
+        query_job_config: QueryJobConfig,
         job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
-        if search_job_config.aggregation_config.is_some() {
-            return Err(Error::UnsupportedJobConfig(
-                "aggregation jobs are not supported".to_owned(),
-            ));
-        }
-        if search_job_config.write_to_file {
-            return Err(Error::UnsupportedJobConfig(
-                "writing query results to files is not supported".to_owned(),
-            ));
+        match &query_job_config.output {
+            QueryOutput::ResultsCache(ResultsCacheOutput {
+                aggregation: None, ..
+            }) => {}
+            QueryOutput::ResultsCache(ResultsCacheOutput {
+                aggregation: Some(_),
+                ..
+            }) => {
+                return Err(Error::UnsupportedJobConfig(
+                    "aggregation jobs are not supported".to_owned(),
+                ));
+            }
+            QueryOutput::File => {
+                return Err(Error::UnsupportedJobConfig(
+                    "writing query results to files is not supported".to_owned(),
+                ));
+            }
+            QueryOutput::Network(_) => {
+                return Err(Error::UnsupportedJobConfig(
+                    "streaming query results to a network listener is not supported".to_owned(),
+                ));
+            }
         }
 
-        let clp_s_query_option = ClpSQueryOption::try_from(&search_job_config)?;
-        if let (Some(begin_timestamp), Some(end_timestamp)) = (
-            search_job_config.begin_timestamp,
-            search_job_config.end_timestamp,
-        ) && begin_timestamp > end_timestamp
-        {
-            return Err(Error::InvalidQueryJobConfig(format!(
-                "begin timestamp {begin_timestamp} is greater than end timestamp {end_timestamp}"
-            )));
-        }
+        let clp_s_query_option = ClpSQueryOption::from(&query_job_config.query);
 
         let archive_end_ts_lower_bound_millisecs = context
             .archive_selection_options
@@ -124,9 +126,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             query_job_id,
             job_submitter,
             resource_group_id,
-            search_job_config,
+            query_job_config,
             clp_s_query_option,
-            output_handle,
             archive_end_ts_lower_bound_millisecs,
         })
     }
@@ -220,7 +221,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                 self.query_job_id,
                 self.resource_group_id,
                 self.clp_s_query_option.clone(),
-                self.output_handle.clone(),
+                self.query_job_config.output.clone(),
                 archives_to_search,
             )
             .await?;
@@ -267,7 +268,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     async fn plan(&self) -> Result<Vec<(ArchiveMetadata, ExecutionPolicy)>, Error> {
         ArchiveSelector {
             context: &self.context,
-            search_job_config: &self.search_job_config,
+            query_job_config: &self.query_job_config,
             archive_end_ts_lower_bound_millisecs: self.archive_end_ts_lower_bound_millisecs,
         }
         .select()
@@ -532,7 +533,7 @@ impl From<&QueryJobOutcome> for QueryJobStatus {
 ///   selector.
 struct ArchiveSelector<'job_handle_lifetime> {
     context: &'job_handle_lifetime QueryJobHandleContext,
-    search_job_config: &'job_handle_lifetime SearchJobConfig,
+    query_job_config: &'job_handle_lifetime QueryJobConfig,
     archive_end_ts_lower_bound_millisecs: Option<i64>,
 }
 
@@ -590,17 +591,11 @@ impl ArchiveSelector<'_> {
     /// Returns an error if:
     ///
     /// * [`Error::InvalidQueryJobConfig`] if:
-    ///   * The job doesn't request any datasets, since clp-text queries aren't supported.
     ///   * The job's requested datasets are empty.
     ///   * The number of distinct datasets exceeds
     ///     [`ArchiveSelectionOptions::max_datasets_per_query`].
     fn deduplicate_and_validate_requested_datasets(&self) -> Result<HashSet<DatasetName>, Error> {
-        let Some(requested_datasets) = self.search_job_config.datasets.as_deref() else {
-            return Err(Error::InvalidQueryJobConfig(
-                "clp-text queries are not supported".to_owned(),
-            ));
-        };
-
+        let requested_datasets = &self.query_job_config.datasets;
         if requested_datasets.is_empty() {
             return Err(Error::InvalidQueryJobConfig(
                 "the datasets list must not be empty".to_owned(),
@@ -680,12 +675,13 @@ impl ArchiveSelector<'_> {
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
             "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
         ));
-        if let Some(end_timestamp) = self.search_job_config.end_timestamp {
+        let time_range = self.query_job_config.query.time_range;
+        if let Some(end_timestamp) = time_range.end_timestamp_millisecs() {
             query_builder
                 .push(" AND `begin_timestamp` <= ")
                 .push_bind(end_timestamp);
         }
-        if let Some(begin_timestamp) = self.search_job_config.begin_timestamp {
+        if let Some(begin_timestamp) = time_range.begin_timestamp_millisecs() {
             query_builder
                 .push(" AND `end_timestamp` >= ")
                 .push_bind(begin_timestamp);
@@ -769,47 +765,145 @@ struct ArchiveRowProjection {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    use std::num::NonZeroU16;
+    use std::num::NonZeroU32;
     use std::num::NonZeroUsize;
+    use std::sync::Arc;
     use std::time::Duration;
 
+    use async_trait::async_trait;
     use clp_rust_utils::clp_config::package::config::Database;
     use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::job_config::SearchJobConfig;
+    use clp_rust_utils::job_config::Aggregation;
+    use clp_rust_utils::job_config::NetworkOutput;
+    use clp_rust_utils::job_config::QueryJobConfig;
+    use clp_rust_utils::job_config::QueryJobId;
+    use clp_rust_utils::job_config::QueryOutput;
+    use clp_rust_utils::job_config::ResultsCacheOutput;
+    use clp_rust_utils::job_config::SearchQuery;
+    use clp_rust_utils::job_config::TimeRange;
+    use clp_rust_utils::task_io::query::ClpSQueryOption;
+    use clp_rust_utils::types::PositiveI64;
+    use clp_rust_utils::types::SessionToken;
+    use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+    use non_empty_string::NonEmptyString;
+    use spider_core::task::ExecutionPolicy;
+    use spider_core::types::id::JobId as SpiderJobId;
+    use spider_core::types::id::ResourceGroupId;
     use sqlx::mysql::MySqlPoolOptions;
 
     use super::ArchiveSelectionOptions;
     use super::ArchiveSelector;
+    use super::QueryJobHandle;
     use super::QueryJobHandleContext;
     use super::SpiderOption;
     use crate::Error;
+    use crate::query_job_submitter::ArchiveMetadata;
+    use crate::query_job_submitter::QueryJobOutcome;
+    use crate::query_job_submitter::QueryJobSubmitter;
+
+    /// A submitter for tests that never reach Spider.
+    #[derive(Clone)]
+    struct UnreachableSubmitter;
+
+    #[async_trait]
+    impl QueryJobSubmitter for UnreachableSubmitter {
+        async fn submit_query_job(
+            &self,
+            _query_job_id: QueryJobId,
+            _resource_group_id: ResourceGroupId,
+            _clp_s_query_option: ClpSQueryOption,
+            _output: QueryOutput,
+            _archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
+        ) -> Result<SpiderJobId, Error> {
+            unreachable!("the test doesn't submit query jobs")
+        }
+
+        async fn run_query_job_to_completion(
+            &self,
+            _spider_job_id: SpiderJobId,
+            _poll_interval: Duration,
+        ) -> Result<QueryJobOutcome, Error> {
+            unreachable!("the test doesn't run query jobs")
+        }
+
+        async fn cancel_query_job(&self, _spider_job_id: SpiderJobId) -> Result<(), Error> {
+            unreachable!("the test doesn't cancel query jobs")
+        }
+    }
+
+    #[tokio::test]
+    async fn query_job_handle_accepts_only_results_cache_output_without_aggregation() {
+        let context = Arc::new(context(None));
+        let results_cache_output = ResultsCacheOutput {
+            max_num_results: NonZeroU32::new(7),
+            aggregation: None,
+        };
+        let new_job_handle = |output| {
+            QueryJobHandle::new(
+                context.clone(),
+                1,
+                UnreachableSubmitter,
+                ResourceGroupId::random(),
+                QueryJobConfig {
+                    output,
+                    ..base_query_job_config()
+                },
+                0,
+            )
+        };
+
+        new_job_handle(QueryOutput::ResultsCache(results_cache_output.clone()))
+            .expect("a results cache output without aggregation should be supported");
+
+        for (output, expected_message) in [
+            (
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    aggregation: Some(Aggregation::CountByTime {
+                        bucket_size_millisecs: PositiveI64::new(60_000)
+                            .expect("60,000 is positive"),
+                    }),
+                    ..results_cache_output
+                }),
+                "aggregation",
+            ),
+            (QueryOutput::File, "files"),
+            (
+                QueryOutput::Network(NetworkOutput {
+                    host: NonEmptyString::from_static_str("10.0.0.5"),
+                    port: NonZeroU16::new(3003).expect("3003 is nonzero"),
+                    session_token: SessionToken::from(uuid::Uuid::nil()),
+                }),
+                "network",
+            ),
+        ] {
+            let Err(error) = new_job_handle(output.clone()) else {
+                panic!("output should be unsupported: {output:?}");
+            };
+            assert!(
+                matches!(
+                    &error,
+                    Error::UnsupportedJobConfig(message) if message.contains(expected_message)
+                ),
+                "unexpected error for {output:?}: {error:?}"
+            );
+        }
+    }
 
     #[tokio::test]
     async fn duplicate_requested_datasets_count_once_toward_max_datasets_per_query() {
-        let context = QueryJobHandleContext {
-            db_pool: MySqlPoolOptions::new()
-                .connect_lazy("mysql://localhost/clp-db")
-                .expect("the database URL should be valid"),
-            db_config: Database::default(),
-            archive_selection_options: ArchiveSelectionOptions {
-                archive_retention_period_millisecs: None,
-                max_datasets_per_query: NonZeroUsize::new(1),
-            },
-            spider_option: SpiderOption {
-                poll_interval: Duration::from_secs(1),
-                query_task_max_retry: 0,
-            },
-        };
+        let context = context(NonZeroUsize::new(1));
         let other_dataset: DatasetName = "other"
             .parse()
             .expect("name should be a valid dataset name");
         let select_datasets = |datasets| {
-            let search_job_config = SearchJobConfig {
-                datasets: Some(datasets),
-                ..SearchJobConfig::default()
+            let query_job_config = QueryJobConfig {
+                datasets,
+                ..base_query_job_config()
             };
             ArchiveSelector {
                 context: &context,
-                search_job_config: &search_job_config,
+                query_job_config: &query_job_config,
                 archive_end_ts_lower_bound_millisecs: None,
             }
             .deduplicate_and_validate_requested_datasets()
@@ -829,5 +923,49 @@ mod tests {
             ),
             "unexpected error: {error:?}"
         );
+    }
+
+    /// # Returns
+    ///
+    /// A query job handle context whose database pool connects lazily, so tests that don't query
+    /// the database need no database.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the database URL is invalid.
+    fn context(max_datasets_per_query: Option<NonZeroUsize>) -> QueryJobHandleContext {
+        QueryJobHandleContext {
+            db_pool: MySqlPoolOptions::new()
+                .connect_lazy("mysql://localhost/clp-db")
+                .expect("the database URL should be valid"),
+            db_config: Database::default(),
+            archive_selection_options: ArchiveSelectionOptions {
+                archive_retention_period_millisecs: None,
+                max_datasets_per_query,
+            },
+            spider_option: SpiderOption {
+                poll_interval: Duration::from_secs(1),
+                query_task_max_retry: 0,
+            },
+        }
+    }
+
+    /// # Returns
+    ///
+    /// A query job config that searches the default dataset and buffers its results in the
+    /// results cache.
+    fn base_query_job_config() -> QueryJobConfig {
+        QueryJobConfig {
+            datasets: vec![DatasetName::default()],
+            query: SearchQuery {
+                query_string: NonEmptyString::from_static_str("*"),
+                time_range: TimeRange::default(),
+                ignore_case: false,
+            },
+            output: QueryOutput::ResultsCache(ResultsCacheOutput {
+                max_num_results: None,
+                aggregation: None,
+            }),
+        }
     }
 }

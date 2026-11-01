@@ -2,8 +2,8 @@
 
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
+use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
-use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
 use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
@@ -18,7 +18,7 @@ pub(crate) fn clp_s_search_task(
     clp_s_query_option: ClpSQueryOption,
     dataset: DatasetName,
     archive_id: ArchiveId,
-    output_handle: OutputHandle,
+    output: QueryOutput,
 ) -> Result<(), TdlError> {
     search::search(
         &ctx,
@@ -27,7 +27,7 @@ pub(crate) fn clp_s_search_task(
         &clp_s_query_option,
         archive_id,
         &dataset,
-        &output_handle,
+        &output,
     )
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }

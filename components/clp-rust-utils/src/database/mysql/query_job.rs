@@ -4,9 +4,9 @@ use const_format::formatcp;
 
 use crate::job_config::Cancellability;
 use crate::job_config::QUERY_JOBS_TABLE_NAME;
+use crate::job_config::QueryJobConfig;
 use crate::job_config::QueryJobStatus;
 use crate::job_config::QueryJobType;
-use crate::job_config::SearchJobConfig;
 
 /// Submits a query job by inserting it into the CLP DB's query jobs table.
 ///
@@ -22,13 +22,13 @@ use crate::job_config::SearchJobConfig;
 /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
 pub async fn submit(
     db_pool: &sqlx::MySqlPool,
-    search_job_config: &SearchJobConfig,
+    query_job_config: &QueryJobConfig,
 ) -> Result<u64, crate::Error> {
     const QUERY: &str =
         formatcp!("INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (?, ?)");
 
     let query_result = sqlx::query(QUERY)
-        .bind(rmp_serde::to_vec_named(search_job_config)?)
+        .bind(rmp_serde::to_vec_named(query_job_config)?)
         .bind(QueryJobType::SearchOrAggregation)
         .execute(db_pool)
         .await?;

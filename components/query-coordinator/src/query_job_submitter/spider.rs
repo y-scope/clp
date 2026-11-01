@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use clp_rust_utils::job_config::QueryJobId;
+use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::task_io::query::ClpSQueryOption;
-use clp_rust_utils::task_io::query::OutputHandle;
 use spider_client::SpiderClient;
 use spider_client::error::ClientError;
 use spider_core::job::JobState;
@@ -40,13 +40,13 @@ impl QueryJobSubmitter for SpiderClient {
         query_job_id: QueryJobId,
         resource_group_id: ResourceGroupId,
         clp_s_query_option: ClpSQueryOption,
-        output_handle: OutputHandle,
+        output: QueryOutput,
         archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error> {
         let (graph, inputs) = build_query_task_graph(
             query_job_id,
             &clp_s_query_option,
-            &output_handle,
+            &output,
             archives_to_search,
         )?;
         let spider_job_id = self.submit_job(resource_group_id, &graph, &inputs).await?;
@@ -144,7 +144,7 @@ impl QueryJobSubmitter for SpiderClient {
 fn build_query_task_graph(
     query_job_id: QueryJobId,
     clp_s_query_option: &ClpSQueryOption,
-    output_handle: &OutputHandle,
+    output: &QueryOutput,
     archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
 ) -> Result<(TaskGraph, TaskGraphInput), Error> {
     // NOTE: Keep these names and the input order in sync with the TDL package definitions.
@@ -156,7 +156,7 @@ fn build_query_task_graph(
     let mut inputs = TaskGraphInputBuilder::new();
     let query_job_id_input = inputs.create_shared_input_payload(&query_job_id)?;
     let query_option_input = inputs.create_shared_input_payload(clp_s_query_option)?;
-    let output_handle_input = inputs.create_shared_input_payload(output_handle)?;
+    let output_input = inputs.create_shared_input_payload(output)?;
     let mut dataset_inputs = HashMap::new();
     for (archive, execution_policy) in archives_to_search {
         graph.insert_task(TaskDescriptor {
@@ -172,7 +172,7 @@ fn build_query_task_graph(
                 )?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("DatasetName")?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("NonEmptyString")?),
-                DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("OutputHandle")?),
+                DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("QueryOutput")?),
             ],
             outputs: vec![],
             input_sources: None,
@@ -188,7 +188,7 @@ fn build_query_task_graph(
         };
         inputs.append_shared_task_input(dataset_input)?;
         inputs.append_task_input(&archive.id)?;
-        inputs.append_shared_task_input(output_handle_input)?;
+        inputs.append_shared_task_input(output_input)?;
     }
 
     Ok((graph, inputs.build()))
