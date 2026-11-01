@@ -111,11 +111,11 @@ impl Frame {
             match rmp::decode::read_array_len(reader)? {
                 NUM_RESULT_FIELDS => {
                     let result_index = rmp::decode::read_int(reader)?;
-                    let timestamp = rmp::decode::read_int(reader)?;
+                    let timestamp_millisecs = rmp::decode::read_int(reader)?;
                     let message = read_str(reader, usize::MAX)?.to_owned();
                     Ok(Self::Result(ResultFrame {
                         result_index,
-                        timestamp,
+                        timestamp_millisecs,
                         message,
                     }))
                 }
@@ -139,7 +139,7 @@ pub struct ResultFrame {
     pub result_index: u64,
 
     /// The result's timestamp, in milliseconds since the Unix epoch.
-    pub timestamp: i64,
+    pub timestamp_millisecs: i64,
 
     /// The result's log event message.
     pub message: String,
@@ -452,10 +452,10 @@ mod tests {
         rmp::encode::write_u64(&mut bytes, 1_700_000_000_000)?;
         rmp::encode::write_str(&mut bytes, "message\n")?;
 
-        let result = |result_index: u64, timestamp: i64| {
+        let result = |result_index: u64, timestamp_millisecs: i64| {
             Frame::Result(ResultFrame {
                 result_index,
-                timestamp,
+                timestamp_millisecs,
                 message: "message\n".to_owned(),
             })
         };

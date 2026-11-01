@@ -33,11 +33,12 @@ pub fn encode_handshake(
 /// Panics if writing to the `Vec` fails. This should never happen since writing to a `Vec` can't
 /// fail.
 #[must_use]
-pub fn encode_result(result_index: u64, timestamp: i64, message: &str) -> Vec<u8> {
+pub fn encode_result(result_index: u64, timestamp_millisecs: i64, message: &str) -> Vec<u8> {
     let mut bytes = Vec::new();
     rmp::encode::write_array_len(&mut bytes, 3).expect("writing to a `Vec` shouldn't fail");
     rmp::encode::write_uint(&mut bytes, result_index).expect("writing to a `Vec` shouldn't fail");
-    rmp::encode::write_sint(&mut bytes, timestamp).expect("writing to a `Vec` shouldn't fail");
+    rmp::encode::write_sint(&mut bytes, timestamp_millisecs)
+        .expect("writing to a `Vec` shouldn't fail");
     rmp::encode::write_str(&mut bytes, message).expect("writing to a `Vec` shouldn't fail");
     bytes
 }
