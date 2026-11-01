@@ -337,7 +337,7 @@ impl Client {
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidQueryJobConfig`] if the job streamed its results to a network
-    ///   listener, so they aren't stored.
+    ///   listener, which means they're not stored.
     /// * Forwards [`Client::get_status`]'s return values on failure.
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
