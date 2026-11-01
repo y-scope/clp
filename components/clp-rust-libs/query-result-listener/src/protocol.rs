@@ -200,6 +200,7 @@ impl From<ProtocolError> for DecodeError {
 impl From<ValueReadError<BytesReadError>> for DecodeError {
     fn from(error: ValueReadError<BytesReadError>) -> Self {
         match error {
+            // A `Bytes` reader only fails to read when its buffer runs out.
             ValueReadError::InvalidMarkerRead(_) | ValueReadError::InvalidDataRead(_) => {
                 Self::Incomplete
             }
@@ -213,6 +214,7 @@ impl From<ValueReadError<BytesReadError>> for DecodeError {
 impl From<NumValueReadError<BytesReadError>> for DecodeError {
     fn from(error: NumValueReadError<BytesReadError>) -> Self {
         match error {
+            // A `Bytes` reader only fails to read when its buffer runs out.
             NumValueReadError::InvalidMarkerRead(_) | NumValueReadError::InvalidDataRead(_) => {
                 Self::Incomplete
             }
@@ -289,6 +291,7 @@ fn expect_num_fields(num_fields: u32, expected: u32) -> Result<(), DecodeError> 
 /// * [`DecodeError::Incomplete`] if the reader ends before the string does.
 /// * [`DecodeError::Invalid`] if:
 ///   * The next value isn't a string.
+///   * The string's length doesn't fit in `usize`.
 ///   * The string is longer than `max_len` bytes.
 ///   * The string isn't valid UTF-8.
 fn read_str<'buffer>(
