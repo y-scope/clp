@@ -1,7 +1,6 @@
 //! The `clp-s` compression worker that turns filesystem or S3 inputs into archives.
 
 use std::ffi::OsString;
-use std::future::Future;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
@@ -200,42 +199,31 @@ pub(super) fn compress<SourceType: Source>(
         &mut tmp_file_deleter,
     )?;
 
-    let archives = match &config.archive_output.storage {
-        ArchiveOutputStorage::Fs { .. } => finish_compression(
-            &runtime,
-            &clp_s_bin,
-            &archive_dir,
-            clp_s_option,
-            &clp_s_input,
-            &ArchiveFinisher {
-                destination: FsDestination {
-                    directory: dataset_dir,
-                },
-                indexer_bin,
-                database: config.database.clone(),
-                dataset: dataset.clone(),
-            },
-        ),
-        ArchiveOutputStorage::S3 { s3_config, .. } => finish_compression(
-            &runtime,
-            &clp_s_bin,
-            &archive_dir,
-            clp_s_option,
-            &clp_s_input,
-            &ArchiveFinisher {
-                destination: S3Destination {
-                    client: build_s3_client(&runtime, s3_config),
-                    bucket: s3_config.bucket.to_string(),
-                    prefix: config
-                        .archive_output
-                        .dataset_archive_storage_directory(&dataset),
-                },
-                indexer_bin,
-                database: config.database.clone(),
-                dataset: dataset.clone(),
-            },
-        ),
-    }?;
+    let destination = match &config.archive_output.storage {
+        ArchiveOutputStorage::Fs { .. } => Destination::Fs {
+            directory: dataset_dir,
+        },
+        ArchiveOutputStorage::S3 { s3_config, .. } => Destination::S3 {
+            client: build_s3_client(&runtime, s3_config),
+            bucket: s3_config.bucket.to_string(),
+            prefix: config
+                .archive_output
+                .dataset_archive_storage_directory(&dataset),
+        },
+    };
+    let archives = finish_compression(
+        &runtime,
+        &clp_s_bin,
+        &archive_dir,
+        clp_s_option,
+        &clp_s_input,
+        &ArchiveFinisher {
+            destination,
+            indexer_bin,
+            database: config.database.clone(),
+            dataset: dataset.clone(),
+        },
+    )?;
 
     tracing::info!(
         job_id = % ctx.job_id,
@@ -409,105 +397,80 @@ impl Drop for TmpFileDeleter {
     }
 }
 
-trait Destination: Clone + Send + 'static {
-    const SINGLE_FILE: bool;
+#[derive(Clone)]
+enum Destination {
+    Fs {
+        directory: PathBuf,
+    },
+    S3 {
+        client: aws_sdk_s3::Client,
+        bucket: String,
+        prefix: String,
+    },
+}
 
+impl Destination {
     /// Finishes indexing and publishes the archive.
     ///
-    /// # Parameters
-    ///
-    /// * `local_path` - The staged archive to publish.
-    /// * `archive_id` - The archive's destination identifier.
-    /// * `indexing_task` - The indexer task, which must be awaited before returning so staging can
-    ///   be safely removed afterward.
-    ///
-    /// # Returns
-    ///
-    /// A future that completes after the archive is indexed and published on success.
+    /// Waits for `indexing_task` before returning, including on publication failure, so the caller
+    /// can safely remove staging paths.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`anyhow::Error`] if indexing or publication fails, or the indexer task cannot be joined.
+    /// * [`tokio::task::JoinError`] if the indexing task panics or is cancelled.
+    /// * Forwards [`run_indexer`]'s return values on failure.
+    /// * Forwards [`tokio::fs::rename`]'s return values on failure.
+    /// * Forwards [`upload_file_to_s3`]'s return values on failure.
     ///
     /// # Panics
     ///
-    /// The returned future may panic if polled outside a Tokio runtime.
-    fn finish(
-        self,
-        local_path: PathBuf,
-        archive_id: ArchiveId,
-        indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
-    ) -> impl Future<Output = anyhow::Result<()>> + Send;
-}
-
-#[derive(Clone)]
-struct FsDestination {
-    directory: PathBuf,
-}
-
-impl Destination for FsDestination {
-    const SINGLE_FILE: bool = false;
-
+    /// Panics if polled outside a Tokio runtime.
     async fn finish(
         self,
         local_path: PathBuf,
         archive_id: ArchiveId,
         indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
     ) -> anyhow::Result<()> {
-        indexing_task
-            .await
-            .context("failed to join indexing task")??;
-        tokio::fs::rename(&local_path, self.directory.join(archive_id.to_string()))
-            .await
-            .with_context(|| format!("failed to publish archive {archive_id}"))?;
-        Ok(())
-    }
-}
-
-#[derive(Clone)]
-struct S3Destination {
-    client: aws_sdk_s3::Client,
-    bucket: String,
-    prefix: String,
-}
-
-impl Destination for S3Destination {
-    const SINGLE_FILE: bool = true;
-
-    async fn finish(
-        self,
-        local_path: PathBuf,
-        archive_id: ArchiveId,
-        indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
-    ) -> anyhow::Result<()> {
-        let key = format!("{}/{archive_id}", self.prefix);
-        let (publication_result, indexing_result) = tokio::join!(
-            upload_file_to_s3(&self.client, &self.bucket, &key, &local_path,),
-            indexing_task
-        );
-        publication_result?;
-        indexing_result.context("failed to join indexing task")??;
+        match self {
+            Self::Fs { directory } => {
+                indexing_task
+                    .await
+                    .context("failed to join indexing task")??;
+                tokio::fs::rename(&local_path, directory.join(archive_id.to_string()))
+                    .await
+                    .with_context(|| format!("failed to publish archive {archive_id}"))?;
+            }
+            Self::S3 {
+                client,
+                bucket,
+                prefix,
+            } => {
+                let key = format!("{prefix}/{archive_id}");
+                let (publication_result, indexing_result) = tokio::join!(
+                    upload_file_to_s3(&client, &bucket, &key, &local_path),
+                    indexing_task
+                );
+                publication_result?;
+                indexing_result.context("failed to join indexing task")??;
+            }
+        }
         Ok(())
     }
 }
 
 /// An async finisher for publishing archives.
 #[derive(Clone)]
-struct ArchiveFinisher<DestinationType: Destination> {
-    destination: DestinationType,
+struct ArchiveFinisher {
+    destination: Destination,
     indexer_bin: PathBuf,
     database: Database,
     dataset: DatasetName,
 }
 
-impl<DestinationType: Destination> ArchiveFinisher<DestinationType> {
+impl ArchiveFinisher {
     /// Finishes indexing and publication of one archive.
-    ///
-    /// # Type Parameters
-    ///
-    /// * `DestinationType` - The [`Destination`] implementation that publishes the archive.
     ///
     /// # Errors
     ///
@@ -536,10 +499,6 @@ impl<DestinationType: Destination> ArchiveFinisher<DestinationType> {
 
 /// Runs compression and waits for all archive indexing and publication to finish.
 ///
-/// # Type Parameters
-///
-/// * `DestinationType` - Determines the archive format and publication implementation.
-///
 /// # Returns
 ///
 /// The finished archives' metadata on success.
@@ -557,13 +516,13 @@ impl<DestinationType: Destination> ArchiveFinisher<DestinationType> {
 ///
 /// Panics if called from an async runtime context, or if a full finisher set unexpectedly has no
 /// tasks (should be unreachable).
-fn finish_compression<DestinationType: Destination>(
+fn finish_compression(
     runtime: &tokio::runtime::Handle,
     clp_s_bin: &Path,
     archive_dir: &Path,
     clp_s_option: &ClpSCompressionOption,
     input: &ClpSInput,
-    finisher: &ArchiveFinisher<DestinationType>,
+    finisher: &ArchiveFinisher,
 ) -> anyhow::Result<Vec<ArchiveMetadata>> {
     const MAX_FINISHERS: usize = 4;
     let mut archives = Vec::new();
@@ -584,11 +543,12 @@ fn finish_compression<DestinationType: Destination>(
         archives.push(archive);
         Ok(())
     };
-    let clp_s_result = run_clp_s::<DestinationType>(
+    let clp_s_result = run_clp_s(
         clp_s_bin,
         archive_dir,
         clp_s_option,
         input,
+        &finisher.destination,
         archive_callback,
     );
     let finish_error = drain_finishers(runtime, finishers);
@@ -746,17 +706,14 @@ fn drain_finishers(
 ///
 /// Converted inputs use local files and the `timestamp` key.
 ///
-/// # Type Parameters
-///
-/// * `DestinationType` - Determines the archive output format.
-///
 /// # Returns
 ///
 /// The ordered clp-s arguments.
-fn build_clp_s_args<DestinationType: Destination>(
+fn build_clp_s_args(
     archive_output_dir: &Path,
     input: &ClpSInput,
     clp_s_option: &ClpSCompressionOption,
+    destination: &Destination,
 ) -> Vec<OsString> {
     let mut args = vec![
         OsString::from("c"),
@@ -767,7 +724,7 @@ fn build_clp_s_args<DestinationType: Destination>(
         OsString::from("--compression-level"),
         OsString::from(clp_s_option.compression_level.to_string()),
     ];
-    if DestinationType::SINGLE_FILE {
+    if matches!(destination, Destination::S3 { .. }) {
         args.push(OsString::from("--single-file-archive"));
     }
     match input {
@@ -797,10 +754,6 @@ fn build_clp_s_args<DestinationType: Destination>(
 /// Attempts to stop and reap the process after a stdout or callback failure. Cleanup failures
 /// are logged without replacing the original error.
 ///
-/// # Type Parameters
-///
-/// * `DestinationType` - Determines the archive output format.
-///
 /// # Errors
 ///
 /// Returns an error if:
@@ -816,11 +769,12 @@ fn build_clp_s_args<DestinationType: Destination>(
 ///
 /// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable), or the
 /// stderr-reader thread cannot be spawned.
-fn run_clp_s<DestinationType: Destination>(
+fn run_clp_s(
     clp_s_bin: &Path,
     archive_dir: &Path,
     clp_s_option: &ClpSCompressionOption,
     input: &ClpSInput,
+    destination: &Destination,
     mut on_archive: impl FnMut(ArchiveMetadata) -> anyhow::Result<()>,
 ) -> anyhow::Result<()> {
     let credential_env = match input {
@@ -828,10 +782,11 @@ fn run_clp_s<DestinationType: Destination>(
         ClpSInput::Directory(_) => &[],
     };
     let mut child = Command::new(clp_s_bin)
-        .args(build_clp_s_args::<DestinationType>(
+        .args(build_clp_s_args(
             archive_dir,
             input,
             clp_s_option,
+            destination,
         ))
         .envs(credential_env.iter().map(|(key, value)| (*key, value)))
         .stdout(Stdio::piped())
@@ -1127,10 +1082,10 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ClpSInput;
+    use super::Destination;
     use super::InputAuth;
     use super::InputList;
     use super::PreparedSource;
-    use super::S3Destination;
     use super::Source;
     use super::TmpFileDeleter;
     use super::build_clp_s_args;
@@ -1147,6 +1102,23 @@ mod tests {
         timestamp_key: None,
         unstructured: false,
     };
+
+    impl Destination {
+        /// # Returns
+        ///
+        /// An S3 destination for command-line argument tests.
+        fn s3_for_test() -> Self {
+            let config = aws_sdk_s3::config::Builder::new()
+                .behavior_version_latest()
+                .region(aws_sdk_s3::config::Region::new("us-east-1"))
+                .build();
+            Self::S3 {
+                client: aws_sdk_s3::Client::from_conf(config),
+                bucket: "archives".to_owned(),
+                prefix: "dataset".to_owned(),
+            }
+        }
+    }
 
     struct FsFixture {
         root: PathBuf,
@@ -1290,8 +1262,12 @@ mod tests {
                 ("AWS_SECRET_ACCESS_KEY", "test-secret-key".to_owned()),
             ]
         );
-        let args =
-            build_clp_s_args::<S3Destination>(Path::new("/archives"), &clp_s_input, &BASE_OPTION);
+        let args = build_clp_s_args(
+            Path::new("/archives"),
+            &clp_s_input,
+            &BASE_OPTION,
+            &Destination::s3_for_test(),
+        );
         assert!(
             args.windows(2)
                 .any(|pair| pair == [OsString::from("--auth"), OsString::from("s3")])
@@ -1326,7 +1302,7 @@ mod tests {
         };
 
         assert_eq!(
-            build_clp_s_args::<S3Destination>(
+            build_clp_s_args(
                 Path::new("/archives"),
                 &ClpSInput::FilesFrom(InputList {
                     path: PathBuf::from("/tmp/log-paths.txt"),
@@ -1334,7 +1310,8 @@ mod tests {
                         credential_env: vec![],
                     },
                 }),
-                &clp_s_option
+                &clp_s_option,
+                &Destination::s3_for_test()
             ),
             vec![
                 OsString::from("c"),
@@ -1360,7 +1337,7 @@ mod tests {
         let clp_s_option = BASE_OPTION;
 
         assert_eq!(
-            build_clp_s_args::<S3Destination>(
+            build_clp_s_args(
                 Path::new("/archives"),
                 &ClpSInput::FilesFrom(InputList {
                     path: PathBuf::from("/tmp/log-paths.txt"),
@@ -1368,7 +1345,8 @@ mod tests {
                         credential_env: vec![],
                     },
                 }),
-                &clp_s_option
+                &clp_s_option,
+                &Destination::s3_for_test()
             ),
             vec![
                 OsString::from("c"),
@@ -1453,8 +1431,12 @@ mod tests {
             panic!("structured compressor input should read the original list");
         };
         assert_eq!(input_list.auth.credential_env(), vec![]);
-        let args =
-            build_clp_s_args::<S3Destination>(Path::new("/archives"), &clp_s_input, &BASE_OPTION);
+        let args = build_clp_s_args(
+            Path::new("/archives"),
+            &clp_s_input,
+            &BASE_OPTION,
+            &Destination::s3_for_test(),
+        );
         assert!(!args.contains(&OsString::from("--auth")));
         assert!(args.ends_with(&[
             OsString::from("--files-from"),
@@ -1516,7 +1498,7 @@ mod tests {
     #[test]
     fn fs_arguments_use_explicit_lists_without_s3_auth() {
         let input_list = PathBuf::from("/tmp/local-files.txt");
-        let args = build_clp_s_args::<S3Destination>(
+        let args = build_clp_s_args(
             Path::new("/archives"),
             &ClpSInput::FilesFrom(InputList {
                 path: input_list.clone(),
@@ -1526,6 +1508,7 @@ mod tests {
                 timestamp_key: Some("ts".to_owned()),
                 ..BASE_OPTION
             },
+            &Destination::s3_for_test(),
         );
         assert_eq!(
             args,
@@ -1612,10 +1595,11 @@ mod tests {
             OsString::from("/tmp/converted"),
         ];
         assert_eq!(
-            build_clp_s_args::<S3Destination>(
+            build_clp_s_args(
                 Path::new("/archives"),
                 &ClpSInput::Directory(PathBuf::from("/tmp/converted")),
-                &clp_s_option
+                &clp_s_option,
+                &Destination::s3_for_test()
             ),
             expected
         );
@@ -1629,11 +1613,22 @@ mod tests {
                 credential_env: vec![],
             },
         });
-        let args =
-            build_clp_s_args::<super::FsDestination>(Path::new("/archives"), &input, &BASE_OPTION);
+        let args = build_clp_s_args(
+            Path::new("/archives"),
+            &input,
+            &BASE_OPTION,
+            &Destination::Fs {
+                directory: PathBuf::from("/archives"),
+            },
+        );
         assert!(!args.contains(&OsString::from("--single-file-archive")));
         assert!(args.contains(&OsString::from("--auth")));
-        let args = build_clp_s_args::<S3Destination>(Path::new("/archives"), &input, &BASE_OPTION);
+        let args = build_clp_s_args(
+            Path::new("/archives"),
+            &input,
+            &BASE_OPTION,
+            &Destination::s3_for_test(),
+        );
         assert!(args.contains(&OsString::from("--single-file-archive")));
     }
 
@@ -1654,7 +1649,7 @@ mod tests {
         let mut cleanup = TmpFileDeleter::new();
         cleanup.add(staging.clone());
         super::Destination::finish(
-            super::FsDestination {
+            Destination::Fs {
                 directory: fixture.root.clone(),
             },
             staged_archive,
@@ -1684,7 +1679,7 @@ mod tests {
         let staged_archive = staging.join(archive_id.to_string());
         std::fs::create_dir(&staged_archive).expect("multi-file archive should be created");
         let error = super::ArchiveFinisher {
-            destination: super::FsDestination {
+            destination: Destination::Fs {
                 directory: fixture.root.clone(),
             },
             indexer_bin: PathBuf::from("/bin/false"),
