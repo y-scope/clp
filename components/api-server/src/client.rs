@@ -916,6 +916,13 @@ mod tests {
                 },
                 "time_range_begin_millisecs",
             ),
+            (
+                QueryConfig {
+                    count_by_time_bucket_size_millisecs: Some(0),
+                    ..base_query_config()
+                },
+                "count_by_time_bucket_size_millisecs",
+            ),
         ] {
             let error = QueryJobConfig::try_from(query_config.clone())
                 .expect_err("query config should be rejected");
