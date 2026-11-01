@@ -10,7 +10,8 @@ documented below.
 
 ### Compression
 
-* `compression::clp_s_s3_compress`: Compress inputs from S3 using `clp-s`.
+* `compression::clp_s_s3_compress`: Compress S3 inputs using `clp-s`.
+* `compression::clp_s_fs_compress`: Compress filesystem inputs using `clp-s`.
 * `compression::commit`: Commit compression task outcomes to the CLP metadata database.
 
 ### Query
