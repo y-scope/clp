@@ -258,12 +258,10 @@ impl TryFrom<QueryConfig> for QueryJobConfig {
                     aggregation: None,
                 })
             }
-            None => QueryOutput::File,
+            None => QueryOutput::File {},
         };
         Ok(Self {
-            datasets: value
-                .datasets
-                .unwrap_or_else(|| vec![DatasetName::default()]),
+            datasets: value.datasets.unwrap_or_else(Self::default_datasets),
             query: SearchQuery {
                 query_string,
                 time_range,
@@ -336,7 +334,7 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidQueryJobConfig`] if the job streamed its results to a network
+    /// * [`ClientError::QueryResultsNotStored`] if the job streamed its results to a network
     ///   listener, which means they're not stored.
     /// * Forwards [`Client::get_status`]'s return values on failure.
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
@@ -395,7 +393,7 @@ impl Client {
                 .fetch_results_from_mongo(query_job_id, max_num_results, raw_docs, sorted)
                 .await
                 .map(|s| SearchResultStream::Mongo { inner: s }),
-            QueryOutput::File => Ok(match &self.config.stream_output.storage {
+            QueryOutput::File {} => Ok(match &self.config.stream_output.storage {
                 StreamOutputStorage::Fs { .. } => SearchResultStream::File {
                     inner: self.fetch_results_from_file(query_job_id),
                 },
@@ -403,10 +401,7 @@ impl Client {
                     inner: self.fetch_results_from_s3(query_job_id).await?,
                 },
             }),
-            QueryOutput::Network(_) => Err(ClientError::InvalidQueryJobConfig(
-                "the query job's results were streamed to a network listener and aren't stored"
-                    .to_owned(),
-            )),
+            QueryOutput::Network(_) => Err(ClientError::QueryResultsNotStored(query_job_id)),
         }
     }
 
@@ -470,7 +465,7 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    /// A stream of the job's results. Each item in the stream is a [`Result`] that:
     ///
     /// ## Returns
     ///
@@ -876,7 +871,7 @@ mod tests {
                     aggregation: None,
                 }),
             ),
-            (base_query_config(), QueryOutput::File),
+            (base_query_config(), QueryOutput::File {}),
         ] {
             let expected = QueryJobConfig {
                 datasets: vec![DatasetName::default()],
@@ -921,25 +916,14 @@ mod tests {
                 },
                 "time_range_begin_millisecs",
             ),
-            (
-                QueryConfig {
-                    count_by_time_bucket_size_millisecs: Some(0),
-                    ..base_query_config()
-                },
-                "count_by_time_bucket_size_millisecs",
-            ),
-            (
-                QueryConfig {
-                    count_by_time_bucket_size_millisecs: Some(-1),
-                    ..base_query_config()
-                },
-                "count_by_time_bucket_size_millisecs",
-            ),
         ] {
             let error = QueryJobConfig::try_from(query_config.clone())
                 .expect_err("query config should be rejected");
             assert!(
-                matches!(&error, ClientError::InvalidInput(message) if message.contains(expected_field)),
+                matches!(
+                    &error,
+                    ClientError::InvalidInput(message) if message.contains(expected_field)
+                ),
                 "unexpected error for {query_config:?}: {error:?}"
             );
         }

@@ -64,7 +64,7 @@ pub(super) fn search(
             ..
         }) => anyhow::bail!("unsupported query output: results cache with aggregation"),
         QueryOutput::Network(_) => anyhow::bail!("unsupported query output: network"),
-        QueryOutput::File => anyhow::bail!("unsupported query output: file"),
+        QueryOutput::File {} => anyhow::bail!("unsupported query output: file"),
     };
 
     tracing::info!(
@@ -723,7 +723,7 @@ mod tests {
                 port: NonZeroU16::new(3003).expect("3003 is nonzero"),
                 session_token: SessionToken::from(uuid::Uuid::nil()),
             }),
-            QueryOutput::File,
+            QueryOutput::File {},
         ] {
             let error = search(
                 &task_context(),

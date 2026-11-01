@@ -158,6 +158,9 @@ async fn health() -> String {
             description = "The URI to fetch the results of the submitted query.",
             example = json!({"query_results_uri":"query_results/1"})
         ),
+        (status = BAD_REQUEST, description = "Invalid query config (e.g., empty query_string, \
+            time_range_begin_millisecs > time_range_end_millisecs, \
+            count_by_time_bucket_size_millisecs <= 0)"),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -225,6 +228,11 @@ struct QueryResultsParams {
         (
             status = NOT_FOUND,
             description = "No query job with the given ID was found."
+        ),
+        (
+            status = CONFLICT,
+            description = "The query job streamed its results to a network listener, so they \
+                aren't stored."
         ),
         (status = INTERNAL_SERVER_ERROR)
     )
@@ -370,7 +378,9 @@ impl From<ClientError> for HandlerError {
             | ClientError::DatasetNotFound(_)
             | ClientError::LogEventNotFound { .. }
             | ClientError::LogsInput(LogsInputError::NotFound(_)) => Self::NotFound,
-            ClientError::QueryJobAlreadyTerminated(_) => Self::Conflict,
+            ClientError::QueryJobAlreadyTerminated(_) | ClientError::QueryResultsNotStored(_) => {
+                Self::Conflict
+            }
             ClientError::InvalidInput(_)
             | ClientError::LogsInput(LogsInputError::OutsideMountPoint(_)) => {
                 Self::BadRequest(format!("{err}"))
@@ -383,7 +393,6 @@ impl From<ClientError> for HandlerError {
             | ClientError::MalformedData
             | ClientError::TaskJoin(_)
             | ClientError::Aws { .. }
-            | ClientError::InvalidQueryJobConfig(_)
             | ClientError::ExtractionJobFailed { .. }
             | ClientError::ExtractionJobNotFound(_)
             | ClientError::LogsInput(
@@ -546,6 +555,7 @@ mod tests {
                 ClientError::QueryJobAlreadyTerminated(1),
                 StatusCode::CONFLICT,
             ),
+            (ClientError::QueryResultsNotStored(1), StatusCode::CONFLICT),
             (
                 ClientError::DatasetNotFound("logs".parse()?),
                 StatusCode::NOT_FOUND,

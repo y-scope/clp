@@ -39,6 +39,9 @@ pub enum ClientError {
     #[error("query job already terminated: {0}")]
     QueryJobAlreadyTerminated(u64),
 
+    #[error("query job {0}'s results were streamed to a network listener and aren't stored")]
+    QueryResultsNotStored(u64),
+
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
@@ -65,9 +68,6 @@ pub enum ClientError {
 
     #[error("compression job ID {0} is out of range")]
     CompressionJobIdOutOfRange(u64),
-
-    #[error("invalid query job config: {0}")]
-    InvalidQueryJobConfig(String),
 
     #[error(transparent)]
     Telemetry(#[from] opentelemetry_otlp::ExporterBuildError),

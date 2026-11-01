@@ -99,7 +99,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
                     "aggregation jobs are not supported".to_owned(),
                 ));
             }
-            QueryOutput::File => {
+            QueryOutput::File {} => {
                 return Err(Error::UnsupportedJobConfig(
                     "writing query results to files is not supported".to_owned(),
                 ));
@@ -860,7 +860,7 @@ mod tests {
                 }),
                 "aggregation",
             ),
-            (QueryOutput::File, "files"),
+            (QueryOutput::File {}, "files"),
             (
                 QueryOutput::Network(NetworkOutput {
                     host: NonEmptyString::from_static_str("10.0.0.5"),

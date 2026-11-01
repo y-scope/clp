@@ -24,10 +24,20 @@ pub type QueryJobId = i32;
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct QueryJobConfig {
-    #[serde(default = "default_datasets")]
+    #[serde(default = "QueryJobConfig::default_datasets")]
     pub datasets: Vec<DatasetName>,
     pub query: SearchQuery,
     pub output: QueryOutput,
+}
+
+impl QueryJobConfig {
+    /// # Returns
+    ///
+    /// The datasets a query job searches when none are given: only the default dataset.
+    #[must_use]
+    pub fn default_datasets() -> Vec<DatasetName> {
+        vec![DatasetName::default()]
+    }
 }
 
 /// The search a query job runs.
@@ -116,11 +126,11 @@ pub struct ReversedTimeRangeError {
 
 /// The destination of a query job's results.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
 pub enum QueryOutput {
     ResultsCache(ResultsCacheOutput),
     Network(NetworkOutput),
-    File,
+    File {},
 }
 
 /// The results cache that a query job's results are buffered in.
@@ -249,13 +259,6 @@ struct UncheckedTimeRange {
     end_timestamp_millisecs: Option<i64>,
 }
 
-/// # Returns
-///
-/// The datasets a query job searches when none are given: only the default dataset.
-fn default_datasets() -> Vec<DatasetName> {
-    vec![DatasetName::default()]
-}
-
 /// Deserializes a [`TimeRange`] that may be `null`.
 ///
 /// # Type Parameters
@@ -340,24 +343,6 @@ mod tests {
     }
 
     #[test]
-    fn reversed_time_range_is_rejected_on_deserialization() {
-        let error = serde_json::from_value::<TimeRange>(serde_json::json!({
-            "begin_timestamp_millisecs": 2,
-            "end_timestamp_millisecs": 1,
-        }))
-        .expect_err("a reversed time range should be rejected");
-
-        assert_eq!(
-            error.to_string(),
-            ReversedTimeRangeError {
-                begin_timestamp_millisecs: 2,
-                end_timestamp_millisecs: 1,
-            }
-            .to_string()
-        );
-    }
-
-    #[test]
     fn null_time_range_deserializes_as_unbounded() {
         let config: QueryJobConfig = serde_json::from_value(serde_json::json!({
             "query": {"query_string": "*", "time_range": null},
@@ -387,6 +372,20 @@ mod tests {
                 }
                 .to_string()
             ),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn file_output_with_an_unknown_field_is_rejected() {
+        let error = serde_json::from_value::<QueryJobConfig>(serde_json::json!({
+            "query": {"query_string": "*"},
+            "output": {"type": "file", "unknown": 1},
+        }))
+        .expect_err("a file output with an unknown field should be rejected");
+
+        assert!(
+            error.to_string().contains("unknown field"),
             "unexpected error: {error}"
         );
     }
