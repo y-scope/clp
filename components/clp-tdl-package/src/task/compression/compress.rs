@@ -151,6 +151,13 @@ pub(super) fn compress<SourceType: Source>(
         "compression-{}-{}-{}-log-paths.txt",
         ctx.job_id, ctx.task_id, ctx.task_instance_id,
     ));
+    tracing::info!(
+        job_id = % ctx.job_id,
+        task_id = % ctx.task_id,
+        task_instance_id = ctx.task_instance_id,
+        list_path = % list_path.display(),
+        "CLP compression task started."
+    );
     let mut tmp_file_deleter = TmpFileDeleter::new();
     let input_list = InputList::new(list_path, prepared_source, &mut tmp_file_deleter)?;
     let runtime = runtime();
@@ -273,7 +280,14 @@ impl InputList {
     ) -> anyhow::Result<Self> {
         tmp_file_deleter.add(path.clone());
         std::fs::write(&path, prepared_source.logs_list)
-            .with_context(|| format!("failed to write logs list to {}", path.display()))?;
+            .with_context(|| format!("failed to write logs list to {}", path.display()))
+            .inspect_err(|e| {
+                tracing::error!(
+                    error = % e,
+                    list_path = % path.display(),
+                    "Failed to write logs list to tmp directory."
+                );
+            })?;
         Ok(Self {
             path,
             auth: prepared_source.auth,
