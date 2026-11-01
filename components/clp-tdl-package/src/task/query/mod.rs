@@ -9,8 +9,21 @@ use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
 use spider_tdl::task;
 
+mod commit;
+mod results_cache;
 mod search;
 
+/// Runs an archive's normal search and any configured timeline aggregation.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`TdlError::ExecutionError`] if [`search::search`] fails.
+///
+/// # Panics
+///
+/// Panics if the TDL package has not initialized its runtime, configuration, or CLP home.
 #[task(name = "query::clp_s_search")]
 pub(crate) fn clp_s_search_task(
     ctx: TaskContext,
@@ -30,4 +43,25 @@ pub(crate) fn clp_s_search_task(
         &output_handle,
     )
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
+}
+
+/// Publishes the timeline histogram after all archive tasks complete successfully.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`TdlError::ExecutionError`] if [`commit::commit_timeline_results`] fails.
+///
+/// # Panics
+///
+/// Panics if the TDL package has not initialized its runtime or configuration.
+#[task(name = "query::commit_timeline")]
+pub(crate) fn commit_timeline_task(ctx: TaskContext) -> Result<(), TdlError> {
+    crate::common::runtime()
+        .block_on(commit::commit_timeline_results(
+            ctx.job_id,
+            crate::common::spider_task_executor_config(),
+        ))
+        .map_err(|error| TdlError::ExecutionError(format!("{error:#}")))
 }
