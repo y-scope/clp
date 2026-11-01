@@ -315,10 +315,7 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidInput`] if:
-    ///   * `query_string` is empty.
-    ///   * `time_range_begin_millisecs` is greater than `time_range_end_millisecs`.
-    ///   * `count_by_time_bucket_size_millisecs` is set and is `<= 0`.
+    /// * Forwards [`QueryJobConfig::try_from`]'s return values on failure.
     /// * Forwards [`query_job::submit`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let query_job_config = QueryJobConfig::try_from(query_config)?;

@@ -15,7 +15,6 @@ use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
-use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::types::ArchiveId;
 use const_format::formatcp;
 use spider_core::task::ExecutionPolicy;
@@ -62,7 +61,6 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
     query_job_config: QueryJobConfig,
-    clp_s_query_option: ClpSQueryOption,
     archive_end_ts_lower_bound_millisecs: Option<i64>,
 }
 
@@ -71,8 +69,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// # Returns
     ///
-    /// A newly created [`QueryJobHandle`] for the given query job, with the `clp-s` query options
-    /// derived from `query_job_config`.
+    /// A newly created [`QueryJobHandle`] for the given query job.
     ///
     /// # Errors
     ///
@@ -114,8 +111,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             }
         }
 
-        let clp_s_query_option = ClpSQueryOption::from(&query_job_config.query);
-
         let archive_end_ts_lower_bound_millisecs = context
             .archive_selection_options
             .archive_retention_period_millisecs
@@ -127,7 +122,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             job_submitter,
             resource_group_id,
             query_job_config,
-            clp_s_query_option,
             archive_end_ts_lower_bound_millisecs,
         })
     }
@@ -220,7 +214,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             .submit_query_job(
                 self.query_job_id,
                 self.resource_group_id,
-                self.clp_s_query_option.clone(),
+                self.query_job_config.query.clone(),
                 self.query_job_config.output.clone(),
                 archives_to_search,
             )
@@ -782,7 +776,6 @@ mod tests {
     use clp_rust_utils::job_config::ResultsCacheOutput;
     use clp_rust_utils::job_config::SearchQuery;
     use clp_rust_utils::job_config::TimeRange;
-    use clp_rust_utils::task_io::query::ClpSQueryOption;
     use clp_rust_utils::types::PositiveI64;
     use clp_rust_utils::types::SessionToken;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
@@ -812,7 +805,7 @@ mod tests {
             &self,
             _query_job_id: QueryJobId,
             _resource_group_id: ResourceGroupId,
-            _clp_s_query_option: ClpSQueryOption,
+            _query: SearchQuery,
             _output: QueryOutput,
             _archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
         ) -> Result<SpiderJobId, Error> {

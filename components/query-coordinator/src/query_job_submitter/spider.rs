@@ -7,7 +7,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
-use clp_rust_utils::task_io::query::ClpSQueryOption;
+use clp_rust_utils::job_config::SearchQuery;
 use spider_client::SpiderClient;
 use spider_client::error::ClientError;
 use spider_core::job::JobState;
@@ -39,16 +39,12 @@ impl QueryJobSubmitter for SpiderClient {
         &self,
         query_job_id: QueryJobId,
         resource_group_id: ResourceGroupId,
-        clp_s_query_option: ClpSQueryOption,
+        query: SearchQuery,
         output: QueryOutput,
         archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error> {
-        let (graph, inputs) = build_query_task_graph(
-            query_job_id,
-            &clp_s_query_option,
-            &output,
-            archives_to_search,
-        )?;
+        let (graph, inputs) =
+            build_query_task_graph(query_job_id, &query, &output, archives_to_search)?;
         let spider_job_id = self.submit_job(resource_group_id, &graph, &inputs).await?;
 
         tracing::info!(
@@ -143,7 +139,7 @@ impl QueryJobSubmitter for SpiderClient {
 /// * Forwards [`TaskGraphInputBuilder::append_task_input`]'s return values on failure.
 fn build_query_task_graph(
     query_job_id: QueryJobId,
-    clp_s_query_option: &ClpSQueryOption,
+    query: &SearchQuery,
     output: &QueryOutput,
     archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
 ) -> Result<(TaskGraph, TaskGraphInput), Error> {
@@ -155,7 +151,7 @@ fn build_query_task_graph(
 
     let mut inputs = TaskGraphInputBuilder::new();
     let query_job_id_input = inputs.create_shared_input_payload(&query_job_id)?;
-    let query_option_input = inputs.create_shared_input_payload(clp_s_query_option)?;
+    let query_input = inputs.create_shared_input_payload(query)?;
     let output_input = inputs.create_shared_input_payload(output)?;
     let mut dataset_inputs = HashMap::new();
     for (archive, execution_policy) in archives_to_search {
@@ -167,9 +163,7 @@ fn build_query_task_graph(
             execution_policy: Some(execution_policy),
             inputs: vec![
                 DataTypeDescriptor::Value(ValueTypeDescriptor::int32()),
-                DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name(
-                    "ClpSQueryOption",
-                )?),
+                DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("SearchQuery")?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("DatasetName")?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("NonEmptyString")?),
                 DataTypeDescriptor::Value(ValueTypeDescriptor::struct_from_name("QueryOutput")?),
@@ -178,7 +172,7 @@ fn build_query_task_graph(
             input_sources: None,
         })?;
         inputs.append_shared_task_input(query_job_id_input)?;
-        inputs.append_shared_task_input(query_option_input)?;
+        inputs.append_shared_task_input(query_input)?;
         let dataset_input = match dataset_inputs.entry(archive.dataset) {
             Entry::Occupied(entry) => *entry.get(),
             Entry::Vacant(entry) => {

@@ -5,6 +5,7 @@ use non_empty_string::NonEmptyString;
 use num_enum::IntoPrimitive;
 use num_enum::TryFromPrimitive;
 use serde::Deserialize;
+use serde::Deserializer;
 use serde::Serialize;
 use strum::EnumString;
 use utoipa::ToSchema;
@@ -34,7 +35,7 @@ pub struct QueryJobConfig {
 #[serde(deny_unknown_fields)]
 pub struct SearchQuery {
     pub query_string: NonEmptyString,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_nullable_time_range")]
     pub time_range: TimeRange,
     #[serde(default)]
     pub ignore_case: bool,
@@ -113,7 +114,7 @@ pub struct ReversedTimeRangeError {
     end_timestamp_millisecs: i64,
 }
 
-/// Where a query job's results go.
+/// The destination of a query job's results.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum QueryOutput {
@@ -255,6 +256,28 @@ fn default_datasets() -> Vec<DatasetName> {
     vec![DatasetName::default()]
 }
 
+/// Deserializes a [`TimeRange`] that may be `null`.
+///
+/// # Type Parameters
+///
+/// * `DeserializerType` - The type of the deserializer to read the time range from.
+///
+/// # Returns
+///
+/// The deserialized time range on success, or [`TimeRange::default`] (unbounded) if the value is
+/// `null`.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`Option::<TimeRange>::deserialize`]'s return values on failure.
+fn deserialize_nullable_time_range<'de, DeserializerType: Deserializer<'de>>(
+    deserializer: DeserializerType,
+) -> Result<TimeRange, DeserializerType::Error> {
+    Ok(Option::<TimeRange>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 #[cfg(test)]
 mod tests {
     use std::num::NonZeroU16;
@@ -265,10 +288,12 @@ mod tests {
     use super::Aggregation;
     use super::Cancellability;
     use super::NetworkOutput;
+    use super::QueryJobConfig;
     use super::QueryJobStatus;
     use super::QueryOutput;
     use super::ResultsCacheOutput;
     use super::ReversedTimeRangeError;
+    use super::SearchQuery;
     use super::TimeRange;
     use crate::types::PositiveI64;
     use crate::types::SessionToken;
@@ -345,6 +370,40 @@ mod tests {
         );
     }
 
+    #[test]
+    fn null_time_range_deserializes_as_unbounded() {
+        let config: QueryJobConfig = serde_json::from_value(serde_json::json!({
+            "query": {"query_string": "*", "time_range": null},
+            "output": {"type": "file"},
+        }))
+        .expect("a null time range should deserialize");
+
+        assert_eq!(config.query.time_range, TimeRange::default());
+    }
+
+    #[test]
+    fn reversed_time_range_in_a_search_query_is_rejected() {
+        let error = serde_json::from_value::<QueryJobConfig>(serde_json::json!({
+            "query": {
+                "query_string": "*",
+                "time_range": {"begin_timestamp_millisecs": 2, "end_timestamp_millisecs": 1},
+            },
+            "output": {"type": "file"},
+        }))
+        .expect_err("a reversed time range should be rejected");
+
+        assert!(
+            error.to_string().contains(
+                &ReversedTimeRangeError {
+                    begin_timestamp_millisecs: 2,
+                    end_timestamp_millisecs: 1,
+                }
+                .to_string()
+            ),
+            "unexpected error: {error}"
+        );
+    }
+
     /// Guards the Spider task-input encoding (`rmp_serde::to_vec`, which writes structs as arrays),
     /// since an internally tagged enum in that compact form would otherwise only fail on a live
     /// Spider cluster.
@@ -373,6 +432,33 @@ mod tests {
                 rmp_serde::from_slice::<QueryOutput>(&serialized)
                     .expect("output should deserialize"),
                 output
+            );
+        }
+    }
+
+    /// Guards the Spider task-input encoding (`rmp_serde::to_vec`, which writes structs as arrays),
+    /// since [`SearchQuery`] combines [`TimeRange`]'s `try_from` adapter with the nullable
+    /// `time_range` helper, and that combination in the compact form would otherwise only fail on
+    /// a live Spider cluster.
+    #[test]
+    fn search_query_round_trips_through_the_spider_task_input_encoding() {
+        for query in [
+            SearchQuery {
+                query_string: NonEmptyString::from_static_str("level: ERROR"),
+                time_range: TimeRange::new(Some(1), Some(2)).expect("range is ordered"),
+                ignore_case: true,
+            },
+            SearchQuery {
+                query_string: NonEmptyString::from_static_str("*"),
+                time_range: TimeRange::default(),
+                ignore_case: false,
+            },
+        ] {
+            let serialized = rmp_serde::to_vec(&query).expect("query should serialize");
+            assert_eq!(
+                rmp_serde::from_slice::<SearchQuery>(&serialized)
+                    .expect("query should deserialize"),
+                query
             );
         }
     }

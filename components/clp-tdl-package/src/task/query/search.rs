@@ -18,8 +18,8 @@ use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
+use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::s3::generate_s3_url;
-use clp_rust_utils::task_io::query::ClpSQueryOption;
 use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 
@@ -46,7 +46,7 @@ pub(super) fn search(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
     query_job_id: QueryJobId,
-    clp_s_query_option: &ClpSQueryOption,
+    query: &SearchQuery,
     archive_id: ArchiveId,
     dataset: &DatasetName,
     output: &QueryOutput,
@@ -93,7 +93,7 @@ pub(super) fn search(
         )?;
     let args = build_clp_s_search_args_for_result_cache(
         &archive_selector,
-        clp_s_query_option,
+        query,
         &config.results_cache,
         max_num_results,
         query_job_id,
@@ -185,7 +185,7 @@ fn resolve_archive_input(
 /// The ordered clp-s arguments.
 fn build_clp_s_search_args_for_result_cache(
     archive_selector: &ArchiveSelector,
-    clp_s_query_option: &ClpSQueryOption,
+    query: &SearchQuery,
     results_cache: &ResultsCache,
     max_num_results: Option<NonZeroU32>,
     query_job_id: QueryJobId,
@@ -205,16 +205,16 @@ fn build_clp_s_search_args_for_result_cache(
         }
     }
 
-    args.push(OsString::from(clp_s_query_option.query_string.as_str()));
-    if let Some(begin_timestamp_millisecs) = clp_s_query_option.begin_timestamp_millisecs {
+    args.push(OsString::from(query.query_string.as_str()));
+    if let Some(begin_timestamp_millisecs) = query.time_range.begin_timestamp_millisecs() {
         args.push(OsString::from("--tge"));
         args.push(OsString::from(begin_timestamp_millisecs.to_string()));
     }
-    if let Some(end_timestamp_millisecs) = clp_s_query_option.end_timestamp_millisecs {
+    if let Some(end_timestamp_millisecs) = query.time_range.end_timestamp_millisecs() {
         args.push(OsString::from("--tle"));
         args.push(OsString::from(end_timestamp_millisecs.to_string()));
     }
-    if clp_s_query_option.ignore_case {
+    if query.ignore_case {
         args.push(OsString::from("--ignore-case"));
     }
 
@@ -324,7 +324,8 @@ mod tests {
     use clp_rust_utils::job_config::NetworkOutput;
     use clp_rust_utils::job_config::QueryOutput;
     use clp_rust_utils::job_config::ResultsCacheOutput;
-    use clp_rust_utils::task_io::query::ClpSQueryOption;
+    use clp_rust_utils::job_config::SearchQuery;
+    use clp_rust_utils::job_config::TimeRange;
     use clp_rust_utils::types::ArchiveId;
     use clp_rust_utils::types::PositiveI64;
     use clp_rust_utils::types::SessionToken;
@@ -344,12 +345,11 @@ mod tests {
 
     /// # Returns
     ///
-    /// A query option with no timestamp bounds, no result limit, and case-sensitive matching.
-    fn unbounded_query_option() -> ClpSQueryOption {
-        ClpSQueryOption {
+    /// A search query with no timestamp bounds and case-sensitive matching.
+    fn unbounded_query() -> SearchQuery {
+        SearchQuery {
             query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
-            begin_timestamp_millisecs: None,
-            end_timestamp_millisecs: None,
+            time_range: TimeRange::default(),
             ignore_case: false,
         }
     }
@@ -440,17 +440,17 @@ mod tests {
 
     #[test]
     fn build_clp_s_search_args_for_result_cache_fs_with_timestamps_and_ignore_case() {
-        let clp_s_query_option = ClpSQueryOption {
+        let query = SearchQuery {
             query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
-            begin_timestamp_millisecs: Some(1_310_138_944_000),
-            end_timestamp_millisecs: Some(1_311_208_074_120),
+            time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
+                .expect("range is ordered"),
             ignore_case: true,
         };
 
         assert_eq!(
             build_clp_s_search_args_for_result_cache(
                 &directory_selector(),
-                &clp_s_query_option,
+                &query,
                 &results_cache(),
                 NonZeroU32::new(7),
                 42,
@@ -482,17 +482,17 @@ mod tests {
 
     #[test]
     fn build_clp_s_search_args_for_result_cache_omits_max_num_results_when_unset() {
-        let clp_s_query_option = ClpSQueryOption {
+        let query = SearchQuery {
             query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
-            begin_timestamp_millisecs: Some(1_310_138_944_000),
-            end_timestamp_millisecs: Some(1_311_208_074_120),
+            time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
+                .expect("range is ordered"),
             ignore_case: true,
         };
 
         assert_eq!(
             build_clp_s_search_args_for_result_cache(
                 &directory_selector(),
-                &clp_s_query_option,
+                &query,
                 &results_cache(),
                 None,
                 42,
@@ -525,7 +525,7 @@ mod tests {
         assert_eq!(
             build_clp_s_search_args_for_result_cache(
                 &directory_selector(),
-                &unbounded_query_option(),
+                &unbounded_query(),
                 &results_cache(),
                 None,
                 42,
@@ -555,7 +555,7 @@ mod tests {
         assert_eq!(
             build_clp_s_search_args_for_result_cache(
                 &ArchiveSelector::ObjectUrl(url.clone()),
-                &unbounded_query_option(),
+                &unbounded_query(),
                 &results_cache(),
                 None,
                 42,
@@ -662,7 +662,7 @@ mod tests {
         )?;
         let args = build_clp_s_search_args_for_result_cache(
             &selector,
-            &unbounded_query_option(),
+            &unbounded_query(),
             &results_cache(),
             None,
             42,
@@ -729,7 +729,7 @@ mod tests {
                 &task_context(),
                 &config,
                 42,
-                &unbounded_query_option(),
+                &unbounded_query(),
                 ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
                 &DatasetName::default(),
                 &output,
@@ -752,7 +752,7 @@ mod tests {
             &task_context(),
             &config,
             42,
-            &unbounded_query_option(),
+            &unbounded_query(),
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
             &DatasetName::default(),
             &QueryOutput::ResultsCache(ResultsCacheOutput {
