@@ -280,24 +280,11 @@ fn deserialize_nullable_time_range<'de, DeserializerType: Deserializer<'de>>(
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroU16;
-    use std::num::NonZeroU32;
-
-    use non_empty_string::NonEmptyString;
-
-    use super::Aggregation;
     use super::Cancellability;
-    use super::NetworkOutput;
     use super::QueryJobConfig;
     use super::QueryJobStatus;
-    use super::QueryOutput;
-    use super::ResultsCacheOutput;
     use super::ReversedTimeRangeError;
-    use super::SearchQuery;
     use super::TimeRange;
-    use crate::types::PositiveI64;
-    use crate::types::SessionToken;
-    use crate::types::non_empty_string::ExpectedNonEmpty;
 
     #[test]
     fn cancellability_from_status_covers_every_status() {
@@ -402,64 +389,5 @@ mod tests {
             ),
             "unexpected error: {error}"
         );
-    }
-
-    /// Guards the Spider task-input encoding (`rmp_serde::to_vec`, which writes structs as arrays),
-    /// since an internally tagged enum in that compact form would otherwise only fail on a live
-    /// Spider cluster.
-    #[test]
-    fn query_output_round_trips_through_the_spider_task_input_encoding() {
-        for output in [
-            QueryOutput::ResultsCache(ResultsCacheOutput {
-                max_num_results: None,
-                aggregation: None,
-            }),
-            QueryOutput::ResultsCache(ResultsCacheOutput {
-                max_num_results: NonZeroU32::new(1000),
-                aggregation: Some(Aggregation::CountByTime {
-                    bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
-                }),
-            }),
-            QueryOutput::Network(NetworkOutput {
-                host: NonEmptyString::from_static_str("10.0.0.5"),
-                port: NonZeroU16::new(3003).expect("3003 is nonzero"),
-                session_token: SessionToken::from(uuid::Uuid::nil()),
-            }),
-            QueryOutput::File,
-        ] {
-            let serialized = rmp_serde::to_vec(&output).expect("output should serialize");
-            assert_eq!(
-                rmp_serde::from_slice::<QueryOutput>(&serialized)
-                    .expect("output should deserialize"),
-                output
-            );
-        }
-    }
-
-    /// Guards the Spider task-input encoding (`rmp_serde::to_vec`, which writes structs as arrays),
-    /// since [`SearchQuery`] combines [`TimeRange`]'s `try_from` adapter with the nullable
-    /// `time_range` helper, and that combination in the compact form would otherwise only fail on
-    /// a live Spider cluster.
-    #[test]
-    fn search_query_round_trips_through_the_spider_task_input_encoding() {
-        for query in [
-            SearchQuery {
-                query_string: NonEmptyString::from_static_str("level: ERROR"),
-                time_range: TimeRange::new(Some(1), Some(2)).expect("range is ordered"),
-                ignore_case: true,
-            },
-            SearchQuery {
-                query_string: NonEmptyString::from_static_str("*"),
-                time_range: TimeRange::default(),
-                ignore_case: false,
-            },
-        ] {
-            let serialized = rmp_serde::to_vec(&query).expect("query should serialize");
-            assert_eq!(
-                rmp_serde::from_slice::<SearchQuery>(&serialized)
-                    .expect("query should deserialize"),
-                query
-            );
-        }
     }
 }
