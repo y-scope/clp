@@ -7,8 +7,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
-use clp_rust_utils::task_io::query::ClpSQueryOption;
-use clp_rust_utils::task_io::query::OutputHandle;
+use clp_rust_utils::job_config::QueryOutput;
+use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::types::ArchiveId;
 use serde::Deserialize;
 use serde::Serialize;
@@ -57,8 +57,8 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     ///
     /// * `query_job_id` - The unique ID of the CLP query job.
     /// * `resource_group_id` - The Spider resource group to register the job under.
-    /// * `clp_s_query_option` - `clp-s` query options shared by every task in the job.
-    /// * `output_handle` - The output handle selecting how the query outputs are returned.
+    /// * `query` - The search query shared by every task in the job.
+    /// * `output` - The destination of the query job's results.
     /// * `archives_to_search` - The archives to search, each represents a query task paired with
     ///   its execution policy.
     ///
@@ -73,8 +73,8 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         &self,
         query_job_id: QueryJobId,
         resource_group_id: ResourceGroupId,
-        clp_s_query_option: ClpSQueryOption,
-        output_handle: OutputHandle,
+        query: SearchQuery,
+        output: QueryOutput,
         archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error>;
 
