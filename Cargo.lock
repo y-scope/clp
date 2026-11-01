@@ -3286,6 +3286,7 @@ dependencies = [
  "clap",
  "clp-rust-utils",
  "const_format",
+ "non-empty-string",
  "rmp-serde",
  "secrecy",
  "serde",
@@ -3297,6 +3298,7 @@ dependencies = [
  "tokio-util",
  "tonic",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

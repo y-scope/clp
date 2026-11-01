@@ -7,18 +7,23 @@ use chrono::TimeZone;
 use chrono::Utc;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
-use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::database::mysql::query_job;
 use clp_rust_utils::dataset::DatasetName;
-use clp_rust_utils::job_config::AggregationConfig;
+use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
+use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobStatus;
-use clp_rust_utils::job_config::SearchJobConfig;
+use clp_rust_utils::job_config::QueryOutput;
+use clp_rust_utils::job_config::ResultsCacheOutput;
+use clp_rust_utils::job_config::SearchQuery;
+use clp_rust_utils::job_config::TimeRange;
+use clp_rust_utils::types::PositiveI64;
 use futures::Stream;
 use futures::StreamExt;
+use non_empty_string::NonEmptyString;
 use pin_project_lite::pin_project;
 use serde::Deserialize;
 use serde::Serialize;
@@ -217,18 +222,53 @@ pub struct QueryConfig {
     pub count_by_time_bucket_size_millisecs: Option<i64>,
 }
 
-impl From<QueryConfig> for SearchJobConfig {
-    fn from(value: QueryConfig) -> Self {
-        Self {
-            datasets: value.datasets,
-            query_string: value.query_string,
-            max_num_results: value.max_num_results,
-            begin_timestamp: value.time_range_begin_millisecs,
-            end_timestamp: value.time_range_end_millisecs,
-            ignore_case: value.ignore_case,
-            write_to_file: !value.buffer_results_in_mongodb,
-            ..Default::default()
-        }
+impl TryFrom<QueryConfig> for QueryJobConfig {
+    type Error = ClientError;
+
+    fn try_from(value: QueryConfig) -> Result<Self, Self::Error> {
+        let query_string = NonEmptyString::new(value.query_string)
+            .map_err(|_| ClientError::InvalidInput("query_string must not be empty".to_owned()))?;
+        let time_range = TimeRange::new(
+            value.time_range_begin_millisecs,
+            value.time_range_end_millisecs,
+        )
+        .map_err(|_| {
+            ClientError::InvalidInput(
+                "time_range_begin_millisecs must be <= time_range_end_millisecs".to_owned(),
+            )
+        })?;
+        let output = match value.count_by_time_bucket_size_millisecs {
+            Some(bucket_size) => {
+                let bucket_size_millisecs = PositiveI64::new(bucket_size).ok_or_else(|| {
+                    ClientError::InvalidInput(
+                        "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
+                    )
+                })?;
+                // Aggregation results are always buffered in MongoDB.
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results: value.max_num_results,
+                    aggregation: Some(Aggregation::CountByTime {
+                        bucket_size_millisecs,
+                    }),
+                })
+            }
+            None if value.buffer_results_in_mongodb => {
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results: value.max_num_results,
+                    aggregation: None,
+                })
+            }
+            None => QueryOutput::File {},
+        };
+        Ok(Self {
+            datasets: value.datasets.unwrap_or_else(Self::default_datasets),
+            query: SearchQuery {
+                query_string,
+                time_range,
+                ignore_case: value.ignore_case,
+            },
+            output,
+        })
     }
 }
 
@@ -273,34 +313,10 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidInput`] if `count_by_time_bucket_size_millisecs` is set and is `<=
-    ///   0`.
+    /// * Forwards [`QueryJobConfig::try_from`]'s return values on failure.
     /// * Forwards [`query_job::submit`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
-        let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
-        if let Some(bucket_size) = count_by_time_bucket_size
-            && bucket_size <= 0
-        {
-            return Err(ClientError::InvalidInput(
-                "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
-            ));
-        }
-        let mut query_job_config: SearchJobConfig = query_config.into();
-        if query_job_config.datasets.is_none() {
-            query_job_config.datasets = match self.config.package.storage_engine {
-                StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some(vec![DatasetName::default()]),
-            }
-        }
-        if let Some(bucket_size) = count_by_time_bucket_size {
-            query_job_config.aggregation_config = Some(AggregationConfig {
-                count_by_time_bucket_size: Some(bucket_size),
-                ..AggregationConfig::default()
-            });
-            // Aggregation results are always buffered in MongoDB.
-            query_job_config.write_to_file = false;
-        }
-
+        let query_job_config = QueryJobConfig::try_from(query_config)?;
         Ok(query_job::submit(&self.sql_pool, &query_job_config).await?)
     }
 
@@ -318,6 +334,8 @@ impl Client {
     ///
     /// Returns an error if:
     ///
+    /// * [`ClientError::QueryResultsNotStored`] if the job streamed its results to a network
+    ///   listener, which means they're not stored.
     /// * Forwards [`Client::get_status`]'s return values on failure.
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
@@ -357,36 +375,34 @@ impl Client {
             }
         }
 
-        let job_config = self.get_job_config(query_job_id).await?;
-        let max_num_results = job_config.max_num_results;
-
-        if job_config.aggregation_config.is_some() {
-            // Aggregation results are always buffered in MongoDB. Each document is an aggregation
-            // record (e.g., a time bucket) rather than a log message, so stream the documents whole
-            // and without a limit.
-            return self
-                .fetch_results_from_mongo(query_job_id, None, true, false)
+        match self.get_job_config(query_job_id).await?.output {
+            QueryOutput::ResultsCache(ResultsCacheOutput {
+                aggregation: Some(_),
+                ..
+            }) => {
+                // Each document is an aggregation record (e.g., a time bucket) rather than a log
+                // message, so stream the documents whole and without a limit.
+                self.fetch_results_from_mongo(query_job_id, None, true, false)
+                    .await
+                    .map(|s| SearchResultStream::Mongo { inner: s })
+            }
+            QueryOutput::ResultsCache(ResultsCacheOutput {
+                max_num_results,
+                aggregation: None,
+            }) => self
+                .fetch_results_from_mongo(query_job_id, max_num_results, raw_docs, sorted)
                 .await
-                .map(|s| SearchResultStream::Mongo { inner: s });
-        }
-
-        if job_config.write_to_file {
-            let stream = match &self.config.stream_output.storage {
+                .map(|s| SearchResultStream::Mongo { inner: s }),
+            QueryOutput::File {} => Ok(match &self.config.stream_output.storage {
                 StreamOutputStorage::Fs { .. } => SearchResultStream::File {
-                    inner: self.fetch_results_from_file(query_job_id, max_num_results)?,
+                    inner: self.fetch_results_from_file(query_job_id),
                 },
                 StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
-                    inner: self
-                        .fetch_results_from_s3(query_job_id, max_num_results)
-                        .await?,
+                    inner: self.fetch_results_from_s3(query_job_id).await?,
                 },
-            };
-            return Ok(stream);
+            }),
+            QueryOutput::Network(_) => Err(ClientError::QueryResultsNotStored(query_job_id)),
         }
-
-        self.fetch_results_from_mongo(query_job_id, max_num_results, raw_docs, sorted)
-            .await
-            .map(|s| SearchResultStream::Mongo { inner: s })
     }
 
     /// Submits a cancellation request for a query job.
@@ -434,7 +450,7 @@ impl Client {
             .ok_or(ClientError::QueryJobNotFound(query_job_id))
     }
 
-    async fn get_job_config(&self, query_job_id: u64) -> Result<SearchJobConfig, ClientError> {
+    async fn get_job_config(&self, query_job_id: u64) -> Result<QueryJobConfig, ClientError> {
         let row = sqlx::query(&format!(
             "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
         ))
@@ -449,7 +465,7 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    /// A stream of the job's results. Each item in the stream is a [`Result`] that:
     ///
     /// ## Returns
     ///
@@ -463,27 +479,20 @@ impl Client {
     /// * Forwards [`tokio::fs::read_dir`]'s return values on failure.
     /// * Forwards [`tokio::fs::ReadDir::next_entry`]'s return values on failure.
     ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`limit_result_stream`]'s return values on failure.
-    ///
     /// # Panics
     ///
     /// Panics if the stream output storage is not file system.
     fn fetch_results_from_file(
         &self,
         query_job_id: u64,
-        max_num_results: Option<NonZeroU32>,
-    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
+    ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
         let StreamOutputStorage::Fs { directory } = &self.config.stream_output.storage else {
             unreachable!();
         };
         let query_job_output_dir = std::path::Path::new("/")
             .join(directory)
             .join(query_job_id.to_string());
-        let stream = stream! {
+        stream! {
             let mut entries = tokio::fs::read_dir(query_job_output_dir).await?;
             while let Some(entry) = entries.next_entry().await? {
                 let search_result_path = entry.path();
@@ -494,8 +503,7 @@ impl Client {
                     yield Ok(event.1);
                 }
             }
-        };
-        limit_result_stream(stream, max_num_results)
+        }
     }
 
     /// Asynchronously fetches results of a completed query job from S3.
@@ -526,7 +534,6 @@ impl Client {
     ///
     /// * [`ClientError::Aws`] if a region code is not provided when using the default AWS S3
     ///   endpoint.
-    /// * Forwards [`limit_result_stream`]'s return values on failure.
     ///
     /// # Panics
     ///
@@ -534,7 +541,6 @@ impl Client {
     async fn fetch_results_from_s3(
         &self,
         query_job_id: u64,
-        max_num_results: Option<NonZeroU32>,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         tracing::info!("Streaming results from S3");
         let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
@@ -569,7 +575,7 @@ impl Client {
             .into_paginator()
             .send();
 
-        let stream = stream! {
+        Ok(stream! {
             while let Some(object_page) = object_pages.next().await {
                 tracing::debug!("Received S3 object page: {:?}", object_page);
                 for object in object_page?.contents() {
@@ -596,8 +602,7 @@ impl Client {
                     }
                 }
             }
-        };
-        limit_result_stream(stream, max_num_results)
+        })
     }
 
     /// Asynchronously fetches results of a completed query job from `MongoDB`.
@@ -812,39 +817,6 @@ where
     }
 }
 
-/// Applies an optional limit to a search result stream.
-///
-/// # Type Parameters
-///
-/// * `StreamType` - The input stream type.
-///
-/// # Returns
-///
-/// A stream yielding at most `max_num_results` items, or all items if unset, on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`ClientError::InvalidQueryJobConfig`] if the limit cannot be represented as a [`usize`].
-fn limit_result_stream<StreamType: Stream<Item = Result<String, ClientError>>>(
-    stream: StreamType,
-    max_num_results: Option<NonZeroU32>,
-) -> Result<impl Stream<Item = Result<String, ClientError>>, ClientError> {
-    let limit = max_num_results
-        .map(|limit| usize::try_from(limit.get()))
-        .transpose()
-        .map_err(|_| {
-            ClientError::InvalidQueryJobConfig(
-                "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
-            )
-        })?;
-    Ok(match limit {
-        Some(limit) => stream.take(limit).left_stream(),
-        None => stream.right_stream(),
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -870,5 +842,113 @@ mod tests {
         };
         let result = ValidatedCompressionUsageParams::try_from(params);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn query_config_converts_to_query_job_config_by_output() {
+        let max_num_results = NonZeroU32::new(7);
+        for (query_config, expected_output) in [
+            (
+                QueryConfig {
+                    count_by_time_bucket_size_millisecs: Some(60_000),
+                    ..base_query_config()
+                },
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results,
+                    aggregation: Some(Aggregation::CountByTime {
+                        bucket_size_millisecs: PositiveI64::new(60_000)
+                            .expect("60,000 is positive"),
+                    }),
+                }),
+            ),
+            (
+                QueryConfig {
+                    buffer_results_in_mongodb: true,
+                    ..base_query_config()
+                },
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results,
+                    aggregation: None,
+                }),
+            ),
+            (base_query_config(), QueryOutput::File {}),
+        ] {
+            let expected = QueryJobConfig {
+                datasets: vec![DatasetName::default()],
+                query: SearchQuery {
+                    query_string: NonEmptyString::new("level: ERROR".to_owned())
+                        .expect("query string is non-empty"),
+                    time_range: TimeRange::new(Some(1), Some(2)).expect("range is ordered"),
+                    ignore_case: true,
+                },
+                output: expected_output,
+            };
+            let actual = QueryJobConfig::try_from(query_config.clone())
+                .expect("query config should convert");
+            assert_eq!(actual, expected, "query config: {query_config:?}");
+        }
+
+        let other_dataset: DatasetName = "other"
+            .parse()
+            .expect("name should be a valid dataset name");
+        let actual = QueryJobConfig::try_from(QueryConfig {
+            datasets: Some(vec![other_dataset.clone()]),
+            ..base_query_config()
+        })
+        .expect("query config should convert");
+        assert_eq!(actual.datasets, vec![other_dataset]);
+    }
+
+    #[test]
+    fn invalid_query_config_is_rejected_as_invalid_input() {
+        for (query_config, expected_field) in [
+            (
+                QueryConfig {
+                    query_string: String::new(),
+                    ..base_query_config()
+                },
+                "query_string",
+            ),
+            (
+                QueryConfig {
+                    time_range_begin_millisecs: Some(3),
+                    ..base_query_config()
+                },
+                "time_range_begin_millisecs",
+            ),
+            (
+                QueryConfig {
+                    count_by_time_bucket_size_millisecs: Some(0),
+                    ..base_query_config()
+                },
+                "count_by_time_bucket_size_millisecs",
+            ),
+        ] {
+            let error = QueryJobConfig::try_from(query_config.clone())
+                .expect_err("query config should be rejected");
+            assert!(
+                matches!(
+                    &error,
+                    ClientError::InvalidInput(message) if message.contains(expected_field)
+                ),
+                "unexpected error for {query_config:?}: {error:?}"
+            );
+        }
+    }
+
+    /// # Returns
+    ///
+    /// A valid query config whose results are buffered in files.
+    fn base_query_config() -> QueryConfig {
+        QueryConfig {
+            query_string: "level: ERROR".to_owned(),
+            datasets: None,
+            max_num_results: NonZeroU32::new(7),
+            time_range_begin_millisecs: Some(1),
+            time_range_end_millisecs: Some(2),
+            ignore_case: true,
+            buffer_results_in_mongodb: false,
+            count_by_time_bucket_size_millisecs: None,
+        }
     }
 }
