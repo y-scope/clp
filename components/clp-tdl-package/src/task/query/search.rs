@@ -390,6 +390,7 @@ fn run_clp_s_search(
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
+    use std::num::NonZeroU16;
     use std::num::NonZeroU32;
     use std::path::Path;
     use std::path::PathBuf;
@@ -405,12 +406,14 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::Aggregation;
+    use clp_rust_utils::job_config::NetworkOutput;
     use clp_rust_utils::job_config::QueryOutput;
     use clp_rust_utils::job_config::ResultsCacheOutput;
     use clp_rust_utils::job_config::SearchQuery;
     use clp_rust_utils::job_config::TimeRange;
     use clp_rust_utils::types::ArchiveId;
     use clp_rust_utils::types::PositiveI64;
+    use clp_rust_utils::types::SessionToken;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
     use spider_core::types::id::JobId;
@@ -419,11 +422,13 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ArchiveSelector;
+    use super::build_clp_s_search_args_for_network;
     use super::build_clp_s_search_args_for_result_cache;
     use super::resolve_archive_input;
     use super::search;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
 
     /// # Returns
     ///
@@ -504,6 +509,24 @@ mod tests {
 
     /// # Returns
     ///
+    /// A network output to a listener at `10.0.0.7:40123`, with [`SESSION_TOKEN`] as its session
+    /// token.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`SESSION_TOKEN`] isn't a valid UUID.
+    fn network_output() -> NetworkOutput {
+        NetworkOutput {
+            host: NonEmptyString::from_static_str("10.0.0.7"),
+            port: NonZeroU16::new(40_123).expect("40,123 is nonzero"),
+            session_token: SessionToken::from(
+                uuid::Uuid::parse_str(SESSION_TOKEN).expect("valid session token UUID"),
+            ),
+        }
+    }
+
+    /// # Returns
+    ///
     /// A [`TaskContext`] for a non-commit task.
     ///
     /// # Panics
@@ -518,6 +541,46 @@ mod tests {
             None,
         )
         .expect("a non-commit task context without graph outputs is valid")
+    }
+
+    #[test]
+    fn build_clp_s_search_args_for_network_fs_with_timestamps_and_ignore_case() {
+        let query = SearchQuery {
+            query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
+            time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
+                .expect("range is ordered"),
+            ignore_case: true,
+        };
+
+        assert_eq!(
+            build_clp_s_search_args_for_network(
+                &directory_selector(),
+                &query,
+                &network_output(),
+                5
+            ),
+            vec![
+                OsString::from("s"),
+                OsString::from("/archives/ds1"),
+                OsString::from("--archive-id"),
+                OsString::from(ARCHIVE_ID),
+                OsString::from("level: \"ERROR\""),
+                OsString::from("--tge"),
+                OsString::from("1310138944000"),
+                OsString::from("--tle"),
+                OsString::from("1311208074120"),
+                OsString::from("--ignore-case"),
+                OsString::from("network"),
+                OsString::from("--host"),
+                OsString::from("10.0.0.7"),
+                OsString::from("--port"),
+                OsString::from("40123"),
+                OsString::from("--session-token"),
+                OsString::from(SESSION_TOKEN),
+                OsString::from("--task-index"),
+                OsString::from("5"),
+            ]
+        );
     }
 
     #[test]
@@ -818,6 +881,37 @@ mod tests {
                 "unexpected error for {output:?}: {error}"
             );
         }
+    }
+
+    #[test]
+    fn search_rejects_network_output_without_task_index() {
+        let config = SpiderTaskExecutorConfig {
+            package: Package {
+                storage_engine: StorageEngine::ClpS,
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let cleanup_task_context = TaskContext::new(
+            JobId::random(),
+            TaskId::Cleanup,
+            1,
+            ResourceGroupId::random(),
+            None,
+        )
+        .expect("a cleanup task context without graph outputs is valid");
+
+        let error = search(
+            &cleanup_task_context,
+            &config,
+            42,
+            &unbounded_query(),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
+            &DatasetName::default(),
+            &QueryOutput::Network(network_output()),
+        )
+        .expect_err("a network output requires a task index");
+
+        assert!(error.to_string().contains("task index"));
     }
 
     #[test]
