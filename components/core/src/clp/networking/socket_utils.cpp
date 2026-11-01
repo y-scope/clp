@@ -27,8 +27,7 @@ constexpr int cSendFlags{0};
  * Sets `SO_NOSIGPIPE` on the socket on platforms that support it but not `MSG_NOSIGNAL`, so that
  * sending over a connection closed by the peer fails with `EPIPE` instead of raising `SIGPIPE`.
  * @param fd
- * @return false if setting `SO_NOSIGPIPE` failed.
- * @return true otherwise.
+ * @return Whether setting `SO_NOSIGPIPE` succeeded.
  */
 [[nodiscard]] auto configure_no_sigpipe([[maybe_unused]] int fd) -> bool {
 #if !defined(MSG_NOSIGNAL) && defined(SO_NOSIGPIPE)
