@@ -188,7 +188,7 @@ if(CLP_BUILD_EXECUTABLES)
                 ${STD_FS_LIBS}
                 clp::string_utils
                 utils::profiling
-                yaml-cpp
+                yaml-cpp::yaml-cpp
                 ystdlib::error_handling
                 zstd::libzstd_static
         )
