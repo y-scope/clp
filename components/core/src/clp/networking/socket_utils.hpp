@@ -24,7 +24,8 @@ int connect_to_server(std::string const& host, std::string const& port);
  * @param buf
  * @param buf_len
  * @return ErrorCode_BadParam if the file descriptor or buffer pointer is invalid.
- * @return ErrorCode_errno if sending failed.
+   * @return ErrorCode_errno if sending failed, in which case part of the buffer may already have been
+   * sent.
  * @return ErrorCode_Success otherwise.
  */
 ErrorCode try_send(int fd, char const* buf, size_t buf_len);
