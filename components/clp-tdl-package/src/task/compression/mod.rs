@@ -12,20 +12,6 @@ use spider_tdl::task;
 mod commit;
 mod compress;
 
-/// Compresses S3 inputs and publishes the resulting archives.
-///
-/// # Returns
-///
-/// The archive metadata on success.
-///
-/// # Errors
-///
-/// Returns [`TdlError::ExecutionError`] if [`compress::compress`] fails.
-///
-/// # Panics
-///
-/// Panics if required package globals have not been initialized or this function is called from
-/// an async runtime context.
 #[task(name = "compression::clp_s_s3_compress")]
 pub(crate) fn s3_compress_task(
     ctx: TaskContext,
@@ -43,20 +29,6 @@ pub(crate) fn s3_compress_task(
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
-/// Compresses filesystem inputs and publishes the resulting archives.
-///
-/// # Returns
-///
-/// The archive metadata on success.
-///
-/// # Errors
-///
-/// Returns [`TdlError::ExecutionError`] if [`compress::compress`] fails.
-///
-/// # Panics
-///
-/// Panics if required package globals have not been initialized or this function is called from
-/// an async runtime context.
 #[task(name = "compression::clp_s_fs_compress")]
 pub(crate) fn fs_compress_task(
     ctx: TaskContext,
