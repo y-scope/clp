@@ -84,6 +84,8 @@ pub struct ParseArchiveIdError {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct SessionToken {
+    // Serialized as a string so stored query job configs stay JSON-shaped.
+    #[serde(with = "uuid::serde::hyphenated")]
     value: uuid::Uuid,
 }
 

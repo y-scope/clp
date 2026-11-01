@@ -75,6 +75,7 @@ pub struct SpiderTaskExecutorConfig {
     pub archive_output: ArchiveOutput,
     pub tmp_directory: String,
     pub database: Database,
+    pub results_cache: ResultsCache,
 }
 
 impl SpiderTaskExecutorConfig {
@@ -115,6 +116,7 @@ impl Default for SpiderTaskExecutorConfig {
                 config: FsIngestion::default(),
             },
             database: Database::default(),
+            results_cache: ResultsCache::default(),
             archive_output: ArchiveOutput::default(),
             tmp_directory: "var/tmp".to_owned(),
         }

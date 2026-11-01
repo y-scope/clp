@@ -33,6 +33,7 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         ClientError::QueryJobNotFound(_)
         | ClientError::DatasetNotFound(_)
         | ClientError::QueryJobAlreadyTerminated(_)
+        | ClientError::QueryResultsNotStored(_)
         | ClientError::InvalidInput(_)
         | ClientError::LogEventNotFound { .. }
         | ClientError::LogsInput(
@@ -45,7 +46,6 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::MalformedData
         | ClientError::TaskJoin(_)
         | ClientError::Aws { .. }
-        | ClientError::InvalidQueryJobConfig(_)
         | ClientError::StreamExtractionTimeout(_)
         | ClientError::ExtractionJobFailed { .. }
         | ClientError::ExtractionJobNotFound(_)
