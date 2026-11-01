@@ -15,6 +15,7 @@ use clp_rust_utils::clp_config::package::config::ResultsCache;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
@@ -22,6 +23,8 @@ use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
+use spider_core::task::TaskIndex;
+use spider_core::types::id::TaskId;
 
 use crate::common::clp_home;
 use crate::common::runtime;
@@ -38,8 +41,9 @@ use crate::task::utils::s3_credential_env;
 /// Returns an error if:
 ///
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
-/// * `output` is not a [`QueryOutput::ResultsCache`] without an aggregation. The current
-///   implementation only supports writing search results to the results cache.
+/// * `output` is a [`QueryOutput::ResultsCache`] with an aggregation, or a [`QueryOutput::File`],
+///   which the current implementation doesn't support.
+/// * `output` is a [`QueryOutput::Network`] and `ctx.task_id` isn't a [`TaskId::Index`].
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
 pub(super) fn search(
@@ -54,16 +58,29 @@ pub(super) fn search(
     if StorageEngine::ClpS != config.package.storage_engine {
         anyhow::bail!("the clp-s query task requires the `clp-s` storage engine");
     }
-    let max_num_results = match output {
+    let search_output = match output {
         QueryOutput::ResultsCache(ResultsCacheOutput {
             max_num_results,
             aggregation: None,
-        }) => *max_num_results,
+        }) => SearchOutput::ResultsCache {
+            max_num_results: *max_num_results,
+        },
         QueryOutput::ResultsCache(ResultsCacheOutput {
             aggregation: Some(_),
             ..
         }) => anyhow::bail!("unsupported query output: results cache with aggregation"),
-        QueryOutput::Network(_) => anyhow::bail!("unsupported query output: network"),
+        QueryOutput::Network(network_output) => {
+            let TaskId::Index(task_index) = ctx.task_id else {
+                anyhow::bail!(
+                    "streaming to a network output requires a task index, got task ID {}",
+                    ctx.task_id
+                );
+            };
+            SearchOutput::Network {
+                network_output,
+                task_index,
+            }
+        }
         QueryOutput::File {} => anyhow::bail!("unsupported query output: file"),
     };
 
@@ -91,14 +108,25 @@ pub(super) fn search(
                 );
             },
         )?;
-    let args = build_clp_s_search_args_for_result_cache(
-        &archive_selector,
-        query,
-        &config.results_cache,
-        max_num_results,
-        query_job_id,
-        dataset.as_str(),
-    );
+    let args = match search_output {
+        SearchOutput::ResultsCache { max_num_results } => build_clp_s_search_args_for_result_cache(
+            &archive_selector,
+            query,
+            &config.results_cache,
+            max_num_results,
+            query_job_id,
+            dataset.as_str(),
+        ),
+        SearchOutput::Network {
+            network_output,
+            task_index,
+        } => build_clp_s_search_args_for_network(
+            &archive_selector,
+            query,
+            network_output,
+            task_index,
+        ),
+    };
     run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
 
     tracing::info!(
@@ -109,6 +137,23 @@ pub(super) fn search(
         "clp-s query task completed successfully.",
     );
     Ok(())
+}
+
+/// The output handler that clp-s writes a query task's results to.
+///
+/// # Lifetimes
+///
+/// * `'output_lifetime` - The lifetime of the [`QueryOutput`] the output is resolved from.
+enum SearchOutput<'output_lifetime> {
+    /// The results cache, keeping at most `max_num_results` results if it's set.
+    ResultsCache { max_num_results: Option<NonZeroU32> },
+
+    /// A TCP listener, and the task's index in the job's task graph, which identifies the task to
+    /// the listener.
+    Network {
+        network_output: &'output_lifetime NetworkOutput,
+        task_index: TaskIndex,
+    },
 }
 
 /// Selector for clp-s to address the archive to search.
@@ -191,6 +236,59 @@ fn build_clp_s_search_args_for_result_cache(
     query_job_id: QueryJobId,
     dataset: &str,
 ) -> Vec<OsString> {
+    let mut args = build_clp_s_search_query_args(archive_selector, query);
+    args.extend([
+        OsString::from("results-cache"),
+        OsString::from("--uri"),
+        OsString::from(results_cache.uri().as_str()),
+        OsString::from("--collection"),
+        OsString::from(query_job_id.to_string()),
+    ]);
+    if let Some(max_num_results) = max_num_results {
+        args.push(OsString::from("--max-num-results"));
+        args.push(OsString::from(max_num_results.to_string()));
+    }
+    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
+    args
+}
+
+/// Builds the clp-s command-line arguments for a single-archive search streaming to a network
+/// destination.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments.
+fn build_clp_s_search_args_for_network(
+    archive_selector: &ArchiveSelector,
+    query: &SearchQuery,
+    network_output: &NetworkOutput,
+    task_index: TaskIndex,
+) -> Vec<OsString> {
+    let mut args = build_clp_s_search_query_args(archive_selector, query);
+    args.extend([
+        OsString::from("network"),
+        OsString::from("--host"),
+        OsString::from(network_output.host.as_str()),
+        OsString::from("--port"),
+        OsString::from(network_output.port.to_string()),
+        OsString::from("--session-token"),
+        OsString::from(network_output.session_token.to_string()),
+        OsString::from("--task-index"),
+        OsString::from(task_index.to_string()),
+    ]);
+    args
+}
+
+/// Builds the clp-s command-line arguments that select the archive and the query to run on it,
+/// shared by every output handler.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments, which the caller completes with an output handler.
+fn build_clp_s_search_query_args(
+    archive_selector: &ArchiveSelector,
+    query: &SearchQuery,
+) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
     match archive_selector {
         ArchiveSelector::Directory { path, archive_id } => {
@@ -217,19 +315,6 @@ fn build_clp_s_search_args_for_result_cache(
     if query.ignore_case {
         args.push(OsString::from("--ignore-case"));
     }
-
-    args.extend([
-        OsString::from("results-cache"),
-        OsString::from("--uri"),
-        OsString::from(results_cache.uri().as_str()),
-        OsString::from("--collection"),
-        OsString::from(query_job_id.to_string()),
-    ]);
-    if let Some(max_num_results) = max_num_results {
-        args.push(OsString::from("--max-num-results"));
-        args.push(OsString::from(max_num_results.to_string()));
-    }
-    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
     args
 }
 
@@ -305,7 +390,6 @@ fn run_clp_s_search(
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
-    use std::num::NonZeroU16;
     use std::num::NonZeroU32;
     use std::path::Path;
     use std::path::PathBuf;
@@ -321,14 +405,12 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::Aggregation;
-    use clp_rust_utils::job_config::NetworkOutput;
     use clp_rust_utils::job_config::QueryOutput;
     use clp_rust_utils::job_config::ResultsCacheOutput;
     use clp_rust_utils::job_config::SearchQuery;
     use clp_rust_utils::job_config::TimeRange;
     use clp_rust_utils::types::ArchiveId;
     use clp_rust_utils::types::PositiveI64;
-    use clp_rust_utils::types::SessionToken;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
     use spider_core::types::id::JobId;
@@ -717,11 +799,6 @@ mod tests {
                 aggregation: Some(Aggregation::CountByTime {
                     bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
                 }),
-            }),
-            QueryOutput::Network(NetworkOutput {
-                host: NonEmptyString::from_static_str("10.0.0.5"),
-                port: NonZeroU16::new(3003).expect("3003 is nonzero"),
-                session_token: SessionToken::from(uuid::Uuid::nil()),
             }),
             QueryOutput::File {},
         ] {
