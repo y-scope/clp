@@ -1263,7 +1263,7 @@ mod tests {
     }
 
     #[test]
-    fn fs_preparation_preserves_zero_byte_files_and_omits_auth() {
+    fn fs_logs_list_includes_zero_byte_files() {
         let fixture = FsFixture::new();
         let file = fixture.root.join("empty.json");
         std::fs::write(&file, []).expect("test input file should be created");
