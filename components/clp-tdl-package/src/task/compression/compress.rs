@@ -8,10 +8,12 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
+use std::sync::Arc;
 
 use anyhow::Context;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::clp_config::package::config::ArchiveOutput;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::clp_config::package::config::LOGS_INPUT_MOUNT_POINT;
@@ -49,10 +51,6 @@ pub(super) trait Source {
     ///
     /// * [`anyhow::Error`] if the source has no inputs, entries are invalid or cannot be read, or
     ///   S3 credentials cannot be resolved.
-    ///
-    /// # Panics
-    ///
-    /// Panics for S3 inputs if the package runtime has not been initialized.
     fn prepare(self) -> anyhow::Result<PreparedSource>;
 }
 
@@ -109,7 +107,8 @@ impl Source for FsInputSource {
     }
 }
 
-/// Compresses the inputs, uploads the archives to S3, and returns their metadata.
+/// Compresses the given inputs into archives, publishes them, and returns their metadata
+/// for the commit task.
 ///
 /// # Type Parameters
 ///
@@ -126,15 +125,10 @@ impl Source for FsInputSource {
 /// * [`anyhow::Error`] if the configured storage engine is not CLP-S.
 /// * Forwards [`Source::prepare`]'s return values on failure.
 /// * Forwards [`InputList::new`]'s return values on failure.
-/// * Forwards [`extract_s3_output_config`]'s return values on failure.
+/// * Forwards [`std::fs::create_dir_all`]'s return values on failure.
+/// * Forwards [`std::fs::create_dir`]'s return values on failure.
 /// * Forwards [`ClpSInput::new`]'s return values on failure.
-/// * Forwards [`run_clp_s`]'s return values on failure.
-/// * Forwards [`drain_finishers`]'s collected error, if any.
-///
-/// # Panics
-///
-/// Panics if required package globals (the runtime or CLP home) have not been initialized or this
-/// function is called from an async runtime context.
+/// * Forwards [`run_compression`]'s return values on failure.
 pub(super) fn compress<SourceType: Source>(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
@@ -162,10 +156,29 @@ pub(super) fn compress<SourceType: Source>(
     let input_list = InputList::new(list_path, prepared_source, &mut tmp_file_deleter)?;
     let runtime = runtime();
 
-    let s3_config = extract_s3_output_config(config)?;
-    let archive_dir = config
+    let dataset_dir = config
         .abs_archive_output_staging(clp_home)
         .join(dataset.as_str());
+    let archive_dir = dataset_dir.join(format!(
+        ".compression-{}-{}-{}-{}",
+        ctx.job_id,
+        ctx.task_id,
+        ctx.task_instance_id,
+        uuid::Uuid::new_v4(),
+    ));
+    std::fs::create_dir_all(&dataset_dir).with_context(|| {
+        format!(
+            "failed to create dataset directory {}",
+            dataset_dir.display()
+        )
+    })?;
+    std::fs::create_dir(&archive_dir).with_context(|| {
+        format!(
+            "failed to create archive staging directory {}",
+            archive_dir.display()
+        )
+    })?;
+    tmp_file_deleter.add(archive_dir.clone());
 
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
     let indexer_bin = clp_binary_path(clp_home, "indexer");
@@ -179,50 +192,29 @@ pub(super) fn compress<SourceType: Source>(
         &mut tmp_file_deleter,
     )?;
 
-    let client = build_s3_client(&runtime, s3_config);
-    let bucket = s3_config.bucket.to_string();
-
-    let mut archives = Vec::new();
-    let mut finishers = tokio::task::JoinSet::new();
-
-    let archive_callback = |archive: ArchiveMetadata| {
-        let archive_staging_path = archive_dir.join(archive.id.to_string());
-        tmp_file_deleter.add(archive_staging_path.clone());
-        finishers.spawn_on(
-            ArchiveFinisher {
-                client: client.clone(),
-                bucket: bucket.clone(),
-                key: config
-                    .archive_output
-                    .dataset_archive_object_key(&dataset, &archive.id)
-                    .into_inner(),
-                indexer_bin: indexer_bin.clone(),
-                database: config.database.clone(),
-                dataset: dataset.clone(),
-                local_path: archive_staging_path,
-                archive_id: archive.id,
-            }
-            .finish(),
-            &runtime,
-        );
-        archives.push(archive);
-        Ok(())
+    let destination = match &config.archive_output.storage {
+        ArchiveOutputStorage::Fs { .. } => Destination::Fs {
+            directory: dataset_dir,
+        },
+        ArchiveOutputStorage::S3 { s3_config, .. } => Destination::S3 {
+            client: build_s3_client(&runtime, s3_config),
+            bucket: s3_config.bucket.to_string(),
+            archive_output: Arc::new(config.archive_output.clone()),
+        },
     };
-
-    let clp_s_result = run_clp_s(
+    let archives = run_compression(
+        &runtime,
         &clp_s_bin,
         &archive_dir,
         clp_s_option,
         &clp_s_input,
-        archive_callback,
-    );
-
-    let finish_error = drain_finishers(&runtime, finishers);
-
-    clp_s_result?;
-    if let Some(e) = finish_error {
-        return Err(e);
-    }
+        &ArchiveFinisher {
+            destination,
+            indexer_bin,
+            database: config.database.clone(),
+            dataset: dataset.clone(),
+        },
+    )?;
 
     tracing::info!(
         job_id = % ctx.job_id,
@@ -396,69 +388,162 @@ impl Drop for TmpFileDeleter {
     }
 }
 
-/// An async finisher for publishing a single archive.
-struct ArchiveFinisher {
-    client: aws_sdk_s3::Client,
-    bucket: String,
-    key: String,
-    indexer_bin: PathBuf,
-    database: Database,
-    dataset: DatasetName,
-    local_path: PathBuf,
-    archive_id: ArchiveId,
+/// The storage destination for published archives.
+#[derive(Clone)]
+enum Destination {
+    Fs {
+        directory: PathBuf,
+    },
+    S3 {
+        client: aws_sdk_s3::Client,
+        bucket: String,
+        archive_output: Arc<ArchiveOutput>,
+    },
 }
 
-impl ArchiveFinisher {
-    /// Publishes one produced archive: indexes it and uploads it to S3 concurrently.
+impl Destination {
+    /// Finishes indexing and publishes the archive.
+    ///
+    /// Waits for `indexing_task` before returning, including on publication failure, so the caller
+    /// can safely remove staging paths.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`anyhow::Error`] if the indexer task panics or is cancelled.
-    /// * Forwards [`upload_file_to_s3`]'s return values on failure.
+    /// * [`tokio::task::JoinError`] if the indexing task panics or is cancelled.
     /// * Forwards [`run_indexer`]'s return values on failure.
-    async fn finish(self) -> anyhow::Result<()> {
-        let Self {
-            client,
-            bucket,
-            key,
-            indexer_bin,
-            database,
-            dataset,
-            local_path,
-            archive_id,
-        } = self;
-
-        let index_path = local_path.clone();
-        let index = tokio::task::spawn_blocking(move || {
-            run_indexer(&indexer_bin, &database, &dataset, &index_path)
-        });
-        let (upload_result, index_result) = tokio::join!(
-            upload_file_to_s3(&client, &bucket, &key, &local_path),
-            index
-        );
-        upload_result
-            .context("failed to upload archive to S3")
-            .inspect_err(|e| {
-                tracing::error!(
-                    error = % e,
-                    archive_id = % archive_id,
-                    bucket = % bucket,
-                    key = % key,
-                    "Failed to upload archive to S3."
+    /// * Forwards [`tokio::fs::rename`]'s return values on failure.
+    /// * Forwards [`upload_file_to_s3`]'s return values on failure.
+    async fn finish(
+        self,
+        local_path: &Path,
+        archive_id: ArchiveId,
+        dataset: &DatasetName,
+        indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
+    ) -> anyhow::Result<()> {
+        match self {
+            Self::Fs { directory } => {
+                indexing_task
+                    .await
+                    .context("failed to join indexing task")??;
+                tokio::fs::rename(local_path, directory.join(archive_id.to_string()))
+                    .await
+                    .with_context(|| format!("failed to publish archive {archive_id}"))?;
+            }
+            Self::S3 {
+                client,
+                bucket,
+                archive_output,
+            } => {
+                let key = archive_output.dataset_archive_object_key(dataset, &archive_id);
+                let (publication_result, indexing_result) = tokio::join!(
+                    upload_file_to_s3(&client, &bucket, key.as_str(), local_path),
+                    indexing_task
                 );
-            })?;
-        index_result
-            .map_err(|e| anyhow::anyhow!("indexer task panicked: {e}"))
-            .inspect_err(|e| {
-                tracing::error!(
-                    error = % e,
-                    "indexer panicked."
-                );
-            })??;
-        anyhow::Ok(())
+                publication_result?;
+                indexing_result.context("failed to join indexing task")??;
+            }
+        }
+        Ok(())
     }
+}
+
+/// An async finisher for publishing archives.
+#[derive(Clone)]
+struct ArchiveFinisher {
+    destination: Destination,
+    indexer_bin: PathBuf,
+    database: Database,
+    dataset: DatasetName,
+}
+
+impl ArchiveFinisher {
+    /// Finishes indexing and publication of one archive.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Destination::finish`]'s return values on failure.
+    async fn finish(self, local_path: PathBuf, archive_id: ArchiveId) -> anyhow::Result<()> {
+        let index_path = local_path.clone();
+        let dataset = self.dataset.clone();
+        let indexing_task = tokio::task::spawn_blocking(move || {
+            run_indexer(&self.indexer_bin, &self.database, &dataset, &index_path)
+        });
+        self.destination
+            .finish(&local_path, archive_id, &self.dataset, indexing_task)
+            .await
+            .inspect_err(|e| {
+                tracing::error!(
+                    archive_id = % archive_id,
+                    local_path = % local_path.display(),
+                    error = ? e,
+                    "Failed to finish archive."
+                );
+            })
+    }
+}
+
+/// Runs compression and waits for all archive indexing and publication to finish.
+///
+/// # Returns
+///
+/// The finished archives' metadata on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`tokio::task::JoinSet::join_next`]'s task-join errors on failure.
+/// * Forwards [`ArchiveFinisher::finish`]'s return values on failure.
+/// * Forwards [`run_clp_s`]'s return values on failure.
+/// * Forwards [`drain_finishers`]'s collected error, if any.
+///
+/// # Panics
+///
+/// Panics if a full finisher set unexpectedly has no tasks (should be unreachable).
+fn run_compression(
+    runtime: &tokio::runtime::Handle,
+    clp_s_bin: &Path,
+    archive_dir: &Path,
+    clp_s_option: &ClpSCompressionOption,
+    input: &ClpSInput,
+    finisher: &ArchiveFinisher,
+) -> anyhow::Result<Vec<ArchiveMetadata>> {
+    const MAX_FINISHERS: usize = 4;
+    let mut archives = Vec::new();
+    let mut finishers = tokio::task::JoinSet::new();
+    let archive_callback = |archive: ArchiveMetadata| {
+        if finishers.len() >= MAX_FINISHERS {
+            runtime
+                .block_on(finishers.join_next())
+                .expect("a full finisher set must contain a task")
+                .context("archive finisher panicked")??;
+        }
+        finishers.spawn_on(
+            finisher
+                .clone()
+                .finish(archive_dir.join(archive.id.to_string()), archive.id),
+            runtime,
+        );
+        archives.push(archive);
+        Ok(())
+    };
+    let clp_s_result = run_clp_s(
+        clp_s_bin,
+        archive_dir,
+        clp_s_option,
+        input,
+        archive_callback,
+    );
+    let finish_error = drain_finishers(runtime, finishers);
+    clp_s_result?;
+    if let Some(error) = finish_error {
+        return Err(error);
+    }
+    Ok(archives)
 }
 
 /// Builds the `--files-from` list of S3 object URLs for clp-s.
@@ -524,26 +609,6 @@ fn build_fs_logs_list(
         list.push('\n');
     }
     Ok(list)
-}
-
-/// Resolves the S3 config the archives are uploaded to from `config`.
-///
-/// # Returns
-///
-/// The archive-output S3 configuration on success.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`anyhow::Error`] if `config`'s archive output is not S3-backed.
-fn extract_s3_output_config(config: &SpiderTaskExecutorConfig) -> anyhow::Result<&S3Config> {
-    match &config.archive_output.storage {
-        ArchiveOutputStorage::S3 { s3_config, .. } => Ok(s3_config),
-        ArchiveOutputStorage::Fs { .. } => {
-            anyhow::bail!("s3 archive output is required for compression")
-        }
-    }
 }
 
 /// Builds an S3 client for the archive-output bucket, resolving the region to
@@ -686,8 +751,7 @@ fn build_clp_s_args(
 ///
 /// # Panics
 ///
-/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable), or the
-/// stderr-reader thread cannot be spawned.
+/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable).
 fn run_clp_s(
     clp_s_bin: &Path,
     archive_dir: &Path,
@@ -995,6 +1059,7 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ClpSInput;
+    use super::Destination;
     use super::InputAuth;
     use super::InputList;
     use super::PreparedSource;
@@ -1200,7 +1265,7 @@ mod tests {
                         credential_env: vec![],
                     },
                 }),
-                &clp_s_option
+                &clp_s_option,
             ),
             vec![
                 OsString::from("c"),
@@ -1234,7 +1299,7 @@ mod tests {
                         credential_env: vec![],
                     },
                 }),
-                &clp_s_option
+                &clp_s_option,
             ),
             vec![
                 OsString::from("c"),
@@ -1480,10 +1545,73 @@ mod tests {
             build_clp_s_args(
                 Path::new("/archives"),
                 &ClpSInput::Directory(PathBuf::from("/tmp/converted")),
-                &clp_s_option
+                &clp_s_option,
             ),
             expected
         );
+    }
+
+    #[tokio::test]
+    async fn filesystem_publication_survives_staging_cleanup() {
+        let fixture = FsFixture::new();
+        let staging = fixture.root.join("staging");
+        std::fs::create_dir(&staging).expect("archive staging should be created");
+        let archive_id: clp_rust_utils::types::ArchiveId = "d545842b-f959-4f2f-9c12-206b107c6713"
+            .parse()
+            .expect("test archive id should be valid");
+        let staged_archive = staging.join(archive_id.to_string());
+        std::fs::write(&staged_archive, b"archive contents")
+            .expect("test archive should be written");
+        std::fs::write(staging.join("unfinished"), b"partial archive")
+            .expect("partial archive should be written");
+        let mut cleanup = TmpFileDeleter::new();
+        cleanup.add(staging.clone());
+        super::Destination::finish(
+            Destination::Fs {
+                directory: fixture.root.clone(),
+            },
+            &staged_archive,
+            archive_id,
+            &DatasetName::default(),
+            tokio::spawn(async { Ok(()) }),
+        )
+        .await
+        .expect("indexed archive should be published");
+        drop(cleanup);
+        assert!(!staging.exists());
+        assert_eq!(
+            std::fs::read(fixture.root.join(archive_id.to_string()))
+                .expect("published archive should survive scratch cleanup"),
+            b"archive contents",
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn filesystem_publication_requires_successful_indexing() {
+        let fixture = FsFixture::new();
+        let staging = fixture.root.join("staging");
+        std::fs::create_dir(&staging).expect("archive staging should be created");
+        let archive_id: clp_rust_utils::types::ArchiveId = "d545842b-f959-4f2f-9c12-206b107c6713"
+            .parse()
+            .expect("test archive id should be valid");
+        let staged_archive = staging.join(archive_id.to_string());
+        std::fs::write(&staged_archive, b"archive contents")
+            .expect("test archive should be written");
+        let error = super::ArchiveFinisher {
+            destination: Destination::Fs {
+                directory: fixture.root.clone(),
+            },
+            indexer_bin: PathBuf::from("/bin/false"),
+            database: super::Database::default(),
+            dataset: DatasetName::default(),
+        }
+        .finish(staged_archive.clone(), archive_id)
+        .await
+        .expect_err("failed indexing must prevent filesystem publication");
+        assert!(error.to_string().contains("indexer exited with"));
+        assert!(staged_archive.is_file());
+        assert!(!fixture.root.join(archive_id.to_string()).exists());
     }
 
     #[test]
