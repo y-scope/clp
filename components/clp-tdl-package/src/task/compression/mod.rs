@@ -26,6 +26,15 @@ pub(crate) fn s3_compress_task(
         dataset,
         input_source,
     )
+    .inspect_err(|e| {
+        tracing::error!(
+            job_id = % ctx.job_id,
+            task_id = % ctx.task_id,
+            task_instance_id = ctx.task_instance_id,
+            error = ? e,
+            "CLP compression task failed."
+        );
+    })
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
@@ -43,6 +52,15 @@ pub(crate) fn fs_compress_task(
         dataset,
         input_source,
     )
+    .inspect_err(|e| {
+        tracing::error!(
+            job_id = % ctx.job_id,
+            task_id = % ctx.task_id,
+            task_instance_id = ctx.task_instance_id,
+            error = ? e,
+            "CLP compression task failed."
+        );
+    })
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
