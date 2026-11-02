@@ -102,7 +102,6 @@ public:
         return std::string_view::npos != value.find_first_of(m_spec.get_delimiters());
     }
 
-
 private:
     // Constructors
     ParsingSpec(log_surgeon::ParsingSpec spec, std::string text)

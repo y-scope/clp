@@ -4,7 +4,6 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -65,7 +64,6 @@
 #include "SingleFileArchiveDefs.hpp"
 
 using namespace clp_s::search;
-using clp_s::cArchiveFormatDevelopmentVersionFlag;
 using clp_s::cEpochTimeMax;
 using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
@@ -74,7 +72,20 @@ using clp_s::KvIrSearchErrorEnum;
 
 namespace {
 /**
- * Create the appropriate OutputHandler based on the cli arguments supplied.
+ * Creates the output handler for the destination selected by the given command-line arguments
+ * (file, network, reducer, results cache, or stdout). When the arguments specify an aggregator,
+ * results are aggregated before being written. Selecting the reducer destination opens a connection
+ * to the reducer.
+ * @param cli_args The command-line arguments carrying the output-handler options and optional
+ * aggregator.
+ * @param archive_id The ID of the archive being searched, used by the aggregation sinks to tag
+ * emitted results.
+ * @return A result containing the created output handler, with ownership transferred to the
+ * caller, or an error code indicating the failure:
+ * - clpp::ClppErrorCodeEnum::BadParam if the connection to the reducer fails, the reducer
+ *   destination is selected without an aggregator, or the aggregator's type is unhandled by the
+ *   reducer destination.
+ * - clpp::ClppErrorCodeEnum::Failure if constructing the handler throws an exception.
  */
 [[nodiscard]] auto
 create_output_handler(CommandLineArguments const& cli_args, std::string_view archive_id)
