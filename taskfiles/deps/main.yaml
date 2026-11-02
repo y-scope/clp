@@ -301,6 +301,7 @@ tasks:
         vars:
           CMAKE_GEN_ARGS:
             - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DLOG_SURGEON_CARGO_EXECUTABLE={{.G_CARGO_HOME}}/bin/cargo"
           LIB_NAME: "log-surgeon"
           TARBALL_SHA256: "da94979c62299e91ff5f292c0d360017e23c43686ca3a4710b8b082e1c376e4a"
           TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/b7fceed.tar.gz"
