@@ -71,9 +71,11 @@ impl Default for Config {
 #[serde(default)]
 pub struct SpiderTaskExecutorConfig {
     pub package: Package,
+    pub logs_input: LogsInput,
     pub archive_output: ArchiveOutput,
     pub tmp_directory: String,
     pub database: Database,
+    pub results_cache: ResultsCache,
 }
 
 impl SpiderTaskExecutorConfig {
@@ -110,7 +112,11 @@ impl Default for SpiderTaskExecutorConfig {
     fn default() -> Self {
         Self {
             package: Package::default(),
+            logs_input: LogsInput::Fs {
+                config: FsIngestion::default(),
+            },
             database: Database::default(),
+            results_cache: ResultsCache::default(),
             archive_output: ArchiveOutput::default(),
             tmp_directory: "var/tmp".to_owned(),
         }
@@ -236,7 +242,7 @@ impl Default for ApiServer {
             host: "localhost".to_owned(),
             port: 3001,
             query_job_polling: QueryJobPollingConfig::default(),
-            stream_file_extraction_timeout_secs: NonZeroU64::new(1800)
+            stream_file_extraction_timeout_secs: NonZeroU64::new(270)
                 .expect("default stream file extraction timeout should not be zero"),
         }
     }

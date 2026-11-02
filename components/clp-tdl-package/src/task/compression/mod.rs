@@ -3,6 +3,7 @@
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
 use clp_rust_utils::task_io::compression::CompressionTaskOutput;
+use clp_rust_utils::task_io::compression::FsInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
 use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
@@ -17,6 +18,23 @@ pub(crate) fn s3_compress_task(
     clp_s_option: ClpSCompressionOption,
     dataset: DatasetName,
     input_source: S3InputSource,
+) -> Result<CompressionTaskOutput, TdlError> {
+    compress::compress(
+        &ctx,
+        crate::common::spider_task_executor_config(),
+        &clp_s_option,
+        dataset,
+        input_source,
+    )
+    .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
+}
+
+#[task(name = "compression::clp_s_fs_compress")]
+pub(crate) fn fs_compress_task(
+    ctx: TaskContext,
+    clp_s_option: ClpSCompressionOption,
+    dataset: DatasetName,
+    input_source: FsInputSource,
 ) -> Result<CompressionTaskOutput, TdlError> {
     compress::compress(
         &ctx,

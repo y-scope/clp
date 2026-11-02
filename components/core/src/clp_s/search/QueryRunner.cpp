@@ -11,7 +11,6 @@
 #include <vector>
 
 #include <fmt/compile.h>
-#include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
 #include <utils/profiling/ScopedProfiler.hpp>
 

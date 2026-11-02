@@ -50,7 +50,7 @@ image:
   resultsCache:
     repository: "mongo"
     pullPolicy: "Always"
-    tag: "8.0.21"
+    tag: "9.0.4"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
@@ -174,7 +174,7 @@ clpConfig:
     query_job_polling:
       initial_backoff_ms: 100
       max_backoff_ms: 5000
-    stream_file_extraction_timeout_secs: 1800
+    stream_file_extraction_timeout_secs: 270
 
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.

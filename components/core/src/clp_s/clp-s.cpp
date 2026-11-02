@@ -9,6 +9,7 @@
 #include <string_view>
 #include <system_error>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <fmt/format.h>
@@ -187,7 +188,9 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
                                 -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
                             return std::make_unique<clp_s::NetworkOutputHandler>(
                                     options.host,
-                                    options.port
+                                    options.port,
+                                    options.session_token,
+                                    options.task_idx
                             );
                         },
                         [&](CommandLineArguments::ReducerOutputHandlerOptions const& options)

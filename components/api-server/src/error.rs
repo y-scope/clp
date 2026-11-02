@@ -5,6 +5,7 @@ use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStreamError;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobStatus;
+use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::types::ArchiveId;
 use num_enum::TryFromPrimitive;
 use thiserror::Error;
@@ -38,6 +39,9 @@ pub enum ClientError {
     #[error("query job already terminated: {0}")]
     QueryJobAlreadyTerminated(u64),
 
+    #[error("query job {0}'s results were streamed to a network listener and aren't stored")]
+    QueryResultsNotStored(u64),
+
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
@@ -59,8 +63,11 @@ pub enum ClientError {
     #[error("Dataset not found: {0}")]
     DatasetNotFound(DatasetName),
 
-    #[error("invalid query job config: {0}")]
-    InvalidQueryJobConfig(String),
+    #[error(transparent)]
+    LogsInput(#[from] LogsInputError),
+
+    #[error("compression job ID {0} is out of range")]
+    CompressionJobIdOutOfRange(u64),
 
     #[error(transparent)]
     Telemetry(#[from] opentelemetry_otlp::ExporterBuildError),

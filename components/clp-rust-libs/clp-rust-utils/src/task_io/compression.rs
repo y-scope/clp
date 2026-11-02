@@ -1,4 +1,4 @@
-//! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP S3 compression jobs.
+//! Protocol types exchanged with the Spider (Huntsman) tasks that run CLP compression jobs.
 
 use non_empty_string::NonEmptyString;
 use serde::Deserialize;
@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use crate::clp_config::AwsAuthentication;
 use crate::dataset::DatasetName;
+use crate::logs_input::LogsInputPath;
 use crate::types::ArchiveId;
 
 /// `clp-s` tuning and engine options for a compression job.
@@ -17,7 +18,7 @@ pub struct ClpSCompressionOption {
     pub unstructured: bool,
 }
 
-/// Input source for a compression task.
+/// A task manifest containing S3 connection settings and object keys.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct S3InputSource {
     pub endpoint_url: Option<NonEmptyString>,
@@ -25,6 +26,12 @@ pub struct S3InputSource {
     pub bucket: NonEmptyString,
     pub aws_authentication: AwsAuthentication,
     pub object_keys: Vec<String>,
+}
+
+/// A task manifest containing local files identified by [`LogsInputPath`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FsInputSource {
+    pub file_paths: Vec<LogsInputPath>,
 }
 
 /// Output of a compression task.
