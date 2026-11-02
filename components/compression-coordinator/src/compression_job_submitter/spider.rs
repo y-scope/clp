@@ -284,24 +284,24 @@ mod tests {
             .expect("commit should be attached");
         assert_eq!(commit.tdl_context.task_func, "compression::commit");
         assert_eq!(commit.execution_policy, Some(commit_policy));
-        let payloads: Vec<Vec<u8>> = inputs
+        let payloads: Vec<&[u8]> = inputs
             .get_positional_inputs()
             .iter()
             .map(|entry| match entry {
-                TaskGraphInputEntry::ValuePayload(payload) => payload.clone(),
+                TaskGraphInputEntry::ValuePayload(payload) => payload.as_slice(),
                 TaskGraphInputEntry::SharedPayload(id) => inputs
                     .get_shared_input_payload(*id)
                     .expect("shared input should exist")
-                    .clone(),
+                    .as_slice(),
             })
             .collect();
         assert_eq!(
-            rmp_serde::from_slice::<ClpSCompressionOption>(&payloads[0])?,
+            rmp_serde::from_slice::<ClpSCompressionOption>(payloads[0])?,
             OPTIONS
         );
-        assert_eq!(rmp_serde::from_slice::<DatasetName>(&payloads[1])?, dataset);
+        assert_eq!(rmp_serde::from_slice::<DatasetName>(payloads[1])?, dataset);
         assert_eq!(
-            &rmp_serde::from_slice::<ManifestType>(&payloads[2])?,
+            &rmp_serde::from_slice::<ManifestType>(payloads[2])?,
             manifest
         );
         Ok(())

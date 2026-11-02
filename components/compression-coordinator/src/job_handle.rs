@@ -417,7 +417,7 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
     /// Returns an error if:
     ///
     /// * [`Error::NoFsInputPaths`] if no input paths are requested.
-    /// * [`Error::UnsupportedInputConfig`] if no logs-input mount point is configured.
+    /// * [`Error::InvalidConfiguration`] if no logs-input mount point is configured.
     /// * [`Error::NoTaskInputs`] if the selection contains no regular files.
     /// * Forwards [`discover_fs_entries`]'s return values on failure.
     /// * Forwards [`CompressionInputBuilder::add`]'s return values on failure.
@@ -428,11 +428,11 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
         if config.paths_to_compress.is_empty() {
             return Err(Error::NoFsInputPaths);
         }
-        let mount_point = self
-            .context
-            .logs_input_mount_point
-            .clone()
-            .ok_or(Error::UnsupportedInputConfig)?;
+        let mount_point = self.context.logs_input_mount_point.clone().ok_or_else(|| {
+            Error::InvalidConfiguration(
+                "filesystem compression requires a configured logs-input mount point".to_owned(),
+            )
+        })?;
         let entries = discover_fs_entries(mount_point, config.paths_to_compress.clone()).await?;
         let mut input_builder = CompressionInputBuilder::new(FsSource, self.target_archive_size);
         for entry in entries {
