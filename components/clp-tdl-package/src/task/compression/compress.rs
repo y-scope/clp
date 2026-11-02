@@ -417,7 +417,7 @@ impl Destination {
     /// * Forwards [`upload_file_to_s3`]'s return values on failure.
     async fn finish(
         self,
-        local_path: PathBuf,
+        local_path: &Path,
         archive_id: ArchiveId,
         dataset: &DatasetName,
         indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
@@ -427,7 +427,7 @@ impl Destination {
                 indexing_task
                     .await
                     .context("failed to join indexing task")??;
-                tokio::fs::rename(&local_path, directory.join(archive_id.to_string()))
+                tokio::fs::rename(local_path, directory.join(archive_id.to_string()))
                     .await
                     .with_context(|| format!("failed to publish archive {archive_id}"))?;
             }
@@ -438,7 +438,7 @@ impl Destination {
             } => {
                 let key = archive_output.dataset_archive_object_key(dataset, &archive_id);
                 let (publication_result, indexing_result) = tokio::join!(
-                    upload_file_to_s3(&client, &bucket, key.as_str(), &local_path),
+                    upload_file_to_s3(&client, &bucket, key.as_str(), local_path),
                     indexing_task
                 );
                 publication_result?;
@@ -473,7 +473,7 @@ impl ArchiveFinisher {
             run_indexer(&self.indexer_bin, &self.database, &dataset, &index_path)
         });
         self.destination
-            .finish(local_path.clone(), archive_id, &self.dataset, indexing_task)
+            .finish(&local_path, archive_id, &self.dataset, indexing_task)
             .await
             .inspect_err(|e| {
                 tracing::error!(
@@ -1570,7 +1570,7 @@ mod tests {
             Destination::Fs {
                 directory: fixture.root.clone(),
             },
-            staged_archive,
+            &staged_archive,
             archive_id,
             &DatasetName::default(),
             tokio::spawn(async { Ok(()) }),
