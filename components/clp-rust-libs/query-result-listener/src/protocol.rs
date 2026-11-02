@@ -4,6 +4,8 @@
 //! frame per result and a trailer that counts them. `clp-s` then shuts down its side of the
 //! connection and waits for the listener's acknowledgement before it reports success.
 
+use std::borrow::Cow;
+
 use bytes::Buf;
 use bytes::BytesMut;
 use clp_rust_utils::types::ArchiveId;
@@ -63,7 +65,7 @@ impl Handshake {
             if PROTOCOL_VERSION != version {
                 return Err(ProtocolError::UnsupportedVersion(version).into());
             }
-            expect_num_fields(num_fields, NUM_HANDSHAKE_FIELDS)?;
+            check_num_fields(num_fields, NUM_HANDSHAKE_FIELDS)?;
             let session_token = read_str(reader, MAX_HANDSHAKE_STRING_LEN)?
                 .parse::<SessionToken>()
                 .map_err(ProtocolError::from)?;
@@ -112,7 +114,7 @@ impl Frame {
                 NUM_RESULT_FIELDS => {
                     let result_index = rmp::decode::read_int(reader)?;
                     let timestamp_millisecs = rmp::decode::read_int(reader)?;
-                    let message = read_str(reader, usize::MAX)?.to_owned();
+                    let message = read_str(reader, usize::MAX)?.into_owned();
                     Ok(Self::Result(ResultFrame {
                         result_index,
                         timestamp_millisecs,
@@ -268,7 +270,7 @@ fn decode_frame<FrameType>(
 /// Returns an error if:
 ///
 /// * [`DecodeError::Invalid`] if `num_fields` isn't `expected`.
-fn expect_num_fields(num_fields: u32, expected: u32) -> Result<(), DecodeError> {
+fn check_num_fields(num_fields: u32, expected: u32) -> Result<(), DecodeError> {
     if expected == num_fields {
         return Ok(());
     }
@@ -278,11 +280,12 @@ fn expect_num_fields(num_fields: u32, expected: u32) -> Result<(), DecodeError> 
     )
 }
 
-/// Reads a msgpack string of at most `max_len` bytes.
+/// Reads a msgpack string of at most `max_len` bytes, replacing each invalid UTF-8 sequence with
+/// U+FFFD.
 ///
 /// # Returns
 ///
-/// The string, borrowed from the reader's buffer, on success.
+/// The string on success.
 ///
 /// # Errors
 ///
@@ -293,11 +296,10 @@ fn expect_num_fields(num_fields: u32, expected: u32) -> Result<(), DecodeError> 
 ///   * The next value isn't a string.
 ///   * The string's length doesn't fit in `usize`.
 ///   * The string is longer than `max_len` bytes.
-///   * The string isn't valid UTF-8.
 fn read_str<'buffer>(
     reader: &mut Bytes<'buffer>,
     max_len: usize,
-) -> Result<&'buffer str, DecodeError> {
+) -> Result<Cow<'buffer, str>, DecodeError> {
     let len = usize::try_from(rmp::decode::read_str_len(reader)?).map_err(|_| {
         ProtocolError::MalformedFrame("string length exceeds the address space".to_owned())
     })?;
@@ -311,8 +313,7 @@ fn read_str<'buffer>(
         return Err(DecodeError::Incomplete);
     };
     *reader = Bytes::new(remaining);
-    std::str::from_utf8(bytes)
-        .map_err(|e| ProtocolError::MalformedFrame(format!("invalid UTF-8 string: {e}")).into())
+    Ok(String::from_utf8_lossy(bytes))
 }
 
 #[cfg(test)]
@@ -324,6 +325,7 @@ mod tests {
     use super::Ack;
     use super::Frame;
     use super::Handshake;
+    use super::MAX_HANDSHAKE_STRING_LEN;
     use super::PROTOCOL_VERSION;
     use super::ResultFrame;
     use super::Trailer;
@@ -402,25 +404,24 @@ mod tests {
     }
 
     #[test]
-    fn handshake_with_an_invalid_uuid_is_rejected() {
-        let mut buffer = BytesMut::from(
-            &encode_handshake(PROTOCOL_VERSION, "not-a-uuid", TASK_INDEX, ARCHIVE_ID)[..],
-        );
-        let error =
-            Handshake::decode(&mut buffer).expect_err("the session token should be rejected");
-        assert!(
-            matches!(error, ProtocolError::InvalidSessionToken(_)),
-            "unexpected error: {error:?}"
-        );
+    fn handshake_with_a_wrong_number_of_fields_is_rejected() -> anyhow::Result<()> {
+        for num_fields in [3, 5] {
+            let mut bytes = Vec::new();
+            rmp::encode::write_array_len(&mut bytes, num_fields)?;
+            rmp::encode::write_uint(&mut bytes, PROTOCOL_VERSION)?;
+            rmp::encode::write_str(&mut bytes, SESSION_TOKEN)?;
+            rmp::encode::write_uint(&mut bytes, TASK_INDEX)?;
+            rmp::encode::write_str(&mut bytes, ARCHIVE_ID)?;
+            let mut buffer = BytesMut::from(&bytes[..]);
 
-        let mut buffer = BytesMut::from(
-            &encode_handshake(PROTOCOL_VERSION, SESSION_TOKEN, TASK_INDEX, "not-a-uuid")[..],
-        );
-        let error = Handshake::decode(&mut buffer).expect_err("the archive ID should be rejected");
-        assert!(
-            matches!(error, ProtocolError::InvalidArchiveId(_)),
-            "unexpected error: {error:?}"
-        );
+            let error =
+                Handshake::decode(&mut buffer).expect_err("the handshake should be rejected");
+            assert!(
+                matches!(error, ProtocolError::MalformedFrame(_)),
+                "{num_fields} fields: unexpected error: {error:?}"
+            );
+        }
+        Ok(())
     }
 
     #[test]
@@ -428,10 +429,10 @@ mod tests {
         let mut bytes = Vec::new();
         rmp::encode::write_array_len(&mut bytes, 4)?;
         rmp::encode::write_uint(&mut bytes, PROTOCOL_VERSION)?;
-        rmp::encode::write_str_len(&mut bytes, MAX_HANDSHAKE_STRING_LEN + 1)?;
+        rmp::encode::write_str_len(&mut bytes, u32::try_from(MAX_HANDSHAKE_STRING_LEN + 1)?)?;
         let mut buffer = BytesMut::from(&bytes[..]);
 
-        let error = Handshake::decode(&mut buffer).expect_err("a 1 MiB token should be rejected");
+        let error = Handshake::decode(&mut buffer).expect_err("the token should be rejected");
         assert!(
             matches!(error, ProtocolError::MalformedFrame(_)),
             "unexpected error: {error:?}"
@@ -463,19 +464,21 @@ mod tests {
     }
 
     #[test]
-    fn result_with_invalid_utf8_is_rejected() -> anyhow::Result<()> {
+    fn result_with_invalid_utf8_decodes_lossily() -> anyhow::Result<()> {
         let mut bytes = Vec::new();
         rmp::encode::write_array_len(&mut bytes, 3)?;
         rmp::encode::write_uint(&mut bytes, 0)?;
         rmp::encode::write_sint(&mut bytes, 0)?;
         rmp::encode::write_str_len(&mut bytes, 1)?;
         bytes.push(0xff);
-        let mut buffer = BytesMut::from(&bytes[..]);
 
-        let error = Frame::decode(&mut buffer).expect_err("invalid UTF-8 should be rejected");
-        assert!(
-            matches!(error, ProtocolError::MalformedFrame(_)),
-            "unexpected error: {error:?}"
+        assert_eq!(
+            decode_frames(&bytes),
+            [Frame::Result(ResultFrame {
+                result_index: 0,
+                timestamp_millisecs: 0,
+                message: char::REPLACEMENT_CHARACTER.to_string(),
+            })]
         );
         Ok(())
     }
@@ -547,6 +550,7 @@ mod tests {
         assert_eq!(reader, &[] as &[u8]);
         Ok(())
     }
+
     #[test]
     fn result_decodes_only_once_complete() -> anyhow::Result<()> {
         const NEXT_BYTE: u8 = 0x93;

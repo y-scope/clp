@@ -15,6 +15,3 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
-
-[features]
-test-utils = []

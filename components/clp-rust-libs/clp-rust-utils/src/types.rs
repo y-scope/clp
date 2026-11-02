@@ -98,17 +98,6 @@ impl From<uuid::Uuid> for SessionToken {
 impl FromStr for SessionToken {
     type Err = ParseSessionTokenError;
 
-    /// Creates a session token from a UUID string accepted by [`uuid::Uuid::parse_str`].
-    ///
-    /// # Returns
-    ///
-    /// The parsed session token on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ParseSessionTokenError`] if `value` is not a valid UUID.
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let token = uuid::Uuid::parse_str(value).map_err(|source| ParseSessionTokenError {
             value: value.to_owned(),
