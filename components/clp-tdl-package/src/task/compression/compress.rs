@@ -552,7 +552,6 @@ fn finish_compression(
         archive_dir,
         clp_s_option,
         input,
-        &finisher.destination,
         archive_callback,
     );
     let finish_error = drain_finishers(runtime, finishers);
@@ -706,7 +705,7 @@ fn drain_finishers(
     })
 }
 
-/// Builds the clp-s command-line arguments for the selected archive destination.
+/// Builds the clp-s command-line arguments for a single-file-archive compression run.
 ///
 /// Converted inputs use local files and the `timestamp` key.
 ///
@@ -717,7 +716,6 @@ fn build_clp_s_args(
     archive_output_dir: &Path,
     input: &ClpSInput,
     clp_s_option: &ClpSCompressionOption,
-    destination: &Destination,
 ) -> Vec<OsString> {
     let mut args = vec![
         OsString::from("c"),
@@ -727,10 +725,8 @@ fn build_clp_s_args(
         OsString::from(clp_s_option.target_encoded_size.to_string()),
         OsString::from("--compression-level"),
         OsString::from(clp_s_option.compression_level.to_string()),
+        OsString::from("--single-file-archive"),
     ];
-    if matches!(destination, Destination::S3 { .. }) {
-        args.push(OsString::from("--single-file-archive"));
-    }
     match input {
         ClpSInput::FilesFrom(input_list) => {
             if matches!(input_list.auth, InputAuth::S3 { .. }) {
@@ -778,7 +774,6 @@ fn run_clp_s(
     archive_dir: &Path,
     clp_s_option: &ClpSCompressionOption,
     input: &ClpSInput,
-    destination: &Destination,
     mut on_archive: impl FnMut(ArchiveMetadata) -> anyhow::Result<()>,
 ) -> anyhow::Result<()> {
     let credential_env = match input {
@@ -786,12 +781,7 @@ fn run_clp_s(
         ClpSInput::Directory(_) => &[],
     };
     let mut child = Command::new(clp_s_bin)
-        .args(build_clp_s_args(
-            archive_dir,
-            input,
-            clp_s_option,
-            destination,
-        ))
+        .args(build_clp_s_args(archive_dir, input, clp_s_option))
         .envs(credential_env.iter().map(|(key, value)| (*key, value)))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1107,23 +1097,6 @@ mod tests {
         unstructured: false,
     };
 
-    impl Destination {
-        /// # Returns
-        ///
-        /// An S3 destination for command-line argument tests.
-        fn s3_for_test() -> Self {
-            let config = aws_sdk_s3::config::Builder::new()
-                .behavior_version_latest()
-                .region(aws_sdk_s3::config::Region::new("us-east-1"))
-                .build();
-            Self::S3 {
-                client: aws_sdk_s3::Client::from_conf(config),
-                bucket: "archives".to_owned(),
-                prefix: "dataset".to_owned(),
-            }
-        }
-    }
-
     struct FsFixture {
         root: PathBuf,
         _cleanup: TmpFileDeleter,
@@ -1266,12 +1239,7 @@ mod tests {
                 ("AWS_SECRET_ACCESS_KEY", "test-secret-key".to_owned()),
             ]
         );
-        let args = build_clp_s_args(
-            Path::new("/archives"),
-            &clp_s_input,
-            &BASE_OPTION,
-            &Destination::s3_for_test(),
-        );
+        let args = build_clp_s_args(Path::new("/archives"), &clp_s_input, &BASE_OPTION);
         assert!(
             args.windows(2)
                 .any(|pair| pair == [OsString::from("--auth"), OsString::from("s3")])
@@ -1315,7 +1283,6 @@ mod tests {
                     },
                 }),
                 &clp_s_option,
-                &Destination::s3_for_test()
             ),
             vec![
                 OsString::from("c"),
@@ -1350,7 +1317,6 @@ mod tests {
                     },
                 }),
                 &clp_s_option,
-                &Destination::s3_for_test()
             ),
             vec![
                 OsString::from("c"),
@@ -1435,12 +1401,7 @@ mod tests {
             panic!("structured compressor input should read the original list");
         };
         assert_eq!(input_list.auth.credential_env(), vec![]);
-        let args = build_clp_s_args(
-            Path::new("/archives"),
-            &clp_s_input,
-            &BASE_OPTION,
-            &Destination::s3_for_test(),
-        );
+        let args = build_clp_s_args(Path::new("/archives"), &clp_s_input, &BASE_OPTION);
         assert!(!args.contains(&OsString::from("--auth")));
         assert!(args.ends_with(&[
             OsString::from("--files-from"),
@@ -1512,7 +1473,6 @@ mod tests {
                 timestamp_key: Some("ts".to_owned()),
                 ..BASE_OPTION
             },
-            &Destination::s3_for_test(),
         );
         assert_eq!(
             args,
@@ -1603,37 +1563,9 @@ mod tests {
                 Path::new("/archives"),
                 &ClpSInput::Directory(PathBuf::from("/tmp/converted")),
                 &clp_s_option,
-                &Destination::s3_for_test()
             ),
             expected
         );
-    }
-
-    #[test]
-    fn archive_format_depends_on_destination() {
-        let input = ClpSInput::FilesFrom(InputList {
-            path: PathBuf::from("/tmp/input-list"),
-            auth: InputAuth::S3 {
-                credential_env: vec![],
-            },
-        });
-        let args = build_clp_s_args(
-            Path::new("/archives"),
-            &input,
-            &BASE_OPTION,
-            &Destination::Fs {
-                directory: PathBuf::from("/archives"),
-            },
-        );
-        assert!(!args.contains(&OsString::from("--single-file-archive")));
-        assert!(args.contains(&OsString::from("--auth")));
-        let args = build_clp_s_args(
-            Path::new("/archives"),
-            &input,
-            &BASE_OPTION,
-            &Destination::s3_for_test(),
-        );
-        assert!(args.contains(&OsString::from("--single-file-archive")));
     }
 
     #[tokio::test]
@@ -1645,9 +1577,8 @@ mod tests {
             .parse()
             .expect("test archive id should be valid");
         let staged_archive = staging.join(archive_id.to_string());
-        std::fs::create_dir(&staged_archive).expect("multi-file archive should be created");
-        std::fs::write(staged_archive.join("header"), b"archive header")
-            .expect("test archive header should be written");
+        std::fs::write(&staged_archive, b"archive contents")
+            .expect("test archive should be written");
         std::fs::write(staging.join("unfinished"), b"partial archive")
             .expect("partial archive should be written");
         let mut cleanup = TmpFileDeleter::new();
@@ -1665,9 +1596,9 @@ mod tests {
         drop(cleanup);
         assert!(!staging.exists());
         assert_eq!(
-            std::fs::read(fixture.root.join(archive_id.to_string()).join("header"))
+            std::fs::read(fixture.root.join(archive_id.to_string()))
                 .expect("published archive should survive scratch cleanup"),
-            b"archive header",
+            b"archive contents",
         );
     }
 
@@ -1681,7 +1612,8 @@ mod tests {
             .parse()
             .expect("test archive id should be valid");
         let staged_archive = staging.join(archive_id.to_string());
-        std::fs::create_dir(&staged_archive).expect("multi-file archive should be created");
+        std::fs::write(&staged_archive, b"archive contents")
+            .expect("test archive should be written");
         let error = super::ArchiveFinisher {
             destination: Destination::Fs {
                 directory: fixture.root.clone(),
@@ -1694,7 +1626,7 @@ mod tests {
         .await
         .expect_err("failed indexing must prevent filesystem publication");
         assert!(error.to_string().contains("indexer exited with"));
-        assert!(staged_archive.is_dir());
+        assert!(staged_archive.is_file());
         assert!(!fixture.root.join(archive_id.to_string()).exists());
     }
 
