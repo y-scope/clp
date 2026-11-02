@@ -41,9 +41,9 @@ use crate::task::utils::s3_credential_env;
 /// Returns an error if:
 ///
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
+/// * `ctx.task_id` isn't a [`TaskId::Index`].
 /// * `output` is a [`QueryOutput::ResultsCache`] with an aggregation, or a [`QueryOutput::File`],
 ///   which the current implementation doesn't support.
-/// * `output` is a [`QueryOutput::Network`] and `ctx.task_id` isn't a [`TaskId::Index`].
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
 pub(super) fn search(
@@ -58,6 +58,12 @@ pub(super) fn search(
     if StorageEngine::ClpS != config.package.storage_engine {
         anyhow::bail!("the clp-s query task requires the `clp-s` storage engine");
     }
+    let TaskId::Index(task_index) = ctx.task_id else {
+        anyhow::bail!(
+            "the clp-s query task requires a task index, got task ID {}",
+            ctx.task_id
+        );
+    };
     let search_output = match output {
         QueryOutput::ResultsCache(ResultsCacheOutput {
             max_num_results,
@@ -69,18 +75,10 @@ pub(super) fn search(
             aggregation: Some(_),
             ..
         }) => anyhow::bail!("unsupported query output: results cache with aggregation"),
-        QueryOutput::Network(network_output) => {
-            let TaskId::Index(task_index) = ctx.task_id else {
-                anyhow::bail!(
-                    "streaming to a network output requires a task index, got task ID {}",
-                    ctx.task_id
-                );
-            };
-            SearchOutput::Network {
-                network_output,
-                task_index,
-            }
-        }
+        QueryOutput::Network(network_output) => SearchOutput::Network {
+            network_output,
+            task_index,
+        },
         QueryOutput::File {} => anyhow::bail!("unsupported query output: file"),
     };
 
