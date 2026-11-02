@@ -7,6 +7,16 @@ includes:
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
   yscope-log-viewer: "./yscope-log-viewer.yaml"
 
+env:
+  # Rust toolchain environment for dependency builds (needed by log-surgeon's cargo build,
+  # which runs deep inside yscope-dev-utils CMake sub-tasks). Mirrors
+  # {{.G_RUST_TOOLCHAIN_ENV_FILE}} (toolchains:rust). A Taskfile's root env propagates to
+  # all transitively included Taskfiles, so this reaches those sub-tasks — task-level env
+  # and cmd-level sourcing cannot cross `task:` calls.
+  CARGO_HOME: "{{.G_CARGO_HOME}}"
+  RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
+  CARGO_TARGET_DIR: "{{.G_RUST_BUILD_DIR}}"
+
 vars:
   # Directories
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
