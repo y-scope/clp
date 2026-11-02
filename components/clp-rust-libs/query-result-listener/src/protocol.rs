@@ -428,7 +428,7 @@ mod tests {
         let mut bytes = Vec::new();
         rmp::encode::write_array_len(&mut bytes, 4)?;
         rmp::encode::write_uint(&mut bytes, PROTOCOL_VERSION)?;
-        rmp::encode::write_str_len(&mut bytes, 1 << 20)?;
+        rmp::encode::write_str_len(&mut bytes, MAX_HANDSHAKE_STRING_LEN + 1)?;
         let mut buffer = BytesMut::from(&bytes[..]);
 
         let error = Handshake::decode(&mut buffer).expect_err("a 1 MiB token should be rejected");
@@ -545,6 +545,34 @@ mod tests {
         assert_eq!(rmp::decode::read_array_len(&mut reader)?, 1);
         assert_eq!(rmp::decode::read_int::<u64, _>(&mut reader)?, NUM_RESULTS);
         assert_eq!(reader, &[] as &[u8]);
+        Ok(())
+    }
+    #[test]
+    fn result_decodes_only_once_complete() -> anyhow::Result<()> {
+        const NEXT_BYTE: u8 = 0x93;
+
+        // These lengths select msgpack's fixstr, str8, str16 and str32 headers, respectively.
+        for message_len in [8, 32, 256, 65_536] {
+            let message = "m".repeat(message_len);
+            let encoded = encode_result(1, 2, &message);
+            let mut buffer = BytesMut::new();
+            for &byte in &encoded {
+                assert_eq!(Frame::decode(&mut buffer)?, None);
+                buffer.extend_from_slice(&[byte]);
+            }
+            assert_eq!(buffer.len(), encoded.len());
+
+            buffer.extend_from_slice(&[NEXT_BYTE]);
+            assert_eq!(
+                Frame::decode(&mut buffer)?,
+                Some(Frame::Result(ResultFrame {
+                    result_index: 1,
+                    timestamp_millisecs: 2,
+                    message,
+                }))
+            );
+            assert_eq!(&buffer[..], &[NEXT_BYTE]);
+        }
         Ok(())
     }
 }

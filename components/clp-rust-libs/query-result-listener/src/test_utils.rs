@@ -1,4 +1,4 @@
-//! Encoders for the messages of the wire protocol, for tests.
+//! Encoders for the frames of the wire protocol, for tests.
 
 /// # Returns
 ///
