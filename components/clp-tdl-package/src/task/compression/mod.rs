@@ -46,21 +46,6 @@ pub(crate) fn fs_compress_task(
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
-/// Publishes the compression task outputs and completes their job.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`TdlError::ExecutionError`] if this is not a commit task, [`commit::collect_outputs`] fails,
-///   or [`commit::commit`] fails.
-/// * [`TdlError::DeserializationError`] if an output cannot be decoded.
-/// * Forwards [`TaskContext::get_task_graph_outputs`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if required package globals have not been initialized or this function is called from
-/// an async runtime context.
 #[task(name = "compression::commit")]
 pub(crate) fn commit_task(ctx: TaskContext) -> Result<(), TdlError> {
     tracing::info!(job_id = % ctx.job_id, "CLP commit task started.");
