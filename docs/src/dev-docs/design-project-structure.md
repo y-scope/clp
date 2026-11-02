@@ -9,6 +9,8 @@ CLP is currently split across a few different components in the [components] dir
 * [clp-rust-libs] contains Rust library crates that other crates depend on and that have no
   deployable artifact of their own.
   * [clp-rust-utils] contains Rust utilities common to several of the other Rust components.
+  * [query-result-listener] contains the listener that receives the results `clp-s` query tasks
+    stream over TCP.
 * [clp-tdl-package] contains implementations of CLP tasks running on Spider.
 * [compression-coordinator] contains code to coordinate CLP compression jobs running on Spider.
 * [core] contains code to compress uncompressed logs, decompress compressed logs, and search
@@ -25,6 +27,7 @@ CLP is currently split across a few different components in the [components] dir
 [clp-py-utils]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/clp-py-utils
 [clp-rust-libs]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/clp-rust-libs
 [clp-rust-utils]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/clp-rust-libs/clp-rust-utils
+[query-result-listener]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/clp-rust-libs/query-result-listener
 [clp-tdl-package]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/clp-tdl-package
 [compression-coordinator]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/compression-coordinator
 [core]: https://github.com/y-scope/clp/tree/DOCS_VAR_CLP_GIT_REF/components/core
