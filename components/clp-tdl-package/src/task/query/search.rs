@@ -15,6 +15,7 @@ use clp_rust_utils::clp_config::package::config::ResultsCache;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
@@ -22,6 +23,8 @@ use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
+use spider_core::task::TaskIndex;
+use spider_core::types::id::TaskId;
 
 use crate::common::clp_home;
 use crate::common::runtime;
@@ -38,8 +41,9 @@ use crate::task::utils::s3_credential_env;
 /// Returns an error if:
 ///
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
-/// * `output` is not a [`QueryOutput::ResultsCache`] without an aggregation. The current
-///   implementation only supports writing search results to the results cache.
+/// * `ctx.task_id` isn't a [`TaskId::Index`].
+/// * `output` is a [`QueryOutput::ResultsCache`] with an aggregation, or a [`QueryOutput::File`],
+///   which the current implementation doesn't support.
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
 pub(super) fn search(
@@ -54,16 +58,29 @@ pub(super) fn search(
     if StorageEngine::ClpS != config.package.storage_engine {
         anyhow::bail!("the clp-s query task requires the `clp-s` storage engine");
     }
-    let max_num_results = match output {
+    let TaskId::Index(task_index) = ctx.task_id else {
+        anyhow::bail!(
+            "the clp-s query task requires a task index, got task ID {}",
+            ctx.task_id
+        );
+    };
+    let output_args = match output {
         QueryOutput::ResultsCache(ResultsCacheOutput {
             max_num_results,
             aggregation: None,
-        }) => *max_num_results,
+        }) => build_clp_s_results_cache_output_args(
+            &config.results_cache,
+            *max_num_results,
+            query_job_id,
+            dataset.as_str(),
+        ),
         QueryOutput::ResultsCache(ResultsCacheOutput {
             aggregation: Some(_),
             ..
         }) => anyhow::bail!("unsupported query output: results cache with aggregation"),
-        QueryOutput::Network(_) => anyhow::bail!("unsupported query output: network"),
+        QueryOutput::Network(network_output) => {
+            build_clp_s_network_output_args(network_output, task_index)
+        }
         QueryOutput::File {} => anyhow::bail!("unsupported query output: file"),
     };
 
@@ -91,14 +108,8 @@ pub(super) fn search(
                 );
             },
         )?;
-    let args = build_clp_s_search_args_for_result_cache(
-        &archive_selector,
-        query,
-        &config.results_cache,
-        max_num_results,
-        query_job_id,
-        dataset.as_str(),
-    );
+    let mut args = build_clp_s_search_query_args(&archive_selector, query);
+    args.extend(output_args);
     run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
 
     tracing::info!(
@@ -178,18 +189,63 @@ fn resolve_archive_input(
     Ok((ArchiveSelector::ObjectUrl(url), credential_env))
 }
 
-/// Builds the clp-s command-line arguments for a single-archive search writing to the result cache.
+/// Builds the clp-s command-line arguments of the `results-cache` output handler.
 ///
 /// # Returns
 ///
-/// The ordered clp-s arguments.
-fn build_clp_s_search_args_for_result_cache(
-    archive_selector: &ArchiveSelector,
-    query: &SearchQuery,
+/// The ordered clp-s arguments, which follow the search's arguments.
+fn build_clp_s_results_cache_output_args(
     results_cache: &ResultsCache,
     max_num_results: Option<NonZeroU32>,
     query_job_id: QueryJobId,
     dataset: &str,
+) -> Vec<OsString> {
+    let mut args = vec![
+        OsString::from("results-cache"),
+        OsString::from("--uri"),
+        OsString::from(results_cache.uri().as_str()),
+        OsString::from("--collection"),
+        OsString::from(query_job_id.to_string()),
+    ];
+    if let Some(max_num_results) = max_num_results {
+        args.push(OsString::from("--max-num-results"));
+        args.push(OsString::from(max_num_results.to_string()));
+    }
+    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
+    args
+}
+
+/// Builds the clp-s command-line arguments of the `network` output handler.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments, which follow the search's arguments.
+fn build_clp_s_network_output_args(
+    network_output: &NetworkOutput,
+    task_index: TaskIndex,
+) -> Vec<OsString> {
+    vec![
+        OsString::from("network"),
+        OsString::from("--host"),
+        OsString::from(network_output.host.as_str()),
+        OsString::from("--port"),
+        OsString::from(network_output.port.to_string()),
+        OsString::from("--session-token"),
+        OsString::from(network_output.session_token.to_string()),
+        OsString::from("--task-index"),
+        OsString::from(task_index.to_string()),
+    ]
+}
+
+/// Builds the clp-s command-line arguments that select the archive and the query to run on it,
+/// shared by every output handler.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments, which the output handler's arguments follow.
+fn build_clp_s_search_query_args(
+    archive_selector: &ArchiveSelector,
+    query: &SearchQuery,
 ) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
     match archive_selector {
@@ -217,19 +273,6 @@ fn build_clp_s_search_args_for_result_cache(
     if query.ignore_case {
         args.push(OsString::from("--ignore-case"));
     }
-
-    args.extend([
-        OsString::from("results-cache"),
-        OsString::from("--uri"),
-        OsString::from(results_cache.uri().as_str()),
-        OsString::from("--collection"),
-        OsString::from(query_job_id.to_string()),
-    ]);
-    if let Some(max_num_results) = max_num_results {
-        args.push(OsString::from("--max-num-results"));
-        args.push(OsString::from(max_num_results.to_string()));
-    }
-    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
     args
 }
 
@@ -337,11 +380,14 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ArchiveSelector;
-    use super::build_clp_s_search_args_for_result_cache;
+    use super::build_clp_s_network_output_args;
+    use super::build_clp_s_results_cache_output_args;
+    use super::build_clp_s_search_query_args;
     use super::resolve_archive_input;
     use super::search;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
 
     /// # Returns
     ///
@@ -422,6 +468,24 @@ mod tests {
 
     /// # Returns
     ///
+    /// A network output to a listener at `10.0.0.7:40123`, with [`SESSION_TOKEN`] as its session
+    /// token.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`SESSION_TOKEN`] isn't a valid UUID.
+    fn network_output() -> NetworkOutput {
+        NetworkOutput {
+            host: NonEmptyString::from_static_str("10.0.0.7"),
+            port: NonZeroU16::new(40_123).expect("40,123 is nonzero"),
+            session_token: SessionToken::from(
+                uuid::Uuid::parse_str(SESSION_TOKEN).expect("valid session token UUID"),
+            ),
+        }
+    }
+
+    /// # Returns
+    ///
     /// A [`TaskContext`] for a non-commit task.
     ///
     /// # Panics
@@ -439,7 +503,7 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_for_result_cache_fs_with_timestamps_and_ignore_case() {
+    fn build_clp_s_search_query_args_fs_with_timestamps_and_ignore_case() {
         let query = SearchQuery {
             query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
             time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
@@ -448,14 +512,7 @@ mod tests {
         };
 
         assert_eq!(
-            build_clp_s_search_args_for_result_cache(
-                &directory_selector(),
-                &query,
-                &results_cache(),
-                NonZeroU32::new(7),
-                42,
-                "ds1",
-            ),
+            build_clp_s_search_query_args(&directory_selector(), &query),
             vec![
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
@@ -467,6 +524,48 @@ mod tests {
                 OsString::from("--tle"),
                 OsString::from("1311208074120"),
                 OsString::from("--ignore-case"),
+            ]
+        );
+    }
+
+    #[test]
+    fn build_clp_s_search_query_args_fs_without_timestamps_or_ignore_case() {
+        assert_eq!(
+            build_clp_s_search_query_args(&directory_selector(), &unbounded_query()),
+            vec![
+                OsString::from("s"),
+                OsString::from("/archives/ds1"),
+                OsString::from("--archive-id"),
+                OsString::from(ARCHIVE_ID),
+                OsString::from("level: \"ERROR\""),
+            ]
+        );
+    }
+
+    #[test]
+    fn build_clp_s_search_query_args_s3_uses_object_url_and_no_archive_id() {
+        let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
+
+        assert_eq!(
+            build_clp_s_search_query_args(
+                &ArchiveSelector::ObjectUrl(url.clone()),
+                &unbounded_query()
+            ),
+            vec![
+                OsString::from("s"),
+                OsString::from(url),
+                OsString::from("--auth"),
+                OsString::from("s3"),
+                OsString::from("level: \"ERROR\""),
+            ]
+        );
+    }
+
+    #[test]
+    fn build_clp_s_results_cache_output_args_with_max_num_results() {
+        assert_eq!(
+            build_clp_s_results_cache_output_args(&results_cache(), NonZeroU32::new(7), 42, "ds1"),
+            vec![
                 OsString::from("results-cache"),
                 OsString::from("--uri"),
                 OsString::from("mongodb://results-cache:27017/clp-query-results"),
@@ -481,34 +580,10 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_for_result_cache_omits_max_num_results_when_unset() {
-        let query = SearchQuery {
-            query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
-            time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
-                .expect("range is ordered"),
-            ignore_case: true,
-        };
-
+    fn build_clp_s_results_cache_output_args_omits_max_num_results_when_unset() {
         assert_eq!(
-            build_clp_s_search_args_for_result_cache(
-                &directory_selector(),
-                &query,
-                &results_cache(),
-                None,
-                42,
-                "ds1",
-            ),
+            build_clp_s_results_cache_output_args(&results_cache(), None, 42, "ds1"),
             vec![
-                OsString::from("s"),
-                OsString::from("/archives/ds1"),
-                OsString::from("--archive-id"),
-                OsString::from(ARCHIVE_ID),
-                OsString::from("level: \"ERROR\""),
-                OsString::from("--tge"),
-                OsString::from("1310138944000"),
-                OsString::from("--tle"),
-                OsString::from("1311208074120"),
-                OsString::from("--ignore-case"),
                 OsString::from("results-cache"),
                 OsString::from("--uri"),
                 OsString::from("mongodb://results-cache:27017/clp-query-results"),
@@ -521,59 +596,19 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_for_result_cache_fs_without_timestamps_or_ignore_case() {
+    fn build_clp_s_network_output_args_names_the_listener_and_the_task() {
         assert_eq!(
-            build_clp_s_search_args_for_result_cache(
-                &directory_selector(),
-                &unbounded_query(),
-                &results_cache(),
-                None,
-                42,
-                "default",
-            ),
+            build_clp_s_network_output_args(&network_output(), 5),
             vec![
-                OsString::from("s"),
-                OsString::from("/archives/ds1"),
-                OsString::from("--archive-id"),
-                OsString::from(ARCHIVE_ID),
-                OsString::from("level: \"ERROR\""),
-                OsString::from("results-cache"),
-                OsString::from("--uri"),
-                OsString::from("mongodb://results-cache:27017/clp-query-results"),
-                OsString::from("--collection"),
-                OsString::from("42"),
-                OsString::from("--dataset"),
-                OsString::from("default"),
-            ]
-        );
-    }
-
-    #[test]
-    fn build_clp_s_search_args_for_result_cache_s3_uses_object_url_and_no_archive_id() {
-        let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
-
-        assert_eq!(
-            build_clp_s_search_args_for_result_cache(
-                &ArchiveSelector::ObjectUrl(url.clone()),
-                &unbounded_query(),
-                &results_cache(),
-                None,
-                42,
-                "ds1",
-            ),
-            vec![
-                OsString::from("s"),
-                OsString::from(url),
-                OsString::from("--auth"),
-                OsString::from("s3"),
-                OsString::from("level: \"ERROR\""),
-                OsString::from("results-cache"),
-                OsString::from("--uri"),
-                OsString::from("mongodb://results-cache:27017/clp-query-results"),
-                OsString::from("--collection"),
-                OsString::from("42"),
-                OsString::from("--dataset"),
-                OsString::from("ds1"),
+                OsString::from("network"),
+                OsString::from("--host"),
+                OsString::from("10.0.0.7"),
+                OsString::from("--port"),
+                OsString::from("40123"),
+                OsString::from("--session-token"),
+                OsString::from(SESSION_TOKEN),
+                OsString::from("--task-index"),
+                OsString::from("5"),
             ]
         );
     }
@@ -660,14 +695,7 @@ mod tests {
             &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
-        let args = build_clp_s_search_args_for_result_cache(
-            &selector,
-            &unbounded_query(),
-            &results_cache(),
-            None,
-            42,
-            "ds1",
-        );
+        let args = build_clp_s_search_query_args(&selector, &unbounded_query());
 
         assert!(
             !args
@@ -718,11 +746,6 @@ mod tests {
                     bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
                 }),
             }),
-            QueryOutput::Network(NetworkOutput {
-                host: NonEmptyString::from_static_str("10.0.0.5"),
-                port: NonZeroU16::new(3003).expect("3003 is nonzero"),
-                session_token: SessionToken::from(uuid::Uuid::nil()),
-            }),
             QueryOutput::File {},
         ] {
             let error = search(
@@ -741,6 +764,37 @@ mod tests {
                 "unexpected error for {output:?}: {error}"
             );
         }
+    }
+
+    #[test]
+    fn search_rejects_a_task_without_a_task_index() {
+        let config = SpiderTaskExecutorConfig {
+            package: Package {
+                storage_engine: StorageEngine::ClpS,
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+        let cleanup_task_context = TaskContext::new(
+            JobId::random(),
+            TaskId::Cleanup,
+            1,
+            ResourceGroupId::random(),
+            None,
+        )
+        .expect("a cleanup task context without graph outputs is valid");
+
+        let error = search(
+            &cleanup_task_context,
+            &config,
+            42,
+            &unbounded_query(),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
+            &DatasetName::default(),
+            &QueryOutput::Network(network_output()),
+        )
+        .expect_err("a query task requires a task index");
+
+        assert!(error.to_string().contains("task index"));
     }
 
     #[test]

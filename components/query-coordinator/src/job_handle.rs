@@ -78,7 +78,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// * [`Error::UnsupportedJobConfig`] if:
     ///   * The job carries an aggregation.
     ///   * The job writes its results to files.
-    ///   * The job streams its results to a network listener.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -90,7 +89,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         match &query_job_config.output {
             QueryOutput::ResultsCache(ResultsCacheOutput {
                 aggregation: None, ..
-            }) => {}
+            })
+            | QueryOutput::Network(_) => {}
             QueryOutput::ResultsCache(ResultsCacheOutput {
                 aggregation: Some(_),
                 ..
@@ -102,11 +102,6 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             QueryOutput::File {} => {
                 return Err(Error::UnsupportedJobConfig(
                     "writing query results to files is not supported".to_owned(),
-                ));
-            }
-            QueryOutput::Network(_) => {
-                return Err(Error::UnsupportedJobConfig(
-                    "streaming query results to a network listener is not supported".to_owned(),
                 ));
             }
         }
@@ -826,7 +821,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_job_handle_accepts_only_results_cache_output_without_aggregation() {
+    async fn query_job_handle_accepts_only_supported_outputs() {
         let context = Arc::new(context(None));
         let results_cache_output = ResultsCacheOutput {
             max_num_results: NonZeroU32::new(7),
@@ -848,6 +843,12 @@ mod tests {
 
         new_job_handle(QueryOutput::ResultsCache(results_cache_output.clone()))
             .expect("a results cache output without aggregation should be supported");
+        new_job_handle(QueryOutput::Network(NetworkOutput {
+            host: NonEmptyString::from_static_str("10.0.0.5"),
+            port: NonZeroU16::new(3003).expect("3003 is nonzero"),
+            session_token: SessionToken::from(uuid::Uuid::nil()),
+        }))
+        .expect("a network output should be supported");
 
         for (output, expected_message) in [
             (
@@ -861,14 +862,6 @@ mod tests {
                 "aggregation",
             ),
             (QueryOutput::File {}, "files"),
-            (
-                QueryOutput::Network(NetworkOutput {
-                    host: NonEmptyString::from_static_str("10.0.0.5"),
-                    port: NonZeroU16::new(3003).expect("3003 is nonzero"),
-                    session_token: SessionToken::from(uuid::Uuid::nil()),
-                }),
-                "network",
-            ),
         ] {
             let Err(error) = new_job_handle(output.clone()) else {
                 panic!("output should be unsupported: {output:?}");
