@@ -117,7 +117,9 @@ pub(super) async fn commit(
 ///
 /// # Errors
 ///
-/// Returns [`anyhow::Error`] if outputs are missing or belong to different datasets.
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if outputs are missing or belong to different datasets.
 pub(super) fn collect_outputs(
     outputs: Vec<CompressionTaskOutput>,
 ) -> anyhow::Result<CompressionTaskOutput> {
