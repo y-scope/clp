@@ -790,10 +790,7 @@ mod tests {
             &unbounded_query(),
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
             &DatasetName::default(),
-            &QueryOutput::ResultsCache(ResultsCacheOutput {
-                max_num_results: None,
-                aggregation: None,
-            }),
+            &QueryOutput::Network(network_output()),
         )
         .expect_err("a query task requires a task index");
 
