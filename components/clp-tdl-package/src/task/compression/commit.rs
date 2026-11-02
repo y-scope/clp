@@ -47,8 +47,7 @@ pub(super) async fn commit(
     archives: Vec<ArchiveMetadata>,
 ) -> anyhow::Result<()> {
     const QUERY: &str = formatcp!(
-        "SELECT id, status FROM {table} WHERE spider_id = ? FOR UPDATE",
-        table = COMPRESSION_JOBS_TABLE_NAME,
+        "SELECT id, status FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE spider_id = ? FOR UPDATE"
     );
 
     tracing::info!(
@@ -221,10 +220,10 @@ async fn mark_job_succeeded(
     // NOTE: `duration` (seconds) is derived from the DB clock so it stays consistent with the DB's
     // time.
     const QUERY: &str = formatcp!(
-        "UPDATE {table} SET status = ?, uncompressed_size = ?, compressed_size = ?, \
-         num_tasks_completed = num_tasks, duration = TIMESTAMPDIFF(MICROSECOND, start_time, \
-         CURRENT_TIMESTAMP(3)) / 1000000 WHERE id = ? AND status = ?",
-        table = COMPRESSION_JOBS_TABLE_NAME,
+        "UPDATE {COMPRESSION_JOBS_TABLE_NAME} SET status = ?, uncompressed_size = ?, \
+         compressed_size = ?, num_tasks_completed = num_tasks, duration = \
+         TIMESTAMPDIFF(MICROSECOND, start_time, CURRENT_TIMESTAMP(3)) / 1000000 WHERE id = ? AND \
+         status = ?"
     );
     let query_result = sqlx::query(QUERY)
         .bind(CompressionJobStatus::Succeeded)
