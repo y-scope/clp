@@ -423,10 +423,6 @@ impl Destination {
     /// * Forwards [`run_indexer`]'s return values on failure.
     /// * Forwards [`tokio::fs::rename`]'s return values on failure.
     /// * Forwards [`upload_file_to_s3`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if polled outside a Tokio runtime.
     async fn finish(
         self,
         local_path: PathBuf,
@@ -492,8 +488,16 @@ impl ArchiveFinisher {
             )
         });
         self.destination
-            .finish(local_path, archive_id, indexing_task)
+            .finish(local_path.clone(), archive_id, indexing_task)
             .await
+            .inspect_err(|e| {
+                tracing::error!(
+                    archive_id = % archive_id,
+                    local_path = % local_path.display(),
+                    error = ? e,
+                    "Failed to finish archive."
+                );
+            })
     }
 }
 
