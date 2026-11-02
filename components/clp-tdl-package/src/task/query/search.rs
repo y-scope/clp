@@ -767,7 +767,7 @@ mod tests {
     }
 
     #[test]
-    fn search_rejects_network_output_without_task_index() {
+    fn search_rejects_a_task_without_a_task_index() {
         let config = SpiderTaskExecutorConfig {
             package: Package {
                 storage_engine: StorageEngine::ClpS,
@@ -790,9 +790,12 @@ mod tests {
             &unbounded_query(),
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
             &DatasetName::default(),
-            &QueryOutput::Network(network_output()),
+            &QueryOutput::ResultsCache(ResultsCacheOutput {
+                max_num_results: None,
+                aggregation: None,
+            }),
         )
-        .expect_err("a network output requires a task index");
+        .expect_err("a query task requires a task index");
 
         assert!(error.to_string().contains("task index"));
     }
