@@ -145,21 +145,17 @@ public:
      * @param ordered_schema
      * @param num_messages
      * @param should_marshal_records
-     * @param log_shape_dict
-     * @param parent_rule_shapes_array
      * @param extract_mode
      */
-    void reset(
+    auto reset(
             std::shared_ptr<SchemaTree> schema_tree,
             std::shared_ptr<search::Projection> projection,
             int32_t schema_id,
             std::span<int32_t const> ordered_schema,
             uint64_t num_messages,
             bool should_marshal_records,
-            LogShapeDictionaryReader const* log_shape_dict,
-            clpp::ParentRuleShapesArray const* parent_rule_shapes_array,
             bool extract_mode = false
-    ) {
+    ) -> void {
         m_schema_id = schema_id;
         m_num_messages = num_messages;
         m_cur_message = 0;
@@ -181,9 +177,26 @@ public:
         m_global_schema_tree = std::move(schema_tree);
         m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
-        m_log_shape_dict = log_shape_dict;
-        m_parent_rule_shapes_array = parent_rule_shapes_array;
+        m_log_shape_dict = nullptr;
+        m_parent_rule_shapes_array = nullptr;
         m_extract_mode = extract_mode;
+    }
+
+    /**
+     * Sets the dictionary used to reconstruct the text of the schema's StructurizedText objects.
+     * @param log_shape_dict Must outlive the reader's use of this schema.
+     */
+    auto set_log_shape_dictionary(LogShapeDictionaryReader const* log_shape_dict) -> void {
+        m_log_shape_dict = log_shape_dict;
+    }
+
+    /**
+     * Sets the shapes used to reconstruct the text of the schema's ParentRule objects.
+     * @param parent_rule_shapes_array Must outlive the reader's use of this schema.
+     */
+    auto set_parent_rule_shapes_array(clpp::ParentRuleShapesArray const* parent_rule_shapes_array)
+            -> void {
+        m_parent_rule_shapes_array = parent_rule_shapes_array;
     }
 
     /**

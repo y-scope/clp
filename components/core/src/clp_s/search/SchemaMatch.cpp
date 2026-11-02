@@ -340,16 +340,6 @@ std::shared_ptr<Expression> SchemaMatch::run(std::shared_ptr<Expression>& expr) 
 
     split_expression_by_schema(expr, m_schema_to_expression, m_matched_schema_ids);
 
-    auto const available_dictionaries{m_archive_reader->get_available_dictionaries()};
-    auto required_dictionaries{ArchiveReader::DictionaryType::None};
-    for (auto const schema_id : m_matched_schema_ids) {
-        required_dictionaries |= get_required_dictionaries((*m_schemas)[schema_id].get_view());
-        if (available_dictionaries == (required_dictionaries & available_dictionaries)) {
-            break;
-        }
-    }
-    m_archive_reader->read_dictionaries(required_dictionaries);
-
     return expr;
 }
 
@@ -1129,37 +1119,6 @@ bool SchemaMatch::schema_searches_against_column(int32_t schema, int32_t column_
 
 void SchemaMatch::add_searched_column_to_schema(int32_t schema, int32_t column) {
     m_schema_to_searched_columns[schema].insert(column);
-}
-
-auto SchemaMatch::get_required_dictionaries(SchemaView const& schema) const
-        -> ArchiveReader::DictionaryType {
-    using DictionaryType = ArchiveReader::DictionaryType;
-    auto dictionaries{DictionaryType::None};
-    static_cast<void>(schema.any_node_id<true>([&](mpt_node_id_t node_id) -> bool {
-        switch (m_tree->get_node(node_id).get_type()) {
-            case NodeType::DictionaryFloat:
-            case NodeType::VarString:
-            case NodeType::UnstructurizedText:
-                dictionaries |= DictionaryType::VarDict;
-                break;
-            case NodeType::ClpString:
-                dictionaries |= DictionaryType::VarDict | DictionaryType::LogTypeDict;
-                break;
-            case NodeType::UnstructuredArray:
-                dictionaries |= DictionaryType::VarDict | DictionaryType::ArrayDict;
-                break;
-            case NodeType::StructurizedText:
-                dictionaries |= DictionaryType::LogShapeDict;
-                break;
-            case NodeType::ParentRule:
-                dictionaries |= DictionaryType::ParentRuleShapes;
-                break;
-            default:
-                break;
-        }
-        return false;
-    }));
-    return dictionaries;
 }
 
 auto SchemaMatch::release_schema_expressions() -> std::map<int32_t, std::shared_ptr<Expression>> {

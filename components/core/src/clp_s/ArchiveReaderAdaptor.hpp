@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -80,18 +81,26 @@ public:
     /**
      * Checks out a reader for a given section of the archive. Reader must be checked back in with
      * the `checkin_reader_for_section` method.
+     *
+     * In a multi-file archive every section is its own file, so any number of sections can be
+     * checked out at once, in any order. In a single-file archive the sections share one forward-
+     * only stream, so only one stream section can be checked out at a time; any unread section the
+     * stream skips over is kept in memory (compressed) so that it can still be checked out later.
+     * Buffered bytes remain resident until this adaptor is destroyed, including after the section
+     * is decoded. A loaded buffered dictionary therefore retains both its compressed bytes and its
+     * materialized entries. Readers over buffered bytes must not outlive this adaptor.
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
-     * @throw OperationFailed if a reader is already checked out, or checking out this section would
-     *        force a backwards seek.
+     * @throw OperationFailed if another single-file archive stream section is checked out, if the
+     * section doesn't exist, or on any I/O error.
      */
     std::unique_ptr<clp::ReaderInterface> checkout_reader_for_section(std::string_view section);
 
     /**
      * Checks in a reader for a given section of the archive.
      * @param section
-     * @throw OperationFailed if no reader is checked out, or if the section being checked in does
-     *        not match the section currently checked out.
+     * @throw OperationFailed if the section is a single-file archive stream section and either no
+     * reader is checked out or the section doesn't match the section currently checked out.
      */
     void checkin_reader_for_section(std::string_view section);
 
@@ -108,15 +117,6 @@ public:
      * @return Whether the section exists in the archive.
      */
     [[nodiscard]] auto has_section(std::string_view section) const -> bool;
-
-    /**
-     * @param section
-     * @return The names of the sections stored before `section`, in on-disk order. Returns an
-     * empty vector for a multi-file archive, where every section has its own reader and can be
-     * read in any order.
-     */
-    [[nodiscard]] auto get_sections_before(std::string_view section) const
-            -> std::vector<std::string_view>;
 
     /**
      * @return The names of every section in the archive, in on-disk order.
@@ -192,13 +192,35 @@ private:
     std::shared_ptr<clp::ReaderInterface> try_create_reader_at_header();
 
     /**
-     * Checks out a reader for a given section of the single file archive.
+     * Checks out a reader for a given section of the single file archive's stream, buffering the
+     * unread sections the stream skips over to reach it.
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
-     * @throw OperationFailed if the requested section does not exist in ArchiveFileInfo, if
-     *        checking out the section would force a backward seek, or on any I/O error.
+     * @throw OperationFailed if another section is checked out, if the requested section does not
+     * exist in ArchiveFileInfo, if checking out the section would force a backward seek, or on any
+     * I/O error.
      */
     std::unique_ptr<clp::ReaderInterface> checkout_reader_for_sfa_section(std::string_view section);
+
+    /**
+     * @param section_it An iterator into `m_archive_file_info.files`.
+     * @return A pair of offsets into the single file archive's stream:
+     * - The offset of the section's first byte.
+     * - The offset one past the section's last byte.
+     * @throws OperationFailed with ErrorCodeOutOfBounds if the archive size doesn't fit in size_t.
+     * @throws OperationFailed with ErrorCodeCorrupt if the section bounds are reversed or outside
+     * the archive's files region.
+     */
+    [[nodiscard]] auto get_sfa_section_bounds(
+            std::vector<ArchiveFileInfo>::const_iterator section_it
+    ) const -> std::pair<size_t, size_t>;
+
+    /**
+     * Seeks the single file archive's stream to the given offset if it isn't already there.
+     * @param offset
+     * @throw OperationFailed on any I/O error.
+     */
+    auto seek_to(size_t offset) -> void;
 
     /**
      * Tries to read the header for the archive from the given reader.
@@ -224,6 +246,7 @@ private:
     ArchiveInfoPacket m_archive_info{};
     size_t m_files_section_offset{};
     std::optional<std::string> m_current_reader_holder;
+    std::unordered_map<std::string, std::vector<char>> m_buffered_sections;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
     std::shared_ptr<clp::ReaderInterface> m_reader;
     std::vector<RangeIndexEntry> m_range_index;

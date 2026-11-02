@@ -9,7 +9,6 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -64,42 +63,18 @@ public:
     };
 
     /**
-     * The dictionaries an archive may contain, as bit flags. A combination of flags is also a
-     * `DictionaryType`; `None` is the empty set. The bitwise operators below are hidden friends so
-     * that they're found by argument-dependent lookup wherever the enum is used.
+     * Which of an archive's dictionaries have been read. A dictionary the archive's flavour doesn't
+     * contain is never read.
      */
-    enum class DictionaryType : uint8_t {
-        None = 0,
-        VarDict = 1U << 0,
-        LogTypeDict = 1U << 1,
-        ArrayDict = 1U << 2,
-        LogShapeDict = 1U << 3,
-        ParentRuleShapes = 1U << 4,
+    struct ReadDictionaries {
+        bool var_dict{false};
+        bool log_type_dict{false};
+        bool array_dict{false};
+        bool log_shape_dict{false};
+        bool parent_rule_shapes{false};
+
+        [[nodiscard]] auto operator==(ReadDictionaries const&) const -> bool = default;
     };
-
-    [[nodiscard]] friend constexpr auto operator|(DictionaryType lhs, DictionaryType rhs)
-            -> DictionaryType {
-        return static_cast<DictionaryType>(
-                static_cast<std::underlying_type_t<DictionaryType>>(lhs)
-                | static_cast<std::underlying_type_t<DictionaryType>>(rhs)
-        );
-    }
-
-    [[nodiscard]] friend constexpr auto operator&(DictionaryType lhs, DictionaryType rhs)
-            -> DictionaryType {
-        return static_cast<DictionaryType>(
-                static_cast<std::underlying_type_t<DictionaryType>>(lhs)
-                & static_cast<std::underlying_type_t<DictionaryType>>(rhs)
-        );
-    }
-
-    friend constexpr auto operator|=(DictionaryType& lhs, DictionaryType rhs) -> DictionaryType& {
-        return lhs = lhs | rhs;
-    }
-
-    friend constexpr auto operator&=(DictionaryType& lhs, DictionaryType rhs) -> DictionaryType& {
-        return lhs = lhs & rhs;
-    }
 
     // Constructors
     /**
@@ -147,17 +122,6 @@ public:
      * Opens packed streams for reading.
      */
     void open_packed_streams();
-
-    /**
-     * For single-file archives, reads the sections stored before `section` if they haven't already
-     * been read. For multi-file archives, this function is a no-op as it is possible to read
-     * sections out of order.
-     *
-     * @param section
-     * @throws OperationFailed(ErrorCodeFailure) if metadata reading fails.
-     * @throw Propagates exceptions from the `get_` function of each archive section.
-     */
-    auto ensure_section_readable(std::string_view section) -> void;
 
     /**
      * Reads the log shape statistics from the archive.
@@ -229,22 +193,9 @@ public:
     auto get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictionaryReader>;
 
     /**
-     * @return The dictionaries this archive contains, which depends on its flavour.
+     * @return Which dictionaries have been read from the archive so far.
      */
-    [[nodiscard]] auto get_available_dictionaries() const -> DictionaryType;
-
-    /**
-     * @return The dictionaries that have been read from the archive so far.
-     */
-    [[nodiscard]] auto get_read_dictionaries() const -> DictionaryType;
-
-    /**
-     * Reads the given dictionaries from the archive in on-disk order, skipping any that have
-     * already been read or that the archive doesn't contain.
-     * @param dictionaries
-     * @throws Propagates the exceptions of each dictionary's `get_` accessor.
-     */
-    auto read_dictionaries(DictionaryType dictionaries) -> void;
+    [[nodiscard]] auto get_read_dictionaries() const -> ReadDictionaries;
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
         return m_archive_reader_adaptor->get_timestamp_dictionary();
@@ -454,8 +405,7 @@ private:
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
     std::shared_ptr<ArchiveReaderAdaptor> m_archive_reader_adaptor;
-    std::unordered_set<std::string_view> m_read_sections;
-    DictionaryType m_read_dictionaries{DictionaryType::None};
+    bool m_has_read_metadata{false};
 
     std::shared_ptr<SchemaTree> m_schema_tree;
     std::shared_ptr<ReaderUtils::SchemaMap> m_schema_map;

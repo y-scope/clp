@@ -47,33 +47,6 @@ public:
     static std::shared_ptr<SchemaMap> read_schemas(ArchiveReaderAdaptor& archives_dir);
 
     /**
-     * Gets the variable dictionary reader for an archive
-     * @param adaptor
-     * @return the variable dictionary reader
-     */
-    static std::shared_ptr<VariableDictionaryReader> get_variable_dictionary_reader(
-            ArchiveReaderAdaptor& adaptor
-    );
-
-    /**
-     * Gets the log type dictionary reader for an archive
-     * @param adaptor
-     * @return the log type dictionary reader
-     */
-    static std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary_reader(
-            ArchiveReaderAdaptor& adaptor
-    );
-
-    /**
-     * Gets the array dictionary reader for an archive
-     * @param adaptor
-     * @return the array dictionary reader
-     */
-    static std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary_reader(
-            ArchiveReaderAdaptor& adaptor
-    );
-
-    /**
      * Reads the parsing specification from an archive.
      * @param adaptor
      * @return The parsing specification contents.

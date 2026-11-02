@@ -73,30 +73,6 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
     return tree;
 }
 
-std::shared_ptr<VariableDictionaryReader> ReaderUtils::get_variable_dictionary_reader(
-        ArchiveReaderAdaptor& adaptor
-) {
-    auto reader = std::make_shared<VariableDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveVarDictFile);
-    return reader;
-}
-
-std::shared_ptr<LogTypeDictionaryReader> ReaderUtils::get_log_type_dictionary_reader(
-        ArchiveReaderAdaptor& adaptor
-) {
-    auto reader = std::make_shared<LogTypeDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveLogDictFile);
-    return reader;
-}
-
-std::shared_ptr<LogTypeDictionaryReader> ReaderUtils::get_array_dictionary_reader(
-        ArchiveReaderAdaptor& adaptor
-) {
-    auto reader = std::make_shared<LogTypeDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveArrayDictFile);
-    return reader;
-}
-
 std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderAdaptor& adaptor) {
     auto schemas_pointer = std::make_unique<SchemaMap>();
     SchemaMap& schemas = *schemas_pointer;

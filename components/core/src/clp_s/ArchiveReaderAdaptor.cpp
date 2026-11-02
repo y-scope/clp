@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstring>
 #include <filesystem>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <string>
@@ -14,6 +15,8 @@
 #include <msgpack.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+
+#include <clp/BufferReader.hpp>
 
 #include "../clp/BoundedReader.hpp"
 #include "../clp/ErrorCode.hpp"
@@ -296,27 +299,30 @@ std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at
 std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_section(
         std::string_view section
 ) {
-    if (m_current_reader_holder.has_value()) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-
-    m_current_reader_holder.emplace(section);
-    if (m_single_file_archive) {
-        return checkout_reader_for_sfa_section(section);
-    } else {
+    if (false == m_single_file_archive) {
         return std::make_unique<clp::FileReader>(m_archive_path.path + std::string{section});
     }
+    if (auto const it{m_buffered_sections.find(std::string{section})};
+        m_buffered_sections.end() != it)
+    {
+        return std::make_unique<clp::BufferReader>(it->second.data(), it->second.size());
+    }
+    return checkout_reader_for_sfa_section(section);
 }
 
 std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_sfa_section(
         std::string_view section
 ) {
-    auto it = std::find_if(
-            m_archive_file_info.files.begin(),
-            m_archive_file_info.files.end(),
-            [&](ArchiveFileInfo& info) { return info.n == section; }
-    );
-    if (m_archive_file_info.files.end() == it) {
+    if (m_current_reader_holder.has_value()) {
+        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
+    }
+
+    auto const section_it{std::find_if(
+            m_archive_file_info.files.cbegin(),
+            m_archive_file_info.files.cend(),
+            [&](ArchiveFileInfo const& info) { return info.n == section; }
+    )};
+    if (m_archive_file_info.files.cend() == section_it) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
@@ -324,45 +330,81 @@ std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_
     if (auto rc = m_reader->try_get_pos(curr_pos); clp::ErrorCode::ErrorCode_Success != rc) {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
-
-    size_t file_offset = m_files_section_offset + it->o;
-    ++it;
-
-    auto const next_file_offset_result{
-            ReaderUtils::try_uint64_to_size_t(m_archive_header.compressed_size)
-    };
-    if (next_file_offset_result.has_error()) {
-        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
-    }
-    size_t next_file_offset{next_file_offset_result.value()};
-
-    if (m_archive_file_info.files.end() != it) {
-        next_file_offset = m_files_section_offset + it->o;
-    }
-
-    if (curr_pos > file_offset) {
+    auto const [begin_offset, end_offset]{get_sfa_section_bounds(section_it)};
+    if (curr_pos > begin_offset) {
         SPDLOG_ERROR(
                 "Single-file archive sections must be read in on-disk order; cannot read '{}' at "
                 "offset {} when the reader is already at offset {}.",
                 section,
-                file_offset,
+                begin_offset,
                 curr_pos
         );
         throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
     }
 
-    if (curr_pos != file_offset) {
-        if (auto rc = m_reader->try_seek_from_begin(file_offset);
+    for (auto skipped_it{m_archive_file_info.files.cbegin()}; skipped_it != section_it;
+         ++skipped_it)
+    {
+        auto const [skipped_begin_offset, skipped_end_offset]{get_sfa_section_bounds(skipped_it)};
+        if (skipped_begin_offset < curr_pos || m_buffered_sections.contains(skipped_it->n)) {
+            continue;
+        }
+        seek_to(skipped_begin_offset);
+        std::vector<char> buffer(skipped_end_offset - skipped_begin_offset);
+        if (auto const rc{m_reader->try_read_exact_length(buffer.data(), buffer.size())};
             clp::ErrorCode::ErrorCode_Success != rc)
         {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
+        m_buffered_sections.emplace(skipped_it->n, std::move(buffer));
     }
 
-    return std::make_unique<clp::BoundedReader>(m_reader.get(), next_file_offset);
+    seek_to(begin_offset);
+    m_current_reader_holder.emplace(section);
+    return std::make_unique<clp::BoundedReader>(m_reader.get(), end_offset);
+}
+
+auto ArchiveReaderAdaptor::get_sfa_section_bounds(
+        std::vector<ArchiveFileInfo>::const_iterator section_it
+) const -> std::pair<size_t, size_t> {
+    auto const archive_end_offset_result{
+            ReaderUtils::try_uint64_to_size_t(m_archive_header.compressed_size)
+    };
+    if (archive_end_offset_result.has_error()) {
+        throw OperationFailed(ErrorCodeOutOfBounds, __FILENAME__, __LINE__);
+    }
+    auto const archive_end_offset{archive_end_offset_result.value()};
+    if (m_files_section_offset > archive_end_offset) {
+        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
+    }
+    auto const files_size{archive_end_offset - m_files_section_offset};
+    auto const next_it{std::next(section_it)};
+    auto const relative_end{m_archive_file_info.files.cend() != next_it ? next_it->o : files_size};
+    if (section_it->o > relative_end || relative_end > files_size) {
+        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
+    }
+    return {m_files_section_offset + static_cast<size_t>(section_it->o),
+            m_files_section_offset + static_cast<size_t>(relative_end)};
+}
+
+auto ArchiveReaderAdaptor::seek_to(size_t offset) -> void {
+    size_t curr_pos{};
+    if (auto rc = m_reader->try_get_pos(curr_pos); clp::ErrorCode::ErrorCode_Success != rc) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
+    if (curr_pos == offset) {
+        return;
+    }
+    if (auto rc = m_reader->try_seek_from_begin(offset); clp::ErrorCode::ErrorCode_Success != rc) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
 }
 
 void ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) {
+    if (false == m_single_file_archive || m_buffered_sections.contains(std::string{section})) {
+        return;
+    }
+
     if (false == m_current_reader_holder.has_value()) {
         throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
     }
@@ -381,21 +423,6 @@ auto ArchiveReaderAdaptor::has_section(std::string_view section) const -> bool {
                    m_archive_file_info.files.end(),
                    [&](ArchiveFileInfo const& info) { return info.n == section; }
            );
-}
-
-auto ArchiveReaderAdaptor::get_sections_before(std::string_view section) const
-        -> std::vector<std::string_view> {
-    if (false == m_single_file_archive) {
-        return {};
-    }
-    std::vector<std::string_view> sections;
-    for (auto const& info : m_archive_file_info.files) {
-        if (info.n == section) {
-            break;
-        }
-        sections.emplace_back(info.n);
-    }
-    return sections;
 }
 
 auto ArchiveReaderAdaptor::get_sections() const -> std::vector<std::string_view> {

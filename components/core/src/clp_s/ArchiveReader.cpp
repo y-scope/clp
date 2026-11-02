@@ -74,22 +74,30 @@ auto ArchiveReader::initialize_archive_reader() -> void {
     }
 
     m_schema_tree = ReaderUtils::read_schema_tree(*m_archive_reader_adaptor);
-    m_read_sections.emplace(constants::cArchiveSchemaTreeFile);
     m_schema_map = ReaderUtils::read_schemas(*m_archive_reader_adaptor);
-    m_read_sections.emplace(constants::cArchiveSchemaMapFile);
 
     m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
-    m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
+    m_var_dict = std::make_shared<VariableDictionaryReader>(
+            *m_archive_reader_adaptor,
+            std::string{constants::cArchiveVarDictFile}
+    );
     if (ClpFlavour::Clpp == m_archive_reader_adaptor->flavour()) {
         m_clpp.emplace();
-        m_clpp->log_shape_dict
-                = std::make_shared<LogShapeDictionaryReader>(*m_archive_reader_adaptor);
-        m_clpp->log_shape_dict->open(constants::cArchiveLogDictFile);
+        m_clpp->log_shape_dict = std::make_shared<LogShapeDictionaryReader>(
+                *m_archive_reader_adaptor,
+                std::string{constants::cArchiveLogDictFile}
+        );
     } else {
-        m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
+        m_log_dict = std::make_shared<LogTypeDictionaryReader>(
+                *m_archive_reader_adaptor,
+                std::string{constants::cArchiveLogDictFile}
+        );
     }
-    m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
+    m_array_dict = std::make_shared<LogTypeDictionaryReader>(
+            *m_archive_reader_adaptor,
+            std::string{constants::cArchiveArrayDictFile}
+    );
 }
 
 auto ArchiveReader::read_single_schema_metadata()
@@ -140,11 +148,10 @@ auto ArchiveReader::read_single_schema_metadata()
 }
 
 auto ArchiveReader::read_metadata() -> ystdlib::error_handling::Result<void> {
-    if (m_read_sections.contains(constants::cArchiveTableMetadataFile)) {
+    if (m_has_read_metadata) {
         return ystdlib::error_handling::success();
     }
     constexpr size_t cDecompressorFileReadBufferCapacity{64 * 1024};  // 64 KiB
-    ensure_section_readable(constants::cArchiveTableMetadataFile);
     auto table_metadata_reader = m_archive_reader_adaptor->checkout_reader_for_section(
             constants::cArchiveTableMetadataFile
     );
@@ -209,7 +216,7 @@ auto ArchiveReader::read_metadata() -> ystdlib::error_handling::Result<void> {
     m_table_metadata_decompressor.close();
 
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveTableMetadataFile);
-    m_read_sections.emplace(constants::cArchiveTableMetadataFile);
+    m_has_read_metadata = true;
 
     return ystdlib::error_handling::success();
 }
@@ -227,50 +234,8 @@ void ArchiveReader::read_dictionaries_and_metadata() {
     get_array_dictionary();
 }
 
-auto ArchiveReader::ensure_section_readable(std::string_view section) -> void {
-    if (false == m_archive_reader_adaptor->is_single_file_archive()) {
-        return;
-    }
-    for (auto const prior : m_archive_reader_adaptor->get_sections_before(section)) {
-        if (m_read_sections.contains(prior)) {
-            continue;
-        }
-        if (constants::cArchiveSchemaTreeFile == prior || constants::cArchiveSchemaMapFile == prior)
-        {
-            m_read_sections.emplace(prior);
-        } else if (constants::cArchiveTableMetadataFile == prior) {
-            if (auto const result{read_metadata()}; result.has_error()) {
-                throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-            }
-        } else if (constants::cArchiveVarDictFile == prior) {
-            get_variable_dictionary();
-        } else if (constants::cArchiveLogDictFile == prior) {
-            if (m_clpp.has_value()) {
-                get_log_shape_dictionary();
-            } else {
-                get_log_type_dictionary();
-            }
-        } else if (constants::cArchiveArrayDictFile == prior) {
-            get_array_dictionary();
-        } else if (constants::cArchiveParentRuleShapesFile == prior) {
-            get_parent_rule_shapes_array();
-        } else if (constants::cArchiveLogShapeStatsFile == prior) {
-            get_log_shape_stats_array();
-        } else if (constants::cArchiveParsingSpecFile == prior) {
-            std::ignore = read_parsing_spec();
-        } else {
-            SPDLOG_WARN("No reader for single-file archive section {}.", prior);
-        }
-    }
-}
-
 auto ArchiveReader::get_variable_dictionary() -> std::shared_ptr<VariableDictionaryReader> {
-    if (false == m_read_sections.contains(constants::cArchiveVarDictFile)) {
-        ensure_section_readable(constants::cArchiveVarDictFile);
-        m_read_sections.emplace(constants::cArchiveVarDictFile);
-        m_var_dict->read_entries(true);
-        m_read_dictionaries |= DictionaryType::VarDict;
-    }
+    m_var_dict->read_entries(true);
     return m_var_dict;
 }
 
@@ -278,12 +243,7 @@ auto ArchiveReader::get_log_type_dictionary() -> std::shared_ptr<LogTypeDictiona
     if (m_clpp.has_value()) {
         return nullptr;
     }
-    if (false == m_read_sections.contains(constants::cArchiveLogDictFile)) {
-        ensure_section_readable(constants::cArchiveLogDictFile);
-        m_read_sections.emplace(constants::cArchiveLogDictFile);
-        m_log_dict->read_entries(true);
-        m_read_dictionaries |= DictionaryType::LogTypeDict;
-    }
+    m_log_dict->read_entries(true);
     return m_log_dict;
 }
 
@@ -291,56 +251,24 @@ auto ArchiveReader::get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictio
     if (false == m_clpp.has_value()) {
         return nullptr;
     }
-    if (false == m_read_sections.contains(constants::cArchiveLogDictFile)) {
-        ensure_section_readable(constants::cArchiveLogDictFile);
-        m_read_sections.emplace(constants::cArchiveLogDictFile);
-        m_clpp->log_shape_dict->read_entries(true);
-        m_read_dictionaries |= DictionaryType::LogShapeDict;
-    }
+    m_clpp->log_shape_dict->read_entries(true);
     return m_clpp->log_shape_dict;
 }
 
 auto ArchiveReader::get_array_dictionary() -> std::shared_ptr<LogTypeDictionaryReader> {
-    if (false == m_read_sections.contains(constants::cArchiveArrayDictFile)) {
-        ensure_section_readable(constants::cArchiveArrayDictFile);
-        m_read_sections.emplace(constants::cArchiveArrayDictFile);
-        m_array_dict->read_entries(true);
-        m_read_dictionaries |= DictionaryType::ArrayDict;
-    }
+    m_array_dict->read_entries(true);
     return m_array_dict;
 }
 
-auto ArchiveReader::get_available_dictionaries() const -> DictionaryType {
-    auto dictionaries{DictionaryType::VarDict | DictionaryType::ArrayDict};
-    if (m_clpp.has_value()) {
-        dictionaries |= DictionaryType::LogShapeDict | DictionaryType::ParentRuleShapes;
-    } else {
-        dictionaries |= DictionaryType::LogTypeDict;
-    }
-    return dictionaries;
-}
-
-auto ArchiveReader::get_read_dictionaries() const -> DictionaryType {
-    return m_read_dictionaries;
-}
-
-auto ArchiveReader::read_dictionaries(DictionaryType dictionaries) -> void {
-    dictionaries &= get_available_dictionaries();
-    if (DictionaryType::None != (dictionaries & DictionaryType::VarDict)) {
-        get_variable_dictionary();
-    }
-    if (DictionaryType::None != (dictionaries & DictionaryType::LogTypeDict)) {
-        get_log_type_dictionary();
-    }
-    if (DictionaryType::None != (dictionaries & DictionaryType::LogShapeDict)) {
-        get_log_shape_dictionary();
-    }
-    if (DictionaryType::None != (dictionaries & DictionaryType::ArrayDict)) {
-        get_array_dictionary();
-    }
-    if (DictionaryType::None != (dictionaries & DictionaryType::ParentRuleShapes)) {
-        get_parent_rule_shapes_array();
-    }
+auto ArchiveReader::get_read_dictionaries() const -> ReadDictionaries {
+    return ReadDictionaries{
+            .var_dict = m_var_dict->has_read_entries(),
+            .log_type_dict = nullptr != m_log_dict && m_log_dict->has_read_entries(),
+            .array_dict = m_array_dict->has_read_entries(),
+            .log_shape_dict = m_clpp.has_value() && m_clpp->log_shape_dict->has_read_entries(),
+            .parent_rule_shapes
+            = m_clpp.has_value() && m_clpp->parent_rule_shapes_array.has_value(),
+    };
 }
 
 auto ArchiveReader::get_log_shape_stats_array() -> clpp::LogShapeStatsArray const& {
@@ -348,8 +276,6 @@ auto ArchiveReader::get_log_shape_stats_array() -> clpp::LogShapeStatsArray cons
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
     if (false == m_clpp->log_shape_stats_array.has_value()) {
-        ensure_section_readable(constants::cArchiveLogShapeStatsFile);
-        m_read_sections.emplace(constants::cArchiveLogShapeStatsFile);
         auto result{read_log_shape_stats_array()};
         if (result.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
@@ -364,20 +290,16 @@ auto ArchiveReader::get_parent_rule_shapes_array() -> clpp::ParentRuleShapesArra
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
     if (false == m_clpp->parent_rule_shapes_array.has_value()) {
-        ensure_section_readable(constants::cArchiveParentRuleShapesFile);
-        m_read_sections.emplace(constants::cArchiveParentRuleShapesFile);
         auto result{read_parent_rule_shapes_array()};
         if (result.has_error()) {
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
         }
         m_clpp->parent_rule_shapes_array = result.value();
-        m_read_dictionaries |= DictionaryType::ParentRuleShapes;
     }
     return m_clpp->parent_rule_shapes_array.value();
 }
 
 void ArchiveReader::open_packed_streams() {
-    ensure_section_readable(constants::cArchiveTablesFile);
     m_stream_reader.open_packed_streams(m_archive_reader_adaptor);
 }
 
@@ -442,20 +364,33 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new FormattedFloatColumnReader(column_id);
             break;
         case NodeType::DictionaryFloat:
-            column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
+            column_reader = new DictionaryFloatColumnReader(column_id, get_variable_dictionary());
             break;
         case NodeType::ClpString:
-            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
+            column_reader = new ClpStringColumnReader(
+                    column_id,
+                    get_variable_dictionary(),
+                    get_log_type_dictionary()
+            );
             break;
         case NodeType::VarString:
         case NodeType::UnstructurizedText:
-            column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
+            column_reader = new VariableStringColumnReader(
+                    column_id,
+                    get_variable_dictionary(),
+                    node.get_type()
+            );
             break;
         case NodeType::Boolean:
             column_reader = new BooleanColumnReader(column_id);
             break;
         case NodeType::UnstructuredArray:
-            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
+            column_reader = new ClpStringColumnReader(
+                    column_id,
+                    get_variable_dictionary(),
+                    get_array_dictionary(),
+                    true
+            );
             break;
         case NodeType::DeprecatedDateString:
             column_reader
@@ -538,18 +473,29 @@ auto ArchiveReader::append_unordered_reader_columns(
                 break;
             case NodeType::DictionaryFloat:
                 reader.append_unordered_column(
-                        std::make_unique<DictionaryFloatColumnReader>(node_id, m_var_dict)
+                        std::make_unique<DictionaryFloatColumnReader>(
+                                node_id,
+                                get_variable_dictionary()
+                        )
                 );
                 break;
             case NodeType::ClpString:
                 reader.append_unordered_column(
-                        std::make_unique<ClpStringColumnReader>(node_id, m_var_dict, m_log_dict)
+                        std::make_unique<ClpStringColumnReader>(
+                                node_id,
+                                get_variable_dictionary(),
+                                get_log_type_dictionary()
+                        )
                 );
                 break;
             case NodeType::VarString:
             case NodeType::UnstructurizedText:
                 reader.append_unordered_column(
-                        std::make_unique<VariableStringColumnReader>(node_id, m_var_dict, node_type)
+                        std::make_unique<VariableStringColumnReader>(
+                                node_id,
+                                get_variable_dictionary(),
+                                node_type
+                        )
                 );
                 break;
             case NodeType::Boolean:
@@ -565,7 +511,8 @@ auto ArchiveReader::append_unordered_reader_columns(
     }
 
     // Recorded after the object's columns are appended so that the range's end is known.
-    if (NodeType::StructurizedText == m_schema_tree->get_node(subtree_root_id).get_type()) {
+    auto const subtree_root_type{m_schema_tree->get_node(subtree_root_id).get_type()};
+    if (NodeType::StructurizedText == subtree_root_type) {
         reader.append_structurized_text_column_range(
                 subtree_root_id,
                 object_begin_pos,
@@ -573,6 +520,11 @@ auto ArchiveReader::append_unordered_reader_columns(
         );
     }
     if (should_marshal_records) {
+        if (NodeType::StructurizedText == subtree_root_type) {
+            reader.set_log_shape_dictionary(get_log_shape_dictionary().get());
+        } else if (NodeType::ParentRule == subtree_root_type) {
+            reader.set_parent_rule_shapes_array(&get_parent_rule_shapes_array());
+        }
         reader.mark_unordered_object(object_begin_pos, subtree_root_id, sub_schema, log_shape_id);
     }
 }
@@ -591,10 +543,6 @@ void ArchiveReader::initialize_schema_reader(
             schema.get_ordered_schema_view(),
             m_id_to_schema_metadata[schema_id].num_messages(),
             should_marshal_records,
-            m_clpp.has_value() ? m_clpp->log_shape_dict.get() : nullptr,
-            m_clpp.has_value() && m_clpp->parent_rule_shapes_array.has_value()
-                    ? &m_clpp->parent_rule_shapes_array.value()
-                    : nullptr,
             m_options.m_extract_mode
     );
     auto timestamp_column_ids
@@ -697,8 +645,6 @@ auto ArchiveReader::read_parsing_spec() -> ystdlib::error_handling::Result<std::
     }
     auto& parsing_spec{m_clpp.value().parsing_spec};
     if (false == parsing_spec.has_value()) {
-        ensure_section_readable(constants::cArchiveParsingSpecFile);
-        m_read_sections.emplace(constants::cArchiveParsingSpecFile);
         parsing_spec = ReaderUtils::read_parsing_spec(*m_archive_reader_adaptor);
     }
     return std::string_view{parsing_spec.value()};

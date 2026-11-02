@@ -18,7 +18,6 @@
 
 #include <clp_s/ArchiveReader.hpp>
 #include <clp_s/Defs.hpp>
-#include <clp_s/Schema.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/search/ast/NarrowSchemasExpr.hpp>
 #include <clp_s/search/ClppMatcher.hpp>
@@ -479,14 +478,6 @@ private:
      */
     [[nodiscard]] auto find_enclosing_structurized_text_node_id(mpt_node_id_t node_id) const
             -> mpt_node_id_t;
-
-    /**
-     * @param schema
-     * @return The dictionaries needed to read the columns in the given schema view, including those
-     * in unordered object sub-schemas.
-     */
-    [[nodiscard]] auto get_required_dictionaries(SchemaView const& schema) const
-            -> ArchiveReader::DictionaryType;
 
     /**
      * Computes the set of literal types a column may resolve to, as a bitmask.

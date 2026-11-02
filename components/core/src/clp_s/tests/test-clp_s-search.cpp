@@ -841,21 +841,19 @@ TEST_CASE("clp-s-search-multiple-archives-in-one-process", "[clp-s][search]") {
     }
 }
 
+// Dictionaries are read when the first column reader needing them is built, which happens after
+// the tables section is opened. In a single-file archive the dictionaries are stored before the
+// tables, so this relies on the adaptor buffering the sections the stream skips over.
 TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
-    using DictionaryType = clp_s::ArchiveReader::DictionaryType;
+    using ReadDictionaries = clp_s::ArchiveReader::ReadDictionaries;
     auto const single_file_archive = GENERATE(true, false);
-    // A single-file archive is read in on-disk order, so reading the array dictionary also reads
-    // the log type dictionary stored before it.
-    auto const dictionaries_stored_before_array_dict{
-            single_file_archive ? DictionaryType::LogTypeDict : DictionaryType::None
-    };
-    std::vector<std::pair<std::string, DictionaryType>> const queries_and_dictionaries{
-            {R"aa(b: null)aa", DictionaryType::None},
-            {R"aa(a: "x")aa", DictionaryType::VarDict},
-            {R"aa(c: 1)aa",
-             DictionaryType::VarDict | DictionaryType::ArrayDict
-                     | dictionaries_stored_before_array_dict},
-    };
+    std::vector<std::tuple<std::string, std::vector<int64_t>, ReadDictionaries>> const
+            queries_results_and_dictionaries{
+                    {R"aa(b: null)aa", {1}, {}},
+                    {R"aa(a: "x")aa", {0}, {.var_dict = true}},
+                    {R"aa(c: 1)aa", {2}, {.var_dict = true, .array_dict = true}},
+                    {R"aa(e: "y" OR c: 1)aa", {2, 3}, {.var_dict = true, .array_dict = true}},
+            };
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
@@ -870,7 +868,9 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
             )
     );
 
-    for (auto const& [query, expected_dictionaries] : queries_and_dictionaries) {
+    for (auto const& [query, expected_results, expected_dictionaries] :
+         queries_results_and_dictionaries)
+    {
         CAPTURE(query);
         auto query_stream = std::istringstream{query};
         auto expr = clp_s::search::kql::parse_kql_expression(query_stream);
@@ -878,6 +878,7 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
         expr = clp_s::search::ast::preprocess_query(expr);
         REQUIRE(nullptr != expr);
 
+        std::vector<clp_s::VectorOutputHandler::QueryResult> results;
         for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
             auto archive_reader = std::make_shared<clp_s::ArchiveReader>(
                     clp_s::Path{
@@ -886,7 +887,7 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
                     },
                     clp_s::ArchiveReader::Options{}
             );
-            REQUIRE(DictionaryType::None == archive_reader->get_read_dictionaries());
+            REQUIRE(ReadDictionaries{} == archive_reader->get_read_dictionaries());
 
             auto match_pass = std::make_shared<clp_s::search::SchemaMatch>(archive_reader, true);
             auto archive_expr = expr->copy();
@@ -894,9 +895,19 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
             REQUIRE(nullptr != archive_expr);
             REQUIRE(nullptr
                     == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr));
+            REQUIRE(ReadDictionaries{} == archive_reader->get_read_dictionaries());
 
+            clp_s::search::Output output_pass(
+                    match_pass,
+                    archive_expr,
+                    archive_reader,
+                    std::make_unique<clp_s::VectorOutputHandler>(results),
+                    false
+            );
+            REQUIRE_NOTHROW(output_pass.filter());
             REQUIRE(expected_dictionaries == archive_reader->get_read_dictionaries());
         }
+        validate_results(results, expected_results);
     }
 }
 
