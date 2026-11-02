@@ -17,6 +17,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
     # Runs only on Ubuntu Jammy (22.04) since the Rust components are only built on this platform.
     runs-on: "ubuntu-22.04"
     steps:

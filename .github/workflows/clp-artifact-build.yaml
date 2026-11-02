@@ -39,6 +39,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # For dorny/paths-filter.
       pull-requests: "read"
     runs-on: &runner >-
@@ -196,6 +197,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the deps image to GHCR.
       packages: "write"
     runs-on: *runner
@@ -234,6 +236,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the deps image to GHCR.
       packages: "write"
     runs-on: "${{matrix.runner}}"
@@ -269,6 +272,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the multi-arch manifest to GHCR.
       packages: "write"
     runs-on: *runner
@@ -297,6 +301,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the multi-arch manifest to GHCR.
       packages: "write"
     runs-on: *runner
@@ -329,6 +334,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the deps image to GHCR.
       packages: "write"
     runs-on: "${{matrix.runner}}"
@@ -360,6 +366,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the deps image to GHCR.
       packages: "write"
     runs-on: *runner
@@ -398,6 +405,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the deps image to GHCR.
       packages: "write"
     runs-on: "ubuntu-24.04-arm"
@@ -849,6 +857,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the binaries image to GHCR.
       packages: "write"
     runs-on: *runner
@@ -1061,6 +1070,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the package image to GHCR.
       packages: "write"
     runs-on: >-
@@ -1129,6 +1139,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the multi-arch manifest to GHCR.
       packages: "write"
     runs-on: *runner
@@ -1233,6 +1244,7 @@ jobs:
     permissions:
       # To check out the repository.
       contents: "read"
+
       # To publish the multi-arch manifest to GHCR.
       packages: "write"
     runs-on: *runner
