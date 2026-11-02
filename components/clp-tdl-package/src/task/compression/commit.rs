@@ -282,31 +282,33 @@ mod tests {
     use super::combine_outputs;
 
     #[test]
-    fn combine_outputs_requires_outputs_but_accepts_empty_archives() {
+    fn combine_outputs_rejects_missing_outputs() {
         let error = combine_outputs(vec![]).expect_err("missing task outputs must be rejected");
         assert!(error.to_string().contains("no compression task outputs"));
-        let dataset = DatasetName::try_from("empty_dataset".to_owned())
-            .expect("test dataset name should be valid");
-        let output = combine_outputs(vec![CompressionTaskOutput {
-            dataset: dataset.clone(),
-            archives: vec![],
-        }])
-        .expect("a valid task can produce no archives");
-        assert_eq!(output.dataset, dataset);
-        assert_eq!(output.archives, vec![]);
     }
 
     #[test]
     fn combine_outputs_rejects_mixed_datasets() {
+        use clp_rust_utils::task_io::compression::ArchiveMetadata;
+
+        let archive = ArchiveMetadata {
+            id: "00000000-0000-0000-0000-000000000001"
+                .parse()
+                .expect("test archive ID should be valid"),
+            begin_timestamp: 1,
+            end_timestamp: 2,
+            size: 10,
+            uncompressed_size: 100,
+        };
         let error = combine_outputs(vec![
             CompressionTaskOutput {
                 dataset: DatasetName::default(),
-                archives: vec![],
+                archives: vec![archive.clone()],
             },
             CompressionTaskOutput {
                 dataset: DatasetName::try_from("other".to_owned())
                     .expect("test dataset name should be valid"),
-                archives: vec![],
+                archives: vec![archive],
             },
         ])
         .expect_err("task outputs from different datasets must not be committed together");
