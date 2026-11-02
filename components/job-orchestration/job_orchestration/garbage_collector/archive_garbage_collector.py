@@ -1,6 +1,8 @@
 import asyncio
 import pathlib
 import time
+import uuid
+from collections import defaultdict
 from contextlib import closing
 
 from clp_py_utils.clp_config import (
@@ -13,8 +15,8 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import configure_logging, get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     delete_archives_from_metadata_db,
-    fetch_existing_datasets,
     get_archives_table_name,
+    get_datasets_table_name,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
 
@@ -37,32 +39,36 @@ def _delete_expired_archives(
     db_conn,
     db_cursor,
     table_prefix: str,
-    archive_expiry_epoch_secs: int,
+    expiry_base_epoch_secs: int,
     candidates_buffer: DeletionCandidatesBuffer,
     archive_output_config: ArchiveOutput,
-    dataset: str | None,
 ) -> None:
-    archives_table = get_archives_table_name(table_prefix, dataset)
-    archive_end_ts_upper_bound = archive_expiry_epoch_secs * SECOND_TO_MILLISECOND
+    archives_table = get_archives_table_name(table_prefix)
+    datasets_table = get_datasets_table_name(table_prefix)
 
     db_cursor.execute(
         f"""
-        SELECT id FROM `{archives_table}`
-        WHERE end_timestamp < %s
-        AND end_timestamp != 0
+        SELECT archives.id, archives.uuid, archives.dataset_id, datasets.name AS dataset
+        FROM `{archives_table}` AS archives
+        JOIN `{datasets_table}` AS datasets ON archives.dataset_id = datasets.id
+        WHERE datasets.retention_period_minutes IS NOT NULL
+        AND archives.creation_time_millis
+            < (%s - datasets.retention_period_minutes * {MIN_TO_SECONDS})
+              * {SECOND_TO_MILLISECOND}
         """,
-        [archive_end_ts_upper_bound],
+        [expiry_base_epoch_secs],
     )
 
     results = db_cursor.fetchall()
-    archive_ids = [result["id"] for result in results]
-    if len(archive_ids) != 0:
-        delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
+    if len(results) != 0:
+        archive_ids_by_dataset_id: dict[int, list[int]] = defaultdict(list)
+        for result in results:
+            archive_ids_by_dataset_id[result["dataset_id"]].append(result["id"])
+            archive_uuid = str(uuid.UUID(bytes=result["uuid"]))
+            candidates_buffer.add_candidate(f"{result['dataset']}/{archive_uuid}")
 
-        for candidate in archive_ids:
-            if dataset is not None:
-                candidate = f"{dataset}/{candidate}"
-            candidates_buffer.add_candidate(candidate)
+        for dataset_id, archive_ids in archive_ids_by_dataset_id.items():
+            delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset_id)
 
         candidates_buffer.persist_new_candidates()
         db_conn.commit()
@@ -71,54 +77,32 @@ def _delete_expired_archives(
     num_candidates_to_delete = len(candidates_to_delete)
     if 0 == num_candidates_to_delete:
         logger.debug(
-            f"No archives matched the expiry criteria: `end_ts < {archive_end_ts_upper_bound}`."
+            "No archives matched the expiry criteria:"
+            f" `creation_time < {expiry_base_epoch_secs} - dataset's retention period`."
         )
         return
 
     execute_deletion(archive_output_config, candidates_to_delete)
 
-    # Prepare the log message
-    dataset_msg: str
-    deleted_candidates: list[str]
-    if dataset is not None:
-        dataset_log_msg = f" from dataset `{dataset}`"
-        # Note: If dataset is not None, candidates are expected to be in the format
-        # `<dataset>/<archive_id>`
-        deleted_candidates = [candidate.split("/")[1] for candidate in candidates_to_delete]
-    else:
-        dataset_log_msg = ""
-        deleted_candidates = list(candidates_to_delete)
-
     candidates_buffer.clear()
-    logger.info(
-        f"Deleted {num_candidates_to_delete} archive(s){dataset_log_msg}: {deleted_candidates}"
-    )
+    logger.info(f"Deleted {num_candidates_to_delete} archive(s): {sorted(candidates_to_delete)}")
 
 
-def _get_archive_safe_expiry_epoch(
-    db_cursor,
-    retention_period_minutes: int,
-) -> int:
+def _get_safe_expiry_base_epoch(db_cursor) -> int:
     """
-    Calculates a safe expiration timestamp such that archives with `end_ts` less than this value are
-    guaranteed not to be searched by any running query jobs.
+    Calculates the base timestamp from which each dataset's retention period is subtracted to
+    determine which of the dataset's archives have expired.
 
-    If no query jobs are running, the expiry time is set to `current_time - retention_period`.
-    If a query job is running and was created at `creation_time`, the query scheduler guarantees
-    that it will not search any archive whose end_ts < (creation_time - retention_period).
-    In this case, the expiry time can be safely adjusted to `creation_time - retention_period`.
-
-    Note: This function does not consider query jobs that started before
-    `current_time - retention_period`, as such long-running jobs are likely hanging. Including them
-    would prevent the expiry time from advancing.
+    If no query jobs are running, the base is the current time. If a query job is running and was
+    created at `creation_time`, the query scheduler guarantees that it won't search any archive
+    created before `creation_time - retention_period`, so the base can be safely adjusted to
+    `creation_time`.
 
     :param db_cursor: Database cursor object
-    :param retention_period_minutes: Retention window in minutes
-    :return: Epoch timestamp indicating the safe expiration time (in seconds)
+    :return: Epoch timestamp (in seconds) to subtract each dataset's retention period from.
     """
-    retention_period_secs = retention_period_minutes * MIN_TO_SECONDS
     current_epoch_secs = time.time()
-    archive_expiry_epoch: int
+    expiry_base_epoch: int
 
     db_cursor.execute(
         f"""
@@ -135,14 +119,14 @@ def _get_archive_safe_expiry_epoch(
     row = db_cursor.fetchone()
     if row is not None:
         job_creation_time = row.get("creation_time")
-        archive_expiry_epoch = int(job_creation_time.timestamp()) - retention_period_secs
+        expiry_base_epoch = int(job_creation_time.timestamp())
         logger.debug(f"Discovered running query job created at {job_creation_time}.")
-        logger.debug(f"Using adjusted archive_expiry_epoch=`{archive_expiry_epoch}`.")
+        logger.debug(f"Using adjusted expiry_base_epoch=`{expiry_base_epoch}`.")
     else:
-        archive_expiry_epoch = int(current_epoch_secs) - retention_period_secs
-        logger.debug(f"Using archive_expiry_epoch=`{archive_expiry_epoch}`.")
+        expiry_base_epoch = int(current_epoch_secs)
+        logger.debug(f"Using expiry_base_epoch=`{expiry_base_epoch}`.")
 
-    return archive_expiry_epoch
+    return expiry_base_epoch
 
 
 def _collect_and_sweep_expired_archives(
@@ -160,35 +144,18 @@ def _collect_and_sweep_expired_archives(
         closing(sql_adapter.create_connection(True)) as db_conn,
         closing(db_conn.cursor(dictionary=True)) as db_cursor,
     ):
-        archive_expiry_epoch = _get_archive_safe_expiry_epoch(
-            db_cursor,
-            archive_output_config.retention_period,
-        )
-        if StorageEngine.CLP_S == storage_engine:
-            datasets = fetch_existing_datasets(db_cursor, table_prefix)
-            for dataset in datasets:
-                logger.debug(f"Running garbage collection on dataset `{dataset}`")
-                _delete_expired_archives(
-                    db_conn,
-                    db_cursor,
-                    table_prefix,
-                    archive_expiry_epoch,
-                    candidates_buffer,
-                    archive_output_config,
-                    dataset,
-                )
-        elif StorageEngine.CLP == storage_engine:
-            _delete_expired_archives(
-                db_conn,
-                db_cursor,
-                table_prefix,
-                archive_expiry_epoch,
-                candidates_buffer,
-                archive_output_config,
-                None,
-            )
-        else:
+        expiry_base_epoch = _get_safe_expiry_base_epoch(db_cursor)
+        if StorageEngine.CLP_S != storage_engine:
             raise ValueError(f"Unsupported Storage engine: {storage_engine}.")
+
+        _delete_expired_archives(
+            db_conn,
+            db_cursor,
+            table_prefix,
+            expiry_base_epoch,
+            candidates_buffer,
+            archive_output_config,
+        )
 
 
 async def archive_garbage_collector(clp_config: ClpConfig) -> None:

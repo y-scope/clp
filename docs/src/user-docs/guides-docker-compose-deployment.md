@@ -224,7 +224,7 @@ docker compose \
   up webui \
     --no-deps --wait
 
-# Start garbage collector (optional, only if retention is configured)
+# Start garbage collector
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up garbage-collector \

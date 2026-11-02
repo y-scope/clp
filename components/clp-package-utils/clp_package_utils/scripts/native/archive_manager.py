@@ -2,15 +2,21 @@ import argparse
 import logging
 import shutil
 import sys
+import uuid
 from abc import ABC, abstractmethod
 from contextlib import closing
 from pathlib import Path
 from typing import Any
 
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, Database
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CLP_DEFAULT_DATASET_NAME,
+    Database,
+)
 from clp_py_utils.clp_metadata_db_utils import (
     delete_archives_from_metadata_db,
     get_archives_table_name,
+    get_datasets_table_name,
 )
 from clp_py_utils.sql_adapter import SqlAdapter
 
@@ -34,10 +40,10 @@ logger: logging.Logger = logging.getLogger(__file__)
 
 
 class DeleteHandler(ABC):
-    def __init__(self, query_params: list[str]):
-        self._params: list[str] = query_params
+    def __init__(self, query_params: list[Any]):
+        self._params: list[Any] = query_params
 
-    def get_params(self) -> list[str]:
+    def get_params(self) -> list[Any]:
         return self._params
 
     @abstractmethod
@@ -52,7 +58,10 @@ class DeleteHandler(ABC):
 
 class FilterDeleteHandler(DeleteHandler):
     def get_criteria(self) -> str:
-        return "begin_timestamp >= %s AND end_timestamp <= %s"
+        return (
+            "archives.timestamp_range_begin_millis >= %s"
+            " AND archives.timestamp_range_end_millis <= %s"
+        )
 
     def get_not_found_message(self) -> str:
         return "No archives found within the specified time range."
@@ -62,15 +71,19 @@ class FilterDeleteHandler(DeleteHandler):
 
 
 class IdDeleteHandler(DeleteHandler):
+    def __init__(self, archive_ids: list[str]):
+        self._archive_ids: list[str] = archive_ids
+        super().__init__([uuid.UUID(archive_id).bytes for archive_id in archive_ids])
+
     def get_criteria(self) -> str:
         placeholders: str = ",".join(["%s"] * len(self._params))
-        return f"id in ({placeholders})"
+        return f"archives.uuid in ({placeholders})"
 
     def get_not_found_message(self) -> str:
         return "No archives found with matching IDs."
 
     def validate_results(self, archive_ids: list[str]) -> None:
-        not_found_ids: set[str] = set(self._params) - set(archive_ids)
+        not_found_ids: set[str] = set(self._archive_ids) - set(archive_ids)
         if not_found_ids:
             logger.warning(
                 f"""
@@ -198,12 +211,13 @@ def main(argv: list[str]) -> int:
 
     database_config: Database = clp_config.database
     dataset = parsed_args.dataset
-    if dataset is not None:
-        try:
-            validate_datasets_exist(database_config, [dataset])
-        except Exception as e:
-            logger.error(e)
-            return -1
+    if dataset is None:
+        dataset = CLP_DEFAULT_DATASET_NAME
+    try:
+        validate_datasets_exist(database_config, [dataset])
+    except Exception as e:
+        logger.error(e)
+        return -1
 
     archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
@@ -221,7 +235,11 @@ def main(argv: list[str]) -> int:
     if DEL_COMMAND == parsed_args.subcommand:
         delete_handler: DeleteHandler
         if DEL_BY_IDS_SUBCOMMAND == parsed_args.del_subcommand:
-            delete_handler: IdDeleteHandler = IdDeleteHandler(parsed_args.ids)
+            try:
+                delete_handler: IdDeleteHandler = IdDeleteHandler(parsed_args.ids)
+            except ValueError:
+                logger.exception("Some of the provided archive IDs are not valid UUIDs.")
+                return -1
             return _delete_archives(
                 archives_dir,
                 database_config,
@@ -249,13 +267,14 @@ def main(argv: list[str]) -> int:
 def _find_archives(
     archives_dir: Path,
     database_config: Database,
-    dataset: str | None,
+    dataset: str,
     begin_ts: int,
     end_ts: int,
 ) -> int:
     """
     Lists all archive IDs, if begin_ts and end_ts are provided, only lists archives where
-    `begin_ts <= archive.begin_timestamp` and `archive.end_timestamp <= end_ts`.
+    `begin_ts <= archive.timestamp_range_begin_millis` and
+    `archive.timestamp_range_end_millis <= end_ts`.
     :param archives_dir:
     :param database_config:
     :param dataset:
@@ -264,8 +283,7 @@ def _find_archives(
     :return: 0 on success, 1 on failure.
     """
     archive_ids: list[str]
-    dataset_specific_message = f" of dataset `{dataset}`" if dataset is not None else ""
-    logger.info(f"Starting to find archives{dataset_specific_message} from the database.")
+    logger.info(f"Starting to find archives of dataset `{dataset}` from the database.")
     try:
         sql_adapter: SqlAdapter = SqlAdapter(database_config)
         clp_db_connection_params: dict[str, Any] = (
@@ -277,25 +295,29 @@ def _find_archives(
             closing(sql_adapter.create_connection(True)) as db_conn,
             closing(db_conn.cursor(dictionary=True)) as db_cursor,
         ):
-            query_params: list[int] = [begin_ts]
+            query_params: list[Any] = [dataset, begin_ts]
             query: str = f"""
-                SELECT id FROM `{get_archives_table_name(table_prefix, dataset)}`
-                WHERE begin_timestamp >= %s
+                SELECT archives.uuid
+                FROM `{get_archives_table_name(table_prefix)}` AS archives
+                JOIN `{get_datasets_table_name(table_prefix)}` AS datasets
+                    ON archives.dataset_id = datasets.id
+                WHERE datasets.name = %s
+                AND archives.timestamp_range_begin_millis >= %s
                 """
             if end_ts is not None:
-                query += " AND end_timestamp <= %s"
+                query += " AND archives.timestamp_range_end_millis <= %s"
                 query_params.append(end_ts)
 
             db_cursor.execute(query, query_params)
             results = db_cursor.fetchall()
 
-            archive_ids: list[str] = [result["id"] for result in results]
+            archive_ids = [str(uuid.UUID(bytes=result["uuid"])) for result in results]
             if 0 == len(archive_ids):
                 logger.info("No archives found within specified time range.")
                 return 0
 
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
-            archive_output_dir = archives_dir / dataset if dataset is not None else archives_dir
+            archive_output_dir = archives_dir / dataset
             for archive_id in archive_ids:
                 logger.info(archive_id)
                 archive_path = archive_output_dir / archive_id
@@ -313,7 +335,7 @@ def _find_archives(
 def _delete_archives(
     archives_dir: Path,
     database_config: Database,
-    dataset: str | None,
+    dataset: str,
     delete_handler: DeleteHandler,
     dry_run: bool = False,
 ) -> int:
@@ -328,8 +350,7 @@ def _delete_archives(
     :return: 0 on success, -1 otherwise.
     """
     archive_ids: list[str]
-    dataset_specific_message = f" of dataset `{dataset}`" if dataset is not None else ""
-    logger.info(f"Starting to delete archives{dataset_specific_message} from the database.")
+    logger.info(f"Starting to delete archives of dataset `{dataset}` from the database.")
     sql_adapter: SqlAdapter = SqlAdapter(database_config)
     clp_db_connection_params: dict[str, Any] = database_config.get_clp_connection_params_and_type(
         True
@@ -345,14 +366,17 @@ def _delete_archives(
                 logger.info("Running in dry-run mode.")
 
             query_criteria: str = delete_handler.get_criteria()
-            query_params: list[str] = delete_handler.get_params()
+            query_params: list[Any] = delete_handler.get_params()
 
             db_cursor.execute(
                 f"""
-                SELECT id FROM `{get_archives_table_name(table_prefix, dataset)}`
-                WHERE {query_criteria}
+                SELECT archives.id, archives.uuid, archives.dataset_id
+                FROM `{get_archives_table_name(table_prefix)}` AS archives
+                JOIN `{get_datasets_table_name(table_prefix)}` AS datasets
+                    ON archives.dataset_id = datasets.id
+                WHERE datasets.name = %s AND {query_criteria}
                 """,
-                query_params,
+                [dataset, *query_params],
             )
             results = db_cursor.fetchall()
 
@@ -360,10 +384,15 @@ def _delete_archives(
                 logger.info(delete_handler.get_not_found_message())
                 return 0
 
-            archive_ids: list[str] = [result["id"] for result in results]
+            archive_ids = [str(uuid.UUID(bytes=result["uuid"])) for result in results]
             delete_handler.validate_results(archive_ids)
 
-            delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
+            delete_archives_from_metadata_db(
+                db_cursor,
+                [result["id"] for result in results],
+                table_prefix,
+                results[0]["dataset_id"],
+            )
             for archive_id in archive_ids:
                 logger.info(f"Deleted archive {archive_id} from the database.")
 
@@ -380,7 +409,7 @@ def _delete_archives(
 
     logger.info("Finished deleting archives from the database.")
 
-    archive_output_dir: Path = archives_dir / dataset if dataset is not None else archives_dir
+    archive_output_dir: Path = archives_dir / dataset
     for archive_id in archive_ids:
         archive_path = archive_output_dir / archive_id
         if not archive_path.is_dir():

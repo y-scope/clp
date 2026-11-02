@@ -2,7 +2,6 @@
 
 use std::cmp::Reverse;
 use std::collections::HashSet;
-use std::num::NonZeroU64;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,6 +15,7 @@ use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::UuidBytes;
 use const_format::formatcp;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
@@ -38,7 +38,6 @@ pub struct SpiderOption {
 
 /// Options for selecting the archives to search.
 pub struct ArchiveSelectionOptions {
-    pub archive_retention_period_millisecs: Option<NonZeroU64>,
     pub max_datasets_per_query: Option<NonZeroUsize>,
 }
 
@@ -61,7 +60,7 @@ pub struct QueryJobHandle<SubmitterType: QueryJobSubmitter> {
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
     query_job_config: QueryJobConfig,
-    archive_end_ts_lower_bound_millisecs: Option<i64>,
+    job_creation_timestamp_millisecs: i64,
 }
 
 impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
@@ -111,18 +110,13 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             }
         }
 
-        let archive_end_ts_lower_bound_millisecs = context
-            .archive_selection_options
-            .archive_retention_period_millisecs
-            .map(|period| job_creation_timestamp_millisecs.saturating_sub_unsigned(period.get()));
-
         Ok(Self {
             context,
             query_job_id,
             job_submitter,
             resource_group_id,
             query_job_config,
-            archive_end_ts_lower_bound_millisecs,
+            job_creation_timestamp_millisecs,
         })
     }
 
@@ -263,7 +257,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         ArchiveSelector {
             context: &self.context,
             query_job_config: &self.query_job_config,
-            archive_end_ts_lower_bound_millisecs: self.archive_end_ts_lower_bound_millisecs,
+            job_creation_timestamp_millisecs: self.job_creation_timestamp_millisecs,
         }
         .select()
         .await
@@ -528,7 +522,7 @@ impl From<&QueryJobOutcome> for QueryJobStatus {
 struct ArchiveSelector<'job_handle_lifetime> {
     context: &'job_handle_lifetime QueryJobHandleContext,
     query_job_config: &'job_handle_lifetime QueryJobConfig,
-    archive_end_ts_lower_bound_millisecs: Option<i64>,
+    job_creation_timestamp_millisecs: i64,
 }
 
 impl ArchiveSelector<'_> {
@@ -537,8 +531,8 @@ impl ArchiveSelector<'_> {
     /// This method validates and deduplicates the job's requested datasets, then retrieves from the
     /// CLP database the metadata of the archives matching the query, ordered by descending archive
     /// end timestamp, and attaches an execution policy derived from each archive's uncompressed
-    /// size to its task. Archives that end before the job's archive retention lower bound, if any,
-    /// are excluded.
+    /// size to its task. Archives that had expired under their dataset's retention period when the
+    /// job was created are excluded.
     ///
     /// # Returns
     ///
@@ -665,27 +659,39 @@ impl ArchiveSelector<'_> {
     ///
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
     async fn fetch_archives(&self, dataset: &DatasetName) -> Result<Vec<ArchiveMetadata>, Error> {
-        let archives_table = self.context.db_config.archives_table_name(dataset);
+        const MILLISECS_PER_MINUTE: i64 = 60 * 1000;
+
+        let archives_table = self.context.db_config.archives_table_name();
+        let datasets_table = self.context.db_config.datasets_table_name();
         let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(format!(
-            "SELECT `id`, `uncompressed_size`, `end_timestamp` FROM `{archives_table}` WHERE TRUE"
+            "SELECT `archives`.`uuid`, `archives`.`num_uncompressed_bytes`, \
+             `archives`.`timestamp_range_end_millis` FROM `{archives_table}` AS `archives` JOIN \
+             `{datasets_table}` AS `datasets` ON `archives`.`dataset_id` = `datasets`.`id` WHERE \
+             CAST(`datasets`.`name` AS BINARY) = "
         ));
+        query_builder
+            .push_bind(dataset)
+            .push(" AND `archives`.`is_deleted` = FALSE");
         let time_range = self.query_job_config.query.time_range;
         if let Some(end_timestamp) = time_range.end_timestamp_millisecs() {
             query_builder
-                .push(" AND `begin_timestamp` <= ")
+                .push(" AND `archives`.`timestamp_range_begin_millis` <= ")
                 .push_bind(end_timestamp);
         }
         if let Some(begin_timestamp) = time_range.begin_timestamp_millisecs() {
             query_builder
-                .push(" AND `end_timestamp` >= ")
+                .push(" AND `archives`.`timestamp_range_end_millis` >= ")
                 .push_bind(begin_timestamp);
         }
-        if let Some(lower_bound) = self.archive_end_ts_lower_bound_millisecs {
-            query_builder
-                .push(" AND (`end_timestamp` >= ")
-                .push_bind(lower_bound)
-                .push(" OR `end_timestamp` = 0)");
-        }
+        query_builder
+            .push(
+                " AND (`datasets`.`retention_period_minutes` IS NULL OR \
+                 `archives`.`creation_time_millis` >= ",
+            )
+            .push_bind(self.job_creation_timestamp_millisecs)
+            .push(formatcp!(
+                " - `datasets`.`retention_period_minutes` * {MILLISECS_PER_MINUTE})"
+            ));
 
         Ok(query_builder
             .build_query_as::<ArchiveRowProjection>()
@@ -693,10 +699,10 @@ impl ArchiveSelector<'_> {
             .await?
             .into_iter()
             .map(|row| ArchiveMetadata {
-                id: row.id,
+                id: ArchiveId::from_bytes(row.uuid),
                 dataset: dataset.clone(),
-                uncompressed_size: row.uncompressed_size,
-                end_timestamp: row.end_timestamp,
+                uncompressed_size: row.num_uncompressed_bytes,
+                end_timestamp: row.timestamp_range_end_millis,
             })
             .collect())
     }
@@ -744,16 +750,16 @@ impl ArchiveSelector<'_> {
     }
 }
 
-/// Columns projected from an archives table.
+/// Columns projected from the archives table.
 ///
-/// [`ArchiveMetadata`] can't be decoded directly from a row since the dataset is encoded in the
-/// archives table's name rather than stored in a column.
+/// [`ArchiveMetadata`] can't be decoded directly from a row since the archives table stores the
+/// dataset's ID rather than its name, and the archive's UUID as raw bytes.
 #[derive(sqlx::FromRow)]
 struct ArchiveRowProjection {
-    id: ArchiveId,
-    #[sqlx(try_from = "i64")]
-    uncompressed_size: u64,
-    end_timestamp: i64,
+    #[sqlx(try_from = "Vec<u8>")]
+    uuid: UuidBytes,
+    num_uncompressed_bytes: u64,
+    timestamp_range_end_millis: i64,
 }
 
 #[cfg(test)]
@@ -897,7 +903,7 @@ mod tests {
             ArchiveSelector {
                 context: &context,
                 query_job_config: &query_job_config,
-                archive_end_ts_lower_bound_millisecs: None,
+                job_creation_timestamp_millisecs: 0,
             }
             .deduplicate_and_validate_requested_datasets()
         };
@@ -933,7 +939,6 @@ mod tests {
                 .expect("the database URL should be valid"),
             db_config: Database::default(),
             archive_selection_options: ArchiveSelectionOptions {
-                archive_retention_period_millisecs: None,
                 max_datasets_per_query,
             },
             spider_option: SpiderOption {

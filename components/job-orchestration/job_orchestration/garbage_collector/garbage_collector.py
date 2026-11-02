@@ -26,6 +26,11 @@ from job_orchestration.garbage_collector.search_result_garbage_collector import 
 logger = get_logger(GARBAGE_COLLECTOR_COMPONENT_NAME)
 
 
+# Placeholder retention period for a garbage collector that resolves retention per resource.
+class UnknownRetentionPeriod:
+    pass
+
+
 async def main(argv: list[str]) -> int:
     args_parser = argparse.ArgumentParser(
         description=f"Spin up the {GARBAGE_COLLECTOR_COMPONENT_NAME}."
@@ -48,9 +53,11 @@ async def main(argv: list[str]) -> int:
         logger.exception("Failed to parse CLP configuration file.")
         return 1
 
-    gc_task_configs: dict[str, tuple[int | None, Callable[[ClpConfig], None]]] = {
+    gc_task_configs: dict[
+        str, tuple[int | UnknownRetentionPeriod | None, Callable[[ClpConfig], None]]
+    ] = {
         ARCHIVE_GARBAGE_COLLECTOR_NAME: (
-            clp_config.archive_output.retention_period,
+            UnknownRetentionPeriod(),
             archive_garbage_collector,
         ),
         SEARCH_RESULT_GARBAGE_COLLECTOR_NAME: (
@@ -65,7 +72,10 @@ async def main(argv: list[str]) -> int:
         if retention_period is None:
             logger.info(f"Retention period is not configured, skip creating {gc_name}.")
             continue
-        logger.info(f"Creating {gc_name} with retention period = {retention_period} minutes")
+        if isinstance(retention_period, UnknownRetentionPeriod):
+            logger.info(f"Creating {gc_name}.")
+        else:
+            logger.info(f"Creating {gc_name} with retention period = {retention_period} minutes")
         gc_tasks.append(asyncio.create_task(task_method(clp_config), name=gc_name))
 
     # Poll and report any task that finished unexpectedly

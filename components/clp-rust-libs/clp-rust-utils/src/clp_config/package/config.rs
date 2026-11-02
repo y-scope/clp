@@ -179,34 +179,34 @@ impl Default for Database {
 impl Database {
     /// # Returns
     ///
-    /// The archives table name (`<prefix><dataset>_archives`).
+    /// The archives table name (`<prefix>archives`).
     #[must_use]
-    pub fn archives_table_name(&self, dataset: &DatasetName) -> String {
-        format!("{}{dataset}_archives", self.table_prefix)
+    pub fn archives_table_name(&self) -> String {
+        format!("{}archives", self.table_prefix)
     }
 
     /// # Returns
     ///
-    /// The column-metadata table name (`<prefix><dataset>_column_metadata`).
+    /// The long span archives table name (`<prefix>long_span_archives`).
     #[must_use]
-    pub fn column_metadata_table_name(&self, dataset: &DatasetName) -> String {
-        format!("{}{dataset}_column_metadata", self.table_prefix)
+    pub fn long_span_archives_table_name(&self) -> String {
+        format!("{}long_span_archives", self.table_prefix)
     }
 
     /// # Returns
     ///
-    /// The datasets table name `<prefix>datasets`.
+    /// The column-metadata table name (`<prefix>column_metadata`).
+    #[must_use]
+    pub fn column_metadata_table_name(&self) -> String {
+        format!("{}column_metadata", self.table_prefix)
+    }
+
+    /// # Returns
+    ///
+    /// The datasets table name (`<prefix>datasets`).
     #[must_use]
     pub fn datasets_table_name(&self) -> String {
         format!("{}datasets", self.table_prefix)
-    }
-
-    /// # Returns
-    ///
-    /// The files table name (`<prefix><dataset>_files`).
-    #[must_use]
-    pub fn files_table_name(&self, dataset: &DatasetName) -> String {
-        format!("{}{dataset}_files", self.table_prefix)
     }
 
     /// # Returns
@@ -417,7 +417,6 @@ pub struct ArchiveOutput {
     pub target_encoded_file_size: u64,
     pub target_segment_size: u64,
     pub compression_level: u8,
-    pub retention_period: Option<NonZeroU64>,
 }
 
 impl ArchiveOutput {
@@ -471,7 +470,6 @@ impl Default for ArchiveOutput {
             target_encoded_file_size: 256 * 1024 * 1024,
             target_segment_size: 256 * 1024 * 1024,
             compression_level: 3,
-            retention_period: None,
         }
     }
 }

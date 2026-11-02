@@ -120,10 +120,8 @@ def main(argv: list[str]) -> int:
             args_parser.error("The -a/--all flag cannot be used together with a dataset name.")
 
         try:
-            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
-            table_prefix = clp_db_connection_params["table_prefix"]
             for dataset in datasets:
-                validate_dataset_name(table_prefix, dataset)
+                validate_dataset_name(dataset)
         except:
             logger.exception("Invalid dataset name.")
             return -1
