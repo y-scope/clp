@@ -128,7 +128,7 @@ impl Source for FsInputSource {
 /// * Forwards [`std::fs::create_dir_all`]'s return values on failure.
 /// * Forwards [`std::fs::create_dir`]'s return values on failure.
 /// * Forwards [`ClpSInput::new`]'s return values on failure.
-/// * Forwards [`finish_compression`]'s return values on failure.
+/// * Forwards [`run_compression`]'s return values on failure.
 pub(super) fn compress<SourceType: Source>(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
@@ -202,7 +202,7 @@ pub(super) fn compress<SourceType: Source>(
             archive_output: Arc::new(config.archive_output.clone()),
         },
     };
-    let archives = finish_compression(
+    let archives = run_compression(
         &runtime,
         &clp_s_bin,
         &archive_dir,
@@ -504,7 +504,7 @@ impl ArchiveFinisher {
 /// # Panics
 ///
 /// Panics if a full finisher set unexpectedly has no tasks (should be unreachable).
-fn finish_compression(
+fn run_compression(
     runtime: &tokio::runtime::Handle,
     clp_s_bin: &Path,
     archive_dir: &Path,
