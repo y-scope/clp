@@ -119,7 +119,7 @@ pub(super) async fn commit(
 /// Returns an error if:
 ///
 /// * [`anyhow::Error`] if outputs are missing or belong to different datasets.
-pub(super) fn collect_outputs(
+pub(super) fn combine_outputs(
     outputs: Vec<CompressionTaskOutput>,
 ) -> anyhow::Result<CompressionTaskOutput> {
     let mut outputs = outputs.into_iter();
@@ -279,15 +279,15 @@ mod tests {
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::task_io::compression::CompressionTaskOutput;
 
-    use super::collect_outputs;
+    use super::combine_outputs;
 
     #[test]
-    fn commit_requires_outputs_but_accepts_empty_archives() {
-        let error = collect_outputs(vec![]).expect_err("missing task outputs must be rejected");
+    fn combine_outputs_requires_outputs_but_accepts_empty_archives() {
+        let error = combine_outputs(vec![]).expect_err("missing task outputs must be rejected");
         assert!(error.to_string().contains("no compression task outputs"));
         let dataset = DatasetName::try_from("empty_dataset".to_owned())
             .expect("test dataset name should be valid");
-        let output = collect_outputs(vec![CompressionTaskOutput {
+        let output = combine_outputs(vec![CompressionTaskOutput {
             dataset: dataset.clone(),
             archives: vec![],
         }])
@@ -297,8 +297,8 @@ mod tests {
     }
 
     #[test]
-    fn commit_rejects_mixed_datasets() {
-        let error = collect_outputs(vec![
+    fn combine_outputs_rejects_mixed_datasets() {
+        let error = combine_outputs(vec![
             CompressionTaskOutput {
                 dataset: DatasetName::default(),
                 archives: vec![],

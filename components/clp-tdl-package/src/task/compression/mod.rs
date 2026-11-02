@@ -76,7 +76,7 @@ pub(crate) fn commit_task(ctx: TaskContext) -> Result<(), TdlError> {
         .collect::<Result<_, _>>()
         .map_err(|e| TdlError::DeserializationError(e.to_string()))?;
     let output =
-        commit::collect_outputs(outputs).map_err(|e| TdlError::ExecutionError(format!("{e:#}")))?;
+        commit::combine_outputs(outputs).map_err(|e| TdlError::ExecutionError(format!("{e:#}")))?;
     crate::common::runtime()
         .block_on(commit::commit(ctx.job_id, &output.dataset, output.archives))
         .inspect_err(|e| {
