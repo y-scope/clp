@@ -8,10 +8,12 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
+use std::sync::Arc;
 
 use anyhow::Context;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::S3Config;
+use clp_rust_utils::clp_config::package::config::ArchiveOutput;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::clp_config::package::config::LOGS_INPUT_MOUNT_POINT;
@@ -206,9 +208,7 @@ pub(super) fn compress<SourceType: Source>(
         ArchiveOutputStorage::S3 { s3_config, .. } => Destination::S3 {
             client: build_s3_client(&runtime, s3_config),
             bucket: s3_config.bucket.to_string(),
-            prefix: config
-                .archive_output
-                .dataset_archive_storage_directory(&dataset),
+            archive_output: Arc::new(config.archive_output.clone()),
         },
     };
     let archives = finish_compression(
@@ -405,7 +405,7 @@ enum Destination {
     S3 {
         client: aws_sdk_s3::Client,
         bucket: String,
-        prefix: String,
+        archive_output: Arc<ArchiveOutput>,
     },
 }
 
@@ -427,6 +427,7 @@ impl Destination {
         self,
         local_path: PathBuf,
         archive_id: ArchiveId,
+        dataset: &DatasetName,
         indexing_task: tokio::task::JoinHandle<anyhow::Result<()>>,
     ) -> anyhow::Result<()> {
         match self {
@@ -441,11 +442,11 @@ impl Destination {
             Self::S3 {
                 client,
                 bucket,
-                prefix,
+                archive_output,
             } => {
-                let key = format!("{prefix}/{archive_id}");
+                let key = archive_output.dataset_archive_object_key(dataset, &archive_id);
                 let (publication_result, indexing_result) = tokio::join!(
-                    upload_file_to_s3(&client, &bucket, &key, &local_path),
+                    upload_file_to_s3(&client, &bucket, key.as_str(), &local_path),
                     indexing_task
                 );
                 publication_result?;
@@ -479,16 +480,12 @@ impl ArchiveFinisher {
     /// Panics if polled outside a Tokio runtime.
     async fn finish(self, local_path: PathBuf, archive_id: ArchiveId) -> anyhow::Result<()> {
         let index_path = local_path.clone();
+        let dataset = self.dataset.clone();
         let indexing_task = tokio::task::spawn_blocking(move || {
-            run_indexer(
-                &self.indexer_bin,
-                &self.database,
-                &self.dataset,
-                &index_path,
-            )
+            run_indexer(&self.indexer_bin, &self.database, &dataset, &index_path)
         });
         self.destination
-            .finish(local_path.clone(), archive_id, indexing_task)
+            .finish(local_path.clone(), archive_id, &self.dataset, indexing_task)
             .await
             .inspect_err(|e| {
                 tracing::error!(
@@ -1589,6 +1586,7 @@ mod tests {
             },
             staged_archive,
             archive_id,
+            &DatasetName::default(),
             tokio::spawn(async { Ok(()) }),
         )
         .await
