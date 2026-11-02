@@ -957,6 +957,7 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 name = "clp-rust-utils"
 version = "0.13.1-dev"
 dependencies = [
+ "anyhow",
  "aws-config",
  "aws-sdk-s3",
  "aws-sdk-sqs",
@@ -971,9 +972,12 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "serde_with",
  "sqlx",
  "strum",
+ "tempfile",
  "thiserror",
+ "tokio",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
@@ -991,6 +995,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-s3",
  "clp-rust-utils",
+ "const_format",
  "non-empty-string",
  "rmp-serde",
  "secrecy",
@@ -1002,6 +1007,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -3275,17 +3281,24 @@ dependencies = [
 name = "query-coordinator"
 version = "0.13.1-dev"
 dependencies = [
+ "anyhow",
  "async-trait",
+ "clap",
  "clp-rust-utils",
  "const_format",
  "non-empty-string",
+ "rmp-serde",
+ "secrecy",
  "serde",
  "spider-client",
  "spider-core",
  "sqlx",
  "thiserror",
  "tokio",
+ "tokio-util",
+ "tonic",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -4003,7 +4016,7 @@ dependencies = [
 [[package]]
 name = "spider-client"
 version = "0.1.0-dev"
-source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
+source = "git+https://github.com/y-scope/spider.git?rev=278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc#278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc"
 dependencies = [
  "spider-core",
  "spider-proto-rust",
@@ -4016,7 +4029,7 @@ dependencies = [
 [[package]]
 name = "spider-core"
 version = "0.1.0-dev"
-source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
+source = "git+https://github.com/y-scope/spider.git?rev=278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc#278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc"
 dependencies = [
  "non-empty-string",
  "rand 0.9.5",
@@ -4036,7 +4049,7 @@ dependencies = [
 [[package]]
 name = "spider-derive"
 version = "0.1.0-dev"
-source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
+source = "git+https://github.com/y-scope/spider.git?rev=278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc#278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4046,7 +4059,7 @@ dependencies = [
 [[package]]
 name = "spider-proto-rust"
 version = "0.1.0-dev"
-source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
+source = "git+https://github.com/y-scope/spider.git?rev=278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc#278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc"
 dependencies = [
  "prost",
  "spider-core",
@@ -4061,7 +4074,7 @@ dependencies = [
 [[package]]
 name = "spider-tdl"
 version = "0.1.0-dev"
-source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
+source = "git+https://github.com/y-scope/spider.git?rev=278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc#278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc"
 dependencies = [
  "const-str",
  "rmp-serde",
@@ -4074,7 +4087,7 @@ dependencies = [
 [[package]]
 name = "spider-tdl-derive"
 version = "0.1.0-dev"
-source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
+source = "git+https://github.com/y-scope/spider.git?rev=278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc#278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4084,7 +4097,7 @@ dependencies = [
 [[package]]
 name = "spider-utils"
 version = "0.1.0-dev"
-source = "git+https://github.com/y-scope/spider.git?rev=86cfba7c73a6428eeb7501bd3b6587140425e9ad#86cfba7c73a6428eeb7501bd3b6587140425e9ad"
+source = "git+https://github.com/y-scope/spider.git?rev=278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc#278d06f81fe0fd0ff62292ee8c6f4cd63a529bfc"
 dependencies = [
  "non-empty-string",
  "rand 0.9.5",

@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -37,8 +38,7 @@ public:
               m_ignore_case(false),
               m_search_begin_ts(cEpochTimeMin),
               m_search_end_ts(cEpochTimeMax),
-              m_batch_size(1000),
-              m_max_num_results(1000) {}
+              m_batch_size(1000) {}
 
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
@@ -79,7 +79,7 @@ public:
 
     uint64_t get_batch_size() const { return m_batch_size; }
 
-    uint64_t get_max_num_results() const { return m_max_num_results; }
+    auto get_max_num_results() const -> std::optional<uint64_t> { return m_max_num_results; }
 
     std::string const& get_network_dest_host() const { return m_network_dest_host; }
 
@@ -203,7 +203,7 @@ private:
     std::string m_mongodb_uri;
     std::string m_mongodb_collection;
     uint64_t m_batch_size;
-    uint64_t m_max_num_results;
+    std::optional<uint64_t> m_max_num_results;
 
     // Reducer output variables
     std::string m_reducer_host;

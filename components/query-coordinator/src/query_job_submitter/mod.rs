@@ -5,11 +5,11 @@ mod spider;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::QueryJobId;
-use clp_rust_utils::task_io::query::ClpSQueryOption;
-use clp_rust_utils::task_io::query::OutputHandle;
+use clp_rust_utils::job_config::QueryOutput;
+use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::types::ArchiveId;
-use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
 use spider_core::task::ExecutionPolicy;
@@ -24,11 +24,14 @@ pub struct ArchiveMetadata {
     /// The archive's ID.
     pub id: ArchiveId,
 
-    /// The archive's dataset, or `None` for the default dataset.
-    pub dataset: Option<NonEmptyString>,
+    /// The archive's dataset.
+    pub dataset: DatasetName,
 
-    /// The archive's compressed size in bytes.
-    pub size: u64,
+    /// The archive's uncompressed size in bytes.
+    pub uncompressed_size: u64,
+
+    /// The archive's end timestamp in Unix epoch milliseconds.
+    pub end_timestamp: i64,
 }
 
 /// The terminal outcome of a query job.
@@ -54,8 +57,8 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
     ///
     /// * `query_job_id` - The unique ID of the CLP query job.
     /// * `resource_group_id` - The Spider resource group to register the job under.
-    /// * `clp_s_query_option` - `clp-s` query options shared by every task in the job.
-    /// * `output_handle` - The output handle selecting how the query outputs are returned.
+    /// * `query` - The search query shared by every task in the job.
+    /// * `output` - The destination of the query job's results.
     /// * `archives_to_search` - The archives to search, each represents a query task paired with
     ///   its execution policy.
     ///
@@ -70,8 +73,8 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         &self,
         query_job_id: QueryJobId,
         resource_group_id: ResourceGroupId,
-        clp_s_query_option: ClpSQueryOption,
-        output_handle: OutputHandle,
+        query: SearchQuery,
+        output: QueryOutput,
         archives_to_search: Vec<(ArchiveMetadata, ExecutionPolicy)>,
     ) -> Result<JobId, Error>;
 
@@ -98,4 +101,18 @@ pub trait QueryJobSubmitter: Clone + Send + Sync {
         spider_job_id: JobId,
         poll_interval: Duration,
     ) -> Result<QueryJobOutcome, Error>;
+
+    /// Idempotently cancels the job identified by `spider_job_id`.
+    ///
+    /// Safe to call regardless of whether the job is not-yet-started, already running, or already
+    /// terminal.
+    ///
+    /// # Parameters
+    ///
+    /// * `spider_job_id` - The job to cancel.
+    ///
+    /// # Errors
+    ///
+    /// Implementations must document their error conditions.
+    async fn cancel_query_job(&self, spider_job_id: JobId) -> Result<(), Error>;
 }

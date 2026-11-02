@@ -39,6 +39,9 @@ following commands to submit a query to clp-json and stream the results.
        }'
    ```
 
+   Omit `max_num_results` to return all matching results. When specified, the limit must be a
+   positive integer; zero is rejected.
+
    On success, the server responds with:
 
     ```json

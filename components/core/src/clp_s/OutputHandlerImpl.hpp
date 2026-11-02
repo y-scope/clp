@@ -5,9 +5,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <string>
 #include <string_view>
@@ -19,6 +21,7 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/options/insert.hpp>
+#include <msgpack.hpp>
 
 #include <clp_s/AggregationSink.hpp>
 #include <clp_s/aggregators.hpp>
@@ -30,7 +33,6 @@
 #include "Defs.hpp"
 #include "FileWriter.hpp"
 #include "search/OutputHandler.hpp"
-#include "TraceableException.hpp"
 
 namespace clp_s {
 /**
@@ -43,16 +45,20 @@ public:
             : ::clp_s::search::OutputHandler(should_output_metadata, true) {}
 
     // Methods inherited from OutputHandler
-    void write(
+    [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override {
+    ) -> ErrorCode override {
         std::cout << archive_id << ": " << log_event_idx << ": " << timestamp << " " << message;
+        return ErrorCode::ErrorCodeSuccess;
     }
 
-    void write(std::string_view message) override { std::cout << message; }
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override {
+        std::cout << message;
+        return ErrorCode::ErrorCodeSuccess;
+    }
 };
 
 /**
@@ -70,14 +76,16 @@ public:
     ~FileOutputHandler() { m_file_writer.close(); }
 
     // Methods inherited from OutputHandler
-    void write(
+    [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override;
+    ) -> ErrorCode override;
 
-    void write(std::string_view message) override { write(message, 0, {}, 0); }
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override {
+        return write(message, 0, {}, 0);
+    }
 
 private:
     FileWriter m_file_writer;
@@ -88,20 +96,11 @@ private:
  */
 class NetworkOutputHandler : public ::clp_s::search::OutputHandler {
 public:
-    // Types
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
+    // Constants
+    static constexpr uint8_t cProtocolVersion{1};
 
     // Constructors
-    explicit NetworkOutputHandler(
-            std::string const& host,
-            int port,
-            bool should_output_metadata = false
-    );
+    NetworkOutputHandler(std::string host, int port, std::string session_token, uint64_t task_idx);
 
     // Destructor
     ~NetworkOutputHandler() override {
@@ -110,20 +109,81 @@ public:
         }
     }
 
+    // Delete copy & move constructors and assignment operators
+    NetworkOutputHandler(NetworkOutputHandler const&) = delete;
+    NetworkOutputHandler(NetworkOutputHandler&&) = delete;
+    auto operator=(NetworkOutputHandler const&) -> NetworkOutputHandler& = delete;
+    auto operator=(NetworkOutputHandler&&) -> NetworkOutputHandler& = delete;
+
     // Methods inherited from OutputHandler
-    void write(
+    /**
+     * Connects to the network destination and sends the handshake before the first result.
+     *
+     * @return ErrorCodeFailureNetwork if connecting or sending to the network destination fails, or
+     * if an earlier call failed to.
+     */
+    [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override;
+    ) -> ErrorCode override;
 
-    void write(std::string_view message) override { write(message, 0, {}, 0); }
+    /**
+     * Unsupported, since the handshake must carry the archive ID and each result its timestamp.
+     *
+     * @return ErrorCodeUnsupported unconditionally.
+     */
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override;
+
+    /**
+     * Sends the trailer, shuts down the write side of the connection, and waits for the listener's
+     * acknowledgement. Returns immediately if no result was written.
+     *
+     * @return ErrorCodeFailureNetwork if an earlier call failed to connect or send, if sending the
+     * trailer, shutting down the write side, or receiving the acknowledgement fails, or if the
+     * acknowledgement is malformed or doesn't match the number of results sent.
+     */
+    [[nodiscard]] auto finish() -> ErrorCode override;
 
 private:
+    // Methods
+    /**
+     * Connects to the network destination.
+     *
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if the connection fails.
+     */
+    [[nodiscard]] auto connect() -> ErrorCode;
+
+    /**
+     * Sends the serialized messages in the buffer to the network destination, and then clears the
+     * buffer.
+     *
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if sending fails.
+     */
+    [[nodiscard]] auto send_buffer() -> ErrorCode;
+
+    /**
+     * Receives the listener's acknowledgement and validates it against the number of results sent.
+     *
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureNetwork if receiving fails, the listener closes the connection before
+     * acknowledging, or the acknowledgement is malformed or doesn't match the number of results
+     * sent.
+     */
+    [[nodiscard]] auto receive_ack() const -> ErrorCode;
+
+    // Variables
     std::string m_host;
     std::string m_port;
-    int m_socket_fd;
+    std::string m_session_token;
+    uint64_t m_task_idx{};
+    uint64_t m_next_result_idx{};
+    int m_socket_fd{-1};
+    bool m_has_failed{false};
+    msgpack::sbuffer m_buffer;
 };
 
 /**
@@ -171,19 +231,12 @@ public:
             std::string_view uri,
             std::string_view collection,
             uint64_t batch_size,
-            uint64_t max_num_results,
+            std::optional<uint64_t> max_num_results,
             std::string_view dataset,
             bool should_output_metadata = true
     );
 
     // Methods inherited from OutputHandler
-    /**
-     * No-op for this handler. The results heap is drained in `finish()` so that
-     * `max_num_results` is enforced across all ERTs in the archive.
-     * @return ErrorCodeSuccess
-     */
-    [[nodiscard]] auto flush() -> ErrorCode override { return ErrorCode::ErrorCodeSuccess; }
-
     /**
      * Flushes the output handler after all tables are searched.
      * @return ErrorCodeSuccess on success.
@@ -191,16 +244,27 @@ public:
      */
     auto finish() -> ErrorCode override;
 
-    void write(
+    [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override;
+    ) -> ErrorCode override;
 
-    void write(std::string_view message) override { write(message, 0, {}, 0); }
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override {
+        return write(message, 0, {}, 0);
+    }
 
 private:
+    /**
+     * Converts a result to BSON and appends it to `m_results`. Flushes MongoDB batch when it
+     * reaches `m_batch_size` documents.
+     *
+     * @return ErrorCodeSuccess on success.
+     * @return ErrorCodeFailureDbBulkWrite if document construction or batch insertion fails.
+     */
+    [[nodiscard]] auto append_result(QueryResult result) -> ErrorCode;
+
     /**
      * Inserts the pending results as an unordered batch. Duplicate-key errors are treated as
      * success so that retries converge on the complete result set.
@@ -213,7 +277,7 @@ private:
     mongocxx::options::insert m_insert_options;
     std::vector<bsoncxx::document::value> m_results;
     uint64_t m_batch_size;
-    uint64_t m_max_num_results;
+    std::optional<uint64_t> m_max_num_results;
     std::string m_dataset;
     std::priority_queue<
             std::unique_ptr<QueryResult>,
@@ -232,14 +296,16 @@ public:
     CountReducerOutputHandler(int reducer_socket_fd);
 
     // Methods implementing OutputHandler
-    auto write(
+    [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) -> void override {}
+    ) -> ErrorCode override {
+        return ErrorCodeSuccess;
+    }
 
-    auto write(std::string_view message) -> void override;
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override;
 
     // Methods overriding OutputHandler
     /**
@@ -271,18 +337,21 @@ public:
               m_count_by_time_bucket_size_millisecs{count_by_time_bucket_size_millisecs} {}
 
     // Methods implementing OutputHandler
-    auto write(
+    [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp_millisecs,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) -> void override {
+    ) -> ErrorCode override {
         int64_t bucket = (timestamp_millisecs / m_count_by_time_bucket_size_millisecs)
                          * m_count_by_time_bucket_size_millisecs;
         m_bucket_counts[bucket] += 1;
+        return ErrorCodeSuccess;
     }
 
-    auto write(std::string_view message) -> void override {}
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override {
+        return ErrorCodeSuccess;
+    }
 
     // Methods overriding OutputHandler
     /**
@@ -313,16 +382,20 @@ public:
               m_sink{std::move(sink)} {}
 
     // Methods implementing OutputHandler
-    auto write(
+    [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp_millisecs,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) -> void override {
+    ) -> ErrorCode override {
         m_aggregator.add_record(message, timestamp_millisecs);
+        return ErrorCodeSuccess;
     }
 
-    auto write(std::string_view message) -> void override { m_aggregator.add_record(message, 0); }
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override {
+        m_aggregator.add_record(message, 0);
+        return ErrorCodeSuccess;
+    }
 
     // Methods overriding OutputHandler
     /**
@@ -400,17 +473,19 @@ public:
               m_output(output) {}
 
     // Methods inherited from OutputHandler
-    void write(
+    [[nodiscard]] auto write(
             std::string_view message,
             epochtime_t timestamp,
             std::string_view archive_id,
             int64_t log_event_idx
-    ) override {
+    ) -> ErrorCode override {
         m_output.emplace_back(message, timestamp, archive_id, log_event_idx);
+        return ErrorCode::ErrorCodeSuccess;
     }
 
-    void write(std::string_view message) override {
+    [[nodiscard]] auto write(std::string_view message) -> ErrorCode override {
         m_output.emplace_back(message, epochtime_t{}, std::string_view{}, int64_t{});
+        return ErrorCode::ErrorCodeSuccess;
     }
 
 private:

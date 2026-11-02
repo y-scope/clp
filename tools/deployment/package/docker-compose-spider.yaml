@@ -53,7 +53,8 @@ services:
       service: "compression-coordinator"
     environment:
       SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "compression"
-      SPIDER_RESOURCE_GROUP_PASSWORD: "${CLP_SPIDER_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "\
+        ${CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
 
   webui:
     extends:
@@ -70,20 +71,14 @@ services:
       file: "docker-compose-all.yaml"
       service: "api-server"
 
-  query-scheduler:
+  query-coordinator:
     extends:
       file: "docker-compose-all.yaml"
-      service: "query-scheduler"
-
-  query-worker:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "query-worker"
-
-  reducer:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "reducer"
+      service: "query-coordinator"
+    environment:
+      SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "query"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "\
+        ${CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
 
   mcp-server:
     extends:

@@ -30,6 +30,7 @@ spider_tdl::register_tdl_package! {
     init: package_init,
     tasks: [
         task::compression::s3_compress_task,
+        task::compression::fs_compress_task,
         task::compression::commit_task,
         task::query::clp_s_search_task,
     ],

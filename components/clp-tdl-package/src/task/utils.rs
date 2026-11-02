@@ -31,7 +31,7 @@ pub(super) fn clp_binary_path(clp_home: &Path, binary: &str) -> PathBuf {
 ///
 /// Returns an error if:
 ///
-/// * The default AWS SDK credential provider chain has no provider.
+/// * `auth` relies on the default AWS SDK credential provider chain, but the chain has no provider.
 /// * Forwards [`ProvideCredentials::provide_credentials`]'s return values on failure.
 pub(super) fn s3_credential_env(
     runtime: &tokio::runtime::Handle,
@@ -47,40 +47,33 @@ pub(super) fn s3_credential_env(
     /// The env var holding the AWS session token.
     const AWS_SESSION_TOKEN_ENV_VAR: &str = "AWS_SESSION_TOKEN";
 
-    let (access_key_id, secret_access_key, session_token) = match auth {
-        AwsAuthentication::Credentials { credentials } => (
-            credentials.access_key_id.clone(),
-            credentials.secret_access_key.clone(),
-            credentials.session_token.clone(),
-        ),
-        AwsAuthentication::Default => {
-            let sdk_config = runtime.block_on(
+    let provider = match auth.credentials_provider() {
+        Some(provider) => provider,
+        None => runtime
+            .block_on(
                 aws_config::defaults(BehaviorVersion::latest())
                     .region(aws_sdk_s3::config::Region::new(region.to_string()))
                     .load(),
-            );
-            let provider = sdk_config
-                .credentials_provider()
-                .context("default AWS SDK credential provider is unavailable")?;
-            let credentials = runtime
-                .block_on(provider.provide_credentials())
-                .context("failed to resolve credentials from the default AWS SDK provider chain")?;
-            (
-                credentials.access_key_id().to_string(),
-                credentials.secret_access_key().to_string(),
-                credentials
-                    .session_token()
-                    .map(std::string::ToString::to_string),
             )
-        }
+            .credentials_provider()
+            .context("default AWS SDK credential provider is unavailable")?,
     };
+    let credentials = runtime
+        .block_on(provider.provide_credentials())
+        .context("failed to resolve AWS credentials")?;
 
     let mut env = vec![
-        (AWS_ACCESS_KEY_ID_ENV_VAR, access_key_id),
-        (AWS_SECRET_ACCESS_KEY_ENV_VAR, secret_access_key),
+        (
+            AWS_ACCESS_KEY_ID_ENV_VAR,
+            credentials.access_key_id().to_owned(),
+        ),
+        (
+            AWS_SECRET_ACCESS_KEY_ENV_VAR,
+            credentials.secret_access_key().to_owned(),
+        ),
     ];
-    if let Some(session_token) = session_token {
-        env.push((AWS_SESSION_TOKEN_ENV_VAR, session_token));
+    if let Some(session_token) = credentials.session_token() {
+        env.push((AWS_SESSION_TOKEN_ENV_VAR, session_token.to_owned()));
     }
     Ok(env)
 }

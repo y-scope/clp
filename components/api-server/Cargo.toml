@@ -39,7 +39,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tower-http = { workspace = true }
 tracing = { workspace = true }
-utoipa = { workspace = true, features = ["axum_extras"] }
+utoipa = { workspace = true, features = ["axum_extras", "chrono"] }
 utoipa-axum = { workspace = true }
 
 [dev-dependencies]

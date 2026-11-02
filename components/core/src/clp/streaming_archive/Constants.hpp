@@ -12,7 +12,6 @@ constexpr char cLogTypeSegmentIndexFilename[] = "logtype.segindex";
 constexpr char cVarSegmentIndexFilename[] = "var.segindex";
 constexpr char cMetadataFileName[] = "metadata";
 constexpr char cMetadataDBFileName[] = "metadata.db";
-constexpr char cSchemaFileName[] = "schema.txt";
 
 namespace cArchiveFormatVersion {
 constexpr uint8_t VersionMajor{0};

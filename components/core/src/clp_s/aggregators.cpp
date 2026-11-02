@@ -109,19 +109,20 @@ auto CountAggregator::get_results() const -> std::vector<AggregationResult> {
     if (0 == m_count) {
         return {};
     }
-    AggregationResult result;
+    AggregationFields result;
     result.emplace_back(constants::results_cache::search::cCount, m_count);
-    return {std::move(result)};
+    return {AggregationResult{std::move(result)}};
 }
 
 auto CountByTimeAggregator::get_results() const -> std::vector<AggregationResult> {
     std::vector<AggregationResult> results;
     results.reserve(m_bucket_counts.size());
     for (auto const& [bucket_timestamp, count] : m_bucket_counts) {
-        AggregationResult result;
-        result.emplace_back(constants::results_cache::search::cTimestamp, bucket_timestamp);
+        AggregationFields result;
+        AggregationFields key;
+        key.emplace_back(constants::results_cache::search::cTimestamp, bucket_timestamp);
         result.emplace_back(constants::results_cache::search::cCount, count);
-        results.push_back(std::move(result));
+        results.emplace_back(std::move(result), std::move(key));
     }
     return results;
 }
@@ -162,7 +163,7 @@ auto MinMaxAggregator::get_results() const -> std::vector<AggregationResult> {
     if (false == m_extreme.has_value()) {
         return {};
     }
-    AggregationResult result;
+    AggregationFields result;
     result.emplace_back(constants::results_cache::search::cField, m_field);
     auto const* const key{
             m_find_max ? constants::results_cache::search::cMax
@@ -172,7 +173,7 @@ auto MinMaxAggregator::get_results() const -> std::vector<AggregationResult> {
             std::visit([](auto held) -> AggregationValue { return held; }, m_extreme.value())
     };
     result.emplace_back(key, value);
-    return {std::move(result)};
+    return {AggregationResult{std::move(result)}};
 }
 
 UniqueAggregator::UniqueAggregator(string_view field)
@@ -195,10 +196,10 @@ auto UniqueAggregator::get_results() const -> std::vector<AggregationResult> {
     std::vector<AggregationResult> results;
     results.reserve(m_values.size());
     for (auto const& value : m_values) {
-        AggregationResult result;
+        AggregationFields result;
         result.emplace_back(constants::results_cache::search::cField, m_field);
         result.emplace_back(constants::results_cache::search::cValue, value);
-        results.push_back(std::move(result));
+        results.emplace_back(std::move(result));
     }
     return results;
 }
