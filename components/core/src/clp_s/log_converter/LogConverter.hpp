@@ -79,7 +79,7 @@ private:
     /**
      * Compacts unconsumed content to the start of the buffer.
      */
-    void compact_buffer();
+    auto compact_buffer() -> void;
 
     /**
      * Grows the buffer if it is full.

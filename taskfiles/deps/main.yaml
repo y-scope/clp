@@ -282,52 +282,14 @@ tasks:
     internal: true
     run: "once"
     deps: ["toolchains:rust"]
-    vars:
-      LIB_NAME: "log-surgeon"
-      INSTALL_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
-      INSTALL_INCLUDE_DIR: "{{.INSTALL_DIR}}/include"
-      INSTALL_LIB_DIR: "{{.INSTALL_DIR}}/lib"
-      INSTALL_CMAKE_DIR: "{{.INSTALL_LIB_DIR}}/cmake/{{.LIB_NAME}}"
-      OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
-      SRC_DIR: "{{.OUTPUT_DIR}}/rust"
-      TARGET_NAME: "{{.LIB_NAME}}::{{.LIB_NAME}}"
     cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "2b103e648c03e2b28c1e59aa705c4a4b6301c0440c14abe3e212e105cc006eb7"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          URL: "https://github.com/modelconsumer/log-surgeon/archive/31ffed8.tar.gz"
-      - |-
-        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-        cd "{{.SRC_DIR}}"
-        cargo build --release
-        mkdir -p "{{.INSTALL_INCLUDE_DIR}}" "{{.INSTALL_LIB_DIR}}" "{{.INSTALL_CMAKE_DIR}}"
-        cp "{{.G_BUILD_DIR}}/rust-targets/release/liblog_surgeon.a" "{{.INSTALL_LIB_DIR}}"
-        cp -r "{{.SRC_DIR}}/cxx/log_surgeon" "{{.INSTALL_INCLUDE_DIR}}"
-
-        cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-config.cmake" << 'EOF'
-        if(NOT TARGET {{.TARGET_NAME}})
-            include("${CMAKE_CURRENT_LIST_DIR}/{{.LIB_NAME}}-targets.cmake")
-        endif()
-        EOF
-
-        cat > "{{.INSTALL_CMAKE_DIR}}/{{.LIB_NAME}}-targets.cmake" << 'EOF'
-        add_library({{.TARGET_NAME}} STATIC IMPORTED)
-        set_target_properties({{.TARGET_NAME}} PROPERTIES
-            IMPORTED_LOCATION "{{.INSTALL_LIB_DIR}}/liblog_surgeon.a"
-            INTERFACE_INCLUDE_DIRECTORIES "{{.INSTALL_INCLUDE_DIR}}"
-        )
-        target_link_libraries({{.TARGET_NAME}} INTERFACE dl)
-        EOF
-
-        cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" << 'EOF'
-        set({{.LIB_NAME}}_ROOT
-            "{{.INSTALL_DIR}}"
-            CACHE PATH
-            "Package root for log-surgeon."
-        )
-        EOF
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+          LIB_NAME: "log-surgeon"
+          TARBALL_SHA256: "da94979c62299e91ff5f292c0d360017e23c43686ca3a4710b8b082e1c376e4a"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/b7fceed.tar.gz"
 
   lz4:
     internal: true
