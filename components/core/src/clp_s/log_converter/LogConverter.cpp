@@ -40,7 +40,10 @@ constexpr std::string_view cTimestampRuleName{"timestamp"};
 #define SEP R"([ T:-])"
 #define TIME R"([ \d]{2}:[ \d]{2}:[ \d]{2}([,\.:]\d{1,9})?)"
 #define OFFSET R"(([\+-]\d{2}(:?\d{2})?))"
-#define ZONE R"(( ?UTC)?(()" OFFSET R"(?Z)|()" OFFSET R"(Z?)))"
+#define ZONE \
+    R"(( ?UTC)?(()" OFFSET R"(?Z)|()" OFFSET R"(Z?))" \
+    R"(|((( [\+\-]\d{2}(:?\d{2})?){0,1}Z{0,1}))" \
+    R"(|(( Z){0,1})))"
 #define PREFIX R"(^(?<timestamp>)"
 #define SUFFIX R"()$)"
 // NOLINTEND(cppcoreguidelines-macro-usage)
