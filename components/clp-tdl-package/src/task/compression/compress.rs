@@ -397,6 +397,7 @@ impl Drop for TmpFileDeleter {
     }
 }
 
+/// The storage destination for published archives.
 #[derive(Clone)]
 enum Destination {
     Fs {
