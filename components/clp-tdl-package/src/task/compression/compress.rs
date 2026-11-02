@@ -51,10 +51,6 @@ pub(super) trait Source {
     ///
     /// * [`anyhow::Error`] if the source has no inputs, entries are invalid or cannot be read, or
     ///   S3 credentials cannot be resolved.
-    ///
-    /// # Panics
-    ///
-    /// Panics for S3 inputs if the package runtime has not been initialized.
     fn prepare(self) -> anyhow::Result<PreparedSource>;
 }
 
@@ -133,11 +129,6 @@ impl Source for FsInputSource {
 /// * Forwards [`std::fs::create_dir`]'s return values on failure.
 /// * Forwards [`ClpSInput::new`]'s return values on failure.
 /// * Forwards [`finish_compression`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if required package globals (the runtime or CLP home) have not been initialized or this
-/// function is called from an async runtime context.
 pub(super) fn compress<SourceType: Source>(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
@@ -475,10 +466,6 @@ impl ArchiveFinisher {
     /// Returns an error if:
     ///
     /// * Forwards [`Destination::finish`]'s return values on failure.
-    ///
-    /// # Panics
-    ///
-    /// Panics if polled outside a Tokio runtime.
     async fn finish(self, local_path: PathBuf, archive_id: ArchiveId) -> anyhow::Result<()> {
         let index_path = local_path.clone();
         let dataset = self.dataset.clone();
@@ -516,8 +503,7 @@ impl ArchiveFinisher {
 ///
 /// # Panics
 ///
-/// Panics if called from an async runtime context, or if a full finisher set unexpectedly has no
-/// tasks (should be unreachable).
+/// Panics if a full finisher set unexpectedly has no tasks (should be unreachable).
 fn finish_compression(
     runtime: &tokio::runtime::Handle,
     clp_s_bin: &Path,
@@ -765,8 +751,7 @@ fn build_clp_s_args(
 ///
 /// # Panics
 ///
-/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable), or the
-/// stderr-reader thread cannot be spawned.
+/// Panics if clp-s's piped stdout or stderr is unexpectedly absent (should be unreachable).
 fn run_clp_s(
     clp_s_bin: &Path,
     archive_dir: &Path,

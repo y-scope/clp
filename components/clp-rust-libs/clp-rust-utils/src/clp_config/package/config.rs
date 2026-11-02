@@ -468,11 +468,6 @@ impl ArchiveOutput {
     /// # Returns
     ///
     /// The dataset's archive storage directory joined with `archive_id`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the derived object key is empty. This should never happen since the key always
-    /// contains at least the `/` separator.
     #[must_use]
     pub fn dataset_archive_object_key(
         &self,

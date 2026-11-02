@@ -36,11 +36,6 @@ use crate::common::spider_task_executor_config;
 /// * Forwards [`insert_archives`]'s return values on failure.
 /// * Forwards [`mark_job_succeeded`]'s return values on failure.
 /// * Forwards [`sqlx::Transaction::commit`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if the executor configuration or CLP home has not been initialized, or an archive-size
-/// total overflows with overflow checks enabled.
 pub(super) async fn commit(
     spider_job_id: JobId,
     dataset: &DatasetName,
@@ -143,10 +138,6 @@ pub(super) fn combine_outputs(
 /// Returns an error if:
 ///
 /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-///
-/// # Panics
-///
-/// Panics if CLP home has not been initialized.
 async fn register_dataset(
     tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
     config: &clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig,
