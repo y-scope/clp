@@ -4,6 +4,7 @@ members = [
     "components/clp-rust-libs/clp-rust-utils",
     "components/clp-tdl-package",
     "components/compression-coordinator",
+    "components/db-table-creator",
     "components/log-ingestor",
     "components/query-coordinator",
 ]

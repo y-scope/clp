@@ -211,11 +211,27 @@ impl Database {
 
     /// # Returns
     ///
+    /// The long-span archives table name (`<prefix>long_span_archives`).
+    #[must_use]
+    pub fn long_span_archives_table_name(&self) -> String {
+        format!("{}long_span_archives", self.table_prefix)
+    }
+
+    /// # Returns
+    ///
     /// The archives table name without a dataset (`<prefix>archives`), used by the CLP storage
-    /// engine.
+    /// engine and by the clp-s tables that every dataset shares.
     #[must_use]
     pub fn unscoped_archives_table_name(&self) -> String {
         format!("{}archives", self.table_prefix)
+    }
+
+    /// # Returns
+    ///
+    /// The column-metadata table name without a dataset (`<prefix>column_metadata`).
+    #[must_use]
+    pub fn unscoped_column_metadata_table_name(&self) -> String {
+        format!("{}column_metadata", self.table_prefix)
     }
 
     /// # Returns
