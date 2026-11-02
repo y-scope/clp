@@ -57,11 +57,6 @@ data:
         {{- end }}{{/* with .s3_config */}}
         {{- end }}{{/* if eq .type "fs" */}}
       {{- end }}{{/* with .Values.clpConfig.archive_output.storage */}}
-      {{- if .Values.clpConfig.archive_output.retention_period }}
-      retention_period: {{ .Values.clpConfig.archive_output.retention_period | int }}
-      {{- else }}
-      retention_period: null
-      {{- end }}
       target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size | int }}
       target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size
         | int }}

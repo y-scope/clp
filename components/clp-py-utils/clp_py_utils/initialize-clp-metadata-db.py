@@ -58,8 +58,7 @@ def main(argv):
         ):
             if StorageEngine.CLP_S == storage_engine:
                 create_datasets_table(metadata_db_cursor, table_prefix)
-            else:
-                create_metadata_db_tables(metadata_db_cursor, table_prefix)
+            create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
     except:
         logger.exception("Failed to create clp metadata tables.")

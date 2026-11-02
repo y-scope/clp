@@ -19,11 +19,9 @@
 //! * `CANCEL_REQUESTED` is non-terminal and is reachable from both `PENDING` and `RUNNING`.
 //! * `CANCELLING` is non-terminal and is reachable only from `CANCEL_REQUESTED`.
 
-use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::time::Duration;
 
-use clp_rust_utils::clp_config::package::config::ArchiveOutput as ArchiveOutputConfig;
 use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
 use clp_rust_utils::clp_config::package::config::QueryCoordinator as CoordinatorConfig;
 use clp_rust_utils::clp_config::package::config::Spider as SpiderConfig;
@@ -92,7 +90,6 @@ impl Coordinator {
     pub async fn new(
         coordinator_config: &CoordinatorConfig,
         spider_config: &SpiderConfig,
-        archive_output_config: &ArchiveOutputConfig,
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
     ) -> Result<(Self, CancellationToken), Error> {
@@ -129,9 +126,6 @@ impl Coordinator {
             db_pool: db_pool.clone(),
             db_config,
             archive_selection_options: ArchiveSelectionOptions {
-                archive_retention_period_millisecs: archive_output_config
-                    .retention_period
-                    .map(|period| period.saturating_mul(MILLISECS_PER_MINUTE)),
                 max_datasets_per_query: coordinator_config.max_datasets_per_query,
             },
             spider_option: SpiderOption {
@@ -566,9 +560,6 @@ impl Coordinator {
         Ok(recovery_context)
     }
 }
-
-const MILLISECS_PER_MINUTE: NonZeroU64 =
-    NonZeroU64::new(60_000).expect("constant should not be zero");
 
 /// A query job that was submitted to Spider by a previous coordinator instance.
 struct SubmittedJob {

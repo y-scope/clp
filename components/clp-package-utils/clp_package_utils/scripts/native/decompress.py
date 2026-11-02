@@ -59,7 +59,7 @@ def get_orig_file_id(db_config: Database, path: str) -> str | None:
         closing(sql_adapter.create_connection(True)) as db_conn,
         closing(db_conn.cursor(dictionary=True)) as db_cursor,
     ):
-        files_table_name = get_files_table_name(table_prefix, None)
+        files_table_name = get_files_table_name(table_prefix)
         db_cursor.execute(
             f"SELECT orig_file_id FROM `{files_table_name}` WHERE path = (%s)",
             (path,),

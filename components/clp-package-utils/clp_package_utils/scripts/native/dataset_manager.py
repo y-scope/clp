@@ -37,7 +37,7 @@ def _get_dataset_info(
 ) -> dict[str, str]:
     """
     :param db_config:
-    :return: A map of name -> archive_storage_directory for each dataset that exists.
+    :return: A map of name -> archive_storage_path for each dataset that exists.
     """
     sql_adapter = SqlAdapter(db_config)
     with (
@@ -47,10 +47,10 @@ def _get_dataset_info(
         clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         db_cursor.execute(
-            f"SELECT name, archive_storage_directory FROM `{get_datasets_table_name(table_prefix)}`"
+            f"SELECT name, archive_storage_path FROM `{get_datasets_table_name(table_prefix)}`"
         )
         rows = db_cursor.fetchall()
-        return {row["name"]: row["archive_storage_directory"] for row in rows}
+        return {row["name"]: row["archive_storage_path"] for row in rows}
 
 
 def _handle_list_datasets(datasets: dict[str, str]) -> int:

@@ -17,7 +17,7 @@ accommodate all expected values.
 | Column name               | Type          | Description                                                                         |
 |---------------------------|---------------|-------------------------------------------------------------------------------------|
 | name                      | VARCHAR(255)  | The *unique* name of the dataset.                                                   |
-| archive_storage_directory | VARCHAR(4096) | The directory (relative to the storage type, e.g., `s3`) where archives are stored. |
+| archive_storage_path      | VARCHAR(4096) | The directory (relative to the storage type, e.g., `s3`) where archives are stored. |
 
 +++
 **Table 1**: The high-level schema of CLP's datasets table.
@@ -26,5 +26,5 @@ accommodate all expected values.
 :::{note}
 CLP typically runs in containers, so when storing archives on a local filesystem, the path it uses
 for archives is the path inside the container. However, for external tools to locate these archives,
-`archive_storage_directory` must be the path on the host filesystem.
+`archive_storage_path` must be the path on the host filesystem.
 :::

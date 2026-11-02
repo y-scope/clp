@@ -13,12 +13,12 @@ To support retention periods, CLP's garbage collector component periodically sca
 expired data (archives or search results). To understand the high-level algorithm, first consider
 the following definitions:
 
-| Term                | Description                                                                                                                                                                |
-|---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| $sweep\_interval$   | The interval (in minutes) at which the garbage collector wakes up to check for expired data.                                                                               |
-| $retention\_period$ | The duration (in minutes) for which data (an archive or search result) is retained before it is considered expired.                                                        |
-| $current\_time$     | The time at which the garbage collector is performing a check.                                                                                                             |
-| $data\_timestamp$   | The end of the time range for the data being evaluated for expiration (e.g., for an archive, this is the timestamp of the most recent log event contained in the archive). |
+| Term                | Description                                                                                                         |
+|---------------------|---------------------------------------------------------------------------------------------------------------------|
+| $sweep\_interval$   | The interval (in minutes) at which the garbage collector wakes up to check for expired data.                        |
+| $retention\_period$ | The duration (in minutes) for which data (an archive or search result) is retained before it is considered expired. |
+| $current\_time$     | The time at which the garbage collector is performing a check.                                                      |
+| $data\_timestamp$   | The time at which the data was created (e.g., for an archive, the time at which it finished being compressed).      |
 
 When the garbage collector wakes up, it will scan for and delete any data that satisfies the expiry
 criteria shown in [Figure 1](#figure-1):
@@ -57,70 +57,27 @@ directory.
 ### Archive retention period
 
 This setting determines how long an archive should be retained before it is automatically deleted.
-To configure it, modify the value of `archive_output.retention_period` in `etc/clp-config.yaml`.
+Unlike the other settings on this page, it is configured **per dataset** rather than in
+`etc/clp-config.yaml`, so different datasets can retain their archives for different durations.
 
-For example, to configure an archive retention period of 30 days (43,200 minutes), use:
+A dataset's retention period is recorded when the dataset is created. If it isn't set, the dataset's
+archives are retained indefinitely.
 
-```yaml
-archive_output:
-  # ... Other archive_output settings...
-
-  # Retention period for archives, in minutes. 
-  # Set to null to disable automatic deletion.
-  retention_period: 43200
-```
-
-By default, `archive_output.retention_period` is `null`, which means that archives will be retained
-indefinitely.
-
-:::{warning}
-If your log events use timestamps that *aren't* in the UTC time zone, you will need to adjust the
-configured retention period to ensure expired archives are deleted at the correct time. See
-[Handling log events with non-UTC timestamps](#handling-log-events-with-non-utc-timestamps) for
-details.
+:::{note}
+🚧 An interface for setting a dataset's retention period is still under construction. Until it's
+available, archives are retained indefinitely.
 :::
 
 #### Archive expiry criteria
 
 For archives, $data\_timestamp$ (in the expiry criteria equation from [Figure 1](#figure-1)) is the
-timestamp of the most recent log event contained in the archive.
+time at which the archive was written, as recorded by CLP's metadata database.
 
 :::{note}
-This is not the timestamp at which your logs were compressed. Therefore, if you compress
-particularly old logs that have already expired according to the expiry criteria, they will be
-deleted the next time the garbage collector runs.
+This is not the timestamp of the log events contained in the archive. Compressing particularly old
+logs therefore doesn't cause the resulting archives to be deleted early; they are retained for the
+dataset's retention period like any other archive.
 :::
-
-#### Handling log events with non-UTC timestamps
-
-If your log events use timestamps that **aren't** in the UTC time zone, you will need to adjust the
-configured retention period to ensure expired archives are deleted at the correct time. This is
-because CLP currently doesn't support parsing time zone information, and the garbage collector runs
-based on the UTC time zone.
-
-For example, let's say:
-
-* your log events use timestamps in the AWST timezone (UTC+8);
-* you set a retention period of 1 hour;
-* you have an archive with $data\_timestamp = 08:00$ AWST; and
-* the garbage collector runs at $current\_time = 09:01$ AWST.
-
-When the garbage collector runs, it will evaluate the archive's expiry criteria, substituting
-$08:00$ for $data\_timestamp$, and $01:01$ for $current\_time$, since $09:01$ AWST = $01:01$ UTC.
-The equation then becomes...
-
-$$is\_expired = (01:01 - 08:00 > 01:00)$$
-
-... which evaluates to false. Thus, the garbage collector won't delete the archive; in fact, it
-won't delete it until $09:01$ UTC, which is 8 hours later than it should've been deleted.
-
-Similarly, archives may be deleted prematurely if your log events use timestamps in a time zone that
-is behind UTC.
-
-To avoid this issue, you can adjust the retention period to account for the offset of the log
-events' time zone from UTC:
-
-$$adjusted\_retention\_period = retention\_period - signed\_utc\_offset$$
 
 ### Search result retention period
 
@@ -182,9 +139,10 @@ $sweep\_interval$ minutes longer than the configured retention period.
 :::
 
 :::{note}
-If the value of `archive_output.retention_period` is `null`, the corresponding garbage collection
-task will not run even if `garbage_collector.sweep_interval.archive` is configured. The same applies
-for `results_cache.retention_period` and `garbage_collector.sweep_interval.search_result`.
+If the value of `results_cache.retention_period` is `null`, the search result garbage collection
+task will not run even if `garbage_collector.sweep_interval.search_result` is configured. The
+archive garbage collection task always runs, but has no effect on datasets that don't have a
+retention period.
 :::
 
 ---

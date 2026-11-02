@@ -700,7 +700,6 @@ class ArchiveOutput(BaseModel):
     target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
     target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MiB
     compression_level: ZstdCompressionLevel = 3
-    retention_period: PositiveInt | None = None
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
