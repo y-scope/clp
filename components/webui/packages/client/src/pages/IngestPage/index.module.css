@@ -1,6 +1,6 @@
 .ingestPageGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
     /* Limits dashboard to two columns */
     max-width: 1250px;
     padding: 20px;

@@ -23,16 +23,6 @@ void splice_into(
 );
 
 /**
- * Casts a double to an int64_t, rounding up or down depending on the filter operation
- * @param in
- * @param op
- * @param out
- * @return false if under FilterOperation::EQ the cast double is not equal to int64_t out, true
- * otherwise
- */
-bool double_as_int(double in, FilterOperation op, int64_t& out);
-
-/**
  * Converts a KQL string column descriptor delimited by '.' into a list of tokens. The
  * descriptor is tokenized and unescaped per the escaping rules for KQL columns.
  * @param descriptor

@@ -41,13 +41,15 @@ planned for a future release.
 `log-ingestor` exposes **RESTful APIs** that allow you to submit ingestion jobs, manage ingestion
 jobs, and check `log-ingestor`'s health.
 
+For a `clp-json` deployment configured with S3 logs input and a log ingestor, open the Web UI's
+**Ingest** page and use **Create S3 Scanner**. Enter the bucket, AWS region, and a nonempty literal
+key prefix, then choose the dataset and log format. AWS access comes from the deployment, including
+IRSA when configured; the form does not accept credentials. Creation returns a scanner ID, but
+scanner jobs are not yet displayed in the Jobs table. With the default buffer settings, compression
+can start up to five minutes after the scanner discovers an object.
+
 You can explore all available endpoints and their schemas at the
 [Swagger UI `log-ingestor` page][swagger-ui-all].
-
-:::{note}
-Currently, requests to `log-ingestor` must be sent directly to the `log-ingestor` service. Requests
-will be routed through CLP's [API server](./guides-using-the-api-server.md) in a future release.
-:::
 
 ### Fault tolerance
 

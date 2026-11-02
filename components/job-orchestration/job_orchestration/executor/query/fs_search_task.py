@@ -224,9 +224,10 @@ def _make_command_and_env_vars(
             "results-cache",
             "--uri", results_cache_uri,
             "--collection", job_id,
-            "--max-num-results", str(search_config.max_num_results),
         ))
         # fmt: on
+        if search_config.max_num_results is not None:
+            command.extend(("--max-num-results", str(search_config.max_num_results)))
         if dataset is not None:
             command.extend(("--dataset", dataset))
 

@@ -37,6 +37,15 @@ jobs:
         with:
           version: "0.8"
 
+      # Work around y-scope/clp#2544.
+      - if: "'macos-15' == matrix.os"
+        name: "Remove the runner image's stale openssl@1.1 symlink"
+        run: |
+          openssl_link="$(brew --prefix)/bin/openssl"
+          case "$(readlink "$openssl_link" 2>/dev/null)" in
+            */openssl@1.1/*) rm -f "$openssl_link" ;;
+          esac
+
       # This is a necessary dependency for the Python mariadb package which is a transitive
       # dependency of `lint:py-check`.
       - name: "Install MariaDB Connector/C"

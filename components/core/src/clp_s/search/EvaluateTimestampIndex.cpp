@@ -6,7 +6,6 @@
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
-#include "ast/Integral.hpp"
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/TimestampLiteral.hpp"
@@ -15,8 +14,6 @@ using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
-using clp_s::search::ast::Integral;
-using clp_s::search::ast::Integral64;
 using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::TimestampLiteral;

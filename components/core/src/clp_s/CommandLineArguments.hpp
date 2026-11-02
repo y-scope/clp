@@ -1,6 +1,7 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -38,7 +39,7 @@ public:
         std::string collection;
         std::string dataset;
         uint64_t batch_size{1000};
-        uint64_t max_num_results{1000};
+        std::optional<uint64_t> max_num_results;
     };
 
     struct FileOutputHandlerOptions {
@@ -48,6 +49,8 @@ public:
     struct NetworkOutputHandlerOptions {
         std::string host;
         int port{};
+        std::string session_token;
+        uint64_t task_idx{};
     };
 
     struct ReducerOutputHandlerOptions {

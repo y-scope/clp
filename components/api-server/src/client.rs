@@ -1,3 +1,4 @@
+use std::num::NonZeroU32;
 use std::pin::Pin;
 
 use async_stream::stream;
@@ -6,18 +7,23 @@ use chrono::TimeZone;
 use chrono::Utc;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
-use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
-use clp_rust_utils::clp_config::package::credentials::Credentials;
-use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
-use clp_rust_utils::job_config::AggregationConfig;
+use clp_rust_utils::database::mysql::query_job;
+use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::Aggregation;
+use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
+use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobStatus;
-use clp_rust_utils::job_config::QueryJobType;
-use clp_rust_utils::job_config::SearchJobConfig;
+use clp_rust_utils::job_config::QueryOutput;
+use clp_rust_utils::job_config::ResultsCacheOutput;
+use clp_rust_utils::job_config::SearchQuery;
+use clp_rust_utils::job_config::TimeRange;
+use clp_rust_utils::types::PositiveI64;
 use futures::Stream;
 use futures::StreamExt;
+use non_empty_string::NonEmptyString;
 use pin_project_lite::pin_project;
 use serde::Deserialize;
 use serde::Serialize;
@@ -183,11 +189,13 @@ pub struct QueryConfig {
 
     /// The datasets to search within. If not provided, only `default` dataset will be searched.
     #[serde(default)]
-    pub datasets: Option<Vec<String>>,
+    #[schema(value_type = Option<Vec<String>>)]
+    pub datasets: Option<Vec<DatasetName>>,
 
-    /// The maximum number of results to return. Set to `0` for no limit.
+    /// The maximum number of results to return. Omit for no limit.
     #[serde(default)]
-    pub max_num_results: u32,
+    #[schema(value_type = Option<u32>, minimum = 1)]
+    pub max_num_results: Option<NonZeroU32>,
 
     /// The beginning timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
@@ -214,18 +222,53 @@ pub struct QueryConfig {
     pub count_by_time_bucket_size_millisecs: Option<i64>,
 }
 
-impl From<QueryConfig> for SearchJobConfig {
-    fn from(value: QueryConfig) -> Self {
-        Self {
-            datasets: value.datasets,
-            query_string: value.query_string,
-            max_num_results: value.max_num_results,
-            begin_timestamp: value.time_range_begin_millisecs,
-            end_timestamp: value.time_range_end_millisecs,
-            ignore_case: value.ignore_case,
-            write_to_file: !value.buffer_results_in_mongodb,
-            ..Default::default()
-        }
+impl TryFrom<QueryConfig> for QueryJobConfig {
+    type Error = ClientError;
+
+    fn try_from(value: QueryConfig) -> Result<Self, Self::Error> {
+        let query_string = NonEmptyString::new(value.query_string)
+            .map_err(|_| ClientError::InvalidInput("query_string must not be empty".to_owned()))?;
+        let time_range = TimeRange::new(
+            value.time_range_begin_millisecs,
+            value.time_range_end_millisecs,
+        )
+        .map_err(|_| {
+            ClientError::InvalidInput(
+                "time_range_begin_millisecs must be <= time_range_end_millisecs".to_owned(),
+            )
+        })?;
+        let output = match value.count_by_time_bucket_size_millisecs {
+            Some(bucket_size) => {
+                let bucket_size_millisecs = PositiveI64::new(bucket_size).ok_or_else(|| {
+                    ClientError::InvalidInput(
+                        "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
+                    )
+                })?;
+                // Aggregation results are always buffered in MongoDB.
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results: value.max_num_results,
+                    aggregation: Some(Aggregation::CountByTime {
+                        bucket_size_millisecs,
+                    }),
+                })
+            }
+            None if value.buffer_results_in_mongodb => {
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results: value.max_num_results,
+                    aggregation: None,
+                })
+            }
+            None => QueryOutput::File {},
+        };
+        Ok(Self {
+            datasets: value.datasets.unwrap_or_else(Self::default_datasets),
+            query: SearchQuery {
+                query_string,
+                time_range,
+                ignore_case: value.ignore_case,
+            },
+            output,
+        })
     }
 }
 
@@ -238,39 +281,24 @@ pub struct Client {
 }
 
 impl Client {
-    /// Factory method to create a new client with active connections to both `MySQL` and `MongoDB`
-    /// databases.
+    /// Factory function.
+    ///
+    /// Creates a client that shares the given `MongoDB` client and `MySQL` connection pool.
     ///
     /// # Returns
     ///
-    /// A newly created [`Client`] instance with active connections to both databases.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::ConfigIsNone`] if `config.api_server` is `None`.
-    /// * Forwards [`create_clp_db_mysql_pool`]'s errors on failure.
-    /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
-    pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
-        if config.api_server.is_none() {
-            return Err(ClientError::ConfigIsNone);
-        }
-
-        let sql_pool =
-            create_clp_db_mysql_pool(&config.database, &credentials.database, 10).await?;
-
-        let mongo_uri = format!(
-            "mongodb://{}:{}/{}?directConnection=true",
-            config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
-        );
-        let mongo_client = mongodb::Client::with_uri_str(mongo_uri).await?;
-
-        Ok(Self {
-            config: config.clone(),
-            mongodb_client: mongo_client,
+    /// A newly created [`Client`].
+    #[must_use]
+    pub const fn new(
+        config: Config,
+        mongodb_client: mongodb::Client,
+        sql_pool: sqlx::Pool<sqlx::MySql>,
+    ) -> Self {
+        Self {
+            mongodb_client,
             sql_pool,
-        })
+            config,
+        }
     }
 
     /// Submits a search or aggregation query as a job. The job is a count-by-time aggregation
@@ -285,53 +313,14 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidInput`] if `count_by_time_bucket_size_millisecs` is set and is `<=
-    ///   0`.
-    /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
-    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    /// * Forwards [`QueryJobConfig::try_from`]'s return values on failure.
+    /// * Forwards [`query_job::submit`]'s return values on failure.
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
-        let count_by_time_bucket_size = query_config.count_by_time_bucket_size_millisecs;
-        if let Some(bucket_size) = count_by_time_bucket_size
-            && bucket_size <= 0
-        {
-            return Err(ClientError::InvalidInput(
-                "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
-            ));
-        }
-        let mut search_job_config: SearchJobConfig = query_config.into();
-        if search_job_config.datasets.is_none() {
-            search_job_config.datasets = match self.config.package.storage_engine {
-                StorageEngine::Clp => None,
-                StorageEngine::ClpS => Some(vec!["default".to_owned()]),
-            }
-        }
-        if search_job_config.max_num_results == 0 {
-            search_job_config.max_num_results =
-                self.get_api_server_config().default_max_num_query_results;
-        }
-        if let Some(bucket_size) = count_by_time_bucket_size {
-            search_job_config.aggregation_config = Some(AggregationConfig {
-                count_by_time_bucket_size: Some(bucket_size),
-                ..AggregationConfig::default()
-            });
-            // Aggregation results are always buffered in MongoDB.
-            search_job_config.write_to_file = false;
-        }
-
-        let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
-        let query_result = sqlx::query(&format!(
-            "INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (?, ?)"
-        ))
-        .bind(rmp_serde::to_vec_named(&search_job_config)?)
-        .bind(query_job_type_i32)
-        .execute(&self.sql_pool)
-        .await?;
-
-        let search_job_id = query_result.last_insert_id();
-        Ok(search_job_id)
+        let query_job_config = QueryJobConfig::try_from(query_config)?;
+        Ok(query_job::submit(&self.sql_pool, &query_job_config).await?)
     }
 
-    /// Asynchronously fetches the results of a completed search job.
+    /// Asynchronously fetches the results of a completed query job.
     ///
     /// # Returns
     ///
@@ -345,13 +334,15 @@ impl Client {
     ///
     /// Returns an error if:
     ///
+    /// * [`ClientError::QueryResultsNotStored`] if the job streamed its results to a network
+    ///   listener, which means they're not stored.
     /// * Forwards [`Client::get_status`]'s return values on failure.
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_s3`]'s return values on failure.
     pub async fn fetch_results(
         &self,
-        search_job_id: u64,
+        query_job_id: u64,
         raw_docs: bool,
         sorted: bool,
     ) -> Result<
@@ -366,14 +357,15 @@ impl Client {
         let mut delay_ms = api_server_config.query_job_polling.initial_backoff_ms;
         let max_delay_ms = api_server_config.query_job_polling.max_backoff_ms;
         loop {
-            match self.get_status(search_job_id).await? {
+            match self.get_status(query_job_id).await? {
                 QueryJobStatus::Succeeded => {
                     break;
                 }
                 QueryJobStatus::Failed
+                | QueryJobStatus::CancelRequested
+                | QueryJobStatus::Cancelling
                 | QueryJobStatus::Cancelled
-                | QueryJobStatus::Killed
-                | QueryJobStatus::Cancelling => {
+                | QueryJobStatus::Killed => {
                     return Err(ClientError::QueryNotSucceeded);
                 }
                 QueryJobStatus::Running | QueryJobStatus::Pending => {
@@ -383,39 +375,40 @@ impl Client {
             }
         }
 
-        let job_config = self.get_job_config(search_job_id).await?;
-        let max_num_results = job_config.max_num_results;
-
-        if job_config.aggregation_config.is_some() {
-            // Aggregation results are always buffered in MongoDB. Each document is an
-            // aggregation record (e.g., a time bucket) rather than a log message, so stream the
-            // documents whole and without a limit.
-            return self
-                .fetch_results_from_mongo(search_job_id, 0, true, false)
+        match self.get_job_config(query_job_id).await?.output {
+            QueryOutput::ResultsCache(ResultsCacheOutput {
+                aggregation: Some(_),
+                ..
+            }) => {
+                // Each document is an aggregation record (e.g., a time bucket) rather than a log
+                // message, so stream the documents whole and without a limit.
+                self.fetch_results_from_mongo(query_job_id, None, true, false)
+                    .await
+                    .map(|s| SearchResultStream::Mongo { inner: s })
+            }
+            QueryOutput::ResultsCache(ResultsCacheOutput {
+                max_num_results,
+                aggregation: None,
+            }) => self
+                .fetch_results_from_mongo(query_job_id, max_num_results, raw_docs, sorted)
                 .await
-                .map(|s| SearchResultStream::Mongo { inner: s });
-        }
-
-        if job_config.write_to_file {
-            let stream = match &self.config.stream_output.storage {
+                .map(|s| SearchResultStream::Mongo { inner: s }),
+            QueryOutput::File {} => Ok(match &self.config.stream_output.storage {
                 StreamOutputStorage::Fs { .. } => SearchResultStream::File {
-                    inner: self.fetch_results_from_file(search_job_id, max_num_results)?,
+                    inner: self.fetch_results_from_file(query_job_id),
                 },
                 StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
-                    inner: self
-                        .fetch_results_from_s3(search_job_id, max_num_results)
-                        .await?,
+                    inner: self.fetch_results_from_s3(query_job_id).await?,
                 },
-            };
-            return Ok(stream);
+            }),
+            QueryOutput::Network(_) => Err(ClientError::QueryResultsNotStored(query_job_id)),
         }
-
-        self.fetch_results_from_mongo(search_job_id, max_num_results, raw_docs, sorted)
-            .await
-            .map(|s| SearchResultStream::Mongo { inner: s })
     }
 
-    /// Submits a cancellation request for a search job.
+    /// Submits a cancellation request for a query job.
+    ///
+    /// This method is idempotent: if a cancellation has already been requested for the job, it's a
+    /// no-op that returns `Ok(())`.
     ///
     /// # Returns
     ///
@@ -425,28 +418,21 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::SearchJobNotFound`] if no matching job was found (e.g., the job doesn't
-    ///   exist or is not in a cancellable state).
-    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
-    pub async fn cancel_search_job(&self, search_job_id: u64) -> Result<(), ClientError> {
-        let result = sqlx::query(&format!(
-            "UPDATE `{QUERY_JOBS_TABLE_NAME}` SET status = ? WHERE id = ? AND status IN (?, ?)"
-        ))
-        .bind::<i32>(QueryJobStatus::Cancelling.into())
-        .bind(search_job_id)
-        .bind::<i32>(QueryJobStatus::Pending.into())
-        .bind::<i32>(QueryJobStatus::Running.into())
-        .execute(&self.sql_pool)
-        .await?;
-
-        if result.rows_affected() == 0 {
-            return Err(ClientError::SearchJobNotFound(search_job_id));
+    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
+    /// * [`ClientError::QueryJobAlreadyTerminated`] if the job has already succeeded, failed, or
+    ///   been killed.
+    /// * Forwards [`query_job::request_cancellation`]'s return values on failure.
+    pub async fn cancel_query_job(&self, query_job_id: u64) -> Result<(), ClientError> {
+        match query_job::request_cancellation(&self.sql_pool, query_job_id).await? {
+            None => Err(ClientError::QueryJobNotFound(query_job_id)),
+            Some(Cancellability::Cancellable | Cancellability::CancellationRequested) => Ok(()),
+            Some(Cancellability::NotCancellable) => {
+                Err(ClientError::QueryJobAlreadyTerminated(query_job_id))
+            }
         }
-
-        Ok(())
     }
 
-    /// Retrieves the status of a previously submitted search job.
+    /// Retrieves the status of a previously submitted query job.
     ///
     /// # Returns
     ///
@@ -456,36 +442,30 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
-    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
-    /// * Forwards [`QueryJobStatus::try_from`]'s return values on failure.
-    pub async fn get_status(&self, search_job_id: u64) -> Result<QueryJobStatus, ClientError> {
-        let row = sqlx::query(&format!(
-            "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
-        ))
-        .bind(search_job_id)
-        .fetch_one(&self.sql_pool)
-        .await?;
-        let status: i32 = row.try_get("status")?;
-        Ok(QueryJobStatus::try_from(status)?)
+    /// * [`ClientError::QueryJobNotFound`] if the job doesn't exist.
+    /// * Forwards [`query_job::get_status`]'s return values on failure.
+    pub async fn get_status(&self, query_job_id: u64) -> Result<QueryJobStatus, ClientError> {
+        query_job::get_status(&self.sql_pool, query_job_id)
+            .await?
+            .ok_or(ClientError::QueryJobNotFound(query_job_id))
     }
 
-    async fn get_job_config(&self, search_job_id: u64) -> Result<SearchJobConfig, ClientError> {
+    async fn get_job_config(&self, query_job_id: u64) -> Result<QueryJobConfig, ClientError> {
         let row = sqlx::query(&format!(
             "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
         ))
-        .bind(search_job_id)
+        .bind(query_job_id)
         .fetch_one(&self.sql_pool)
         .await?;
         let msgpack: &[u8] = row.try_get("job_config")?;
         Ok(rmp_serde::from_slice(msgpack)?)
     }
 
-    /// Asynchronously fetches results of a completed search job from files.
+    /// Asynchronously fetches results of a completed query job from files.
     ///
     /// # Returns
     ///
-    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    /// A stream of the job's results. Each item in the stream is a [`Result`] that:
     ///
     /// ## Returns
     ///
@@ -504,17 +484,16 @@ impl Client {
     /// Panics if the stream output storage is not file system.
     fn fetch_results_from_file(
         &self,
-        search_job_id: u64,
-        max_num_results: u32,
-    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
+        query_job_id: u64,
+    ) -> impl Stream<Item = Result<String, ClientError>> + use<> {
         let StreamOutputStorage::Fs { directory } = &self.config.stream_output.storage else {
             unreachable!();
         };
-        let search_job_output_dir = std::path::Path::new("/")
+        let query_job_output_dir = std::path::Path::new("/")
             .join(directory)
-            .join(search_job_id.to_string());
-        let stream = stream! {
-            let mut entries = tokio::fs::read_dir(search_job_output_dir).await?;
+            .join(query_job_id.to_string());
+        stream! {
+            let mut entries = tokio::fs::read_dir(query_job_output_dir).await?;
             while let Some(entry) = entries.next_entry().await? {
                 let search_result_path = entry.path();
                 let reader = std::fs::File::open(search_result_path)?;
@@ -524,16 +503,10 @@ impl Client {
                     yield Ok(event.1);
                 }
             }
-        };
-        let limit: usize = max_num_results.try_into().map_err(|_| {
-            ClientError::InvalidSearchJobConfig(
-                "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
-            )
-        })?;
-        Ok(stream.take(limit))
+        }
     }
 
-    /// Asynchronously fetches results of a completed search job from S3.
+    /// Asynchronously fetches results of a completed query job from S3.
     ///
     /// # Returns
     ///
@@ -557,7 +530,7 @@ impl Client {
     ///
     /// # Errors
     ///
-    /// Return an error if:
+    /// Returns an error if:
     ///
     /// * [`ClientError::Aws`] if a region code is not provided when using the default AWS S3
     ///   endpoint.
@@ -567,8 +540,7 @@ impl Client {
     /// Panics if the stream output storage is not S3.
     async fn fetch_results_from_s3(
         &self,
-        search_job_id: u64,
-        max_num_results: u32,
+        query_job_id: u64,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         tracing::info!("Streaming results from S3");
         let StreamOutputStorage::S3 { s3_config, .. } = &self.config.stream_output.storage else {
@@ -594,7 +566,7 @@ impl Client {
         )
         .await;
 
-        let key_prefix = format!("{}{}/", s3_config.key_prefix, search_job_id);
+        let key_prefix = format!("{}{}/", s3_config.key_prefix, query_job_id);
         tracing::info!("Streaming results from S3 prefix: {}", key_prefix);
         let mut object_pages = s3_client
             .list_objects_v2()
@@ -603,7 +575,7 @@ impl Client {
             .into_paginator()
             .send();
 
-        let stream = stream! {
+        Ok(stream! {
             while let Some(object_page) = object_pages.next().await {
                 tracing::debug!("Received S3 object page: {:?}", object_page);
                 for object in object_page?.contents() {
@@ -630,19 +602,12 @@ impl Client {
                     }
                 }
             }
-        };
-        let limit: usize = max_num_results.try_into().map_err(|_| {
-            ClientError::InvalidSearchJobConfig(
-                "cannot convert `max_num_results` from `u32` to `usize`".to_owned(),
-            )
-        })?;
-        Ok(stream.take(limit))
+        })
     }
 
-    /// Asynchronously fetches results of a completed search job from `MongoDB`.
+    /// Asynchronously fetches results of a completed query job from `MongoDB`.
     ///
-    /// When `max_num_results` is greater than 0, the query is limited to at most that many
-    /// documents.
+    /// When `max_num_results` is set, the query is limited to at most that many documents.
     ///
     /// When `raw_docs` is `true`, each document is serialized to JSON whole (used
     /// for aggregation results); otherwise the document's "message" field is extracted (used for
@@ -675,8 +640,8 @@ impl Client {
     /// * Forwards [`mongodb::Collection::find`]'s return values on failure.
     async fn fetch_results_from_mongo(
         &self,
-        search_job_id: u64,
-        max_num_results: u32,
+        query_job_id: u64,
+        max_num_results: Option<NonZeroU32>,
         raw_docs: bool,
         sorted: bool,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
@@ -684,10 +649,10 @@ impl Client {
             .mongodb_client
             .database(&self.config.results_cache.db_name);
         let collection: mongodb::Collection<mongodb::bson::Document> =
-            database.collection(&search_job_id.to_string());
+            database.collection(&query_job_id.to_string());
         let mut find_options = mongodb::options::FindOptions::default();
-        if max_num_results > 0 {
-            find_options.limit = Some(i64::from(max_num_results));
+        if let Some(limit) = max_num_results {
+            find_options.limit = Some(i64::from(limit.get()));
         }
         if sorted {
             find_options.sort = Some(mongodb::bson::doc! {
@@ -714,52 +679,6 @@ impl Client {
             Ok(message.clone())
         });
         Ok(mapped)
-    }
-
-    /// Retrieves timestamp column names for a given dataset.
-    ///
-    /// # Returns
-    ///
-    /// A vector of timestamp column name strings on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::InvalidDatasetName`] if the dataset name contains invalid characters.
-    /// * [`ClientError::DatasetNotFound`] if the dataset's column metadata table doesn't exist.
-    /// * Forwards [`sqlx::query::Query::fetch_all`]'s return values on failure.
-    pub async fn get_timestamp_column_names(
-        &self,
-        dataset_name: &str,
-    ) -> Result<Vec<String>, ClientError> {
-        // Must be kept in sync with `NodeType::Timestamp` in
-        // `components/core/src/clp_s/SchemaTree.hpp`.
-        const TIMESTAMP_NODE_TYPE: i8 = 14;
-        // MySQL error number for "Table doesn't exist".
-        const MYSQL_TABLE_NOT_FOUND: u16 = 1146;
-
-        if !clp_rust_utils::dataset::VALID_DATASET_NAME_REGEX.is_match(dataset_name) {
-            return Err(ClientError::InvalidDatasetName);
-        }
-        let table_name = format!("clp_{dataset_name}_column_metadata");
-        let names: Vec<String> =
-            sqlx::query_scalar(&format!("SELECT name FROM `{table_name}` WHERE type = ?"))
-                .bind(TIMESTAMP_NODE_TYPE)
-                .fetch_all(&self.sql_pool)
-                .await
-                .map_err(|err| {
-                    if let sqlx::Error::Database(db_err) = &err
-                        && let Some(mysql_err) =
-                            db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-                        && mysql_err.number() == MYSQL_TABLE_NOT_FOUND
-                    {
-                        return ClientError::DatasetNotFound(dataset_name.to_owned());
-                    }
-                    err.into()
-                })?;
-
-        Ok(names)
     }
 
     /// Returns compression usage for each job within a time range, optionally
@@ -923,5 +842,113 @@ mod tests {
         };
         let result = ValidatedCompressionUsageParams::try_from(params);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn query_config_converts_to_query_job_config_by_output() {
+        let max_num_results = NonZeroU32::new(7);
+        for (query_config, expected_output) in [
+            (
+                QueryConfig {
+                    count_by_time_bucket_size_millisecs: Some(60_000),
+                    ..base_query_config()
+                },
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results,
+                    aggregation: Some(Aggregation::CountByTime {
+                        bucket_size_millisecs: PositiveI64::new(60_000)
+                            .expect("60,000 is positive"),
+                    }),
+                }),
+            ),
+            (
+                QueryConfig {
+                    buffer_results_in_mongodb: true,
+                    ..base_query_config()
+                },
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results,
+                    aggregation: None,
+                }),
+            ),
+            (base_query_config(), QueryOutput::File {}),
+        ] {
+            let expected = QueryJobConfig {
+                datasets: vec![DatasetName::default()],
+                query: SearchQuery {
+                    query_string: NonEmptyString::new("level: ERROR".to_owned())
+                        .expect("query string is non-empty"),
+                    time_range: TimeRange::new(Some(1), Some(2)).expect("range is ordered"),
+                    ignore_case: true,
+                },
+                output: expected_output,
+            };
+            let actual = QueryJobConfig::try_from(query_config.clone())
+                .expect("query config should convert");
+            assert_eq!(actual, expected, "query config: {query_config:?}");
+        }
+
+        let other_dataset: DatasetName = "other"
+            .parse()
+            .expect("name should be a valid dataset name");
+        let actual = QueryJobConfig::try_from(QueryConfig {
+            datasets: Some(vec![other_dataset.clone()]),
+            ..base_query_config()
+        })
+        .expect("query config should convert");
+        assert_eq!(actual.datasets, vec![other_dataset]);
+    }
+
+    #[test]
+    fn invalid_query_config_is_rejected_as_invalid_input() {
+        for (query_config, expected_field) in [
+            (
+                QueryConfig {
+                    query_string: String::new(),
+                    ..base_query_config()
+                },
+                "query_string",
+            ),
+            (
+                QueryConfig {
+                    time_range_begin_millisecs: Some(3),
+                    ..base_query_config()
+                },
+                "time_range_begin_millisecs",
+            ),
+            (
+                QueryConfig {
+                    count_by_time_bucket_size_millisecs: Some(0),
+                    ..base_query_config()
+                },
+                "count_by_time_bucket_size_millisecs",
+            ),
+        ] {
+            let error = QueryJobConfig::try_from(query_config.clone())
+                .expect_err("query config should be rejected");
+            assert!(
+                matches!(
+                    &error,
+                    ClientError::InvalidInput(message) if message.contains(expected_field)
+                ),
+                "unexpected error for {query_config:?}: {error:?}"
+            );
+        }
+    }
+
+    /// # Returns
+    ///
+    /// A valid query config whose results are buffered in files.
+    fn base_query_config() -> QueryConfig {
+        QueryConfig {
+            query_string: "level: ERROR".to_owned(),
+            datasets: None,
+            max_num_results: NonZeroU32::new(7),
+            time_range_begin_millisecs: Some(1),
+            time_range_end_millisecs: Some(2),
+            ignore_case: true,
+            buffer_results_in_mongodb: false,
+            count_by_time_bucket_size_millisecs: None,
+        }
     }
 }

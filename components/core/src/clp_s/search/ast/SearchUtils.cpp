@@ -191,26 +191,6 @@ void splice_into(
     parent->get_op_list().splice(location, child->get_op_list());
 }
 
-bool double_as_int(double in, FilterOperation op, int64_t& out) {
-    switch (op) {
-        case FilterOperation::EQ:
-            out = static_cast<int64_t>(in);
-            return in == static_cast<double>(out);
-        case FilterOperation::LT:
-        case FilterOperation::GTE:
-            out = std::ceil(in);
-            break;
-        case FilterOperation::GT:
-        case FilterOperation::LTE:
-            out = std::floor(in);
-            break;
-        default:
-            out = static_cast<int64_t>(in);
-            break;
-    }
-    return true;
-}
-
 auto tokenize_column_descriptor(
         std::string const& descriptor,
         std::vector<std::string>& tokens,

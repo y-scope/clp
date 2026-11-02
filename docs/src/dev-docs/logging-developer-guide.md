@@ -65,6 +65,6 @@ console.error("Failed to submit query:", err);
 * Package/setup tools (DB initialization scripts, package controllers) should use the
   [standard Python logger][std-logger].
 
-[clp-rust-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-rust-utils/src/logging.rs
+[clp-rust-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-rust-libs/clp-rust-utils/src/logging.rs
 [spdlog]: https://github.com/gabime/spdlog
 [std-logger]: https://docs.python.org/3/library/logging.html

@@ -12,9 +12,10 @@ constexpr char IsLastChunk[]{"is_last_chunk"};
 }  // namespace IrOutput
 
 namespace SearchOutput {
+constexpr char Id[]{"_id"};
 constexpr char OrigFileId[]{"orig_file_id"};
 constexpr char OrigFilePath[]{"orig_file_path"};
-constexpr char LogEventIx[]{"log_event_ix"};
+constexpr char LogEventIdx[]{"log_event_idx"};
 constexpr char Timestamp[]{"timestamp"};
 constexpr char Message[]{"message"};
 }  // namespace SearchOutput

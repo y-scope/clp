@@ -1,8 +1,13 @@
 """Tests for the clp-json package."""
 
+import json
 import logging
+import uuid
+from pathlib import Path
+from typing import Any
 
 import pytest
+from pymongo import MongoClient
 
 from tests.package_tests.classes import ClpPackage
 from tests.package_tests.clp_json.utils.mode import CLP_JSON_MODE
@@ -18,6 +23,7 @@ from tests.utils.classes import (
     SampleDataset,
     SampleDatasetMetadata,
 )
+from tests.utils.config import ClpCorePathConfig
 
 logger = logging.getLogger(__name__)
 
@@ -122,3 +128,64 @@ def test_clp_json_search(clp_package: ClpPackage) -> None:
     # TODO: search through that dataset and check the correctness of the search results.
 
     assert clp_package
+
+
+@pytest.mark.search
+@pytest.mark.parametrize("limit", [None, 7, 2_000])
+def test_results_cache_optional_limit(
+    clp_package: ClpPackage,
+    clp_core_path_config: ClpCorePathConfig,
+    tmp_path: Path,
+    limit: int | None,
+) -> None:
+    """An omitted limit returns over 1,000 events; a positive limit retains the latest events."""
+    num_events = 1_205
+    timestamps = [1_700_000_000_000 + index * 1_000 for index in range(num_events)]
+    source = tmp_path / "input.jsonl"
+    archives = tmp_path / "archives"
+    # Alternate schemas to exercise a limit spanning multiple ERTs.
+    source.write_text(
+        "".join(
+            json.dumps({"timestamp": timestamp, "message": "match", f"field{index % 2}": index})
+            + "\n"
+            for index, timestamp in enumerate(timestamps)
+        )
+    )
+    binary = clp_core_path_config.clp_s_binary_path
+    compression = [str(binary), "c", "--timestamp-key", "timestamp"]
+    result = ClpAction.from_cmd([*compression, str(archives), str(source)]).verify_returncode()
+    assert result, result.failure_message
+    archive_paths = [path for path in archives.iterdir() if path.is_dir()]
+    assert len(archive_paths) == 1
+
+    cache = clp_package.clp_config.results_cache
+    uri = f"mongodb://{cache.host}:{cache.port}/{cache.db_name}"
+    # The package replica set advertises a hostname reachable only inside Docker.
+    with MongoClient[dict[str, Any]](uri, directConnection=True) as client:
+        collection = client[cache.db_name][f"limit-test-{uuid.uuid4().hex}"]
+        command = [
+            str(binary),
+            "s",
+            str(archive_paths[0]),
+            "*",
+            "results-cache",
+            "--uri",
+            uri,
+            "--collection",
+            collection.name,
+            "--batch-size",
+            "127",
+        ]
+        if limit is not None:
+            command.extend(["--max-num-results", str(limit)])
+        try:
+            result = ClpAction.from_cmd(command).verify_returncode()
+            assert result, result.failure_message
+            expected = timestamps if limit is None else timestamps[-limit:]
+            assert sorted(doc["timestamp"] for doc in collection.find()) == expected
+            # Both streaming and limited output must remain idempotent on a retry.
+            result = ClpAction.from_cmd(command).verify_returncode()
+            assert result, result.failure_message
+            assert collection.count_documents({}) == len(expected)
+        finally:
+            collection.drop()
