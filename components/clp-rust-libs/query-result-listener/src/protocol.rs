@@ -313,7 +313,7 @@ fn read_str<'buffer>(
         return Err(DecodeError::Incomplete);
     };
     *reader = Bytes::new(remaining);
-    Ok(String::from_utf8_lossy(bytes))
+    Ok(std::str::from_utf8(bytes).map_or_else(|_| String::from_utf8_lossy(bytes), Cow::Borrowed))
 }
 
 #[cfg(test)]
