@@ -74,8 +74,6 @@ impl TaskCursor {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use clp_rust_utils::types::ArchiveId;
 
     use super::Claim;
@@ -119,25 +117,30 @@ mod tests {
         const NUM_ATTEMPTS: usize = 8;
         const NUM_RESULTS: u64 = 10_000;
 
-        let cursor = Arc::new(new_cursor());
-        let mut attempts = Vec::with_capacity(NUM_ATTEMPTS);
-        for _ in 0..NUM_ATTEMPTS {
-            let cursor = Arc::clone(&cursor);
-            attempts.push(std::thread::spawn(move || {
-                (0..NUM_RESULTS)
-                    .filter(|&result_index| Claim::Claimed == cursor.claim(result_index))
-                    .collect::<Vec<_>>()
-            }));
-        }
+        use std::sync::Barrier;
 
-        let mut claimed = Vec::new();
-        for attempt in attempts {
-            claimed.extend(
-                attempt
-                    .join()
-                    .expect("concurrent claim attempt should not panic"),
-            );
-        }
+        let cursor = new_cursor();
+        let start = Barrier::new(NUM_ATTEMPTS);
+        let mut claimed: Vec<u64> = std::thread::scope(|scope| {
+            let attempts: Vec<_> = (0..NUM_ATTEMPTS)
+                .map(|_| {
+                    scope.spawn(|| {
+                        start.wait();
+                        (0..NUM_RESULTS)
+                            .filter(|&result_index| Claim::Claimed == cursor.claim(result_index))
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            attempts
+                .into_iter()
+                .flat_map(|attempt| {
+                    attempt
+                        .join()
+                        .expect("concurrent claim attempt should not panic")
+                })
+                .collect()
+        });
         claimed.sort_unstable();
         assert_eq!(claimed, (0..NUM_RESULTS).collect::<Vec<_>>());
     }
