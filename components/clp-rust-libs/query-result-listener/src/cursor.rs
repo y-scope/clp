@@ -114,10 +114,10 @@ mod tests {
 
     #[test]
     fn concurrent_attempts_claim_each_index_exactly_once() {
+        use std::sync::Barrier;
+
         const NUM_ATTEMPTS: usize = 8;
         const NUM_RESULTS: u64 = 10_000;
-
-        use std::sync::Barrier;
 
         let cursor = new_cursor();
         let start = Barrier::new(NUM_ATTEMPTS);
