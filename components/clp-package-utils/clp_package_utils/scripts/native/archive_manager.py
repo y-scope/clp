@@ -299,7 +299,7 @@ def _find_archives(
             for archive_id in archive_ids:
                 logger.info(archive_id)
                 archive_path = archive_output_dir / archive_id
-                if not archive_path.is_dir():
+                if not archive_path.exists():
                     logger.warning(f"Archive {archive_id} in database not found on disk.")
 
     except Exception:
@@ -383,12 +383,15 @@ def _delete_archives(
     archive_output_dir: Path = archives_dir / dataset if dataset is not None else archives_dir
     for archive_id in archive_ids:
         archive_path = archive_output_dir / archive_id
-        if not archive_path.is_dir():
-            logger.warning(f"Archive {archive_id} is not a directory. Skipping deletion.")
+        if not archive_path.exists():
+            logger.warning(f"Archive {archive_id} not found on disk. Skipping deletion.")
             continue
 
         logger.info(f"Deleting archive {archive_id} from disk.")
-        shutil.rmtree(archive_path)
+        if archive_path.is_dir():
+            shutil.rmtree(archive_path)
+        else:
+            archive_path.unlink()
 
     logger.info("Finished deleting archives from disk.")
 
