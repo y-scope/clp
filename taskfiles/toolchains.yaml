@@ -21,7 +21,7 @@ vars:
   G_RUSTUP_HOME: "{{.G_RUST_TOOLCHAIN_DIR}}/.rustup"
 
   # The nightly Rust toolchain used for formatting and linting. Set it to a dated nightly (e.g.,
-  # `nightly-2026-10-31`) to pin it if a nightly regression breaks linting (see y-scope/clp#2653).
+  # `nightly-2026-10-31`) to pin it if a nightly regression breaks linting.
   G_RUST_NIGHTLY_TOOLCHAIN: "nightly"
 
   # Rust toolchain checksum file
