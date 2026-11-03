@@ -1016,6 +1016,13 @@ export interface operations {
                     "application/json": components["schemas"]["QueryResultsUri"];
                 };
             };
+            /** @description Invalid query config (e.g., empty query_string, time_range_begin_millisecs > time_range_end_millisecs, count_by_time_bucket_size_millisecs <= 0) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -1098,6 +1105,20 @@ export interface operations {
                     /** @example data: {"timestamp": 1633036800, "message": "Example log message"}\n */
                     "text/event-stream": string;
                 };
+            };
+            /** @description No query job with the given ID was found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The query job streamed its results to a network listener, so they aren't stored. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             500: {
                 headers: {

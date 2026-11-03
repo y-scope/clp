@@ -74,6 +74,12 @@ impl TryFrom<String> for LogsInputPath {
     }
 }
 
+impl AsRef<str> for LogsInputPath {
+    fn as_ref(&self) -> &str {
+        &self.value
+    }
+}
+
 impl Display for LogsInputPath {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         self.value.fmt(formatter)

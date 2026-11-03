@@ -4,13 +4,41 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cerrno>
+#include <cstddef>
 #include <cstdio>
+#include <span>
 #include <string>
+
+#include <clp/ErrorCode.hpp>
 
 #include "../Defs.h"
 #include "SocketOperationFailed.hpp"
 
 namespace clp::networking {
+namespace {
+#if defined(MSG_NOSIGNAL)
+constexpr int cSendFlags{MSG_NOSIGNAL};
+#else
+constexpr int cSendFlags{0};
+#endif
+
+/**
+ * Sets `SO_NOSIGPIPE` on the socket on platforms that support it but not `MSG_NOSIGNAL`, so that
+ * sending over a connection closed by the peer fails with `EPIPE` instead of raising `SIGPIPE`.
+ * @param fd
+ * @return Whether setting `SO_NOSIGPIPE` succeeded.
+ */
+[[nodiscard]] auto configure_no_sigpipe([[maybe_unused]] int fd) -> bool {
+#if !defined(MSG_NOSIGNAL) && defined(SO_NOSIGPIPE)
+    int const enabled{1};
+    return 0 == setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enabled, sizeof(enabled));
+#else
+    return true;
+#endif
+}
+}  // namespace
+
 int connect_to_server(std::string const& host, std::string const& port) {
     // Get address info
     struct addrinfo hints = {};
@@ -36,7 +64,9 @@ int connect_to_server(std::string const& host, std::string const& port) {
         }
 
         // Connect to address
-        if (connect(socket_fd, curr->ai_addr, curr->ai_addrlen) != -1) {
+        if (connect(socket_fd, curr->ai_addr, curr->ai_addrlen) != -1
+            && configure_no_sigpipe(socket_fd))
+        {
             break;
         }
 
@@ -54,9 +84,18 @@ ErrorCode try_send(int fd, char const* buf, size_t buf_len) {
         return ErrorCode_BadParam;
     }
 
-    ssize_t num_bytes_sent = ::send(fd, buf, buf_len, 0);
-    if (-1 == num_bytes_sent) {
-        return ErrorCode_errno;
+    std::span<char const> remaining_buf{buf, buf_len};
+    while (false == remaining_buf.empty()) {
+        auto const num_bytes_sent{
+                ::send(fd, remaining_buf.data(), remaining_buf.size(), cSendFlags)
+        };
+        if (-1 == num_bytes_sent) {
+            if (EINTR == errno) {
+                continue;
+            }
+            return ErrorCode_errno;
+        }
+        remaining_buf = remaining_buf.subspan(static_cast<size_t>(num_bytes_sent));
     }
 
     return ErrorCode_Success;

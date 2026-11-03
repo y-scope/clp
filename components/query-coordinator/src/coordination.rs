@@ -26,14 +26,12 @@ use std::time::Duration;
 use clp_rust_utils::clp_config::package::config::ArchiveOutput as ArchiveOutputConfig;
 use clp_rust_utils::clp_config::package::config::Database as DatabaseConfig;
 use clp_rust_utils::clp_config::package::config::QueryCoordinator as CoordinatorConfig;
-use clp_rust_utils::clp_config::package::config::ResultsCache as ResultsCacheConfig;
 use clp_rust_utils::clp_config::package::config::Spider as SpiderConfig;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
+use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryJobType;
-use clp_rust_utils::job_config::SearchJobConfig;
-use clp_rust_utils::task_io::query::OutputHandle;
 use const_format::formatcp;
 use spider_client::SpiderClient;
 use spider_core::types::id::JobId as SpiderJobId;
@@ -59,7 +57,6 @@ pub struct Coordinator {
     spider_client: SpiderClient,
     db_pool: sqlx::MySqlPool,
     job_handle_context: Arc<QueryJobHandleContext>,
-    output_handle: OutputHandle,
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
@@ -95,7 +92,6 @@ impl Coordinator {
     pub async fn new(
         coordinator_config: &CoordinatorConfig,
         spider_config: &SpiderConfig,
-        results_cache_config: &ResultsCacheConfig,
         archive_output_config: &ArchiveOutputConfig,
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
@@ -161,9 +157,6 @@ impl Coordinator {
             spider_client,
             db_pool,
             job_handle_context,
-            output_handle: OutputHandle::ResultsCache {
-                uri: results_cache_config.uri(),
-            },
             is_first_fetch: true,
             job_polling_interval,
             cancellation_token: cancellation_token.clone(),
@@ -261,7 +254,7 @@ impl Coordinator {
             id: job_id,
             spider_job_id,
             status,
-            search_job_config,
+            query_job_config,
             job_creation_timestamp_millisecs,
         } in self.fetch_submitted_jobs().await?
         {
@@ -276,8 +269,7 @@ impl Coordinator {
                 job_id,
                 self.spider_client.clone(),
                 self.resource_group_id,
-                search_job_config,
-                self.output_handle.clone(),
+                query_job_config,
                 job_creation_timestamp_millisecs,
             ) {
                 Ok(job_handle) => job_handle,
@@ -357,18 +349,18 @@ impl Coordinator {
         let dispatched_job_ids: Vec<QueryJobId> = new_job_rows.iter().map(|row| row.id).collect();
         for job_row in new_job_rows {
             let job_id = job_row.id;
-            let search_job_config: SearchJobConfig =
-                match rmp_serde::from_slice(&job_row.serialized_search_job_config) {
-                    Ok(search_job_config) => search_job_config,
+            let query_job_config: QueryJobConfig =
+                match rmp_serde::from_slice(&job_row.serialized_query_job_config) {
+                    Ok(query_job_config) => query_job_config,
                     Err(e) => {
                         tracing::error!(
                             error = % e,
                             job_id = % job_id,
-                            "Failed to deserialize search job config. Skipping."
+                            "Failed to deserialize query job config. Skipping."
                         );
                         self.mark_job_failed(
                             job_id,
-                            &format!("Failed to deserialize search job config: {e}"),
+                            &format!("Failed to deserialize query job config: {e}"),
                         )
                         .await;
                         continue;
@@ -380,8 +372,7 @@ impl Coordinator {
                 job_id,
                 self.spider_client.clone(),
                 self.resource_group_id,
-                search_job_config,
-                self.output_handle.clone(),
+                query_job_config,
                 job_row.job_creation_timestamp_millisecs,
             ) {
                 Ok(job_handle) => job_handle,
@@ -544,20 +535,20 @@ impl Coordinator {
             .fetch_all(&self.db_pool)
             .await?
         {
-            let search_job_config: SearchJobConfig = match rmp_serde::from_slice(
-                &row.serialized_search_job_config,
+            let query_job_config: QueryJobConfig = match rmp_serde::from_slice(
+                &row.serialized_query_job_config,
             ) {
-                Ok(search_job_config) => search_job_config,
+                Ok(query_job_config) => query_job_config,
                 Err(e) => {
                     tracing::error!(
                         error = % e,
                         job_id = % row.id,
-                        "Failed to deserialize search job config of a submitted job. The database \
+                        "Failed to deserialize query job config of a submitted job. The database \
                          might be corrupted. Skipping."
                     );
                     self.mark_job_failed(
                         row.id,
-                        &format!("Failed to deserialize search job config: {e}"),
+                        &format!("Failed to deserialize query job config: {e}"),
                     )
                     .await;
                     continue;
@@ -567,7 +558,7 @@ impl Coordinator {
                 id: row.id,
                 spider_job_id: row.spider_job_id,
                 status: row.status,
-                search_job_config,
+                query_job_config,
                 job_creation_timestamp_millisecs: row.job_creation_timestamp_millisecs,
             });
         }
@@ -584,7 +575,7 @@ struct SubmittedJob {
     id: QueryJobId,
     spider_job_id: SpiderJobId,
     status: QueryJobStatus,
-    search_job_config: SearchJobConfig,
+    query_job_config: QueryJobConfig,
     job_creation_timestamp_millisecs: i64,
 }
 
@@ -593,7 +584,7 @@ struct SubmittedJob {
 struct PendingJobRowProjection {
     id: QueryJobId,
     #[sqlx(rename = "job_config")]
-    serialized_search_job_config: Vec<u8>,
+    serialized_query_job_config: Vec<u8>,
     job_creation_timestamp_millisecs: i64,
 }
 
@@ -605,6 +596,6 @@ struct SubmittedJobRowProjection {
     spider_job_id: SpiderJobId,
     status: QueryJobStatus,
     #[sqlx(rename = "job_config")]
-    serialized_search_job_config: Vec<u8>,
+    serialized_query_job_config: Vec<u8>,
     job_creation_timestamp_millisecs: i64,
 }
