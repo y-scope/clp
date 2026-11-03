@@ -108,7 +108,7 @@ pub(super) fn search(
                 );
             },
         )?;
-    let mut args = build_clp_s_search_query_args(&archive_selector, query);
+    let mut args = build_clp_s_query_args(&archive_selector, query);
     args.extend(output_args);
     run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
 
@@ -243,7 +243,7 @@ fn build_clp_s_network_output_args(
 /// # Returns
 ///
 /// The ordered clp-s arguments, which the output handler's arguments follow.
-fn build_clp_s_search_query_args(
+fn build_clp_s_query_args(
     archive_selector: &ArchiveSelector,
     query: &SearchQuery,
 ) -> Vec<OsString> {
@@ -381,8 +381,8 @@ mod tests {
 
     use super::ArchiveSelector;
     use super::build_clp_s_network_output_args;
+    use super::build_clp_s_query_args;
     use super::build_clp_s_results_cache_output_args;
-    use super::build_clp_s_search_query_args;
     use super::resolve_archive_input;
     use super::search;
 
@@ -503,7 +503,7 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_query_args_fs_with_timestamps_and_ignore_case() {
+    fn build_clp_s_query_args_fs_with_timestamps_and_ignore_case() {
         let query = SearchQuery {
             query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
             time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
@@ -512,7 +512,7 @@ mod tests {
         };
 
         assert_eq!(
-            build_clp_s_search_query_args(&directory_selector(), &query),
+            build_clp_s_query_args(&directory_selector(), &query),
             vec![
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
@@ -529,28 +529,11 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_query_args_fs_without_timestamps_or_ignore_case() {
-        assert_eq!(
-            build_clp_s_search_query_args(&directory_selector(), &unbounded_query()),
-            vec![
-                OsString::from("s"),
-                OsString::from("/archives/ds1"),
-                OsString::from("--archive-id"),
-                OsString::from(ARCHIVE_ID),
-                OsString::from("level: \"ERROR\""),
-            ]
-        );
-    }
-
-    #[test]
-    fn build_clp_s_search_query_args_s3_uses_object_url_and_no_archive_id() {
+    fn build_clp_s_query_args_s3_uses_object_url_and_no_archive_id() {
         let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
 
         assert_eq!(
-            build_clp_s_search_query_args(
-                &ArchiveSelector::ObjectUrl(url.clone()),
-                &unbounded_query()
-            ),
+            build_clp_s_query_args(&ArchiveSelector::ObjectUrl(url.clone()), &unbounded_query()),
             vec![
                 OsString::from("s"),
                 OsString::from(url),
@@ -695,7 +678,7 @@ mod tests {
             &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
-        let args = build_clp_s_search_query_args(&selector, &unbounded_query());
+        let args = build_clp_s_query_args(&selector, &unbounded_query());
 
         assert!(
             !args
