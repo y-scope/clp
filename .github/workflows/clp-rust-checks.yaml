@@ -8,7 +8,7 @@ on:
       - "Cargo.toml"
       - ".github/workflows/clp-rust-checks.yaml"
       - "components/api-server/**"
-      - "components/clp-rust-utils/**"
+      - "components/clp-rust-libs/**"
       - "components/clp-tdl-package/**"
       - "components/compression-coordinator/**"
       - "components/log-ingestor/**"

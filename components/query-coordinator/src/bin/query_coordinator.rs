@@ -52,7 +52,6 @@ async fn main() -> anyhow::Result<()> {
     let (coordinator, cancellation_token) = Coordinator::new(
         &coordinator_config,
         &spider_config,
-        &config.results_cache,
         &config.archive_output,
         db_pool,
         config.database,

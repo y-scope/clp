@@ -15,6 +15,7 @@ data:
       query_job_polling:
         initial_backoff_ms: {{ .query_job_polling.initial_backoff_ms | int }}
         max_backoff_ms: {{ .query_job_polling.max_backoff_ms | int }}
+      stream_file_extraction_timeout_secs: {{ .stream_file_extraction_timeout_secs | int }}
     {{- else }}
     api_server: null
     {{- end }}
@@ -156,6 +157,24 @@ data:
     {{- end }}
     package:
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+    {{- if .Values.spider.enabled }}
+    query_coordinator:
+      database_connection_pool_size: {{
+        .Values.clpConfig.query_coordinator.database_connection_pool_size | int }}
+      job_polling_interval_millisecs: {{
+        .Values.clpConfig.query_coordinator.job_polling_interval_millisecs | int }}
+      max_concurrent_jobs: {{ .Values.clpConfig.query_coordinator.max_concurrent_jobs | int }}
+      {{- with .Values.clpConfig.query_coordinator.max_datasets_per_query }}
+      max_datasets_per_query: {{ . | int }}
+      {{- else }}
+      max_datasets_per_query: null
+      {{- end }}
+      query_task_max_retry: {{ .Values.clpConfig.query_coordinator.query_task_max_retry | int }}
+      result_polling_interval_millisecs: {{
+        .Values.clpConfig.query_coordinator.result_polling_interval_millisecs | int }}
+      termination_timeout_secs: {{
+        .Values.clpConfig.query_coordinator.termination_timeout_secs | int }}
+    {{- end }}
     {{- with .Values.clpConfig.query_scheduler }}
     query_scheduler:
       host: "{{ include "clp.fullname" $ }}-query-scheduler"

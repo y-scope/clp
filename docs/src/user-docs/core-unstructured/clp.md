@@ -16,8 +16,7 @@ Usage:
     empty.
   * You can use the same directory repeatedly and `clp` will add to the compressed logs within.
 * `input-path` is any plain-text log file or directory containing such files.
-* `options` allow you to specify things like a path to a custom
-  [schema](../reference-unstructured-schema-file) file (`--schema-path <file-path>`).
+* `options` allow you to specify things like the target archive size.
   * For a complete list, run `./clp c --help`
 
 ### Examples
@@ -26,12 +25,6 @@ Usage:
 
 ```shell
 ./clp c /mnt/data/archives1 /mnt/logs/log1.log
-```
-
-**Compress `/mnt/logs/log1.log` using a custom schema specified in `/mnt/conf/schemas.txt`:**
-
-```shell
-./clp c --schema-path /mnt/conf/schemas.txt /mnt/data/archives1 /mnt/logs/log1.log
 ```
 
 ## Decompression

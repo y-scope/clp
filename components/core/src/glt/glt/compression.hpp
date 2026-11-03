@@ -17,8 +17,6 @@ namespace glt::glt {
  * @param empty_directory_paths
  * @param grouped_files_to_compress
  * @param target_encoded_file_size
- * @param reader_parser
- * @param use_heuristic
  * @return true if compression was successful, false otherwise
  */
 bool compress(
