@@ -350,6 +350,7 @@ mod tests {
         let mut frames = Vec::new();
         while let Some(frame) = Frame::decode(&mut buffer).expect("frames should be valid") {
             frames.push(frame);
+            assert!(frames.len() <= bytes.len(), "decoding should consume bytes");
         }
         assert_eq!(&buffer[..], &[] as &[u8]);
         frames
