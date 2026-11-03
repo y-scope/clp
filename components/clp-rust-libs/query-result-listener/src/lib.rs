@@ -2,7 +2,7 @@
 
 #[expect(
     dead_code,
-    reason = "the connection handler will be added in a separate later change"
+    reason = "the connection handler that uses the cursor comes in a later change"
 )]
 mod cursor;
 mod error;

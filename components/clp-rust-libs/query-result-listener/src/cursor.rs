@@ -8,7 +8,7 @@ use clp_rust_utils::types::ArchiveId;
 /// The outcome of claiming a result index on a [`TaskCursor`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Claim {
-    /// The caller is the first to claim the result.
+    /// The calling attempt is the first to claim the result.
     Claimed,
 
     /// Another attempt already claimed the result.
@@ -74,8 +74,6 @@ impl TaskCursor {
 
 #[cfg(test)]
 mod tests {
-    use clp_rust_utils::types::ArchiveId;
-
     use super::Claim;
     use super::TaskCursor;
 
@@ -83,6 +81,8 @@ mod tests {
     ///
     /// A cursor for the test archive.
     fn new_cursor() -> TaskCursor {
+        use clp_rust_utils::types::ArchiveId;
+
         const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
         TaskCursor::new(
