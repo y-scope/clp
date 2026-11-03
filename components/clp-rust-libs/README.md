@@ -11,5 +11,7 @@ the root `Cargo.toml`.
 ## Crates
 
 * [clp-rust-utils]: Common utilities used by other Rust components in the CLP package.
+* [query-result-listener]: Receives the results that `clp-s` query tasks stream over TCP.
 
 [clp-rust-utils]: clp-rust-utils/README.md
+[query-result-listener]: query-result-listener/README.md
