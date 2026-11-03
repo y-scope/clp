@@ -107,10 +107,11 @@ public:
     /**
      * Clears and resets all internal state.
      */
-    void clear();
+    auto clear() -> void;
 
     /**
      * Closes the current file split, resetting the accumulated time ranges for the next file split.
+     *
      * @return An option containing a pair representing the start and end timestamp of the closed
      * file split as milliseconds since the UNIX epoch.
      */

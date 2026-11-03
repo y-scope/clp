@@ -61,8 +61,9 @@ public:
     /**
      * Ingests a millisecond precision timestamp, potentially adjusting the start and end bounds for
      * this TimestampEntry.
+     * @param timestamp The timestamp to be ingested
      */
-    void ingest_millisecond_timestamp(epochtime_t millisecond_timestamp);
+    auto ingest_millisecond_timestamp(epochtime_t millisecond_timestamp) -> void;
 
     /**
      * Write the timestamp entry to a buffered stream.
@@ -84,7 +85,7 @@ public:
     void read_from_file(ZstdDecompressor& decompressor);
 
     /**
-     * Checks if a timestamp is in the range of this TimestampEntry
+     * Checks if a timestamp is in the range of this TimestampEntry.
      * @param op
      * @param timestamp
      * @return Whether the timestamp could possibly be in the range of this TimestampEntry.
