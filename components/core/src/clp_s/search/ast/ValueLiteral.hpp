@@ -42,11 +42,17 @@ public:
     void print() const override;
 
     // Methods implementing Literal
-    auto matches_type(LiteralType type) -> bool override { return 0 != (m_types & type); }
+    [[nodiscard]] auto matches_type(LiteralType type) const -> bool override {
+        return 0 != (m_types & type);
+    }
 
-    auto matches_any(literal_type_bitmask_t mask) -> bool override { return 0 != (m_types & mask); }
+    [[nodiscard]] auto matches_any(literal_type_bitmask_t mask) const -> bool override {
+        return 0 != (m_types & mask);
+    }
 
-    auto matches_exactly(literal_type_bitmask_t mask) -> bool override { return m_types == mask; }
+    [[nodiscard]] auto matches_exactly(literal_type_bitmask_t mask) const -> bool override {
+        return m_types == mask;
+    }
 
     // Methods overriding Literal
     auto as_clp_string(std::string& ret, FilterOperation op) -> bool override;
