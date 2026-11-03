@@ -112,6 +112,15 @@ Usage:
 * `kql-query` is a [KQL](reference-json-search-syntax) query.
 * `options` allow you to specify things like a specific archive (from within `archives-path`, if it
   is a directory) to search (`--archive-id <archive-id>`).
+  * `--projection '<column>' ...` outputs only the given columns. It must come after all positional
+    arguments. Each column is written as a plain key path (single-quoting is recommended); no KQL
+    quoting is needed, even for keys containing spaces:
+
+    ```shell
+    ./clp-s s /mnt/data/archives1 '*' --projection 'my key' 'a.b' 'a\.b'
+    ```
+
+    projects the key `my key`, the key `b` nested in `a`, and the key `a.b`.
   * For a complete list, run `./clp-s s --help`
 
 ### Examples
