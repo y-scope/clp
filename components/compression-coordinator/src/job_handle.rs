@@ -622,7 +622,7 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
                     return Ok(());
                 }
                 self.update_job_status(
-                    CompressionJobStatus::Killed,
+                    CompressionJobStatus::Failed,
                     Some("The Spider compression job was cancelled.".to_owned()),
                 )
                 .await

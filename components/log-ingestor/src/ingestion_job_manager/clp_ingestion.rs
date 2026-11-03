@@ -1188,9 +1188,7 @@ impl ClpCompressionState {
 
         let ingested_s3_object_metadata_status = match status {
             CompressionJobStatus::Succeeded => IngestedS3ObjectMetadataStatus::Compressed,
-            CompressionJobStatus::Failed | CompressionJobStatus::Killed => {
-                IngestedS3ObjectMetadataStatus::Failed
-            }
+            CompressionJobStatus::Failed => IngestedS3ObjectMetadataStatus::Failed,
             _ => {
                 unreachable!(
                     "Compression job status returned from `Self::wait_for_compression_result` \
@@ -1240,7 +1238,6 @@ impl ClpCompressionState {
     ///
     /// * [`CompressionJobStatus::Succeeded`]
     /// * [`CompressionJobStatus::Failed`]
-    /// * [`CompressionJobStatus::Killed`]
     ///
     /// # Returns
     ///
@@ -1276,9 +1273,7 @@ impl ClpCompressionState {
                 .map_err(|_| anyhow::anyhow!("Invalid compression job status: {status}"))?;
 
             match status {
-                CompressionJobStatus::Succeeded
-                | CompressionJobStatus::Failed
-                | CompressionJobStatus::Killed => {
+                CompressionJobStatus::Succeeded | CompressionJobStatus::Failed => {
                     return Ok((status, status_msg));
                 }
                 _ => {}
