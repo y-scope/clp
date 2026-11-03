@@ -381,17 +381,28 @@ def _delete_archives(
     logger.info("Finished deleting archives from the database.")
 
     archive_output_dir: Path = archives_dir / dataset if dataset is not None else archives_dir
+    deletion_failed = False
     for archive_id in archive_ids:
         archive_path = archive_output_dir / archive_id
-        if not archive_path.exists():
-            logger.warning(f"Archive {archive_id} not found on disk. Skipping deletion.")
-            continue
+        try:
+            if not archive_path.exists():
+                logger.warning(f"Archive {archive_id} not found on disk. Skipping deletion.")
+                continue
 
-        logger.info(f"Deleting archive {archive_id} from disk.")
-        if archive_path.is_dir():
-            shutil.rmtree(archive_path)
-        else:
-            archive_path.unlink()
+            logger.info(f"Deleting archive {archive_id} from disk.")
+            if archive_path.is_dir():
+                shutil.rmtree(archive_path)
+            else:
+                archive_path.unlink()
+        except OSError:
+            logger.exception(
+                "Failed to delete archive at %s from disk; its metadata has already been deleted.",
+                archive_path,
+            )
+            deletion_failed = True
+
+    if deletion_failed:
+        return -1
 
     logger.info("Finished deleting archives from disk.")
 
