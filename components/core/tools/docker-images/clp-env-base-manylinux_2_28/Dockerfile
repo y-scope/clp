@@ -2,7 +2,8 @@
 
 # Multi-arch base image (amd64, arm64, ...). Build with `--platform` to select the
 # target architecture; see build.sh (PLATFORM env var for local cross-builds).
-FROM quay.io/pypa/manylinux_2_28
+ARG QUAY_MIRROR=quay.io
+FROM ${QUAY_MIRROR}/pypa/manylinux_2_28
 
 WORKDIR /root
 
