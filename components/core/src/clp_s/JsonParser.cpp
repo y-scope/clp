@@ -143,6 +143,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
           m_retain_float_format(option.retain_float_format),
+          m_sanitize_invalid_json(option.sanitize_invalid_json),
           m_input_paths_and_canonical_filenames{option.input_paths_and_canonical_filenames},
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
@@ -753,7 +754,8 @@ auto JsonParser::ingest_json(
         std::string const& file_name_in_metadata,
         std::string const& archive_creator_id
 ) -> bool {
-    JsonFileIterator json_file_iterator(*reader, m_max_document_size);
+    JsonFileIterator
+            json_file_iterator(*reader, m_max_document_size, m_sanitize_invalid_json, path.path);
     if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
         SPDLOG_ERROR(
                 "Encountered error - {} - while trying to parse {} after parsing 0 bytes",

@@ -556,6 +556,8 @@ if(CLP_BUILD_TESTING)
                 tests/clp_s_test_utils.cpp
                 tests/clp_s_test_utils.hpp
                 tests/test-FloatFormatEncoding.cpp
+                tests/test-JsonFileIterator.cpp
+                tests/test-StringUtils.cpp
                 tests/test-clp_s-delta-encode-log-order.cpp
                 tests/test-clp_s-end_to_end.cpp
                 tests/test-clp_s-ffi_sfa_reader.cpp
