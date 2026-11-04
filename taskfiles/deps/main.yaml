@@ -7,15 +7,6 @@ includes:
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
   yscope-log-viewer: "./yscope-log-viewer.yaml"
 
-env:
-  # Set the rust toolchain environment variables for inheritance by dependency builds (needed by
-  # log-surgeon's cargo build, which runs inside the CMake sub-tasks). Note that a taskfile's root
-  # env propagates to all transitively called tasks, but a task's env does not.
-  # Mirrors the contents of {{.G_RUST_TOOLCHAIN_ENV_FILE}}.
-  CARGO_HOME: "{{.G_CARGO_HOME}}"
-  RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
-  CARGO_TARGET_DIR: "{{.G_RUST_BUILD_DIR}}"
-
 vars:
   # Directories
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
@@ -304,13 +295,13 @@ tasks:
   log-surgeon:
     internal: true
     run: "once"
-    deps: ["toolchains:rust"]
+    deps: [":toolchains:rust"]
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
             - "-DCMAKE_BUILD_TYPE=Release"
-            - "-DLOG_SURGEON_CARGO_EXECUTABLE={{.G_CARGO_HOME}}/bin/cargo"
+          ENV_FILE: "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
           LIB_NAME: "log-surgeon"
           TARBALL_SHA256: "da94979c62299e91ff5f292c0d360017e23c43686ca3a4710b8b082e1c376e4a"
           TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/b7fceed.tar.gz"
