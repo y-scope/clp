@@ -546,9 +546,8 @@ mod tests {
                 }
             }
             assert_eq!(
-                mount_point.canonical_input_path(
-                    &fixture.base.path().join("outside-to-inside-link")
-                )?,
+                mount_point
+                    .canonical_input_path(&fixture.base.path().join("outside-to-inside-link"))?,
                 path("/app.log")
             );
         }
@@ -604,7 +603,11 @@ mod tests {
         let fixture = Fixture::new();
         let mount_point = fixture.resolve();
         for name in [b"line\nlink".as_slice(), b"line\rlink", b"invalid-\xff"] {
-            let alias = fixture.base.path().join("logs").join(OsStr::from_bytes(name));
+            let alias = fixture
+                .base
+                .path()
+                .join("logs")
+                .join(OsStr::from_bytes(name));
             symlink("app.log", &alias)?;
             let result = mount_point.canonical_input_path(&alias);
             assert!(
@@ -627,7 +630,11 @@ mod tests {
             let name = OsStr::from_bytes(name);
             let target = fixture.base.path().join("logs").join(name);
             std::fs::write(&target, b"")?;
-            let alias = fixture.base.path().join("logs").join(format!("alias-{index}"));
+            let alias = fixture
+                .base
+                .path()
+                .join("logs")
+                .join(format!("alias-{index}"));
             symlink(name, &alias)?;
             let canonical_target = std::fs::canonicalize(&target)?;
             let result = mount_point.canonical_input_path(&alias);
