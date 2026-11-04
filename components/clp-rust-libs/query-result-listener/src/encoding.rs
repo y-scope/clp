@@ -45,6 +45,7 @@ pub trait ResultEncoder: Send + 'static {
 }
 
 /// A query result in the batches of a [`QueryResultEncoding`].
+#[cfg(test)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct QueryResult {
     /// The ID of the archive that produced the result.
@@ -58,9 +59,11 @@ pub struct QueryResult {
 }
 
 /// A [`ResultEncoding`] that batches [`QueryResult`] values.
+#[cfg(test)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct QueryResultEncoding;
 
+#[cfg(test)]
 impl ResultEncoding for QueryResultEncoding {
     type Batch = Vec<QueryResult>;
     type Encoder = QueryResultEncoder;
@@ -74,19 +77,21 @@ impl ResultEncoding for QueryResultEncoding {
 }
 
 /// The [`ResultEncoder`] for [`QueryResultEncoding`].
+#[cfg(test)]
 pub struct QueryResultEncoder {
     archive_id: ArchiveId,
     batch: Vec<QueryResult>,
 }
 
+#[cfg(test)]
 impl ResultEncoder for QueryResultEncoder {
     type Batch = Vec<QueryResult>;
 
-    fn encode(&mut self, timestamp_millisecs: i64, message: String) {
+    fn encode(&mut self, timestamp_millisecs: i64, message: &str) {
         self.batch.push(QueryResult {
             archive_id: self.archive_id,
             timestamp_millisecs,
-            message,
+            message: message.to_owned(),
         });
     }
 
@@ -117,10 +122,10 @@ mod tests {
         };
         let mut encoder = QueryResultEncoding.encoder(archive_id);
 
-        encoder.encode(2, "b\n".to_owned());
-        encoder.encode(1, "a\n".to_owned());
+        encoder.encode(2, "b\n");
+        encoder.encode(1, "a\n");
         let first_batch = encoder.take_batch();
-        encoder.encode(3, "c".to_owned());
+        encoder.encode(3, "c");
         let second_batch = encoder.take_batch();
 
         assert_eq!(
