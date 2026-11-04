@@ -33,7 +33,7 @@ pub trait ResultEncoder: Send + 'static {
     ///
     /// * `timestamp_millisecs` - The result's timestamp in milliseconds since the Unix epoch.
     /// * `message` - The result's log event message.
-    fn encode(&mut self, timestamp_millisecs: i64, message: String);
+    fn encode(&mut self, timestamp_millisecs: i64, message: &str);
 
     /// Takes the pending batch and starts a new empty batch.
     ///
