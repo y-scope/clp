@@ -20,6 +20,10 @@ vars:
   G_CARGO_HOME: "{{.G_RUST_TOOLCHAIN_DIR}}/.cargo"
   G_RUSTUP_HOME: "{{.G_RUST_TOOLCHAIN_DIR}}/.rustup"
 
+  # The nightly Rust toolchain used for formatting and linting. It's pinned so that a nightly
+  # regression can't break linting (see y-scope/clp#2653).
+  G_RUST_NIGHTLY_TOOLCHAIN: "nightly-2026-10-31"
+
   # Rust toolchain checksum file
   G_RUST_TOOLCHAIN_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains-rust.md5"
 
@@ -178,7 +182,7 @@ tasks:
       # Disable Rustup's auto self update at the end to avoid unexpected checksum mismatches.
       - |-
         . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
-        rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
+        rustup toolchain install "{{.G_RUST_NIGHTLY_TOOLCHAIN}}" --component clippy,rustfmt
         rustup toolchain install stable
         rustup default stable
         cargo install --locked cargo-nextest

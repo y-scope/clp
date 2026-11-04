@@ -1,3 +1,5 @@
+pub mod query_job;
+
 use secrecy::ExposeSecret;
 use strum::IntoEnumIterator;
 

@@ -84,6 +84,8 @@ pub struct ParseArchiveIdError {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct SessionToken {
+    // Serialized as a string so stored query job configs stay JSON-shaped.
+    #[serde(with = "uuid::serde::hyphenated")]
     value: uuid::Uuid,
 }
 
@@ -93,10 +95,30 @@ impl From<uuid::Uuid> for SessionToken {
     }
 }
 
+impl FromStr for SessionToken {
+    type Err = ParseSessionTokenError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let token = uuid::Uuid::parse_str(value).map_err(|source| ParseSessionTokenError {
+            value: value.to_owned(),
+            source,
+        })?;
+        Ok(Self { value: token })
+    }
+}
+
 impl Display for SessionToken {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         self.value.fmt(formatter)
     }
+}
+
+/// An error returned when parsing an invalid session token string.
+#[derive(Debug, thiserror::Error)]
+#[error("invalid session token {value:?}: {source}")]
+pub struct ParseSessionTokenError {
+    value: String,
+    source: uuid::Error,
 }
 
 /// A strictly positive `i64`, in the range `[1, i64::MAX]`.
@@ -237,6 +259,15 @@ mod tests {
                 "parse error should include the invalid archive ID"
             );
         }
+    }
+
+    #[test]
+    fn parse_session_token_rejects_invalid_uuids() {
+        const VALUE: &str = "not-a-uuid";
+        let error = VALUE
+            .parse::<SessionToken>()
+            .expect_err("invalid UUID should be rejected");
+        assert_eq!(error.value, VALUE);
     }
 
     #[test]
