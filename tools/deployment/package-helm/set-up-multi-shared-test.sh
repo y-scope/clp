@@ -43,8 +43,15 @@ echo "Installing Helm chart..."
 helm uninstall test --ignore-not-found
 sleep 2
 helm dependency update "${script_dir}"
+
+# Resolve image overrides before installing, so that a failure to load an image stops the script.
+clp_package_image_args=$(get_image_helm_args \
+    "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}") || exit 1
+clp_connector_image_args=$(get_image_helm_args \
+    "${CLUSTER_NAME}" "clpConnector" "${CLP_CONNECTOR_IMAGE}") || exit 1
+
 # Word splitting is intentional: helper functions return multiple --set flags.
-# shellcheck disable=SC2046
+# shellcheck disable=SC2046,SC2086
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
     --set "scheduling.compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
@@ -53,6 +60,7 @@ helm install test "${script_dir}" \
     --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
     $(get_service_exposure_helm_args) \
     $(get_presto_helm_args) \
-    $(get_image_helm_args "${CLUSTER_NAME}" "clpPackage" "${CLP_PACKAGE_IMAGE}")
+    ${clp_package_image_args} \
+    ${clp_connector_image_args}
 
 wait_for_cluster_ready

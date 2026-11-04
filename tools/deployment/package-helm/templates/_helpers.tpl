@@ -158,28 +158,32 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Creates a container image reference from .Values.image.
 
-Renders repository@digest when "digest" is set; otherwise, renders repository:tag. clpPackage
-defaults to Chart.AppVersion when "tag" is omitted; other components require "tag".
+Renders repository:tag, repository@digest, or repository:tag@digest, depending on which of "tag"
+and "digest" are set. When both are set, the digest selects the image and the tag is only a
+human-readable label. clpPackage defaults to the Chart.AppVersion tag when neither is set; other
+components require "tag", "digest", or both.
 
 @param {object} root Root template context (required)
 @param {string} component Key under .Values.image (e.g., "clpPackage", "redis")
-@return {string} Full image reference (repository@digest or repository:tag)
+@return {string} Full image reference
 */}}
 {{- define "clp.imageRef" -}}
 {{- $img := index .root.Values.image .component -}}
-{{- if $img.digest -}}
-{{- printf "%s@%s" $img.repository $img.digest -}}
-{{- else -}}
 {{- $tag := $img.tag -}}
-{{- if not $tag -}}
-  {{- if eq .component "clpPackage" -}}
-    {{- $tag = .root.Chart.AppVersion -}}
-  {{- else -}}
-    {{- fail (printf "image.%s.tag is required" .component) -}}
-  {{- end -}}
+{{- if and (not $tag) (not $img.digest) (eq .component "clpPackage") -}}
+  {{- $tag = .root.Chart.AppVersion -}}
 {{- end -}}
-{{- printf "%s:%s" $img.repository $tag -}}
+{{- if not (or $tag $img.digest) -}}
+  {{- fail (printf "image.%s requires \"tag\", \"digest\", or both." .component) -}}
 {{- end -}}
+{{- $ref := $img.repository -}}
+{{- if $tag -}}
+  {{- $ref = printf "%s:%s" $ref $tag -}}
+{{- end -}}
+{{- if $img.digest -}}
+  {{- $ref = printf "%s@%s" $ref $img.digest -}}
+{{- end -}}
+{{- $ref -}}
 {{- end }}
 
 {{/*
@@ -442,6 +446,62 @@ Gets the port for the Presto service.
 {{- else -}}
 {{- .Values.clpConfig.presto.port -}}
 {{- end -}}
+{{- end }}
+
+{{/*
+Creates the bundled Presto coordinator's CLP catalog, which contains the database credentials.
+
+@param {object} . Root template context
+@return {string} The catalog's `.properties` content
+*/}}
+{{- define "clp.prestoCoordinatorCatalog" -}}
+connector.name=clp
+clp.metadata-provider-type=mysql
+clp.metadata-db-url=jdbc:mysql://{{ include "clp.databaseHost" . }}:{{ include "clp.databasePort" . }}
+clp.metadata-db-name={{ .Values.clpConfig.database.names.clp }}
+clp.metadata-db-user={{ .Values.credentials.database.username }}
+clp.metadata-db-password={{ .Values.credentials.database.password }}
+clp.metadata-table-prefix=clp_
+clp.split-provider-type=mysql
+clp.split-filter-provider-type=mysql
+clp.split-filter-config=/opt/presto-server/etc/split-filter.json
+{{- end }}
+
+{{/*
+Creates the bundled Presto worker's CLP catalog. For archives on S3, the catalog contains static
+credentials when `aws_authentication.type` is "credentials". When it's "default", the worker gets
+credentials from the AWS default credential provider chain (e.g., an IAM role for the service
+account).
+
+@param {object} . Root template context
+@return {string} The catalog's `.properties` content
+*/}}
+{{- define "clp.prestoWorkerCatalog" -}}
+connector.name=clp
+{{- with .Values.clpConfig.archive_output.storage }}
+{{- if eq .type "s3" }}
+{{- $s3Config := .s3_config }}
+{{- $authType := $s3Config.aws_authentication.type }}
+clp.storage-type=s3
+{{- if eq $authType "default" }}
+clp.s3-auth-provider=default
+{{- else if eq $authType "credentials" }}
+clp.s3-auth-provider=clp_package
+clp.s3-access-key-id={{ $s3Config.aws_authentication.credentials.access_key_id }}
+clp.s3-secret-access-key={{ $s3Config.aws_authentication.credentials.secret_access_key }}
+{{- else }}
+{{- fail (printf
+  "Presto reads S3 archives with the %q or %q aws_authentication type, not %q."
+  "default" "credentials" $authType) }}
+{{- end }}
+clp.s3-bucket={{ $s3Config.bucket }}
+{{- if $s3Config.endpoint_url }}
+clp.s3-end-point={{ trimSuffix "/" $s3Config.endpoint_url }}
+{{- else }}
+clp.s3-end-point=https://s3.{{ $s3Config.region_code }}.amazonaws.com
+{{- end }}
+{{- end }}{{/* if eq .type "s3" */}}
+{{- end }}{{/* with .Values.clpConfig.archive_output.storage */}}
 {{- end }}
 
 {{/*

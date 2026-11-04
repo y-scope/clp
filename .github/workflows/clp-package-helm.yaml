@@ -4,6 +4,10 @@ on:
   pull_request:
     paths: &monitored_paths
       - ".github/workflows/clp-package-helm.yaml"
+      - "integration-tests/.pytest.ini"
+      - "integration-tests/pyproject.toml"
+      - "integration-tests/tests/helm_tests/**"
+      - "integration-tests/uv.lock"
       - "taskfile.yaml"
       - "taskfiles/**"
       - "tools/deployment/package-helm/**"
@@ -40,12 +44,36 @@ jobs:
         shell: "bash"
         run: "task lint:check-helm"
 
+  render-tests:
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"  # v6.0.2
+        with:
+          submodules: "recursive"
+
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-go-task"
+        with:
+          version: "3.48.0"
+
+      - uses: "./tools/yscope-dev-utils/exports/github/actions/install-uv"
+        with:
+          version: "0.8"
+
+      # This is a necessary dependency for the Python mariadb package, which the integration tests
+      # depend on through the CLP Python projects.
+      - name: "Install MariaDB Connector/C"
+        run: "sudo apt-get update && sudo apt-get install -y libmariadb-dev"
+
+      - name: "Run the Helm chart's render tests"
+        shell: "bash"
+        run: "task tests:integration:helm"
+
   publish:
     # Publish from `main` and `vA.B.C` release branches.
     if: >-
       github.event_name != 'pull_request'
       && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/v'))
-    needs: "lint"
+    needs: ["lint", "render-tests"]
     runs-on: "ubuntu-24.04"
     permissions:
       # To push to the `gh-pages` branch.

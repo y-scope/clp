@@ -1,5 +1,8 @@
 version: "3"
 
+includes:
+  toolchains: "../toolchains.yaml"
+
 vars:
   G_INTEGRATION_TESTS_DIR: "{{.ROOT_DIR}}/integration-tests"
 
@@ -8,6 +11,7 @@ tasks:
     deps:
       - task: "clp-py-project-imports"
       - task: "core"
+      - task: "helm"
       - task: "package"
 
   cache-clear:
@@ -27,6 +31,17 @@ tasks:
   clp-py-project-imports:
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     cmd: "uv run pytest tests/test_clp_native_py_project_imports.py"
+
+  helm:
+    env:
+      CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    deps: ["toolchains:helm"]
+    cmds:
+      - |-
+        . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        helm dependency update "{{.ROOT_DIR}}/tools/deployment/package-helm"
+        uv run pytest -m helm
 
   package:
     env:

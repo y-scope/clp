@@ -58,7 +58,11 @@ get_image_helm_args() {
     fi
 
     echo "Loading local image '${image}' into kind cluster..." >&2
-    kind load docker-image "${image}" --name "${cluster_name}" >&2
+    # Callers run this in a command substitution, where `errexit` doesn't apply.
+    if ! kind load docker-image "${image}" --name "${cluster_name}" >&2; then
+        echo "Error: failed to load local image '${image}' into kind cluster." >&2
+        return 1
+    fi
 
     # Split "repo:tag" on the last colon whose right-hand side contains no '/'
     # (so registry ports like localhost:5000/repo are not mistaken for tags).
@@ -69,17 +73,20 @@ get_image_helm_args() {
         echo "Error: '${image}' is not a valid image reference (expected repo:tag)." >&2
         return 1
     fi
+    # Clear any default digest, since it would select the default image instead of the local one.
     echo "--set" "image.${component}.repository=${repo}" \
          "--set" "image.${component}.tag=${tag}" \
+         "--set" "image.${component}.digest=null" \
          "--set" "image.${component}.pullPolicy=Never"
 }
 
 # Parses common arguments shared across set-up scripts.
-# Sets CLP_PACKAGE_IMAGE and ENABLE_PRESTO global variables.
+# Sets CLP_PACKAGE_IMAGE, CLP_CONNECTOR_IMAGE, and ENABLE_PRESTO global variables.
 #
 # @param {string[]} args Script arguments
 parse_common_args() {
     CLP_PACKAGE_IMAGE=""
+    CLP_CONNECTOR_IMAGE=""
     ENABLE_PRESTO="false"
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -89,6 +96,14 @@ parse_common_args() {
                     exit 1
                 fi
                 CLP_PACKAGE_IMAGE="$2"
+                shift 2
+                ;;
+            --clp-connector-image)
+                if [[ $# -lt 2 || "$2" == --* ]]; then
+                    echo "Error: '--clp-connector-image' requires a value." >&2
+                    exit 1
+                fi
+                CLP_CONNECTOR_IMAGE="$2"
                 shift 2
                 ;;
             --presto)
