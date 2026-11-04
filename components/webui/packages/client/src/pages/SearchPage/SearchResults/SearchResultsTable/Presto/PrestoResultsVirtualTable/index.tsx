@@ -33,8 +33,12 @@ interface PrestoResultsVirtualTableProps {
  * @return
  */
 const PrestoResultsVirtualTable = ({tableHeight}: PrestoResultsVirtualTableProps) => {
-    const {updateNumSearchResultsTable} = useSearchStore();
-    const {updatePrestoSearchResults} = usePrestoSearchState();
+    const updateNumSearchResultsTable = useSearchStore(
+        (state) => state.updateNumSearchResultsTable
+    );
+    const updatePrestoSearchResults = usePrestoSearchState(
+        (state) => state.updatePrestoSearchResults
+    );
     const prestoSearchResults = usePrestoSearchResults();
 
     const columns = useMemo(

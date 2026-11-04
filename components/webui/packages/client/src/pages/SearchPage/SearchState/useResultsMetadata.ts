@@ -18,7 +18,7 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "./index";
  * @return
  */
 const useResultsMetadata = () => {
-    const {searchJobId} = useSearchStore();
+    const searchJobId = useSearchStore((state) => state.searchJobId);
 
     const resultsMetadataCursor = useCursor<SearchResultsMetadataDocument>(
         () => {
