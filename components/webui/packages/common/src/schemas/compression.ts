@@ -22,11 +22,11 @@ const TABLE_SUFFIX_MAX_LEN = Math.max(
 );
 
 /**
- * Dataset name validation constants matching `clp_package_utils.general.validate_dataset_name`.
- * - Pattern: only alphanumeric characters and underscores.
+ * Dataset name validation constants matching `DatasetName` in `clp_rust_utils::dataset`.
+ * - Pattern: only Unicode letters, numbers, and underscores in the Basic Multilingual Plane.
  * - Max length: computed using the default table prefix.
  */
-const DATASET_NAME_PATTERN = "^\\w+$";
+const DATASET_NAME_PATTERN = /^(?:(?![\u{10000}-\u{10FFFF}])[\p{L}\p{N}_])+$/u;
 const DATASET_NAME_SEPARATOR_LEN = 1;
 const DATASET_NAME_MAX_LEN =
     MYSQL_TABLE_NAME_MAX_LEN -
@@ -37,8 +37,7 @@ const DATASET_NAME_MAX_LEN =
 /**
  * TypeBox schema for dataset name validation.
  */
-const DatasetNameSchema = Type.String({
-    pattern: DATASET_NAME_PATTERN,
+const DatasetNameSchema = Type.RegExp(DATASET_NAME_PATTERN, {
     maxLength: DATASET_NAME_MAX_LEN,
 });
 
