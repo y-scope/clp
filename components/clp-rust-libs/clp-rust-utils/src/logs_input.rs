@@ -219,6 +219,49 @@ impl LogsInputMountPoint {
             .ok_or(LogsInputError::UnsupportedName(checked_path))
     }
 
+    /// Converts a container path to its canonical path relative to the logs-input mount point.
+    ///
+    /// # Returns
+    ///
+    /// The canonical logs-input path on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`LogsInputError::RelativeContainerPath`] if `container_path` is relative.
+    /// * [`LogsInputError::UnsupportedName`] if the input or canonical mount-relative path isn't
+    ///   UTF-8 or contains a line break.
+    /// * [`LogsInputError::OutsideMountPoint`] if the canonical path isn't under the mount point.
+    /// * Forwards [`Self::canonicalize`]'s return values on failure.
+    pub fn canonical_input_path(
+        &self,
+        container_path: &Path,
+    ) -> Result<LogsInputPath, LogsInputError> {
+        if container_path.is_relative() {
+            return Err(LogsInputError::RelativeContainerPath(
+                container_path.to_path_buf(),
+            ));
+        }
+        if container_path
+            .to_str()
+            .is_none_or(|path| path.contains(['\n', '\r']))
+        {
+            return Err(LogsInputError::UnsupportedName(
+                container_path.to_path_buf(),
+            ));
+        }
+        let canonical_path = self.canonicalize(container_path, container_path)?;
+        let relative_path = canonical_path
+            .strip_prefix(&self.canonical_path)
+            .map_err(|_| LogsInputError::OutsideMountPoint(container_path.to_path_buf()))?;
+        let relative_path = relative_path
+            .to_str()
+            .ok_or_else(|| LogsInputError::UnsupportedName(canonical_path.clone()))?;
+        LogsInputPath::try_from(format!("/{relative_path}"))
+            .map_err(|_| LogsInputError::UnsupportedName(canonical_path))
+    }
+
     /// Lists the entries of the directory at a logs-input path under the mount point.
     ///
     /// # Returns

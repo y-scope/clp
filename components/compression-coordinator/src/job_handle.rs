@@ -1,4 +1,4 @@
-//! Handle for driving a single S3 compression job to completion.
+//! Handle for driving a single compression job to completion.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -9,10 +9,13 @@ use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
+use clp_rust_utils::job_config::FsInputConfig;
 use clp_rust_utils::job_config::InputConfig;
+use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
 use clp_rust_utils::s3::ObjectMetadata;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
+use clp_rust_utils::task_io::compression::FsInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
@@ -24,8 +27,11 @@ use sqlx::MySqlPool;
 
 use crate::Error;
 use crate::compression_job_submitter::CompressionJobOutcome;
-use crate::compression_job_submitter::S3CompressionJobSubmitter;
+use crate::compression_job_submitter::CompressionJobSubmitter;
+use crate::compression_job_submitter::CompressionManifest;
+use crate::input::discover_fs_entries;
 use crate::partition::CompressionInputBuilder;
+use crate::partition::FsSource;
 
 /// Options for a compression job running in Spider.
 pub struct SpiderOption {
@@ -35,14 +41,23 @@ pub struct SpiderOption {
     pub max_poll_backoff: Duration,
 }
 
-/// Handles the asynchronous submission of an S3 compression job and the retrieval of its result.
+/// Resources and execution options shared by compression job handles.
+pub struct CompressionJobHandleContext {
+    pub db_pool: MySqlPool,
+    pub db_config: Database,
+
+    /// The container's logs-input mount point, or `None` when filesystem input is unavailable.
+    pub logs_input_mount_point: Option<NonEmptyString>,
+    pub spider_option: SpiderOption,
+}
+
+/// Handles the asynchronous submission of a compression job and the retrieval of its result.
 ///
 /// # Type Parameters
 ///
 /// * `SubmitterType` - The type of the job submitter for Spider job submission.
-pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
-    db_pool: MySqlPool,
-    db_config: Database,
+pub struct CompressionJobHandle<SubmitterType: CompressionJobSubmitter> {
+    context: Arc<CompressionJobHandleContext>,
     compression_job_id: CompressionJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
@@ -51,57 +66,54 @@ pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
     clp_s_compression_option: ClpSCompressionOption,
     dataset: DatasetName,
     target_archive_size: u64,
-
-    spider_option: Arc<SpiderOption>,
 }
 
-impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterType> {
+impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType> {
     /// Factory function.
     ///
     /// # Returns
     ///
-    /// A newly created [`S3CompressionJobHandle`] for the given compression job, with the `clp-s`
+    /// A newly created [`CompressionJobHandle`] for the given compression job, with the `clp-s`
     /// compression options derived from `clp_io_config`'s output config.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::UnsupportedInputConfig`] if `clp_io_config`'s input config is not an
-    ///   [`InputConfig::S3ObjectMetadataInputConfig`].
+    /// * [`Error::UnsupportedInputConfig`] if `clp_io_config` requests direct S3 discovery.
     pub fn new(
-        db_pool: MySqlPool,
-        db_config: Database,
+        context: Arc<CompressionJobHandleContext>,
         compression_job_id: CompressionJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
         clp_io_config: ClpIoConfig,
-        spider_option: Arc<SpiderOption>,
     ) -> Result<Self, Error> {
         let input_config = clp_io_config.input;
-        let InputConfig::S3ObjectMetadataInputConfig {
-            config: s3_object_metadata_config,
-        } = &input_config
-        else {
-            return Err(Error::UnsupportedInputConfig);
+        let (dataset, timestamp_key, unstructured) = match &input_config {
+            InputConfig::S3ObjectMetadataInputConfig { config } => (
+                config.dataset.clone(),
+                config.timestamp_key.clone(),
+                config.unstructured,
+            ),
+            InputConfig::FsInputConfig { config } => (
+                config.dataset.clone(),
+                config.timestamp_key.clone(),
+                config.unstructured,
+            ),
+            InputConfig::S3InputConfig { .. } => return Err(Error::UnsupportedInputConfig),
         };
-        let dataset = s3_object_metadata_config.dataset.clone();
 
         let output_config = clp_io_config.output;
         let clp_s_compression_option = ClpSCompressionOption {
             target_encoded_size: output_config.target_segment_size
                 + output_config.target_dictionaries_size,
             compression_level: output_config.compression_level,
-            timestamp_key: s3_object_metadata_config
-                .timestamp_key
-                .clone()
-                .map(String::from),
-            unstructured: s3_object_metadata_config.unstructured,
+            timestamp_key: timestamp_key.map(String::from),
+            unstructured,
         };
 
         Ok(Self {
-            db_pool,
-            db_config,
+            context,
             compression_job_id,
             job_submitter,
             resource_group_id,
@@ -109,7 +121,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             clp_s_compression_option,
             dataset,
             target_archive_size: output_config.target_archive_size,
-            spider_option,
         })
     }
 
@@ -171,27 +182,64 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
-    /// * Forwards [`Self::upsert_metadata_tables`]'s return values on failure.
-    /// * Forwards [`S3CompressionJobSubmitter::submit_s3_compression_job`]'s return values on
-    ///   failure.
-    /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
+    /// * Forwards [`Self::prepare_s3_task_inputs`]'s return values on failure.
+    /// * Forwards [`Self::prepare_fs_task_inputs`]'s return values on failure.
+    /// * Forwards [`Self::submit`]'s return values on failure.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     async fn submit_and_wait(&self) -> Result<(), Error> {
-        let input_sources = self.prepare_task_inputs().await?;
+        let spider_job_id = match &self.input_config {
+            InputConfig::S3ObjectMetadataInputConfig { config } => {
+                self.submit(self.prepare_s3_task_inputs(config).await?)
+                    .await?
+            }
+            InputConfig::FsInputConfig { config } => {
+                self.submit(self.prepare_fs_task_inputs(config).await?)
+                    .await?
+            }
+            InputConfig::S3InputConfig { .. } => {
+                unreachable!("the input config is validated in the factory")
+            }
+        };
+        self.to_completion(spider_job_id).await
+    }
+
+    /// Submits the compression job and persists its Spider association.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `ManifestType` - The concrete input manifest consumed by each compression task.
+    ///
+    /// # Returns
+    ///
+    /// The submitted Spider job ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::upsert_metadata_tables`]'s return values on failure.
+    /// * Forwards [`CompressionJobSubmitter::submit_compression_job`]'s return values on failure.
+    /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
+    async fn submit<ManifestType: CompressionManifest>(
+        &self,
+        input_sources: Vec<(ManifestType, ExecutionPolicy)>,
+    ) -> Result<SpiderJobId, Error> {
         let num_tasks = input_sources.len();
 
         self.upsert_metadata_tables().await?;
 
         let spider_job_id = self
             .job_submitter
-            .submit_s3_compression_job(
+            .submit_compression_job(
                 self.compression_job_id,
                 self.resource_group_id,
                 self.clp_s_compression_option.clone(),
                 self.dataset.clone(),
                 input_sources,
-                self.spider_option.commit_task_execution_policy.clone(),
+                self.context
+                    .spider_option
+                    .commit_task_execution_policy
+                    .clone(),
             )
             .await?;
         tracing::info!(
@@ -207,7 +255,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             "Compression job submission persisted.",
         );
 
-        self.to_completion(spider_job_id).await
+        Ok(spider_job_id)
     }
 
     /// Reports a compression job failure.
@@ -261,14 +309,14 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     /// * [`Error::NoTaskInputs`] if no compression task inputs are produced.
     /// * Forwards [`CompressionInputBuilder::add`]'s return values on failure.
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn prepare_task_inputs(&self) -> Result<Vec<(S3InputSource, ExecutionPolicy)>, Error> {
+    async fn prepare_s3_task_inputs(
+        &self,
+        config: &S3ObjectMetadataInputConfig,
+    ) -> Result<Vec<(S3InputSource, ExecutionPolicy)>, Error> {
         // NOTE: We batch the metadata fetch to avoid hitting the maximum placeholder limit of
         // MySQL.
         const FETCH_CHUNK_SIZE: usize = 1000;
 
-        let InputConfig::S3ObjectMetadataInputConfig { config } = &self.input_config else {
-            unreachable!("the input config is validated in the factory")
-        };
         if config.s3_object_metadata_ids.is_empty() {
             return Err(Error::NoS3ObjectMetadata(config.ingestion_job_id));
         }
@@ -310,7 +358,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
 
             let metadata_rows = query_builder
                 .build_query_as::<S3ObjectMetadataRow>()
-                .fetch_all(&self.db_pool)
+                .fetch_all(&self.context.db_pool)
                 .await?;
 
             let mut row_iter = metadata_rows.into_iter().peekable();
@@ -352,22 +400,75 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         Ok(manifests
             .into_iter()
             .map(|manifest| {
-                // NOTE: The timeout policy scales with the number of objects assigned to the task.
-                // Each object contributes three minutes to the soft timeout and five minutes to
-                // the hard timeout. This heuristic does not account for object size and can be
-                // refined in the future.
-                let num_objects = manifest.object_keys.len() as u64;
-                let execution_policy = ExecutionPolicy {
-                    max_num_retry: self.spider_option.compression_task_max_retry,
-                    timeout_policy: TimeoutPolicy {
-                        soft_timeout_ms: num_objects * 3 * 60 * 1000,
-                        hard_timeout_ms: num_objects * 5 * 60 * 1000,
-                    },
-                    ..ExecutionPolicy::default()
-                };
+                let execution_policy = self.task_execution_policy(manifest.object_keys.len());
                 (manifest, execution_policy)
             })
             .collect())
+    }
+
+    /// Discovers and partitions filesystem inputs and attaches each task's execution policy.
+    ///
+    /// # Returns
+    ///
+    /// Regular-file manifests paired with their execution policies on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::NoFsInputPaths`] if no input paths are requested.
+    /// * [`Error::InvalidConfiguration`] if no logs-input mount point is configured.
+    /// * [`Error::NoTaskInputs`] if the selection contains no regular files.
+    /// * Forwards [`discover_fs_entries`]'s return values on failure.
+    /// * Forwards [`CompressionInputBuilder::add`]'s return values on failure.
+    async fn prepare_fs_task_inputs(
+        &self,
+        config: &FsInputConfig,
+    ) -> Result<Vec<(FsInputSource, ExecutionPolicy)>, Error> {
+        if config.paths_to_compress.is_empty() {
+            return Err(Error::NoFsInputPaths);
+        }
+        let mount_point = self.context.logs_input_mount_point.clone().ok_or_else(|| {
+            Error::InvalidConfiguration(
+                "filesystem compression requires a configured logs-input mount point".to_owned(),
+            )
+        })?;
+        let entries = discover_fs_entries(mount_point, config.paths_to_compress.clone()).await?;
+        let mut input_builder = CompressionInputBuilder::new(FsSource, self.target_archive_size);
+        for entry in entries {
+            input_builder.add(entry)?;
+        }
+        let manifests = input_builder.build();
+        if manifests.is_empty() {
+            return Err(Error::NoTaskInputs);
+        }
+        Ok(manifests
+            .into_iter()
+            .map(|manifest| {
+                let execution_policy = self.task_execution_policy(manifest.file_paths.len());
+                (manifest, execution_policy)
+            })
+            .collect())
+    }
+
+    /// Derives a compression task's retry and timeout policy from its input count.
+    ///
+    /// # Returns
+    ///
+    /// The configured retry policy with timeouts scaled by at least one input.
+    fn task_execution_policy(&self, num_inputs: usize) -> ExecutionPolicy {
+        // NOTE: The timeout policy scales with at least one input. Each input contributes three
+        // minutes to the soft timeout and five minutes to the hard timeout. This heuristic does
+        // not account for input size and can be refined in the future.
+        let num_inputs = (num_inputs as u64).max(1);
+        ExecutionPolicy {
+            max_num_retry: self.context.spider_option.compression_task_max_retry,
+            timeout_policy: TimeoutPolicy {
+                soft_timeout_ms: num_inputs * 3 * 60 * 1000,
+                hard_timeout_ms: num_inputs * 5 * 60 * 1000,
+            },
+            ..ExecutionPolicy::default()
+        }
     }
 
     /// Ensures that the required metadata tables exist for the configured dataset.
@@ -383,8 +484,11 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::MetadataTableCreation`] if either table cannot be created.
     async fn upsert_metadata_tables(&self) -> Result<(), Error> {
-        let archives_table = self.db_config.archives_table_name(&self.dataset);
-        let column_metadata_table = self.db_config.column_metadata_table_name(&self.dataset);
+        let archives_table = self.context.db_config.archives_table_name(&self.dataset);
+        let column_metadata_table = self
+            .context
+            .db_config
+            .column_metadata_table_name(&self.dataset);
 
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS `{archives_table}` (
@@ -401,7 +505,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                 PRIMARY KEY (`pagination_id`)
             )"
         ))
-        .execute(&self.db_pool)
+        .execute(&self.context.db_pool)
         .await
         .map_err(|source| Error::MetadataTableCreation {
             table: archives_table,
@@ -415,7 +519,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                 PRIMARY KEY (`name`, `type`)
             )"
         ))
-        .execute(&self.db_pool)
+        .execute(&self.context.db_pool)
         .await
         .map_err(|source| Error::MetadataTableCreation {
             table: column_metadata_table,
@@ -458,7 +562,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         .bind(CompressionJobStatus::Running)
         .bind(num_tasks)
         .bind(self.compression_job_id)
-        .execute(&self.db_pool)
+        .execute(&self.context.db_pool)
         .await?;
 
         Ok(())
@@ -473,17 +577,17 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`S3CompressionJobSubmitter::run_s3_compression_job_to_completion`]'s return
-    ///   values on failure.
+    /// * Forwards [`CompressionJobSubmitter::run_compression_job_to_completion`]'s return values on
+    ///   failure.
     /// * Forwards [`Self::update_job_status`]'s return values on failure.
     /// * Forwards [`Self::get_job_status`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         let outcome = self
             .job_submitter
-            .run_s3_compression_job_to_completion(
+            .run_compression_job_to_completion(
                 spider_job_id,
-                self.spider_option.initial_poll_backoff,
-                self.spider_option.max_poll_backoff,
+                self.context.spider_option.initial_poll_backoff,
+                self.context.spider_option.max_poll_backoff,
             )
             .await?;
         tracing::info!(
@@ -544,7 +648,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             "SELECT `status` FROM `{COMPRESSION_JOBS_TABLE_NAME}` WHERE `id` = ?"
         ))
         .bind(self.compression_job_id)
-        .fetch_one(&self.db_pool)
+        .fetch_one(&self.context.db_pool)
         .await?;
 
         Ok(job_status)
@@ -570,7 +674,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         .bind(job_status)
         .bind(status_message)
         .bind(self.compression_job_id)
-        .execute(&self.db_pool)
+        .execute(&self.context.db_pool)
         .await?;
 
         Ok(())
