@@ -232,8 +232,12 @@ impl LogsInputMountPoint {
     /// * [`LogsInputError::RelativeContainerPath`] if `container_path` is relative.
     /// * [`LogsInputError::UnsupportedName`] if the input or canonical mount-relative path isn't
     ///   UTF-8 or contains a line break.
-    /// * [`LogsInputError::OutsideMountPoint`] if the canonical path isn't under the mount point.
     /// * Forwards [`Self::canonicalize`]'s return values on failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal containment invariant established by [`Self::canonicalize`] is
+    /// violated.
     pub fn canonical_input_path(
         &self,
         container_path: &Path,
@@ -254,7 +258,7 @@ impl LogsInputMountPoint {
         let canonical_path = self.canonicalize(container_path, container_path)?;
         let relative_path = canonical_path
             .strip_prefix(&self.canonical_path)
-            .map_err(|_| LogsInputError::OutsideMountPoint(container_path.to_path_buf()))?;
+            .expect("canonicalize should have verified containment within the mount point");
         let relative_path = relative_path
             .to_str()
             .ok_or_else(|| LogsInputError::UnsupportedName(canonical_path.clone()))?;
