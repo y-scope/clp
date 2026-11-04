@@ -5,3 +5,4 @@ rustflags = [
     "-Dclippy::pedantic",
     "-Aclippy::empty_enums",
 ]
+target-dir = "build/rust-targets"
