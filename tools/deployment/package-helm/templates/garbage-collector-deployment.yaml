@@ -68,7 +68,7 @@ spec:
                 "name" "tmp"
               ) | quote }}
               mountPath: "/var/tmp"
-            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+            {{- if eq .Values.global.archiveOutputStorageType "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "archives"
@@ -99,7 +99,7 @@ spec:
             "name" "tmp"
           ) | quote }}
           emptyDir: {}
-        {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+        {{- if eq .Values.global.archiveOutputStorageType "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
