@@ -39,7 +39,8 @@ pub trait ResultEncoder: Send + 'static {
     ///
     /// # Returns
     ///
-    /// The query results appended since the encoder was created or `take_batch` was last called.
+    /// The query results appended since the encoder was created or [`Self::take_batch`] was last
+    /// called.
     fn take_batch(&mut self) -> Self::Batch;
 }
 
