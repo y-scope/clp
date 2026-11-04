@@ -7,6 +7,15 @@ includes:
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
   yscope-log-viewer: "./yscope-log-viewer.yaml"
 
+env:
+  # Set the rust toolchain environment variables for inheritance by dependency builds (needed by
+  # log-surgeon's cargo build, which runs inside the CMake sub-tasks). Note that a taskfile's root
+  # env propagates to all transitively called tasks, but a task's env does not.
+  # Mirrors the contents of {{.G_RUST_TOOLCHAIN_ENV_FILE}}.
+  CARGO_HOME: "{{.G_CARGO_HOME}}"
+  RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
+  CARGO_TARGET_DIR: "{{.G_RUST_BUILD_DIR}}"
+
 vars:
   # Directories
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
