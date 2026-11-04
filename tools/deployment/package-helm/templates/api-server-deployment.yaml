@@ -63,6 +63,9 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            {{- if .Values.clpConfig.aws_config }}
+            - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
+            {{- end }}
             {{- if eq .Values.clpConfig.logs_input.type "fs" }}
             - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             {{- end }}
@@ -91,6 +94,9 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- if .Values.clpConfig.aws_config }}
+        - {{- include "clp.awsConfigVolume" . | nindent 10 }}
+        {{- end }}
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}
         - {{- include "clp.logsInputVolume" . | nindent 10 }}
         {{- end }}
