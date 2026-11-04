@@ -11,6 +11,7 @@ dnf install -y \
     libcurl-devel \
     mariadb-connector-c-devel \
     openssl-devel \
+    perl-core \
     zlib-devel \
     zlib-static
 
