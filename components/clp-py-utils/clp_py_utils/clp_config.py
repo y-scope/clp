@@ -1239,6 +1239,14 @@ class ClpConfig(BaseModel):
         return d
 
     @model_validator(mode="after")
+    def validate_unsupported_engines(self):
+        if self.package.storage_engine == StorageEngine.CLP:
+            raise ValueError(f"storage engine `{StorageEngine.CLP}` is no longer supported.")
+        if self.webui.query_engine == QueryEngine.CLP:
+            raise ValueError(f"query engine `{QueryEngine.CLP}` is no longer supported.")
+        return self
+
+    @model_validator(mode="after")
     def validate_log_ingestor_config(self):
         if self.log_ingestor is None:
             return self
@@ -1310,28 +1318,6 @@ class ClpConfig(BaseModel):
             raise ValueError(
                 f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
-        return self
-
-    @model_validator(mode="after")
-    def validate_query_engine_package_compatibility(self):
-        query_engine = self.webui.query_engine
-        storage_engine = self.package.storage_engine
-
-        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
-            if query_engine != storage_engine:
-                raise ValueError(
-                    f"query_engine '{query_engine}' is only compatible with "
-                    f"storage_engine '{query_engine}'."
-                )
-        elif query_engine == QueryEngine.PRESTO:
-            if storage_engine != StorageEngine.CLP_S:
-                raise ValueError(
-                    f"query_engine '{QueryEngine.PRESTO}' is only compatible with "
-                    f"storage_engine '{StorageEngine.CLP_S}'."
-                )
-        else:
-            raise ValueError(f"Unsupported query_engine '{query_engine}'.")
-
         return self
 
     @model_validator(mode="after")
