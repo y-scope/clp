@@ -39,11 +39,11 @@ pub trait ResultEncoder: Send + 'static {
     ///
     /// # Returns
     ///
-    /// The query results appended since the previous call.
+    /// The query results appended since the encoder was created or `take_batch` was last called.
     fn take_batch(&mut self) -> Self::Batch;
 }
 
-/// A query result emitted by a listener session.
+/// A query result in the batches of a [`QueryResultEncoding`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct QueryResult {
     /// The ID of the archive that produced the result.
@@ -105,7 +105,7 @@ mod tests {
     use super::ResultEncoding;
 
     #[test]
-    fn query_result_encoder_preserves_order_and_starts_next_batch_empty() -> Result<()> {
+    fn query_result_encoder_stamps_the_archive_id_and_starts_next_batch_empty() -> Result<()> {
         const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
         let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
