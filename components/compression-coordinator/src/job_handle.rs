@@ -392,16 +392,19 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
             }
         }
 
-        let manifests = input_builder.build();
-        if manifests.is_empty() {
+        let partitions = input_builder.build();
+        if partitions.is_empty() {
             return Err(Error::NoTaskInputs);
         }
 
-        Ok(manifests
+        Ok(partitions
             .into_iter()
-            .map(|manifest| {
-                let execution_policy = self.task_execution_policy(manifest.object_keys.len());
-                (manifest, execution_policy)
+            .map(|partition| {
+                let execution_policy = self.task_execution_policy(
+                    partition.estimated_uncompressed_size,
+                    partition.input.object_keys.len(),
+                );
+                (partition.input, execution_policy)
             })
             .collect())
     }
@@ -438,35 +441,38 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
         for entry in entries {
             input_builder.add(entry)?;
         }
-        let manifests = input_builder.build();
-        if manifests.is_empty() {
+        let partitions = input_builder.build();
+        if partitions.is_empty() {
             return Err(Error::NoTaskInputs);
         }
-        Ok(manifests
+        Ok(partitions
             .into_iter()
-            .map(|manifest| {
-                let execution_policy = self.task_execution_policy(manifest.file_paths.len());
-                (manifest, execution_policy)
+            .map(|partition| {
+                let execution_policy = self.task_execution_policy(
+                    partition.estimated_uncompressed_size,
+                    partition.input.file_paths.len(),
+                );
+                (partition.input, execution_policy)
             })
             .collect())
     }
 
-    /// Derives a compression task's retry and timeout policy from its input count.
+    /// Derives a compression task's retry and timeout policy from its input size and count.
     ///
     /// # Returns
     ///
-    /// The configured retry policy with timeouts scaled by at least one input.
-    fn task_execution_policy(&self, num_inputs: usize) -> ExecutionPolicy {
-        // NOTE: The timeout policy scales with at least one input. Each input contributes three
-        // minutes to the soft timeout and five minutes to the hard timeout. This heuristic does
-        // not account for input size and can be refined in the future.
-        let num_inputs = (num_inputs as u64).max(1);
+    /// The configured retry policy with size-based timeouts and latency for at least one input.
+    fn task_execution_policy(
+        &self,
+        estimated_uncompressed_size: u64,
+        num_inputs: usize,
+    ) -> ExecutionPolicy {
         ExecutionPolicy {
             max_num_retry: self.context.spider_option.compression_task_max_retry,
-            timeout_policy: TimeoutPolicy {
-                soft_timeout_ms: num_inputs * 3 * 60 * 1000,
-                hard_timeout_ms: num_inputs * 5 * 60 * 1000,
-            },
+            timeout_policy: compression_timeout_policy(
+                estimated_uncompressed_size,
+                num_inputs as u64,
+            ),
             ..ExecutionPolicy::default()
         }
     }
@@ -690,4 +696,118 @@ struct S3ObjectMetadataRow {
     bucket: String,
     key: String,
     size: u64,
+}
+
+fn compression_timeout_policy(estimated_uncompressed_size: u64, num_files: u64) -> TimeoutPolicy {
+    const SOFT_THROUGHPUT_BYTES_PER_SEC: u64 = 40 * 1024 * 1024;
+    const HARD_THROUGHPUT_BYTES_PER_SEC: u64 = 8 * 1024 * 1024;
+    const FILE_LATENCY_MS: u64 = 1000;
+    const MIN_TIMEOUT_MS: u64 = 100;
+    const MAX_TIMEOUT_MS: u64 = 24 * 60 * 60 * 1000;
+
+    let latency_ms = num_files.max(1).saturating_mul(FILE_LATENCY_MS);
+    let timeout_ms = |throughput| {
+        estimated_uncompressed_size
+            .saturating_mul(1000)
+            .div_ceil(throughput)
+            .saturating_add(latency_ms)
+    };
+    let soft_timeout_ms =
+        timeout_ms(SOFT_THROUGHPUT_BYTES_PER_SEC).clamp(MIN_TIMEOUT_MS, MAX_TIMEOUT_MS - 1);
+    let hard_timeout_ms =
+        timeout_ms(HARD_THROUGHPUT_BYTES_PER_SEC).clamp(soft_timeout_ms + 1, MAX_TIMEOUT_MS);
+    TimeoutPolicy {
+        soft_timeout_ms,
+        hard_timeout_ms,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clp_rust_utils::logs_input::LogsInputPath;
+    use spider_core::task::TaskGraph;
+    use spider_core::task::TdlContext;
+    use spider_core::task::TerminationTaskDescriptor;
+
+    use super::*;
+    use crate::partition::FsEntry;
+    use crate::partition::FsSource;
+
+    #[test]
+    fn compression_timeouts_scale_with_size_and_file_latency() -> anyhow::Result<()> {
+        for (size, num_files, soft_timeout_ms, hard_timeout_ms) in [
+            (0, 0, 1000, 1001),
+            (0, 1, 1000, 1001),
+            (1, 1, 1001, 1002),
+            (40 * 1024 * 1024, 2, 3000, 7000),
+            (1024 * 1024 * 1024 * 1024, 1, 26_215_400, 86_400_000),
+            (u64::MAX, 1, 86_399_999, 86_400_000),
+        ] {
+            let policy = compression_timeout_policy(size, num_files);
+            assert_eq!(
+                policy,
+                TimeoutPolicy {
+                    soft_timeout_ms,
+                    hard_timeout_ms
+                }
+            );
+            TaskGraph::new(
+                Some(TerminationTaskDescriptor {
+                    tdl_context: TdlContext {
+                        package: "clp".to_owned(),
+                        task_func: "compression::commit".to_owned(),
+                    },
+                    execution_policy: Some(ExecutionPolicy {
+                        timeout_policy: policy,
+                        ..ExecutionPolicy::default()
+                    }),
+                }),
+                None,
+            )?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn full_filesystem_partition_has_valid_size_based_timeouts() -> anyhow::Result<()> {
+        const TARGET_ARCHIVE_SIZE: u64 = 256 * 1024 * 1024;
+        const NUM_FILES: u64 = 4096;
+
+        let mut builder = CompressionInputBuilder::new(FsSource, TARGET_ARCHIVE_SIZE);
+        for index in 0..NUM_FILES {
+            builder.add(FsEntry {
+                path: LogsInputPath::try_from(format!("/logs/{index}"))?,
+                size: TARGET_ARCHIVE_SIZE / NUM_FILES,
+            })?;
+        }
+        let partitions = builder.build();
+        assert_eq!(partitions.len(), 1);
+        let partition = &partitions[0];
+        assert_eq!(partition.input.file_paths.len() as u64, NUM_FILES);
+        let policy = compression_timeout_policy(
+            partition.estimated_uncompressed_size,
+            partition.input.file_paths.len() as u64,
+        );
+        assert_eq!(
+            policy,
+            TimeoutPolicy {
+                soft_timeout_ms: 4_102_400,
+                hard_timeout_ms: 4_128_000,
+            }
+        );
+        TaskGraph::new(
+            Some(TerminationTaskDescriptor {
+                tdl_context: TdlContext {
+                    package: "clp".to_owned(),
+                    task_func: "compression::commit".to_owned(),
+                },
+                execution_policy: Some(ExecutionPolicy {
+                    timeout_policy: policy,
+                    ..ExecutionPolicy::default()
+                }),
+            }),
+            None,
+        )?;
+        Ok(())
+    }
 }
