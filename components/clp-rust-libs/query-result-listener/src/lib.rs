@@ -1,5 +1,6 @@
 //! Receives the results that `clp-s` query tasks stream over TCP.
 
+pub mod encoding;
 mod error;
 pub mod protocol;
 
