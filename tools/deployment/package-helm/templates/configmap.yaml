@@ -1,5 +1,11 @@
 {{- $logIngestorEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
     (eq .Values.clpConfig.logs_input.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
+{{- if not (has .Values.global.archiveOutputStorageType (list "fs" "s3")) }}
+{{- fail (printf
+  "global.archiveOutputStorageType (%v) must be \"fs\" or \"s3\""
+  .Values.global.archiveOutputStorageType
+) }}
+{{- end }}
 apiVersion: "v1"
 kind: "ConfigMap"
 metadata:
@@ -21,15 +27,14 @@ data:
     {{- end }}
     archive_output:
       compression_level: {{ .Values.clpConfig.archive_output.compression_level | int }}
-      {{- with .Values.clpConfig.archive_output.storage }}
       storage:
-        {{- if eq .type "fs" }}
+        {{- if eq .Values.global.archiveOutputStorageType "fs" }}
         directory: "/var/data/archives"
         type: "fs"
-        {{- else if eq .type "s3" }}
+        {{- else if eq .Values.global.archiveOutputStorageType "s3" }}
         type: "s3"
         staging_directory: "/var/data/staged-archives"
-        {{- with .s3_config }}
+        {{- with .Values.clpConfig.archive_output.storage.s3_config }}
         s3_config:
           {{- if .endpoint_url }}
           endpoint_url: {{ .endpoint_url | quote }}
@@ -54,9 +59,8 @@ data:
               {{- end }}
             {{- end }}
           {{- end }}{{/* with .aws_authentication */}}
-        {{- end }}{{/* with .s3_config */}}
-        {{- end }}{{/* if eq .type "fs" */}}
-      {{- end }}{{/* with .Values.clpConfig.archive_output.storage */}}
+        {{- end }}{{/* with .Values.clpConfig.archive_output.storage.s3_config */}}
+        {{- end }}{{/* if eq .Values.global.archiveOutputStorageType "fs" */}}
       {{- if .Values.clpConfig.archive_output.retention_period }}
       retention_period: {{ .Values.clpConfig.archive_output.retention_period | int }}
       {{- else }}
@@ -315,11 +319,6 @@ data:
         "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
         "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
 
-        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
-        "LogsInputRootDir": "/mnt/logs",
-        {{- else }}
-        "LogsInputRootDir": null,
-        {{- end }}
         "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
         "LogIngestorEnabled": {{ $logIngestorEnabled }},
 
@@ -336,12 +335,6 @@ data:
         "PrestoMaxNumSearchResults":
           {{ .Values.clpConfig.webui.presto_max_num_search_results | int }},
 
-        "SqlDbClpArchivesTableName": "clp_archives",
-        "SqlDbClpDatasetsTableName": "clp_datasets",
-        "SqlDbClpFilesTableName": "clp_files",
-        "SqlDbClpTablePrefix": "clp_",
-        "SqlDbCompressionJobsTableName": "compression_jobs",
-
         "MongoDbSearchResultsMetadataCollectionName":
           {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
       },
@@ -353,18 +346,9 @@ data:
         "LogIngestorUrl": null,
         {{- end }}
 
-        "SqlDbHost": "{{ include "clp.databaseHost" . }}",
-        "SqlDbName": {{ .Values.clpConfig.database.names.clp | quote }},
-        "SqlDbPort": {{ include "clp.databasePort" . | int }},
-
-        "SqlDbQueryJobsTableName": "query_jobs",
-
         "MongoDbHost": "{{ include "clp.resultsCacheHost" . }}",
         "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
         "MongoDbPort": {{ include "clp.resultsCachePort" . | int }},
-
-        "MongoDbStreamFilesCollectionName":
-          {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
 
         "ClientDir": "/opt/clp/var/www/webui/client",
         "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
@@ -373,39 +357,6 @@ data:
         {{- else }}
         "StreamFilesDir": null,
         {{- end }}
-
-        {{- if eq .Values.clpConfig.stream_output.storage.type "s3" }}
-        {{- with .Values.clpConfig.stream_output.storage.s3_config }}
-        "StreamFilesS3PathPrefix": {{ printf "%s/%s" .bucket .key_prefix | quote }},
-        {{- if eq .aws_authentication.type "profile" }}
-        "StreamFilesS3Profile": {{ .aws_authentication.profile | quote }},
-        {{- else }}
-        "StreamFilesS3Profile": null,
-        {{- end }}
-        {{- if .region_code }}
-        "StreamFilesS3Region": {{ .region_code | quote }},
-        {{- else }}
-        "StreamFilesS3Region": null,
-        {{- end }}
-        {{- end }}{{/* with .Values.clpConfig.stream_output.storage.s3_config */}}
-        {{- else }}
-        "StreamFilesS3PathPrefix": null,
-        "StreamFilesS3Profile": null,
-        "StreamFilesS3Region": null,
-        {{- end }}
-        "StreamTargetUncompressedSize":
-          {{ .Values.clpConfig.stream_output.target_uncompressed_size | int }},
-
-        "ArchiveOutputCompressionLevel":
-          {{ .Values.clpConfig.archive_output.compression_level | int }},
-        "ArchiveOutputTargetArchiveSize":
-          {{ .Values.clpConfig.archive_output.target_archive_size | int }},
-        "ArchiveOutputTargetDictionariesSize":
-          {{ .Values.clpConfig.archive_output.target_dictionaries_size | int }},
-        "ArchiveOutputTargetEncodedFileSize":
-          {{ .Values.clpConfig.archive_output.target_encoded_file_size | int }},
-        "ArchiveOutputTargetSegmentSize":
-          {{ .Values.clpConfig.archive_output.target_segment_size | int }},
 
         {{- if .Values.clpConfig.presto }}
         "PrestoHost": "{{ include "clp.prestoHost" . }}",
@@ -470,7 +421,7 @@ data:
   presto-worker-catalog-clp.properties: |
     connector.name=clp
     {{- with $.Values.clpConfig.archive_output.storage }}
-    {{- if eq .type "s3" }}
+    {{- if eq $.Values.global.archiveOutputStorageType "s3" }}
     clp.storage-type=s3
     clp.s3-auth-provider=clp_package
     clp.s3-access-key-id={{ .s3_config.aws_authentication.credentials.access_key_id }}
@@ -481,7 +432,7 @@ data:
     clp.s3-end-point=https://s3.{{ .s3_config.region_code }}.amazonaws.com
     {{- end }}
     clp.s3-secret-access-key={{ .s3_config.aws_authentication.credentials.secret_access_key }}
-    {{- end }}{{/* if eq .type "s3" */}}
+    {{- end }}{{/* if eq $.Values.global.archiveOutputStorageType "s3" */}}
     {{- end }}{{/* with $.Values.clpConfig.archive_output.storage */}}
 
   presto-worker-config-config.properties: |
