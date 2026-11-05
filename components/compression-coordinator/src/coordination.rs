@@ -41,16 +41,15 @@ use tokio_util::sync::CancellationToken;
 use tonic::transport::Endpoint;
 
 use crate::Error;
-use crate::job_handle::S3CompressionJobHandle;
+use crate::job_handle::CompressionJobHandle;
+use crate::job_handle::CompressionJobHandleContext;
 use crate::job_handle::SpiderOption;
 
 /// Coordinator for fetching new compression jobs and submitting them to Spider.
 pub struct Coordinator {
     resource_group_id: ResourceGroupId,
     spider_client: SpiderClient,
-    db_pool: sqlx::MySqlPool,
-    db_config: DatabaseConfig,
-    spider_option: Arc<SpiderOption>,
+    context: Arc<CompressionJobHandleContext>,
     is_first_fetch: bool,
     job_polling_interval: Duration,
     cancellation_token: CancellationToken,
@@ -116,7 +115,7 @@ impl Coordinator {
                 tracing::error!(error = % e, "Failed to add or verify resource group.");
             })?;
 
-        let spider_option = Arc::new(SpiderOption {
+        let spider_option = SpiderOption {
             compression_task_max_retry: coordinator_config.compression_task_max_retry,
             commit_task_execution_policy: ExecutionPolicy {
                 max_num_instances: 1,
@@ -138,16 +137,18 @@ impl Coordinator {
                     .max_backoff_millisecs
                     .get(),
             ),
-        });
+        };
 
         let cancellation_token = CancellationToken::new();
 
         let coordinator = Self {
             resource_group_id,
             spider_client,
-            db_pool,
-            db_config,
-            spider_option,
+            context: Arc::new(CompressionJobHandleContext {
+                db_pool,
+                db_config,
+                spider_option,
+            }),
             is_first_fetch: true,
             job_polling_interval: Duration::from_millis(
                 coordinator_config.job_polling_interval_millisecs.get(),
@@ -246,7 +247,7 @@ impl Coordinator {
             .bind(CompressionJobStatus::Failed)
             .bind(status_msg)
             .bind(job_id)
-            .execute(&self.db_pool)
+            .execute(&self.context.db_pool)
             .await
         {
             tracing::error!(
@@ -261,9 +262,8 @@ impl Coordinator {
     /// by the job-handler semaphore.
     ///
     /// A job whose config cannot be deserialized is marked [`CompressionJobStatus::Failed`] and
-    /// skipped; a job whose handle cannot be constructed is skipped as well (and marked
-    /// [`CompressionJobStatus::Failed`] unless its input config is unsupported, in which case it is
-    /// left for the legacy Celery-based compression scheduler).
+    /// skipped; a job whose handle cannot be constructed is also marked
+    /// [`CompressionJobStatus::Failed`] and skipped.
     ///
     /// # Returns
     ///
@@ -325,7 +325,7 @@ impl Coordinator {
                     tracing::error!(
                         error = % e,
                         job_id = % job_id,
-                        "Failed to schedule S3 compression job."
+                        "Failed to schedule compression job."
                     );
                 });
             });
@@ -347,7 +347,7 @@ impl Coordinator {
             return Ok(());
         }
 
-        let mut tx = self.db_pool.begin().await?;
+        let mut tx = self.context.db_pool.begin().await?;
         for chunk in job_ids.chunks(1000) {
             let mut query_builder = sqlx::QueryBuilder::<sqlx::MySql>::new(formatcp!(
                 "UPDATE `{table}` SET `dispatch_time` = COALESCE(`dispatch_time`, \
@@ -366,55 +366,43 @@ impl Coordinator {
         Ok(())
     }
 
-    /// Constructs an [`S3CompressionJobHandle`] for the given job.
+    /// Constructs a [`CompressionJobHandle`] for the given job.
     ///
-    /// A construction failure is logged, and the job is marked [`CompressionJobStatus::Failed`] for
-    /// any failure other than an unsupported input config, which is only warned and left for
-    /// another handler.
+    /// A construction failure is logged, and the job is marked [`CompressionJobStatus::Failed`].
     ///
     /// # Returns
     ///
-    /// The constructed [`S3CompressionJobHandle`] on success.
+    /// The constructed [`CompressionJobHandle`] on success.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`S3CompressionJobHandle::new`]'s return values on failure.
+    /// * Forwards [`CompressionJobHandle::new`]'s return values on failure.
     async fn create_job_handle(
         &self,
         job_id: CompressionJobId,
         clp_io_config: ClpIoConfig,
-    ) -> Result<S3CompressionJobHandle<SpiderClient>, Error> {
-        let result = S3CompressionJobHandle::new(
-            self.db_pool.clone(),
-            self.db_config.clone(),
+    ) -> Result<CompressionJobHandle<SpiderClient>, Error> {
+        let result = CompressionJobHandle::new(
+            self.context.clone(),
             job_id,
             self.spider_client.clone(),
             self.resource_group_id,
             clp_io_config,
-            self.spider_option.clone(),
         );
 
         if let Err(e) = &result {
-            if matches!(e, Error::UnsupportedInputConfig) {
-                tracing::warn!(
-                    error = % e,
-                    job_id = % job_id,
-                    "Unsupported input config. Skipping."
-                );
-            } else {
-                tracing::error!(
-                    error = % e,
-                    job_id = % job_id,
-                    "Failed to create S3 job handle. Skipping."
-                );
-                self.mark_job_failed(
-                    job_id,
-                    &format!("Failed to create the compression job handle: {e}"),
-                )
-                .await;
-            }
+            tracing::error!(
+                error = % e,
+                job_id = % job_id,
+                "Failed to create compression job handle. Skipping."
+            );
+            self.mark_job_failed(
+                job_id,
+                &format!("Failed to create the compression job handle: {e}"),
+            )
+            .await;
         }
 
         result
@@ -470,7 +458,7 @@ impl Coordinator {
                 )
         };
 
-        let rows = query.fetch_all(&self.db_pool).await?;
+        let rows = query.fetch_all(&self.context.db_pool).await?;
 
         Ok(rows)
     }
@@ -506,7 +494,7 @@ impl Coordinator {
         let mut recovery_context = Vec::new();
         for row in sqlx::query_as::<_, RunningJobRowProjection>(QUERY)
             .bind(CompressionJobStatus::Running)
-            .fetch_all(&self.db_pool)
+            .fetch_all(&self.context.db_pool)
             .await?
         {
             let clp_io_config: ClpIoConfig =
