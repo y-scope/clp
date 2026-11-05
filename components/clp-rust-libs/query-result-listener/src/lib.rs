@@ -8,6 +8,15 @@
     )
 )]
 mod connection;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "the TCP listener that runs the connection handler comes in a later change"
+    )
+)]
+mod cursor;
+pub mod encoding;
 mod error;
 pub mod protocol;
 #[cfg_attr(
