@@ -1,7 +1,9 @@
 #ifndef CLP_S_SEARCH_OREXPR_HPP
 #define CLP_S_SEARCH_OREXPR_HPP
 
-#include "Expression.hpp"
+#include <memory>
+
+#include <clp_s/search/ast/Expression.hpp>
 
 namespace clp_s::search::ast {
 /**
@@ -17,7 +19,8 @@ public:
      * @param parent parent this expression is attached to
      * @return A newly created Or expression
      */
-    static std::shared_ptr<Expression> create(bool inverted = false, Expression* parent = nullptr);
+    [[nodiscard]] static auto create(bool inverted = false, Expression* parent = nullptr)
+            -> std::shared_ptr<Expression>;
 
     /**
      * Create an Or expression with two children
@@ -27,26 +30,36 @@ public:
      * @param parent parent this expression is attached to
      * @return A newly created Or expression
      */
-    static std::shared_ptr<Expression> create(
+    [[nodiscard]] static auto create(
             std::shared_ptr<Expression>& op1,
             std::shared_ptr<Expression>& op2,
             bool inverted = false,
             Expression* parent = nullptr
-    );
+    ) -> std::shared_ptr<Expression>;
+
+    // Delete copy assignment operator
+    auto operator=(OrExpr const&) -> OrExpr& = delete;
+
+    // Delete move constructor and assignment operator
+    OrExpr(OrExpr&&) = delete;
+    auto operator=(OrExpr&&) -> OrExpr& = delete;
+
+    // Destructor
+    ~OrExpr() override = default;
 
     // Methods inherited from Value
-    void print() const override;
+    auto print() const -> void override;
 
     // Methods inherited from Expression
-    bool has_only_expression_operands() override { return true; }
+    [[nodiscard]] auto has_only_expression_operands() -> bool override { return true; }
 
-    std::shared_ptr<Expression> copy() const override;
+    [[nodiscard]] auto copy() const -> std::shared_ptr<Expression> override;
 
 private:
-    // Constructor
+    // Constructors
     explicit OrExpr(bool inverted = false, Expression* parent = nullptr);
 
-    OrExpr(OrExpr const&);
+    OrExpr(OrExpr const&) = default;
 };
 }  // namespace clp_s::search::ast
 

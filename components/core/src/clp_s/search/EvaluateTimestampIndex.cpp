@@ -1,11 +1,14 @@
 #include "EvaluateTimestampIndex.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "ast/AndExpr.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
-#include "ast/FilterOperation.hpp"
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/TimestampLiteral.hpp"
@@ -13,7 +16,6 @@
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
-using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::TimestampLiteral;
@@ -22,15 +24,16 @@ namespace clp_s::search {
 constexpr literal_type_bitmask_t cTimestampTypes
         = search::ast::cIntegralTypes | search::ast::LiteralType::TimestampT;
 
-EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& expr) {
+auto EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& expr) -> EvaluatedValue {
     if (std::dynamic_pointer_cast<OrExpr>(expr)) {
         bool any_unkown = false;
         for (auto it = expr->op_begin(); it != expr->op_end(); it++) {
             auto sub_expr = std::static_pointer_cast<Expression>(*it);
-            EvaluatedValue ret = run(sub_expr);
+            auto const ret = run(sub_expr);
             if (ret == EvaluatedValue::True) {
                 return expr->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
-            } else if (ret == EvaluatedValue::Unknown) {
+            }
+            if (ret == EvaluatedValue::Unknown) {
                 any_unkown = true;
             }
         }
@@ -40,14 +43,16 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
         }
         // must have been all false
         return expr->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
-    } else if (std::dynamic_pointer_cast<AndExpr>(expr)) {
+    }
+    if (std::dynamic_pointer_cast<AndExpr>(expr)) {
         bool any_unkown = false;
         for (auto it = expr->op_begin(); it != expr->op_end(); it++) {
             auto sub_expr = std::static_pointer_cast<Expression>(*it);
-            EvaluatedValue ret = run(sub_expr);
+            auto const ret = run(sub_expr);
             if (ret == EvaluatedValue::False) {
                 return expr->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
-            } else if (ret == EvaluatedValue::Unknown) {
+            }
+            if (ret == EvaluatedValue::Unknown) {
                 any_unkown = true;
             }
         }
@@ -57,8 +62,13 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
         }
         // must have been all true
         return expr->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
-    } else if (auto filter = std::dynamic_pointer_cast<FilterExpr>(expr)) {
-        auto column = filter->get_column();
+    }
+    auto filter = std::dynamic_pointer_cast<FilterExpr>(expr);
+    if (nullptr == filter) {
+        return EvaluatedValue::Unknown;
+    }
+    {
+        auto column{filter->get_column()};
         if (false == column->matches_any(cTimestampTypes)) {
             return EvaluatedValue::Unknown;
         }
@@ -127,14 +137,14 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
 
             if (ret == EvaluatedValue::True) {
                 return filter->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
-            } else if (ret == EvaluatedValue::False) {
+            }
+            if (ret == EvaluatedValue::False) {
                 return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
             }
             return EvaluatedValue::Unknown;
         }
         return EvaluatedValue::Unknown;
-    } else {
-        return EvaluatedValue::Unknown;
     }
+    return EvaluatedValue::Unknown;
 }
 }  // namespace clp_s::search

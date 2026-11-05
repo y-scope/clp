@@ -24,7 +24,7 @@ enum LiteralType : uint32_t {
     NullT = 1 << 6,
     TimestampT = 1 << 7,
     TypesEnd = 1 << 8,
-    UnknownT = ((uint32_t)1) << 31
+    UnknownT = static_cast<uint32_t>(1) << 31
 };
 
 using literal_type_bitmask_t = std::underlying_type_t<LiteralType>;
@@ -58,7 +58,7 @@ public:
      * @param type the enum value being turned in a string
      * @return A string representing the enum value
      */
-    static std::string type_to_string(LiteralType type) {
+    static auto type_to_string(LiteralType type) -> std::string {
         switch (type) {
             case LiteralType::IntegerT:
                 return "int";
@@ -88,25 +88,29 @@ public:
      * @param op the FilterOperation operating on the Literal
      * @return true if cast is successful
      */
-    virtual bool as_clp_string(std::string& ret, FilterOperation op) { return false; }
+    virtual auto as_clp_string(std::string& /*ret*/, FilterOperation /*op*/) -> bool {
+        return false;
+    }
 
-    virtual bool as_var_string(std::string& ret, FilterOperation op) { return false; }
+    virtual auto as_var_string(std::string& /*ret*/, FilterOperation /*op*/) -> bool {
+        return false;
+    }
 
-    virtual bool as_float(double& ret, FilterOperation op) { return false; }
+    virtual auto as_float(double& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
-    virtual bool as_int(int64_t& ret, FilterOperation op) { return false; }
+    virtual auto as_int(int64_t& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
-    virtual bool as_bool(bool& ret, FilterOperation op) { return false; }
+    virtual auto as_bool(bool& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
-    virtual bool as_null(FilterOperation op) { return false; }
+    virtual auto as_null(FilterOperation /*op*/) -> bool { return false; }
 
-    inline bool as_array(std::string& ret, FilterOperation op) {
+    auto as_array(std::string& ret, FilterOperation op) -> bool {
         return as_var_string(ret, op) || as_clp_string(ret, op);
     }
 
-    virtual bool as_timestamp() { return false; }
+    virtual auto as_timestamp() -> bool { return false; }
 
-    virtual bool as_any(FilterOperation op) { return false; }
+    virtual auto as_any(FilterOperation /*op*/) -> bool { return false; }
 };
 }  // namespace clp_s::search::ast
 

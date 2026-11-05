@@ -136,7 +136,6 @@ auto ValueLiteral::create_from_string(std::string_view v) -> std::shared_ptr<Lit
     std::optional<double> float_option;
     std::optional<bool> bool_option;
     std::optional<std::pair<int64_t, int64_t>> int_bounds_option;
-    std::optional<int64_t> int_upper_bound_option;
     if (auto const parsed_int_option{parse_number<int64_t>(str)}; parsed_int_option.has_value()) {
         types |= cIntegralTypes | LiteralType::TimestampT;
         float_option = static_cast<double>(parsed_int_option.value());

@@ -32,7 +32,7 @@ public:
      *
      * This hook is meant to be used when debugging in gdb.
      */
-    virtual void print() const = 0;
+    virtual auto print() const -> void = 0;
 
 protected:
     /**

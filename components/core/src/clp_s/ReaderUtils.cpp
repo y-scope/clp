@@ -6,11 +6,15 @@
 #include <string_view>
 
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
+#include <clp_s/TraceableException.hpp>
+#include <clp_s/ZstdDecompressor.hpp>
 
 namespace clp_s {
-std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) {
+auto ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) -> std::shared_ptr<SchemaTree> {
     ZstdDecompressor schema_tree_decompressor;
     std::shared_ptr<SchemaTree> tree = std::make_shared<SchemaTree>();
 
@@ -55,7 +59,7 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        tree->add_node(parent_id, (NodeType)node_type, key);
+        tree->add_node(parent_id, static_cast<NodeType>(node_type), key);
     }
 
     schema_tree_decompressor.close();
@@ -64,31 +68,29 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& 
     return tree;
 }
 
-std::shared_ptr<VariableDictionaryReader> ReaderUtils::get_variable_dictionary_reader(
-        ArchiveReaderAdaptor& adaptor
-) {
+auto ReaderUtils::get_variable_dictionary_reader(ArchiveReaderAdaptor& adaptor)
+        -> std::shared_ptr<VariableDictionaryReader> {
     auto reader = std::make_shared<VariableDictionaryReader>(adaptor);
     reader->open(constants::cArchiveVarDictFile);
     return reader;
 }
 
-std::shared_ptr<LogTypeDictionaryReader> ReaderUtils::get_log_type_dictionary_reader(
-        ArchiveReaderAdaptor& adaptor
-) {
+auto ReaderUtils::get_log_type_dictionary_reader(ArchiveReaderAdaptor& adaptor)
+        -> std::shared_ptr<LogTypeDictionaryReader> {
     auto reader = std::make_shared<LogTypeDictionaryReader>(adaptor);
     reader->open(constants::cArchiveLogDictFile);
     return reader;
 }
 
-std::shared_ptr<LogTypeDictionaryReader> ReaderUtils::get_array_dictionary_reader(
-        ArchiveReaderAdaptor& adaptor
-) {
+auto ReaderUtils::get_array_dictionary_reader(ArchiveReaderAdaptor& adaptor)
+        -> std::shared_ptr<LogTypeDictionaryReader> {
     auto reader = std::make_shared<LogTypeDictionaryReader>(adaptor);
     reader->open(constants::cArchiveArrayDictFile);
     return reader;
 }
 
-std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderAdaptor& adaptor) {
+auto ReaderUtils::read_schemas(ArchiveReaderAdaptor& adaptor)
+        -> std::shared_ptr<ReaderUtils::SchemaMap> {
     auto schemas_pointer = std::make_unique<SchemaMap>();
     SchemaMap& schemas = *schemas_pointer;
     ZstdDecompressor schema_id_decompressor;
@@ -111,13 +113,13 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        uint32_t schema_node_size;
+        uint32_t schema_node_size{0};
         error_code = schema_id_decompressor.try_read_numeric_value(schema_node_size);
         if (ErrorCodeSuccess != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        uint32_t num_ordered_nodes;
+        uint32_t num_ordered_nodes{0};
         error_code = schema_id_decompressor.try_read_numeric_value(num_ordered_nodes);
         if (ErrorCodeSuccess != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);

@@ -19,7 +19,7 @@ private:
      * @param cur
      * @return A new expression with empty expressions propagated
      */
-    static std::shared_ptr<Expression> propagate_empty(std::shared_ptr<Expression> cur);
+    static auto propagate_empty(std::shared_ptr<Expression> cur) -> std::shared_ptr<Expression>;
 };
 }  // namespace clp_s::search::ast
 

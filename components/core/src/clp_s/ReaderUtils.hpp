@@ -6,17 +6,15 @@
 #include <limits>
 #include <map>
 #include <memory>
-#include <string>
 #include <system_error>
 
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
+#include "ErrorCode.hpp"
 #include "Schema.hpp"
-#include "SchemaReader.hpp"
 #include "SchemaTree.hpp"
-#include "TimestampDictionaryReader.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
@@ -30,48 +28,45 @@ public:
     };
 
     using SchemaMap = std::map<int32_t, Schema>;
-    static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
+    static constexpr size_t cDecompressorFileReadBufferCapacity{64ULL * 1024ULL};  // 64 KiB
 
     /**
      * Reads the schema tree from an archive
      * @param adaptor
      * @return The schema tree
      */
-    static std::shared_ptr<SchemaTree> read_schema_tree(ArchiveReaderAdaptor& adaptor);
+    static auto read_schema_tree(ArchiveReaderAdaptor& adaptor) -> std::shared_ptr<SchemaTree>;
 
     /**
      * Reads the schema map from an archive
      * @param adaptor
      * @return the schema map
      */
-    static std::shared_ptr<SchemaMap> read_schemas(ArchiveReaderAdaptor& archives_dir);
+    static auto read_schemas(ArchiveReaderAdaptor& adaptor) -> std::shared_ptr<SchemaMap>;
 
     /**
      * Gets the variable dictionary reader for an archive
      * @param adaptor
      * @return the variable dictionary reader
      */
-    static std::shared_ptr<VariableDictionaryReader> get_variable_dictionary_reader(
-            ArchiveReaderAdaptor& adaptor
-    );
+    static auto get_variable_dictionary_reader(ArchiveReaderAdaptor& adaptor)
+            -> std::shared_ptr<VariableDictionaryReader>;
 
     /**
      * Gets the log type dictionary reader for an archive
      * @param adaptor
      * @return the log type dictionary reader
      */
-    static std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary_reader(
-            ArchiveReaderAdaptor& adaptor
-    );
+    static auto get_log_type_dictionary_reader(ArchiveReaderAdaptor& adaptor)
+            -> std::shared_ptr<LogTypeDictionaryReader>;
 
     /**
      * Gets the array dictionary reader for an archive
      * @param adaptor
      * @return the array dictionary reader
      */
-    static std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary_reader(
-            ArchiveReaderAdaptor& adaptor
-    );
+    static auto get_array_dictionary_reader(ArchiveReaderAdaptor& adaptor)
+            -> std::shared_ptr<LogTypeDictionaryReader>;
 
     /**
      * Converts a serialized 64-bit numeric value into `size_t` with bounds checking.
@@ -88,28 +83,6 @@ public:
         }
         return static_cast<size_t>(value);
     }
-
-private:
-    /**
-     * Appends a column to the given schema reader
-     * @param reader
-     * @param column_id
-     * @param schema_tree
-     * @param var_dict
-     * @param log_dict
-     * @param array_dict
-     * @param timestamp_dict
-     * @return the appended reader column
-     */
-    static BaseColumnReader* append_reader_column(
-            SchemaReader* reader,
-            int32_t column_id,
-            std::shared_ptr<SchemaTree> const& schema_tree,
-            std::shared_ptr<VariableDictionaryReader> const& var_dict,
-            std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
-            std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
-            std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
-    );
 };
 }  // namespace clp_s
 
