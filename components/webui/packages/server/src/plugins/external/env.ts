@@ -10,10 +10,6 @@ declare module "fastify" {
             PORT: number;
             HOST: string;
             USER: string;
-            CLP_DB_USER: string;
-            CLP_DB_PASS: string;
-            CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: string;
-            CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: string;
             PRESTO_CATALOG: string;
             PRESTO_SCHEMA: string;
             RATE_LIMIT: number;
@@ -30,8 +26,6 @@ const schema = {
     required: [
         "PORT",
         "HOST",
-        "CLP_DB_USER",
-        "CLP_DB_PASS",
     ],
     /* eslint-disable sort-keys */
     properties: {
@@ -52,26 +46,6 @@ const schema = {
         USER: {
             type: "string",
             default: "clp-webui",
-        },
-
-        // Databases
-        CLP_DB_USER: {
-            type: "string",
-            minLength: 1,
-            default: "clp-user",
-        },
-        CLP_DB_PASS: {
-            type: "string",
-        },
-
-        // S3
-        CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID: {
-            type: "string",
-            default: "",
-        },
-        CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY: {
-            type: "string",
-            default: "",
         },
 
         // Presto

@@ -5,8 +5,6 @@
 #include <vector>
 
 #include <boost/filesystem/path.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
 
 #include "CommandLineArguments.hpp"
 #include "FileToCompress.hpp"
@@ -19,8 +17,6 @@ namespace clp::clp {
  * @param empty_directory_paths
  * @param grouped_files_to_compress
  * @param target_encoded_file_size
- * @param reader_parser
- * @param use_heuristic
  * @return true if compression was successful, false otherwise
  */
 bool compress(
@@ -28,9 +24,7 @@ bool compress(
         std::vector<FileToCompress>& files_to_compress,
         std::vector<std::string> const& empty_directory_paths,
         std::vector<FileToCompress>& grouped_files_to_compress,
-        size_t target_encoded_file_size,
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
-        bool use_heuristic
+        size_t target_encoded_file_size
 );
 
 /**

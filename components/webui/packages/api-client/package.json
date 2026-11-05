@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc -w --preserveWatchOutput",
-    "generate": "openapi-typescript ../../../../docs/src/_static/generated/api-server-openapi.json -o src/schema.ts",
+    "generate": "openapi-typescript openapi.json -o src/schema.ts",
     "lint:check": "eslint . --max-warnings 0",
     "lint:fix": "pnpm run lint:check --fix"
   },

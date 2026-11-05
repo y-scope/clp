@@ -1,7 +1,5 @@
-import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import dayjs from "dayjs";
 
-import {SETTINGS_STORAGE_ENGINE} from "../../../../../config";
 import {DATETIME_FORMAT_TEMPLATE} from "../../../../../typings/datetime";
 import type {SearchResult} from "./SearchResultsVirtualTable/typings";
 
@@ -56,22 +54,9 @@ const formatTimestamp = (timestamp: number): string => (
     dayjs.utc(timestamp).format(DATETIME_FORMAT_TEMPLATE)
 );
 
-/**
- * Returns the stream id based on the storage engine.
- *
- * @param result The search result object.
- * @return The stream id string, either from orig_file_id or archive_id.
- */
-const getStreamId = (result: SearchResult): string => {
-    return CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE ?
-        result.orig_file_id :
-        result.archive_id;
-};
-
 export {
     formatExportEventTimestamp,
     formatExportFilenameTimestamp,
     formatResultAsJsonl,
     formatTimestamp,
-    getStreamId,
 };

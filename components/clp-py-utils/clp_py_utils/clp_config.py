@@ -762,7 +762,7 @@ class ApiServer(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
-    stream_file_extraction_timeout_secs: PositiveInt = 1800
+    stream_file_extraction_timeout_secs: PositiveInt = 270
 
     def transform_for_container(self):
         self.host = API_SERVER_COMPONENT_NAME
