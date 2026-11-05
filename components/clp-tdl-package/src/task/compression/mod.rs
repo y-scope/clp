@@ -26,6 +26,15 @@ pub(crate) fn s3_compress_task(
         dataset,
         input_source,
     )
+    .inspect_err(|e| {
+        tracing::error!(
+            job_id = % ctx.job_id,
+            task_id = % ctx.task_id,
+            task_instance_id = ctx.task_instance_id,
+            error = ? e,
+            "CLP compression task failed."
+        );
+    })
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
@@ -43,6 +52,15 @@ pub(crate) fn fs_compress_task(
         dataset,
         input_source,
     )
+    .inspect_err(|e| {
+        tracing::error!(
+            job_id = % ctx.job_id,
+            task_id = % ctx.task_id,
+            task_instance_id = ctx.task_instance_id,
+            error = ? e,
+            "CLP compression task failed."
+        );
+    })
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
@@ -57,20 +75,10 @@ pub(crate) fn commit_task(ctx: TaskContext) -> Result<(), TdlError> {
         .map(|output| rmp_serde::from_slice(output))
         .collect::<Result<_, _>>()
         .map_err(|e| TdlError::DeserializationError(e.to_string()))?;
-    let dataset = outputs
-        .first()
-        .map_or_else(DatasetName::default, |output| output.dataset.clone());
-    if outputs.iter().any(|output| output.dataset != dataset) {
-        return Err(TdlError::ExecutionError(
-            "compression task outputs belong to more than one dataset".to_owned(),
-        ));
-    }
-    let archives = outputs
-        .into_iter()
-        .flat_map(|output| output.archives)
-        .collect();
+    let output =
+        commit::combine_outputs(outputs).map_err(|e| TdlError::ExecutionError(format!("{e:#}")))?;
     crate::common::runtime()
-        .block_on(commit::commit(ctx.job_id, &dataset, archives))
+        .block_on(commit::commit(ctx.job_id, &output.dataset, output.archives))
         .inspect_err(|e| {
             tracing::error!(spider_job_id = % ctx.job_id, error = ? e, "CLP commit task failed.");
         })

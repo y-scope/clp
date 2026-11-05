@@ -8,32 +8,30 @@ use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
+use clp_rust_utils::task_io::compression::CompressionTaskOutput;
 use const_format::formatcp;
 use secrecy::SecretString;
 use spider_core::types::id::JobId;
 
+use crate::common::clp_home;
 use crate::common::spider_task_executor_config;
 
 /// Publishes a compression job's archives and marks it succeeded.
 ///
-/// In one DB transaction, idempotently registers the dataset in the `datasets` table, inserts all
-/// `archives`, and CAS-transitions the CLP compression job (found by reverse-lookup on `spider_id`)
-/// from [`CompressionJobStatus::Running`] to [`CompressionJobStatus::Succeeded`], recording the
-/// job's total sizes and duration. A no-op if the job is already
+/// Registers the dataset and archives together with the job's final sizes, completed task count,
+/// and duration in one transaction. A no-op if the job is already
 /// [`CompressionJobStatus::Succeeded`].
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * `archives` is empty.
-/// * No CLP compression job exists for `spider_job_id`.
-/// * The CLP compression job is in a state other than [`CompressionJobStatus::Running`] or
-///   [`CompressionJobStatus::Succeeded`].
+/// * [`anyhow::Error`] if no CLP compression job exists for `spider_job_id`, or its status is
+///   neither [`CompressionJobStatus::Running`] nor [`CompressionJobStatus::Succeeded`].
 /// * Forwards [`db_credentials_from_env`]'s return values on failure.
 /// * Forwards [`create_clp_db_mysql_pool`]'s return values on failure.
 /// * Forwards [`sqlx::Pool::begin`]'s return values on failure.
-/// * Forwards [`sqlx::query::Query::fetch_optional`]'s return values on failure.
+/// * Forwards [`sqlx::query::QueryAs::fetch_optional`]'s return values on failure.
 /// * Forwards [`register_dataset`]'s return values on failure.
 /// * Forwards [`insert_archives`]'s return values on failure.
 /// * Forwards [`mark_job_succeeded`]'s return values on failure.
@@ -51,9 +49,6 @@ pub(super) async fn commit(
         spider_job_id = spider_job_id.get(),
         "CLP compression commit task started."
     );
-    if archives.is_empty() {
-        anyhow::bail!("commit received no archives to publish");
-    }
     let total_uncompressed_size: i64 = archives.iter().map(|a| a.uncompressed_size).sum();
     let total_compressed_size: i64 = archives.iter().map(|a| a.size).sum();
 
@@ -108,6 +103,33 @@ pub(super) async fn commit(
     Ok(())
 }
 
+/// Combines compression outputs belonging to one dataset.
+///
+/// # Returns
+///
+/// The combined output on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`anyhow::Error`] if outputs are missing or belong to different datasets.
+pub(super) fn combine_outputs(
+    outputs: Vec<CompressionTaskOutput>,
+) -> anyhow::Result<CompressionTaskOutput> {
+    let mut outputs = outputs.into_iter();
+    let mut combined = outputs
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("commit received no compression task outputs"))?;
+    for output in outputs {
+        if output.dataset != combined.dataset {
+            anyhow::bail!("compression task outputs belong to more than one dataset");
+        }
+        combined.archives.extend(output.archives);
+    }
+    Ok(combined)
+}
+
 /// Idempotently registers `dataset` in the `datasets` table, recording its archive storage
 /// directory.
 ///
@@ -122,9 +144,7 @@ async fn register_dataset(
     dataset: &DatasetName,
 ) -> anyhow::Result<()> {
     let datasets_table = config.database.datasets_table_name();
-    let archive_storage_directory = config
-        .archive_output
-        .dataset_archive_storage_directory(dataset);
+    let archive_storage_directory = config.dataset_archive_storage_directory(clp_home(), dataset);
     sqlx::query(&format!(
         "INSERT INTO `{datasets_table}` (name, archive_storage_directory) VALUES (?, ?) ON \
          DUPLICATE KEY UPDATE archive_storage_directory = VALUES(archive_storage_directory)"
@@ -173,13 +193,14 @@ async fn insert_archives(
     Ok(())
 }
 
-/// CAS-transitions the compression job `id` to [`CompressionJobStatus::Succeeded`], recording its
-/// total sizes and the DB-clock-derived duration.
+/// Marks a running compression job succeeded with its final sizes, completed task count, and
+/// duration.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
+/// * [`anyhow::Error`] if the update does not affect exactly one running job.
 /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
 async fn mark_job_succeeded(
     tx: &mut sqlx::Transaction<'_, sqlx::MySql>,
@@ -191,8 +212,9 @@ async fn mark_job_succeeded(
     // time.
     const QUERY: &str = formatcp!(
         "UPDATE {COMPRESSION_JOBS_TABLE_NAME} SET status = ?, uncompressed_size = ?, \
-         compressed_size = ?, duration = TIMESTAMPDIFF(MICROSECOND, start_time, \
-         CURRENT_TIMESTAMP(3)) / 1000000 WHERE id = ? AND status = ?"
+         compressed_size = ?, num_tasks_completed = num_tasks, duration = \
+         TIMESTAMPDIFF(MICROSECOND, start_time, CURRENT_TIMESTAMP(3)) / 1000000 WHERE id = ? AND \
+         status = ?"
     );
     let query_result = sqlx::query(QUERY)
         .bind(CompressionJobStatus::Succeeded)
@@ -239,4 +261,48 @@ fn db_credentials_from_env() -> anyhow::Result<credentials::Database> {
         user,
         password: SecretString::from(password),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    //! Validation of the compression task outputs accepted for commit.
+
+    use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::task_io::compression::CompressionTaskOutput;
+
+    use super::combine_outputs;
+
+    #[test]
+    fn combine_outputs_rejects_missing_outputs() {
+        let error = combine_outputs(vec![]).expect_err("missing task outputs must be rejected");
+        assert!(error.to_string().contains("no compression task outputs"));
+    }
+
+    #[test]
+    fn combine_outputs_rejects_mixed_datasets() {
+        use clp_rust_utils::task_io::compression::ArchiveMetadata;
+
+        let archive = ArchiveMetadata {
+            id: "00000000-0000-0000-0000-000000000001"
+                .parse()
+                .expect("test archive ID should be valid"),
+            begin_timestamp: 1,
+            end_timestamp: 2,
+            size: 10,
+            uncompressed_size: 100,
+        };
+        let error = combine_outputs(vec![
+            CompressionTaskOutput {
+                dataset: DatasetName::default(),
+                archives: vec![archive.clone()],
+            },
+            CompressionTaskOutput {
+                dataset: DatasetName::try_from("other".to_owned())
+                    .expect("test dataset name should be valid"),
+                archives: vec![archive],
+            },
+        ])
+        .expect_err("task outputs from different datasets must not be committed together");
+        assert!(error.to_string().contains("more than one dataset"));
+    }
 }
