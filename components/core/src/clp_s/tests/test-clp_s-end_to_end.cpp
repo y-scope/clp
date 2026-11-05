@@ -234,7 +234,7 @@ void compare_with_input(
     result = std::system(command.c_str());
     REQUIRE((0 == result));
 
-    REQUIRE((false == std::filesystem::is_empty(cTestEndToEndOutputSortedJson)));
+    REQUIRE_FALSE(std::filesystem::is_empty(cTestEndToEndOutputSortedJson));
 
     result = std::system("command -v diff >/dev/null 2>&1");
     REQUIRE((0 == result));
