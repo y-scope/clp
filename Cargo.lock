@@ -1054,17 +1054,20 @@ dependencies = [
  "clp-rust-utils",
  "const_format",
  "non-empty-string",
+ "rmp-serde",
  "secrecy",
  "serde",
  "spider-client",
  "spider-core",
  "sqlx",
  "strsim",
+ "tempfile",
  "thiserror",
  "tokio",
  "tokio-util",
  "tonic",
  "tracing",
+ "walkdir",
 ]
 
 [[package]]
