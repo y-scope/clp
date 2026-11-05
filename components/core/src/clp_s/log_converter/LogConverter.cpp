@@ -27,7 +27,7 @@ constexpr std::string_view cTimestampRuleName{"timestamp"};
 
 /**
  * Non-exhaustive timestamp parsing specification which covers many common patterns.
- * Based on the CLP heuristic.
+ * Based on the heuristic parsing sepcification.
  *
  * Once log-surgeon has better unicode support, we should also allow \u2202 as an alternative
  * minus sign for timezone offsets.
