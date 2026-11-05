@@ -314,7 +314,6 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
         // NOTE: We batch the metadata fetch to avoid hitting the maximum placeholder limit of
         // MySQL.
         const FETCH_CHUNK_SIZE: usize = 1000;
-        const S3_OBJECT_LATENCY_MS: u64 = 1000;
 
         if config.s3_object_metadata_ids.is_empty() {
             return Err(Error::NoS3ObjectMetadata(config.ingestion_job_id));
@@ -401,7 +400,7 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
             .map(|partition| {
                 let execution_policy = self.task_execution_policy(
                     partition.estimated_uncompressed_size,
-                    (partition.input.object_keys.len() as u64).saturating_mul(S3_OBJECT_LATENCY_MS),
+                    partition.input.object_keys.len() as u64,
                 );
                 (partition.input, execution_policy)
             })
@@ -455,21 +454,21 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
     }
 
     /// Derives a compression task's retry and timeout policy from its input size and download
-    /// latency.
+    /// input count.
     ///
     /// # Returns
     ///
-    /// The configured retry policy with size-based timeouts and the supplied download latency.
+    /// The configured retry policy with size-based timeouts and per-input download latency.
     fn task_execution_policy(
         &self,
         estimated_uncompressed_size: u64,
-        download_latency_ms: u64,
+        num_download_inputs: u64,
     ) -> ExecutionPolicy {
         ExecutionPolicy {
             max_num_retry: self.context.spider_option.compression_task_max_retry,
             timeout_policy: compression_timeout_policy(
                 estimated_uncompressed_size,
-                download_latency_ms,
+                num_download_inputs,
             ),
             ..ExecutionPolicy::default()
         }
@@ -698,13 +697,15 @@ struct S3ObjectMetadataRow {
 
 fn compression_timeout_policy(
     estimated_uncompressed_size: u64,
-    download_latency_ms: u64,
+    num_download_inputs: u64,
 ) -> TimeoutPolicy {
+    const DOWNLOAD_INPUT_LATENCY_MS: u64 = 1000;
     const SOFT_THROUGHPUT_BYTES_PER_SEC: u64 = 40 * 1024 * 1024;
     const HARD_THROUGHPUT_BYTES_PER_SEC: u64 = 8 * 1024 * 1024;
     const MIN_TIMEOUT_MS: u64 = 100;
     const MAX_TIMEOUT_MS: u64 = 24 * 60 * 60 * 1000;
 
+    let download_latency_ms = num_download_inputs.saturating_mul(DOWNLOAD_INPUT_LATENCY_MS);
     let timeout_ms = |throughput| {
         estimated_uncompressed_size
             .saturating_mul(1000)
@@ -733,17 +734,18 @@ mod tests {
     use crate::partition::FsSource;
 
     #[test]
-    fn compression_timeouts_scale_with_size_and_download_latency() -> anyhow::Result<()> {
-        for (size, download_latency_ms, soft_timeout_ms, hard_timeout_ms) in [
+    fn compression_timeouts_scale_with_size_and_download_input_count() -> anyhow::Result<()> {
+        for (size, num_download_inputs, soft_timeout_ms, hard_timeout_ms) in [
             (0, 0, 100, 101),
             (1, 0, 100, 101),
-            (0, 1000, 1000, 1001),
-            (1, 1000, 1001, 1002),
-            (40 * 1024 * 1024, 2000, 3000, 7000),
-            (1024 * 1024 * 1024 * 1024, 1000, 26_215_400, 86_400_000),
-            (u64::MAX, 1000, 86_399_999, 86_400_000),
+            (0, 1, 1000, 1001),
+            (1, 1, 1001, 1002),
+            (40 * 1024 * 1024, 2, 3000, 7000),
+            (1024 * 1024 * 1024 * 1024, 1, 26_215_400, 86_400_000),
+            (u64::MAX, 1, 86_399_999, 86_400_000),
+            (0, 4096, 4_096_000, 4_096_001),
         ] {
-            let policy = compression_timeout_policy(size, download_latency_ms);
+            let policy = compression_timeout_policy(size, num_download_inputs);
             assert_eq!(
                 policy,
                 TimeoutPolicy {
