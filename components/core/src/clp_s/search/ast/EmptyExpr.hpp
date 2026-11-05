@@ -28,11 +28,21 @@ public:
 
     [[nodiscard]] auto copy() const -> std::shared_ptr<Expression> override;
 
+    // Delete copy assignment operator
+    auto operator=(EmptyExpr const&) -> EmptyExpr& = delete;
+
+    // Delete move constructor and assignment operator
+    EmptyExpr(EmptyExpr&&) = delete;
+    auto operator=(EmptyExpr&&) -> EmptyExpr& = delete;
+
+    // Destructor
+    ~EmptyExpr() override = default;
+
 private:
-    // Constructor
+    // Constructors
     explicit EmptyExpr(Expression* parent = nullptr);
 
-    EmptyExpr(EmptyExpr const&);
+    EmptyExpr(EmptyExpr const&) = default;
 };
 }  // namespace clp_s::search::ast
 

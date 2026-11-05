@@ -43,7 +43,8 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
     }
 }
 
-int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_view const key) {
+auto SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_view const key)
+        -> int32_t {
     auto node_it = m_node_map.find({parent_node_id, key, type});
     if (node_it != m_node_map.end()) {
         auto node_id = node_it->second;
@@ -51,7 +52,7 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_
         return node_id;
     }
 
-    int32_t node_id = m_nodes.size();
+    auto node_id{static_cast<int32_t>(m_nodes.size())};
     auto& node = m_nodes.emplace_back(parent_node_id, node_id, std::string{key}, type, 0);
     node.increase_count();
     if (constants::cRootNodeId == parent_node_id) {
@@ -80,7 +81,7 @@ auto SchemaTree::get_subtree_node_id(std::string_view subtree_namespace, NodeTyp
     return -1;
 }
 
-int32_t SchemaTree::get_metadata_field_id(std::string_view const field_name) const {
+auto SchemaTree::get_metadata_field_id(std::string_view const field_name) const -> int32_t {
     auto const metadata_subtree_id = get_metadata_subtree_node_id();
     if (metadata_subtree_id < 0) {
         return -1;
@@ -118,16 +119,16 @@ auto SchemaTree::store(std::string const& archives_dir, int compression_level) -
     }
 
     schema_tree_compressor.close();
-    size_t compressed_size = schema_tree_writer.get_pos();
+    auto const compressed_size{schema_tree_writer.get_pos()};
     schema_tree_writer.close();
     return compressed_size;
 }
 
-int32_t SchemaTree::find_matching_subtree_root_in_subtree(
+auto SchemaTree::find_matching_subtree_root_in_subtree(
         int32_t const subtree_root_node,
         int32_t node,
         NodeType type
-) const {
+) const -> int32_t {
     int32_t earliest_match = -1;
     while (subtree_root_node != node) {
         auto const& schema_node{get_node(node)};

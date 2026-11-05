@@ -8,8 +8,6 @@
 namespace clp_s::search::ast {
 EmptyExpr::EmptyExpr(Expression* parent) : Expression(false, parent) {}
 
-EmptyExpr::EmptyExpr(EmptyExpr const& expr) : Expression(expr) {}
-
 auto EmptyExpr::create(Expression* parent) -> std::shared_ptr<Expression> {
     return std::shared_ptr<Expression>(static_cast<Expression*>(new EmptyExpr(parent)));
 }

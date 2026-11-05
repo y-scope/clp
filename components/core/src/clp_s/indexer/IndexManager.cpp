@@ -1,14 +1,26 @@
 #include "IndexManager.hpp"
 
-#include <filesystem>
+#include <cctype>
+#include <cstdint>
+#include <cstdio>
 #include <memory>
+#include <optional>
 #include <stack>
 #include <string>
+#include <string_view>
+#include <utility>
 
-#include <spdlog/spdlog.h>
-
+#include <clp/GlobalMetadataDBConfig.hpp>
 #include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReader.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/SchemaTree.hpp>
 #include <clp_s/TimestampDictionaryReader.hpp>
+#include <clp_s/TraceableException.hpp>
+
+#include "MySQLIndexStorage.hpp"
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
@@ -29,7 +41,7 @@ IndexManager::IndexManager(
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
     m_mysql_index_storage->open();
-    m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
+    m_field_update_callback = [this](std::string& field_name, NodeType field_type) -> void {
         m_mysql_index_storage->add_field(field_name, field_type);
     };
     m_should_create_table = should_create_table;
@@ -42,7 +54,8 @@ IndexManager::~IndexManager() {
     }
 }
 
-void IndexManager::update_metadata(std::string const& dataset_name, Path const& archive_path) {
+auto IndexManager::update_metadata(std::string const& dataset_name, Path const& archive_path)
+        -> void {
     m_mysql_index_storage->init(dataset_name, m_should_create_table);
 
     ArchiveReader archive_reader;
@@ -54,7 +67,7 @@ void IndexManager::update_metadata(std::string const& dataset_name, Path const& 
     );
 }
 
-std::string IndexManager::escape_key_name(std::string_view const key_name) {
+auto IndexManager::escape_key_name(std::string_view const key_name) -> std::string {
     std::string escaped_key_name;
     escaped_key_name.reserve(key_name.size());
     for (auto c : key_name) {
@@ -84,7 +97,7 @@ std::string IndexManager::escape_key_name(std::string_view const key_name) {
                 escaped_key_name += "\\.";
                 break;
             default:
-                if (std::isprint(c)) {
+                if (0 != std::isprint(c)) {
                     escaped_key_name += c;
                 } else {
                     char buffer[7];
@@ -101,10 +114,10 @@ std::string IndexManager::escape_key_name(std::string_view const key_name) {
     return escaped_key_name;
 }
 
-void IndexManager::traverse_schema_tree_and_update_metadata(
+auto IndexManager::traverse_schema_tree_and_update_metadata(
         std::shared_ptr<SchemaTree> const& schema_tree,
         std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
-) {
+) -> void {
     if (nullptr == schema_tree) {
         return;
     }

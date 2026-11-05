@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <string_view>
+#include <utility>
 
 #include <log_surgeon/BufferParser.hpp>
 #include <ystdlib/containers/Array.hpp>

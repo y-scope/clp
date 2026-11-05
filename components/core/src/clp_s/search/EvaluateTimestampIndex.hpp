@@ -23,7 +23,7 @@ public:
      * @param expr the expression to evaluate against the timestamp index
      * @return The evaluated value of the expression given the index (True, False, Unknown)
      */
-    EvaluatedValue run(std::shared_ptr<ast::Expression> const& expr);
+    auto run(std::shared_ptr<ast::Expression> const& expr) -> EvaluatedValue;
 
 private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;

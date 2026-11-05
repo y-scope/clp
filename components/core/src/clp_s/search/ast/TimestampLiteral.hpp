@@ -4,7 +4,9 @@
 #include <cstdint>
 #include <memory>
 
-#include "../../Defs.hpp"
+#include <clp_s/Defs.hpp>
+
+#include "FilterOperation.hpp"
 #include "Literal.hpp"
 
 namespace clp_s::search::ast {
@@ -22,39 +24,46 @@ public:
         Nanoseconds
     };
 
-    // Factory function
+    // Factory methods
     /**
      * Creates a timestamp literal from a timestamp in epoch nanoseconds.
      * @param v The timestamp value.
      * @return A `shared_ptr` referencing the newly created timestamp literal.
      */
-    static std::shared_ptr<Literal> create(epochtime_t v);
+    [[nodiscard]] static auto create(epochtime_t v) -> std::shared_ptr<Literal>;
 
-    // Delete copy constructor and assignment operator.
+    // Delete copy constructor and assignment operator
     TimestampLiteral(TimestampLiteral const&) = delete;
-    TimestampLiteral& operator=(TimestampLiteral const&) = delete;
+    auto operator=(TimestampLiteral const&) -> TimestampLiteral& = delete;
+
+    // Delete move constructor and assignment operator
+    TimestampLiteral(TimestampLiteral&&) = delete;
+    auto operator=(TimestampLiteral&&) -> TimestampLiteral& = delete;
+
+    // Destructor
+    ~TimestampLiteral() override = default;
 
     // Methods inherited from Value
-    void print() const override;
+    auto print() const -> void override;
 
     // Methods inherited from Literal
     [[nodiscard]] auto matches_type(LiteralType type) const -> bool override {
-        return type & cTimestampLiteralTypes;
+        return 0 != (type & cTimestampLiteralTypes);
     }
 
     [[nodiscard]] auto matches_any(literal_type_bitmask_t mask) const -> bool override {
-        return mask & cTimestampLiteralTypes;
+        return 0 != (mask & cTimestampLiteralTypes);
     }
 
     [[nodiscard]] auto matches_exactly(literal_type_bitmask_t mask) const -> bool override {
         return mask == cTimestampLiteralTypes;
     }
 
-    bool as_timestamp() override { return true; }
+    auto as_timestamp() -> bool override { return true; }
 
-    bool as_int(int64_t& ret, FilterOperation op) override;
+    auto as_int(int64_t& ret, FilterOperation op) -> bool override;
 
-    bool as_float(double& ret, FilterOperation op) override;
+    auto as_float(double& ret, FilterOperation op) -> bool override;
 
     // Methods
     /**
@@ -68,7 +77,7 @@ public:
      * the same as the value returned from `as_precision(precision)`.
      * @param precision
      */
-    void set_default_precision(Precision precision);
+    auto set_default_precision(Precision precision) -> void;
 
 private:
     // Types
@@ -77,7 +86,7 @@ private:
     // Constructors
     explicit TimestampLiteral(epochtime_t timestamp);
 
-    // Variables
+    // Data members
     epochtime_t m_timestamp{};
     epochtime_t m_default_precision_timestamp{};
     double m_double_timestamp{};

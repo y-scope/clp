@@ -1,14 +1,18 @@
 #include "OrOfAndForm.hpp"
 
+#include <memory>
 #include <vector>
 
+#include "AndExpr.hpp"
+#include "Expression.hpp"
+#include "OrExpr.hpp"
 #include "SearchUtils.hpp"
 
 namespace clp_s::search::ast {
-std::shared_ptr<Expression> OrOfAndForm::run(std::shared_ptr<Expression>& expr) {
-    auto parent = expr->get_parent();
+auto OrOfAndForm::run(std::shared_ptr<Expression>& expr) -> std::shared_ptr<Expression> {
+    auto* parent{expr->get_parent()};
     while (expr->get_num_operands() == 1 && expr->has_only_expression_operands()) {
-        bool invert = expr->is_inverted();
+        bool const invert{expr->is_inverted()};
         expr = std::static_pointer_cast<Expression>(*expr->op_begin());
         expr->set_parent(parent);
         if (invert) {
@@ -28,7 +32,7 @@ std::shared_ptr<Expression> OrOfAndForm::run(std::shared_ptr<Expression>& expr) 
     return simplify(expr);
 }
 
-void OrOfAndForm::de_morgan(std::shared_ptr<Expression>& expr) {
+auto OrOfAndForm::de_morgan(std::shared_ptr<Expression>& expr) -> void {
     std::shared_ptr<Expression> new_expr;
 
     if (std::dynamic_pointer_cast<AndExpr>(expr)) {
@@ -50,7 +54,7 @@ void OrOfAndForm::de_morgan(std::shared_ptr<Expression>& expr) {
     expr = new_expr;
 }
 
-std::shared_ptr<Expression> OrOfAndForm::simplify(std::shared_ptr<Expression> const& expr) {
+auto OrOfAndForm::simplify(std::shared_ptr<Expression> const& expr) -> std::shared_ptr<Expression> {
     for (auto it = expr->op_begin(); it != expr->op_end(); it++) {
         auto sub_expr = std::static_pointer_cast<Expression>(*it);
         if (sub_expr->is_inverted()) {
@@ -61,7 +65,7 @@ std::shared_ptr<Expression> OrOfAndForm::simplify(std::shared_ptr<Expression> co
         }
 
         while (sub_expr->get_num_operands() == 1 && sub_expr->has_only_expression_operands()) {
-            bool invert = sub_expr->is_inverted();
+            bool const invert{sub_expr->is_inverted()};
             sub_expr = std::static_pointer_cast<Expression>(*sub_expr->op_begin());
             sub_expr->set_parent(expr.get());
             *it = sub_expr;
@@ -78,15 +82,16 @@ std::shared_ptr<Expression> OrOfAndForm::simplify(std::shared_ptr<Expression> co
 
     if (std::dynamic_pointer_cast<OrExpr>(expr)) {
         return simplify_or(expr);
-    } else if (std::dynamic_pointer_cast<AndExpr>(expr)) {
-        return simplify_and(expr);
-    } else {
-        // currently and/or are the only form of expressions we need to simplify
-        return expr;
     }
+    if (std::dynamic_pointer_cast<AndExpr>(expr)) {
+        return simplify_and(expr);
+    }
+    // currently and/or are the only form of expressions we need to simplify
+    return expr;
 }
 
-std::shared_ptr<Expression> OrOfAndForm::simplify_or(std::shared_ptr<Expression> const& expr) {
+auto OrOfAndForm::simplify_or(std::shared_ptr<Expression> const& expr)
+        -> std::shared_ptr<Expression> {
     std::vector<OpList::iterator> deleted;
 
     for (auto it = expr->op_begin(); it != expr->op_end(); it++) {
@@ -104,7 +109,8 @@ std::shared_ptr<Expression> OrOfAndForm::simplify_or(std::shared_ptr<Expression>
     return expr;
 }
 
-std::shared_ptr<Expression> OrOfAndForm::simplify_and(std::shared_ptr<Expression> const& expr) {
+auto OrOfAndForm::simplify_and(std::shared_ptr<Expression> const& expr)
+        -> std::shared_ptr<Expression> {
     std::vector<OpList::iterator> deleted;
     std::vector<OpList::iterator> deleted_or_expr;
     std::vector<std::shared_ptr<Expression>> or_expressions;
@@ -145,13 +151,13 @@ std::shared_ptr<Expression> OrOfAndForm::simplify_and(std::shared_ptr<Expression
     return new_or_expr;
 }
 
-void OrOfAndForm::insert_all_combinations(
+auto OrOfAndForm::insert_all_combinations(
         std::shared_ptr<Expression> const& new_or_expr,
         std::shared_ptr<Expression> const& base_and_expr,
         ExpressionVector::iterator cur,
         ExpressionVector::iterator end,
         ExpressionList& prefix
-) {
+) -> void {
     if (cur == end) {
         auto new_and_expr = base_and_expr->copy();
         for (auto const& it : prefix) {
