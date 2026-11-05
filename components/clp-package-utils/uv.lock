@@ -480,6 +480,7 @@ version = "0.13.1.dev0"
 source = { directory = "../job-orchestration" }
 dependencies = [
     { name = "celery", extra = ["redis"] },
+    { name = "kombu" },
     { name = "mariadb" },
     { name = "msgpack" },
     { name = "mysql-connector-python" },
@@ -492,6 +493,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "celery", extras = ["redis"], specifier = ">=5.6.2" },
+    { name = "kombu", specifier = "==5.6.2" },
     { name = "mariadb", specifier = ">=1.1.14" },
     { name = "msgpack", specifier = ">=1.1.2" },
     { name = "mysql-connector-python", specifier = ">=9.5.0" },
