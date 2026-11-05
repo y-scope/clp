@@ -2,6 +2,7 @@
 
 use std::ffi::OsString;
 use std::io::Read;
+use std::num::NonZeroU32;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -10,15 +11,20 @@ use std::process::Stdio;
 use anyhow::Context;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
+use clp_rust_utils::clp_config::package::config::ResultsCache;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::Aggregation;
+use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QueryJobId;
+use clp_rust_utils::job_config::QueryOutput;
+use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::s3::generate_s3_url;
-use clp_rust_utils::task_io::query::ClpSQueryOption;
-use clp_rust_utils::task_io::query::OutputHandle;
 use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
+use spider_core::task::TaskIndex;
+use spider_core::types::id::TaskId;
 
 use crate::common::clp_home;
 use crate::common::runtime;
@@ -28,41 +34,42 @@ use crate::task::utils::s3_credential_env;
 
 /// Searches one archive with clp-s and publishes normal and optional timeline results.
 ///
+/// A pure worker function called by a spider-tdl task wrapper, which formats any returned
+/// `anyhow::Error` into a user-space TDL error.
+///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
-/// * `output_handle` is not [`OutputHandle::ResultsCache`]. The current implementation only
-///   supports result cache output streaming.
-/// * Timeline results target a different results cache than the worker's configured results cache.
+/// * `ctx.task_id` isn't a [`TaskId::Index`].
+/// * `output` is [`QueryOutput::File`], which is unsupported.
+/// * Forwards [`build_clp_s_search_args`]'s return values on failure.
 /// * Forwards [`parse_results_cache_uri`]'s return values on failure.
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
-/// * Forwards [`run_clp_s_search_with_optional_timeline`]'s return values on failure.
+/// * Forwards [`run_clp_s_search`]'s return values on failure.
 pub(super) fn search(
     ctx: &spider_tdl::TaskContext,
     config: &SpiderTaskExecutorConfig,
     query_job_id: QueryJobId,
-    clp_s_query_option: &ClpSQueryOption,
+    query: &SearchQuery,
     archive_id: ArchiveId,
     dataset: &DatasetName,
-    output_handle: &OutputHandle,
+    output: &QueryOutput,
 ) -> anyhow::Result<()> {
     if StorageEngine::ClpS != config.package.storage_engine {
         anyhow::bail!("the clp-s query task requires the `clp-s` storage engine");
     }
-    let OutputHandle::ResultsCache { uri } = output_handle else {
-        anyhow::bail!("unsupported query output handler");
+    let TaskId::Index(task_index) = ctx.task_id else {
+        anyhow::bail!(
+            "the clp-s query task requires a task index, got task ID {}",
+            ctx.task_id
+        );
     };
-    if clp_s_query_option
-        .count_by_time_bucket_size_millisecs
-        .is_some()
-        && *uri != config.results_cache.uri()
-    {
-        anyhow::bail!("timeline search must use the worker's configured results cache");
-    }
 
-    runtime().block_on(parse_results_cache_uri(uri.as_str()))?;
+    if matches!(output, QueryOutput::File {}) {
+        anyhow::bail!("unsupported query output: file");
+    }
 
     tracing::info!(
         job_id = % ctx.job_id,
@@ -88,15 +95,21 @@ pub(super) fn search(
                 );
             },
         )?;
-    run_clp_s_search_with_optional_timeline(
-        &clp_binary_path(clp_home, "clp-s"),
+    let searches = build_clp_s_search_args(
         &archive_selector,
-        clp_s_query_option,
-        uri.as_str(),
+        query,
+        output,
+        &config.results_cache,
         query_job_id,
         dataset.as_str(),
-        &credential_env,
+        task_index,
     )?;
+    if matches!(output, QueryOutput::ResultsCache(_)) {
+        runtime().block_on(parse_results_cache_uri(config.results_cache.uri().as_str()))?;
+    }
+    for args in searches {
+        run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
+    }
 
     tracing::info!(
         job_id = % ctx.job_id,
@@ -120,51 +133,61 @@ enum ArchiveSelector {
     ObjectUrl(String),
 }
 
-/// Runs normal search followed by the optional timeline search.
+/// Builds the ordered searches for normal results and optional timeline aggregation.
+///
+/// # Returns
+///
+/// The argument list for each search on success.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
-/// * Forwards [`run_clp_s_search`]'s return values on failure.
-fn run_clp_s_search_with_optional_timeline(
-    clp_s_bin: &Path,
+/// * `output` is [`QueryOutput::File`], which is unsupported.
+fn build_clp_s_search_args(
     archive_selector: &ArchiveSelector,
-    options: &ClpSQueryOption,
-    uri: &str,
+    query: &SearchQuery,
+    output: &QueryOutput,
+    results_cache: &ResultsCache,
     query_job_id: QueryJobId,
     dataset: &str,
-    credential_env: &[(&'static str, String)],
-) -> anyhow::Result<()> {
-    let normal_options = ClpSQueryOption {
-        count_by_time_bucket_size_millisecs: None,
-        ..options.clone()
-    };
-    run_clp_s_search(
-        clp_s_bin,
-        build_clp_s_search_args_for_result_cache(
-            archive_selector,
-            &normal_options,
-            uri,
-            query_job_id,
-            dataset,
-        ),
-        credential_env,
-    )?;
-    if options.count_by_time_bucket_size_millisecs.is_some() {
-        run_clp_s_search(
-            clp_s_bin,
-            build_clp_s_search_args_for_result_cache(
-                archive_selector,
-                options,
-                uri,
-                query_job_id,
+    task_index: TaskIndex,
+) -> anyhow::Result<Vec<Vec<OsString>>> {
+    let mut normal_args = build_clp_s_query_args(archive_selector, query);
+    match output {
+        QueryOutput::ResultsCache(output) => {
+            normal_args.extend(build_clp_s_results_cache_output_args(
+                results_cache,
+                output.max_num_results,
+                &query_job_id.to_string(),
                 dataset,
-            ),
-            credential_env,
-        )?;
+            ));
+            let mut searches = vec![normal_args];
+            if let Some(Aggregation::CountByTime {
+                bucket_size_millisecs,
+            }) = output.aggregation
+            {
+                let mut timeline_args = build_clp_s_query_args(archive_selector, query);
+                timeline_args.extend([
+                    OsString::from("--count-by-time"),
+                    OsString::from(bucket_size_millisecs.get().to_string()),
+                ]);
+                timeline_args.extend(build_clp_s_results_cache_output_args(
+                    results_cache,
+                    None,
+                    &format!("{query_job_id}-timeline"),
+                    dataset,
+                ));
+                searches.push(timeline_args);
+            }
+            Ok(searches)
+        }
+        QueryOutput::Network(network_output) => {
+            normal_args.extend(build_clp_s_network_output_args(network_output, task_index));
+            Ok(vec![normal_args])
+        }
+        QueryOutput::File {} => anyhow::bail!("unsupported query output: file"),
     }
-    Ok(())
 }
 
 /// Resolves how clp-s addresses the archive, and the credential env vars it needs to read it.
@@ -222,17 +245,63 @@ fn resolve_archive_input(
     Ok((ArchiveSelector::ObjectUrl(url), credential_env))
 }
 
-/// Builds the clp-s command-line arguments for a single-archive search writing to the result cache.
+/// Builds the clp-s command-line arguments of the `results-cache` output handler.
 ///
 /// # Returns
 ///
-/// The ordered clp-s arguments.
-fn build_clp_s_search_args_for_result_cache(
-    archive_selector: &ArchiveSelector,
-    clp_s_query_option: &ClpSQueryOption,
-    result_cache_uri: &str,
-    query_job_id: QueryJobId,
+/// The ordered clp-s arguments, which follow the search's arguments.
+fn build_clp_s_results_cache_output_args(
+    results_cache: &ResultsCache,
+    max_num_results: Option<NonZeroU32>,
+    collection: &str,
     dataset: &str,
+) -> Vec<OsString> {
+    let mut args = vec![
+        OsString::from("results-cache"),
+        OsString::from("--uri"),
+        OsString::from(results_cache.uri().as_str()),
+        OsString::from("--collection"),
+        OsString::from(collection),
+    ];
+    if let Some(max_num_results) = max_num_results {
+        args.push(OsString::from("--max-num-results"));
+        args.push(OsString::from(max_num_results.to_string()));
+    }
+    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
+    args
+}
+
+/// Builds the clp-s command-line arguments of the `network` output handler.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments, which follow the search's arguments.
+fn build_clp_s_network_output_args(
+    network_output: &NetworkOutput,
+    task_index: TaskIndex,
+) -> Vec<OsString> {
+    vec![
+        OsString::from("network"),
+        OsString::from("--host"),
+        OsString::from(network_output.host.as_str()),
+        OsString::from("--port"),
+        OsString::from(network_output.port.to_string()),
+        OsString::from("--session-token"),
+        OsString::from(network_output.session_token.to_string()),
+        OsString::from("--task-index"),
+        OsString::from(task_index.to_string()),
+    ]
+}
+
+/// Builds the clp-s command-line arguments that select the archive and the query to run on it,
+/// shared by every output handler.
+///
+/// # Returns
+///
+/// The ordered clp-s arguments, which the output handler's arguments follow.
+fn build_clp_s_query_args(
+    archive_selector: &ArchiveSelector,
+    query: &SearchQuery,
 ) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
     match archive_selector {
@@ -248,47 +317,18 @@ fn build_clp_s_search_args_for_result_cache(
         }
     }
 
-    args.push(OsString::from(clp_s_query_option.query_string.as_str()));
-    if let Some(begin_timestamp_millisecs) = clp_s_query_option.begin_timestamp_millisecs {
+    args.push(OsString::from(query.query_string.as_str()));
+    if let Some(begin_timestamp_millisecs) = query.time_range.begin_timestamp_millisecs() {
         args.push(OsString::from("--tge"));
         args.push(OsString::from(begin_timestamp_millisecs.to_string()));
     }
-    if let Some(end_timestamp_millisecs) = clp_s_query_option.end_timestamp_millisecs {
+    if let Some(end_timestamp_millisecs) = query.time_range.end_timestamp_millisecs() {
         args.push(OsString::from("--tle"));
         args.push(OsString::from(end_timestamp_millisecs.to_string()));
     }
-    if clp_s_query_option.ignore_case {
+    if query.ignore_case {
         args.push(OsString::from("--ignore-case"));
     }
-
-    let collection = clp_s_query_option
-        .count_by_time_bucket_size_millisecs
-        .map_or_else(
-            || query_job_id.to_string(),
-            |width| {
-                args.extend([
-                    OsString::from("--count-by-time"),
-                    OsString::from(width.get().to_string()),
-                ]);
-                format!("{query_job_id}-timeline")
-            },
-        );
-    args.extend([
-        OsString::from("results-cache"),
-        OsString::from("--uri"),
-        OsString::from(result_cache_uri),
-        OsString::from("--collection"),
-        OsString::from(collection),
-    ]);
-    if clp_s_query_option
-        .count_by_time_bucket_size_millisecs
-        .is_none()
-        && let Some(max_num_results) = clp_s_query_option.max_num_results
-    {
-        args.push(OsString::from("--max-num-results"));
-        args.push(OsString::from(max_num_results.to_string()));
-    }
-    args.extend([OsString::from("--dataset"), OsString::from(dataset)]);
     args
 }
 
@@ -364,6 +404,7 @@ fn run_clp_s_search(
 #[cfg(test)]
 mod tests {
     use std::ffi::OsString;
+    use std::num::NonZeroU16;
     use std::num::NonZeroU32;
     use std::path::Path;
     use std::path::PathBuf;
@@ -374,13 +415,19 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::ArchiveOutput;
     use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
     use clp_rust_utils::clp_config::package::config::Package;
+    use clp_rust_utils::clp_config::package::config::ResultsCache;
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::task_io::query::ClpSQueryOption;
-    use clp_rust_utils::task_io::query::OutputHandle;
+    use clp_rust_utils::job_config::Aggregation;
+    use clp_rust_utils::job_config::NetworkOutput;
+    use clp_rust_utils::job_config::QueryOutput;
+    use clp_rust_utils::job_config::ResultsCacheOutput;
+    use clp_rust_utils::job_config::SearchQuery;
+    use clp_rust_utils::job_config::TimeRange;
     use clp_rust_utils::types::ArchiveId;
     use clp_rust_utils::types::PositiveI64;
+    use clp_rust_utils::types::SessionToken;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
     use spider_core::types::id::JobId;
@@ -389,23 +436,34 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ArchiveSelector;
-    use super::build_clp_s_search_args_for_result_cache;
+    use super::build_clp_s_network_output_args;
+    use super::build_clp_s_query_args;
+    use super::build_clp_s_results_cache_output_args;
+    use super::build_clp_s_search_args;
     use super::resolve_archive_input;
     use super::search;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
 
     /// # Returns
     ///
-    /// A query option with no timestamp bounds, no result limit, and case-sensitive matching.
-    fn unbounded_query_option() -> ClpSQueryOption {
-        ClpSQueryOption {
+    /// A search query with no timestamp bounds and case-sensitive matching.
+    fn unbounded_query() -> SearchQuery {
+        SearchQuery {
             query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
-            max_num_results: None,
-            begin_timestamp_millisecs: None,
-            end_timestamp_millisecs: None,
+            time_range: TimeRange::default(),
             ignore_case: false,
-            count_by_time_bucket_size_millisecs: None,
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The results cache config whose URI is `mongodb://results-cache:27017/clp-query-results`.
+    fn results_cache() -> ResultsCache {
+        ResultsCache {
+            host: "results-cache".to_owned(),
+            ..ResultsCache::default()
         }
     }
 
@@ -467,6 +525,24 @@ mod tests {
 
     /// # Returns
     ///
+    /// A network output to a listener at `10.0.0.7:40123`, with [`SESSION_TOKEN`] as its session
+    /// token.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`SESSION_TOKEN`] isn't a valid UUID.
+    fn network_output() -> NetworkOutput {
+        NetworkOutput {
+            host: NonEmptyString::from_static_str("10.0.0.7"),
+            port: NonZeroU16::new(40_123).expect("40,123 is nonzero"),
+            session_token: SessionToken::from(
+                uuid::Uuid::parse_str(SESSION_TOKEN).expect("valid session token UUID"),
+            ),
+        }
+    }
+
+    /// # Returns
+    ///
     /// A [`TaskContext`] for a non-commit task.
     ///
     /// # Panics
@@ -484,24 +560,16 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_for_result_cache_fs_with_timestamps_and_ignore_case() {
-        let clp_s_query_option = ClpSQueryOption {
+    fn build_clp_s_query_args_fs_with_timestamps_and_ignore_case() {
+        let query = SearchQuery {
             query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
-            max_num_results: Some(NonZeroU32::new(7).expect("7 is nonzero")),
-            begin_timestamp_millisecs: Some(1_310_138_944_000),
-            end_timestamp_millisecs: Some(1_311_208_074_120),
+            time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
+                .expect("range is ordered"),
             ignore_case: true,
-            count_by_time_bucket_size_millisecs: None,
         };
 
         assert_eq!(
-            build_clp_s_search_args_for_result_cache(
-                &directory_selector(),
-                &clp_s_query_option,
-                "mongodb://results-cache:27017/clp-query-results",
-                42,
-                "ds1",
-            ),
+            build_clp_s_query_args(&directory_selector(), &query),
             vec![
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
@@ -513,6 +581,36 @@ mod tests {
                 OsString::from("--tle"),
                 OsString::from("1311208074120"),
                 OsString::from("--ignore-case"),
+            ]
+        );
+    }
+
+    #[test]
+    fn build_clp_s_query_args_s3_uses_object_url_and_no_archive_id() {
+        let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
+
+        assert_eq!(
+            build_clp_s_query_args(&ArchiveSelector::ObjectUrl(url.clone()), &unbounded_query()),
+            vec![
+                OsString::from("s"),
+                OsString::from(url),
+                OsString::from("--auth"),
+                OsString::from("s3"),
+                OsString::from("level: \"ERROR\""),
+            ]
+        );
+    }
+
+    #[test]
+    fn build_clp_s_results_cache_output_args_with_max_num_results() {
+        assert_eq!(
+            build_clp_s_results_cache_output_args(
+                &results_cache(),
+                NonZeroU32::new(7),
+                "42",
+                "ds1"
+            ),
+            vec![
                 OsString::from("results-cache"),
                 OsString::from("--uri"),
                 OsString::from("mongodb://results-cache:27017/clp-query-results"),
@@ -527,35 +625,10 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_for_result_cache_omits_max_num_results_when_unset() {
-        let clp_s_query_option = ClpSQueryOption {
-            query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
-            max_num_results: None,
-            begin_timestamp_millisecs: Some(1_310_138_944_000),
-            end_timestamp_millisecs: Some(1_311_208_074_120),
-            ignore_case: true,
-            count_by_time_bucket_size_millisecs: None,
-        };
-
+    fn build_clp_s_results_cache_output_args_omits_max_num_results_when_unset() {
         assert_eq!(
-            build_clp_s_search_args_for_result_cache(
-                &directory_selector(),
-                &clp_s_query_option,
-                "mongodb://results-cache:27017/clp-query-results",
-                42,
-                "ds1",
-            ),
+            build_clp_s_results_cache_output_args(&results_cache(), None, "42", "ds1"),
             vec![
-                OsString::from("s"),
-                OsString::from("/archives/ds1"),
-                OsString::from("--archive-id"),
-                OsString::from(ARCHIVE_ID),
-                OsString::from("level: \"ERROR\""),
-                OsString::from("--tge"),
-                OsString::from("1310138944000"),
-                OsString::from("--tle"),
-                OsString::from("1311208074120"),
-                OsString::from("--ignore-case"),
                 OsString::from("results-cache"),
                 OsString::from("--uri"),
                 OsString::from("mongodb://results-cache:27017/clp-query-results"),
@@ -568,57 +641,19 @@ mod tests {
     }
 
     #[test]
-    fn build_clp_s_search_args_for_result_cache_fs_without_timestamps_or_ignore_case() {
+    fn build_clp_s_network_output_args_names_the_listener_and_the_task() {
         assert_eq!(
-            build_clp_s_search_args_for_result_cache(
-                &directory_selector(),
-                &unbounded_query_option(),
-                "mongodb://results-cache:27017/clp-query-results",
-                42,
-                "default",
-            ),
+            build_clp_s_network_output_args(&network_output(), 5),
             vec![
-                OsString::from("s"),
-                OsString::from("/archives/ds1"),
-                OsString::from("--archive-id"),
-                OsString::from(ARCHIVE_ID),
-                OsString::from("level: \"ERROR\""),
-                OsString::from("results-cache"),
-                OsString::from("--uri"),
-                OsString::from("mongodb://results-cache:27017/clp-query-results"),
-                OsString::from("--collection"),
-                OsString::from("42"),
-                OsString::from("--dataset"),
-                OsString::from("default"),
-            ]
-        );
-    }
-
-    #[test]
-    fn build_clp_s_search_args_for_result_cache_s3_uses_object_url_and_no_archive_id() {
-        let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
-
-        assert_eq!(
-            build_clp_s_search_args_for_result_cache(
-                &ArchiveSelector::ObjectUrl(url.clone()),
-                &unbounded_query_option(),
-                "mongodb://results-cache:27017/clp-query-results",
-                42,
-                "ds1",
-            ),
-            vec![
-                OsString::from("s"),
-                OsString::from(url),
-                OsString::from("--auth"),
-                OsString::from("s3"),
-                OsString::from("level: \"ERROR\""),
-                OsString::from("results-cache"),
-                OsString::from("--uri"),
-                OsString::from("mongodb://results-cache:27017/clp-query-results"),
-                OsString::from("--collection"),
-                OsString::from("42"),
-                OsString::from("--dataset"),
-                OsString::from("ds1"),
+                OsString::from("network"),
+                OsString::from("--host"),
+                OsString::from("10.0.0.7"),
+                OsString::from("--port"),
+                OsString::from("40123"),
+                OsString::from("--session-token"),
+                OsString::from(SESSION_TOKEN),
+                OsString::from("--task-index"),
+                OsString::from("5"),
             ]
         );
     }
@@ -705,13 +740,7 @@ mod tests {
             &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
-        let args = build_clp_s_search_args_for_result_cache(
-            &selector,
-            &unbounded_query_option(),
-            "mongodb://results-cache:27017/clp-query-results",
-            42,
-            "ds1",
-        );
+        let args = build_clp_s_query_args(&selector, &unbounded_query());
 
         assert!(
             !args
@@ -747,7 +776,7 @@ mod tests {
     }
 
     #[test]
-    fn search_rejects_file_output_handle() {
+    fn search_rejects_unsupported_outputs() {
         let config = SpiderTaskExecutorConfig {
             package: Package {
                 storage_engine: StorageEngine::ClpS,
@@ -755,49 +784,53 @@ mod tests {
             ..SpiderTaskExecutorConfig::default()
         };
 
+        let output = QueryOutput::File {};
         let error = search(
             &task_context(),
             &config,
             42,
-            &unbounded_query_option(),
+            &unbounded_query(),
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
             &DatasetName::default(),
-            &OutputHandle::File,
+            &output,
         )
-        .expect_err("the file output handler is unsupported");
+        .expect_err("the output should be unsupported");
 
-        assert!(error.to_string().contains("unsupported"));
+        assert!(
+            error.to_string().contains("unsupported query output"),
+            "unexpected error for {output:?}: {error}"
+        );
     }
 
     #[test]
-    fn timeline_search_rejects_mismatched_results_cache() -> anyhow::Result<()> {
+    fn search_rejects_a_task_without_a_task_index() {
         let config = SpiderTaskExecutorConfig {
             package: Package {
                 storage_engine: StorageEngine::ClpS,
             },
             ..SpiderTaskExecutorConfig::default()
         };
-        let options = ClpSQueryOption {
-            count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
-            ..unbounded_query_option()
-        };
+        let cleanup_task_context = TaskContext::new(
+            JobId::random(),
+            TaskId::Cleanup,
+            1,
+            ResourceGroupId::random(),
+            None,
+        )
+        .expect("a cleanup task context without graph outputs is valid");
+
         let error = search(
-            &task_context(),
+            &cleanup_task_context,
             &config,
             42,
-            &options,
-            ARCHIVE_ID.parse::<ArchiveId>()?,
+            &unbounded_query(),
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
             &DatasetName::default(),
-            &OutputHandle::ResultsCache {
-                uri: NonEmptyString::from_static_str("mongodb://localhost/other-results"),
-            },
+            &QueryOutput::Network(network_output()),
         )
-        .expect_err("timeline destination must match the commit worker configuration");
-        assert_eq!(
-            error.to_string(),
-            "timeline search must use the worker's configured results cache"
-        );
-        Ok(())
+        .expect_err("a query task requires a task index");
+
+        assert!(error.to_string().contains("task index"));
     }
 
     #[test]
@@ -809,41 +842,68 @@ mod tests {
             &task_context(),
             &config,
             42,
-            &unbounded_query_option(),
+            &unbounded_query(),
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
             &DatasetName::default(),
-            &OutputHandle::ResultsCache {
-                uri: NonEmptyString::from_static_str(
-                    "mongodb://results-cache:27017/clp-query-results",
-                ),
-            },
+            &QueryOutput::ResultsCache(ResultsCacheOutput {
+                max_num_results: None,
+                aggregation: None,
+            }),
         )
         .expect_err("the clp storage engine is unsupported");
 
         assert!(error.to_string().contains("clp-s"));
     }
+
     #[test]
     fn timeline_search_preserves_filters_and_omits_result_limit() -> anyhow::Result<()> {
-        let options = ClpSQueryOption {
-            max_num_results: NonZeroU32::new(7),
-            begin_timestamp_millisecs: Some(-1),
-            end_timestamp_millisecs: Some(120_000),
+        let query = SearchQuery {
+            time_range: TimeRange::new(Some(-1), Some(120_000))?,
             ignore_case: true,
-            count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
-            ..unbounded_query_option()
+            ..unbounded_query()
         };
-        for max_num_results in [None, options.max_num_results] {
-            let options = ClpSQueryOption {
+        for max_num_results in [None, NonZeroU32::new(7)] {
+            let output = QueryOutput::ResultsCache(ResultsCacheOutput {
                 max_num_results,
-                ..options.clone()
-            };
-            let args = build_clp_s_search_args_for_result_cache(
+                aggregation: Some(Aggregation::CountByTime {
+                    bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
+                }),
+            });
+            let searches = build_clp_s_search_args(
                 &directory_selector(),
-                &options,
-                "mongodb://localhost/results",
+                &query,
+                &output,
+                &results_cache(),
                 42,
                 "ds1",
-            );
+                0,
+            )?;
+            assert_eq!(searches.len(), 2);
+            let args = &searches[1];
+            let mut expected_normal = [
+                "s",
+                "/archives/ds1",
+                "--archive-id",
+                ARCHIVE_ID,
+                "level: \"ERROR\"",
+                "--tge",
+                "-1",
+                "--tle",
+                "120000",
+                "--ignore-case",
+                "results-cache",
+                "--uri",
+                "mongodb://results-cache:27017/clp-query-results",
+                "--collection",
+                "42",
+            ]
+            .map(OsString::from)
+            .to_vec();
+            if max_num_results.is_some() {
+                expected_normal.extend(["--max-num-results", "7"].map(OsString::from));
+            }
+            expected_normal.extend(["--dataset", "ds1"].map(OsString::from));
+            assert_eq!(searches[0], expected_normal);
             let expected = [
                 "s",
                 "/archives/ds1",
@@ -859,14 +919,14 @@ mod tests {
                 "60000",
                 "results-cache",
                 "--uri",
-                "mongodb://localhost/results",
+                "mongodb://results-cache:27017/clp-query-results",
                 "--collection",
                 "42-timeline",
                 "--dataset",
                 "ds1",
             ];
             anyhow::ensure!(
-                args == expected.map(OsString::from),
+                *args == expected.map(OsString::from),
                 "unexpected timeline arguments: {args:?}"
             );
         }
@@ -875,18 +935,22 @@ mod tests {
 
     #[test]
     fn timeline_search_preserves_s3_authentication_and_large_bucket_width() -> anyhow::Result<()> {
-        let options = ClpSQueryOption {
+        let output = QueryOutput::ResultsCache(ResultsCacheOutput {
             max_num_results: NonZeroU32::new(7),
-            count_by_time_bucket_size_millisecs: PositiveI64::new(i64::MAX),
-            ..unbounded_query_option()
-        };
-        let args = build_clp_s_search_args_for_result_cache(
+            aggregation: Some(Aggregation::CountByTime {
+                bucket_size_millisecs: PositiveI64::new(i64::MAX).expect("i64::MAX is positive"),
+            }),
+        });
+        let searches = build_clp_s_search_args(
             &ArchiveSelector::ObjectUrl("https://bucket.s3.amazonaws.com/archive".to_owned()),
-            &options,
-            "mongodb://localhost/results",
+            &unbounded_query(),
+            &output,
+            &results_cache(),
             42,
             "ds1",
-        );
+            0,
+        )?;
+        let args = &searches[1];
         let expected = [
             "s",
             "https://bucket.s3.amazonaws.com/archive",
@@ -897,14 +961,14 @@ mod tests {
             "9223372036854775807",
             "results-cache",
             "--uri",
-            "mongodb://localhost/results",
+            "mongodb://results-cache:27017/clp-query-results",
             "--collection",
             "42-timeline",
             "--dataset",
             "ds1",
         ];
         anyhow::ensure!(
-            args == expected.map(OsString::from),
+            *args == expected.map(OsString::from),
             "unexpected timeline arguments: {args:?}"
         );
         Ok(())

@@ -976,6 +976,7 @@ dependencies = [
  "serde_with",
  "sqlx",
  "strum",
+ "tempfile",
  "thiserror",
  "tokio",
  "tracing",
@@ -1009,6 +1010,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -3287,6 +3289,7 @@ dependencies = [
  "clap",
  "clp-rust-utils",
  "const_format",
+ "non-empty-string",
  "rmp-serde",
  "secrecy",
  "serde",
@@ -3298,6 +3301,18 @@ dependencies = [
  "tokio-util",
  "tonic",
  "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "query-result-listener"
+version = "0.13.1-dev"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "clp-rust-utils",
+ "rmp",
+ "thiserror",
 ]
 
 [[package]]

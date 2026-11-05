@@ -1,4 +1,6 @@
 global:
+  # Where archives are stored: "fs" or "s3".
+  archiveOutputStorageType: "fs"
   fullnameOverride: ""
   nameOverride: ""
 
@@ -50,13 +52,13 @@ image:
   resultsCache:
     repository: "mongo"
     pullPolicy: "Always"
-    tag: "8.0.21"
+    tag: "9.0.4"
 
 # - If false: Single-node deployment.
 #   - Pods automatically tolerate control-plane taints.
 #   - Each worker deployment supports only 1 replica.
 # - If true: Multi-node deployment.
-#   - When using filesystem storage (`archive_output.storage.type: "fs"`), the PVC-backed
+#   - When using filesystem storage (`global.archiveOutputStorageType: "fs"`), the PVC-backed
 #     directories must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
 #     the same path).
 distributedDeployment: false
@@ -174,7 +176,7 @@ clpConfig:
     query_job_polling:
       initial_backoff_ms: 100
       max_backoff_ms: 5000
-    stream_file_extraction_timeout_secs: 1800
+    stream_file_extraction_timeout_secs: 270
 
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.
@@ -325,8 +327,7 @@ clpConfig:
 
   # Where archives should be output to
   archive_output:
-    storage:
-      type: "fs"
+    storage: {}
 
     # Retention period for archives, in minutes. Set to null to disable automatic deletion.
     retention_period: null
@@ -445,19 +446,28 @@ spider:
             secretKeyRef:
               name: "{{ include \"clp.fullname\" . }}-database"
               key: "password"
-      extra_volume_mounts:
+      extra_volume_mounts: |-
         - name: "clp-config"
           mountPath: "/etc/clp-config.yaml"
           subPath: "clp-config.yaml"
           readOnly: true
         - name: "staged-archives"
           mountPath: "/var/data/staged-archives"
-      extra_volumes:
+        {{- if eq .Values.global.archiveOutputStorageType "fs" }}
+        - name: "shared-data-archives"
+          mountPath: "/var/data/archives"
+        {{- end }}
+      extra_volumes: |-
         - name: "clp-config"
           configMap:
-            name: "{{ include \"clp.fullname\" . }}-config"
+            name: "{{ include "clp.fullname" . }}-config"
         - name: "staged-archives"
           emptyDir: {}
+        {{- if eq .Values.global.archiveOutputStorageType "fs" }}
+        - name: "shared-data-archives"
+          persistentVolumeClaim:
+            claimName: "{{ include "clp.fullname" . }}-shared-data-archives"
+        {{- end }}
       service_account_name: "{{ include \"clp.fullname\" . }}-service-account"
       pools:
         - name: "general"

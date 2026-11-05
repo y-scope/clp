@@ -182,6 +182,6 @@ formats described for Python orchestration services, Rust HTTP services, or the 
 
 
 [clp-py-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-py-utils/clp_py_utils/clp_logging.py
-[clp-rust-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-rust-utils/src/logging.rs
+[clp-rust-logging]: https://github.com/y-scope/clp/blob/DOCS_VAR_CLP_GIT_REF/components/clp-rust-libs/clp-rust-utils/src/logging.rs
 [pino]: https://fastify.dev/docs/v2.15.x/Documentation/Logging/
 [EnvFilter]: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html
