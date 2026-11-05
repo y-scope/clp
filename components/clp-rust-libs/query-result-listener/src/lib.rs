@@ -1,15 +1,21 @@
 //! Receives the results that `clp-s` query tasks stream over TCP.
 
-#[expect(
-    dead_code,
-    reason = "the TCP listener that runs the connection handler comes in a later change"
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "the TCP listener that runs the connection handler comes in a later change"
+    )
 )]
 mod connection;
 mod error;
 pub mod protocol;
-#[expect(
-    dead_code,
-    reason = "the TCP listener that runs the connection handler comes in a later change"
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "the TCP listener that runs the connection handler comes in a later change"
+    )
 )]
 mod session;
 

@@ -17,3 +17,4 @@ tokio = { workspace = true, features = ["io-util", "sync"] }
 
 [dev-dependencies]
 anyhow = { workspace = true }
+tokio = { workspace = true, features = ["macros"] }
