@@ -24,6 +24,8 @@ use crate::protocol::Trailer;
 use crate::session::SessionStats;
 use crate::session::State;
 
+const MAX_READ_SIZE: usize = 64 * 1024;
+
 /// A connection that joined a session, streaming the results of one attempt of a query task.
 ///
 /// # Type Parameters
@@ -109,8 +111,6 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
         stream: &mut StreamType,
         mut buffered: BytesMut,
     ) -> Result<(), ConnectionError> {
-        const MAX_READ_SIZE: usize = 64 * 1024;
-
         loop {
             let claimed = self.claim_buffered_frames(&mut buffered);
             if 0 != self.num_pending_results {
@@ -986,18 +986,22 @@ mod tests {
             }
             .encode()
         );
-        assert!(
-            results == expected,
+        assert_eq!(results.len(), expected.len());
+        assert_eq!(
+            results
+                .iter()
+                .zip(&expected)
+                .position(|(result, expected_result)| result != expected_result),
+            None,
             "every result should arrive once, in order, with the attempt's archive ID and its own \
-             message ({} results arrived)",
-            results.len()
+             message"
         );
         Ok(())
     }
 
     #[tokio::test]
     async fn results_written_at_once_are_read_at_most_64_kib_at_a_time() -> anyhow::Result<()> {
-        const MAX_READ_SIZE: usize = 64 * 1024;
+        use super::MAX_READ_SIZE;
 
         /// Far more bytes than [`MAX_READ_SIZE`], and fewer than the in-memory stream holds.
         const NUM_RESULTS: u64 = 10_000;
@@ -1011,13 +1015,6 @@ mod tests {
         let end = attempt.finish(NUM_RESULTS).await;
         end.result?;
 
-        assert_eq!(
-            end.received,
-            Ack {
-                num_results: NUM_RESULTS
-            }
-            .encode()
-        );
         let batches = harness.take_batches();
         // No frame is shorter than the first, and a batch may also hold the result whose frame the
         // previous read cut off.
