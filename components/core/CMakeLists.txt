@@ -170,7 +170,7 @@ if(CLP_NEED_BOOST)
     endif()
     find_package(
         Boost
-        1.81...1.88
+        1.86...1.88
         REQUIRED
             filesystem
             iostreams
