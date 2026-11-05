@@ -1,18 +1,16 @@
 #ifndef CLP_S_SEARCH_NARROWTYPES_HPP
 #define CLP_S_SEARCH_NARROWTYPES_HPP
 
-#include <memory>
 #include <vector>
 
-#include <clp_s/search/ast/ColumnDescriptor.hpp>
-#include <clp_s/search/ast/Expression.hpp>
-#include <clp_s/search/ast/Transformation.hpp>
+#include "ColumnDescriptor.hpp"
+#include "Transformation.hpp"
 
 namespace clp_s::search::ast {
 class NarrowTypes : public Transformation {
 public:
     // Methods inherited from Transformation
-    auto run(std::shared_ptr<Expression>& expr) -> std::shared_ptr<Expression> override;
+    std::shared_ptr<Expression> run(std::shared_ptr<Expression>& expr) override;
 
 private:
     /**
@@ -20,7 +18,7 @@ private:
      * @param cur the expression to narrow
      * @return the narrowed expression
      */
-    auto narrow(std::shared_ptr<Expression> cur) -> std::shared_ptr<Expression>;
+    std::shared_ptr<Expression> narrow(std::shared_ptr<Expression> cur);
 
     bool m_should_renormalize{false};
     std::vector<std::shared_ptr<ColumnDescriptor>> m_local_exists_descriptors;

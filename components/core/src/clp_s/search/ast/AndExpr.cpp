@@ -1,14 +1,13 @@
 #include "AndExpr.hpp"
 
 #include <iostream>
-#include <memory>
-
-#include <clp_s/search/ast/Expression.hpp>
 
 namespace clp_s::search::ast {
 AndExpr::AndExpr(bool inverted, Expression* parent) : Expression(inverted, parent) {}
 
-auto AndExpr::print() const -> void {
+AndExpr::AndExpr(AndExpr const& expr) : Expression(expr) {}
+
+void AndExpr::print() const {
     auto& os = get_print_stream();
     if (is_inverted()) {
         os << "!";
@@ -25,12 +24,13 @@ auto AndExpr::print() const -> void {
     os << ")";
 
     if (get_parent() == nullptr) {
-        os << '\n';
+        os << std::endl;
+    } else {
+        os << std::flush;
     }
-    os << std::flush;
 }
 
-auto AndExpr::copy() const -> std::shared_ptr<Expression> {
+std::shared_ptr<Expression> AndExpr::copy() const {
     auto new_expr = std::shared_ptr<Expression>(new AndExpr(*this));
     for (auto it = new_expr->op_begin(); it != new_expr->op_end(); it++) {
         auto expr = std::static_pointer_cast<Expression>(*it);
@@ -39,16 +39,16 @@ auto AndExpr::copy() const -> std::shared_ptr<Expression> {
     return new_expr;
 }
 
-auto AndExpr::create(bool inverted, Expression* parent) -> std::shared_ptr<Expression> {
+std::shared_ptr<Expression> AndExpr::create(bool inverted, Expression* parent) {
     return std::shared_ptr<Expression>(static_cast<Expression*>(new AndExpr(inverted, parent)));
 }
 
-auto AndExpr::create(
+std::shared_ptr<Expression> AndExpr::create(
         std::shared_ptr<Expression>& op1,
         std::shared_ptr<Expression>& op2,
         bool inverted,
         Expression* parent
-) -> std::shared_ptr<Expression> {
+) {
     std::shared_ptr<Expression> expr(static_cast<Expression*>(new AndExpr(inverted, parent)));
     op1->copy_append(expr.get());
     op2->copy_append(expr.get());
