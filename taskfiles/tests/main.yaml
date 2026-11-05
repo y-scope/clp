@@ -15,7 +15,7 @@ tasks:
       LOCALSTACK_PORT:
         sh: "tools/scripts/localstack/get-free-port.py"
     dir: "{{.ROOT_DIR}}"
-    deps: ["toolchains:rust"]
+    deps: [":toolchains:rust"]
     cmds:
       - |-
         tools/scripts/localstack/start.py \
