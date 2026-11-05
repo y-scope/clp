@@ -23,6 +23,4 @@ sqlx = { workspace = true }
 tokio = { workspace = true, features = ["fs", "macros", "net"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-
-[dev-dependencies]
 uuid = { workspace = true }

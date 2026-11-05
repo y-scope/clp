@@ -68,7 +68,7 @@ spec:
               readOnly: true
             - name: "presto-etc"
               mountPath: "/opt/presto-server/etc"
-            {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+            {{- if eq .Values.global.archiveOutputStorageType "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "archives"
@@ -102,7 +102,7 @@ spec:
               - key: "presto-worker-setup-configs.sh"
                 path: "presto-worker-setup-configs.sh"
             defaultMode: 0755
-        {{- if eq .Values.clpConfig.archive_output.storage.type "fs" }}
+        {{- if eq .Values.global.archiveOutputStorageType "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
