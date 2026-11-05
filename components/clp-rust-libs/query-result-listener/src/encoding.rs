@@ -44,71 +44,15 @@ pub trait ResultEncoder: Send + 'static {
     fn take_batch(&mut self) -> Self::Batch;
 }
 
-/// A query result in the batches of a [`QueryResultEncoding`].
-#[cfg(test)]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct QueryResult {
-    /// The ID of the archive that produced the result.
-    pub archive_id: ArchiveId,
-
-    /// The result's timestamp in milliseconds since the Unix epoch.
-    pub timestamp_millisecs: i64,
-
-    /// The result's log event message.
-    pub message: String,
-}
-
-/// A [`ResultEncoding`] that batches [`QueryResult`] values.
-#[cfg(test)]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct QueryResultEncoding;
-
-#[cfg(test)]
-impl ResultEncoding for QueryResultEncoding {
-    type Batch = Vec<QueryResult>;
-    type Encoder = QueryResultEncoder;
-
-    fn encoder(&self, archive_id: ArchiveId) -> QueryResultEncoder {
-        QueryResultEncoder {
-            archive_id,
-            batch: Vec::new(),
-        }
-    }
-}
-
-/// The [`ResultEncoder`] for [`QueryResultEncoding`].
-#[cfg(test)]
-pub struct QueryResultEncoder {
-    archive_id: ArchiveId,
-    batch: Vec<QueryResult>,
-}
-
-#[cfg(test)]
-impl ResultEncoder for QueryResultEncoder {
-    type Batch = Vec<QueryResult>;
-
-    fn encode(&mut self, timestamp_millisecs: i64, message: &str) {
-        self.batch.push(QueryResult {
-            archive_id: self.archive_id,
-            timestamp_millisecs,
-            message: message.to_owned(),
-        });
-    }
-
-    fn take_batch(&mut self) -> Vec<QueryResult> {
-        std::mem::take(&mut self.batch)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
     use clp_rust_utils::types::ArchiveId;
 
-    use super::QueryResult;
-    use super::QueryResultEncoding;
     use super::ResultEncoder;
     use super::ResultEncoding;
+    use crate::test_utils::QueryResult;
+    use crate::test_utils::QueryResultEncoding;
 
     #[test]
     fn query_result_encoder_stamps_the_archive_id_and_starts_next_batch_empty() -> Result<()> {

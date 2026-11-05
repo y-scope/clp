@@ -1,4 +1,9 @@
-//! Encoders for the frames of the wire protocol, for tests.
+//! Encoders for the frames of the wire protocol, and an encoding of query results, for tests.
+
+use clp_rust_utils::types::ArchiveId;
+
+use crate::encoding::ResultEncoder;
+use crate::encoding::ResultEncoding;
 
 /// # Returns
 ///
@@ -41,4 +46,54 @@ pub fn encode_trailer(num_results: u64) -> Vec<u8> {
     rmp::encode::write_array_len(&mut bytes, 1);
     rmp::encode::write_uint(&mut bytes, num_results);
     bytes.into_vec()
+}
+
+/// A query result in the batches of a [`QueryResultEncoding`].
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct QueryResult {
+    /// The ID of the archive that produced the result.
+    pub archive_id: ArchiveId,
+
+    /// The result's timestamp in milliseconds since the Unix epoch.
+    pub timestamp_millisecs: i64,
+
+    /// The result's log event message.
+    pub message: String,
+}
+
+/// A [`ResultEncoding`] that batches [`QueryResult`] values.
+pub struct QueryResultEncoding;
+
+impl ResultEncoding for QueryResultEncoding {
+    type Batch = Vec<QueryResult>;
+    type Encoder = QueryResultEncoder;
+
+    fn encoder(&self, archive_id: ArchiveId) -> QueryResultEncoder {
+        QueryResultEncoder {
+            archive_id,
+            batch: Vec::new(),
+        }
+    }
+}
+
+/// The [`ResultEncoder`] for [`QueryResultEncoding`].
+pub struct QueryResultEncoder {
+    archive_id: ArchiveId,
+    batch: Vec<QueryResult>,
+}
+
+impl ResultEncoder for QueryResultEncoder {
+    type Batch = Vec<QueryResult>;
+
+    fn encode(&mut self, timestamp_millisecs: i64, message: &str) {
+        self.batch.push(QueryResult {
+            archive_id: self.archive_id,
+            timestamp_millisecs,
+            message: message.to_owned(),
+        });
+    }
+
+    fn take_batch(&mut self) -> Vec<QueryResult> {
+        std::mem::take(&mut self.batch)
+    }
 }
