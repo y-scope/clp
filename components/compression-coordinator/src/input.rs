@@ -12,8 +12,8 @@ use crate::partition::FsEntry;
 
 /// Recursively discovers regular files selected by container paths under the logs-input mount.
 ///
-/// Traversal runs on a blocking executor and follows symlinks within the mount. Canonical paths
-/// deduplicate overlapping selections and prevent revisiting directories through symlink cycles.
+/// Traversal follows symlinks within the mount. Canonical paths deduplicate overlapping selections
+/// and prevent revisiting directories through symlink cycles.
 /// Directories are omitted, while zero-byte regular files are retained.
 ///
 /// # Returns
@@ -29,60 +29,53 @@ use crate::partition::FsEntry;
 /// * [`Error::UnsupportedFsInput`] if a selected or discovered entry is neither a regular file nor
 ///   a directory.
 /// * [`Error::FsTraversal`] if traversing directory entries fails.
-/// * [`Error::FsDiscoveryJoin`] if the blocking discovery task cannot be joined.
-/// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
 /// * Forwards [`LogsInputMountPoint::canonical_input_path`]'s return values on failure.
 /// * Forwards [`walkdir::DirEntry::metadata`]'s return values on failure.
-pub async fn discover_fs_entries(
-    mount_point: NonEmptyString,
-    paths: Vec<NonEmptyString>,
+pub fn discover_fs_entries(
+    paths: &[NonEmptyString],
+    mount_point: &LogsInputMountPoint,
 ) -> Result<Vec<FsEntry>, Error> {
     if paths.is_empty() {
         return Err(Error::NoFsInputPaths);
     }
-    tokio::task::spawn_blocking(move || {
-        let mount_point = LogsInputMountPoint::resolve(mount_point)?;
-        let mut visited = HashSet::new();
-        let mut files = Vec::new();
-        for path in paths {
-            let root_input_path = mount_point.canonical_input_path(Path::new(path.as_str()))?;
-            let mut entries = WalkDir::new(path.as_str()).follow_links(true).into_iter();
-            while let Some(entry) = entries.next() {
-                let entry = match entry {
-                    Ok(entry) => entry,
-                    Err(error) => {
-                        if let Some(path) = error.path().filter(|_| error.loop_ancestor().is_some())
-                        {
-                            mount_point.canonical_input_path(path)?;
-                            continue;
-                        }
-                        return Err(error.into());
+    let mut visited = HashSet::new();
+    let mut files = Vec::new();
+    for path in paths {
+        let root_input_path = mount_point.canonical_input_path(Path::new(path.as_str()))?;
+        let mut entries = WalkDir::new(path.as_str()).follow_links(true).into_iter();
+        while let Some(entry) = entries.next() {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) => {
+                    if let Some(path) = error.path().filter(|_| error.loop_ancestor().is_some()) {
+                        mount_point.canonical_input_path(path)?;
+                        continue;
                     }
-                };
-                let input_path = if entry.depth() == 0 {
-                    root_input_path.clone()
-                } else {
-                    mount_point.canonical_input_path(entry.path())?
-                };
-                if !visited.insert(input_path.as_ref().to_owned()) {
-                    if entry.file_type().is_dir() {
-                        entries.skip_current_dir();
-                    }
-                    continue;
+                    return Err(error.into());
                 }
-                if entry.file_type().is_file() {
-                    files.push(FsEntry {
-                        path: input_path,
-                        size: entry.metadata()?.len(),
-                    });
-                } else if !entry.file_type().is_dir() {
-                    return Err(Error::UnsupportedFsInput(entry.into_path()));
+            };
+            let input_path = if entry.depth() == 0 {
+                root_input_path.clone()
+            } else {
+                mount_point.canonical_input_path(entry.path())?
+            };
+            if !visited.insert(input_path.as_ref().to_owned()) {
+                if entry.file_type().is_dir() {
+                    entries.skip_current_dir();
                 }
+                continue;
+            }
+            if entry.file_type().is_file() {
+                files.push(FsEntry {
+                    path: input_path,
+                    size: entry.metadata()?.len(),
+                });
+            } else if !entry.file_type().is_dir() {
+                return Err(Error::UnsupportedFsInput(entry.into_path()));
             }
         }
-        Ok(files)
-    })
-    .await?
+    }
+    Ok(files)
 }
 
 #[cfg(test)]
@@ -92,6 +85,7 @@ mod tests {
     use std::os::unix::net::UnixListener;
     use std::path::Path;
 
+    use clp_rust_utils::logs_input::LogsInputMountPoint;
     use non_empty_string::NonEmptyString;
 
     use super::discover_fs_entries;
@@ -106,23 +100,23 @@ mod tests {
         .expect("temporary path should not be empty")
     }
 
-    #[tokio::test]
-    async fn recursive_overlapping_selections_include_zero_byte_files_once() -> anyhow::Result<()> {
+    #[test]
+    fn recursive_overlapping_selections_include_zero_byte_files_once() -> anyhow::Result<()> {
         let root = tempfile::tempdir()?;
+        let mount_point = LogsInputMountPoint::resolve(path_string(root.path()))?;
         std::fs::create_dir(root.path().join("dir"))?;
         std::fs::write(root.path().join("dir/data.log"), b"hello")?;
         std::fs::write(root.path().join("empty.log"), b"")?;
         symlink("dir", root.path().join("alias"))?;
         symlink("..", root.path().join("dir/cycle"))?;
         let files = discover_fs_entries(
-            path_string(root.path()),
-            vec![
+            &[
                 path_string(root.path()),
                 path_string(&root.path().join("alias")),
                 path_string(&root.path().join("dir/data.log")),
             ],
-        )
-        .await?;
+            &mount_point,
+        )?;
         let num_files = files.len();
         let files: BTreeMap<_, _> = files
             .into_iter()
@@ -139,9 +133,10 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn missing_escaping_and_special_paths_are_rejected() -> anyhow::Result<()> {
+    #[test]
+    fn missing_escaping_and_special_paths_are_rejected() -> anyhow::Result<()> {
         let root = tempfile::tempdir()?;
+        let mount_point = LogsInputMountPoint::resolve(path_string(root.path()))?;
         let outside = tempfile::tempdir()?;
         symlink(outside.path(), root.path().join("escape"))?;
         std::fs::create_dir(root.path().join("nested"))?;
@@ -160,8 +155,7 @@ mod tests {
             ("invalid-cycle", "invalid-cycle/loop\n"),
         ] {
             let path = root.path().join(selection);
-            let error = discover_fs_entries(path_string(root.path()), vec![path_string(&path)])
-                .await
+            let error = discover_fs_entries(&[path_string(&path)], &mount_point)
                 .err()
                 .expect("invalid selection should fail");
             let invalid_path = root.path().join(invalid_path);
@@ -174,13 +168,13 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn empty_directories_and_directory_cycles_produce_no_files() -> anyhow::Result<()> {
+    #[test]
+    fn empty_directories_and_directory_cycles_produce_no_files() -> anyhow::Result<()> {
         let root = tempfile::tempdir()?;
+        let mount_point = LogsInputMountPoint::resolve(path_string(root.path()))?;
         std::fs::create_dir(root.path().join("empty"))?;
         symlink(".", root.path().join("cycle"))?;
-        let entries =
-            discover_fs_entries(path_string(root.path()), vec![path_string(root.path())]).await?;
+        let entries = discover_fs_entries(&[path_string(root.path())], &mount_point)?;
         assert_eq!(
             entries
                 .into_iter()
@@ -191,11 +185,11 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn empty_selection_is_rejected_before_resolving_the_mount() -> anyhow::Result<()> {
+    #[test]
+    fn empty_selection_is_rejected() -> anyhow::Result<()> {
         let root = tempfile::tempdir()?;
-        let result =
-            discover_fs_entries(path_string(&root.path().join("missing")), Vec::new()).await;
+        let mount_point = LogsInputMountPoint::resolve(path_string(root.path()))?;
+        let result = discover_fs_entries(&[], &mount_point);
         assert!(matches!(result, Err(Error::NoFsInputPaths)));
         Ok(())
     }
