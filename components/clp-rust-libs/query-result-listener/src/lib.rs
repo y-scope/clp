@@ -2,12 +2,22 @@
 
 #[expect(
     dead_code,
-    reason = "the connection handler that uses the cursor comes in a later change"
+    reason = "the TCP listener that runs the connection handler comes in a later change"
+)]
+mod connection;
+#[expect(
+    dead_code,
+    reason = "the TCP listener that runs the connection handler comes in a later change"
 )]
 mod cursor;
 pub mod encoding;
 mod error;
 pub mod protocol;
+#[expect(
+    dead_code,
+    reason = "the TCP listener that runs the connection handler comes in a later change"
+)]
+mod session;
 
 pub use error::ProtocolError;
 
