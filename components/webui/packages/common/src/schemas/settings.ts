@@ -15,10 +15,6 @@ const WebuiPublicSettingsSchema = Type.Object({
     ClpStorageEngine: Type.Enum(CLP_STORAGE_ENGINES),
 
     LogIngestorEnabled: Type.Boolean({default: false}),
-    LogsInputRootDir: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
     LogsInputType: Type.Enum(STORAGE_TYPE),
 
     MaxDatasetsPerQuery: Type.Union([
@@ -27,12 +23,6 @@ const WebuiPublicSettingsSchema = Type.Object({
     ]),
 
     PrestoMaxNumSearchResults: Type.Integer({minimum: 1}),
-
-    SqlDbClpArchivesTableName: Type.String(),
-    SqlDbClpDatasetsTableName: Type.String(),
-    SqlDbClpFilesTableName: Type.String(),
-    SqlDbClpTablePrefix: Type.String(),
-    SqlDbCompressionJobsTableName: Type.String(),
 
     MongoDbSearchResultsMetadataCollectionName: Type.String(),
 });
@@ -44,17 +34,9 @@ const WebuiServerSettingsSchema = Type.Object({
         Type.Null(),
     ], {default: null}),
 
-    SqlDbHost: Type.String(),
-    SqlDbName: Type.String(),
-    SqlDbPort: Type.Integer({minimum: 1, maximum: 65535}),
-
-    SqlDbQueryJobsTableName: Type.String(),
-
     MongoDbHost: Type.String(),
     MongoDbName: Type.String(),
     MongoDbPort: Type.Integer({minimum: 1, maximum: 65535}),
-
-    MongoDbStreamFilesCollectionName: Type.String(),
 
     ClientDir: Type.String(),
     LogViewerDir: Type.String(),
@@ -62,26 +44,6 @@ const WebuiServerSettingsSchema = Type.Object({
         Type.String(),
         Type.Null(),
     ]),
-
-    StreamFilesS3PathPrefix: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
-    StreamFilesS3Profile: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
-    StreamFilesS3Region: Type.Union([
-        Type.String(),
-        Type.Null(),
-    ]),
-    StreamTargetUncompressedSize: Type.Integer({minimum: 1}),
-
-    ArchiveOutputCompressionLevel: Type.Integer({minimum: 1, maximum: 19}),
-    ArchiveOutputTargetArchiveSize: Type.Integer({minimum: 1}),
-    ArchiveOutputTargetDictionariesSize: Type.Integer({minimum: 1}),
-    ArchiveOutputTargetEncodedFileSize: Type.Integer({minimum: 1}),
-    ArchiveOutputTargetSegmentSize: Type.Integer({minimum: 1}),
 
     PrestoHost: Type.Union([
         Type.String(),
