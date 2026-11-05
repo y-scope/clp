@@ -5,8 +5,6 @@ use clap::Parser;
 use clp_rust_utils::clp_config::package::{self};
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::serde::yaml;
-use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
-use non_empty_string::NonEmptyString;
 
 /// Command-line arguments for the compression coordinator.
 #[derive(Debug, Parser)]
@@ -33,12 +31,6 @@ async fn main() -> anyhow::Result<()> {
         tracing::error!(ERROR_MESSAGE);
         anyhow::bail!(ERROR_MESSAGE);
     }
-    let logs_input_mount_point = match config.logs_input {
-        package::config::LogsInput::Fs { .. } => Some(NonEmptyString::from_static_str(
-            package::config::LOGS_INPUT_MOUNT_POINT,
-        )),
-        package::config::LogsInput::S3 { .. } => None,
-    };
 
     let credentials = package::credentials::Credentials {
         database: package::credentials::Database {
@@ -87,7 +79,6 @@ async fn main() -> anyhow::Result<()> {
             &spider_config,
             db_pool,
             config.database,
-            logs_input_mount_point,
         )
         .await?;
 

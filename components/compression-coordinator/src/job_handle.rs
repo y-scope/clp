@@ -12,6 +12,7 @@ use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::FsInputConfig;
 use clp_rust_utils::job_config::InputConfig;
 use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
+use clp_rust_utils::logs_input::default_mount_point;
 use clp_rust_utils::s3::ObjectMetadata;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
@@ -45,9 +46,6 @@ pub struct SpiderOption {
 pub struct CompressionJobHandleContext {
     pub db_pool: MySqlPool,
     pub db_config: Database,
-
-    /// The container's logs-input mount point, or `None` when filesystem input is unavailable.
-    pub logs_input_mount_point: Option<NonEmptyString>,
     pub spider_option: SpiderOption,
 }
 
@@ -417,8 +415,9 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
     /// Returns an error if:
     ///
     /// * [`Error::NoFsInputPaths`] if no input paths are requested.
-    /// * [`Error::InvalidConfiguration`] if no logs-input mount point is configured.
+    /// * [`Error::FsDiscoveryJoin`] if the blocking discovery task cannot be joined.
     /// * [`Error::NoTaskInputs`] if the selection contains no regular files.
+    /// * Forwards [`default_mount_point`]'s return values on failure.
     /// * Forwards [`discover_fs_entries`]'s return values on failure.
     /// * Forwards [`CompressionInputBuilder::add`]'s return values on failure.
     async fn prepare_fs_task_inputs(
@@ -428,12 +427,11 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
         if config.paths_to_compress.is_empty() {
             return Err(Error::NoFsInputPaths);
         }
-        let mount_point = self.context.logs_input_mount_point.clone().ok_or_else(|| {
-            Error::InvalidConfiguration(
-                "filesystem compression requires a configured logs-input mount point".to_owned(),
-            )
-        })?;
-        let entries = discover_fs_entries(mount_point, config.paths_to_compress.clone()).await?;
+        let paths = config.paths_to_compress.clone();
+        let entries = tokio::task::spawn_blocking(move || {
+            discover_fs_entries(&paths, default_mount_point()?)
+        })
+        .await??;
         let mut input_builder = CompressionInputBuilder::new(FsSource, self.target_archive_size);
         for entry in entries {
             input_builder.add(entry)?;

@@ -5,10 +5,14 @@ use std::fmt::Formatter;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use non_empty_string::NonEmptyString;
 use serde::Deserialize;
 use serde::Serialize;
+
+use crate::clp_config::package::config::LOGS_INPUT_MOUNT_POINT;
+use crate::types::non_empty_string::ExpectedNonEmpty;
 
 /// A path in the logs input, relative to the logs-input mount point
 /// ([`LOGS_INPUT_MOUNT_POINT`](crate::clp_config::package::config::LOGS_INPUT_MOUNT_POINT)).
@@ -382,6 +386,30 @@ pub enum LogsInputError {
         #[source]
         source: io::Error,
     },
+}
+
+/// Resolves the default logs-input mount point on first use and caches successful resolution.
+///
+/// Failed resolutions are retried on subsequent calls.
+///
+/// # Returns
+///
+/// The shared resolved mount point on success.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`LogsInputMountPoint::resolve`]'s return values on failure.
+pub fn default_mount_point() -> Result<&'static LogsInputMountPoint, LogsInputError> {
+    static MOUNT_POINT: OnceLock<LogsInputMountPoint> = OnceLock::new();
+
+    if let Some(mount_point) = MOUNT_POINT.get() {
+        return Ok(mount_point);
+    }
+    let mount_point =
+        LogsInputMountPoint::resolve(NonEmptyString::from_static_str(LOGS_INPUT_MOUNT_POINT))?;
+    Ok(MOUNT_POINT.get_or_init(|| mount_point))
 }
 
 #[cfg(test)]

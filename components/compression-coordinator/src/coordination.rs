@@ -28,7 +28,6 @@ use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::serde::ZstdMsgpack;
 use const_format::formatcp;
-use non_empty_string::NonEmptyString;
 use spider_client::SpiderClient;
 use spider_core::task::ExecutionPolicy;
 use spider_core::task::TimeoutPolicy;
@@ -86,7 +85,6 @@ impl Coordinator {
         spider_config: &SpiderConfig,
         db_pool: sqlx::MySqlPool,
         db_config: DatabaseConfig,
-        logs_input_mount_point: Option<NonEmptyString>,
     ) -> Result<(Self, CancellationToken), Error> {
         let max_concurrent_jobs = coordinator_config.max_concurrent_jobs.get();
         if max_concurrent_jobs > Semaphore::MAX_PERMITS {
@@ -149,7 +147,6 @@ impl Coordinator {
             context: Arc::new(CompressionJobHandleContext {
                 db_pool,
                 db_config,
-                logs_input_mount_point,
                 spider_option,
             }),
             is_first_fetch: true,
