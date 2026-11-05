@@ -5,10 +5,12 @@ from types import SimpleNamespace
 from typing import Any, TypeVar
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import msgpack  # type: ignore[import-untyped]  # msgpack ships no stubs or py.typed marker
 import pytest
-from clp_py_utils.clp_config import ClpDbNameType
+from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME, ClpDbNameType
 
 from clp_mcp_server.clp_connector import ClpConnector, QueryJobStatus
+from clp_mcp_server.constants import QueryJobType, SEARCH_MAX_NUM_RESULTS
 
 
 @pytest.fixture
@@ -61,6 +63,77 @@ async def test_submit_query_invalid_timestamps(mock_clp_config: Any) -> None:
     connector = ClpConnector(mock_clp_config)
     with pytest.raises(ValueError, match="smaller than"):
         await connector.submit_query("test", 100, 50)
+
+
+async def _submitted_job_config(
+    connector: ClpConnector, begin_ts: int | None, end_ts: int | None
+) -> dict[str, Any]:
+    """
+    Submits a query against mocked databases.
+
+    :param connector: The connector to submit through.
+    :param begin_ts: The beginning timestamp of the query range.
+    :param end_ts: The end timestamp of the query range.
+    :return: The job config the connector stored in `query_jobs`, unpacked.
+    """
+    cursor = AsyncMock()
+    cursor.fetchone.return_value = (7,)
+    conn = MagicMock()
+    conn.commit = AsyncMock()
+    conn.cursor.return_value.__aenter__.return_value = cursor
+    connect = MagicMock()
+    connect.return_value.__aenter__.return_value = conn
+    results_cache = MagicMock()
+    results_cache.create_collection = AsyncMock()
+    results_cache.__getitem__.return_value.insert_one = AsyncMock()
+
+    with (
+        patch("clp_mcp_server.clp_connector.aiomysql.connect", connect),
+        patch.object(connector, "_results_cache", results_cache),
+    ):
+        query_id = await connector.submit_query("level: ERROR", begin_ts, end_ts)
+
+    assert query_id == "7"
+    sql, (job_type, packed_config) = cursor.execute.await_args_list[0].args
+    assert "INSERT INTO query_jobs" in sql
+    assert job_type == int(QueryJobType.SEARCH_OR_AGGREGATION)
+    job_config: dict[str, Any] = msgpack.unpackb(packed_config)
+    return job_config
+
+
+@pytest.mark.asyncio
+async def test_submit_query_stores_query_job_config(mock_clp_config: Any) -> None:
+    """
+    Tests that a search is stored in the `QueryJobConfig` format the query coordinator reads.
+
+    The coordinator denies unknown fields, so a job stored in the old flat format fails before it
+    runs (y-scope/clp#2656).
+    """
+    connector = ClpConnector(mock_clp_config)
+    job_config = await _submitted_job_config(connector, 0, 1790790051822)
+    assert job_config == {
+        "datasets": [CLP_DEFAULT_DATASET_NAME],
+        "query": {
+            "query_string": "level: ERROR",
+            "time_range": {
+                "begin_timestamp_millisecs": 0,
+                "end_timestamp_millisecs": 1790790051822,
+            },
+            "ignore_case": True,
+        },
+        "output": {"type": "results_cache", "max_num_results": SEARCH_MAX_NUM_RESULTS},
+    }
+
+
+@pytest.mark.asyncio
+async def test_submit_query_without_time_range_is_unbounded(mock_clp_config: Any) -> None:
+    """Tests that omitted timestamps are stored as unbounded sides of the time range."""
+    connector = ClpConnector(mock_clp_config)
+    job_config = await _submitted_job_config(connector, None, None)
+    assert job_config["query"]["time_range"] == {
+        "begin_timestamp_millisecs": None,
+        "end_timestamp_millisecs": None,
+    }
 
 
 @pytest.mark.asyncio
