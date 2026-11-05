@@ -236,7 +236,7 @@ tasks:
   # NOTE: We rely on cargo for checksumming. It automatically rebuilds when source files change or
   # when a binary is missing.
   rust:
-    deps: [":toolchains:rust"]
+    deps: ["toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
@@ -244,7 +244,7 @@ tasks:
       cargo build --release -p clp-tdl-package
 
   clp-tdl-package:
-    deps: [":toolchains:rust"]
+    deps: ["toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
