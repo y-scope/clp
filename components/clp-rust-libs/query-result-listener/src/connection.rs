@@ -1000,7 +1000,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn results_written_at_once_are_read_at_most_64_kib_at_a_time() -> anyhow::Result<()> {
+    async fn one_large_write_is_read_at_most_max_read_size_at_a_time() -> anyhow::Result<()> {
         use super::MAX_READ_SIZE;
 
         /// Far more bytes than [`MAX_READ_SIZE`], and fewer than the in-memory stream holds.
