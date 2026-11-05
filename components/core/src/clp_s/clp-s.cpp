@@ -52,7 +52,6 @@
 #include "SingleFileArchiveDefs.hpp"
 
 using namespace clp_s::search;
-using clp_s::cArchiveFormatDevelopmentVersionFlag;
 using clp_s::cEpochTimeMax;
 using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;

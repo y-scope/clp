@@ -1,20 +1,13 @@
 #ifndef CLP_S_SEARCH_OUTPUT_HPP
 #define CLP_S_SEARCH_OUTPUT_HPP
 
-#include <map>
-#include <set>
-#include <stack>
-#include <string>
+#include <memory>
 #include <string_view>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 
 #include <clp_s/search/SearchTelemetry.hpp>
 
 #include "../ArchiveReader.hpp"
-#include "../SchemaReader.hpp"
-#include "../Utils.hpp"
 #include "ast/Expression.hpp"
 #include "OutputHandler.hpp"
 #include "QueryRunner.hpp"
