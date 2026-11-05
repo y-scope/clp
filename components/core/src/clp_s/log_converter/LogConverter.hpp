@@ -8,8 +8,8 @@
 #include <ystdlib/containers/Array.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "../../clp/ReaderInterface.hpp"
-#include "../InputConfig.hpp"
+#include <clp/ReaderInterface.hpp>
+#include <clp_s/InputConfig.hpp>
 
 namespace clp_s::log_converter {
 /**
@@ -70,7 +70,7 @@ private:
     /**
      * Compacts unconsumed content to the start of the buffer.
      */
-    void compact_buffer();
+    auto compact_buffer() -> void;
 
     /**
      * Grows the buffer if it is full.

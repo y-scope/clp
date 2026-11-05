@@ -2,11 +2,14 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
+#include <tuple>
+#include <utility>
 
-#include "archive_constants.hpp"
-#include "FileWriter.hpp"
-#include "search/ast/Literal.hpp"
-#include "ZstdCompressor.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/FileWriter.hpp>
+#include <clp_s/search/ast/Literal.hpp>
+#include <clp_s/ZstdCompressor.hpp>
 
 namespace clp_s {
 auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
@@ -83,9 +86,9 @@ int32_t SchemaTree::get_metadata_field_id(std::string_view const field_name) con
         return -1;
     }
 
-    auto& metadata_subtree_node = m_nodes.at(metadata_subtree_id);
+    auto const& metadata_subtree_node{m_nodes.at(metadata_subtree_id)};
     for (auto child_id : metadata_subtree_node.get_children_ids()) {
-        auto& child_node = m_nodes.at(child_id);
+        auto const& child_node{m_nodes.at(child_id)};
         if (child_node.get_key_name() == field_name) {
             return child_id;
         }
@@ -127,7 +130,7 @@ int32_t SchemaTree::find_matching_subtree_root_in_subtree(
 ) const {
     int32_t earliest_match = -1;
     while (subtree_root_node != node) {
-        auto const& schema_node = get_node(node);
+        auto const& schema_node{get_node(node)};
         if (schema_node.get_type() == type) {
             earliest_match = node;
         }

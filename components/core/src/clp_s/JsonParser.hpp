@@ -55,9 +55,6 @@ public:
     // Constructor
     explicit JsonParser(JsonParserOption const& option);
 
-    // Destructor
-    ~JsonParser() = default;
-
     /**
      * Ingests the input described by `JsonParserOption`.
      * @return Whether the input was ingested successfully.

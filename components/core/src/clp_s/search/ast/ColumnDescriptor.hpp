@@ -1,16 +1,18 @@
 #ifndef CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 #define CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include "../../ErrorCode.hpp"
-#include "../../TraceableException.hpp"
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TraceableException.hpp>
+
 #include "Literal.hpp"
 
 namespace clp_s::search::ast {
@@ -251,7 +253,7 @@ public:
      * Whether the list of Descriptor's contains any wildcards
      * @return true if the descriptor contains any wildcards that need to be resolved
      */
-    bool is_unresolved_descriptor() const { return m_unresolved_descriptors; }
+    auto is_unresolved_descriptor() const -> bool { return m_unresolved_descriptors; }
 
     /**
      * Whether this Column is a single wildcard
