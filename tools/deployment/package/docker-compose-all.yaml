@@ -119,7 +119,7 @@ services:
       "-u",
       "-m", "clp_py_utils.create-db-tables",
       "--config", "/etc/clp-config.yaml",
-      "--storage-engine", "${CLP_PACKAGE_STORAGE_ENGINE:-clp}",
+      "--storage-engine", "${CLP_PACKAGE_STORAGE_ENGINE:-clp-s}",
     ]
 
   queue:

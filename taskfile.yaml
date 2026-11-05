@@ -100,12 +100,6 @@ tasks:
         vars:
           FLAVOUR: "json"
 
-  clp-text-pkg-tar:
-    cmds:
-      - task: "package-tar"
-        vars:
-          FLAVOUR: "text"
-
   clean-rust:
     cmds:
       - "rm -rf '{{.G_RUST_BUILD_DIR}}'"
