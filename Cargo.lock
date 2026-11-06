@@ -3312,6 +3312,7 @@ dependencies = [
  "bytes",
  "clp-rust-utils",
  "rmp",
+ "spider-core",
  "thiserror",
 ]
 
