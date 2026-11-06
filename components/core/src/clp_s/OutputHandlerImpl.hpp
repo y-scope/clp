@@ -158,10 +158,10 @@ public:
 private:
     // Methods
     /**
-     * Connects to the network destination and sets TCP_NODELAY on the connection.
+     * Connects to the network destination and sets `TCP_NODELAY` on the connection.
      *
      * @return ErrorCodeSuccess on success.
-     * @return ErrorCodeFailureNetwork if the connection or setting TCP_NODELAY on it fails.
+     * @return ErrorCodeFailureNetwork if the connection or setting `TCP_NODELAY` on it fails.
      */
     [[nodiscard]] auto connect() -> ErrorCode;
 

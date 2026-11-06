@@ -90,10 +90,7 @@ auto NetworkOutputHandler::write(
             return ecode;
         }
     }
-    auto const now{std::chrono::steady_clock::now()};
-    if (0 == m_buffer.size()) {
-        m_oldest_buffered_result_time = now;
-    }
+    auto const is_buffer_empty{0 == m_buffer.size()};
     msgpack::packer<msgpack::sbuffer> packer{m_buffer};
     if (-1 == m_socket_fd) {
         if (auto const ecode{connect()}; ErrorCode::ErrorCodeSuccess != ecode) {
@@ -104,6 +101,10 @@ auto NetworkOutputHandler::write(
         packer.pack(m_session_token);
         packer.pack_uint64(m_task_idx);
         packer.pack(archive_id);
+    }
+    auto const now{std::chrono::steady_clock::now()};
+    if (is_buffer_empty) {
+        m_oldest_buffered_result_time = now;
     }
     packer.pack_array(cNumResultFields);
     packer.pack_uint64(m_next_result_idx);
