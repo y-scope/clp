@@ -79,6 +79,15 @@ auto NetworkOutputHandler::write(
         return ErrorCode::ErrorCodeFailureNetwork;
     }
 
+    // The longest msgpack encoding of a result frame's array header, result index, timestamp, and
+    // message header.
+    constexpr size_t cMaxResultFrameOverheadSize{1 + 9 + 9 + 5};
+    auto const max_frame_size{cMaxResultFrameOverheadSize + message.size()};
+    if (0 != m_buffer.size() && m_buffer.size() + max_frame_size > cBufferSizeSendThreshold) {
+        if (auto const ecode{send_buffer()}; ErrorCode::ErrorCodeSuccess != ecode) {
+            return ecode;
+        }
+    }
     auto const now{std::chrono::steady_clock::now()};
     if (0 == m_buffer.size()) {
         m_oldest_buffered_result_time = now;

@@ -122,8 +122,9 @@ public:
     // Methods inherited from OutputHandler
     /**
      * Connects to the network destination and buffers the handshake before the first result. Sends
-     * the buffered frames once their size reaches `cBufferSizeSendThreshold` or the oldest of them
-     * has been buffered for `cBufferedResultAgeSendThreshold`.
+     * the buffered frames before the result would grow them past `cBufferSizeSendThreshold` bytes,
+     * after a result that alone reaches it, or once the oldest of them has been buffered for
+     * `cBufferedResultAgeSendThreshold`.
      *
      * @return ErrorCodeFailureNetwork if connecting or sending to the network destination fails, or
      * if an earlier call failed to.
