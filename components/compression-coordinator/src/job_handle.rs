@@ -793,7 +793,7 @@ fn s3_compression_timeout_policy(
             .expect("40 MiB/s is nonzero"),
         hard_compression_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
             .expect("8 MiB/s is nonzero"),
-        output_compression_ratio_estimate: NonZeroU64::MIN,
+        output_compression_ratio_estimate: NonZeroU64::new(15).expect("15 is nonzero"),
         soft_upload_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
             .expect("40 MiB/s is nonzero"),
         hard_upload_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
@@ -818,7 +818,7 @@ fn fs_compression_timeout_policy(
             .expect("40 MiB/s is nonzero"),
         hard_compression_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
             .expect("8 MiB/s is nonzero"),
-        output_compression_ratio_estimate: NonZeroU64::MIN,
+        output_compression_ratio_estimate: NonZeroU64::new(15).expect("15 is nonzero"),
         soft_upload_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
             .expect("40 MiB/s is nonzero"),
         hard_upload_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
@@ -848,8 +848,9 @@ mod tests {
             (1, 1, 1002, 10_000),
             (0, 9, 9000, 10_000),
             (0, 10, 10_000, 10_001),
-            (40 * 1024 * 1024, 2, 4000, 12_000),
-            (1024 * 1024 * 1024 * 1024, 1, 52_429_800, 86_400_000),
+            (40 * 1024 * 1024, 2, 3067, 10_000),
+            (15 * 40 * 1024 * 1024 + 1, 1, 17_002, 81_002),
+            (1024 * 1024 * 1024 * 1024, 1, 27_963_027, 86_400_000),
             (u64::MAX, 1, 86_399_999, 86_400_000),
             (0, 4096, 4_096_000, 4_096_001),
         ] {
@@ -926,8 +927,8 @@ mod tests {
         assert_eq!(
             policy,
             TimeoutPolicy {
-                soft_timeout_ms: 4_108_800,
-                hard_timeout_ms: 4_160_000,
+                soft_timeout_ms: 4_102_827,
+                hard_timeout_ms: 4_130_134,
             }
         );
         TaskGraph::new(
