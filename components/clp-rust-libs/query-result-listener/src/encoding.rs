@@ -3,12 +3,21 @@
 use clp_rust_utils::types::ArchiveId;
 
 /// A transport-specific encoding of query results.
+///
+/// An encoding is only a type: it binds the batches the session's consumer receives to the encoder
+/// that produces them, and is never instantiated.
 pub trait ResultEncoding: Send + Sync + 'static {
     /// A batch of encoded query results.
     type Batch: Send + 'static;
 
     /// An encoder for one connection's query results.
     type Encoder: ResultEncoder<Batch = Self::Batch>;
+}
+
+/// Encodes the query results of one connection into transport-specific batches.
+pub trait ResultEncoder: Send + 'static {
+    /// A batch of encoded query results.
+    type Batch: Send + 'static;
 
     /// Creates an encoder for one connection's query results from one archive.
     ///
@@ -19,13 +28,7 @@ pub trait ResultEncoding: Send + Sync + 'static {
     /// # Returns
     ///
     /// A new encoder for the connection's query results.
-    fn encoder(&self, archive_id: ArchiveId) -> Self::Encoder;
-}
-
-/// Encodes query results from one connection into batches.
-pub trait ResultEncoder: Send + 'static {
-    /// A batch of encoded query results.
-    type Batch: Send + 'static;
+    fn new(archive_id: ArchiveId) -> Self;
 
     /// Appends a query result to the pending batch.
     ///
@@ -64,7 +67,7 @@ mod tests {
             timestamp_millisecs,
             message: message.to_owned(),
         };
-        let mut encoder = QueryResultEncoding.encoder(archive_id);
+        let mut encoder = <QueryResultEncoding as ResultEncoding>::Encoder::new(archive_id);
 
         encoder.encode(2, "b\n");
         encoder.encode(1, "a\n");
