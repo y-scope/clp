@@ -113,9 +113,9 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
     ///
     /// # Returns
     ///
-      /// A [`Partition`] per compression task, pairing its manifest with its estimated uncompressed
-      /// size. Every added entry appears in exactly one partition, and the list is empty if no
-      /// entries were added.
+    /// A [`Partition`] per compression task, pairing its manifest with its estimated uncompressed
+    /// size. Every added entry appears in exactly one partition, and the list is empty if no
+    /// entries were added.
     #[must_use]
     pub fn build(mut self) -> Vec<Partition<SourceType::Manifest>> {
         self.partition(true);
