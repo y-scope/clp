@@ -7,8 +7,8 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../archive_constants.hpp"
-#include "../TimestampDictionaryReader.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(

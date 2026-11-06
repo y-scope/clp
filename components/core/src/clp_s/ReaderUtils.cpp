@@ -1,11 +1,13 @@
 #include "ReaderUtils.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <string_view>
 
-#include "archive_constants.hpp"
-#include "ErrorCode.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/SchemaTree.hpp>
 
 namespace clp_s {
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) {

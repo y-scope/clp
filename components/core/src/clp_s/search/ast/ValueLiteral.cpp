@@ -9,7 +9,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <utility>
 
 #include <clp_s/search/ast/FilterOperation.hpp>

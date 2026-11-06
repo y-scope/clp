@@ -1,16 +1,18 @@
 #ifndef CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 #define CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include "../../ErrorCode.hpp"
-#include "../../TraceableException.hpp"
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TraceableException.hpp>
+
 #include "Literal.hpp"
 
 namespace clp_s::search::ast {
@@ -251,7 +253,7 @@ public:
      * Whether the list of Descriptor's contains any wildcards
      * @return true if the descriptor contains any wildcards that need to be resolved
      */
-    bool is_unresolved_descriptor() const { return m_unresolved_descriptors; }
+    auto is_unresolved_descriptor() const -> bool { return m_unresolved_descriptors; }
 
     /**
      * Whether this Column is a single wildcard
@@ -264,11 +266,17 @@ public:
 
     // Methods inherited from Literal
     // ColumnDescriptor can implicitly match several different types at the same time.
-    bool matches_type(LiteralType type) override { return m_flags & type; }
+    [[nodiscard]] auto matches_type(LiteralType type) const -> bool override {
+        return m_flags & type;
+    }
 
-    bool matches_any(literal_type_bitmask_t mask) override { return m_flags & mask; }
+    [[nodiscard]] auto matches_any(literal_type_bitmask_t mask) const -> bool override {
+        return m_flags & mask;
+    }
 
-    bool matches_exactly(literal_type_bitmask_t mask) override { return m_flags == mask; }
+    [[nodiscard]] auto matches_exactly(literal_type_bitmask_t mask) const -> bool override {
+        return m_flags == mask;
+    }
 
     /**
      * Equal to operator to allow comparison between two column descriptors.

@@ -85,11 +85,11 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             {constants::cArchiveArrayDictFile, array_dict_compressed_size},
             {constants::cArchiveTablesFile, table_compressed_size}
     };
-    uint64_t offset = 0;
+    uint64_t total_files_size{0};
     for (auto& file : files) {
-        uint64_t original_size = file.o;
-        file.o = offset;
-        offset += original_size;
+        uint64_t const file_size{file.o};
+        file.o = total_files_size;
+        total_files_size += file_size;
     }
 
     nlohmann::json archive_range_index;
