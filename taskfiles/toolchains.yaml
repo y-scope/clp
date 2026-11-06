@@ -131,6 +131,11 @@ tasks:
             https://github.com/oras-project/oras/releases/download/v{{.ORAS_VERSION}}/oras_{{.ORAS_VERSION}}_{{OS}}_{{ARCH}}.tar.gz
 
   rust:
+    # A task's qualified name is derived from its include path from the root taskfile and a task
+    # that is included through multiple paths will be defined multiple times with different
+    # qualified names. These tasks can then run concurrently as their qualified names differ. To
+    # avoid race conditions invocations should use `toolchains:rust` from the root taskfile and
+    # `:toolchains:rust` from an included taskfile.
     # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.
     label: "toolchains-rust"
     run: "once"
