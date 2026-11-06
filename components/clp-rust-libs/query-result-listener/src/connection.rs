@@ -13,6 +13,7 @@ use tokio::io::AsyncWriteExt;
 use crate::cursor::Claim;
 use crate::cursor::TaskCursor;
 use crate::encoding::ResultEncoder;
+use crate::encoding::ResultEncoding;
 use crate::error::ConnectionError;
 use crate::error::ProtocolError;
 use crate::protocol::Ack;
@@ -27,17 +28,17 @@ use crate::session::State;
 ///
 /// # Type Parameters
 ///
-/// * `EncoderType` - The encoder of the connection's results.
-pub struct Connection<EncoderType: ResultEncoder> {
-    session: Arc<State<EncoderType>>,
+/// * `EncodingType` - The encoding of the results the session delivers.
+pub struct Connection<EncodingType: ResultEncoding> {
+    session: Arc<State<EncodingType>>,
     cursor: Arc<TaskCursor>,
-    encoder: EncoderType,
+    encoder: EncodingType::Encoder,
     num_pending_results: u64,
     num_results: u64,
     stats: SessionStats,
 }
 
-impl<EncoderType: ResultEncoder> Connection<EncoderType> {
+impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     /// Factory function.
     ///
     /// Joins the connection to the task cursor of `session` that `handshake` names, creating the
@@ -54,7 +55,7 @@ impl<EncoderType: ResultEncoder> Connection<EncoderType> {
     /// * [`ProtocolError::ArchiveIdMismatch`] if the cursor of the handshake's task is bound to
     ///   another archive.
     pub fn new(
-        session: Arc<State<EncoderType>>,
+        session: Arc<State<EncodingType>>,
         handshake: &Handshake,
     ) -> Result<Self, ProtocolError> {
         let cursor = Arc::clone(
@@ -73,7 +74,7 @@ impl<EncoderType: ResultEncoder> Connection<EncoderType> {
             });
         }
         Ok(Self {
-            encoder: EncoderType::new(archive_id),
+            encoder: EncodingType::Encoder::new(archive_id),
             session,
             cursor,
             num_pending_results: 0,
@@ -221,7 +222,7 @@ impl<EncoderType: ResultEncoder> Connection<EncoderType> {
     }
 }
 
-impl<EncoderType: ResultEncoder> Drop for Connection<EncoderType> {
+impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
     fn drop(&mut self) {
         self.session.record(&self.stats);
     }
@@ -307,7 +308,7 @@ mod tests {
     use crate::session::SessionStats;
     use crate::session::State;
     use crate::test_utils::QueryResult;
-    use crate::test_utils::QueryResultEncoder;
+    use crate::test_utils::QueryResultEncoding;
     use crate::test_utils::encode_result;
     use crate::test_utils::encode_trailer;
 
@@ -322,7 +323,7 @@ mod tests {
     /// A session's state, the receiver of the batches its connections send, and the number of bytes
     /// each direction of its connections' in-memory streams buffers.
     struct Harness {
-        state: Arc<State<QueryResultEncoder>>,
+        state: Arc<State<QueryResultEncoding>>,
         batches_receiver: Option<mpsc::Receiver<Vec<QueryResult>>>,
         stream_capacity: usize,
     }
@@ -409,7 +410,7 @@ mod tests {
             &self,
             task_index: TaskIndex,
             archive_id: &str,
-        ) -> Result<Connection<QueryResultEncoder>, ProtocolError> {
+        ) -> Result<Connection<QueryResultEncoding>, ProtocolError> {
             use clp_rust_utils::types::SessionToken;
 
             use crate::protocol::Handshake;

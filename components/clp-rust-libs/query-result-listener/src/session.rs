@@ -9,7 +9,7 @@ use spider_core::task::TaskIndex;
 use tokio::sync::mpsc;
 
 use crate::cursor::TaskCursor;
-use crate::encoding::ResultEncoder;
+use crate::encoding::ResultEncoding;
 
 /// Statistics of a session's connections.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -34,20 +34,20 @@ pub struct SessionStats {
 ///
 /// # Type Parameters
 ///
-/// * `EncoderType` - The encoder of the results the session delivers.
-pub struct State<EncoderType: ResultEncoder> {
+/// * `EncodingType` - The encoding of the results the session delivers.
+pub struct State<EncodingType: ResultEncoding> {
     /// The cursors of the session's query tasks, keyed by task index.
     pub cursors: DashMap<TaskIndex, Arc<TaskCursor>>,
 
     /// The sender of the session's batches of encoded results.
-    pub batches_sender: mpsc::Sender<EncoderType::Batch>,
+    pub batches_sender: mpsc::Sender<EncodingType::Batch>,
 
     num_results_emitted: AtomicU64,
     num_duplicates_dropped: AtomicU64,
     num_results_discarded: AtomicU64,
 }
 
-impl<EncoderType: ResultEncoder> State<EncoderType> {
+impl<EncodingType: ResultEncoding> State<EncodingType> {
     /// Factory function.
     ///
     /// Creates the state of a session that sends its batches to `batches_sender`.
@@ -56,7 +56,7 @@ impl<EncoderType: ResultEncoder> State<EncoderType> {
     ///
     /// The newly created state.
     #[must_use]
-    pub fn new(batches_sender: mpsc::Sender<EncoderType::Batch>) -> Self {
+    pub fn new(batches_sender: mpsc::Sender<EncodingType::Batch>) -> Self {
         Self {
             cursors: DashMap::new(),
             batches_sender,
