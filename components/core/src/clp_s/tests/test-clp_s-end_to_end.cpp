@@ -226,21 +226,37 @@ void compare_with_input(
 ) {
     int result{std::system("command -v jq >/dev/null 2>&1")};
     REQUIRE((0 == result));
+    result = std::system("command -v diff >/dev/null 2>&1");
+    REQUIRE((0 == result));
+
+    // Canonicalize both sides identically: sorted keys, one compact object per line, lines sorted.
+    // `--slurp` makes `jq` parse the whole file before emitting anything, so a malformed record
+    // fails the command rather than truncating its output. Each `jq` writes its own file so its
+    // exit status is checked directly rather than being hidden behind a pipeline.
+    constexpr std::string_view cCanonicalizeCommandFormat{
+            "jq --sort-keys --compact-output --slurp 'sort | .[]' '{}' > '{}'"
+    };
     auto command = fmt::format(
-            "jq --sort-keys --compact-output '.' {} | sort > {}",
+            cCanonicalizeCommandFormat,
+            input_file_path,
+            cTestEndToEndExpectedOutputSortedFile
+    );
+    result = std::system(command.c_str());
+    REQUIRE((0 == result));
+    REQUIRE_FALSE(std::filesystem::is_empty(cTestEndToEndExpectedOutputSortedFile));
+
+    command = fmt::format(
+            cCanonicalizeCommandFormat,
             extracted_json_path.string(),
             cTestEndToEndOutputSortedJson
     );
     result = std::system(command.c_str());
     REQUIRE((0 == result));
-
     REQUIRE_FALSE(std::filesystem::is_empty(cTestEndToEndOutputSortedJson));
 
-    result = std::system("command -v diff >/dev/null 2>&1");
-    REQUIRE((0 == result));
     command = fmt::format(
-            "jq --sort-keys --compact-output '.' {} | sort | diff --unified - {} > /dev/null",
-            input_file_path,
+            "diff --unified '{}' '{}' > /dev/null",
+            cTestEndToEndExpectedOutputSortedFile,
             cTestEndToEndOutputSortedJson
     );
     result = std::system(command.c_str());
@@ -376,7 +392,8 @@ TEST_CASE("clp-s-compress-extract-empty-containers", "[clp-s][end-to-end]") {
     TestOutputCleaner const test_cleanup{
             {std::string{cTestEndToEndArchiveDirectory},
              std::string{cTestEndToEndOutputDirectory},
-             std::string{cTestEndToEndOutputSortedJson}}
+             std::string{cTestEndToEndOutputSortedJson},
+             std::string{cTestEndToEndExpectedOutputSortedFile}}
     };
 
     REQUIRE_NOTHROW(
@@ -411,7 +428,8 @@ TEST_CASE("clp-s-compress-extract-text-in-arrays", "[clp-s][end-to-end]") {
     TestOutputCleaner const test_cleanup{
             {std::string{cTestEndToEndArchiveDirectory},
              std::string{cTestEndToEndOutputDirectory},
-             std::string{cTestEndToEndOutputSortedJson}}
+             std::string{cTestEndToEndOutputSortedJson},
+             std::string{cTestEndToEndExpectedOutputSortedFile}}
     };
 
     REQUIRE_NOTHROW(
