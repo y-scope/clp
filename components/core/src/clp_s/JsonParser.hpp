@@ -223,7 +223,7 @@ private:
     std::vector<std::string> m_timestamp_column;
     std::string m_timestamp_namespace;
 
-    boost::uuids::time_generator_v7 m_generator{};
+    boost::uuids::time_generator_v7 m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
     ArchiveWriterOption m_archive_options{};
     size_t m_target_encoded_size;

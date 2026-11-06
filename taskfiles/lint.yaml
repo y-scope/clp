@@ -443,7 +443,6 @@ tasks:
             - "clp_s/search/ast/AndExpr.cpp"
             - "clp_s/search/ast/AndExpr.hpp"
             - "clp_s/search/ast/ColumnDescriptor.cpp"
-            - "clp_s/search/ast/ConstantProp.cpp"
             - "clp_s/search/ast/ConvertToExists.cpp"
             - "clp_s/search/ast/ConvertToExists.hpp"
             - "clp_s/search/ast/Expression.cpp"
