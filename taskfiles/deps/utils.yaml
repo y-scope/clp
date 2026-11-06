@@ -48,6 +48,7 @@ tasks:
   # command.
   # @param {string} [CMAKE_SOURCE_DIR=.] The path, within the tarball extraction directory,
   # containing the project's top level CMakeLists.txt.
+  # @param {string} [ENV_FILE] A file sourced to set up the environment before running CMake.
   install-remote-cmake-lib:
     internal: true
     vars:
@@ -73,6 +74,7 @@ tasks:
           CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           CMAKE_SOURCE_DIR: "{{.CMAKE_SOURCE_DIR}}"
+          ENV_FILE: "{{.ENV_FILE}}"
           TAR_SHA256: "{{.TARBALL_SHA256}}"
           TAR_URL: "{{.TARBALL_URL}}"
           WORK_DIR: "{{.G_DEPS_CPP_DIR}}"

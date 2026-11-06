@@ -95,7 +95,7 @@ pub(super) fn search(
     );
 
     let clp_home = clp_home();
-    let (archive_selector, credential_env) =
+    let (archive_descriptor, credential_env) =
         resolve_archive_input(&runtime(), clp_home, config, dataset, archive_id).inspect_err(
             |e| {
                 tracing::error!(
@@ -108,7 +108,7 @@ pub(super) fn search(
                 );
             },
         )?;
-    let mut args = build_clp_s_query_args(&archive_selector, query);
+    let mut args = build_clp_s_query_args(&archive_descriptor, query);
     args.extend(output_args);
     run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
 
@@ -122,8 +122,8 @@ pub(super) fn search(
     Ok(())
 }
 
-/// Selector for clp-s to address the archive to search.
-enum ArchiveSelector {
+/// The archive to search, in the form clp-s addresses it.
+enum ArchiveDescriptor {
     /// A local dataset archives directory plus the `--archive-id` selecting one archive in it.
     Directory {
         path: PathBuf,
@@ -140,7 +140,7 @@ enum ArchiveSelector {
 ///
 /// A tuple on success, containing:
 ///
-/// * The archive selector.
+/// * The archive descriptor.
 /// * The credential env vars clp-s should run with, which are empty for filesystem-backed archive
 ///   output.
 ///
@@ -156,11 +156,11 @@ fn resolve_archive_input(
     config: &SpiderTaskExecutorConfig,
     dataset: &DatasetName,
     archive_id: ArchiveId,
-) -> anyhow::Result<(ArchiveSelector, Vec<(&'static str, String)>)> {
+) -> anyhow::Result<(ArchiveDescriptor, Vec<(&'static str, String)>)> {
     let s3_config = match &config.archive_output.storage {
         ArchiveOutputStorage::Fs { .. } => {
             return Ok((
-                ArchiveSelector::Directory {
+                ArchiveDescriptor::Directory {
                     path: config
                         .abs_archive_output_staging(clp_home)
                         .join(dataset.as_str()),
@@ -186,7 +186,7 @@ fn resolve_archive_input(
         .as_ref()
         .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
     let credential_env = s3_credential_env(runtime, region, &s3_config.aws_authentication)?;
-    Ok((ArchiveSelector::ObjectUrl(url), credential_env))
+    Ok((ArchiveDescriptor::ObjectUrl(url), credential_env))
 }
 
 /// Builds the clp-s command-line arguments of the `results-cache` output handler.
@@ -244,17 +244,17 @@ fn build_clp_s_network_output_args(
 ///
 /// The ordered clp-s arguments, which the output handler's arguments follow.
 fn build_clp_s_query_args(
-    archive_selector: &ArchiveSelector,
+    archive_descriptor: &ArchiveDescriptor,
     query: &SearchQuery,
 ) -> Vec<OsString> {
     let mut args = vec![OsString::from("s")];
-    match archive_selector {
-        ArchiveSelector::Directory { path, archive_id } => {
+    match archive_descriptor {
+        ArchiveDescriptor::Directory { path, archive_id } => {
             args.push(path.as_os_str().to_os_string());
             args.push(OsString::from("--archive-id"));
             args.push(OsString::from(archive_id.to_string()));
         }
-        ArchiveSelector::ObjectUrl(url) => {
+        ArchiveDescriptor::ObjectUrl(url) => {
             args.push(OsString::from(url));
             args.push(OsString::from("--auth"));
             args.push(OsString::from("s3"));
@@ -379,7 +379,7 @@ mod tests {
     use spider_core::types::id::TaskId;
     use spider_tdl::TaskContext;
 
-    use super::ArchiveSelector;
+    use super::ArchiveDescriptor;
     use super::build_clp_s_network_output_args;
     use super::build_clp_s_query_args;
     use super::build_clp_s_results_cache_output_args;
@@ -425,9 +425,9 @@ mod tests {
 
     /// # Returns
     ///
-    /// An [`ArchiveSelector`] addressing [`ARCHIVE_ID`] under `/archives/ds1`.
-    fn directory_selector() -> ArchiveSelector {
-        ArchiveSelector::Directory {
+    /// An [`ArchiveDescriptor`] addressing [`ARCHIVE_ID`] under `/archives/ds1`.
+    fn directory_descriptor() -> ArchiveDescriptor {
+        ArchiveDescriptor::Directory {
             path: PathBuf::from("/archives/ds1"),
             archive_id: ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         }
@@ -512,7 +512,7 @@ mod tests {
         };
 
         assert_eq!(
-            build_clp_s_query_args(&directory_selector(), &query),
+            build_clp_s_query_args(&directory_descriptor(), &query),
             vec![
                 OsString::from("s"),
                 OsString::from("/archives/ds1"),
@@ -533,7 +533,10 @@ mod tests {
         let url = format!("https://bucket.s3.amazonaws.com/LIB1/ds1/{ARCHIVE_ID}");
 
         assert_eq!(
-            build_clp_s_query_args(&ArchiveSelector::ObjectUrl(url.clone()), &unbounded_query()),
+            build_clp_s_query_args(
+                &ArchiveDescriptor::ObjectUrl(url.clone()),
+                &unbounded_query()
+            ),
             vec![
                 OsString::from("s"),
                 OsString::from(url),
@@ -612,7 +615,7 @@ mod tests {
             ..SpiderTaskExecutorConfig::default()
         };
 
-        let (selector, credential_env) = resolve_archive_input(
+        let (descriptor, credential_env) = resolve_archive_input(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -620,8 +623,8 @@ mod tests {
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
-        let ArchiveSelector::Directory { path, archive_id } = selector else {
-            panic!("expected a directory selector");
+        let ArchiveDescriptor::Directory { path, archive_id } = descriptor else {
+            panic!("expected a directory descriptor");
         };
         assert_eq!(path, PathBuf::from("/clp/var/data/archives/ds1"));
         assert_eq!(
@@ -638,7 +641,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config("var/data/staged-archives", None);
 
-        let (selector, credential_env) = resolve_archive_input(
+        let (descriptor, credential_env) = resolve_archive_input(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -646,8 +649,8 @@ mod tests {
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
-        let ArchiveSelector::ObjectUrl(url) = selector else {
-            panic!("expected an object-URL selector");
+        let ArchiveDescriptor::ObjectUrl(url) = descriptor else {
+            panic!("expected an object-URL descriptor");
         };
         assert_eq!(
             url,
@@ -671,14 +674,14 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config(STAGING_DIRECTORY, None);
 
-        let (selector, _) = resolve_archive_input(
+        let (descriptor, _) = resolve_archive_input(
             runtime.handle(),
             Path::new("/clp"),
             &config,
             &"ds1".parse::<DatasetName>()?,
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
-        let args = build_clp_s_query_args(&selector, &unbounded_query());
+        let args = build_clp_s_query_args(&descriptor, &unbounded_query());
 
         assert!(
             !args
@@ -694,7 +697,7 @@ mod tests {
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let config = s3_backed_config("var/data/staged-archives", Some("http://minio:9000"));
 
-        let (selector, _) = resolve_archive_input(
+        let (descriptor, _) = resolve_archive_input(
             runtime.handle(),
             Path::new("/clp"),
             &config,
@@ -702,8 +705,8 @@ mod tests {
             ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
         )?;
 
-        let ArchiveSelector::ObjectUrl(url) = selector else {
-            panic!("expected an object-URL selector");
+        let ArchiveDescriptor::ObjectUrl(url) = descriptor else {
+            panic!("expected an object-URL descriptor");
         };
         assert_eq!(
             url,
