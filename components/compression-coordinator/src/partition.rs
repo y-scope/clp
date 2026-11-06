@@ -113,8 +113,9 @@ impl<SourceType: Source> CompressionInputBuilder<SourceType> {
     ///
     /// # Returns
     ///
-    /// Task manifests and estimated uncompressed sizes containing every added entry once, or an
-    /// empty list if no entries were added.
+      /// A [`Partition`] per compression task, pairing its manifest with its estimated uncompressed
+      /// size. Every added entry appears in exactly one partition, and the list is empty if no
+      /// entries were added.
     #[must_use]
     pub fn build(mut self) -> Vec<Partition<SourceType::Manifest>> {
         self.partition(true);
@@ -226,6 +227,12 @@ impl Source for FsSource {
     }
 }
 
+/// The input of one compression task and its estimated uncompressed size in bytes.
+///
+/// # Type Parameters
+///
+/// * `InputType` - The task's input: its file paths or object keys while partitioning, or the task
+///   manifest built from them.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Partition<InputType> {
     pub input: InputType,
