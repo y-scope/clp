@@ -837,7 +837,7 @@ tasks:
     requires:
       vars: ["CARGO_FMT_FLAGS"]
     dir: "{{.ROOT_DIR}}"
-    deps: ["rust-lint-configs", "toolchains:rust"]
+    deps: ["rust-lint-configs", ":toolchains:rust"]
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo "+{{.G_RUST_NIGHTLY_TOOLCHAIN}}" fmt --all -- {{.CARGO_FMT_FLAGS}}
@@ -851,7 +851,7 @@ tasks:
     requires:
       vars: ["CARGO_CLIPPY_FLAGS"]
     dir: "{{.ROOT_DIR}}"
-    deps: ["toolchains:rust"]
+    deps: [":toolchains:rust"]
     cmd: |-
       . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo "+{{.G_RUST_NIGHTLY_TOOLCHAIN}}" clippy --all-targets --all-features \
