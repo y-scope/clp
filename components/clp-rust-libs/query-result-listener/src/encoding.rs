@@ -2,13 +2,10 @@
 
 use clp_rust_utils::types::ArchiveId;
 
-/// A transport-specific encoding of query results.
-pub trait ResultEncoding: Send + Sync + 'static {
+/// Encodes the query results of one connection into transport-specific batches.
+pub trait ResultEncoder: Send + 'static {
     /// A batch of encoded query results.
     type Batch: Send + 'static;
-
-    /// An encoder for one connection's query results.
-    type Encoder: ResultEncoder<Batch = Self::Batch>;
 
     /// Creates an encoder for one connection's query results from one archive.
     ///
@@ -19,13 +16,7 @@ pub trait ResultEncoding: Send + Sync + 'static {
     /// # Returns
     ///
     /// A new encoder for the connection's query results.
-    fn encoder(&self, archive_id: ArchiveId) -> Self::Encoder;
-}
-
-/// Encodes query results from one connection into batches.
-pub trait ResultEncoder: Send + 'static {
-    /// A batch of encoded query results.
-    type Batch: Send + 'static;
+    fn new(archive_id: ArchiveId) -> Self;
 
     /// Appends a query result to the pending batch.
     ///
@@ -50,9 +41,8 @@ mod tests {
     use clp_rust_utils::types::ArchiveId;
 
     use super::ResultEncoder;
-    use super::ResultEncoding;
     use crate::test_utils::QueryResult;
-    use crate::test_utils::QueryResultEncoding;
+    use crate::test_utils::QueryResultEncoder;
 
     #[test]
     fn query_result_encoder_stamps_the_archive_id_and_starts_next_batch_empty() -> Result<()> {
@@ -64,7 +54,7 @@ mod tests {
             timestamp_millisecs,
             message: message.to_owned(),
         };
-        let mut encoder = QueryResultEncoding.encoder(archive_id);
+        let mut encoder = QueryResultEncoder::new(archive_id);
 
         encoder.encode(2, "b\n");
         encoder.encode(1, "a\n");
