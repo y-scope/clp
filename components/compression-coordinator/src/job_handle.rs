@@ -468,9 +468,23 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
         estimated_uncompressed_size: u64,
         num_download_inputs: u64,
     ) -> ExecutionPolicy {
+        const FACTORS: CompressionTimeoutFactors = CompressionTimeoutFactors {
+            download_input_latency_ms: 1000,
+            soft_compression_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
+                .expect("40 MiB/s is nonzero"),
+            hard_compression_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
+                .expect("8 MiB/s is nonzero"),
+            output_compression_ratio_estimate: NonZeroU64::new(15).expect("15 is nonzero"),
+            soft_upload_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
+                .expect("40 MiB/s is nonzero"),
+            hard_upload_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
+                .expect("8 MiB/s is nonzero"),
+        };
+
         ExecutionPolicy {
             max_num_retry: self.context.spider_option.compression_task_max_retry,
-            timeout_policy: s3_compression_timeout_policy(
+            timeout_policy: compression_timeout_policy(
+                &FACTORS,
                 estimated_uncompressed_size,
                 num_download_inputs,
             ),
@@ -490,9 +504,23 @@ impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType>
         estimated_uncompressed_size: u64,
         num_download_inputs: u64,
     ) -> ExecutionPolicy {
+        const FACTORS: CompressionTimeoutFactors = CompressionTimeoutFactors {
+            download_input_latency_ms: 1000,
+            soft_compression_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
+                .expect("40 MiB/s is nonzero"),
+            hard_compression_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
+                .expect("8 MiB/s is nonzero"),
+            output_compression_ratio_estimate: NonZeroU64::new(15).expect("15 is nonzero"),
+            soft_upload_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
+                .expect("40 MiB/s is nonzero"),
+            hard_upload_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
+                .expect("8 MiB/s is nonzero"),
+        };
+
         ExecutionPolicy {
             max_num_retry: self.context.spider_option.compression_task_max_retry,
-            timeout_policy: fs_compression_timeout_policy(
+            timeout_policy: compression_timeout_policy(
+                &FACTORS,
                 estimated_uncompressed_size,
                 num_download_inputs,
             ),
@@ -730,102 +758,48 @@ struct CompressionTimeoutFactors {
     hard_upload_throughput_bytes_per_sec: NonZeroU64,
 }
 
-impl CompressionTimeoutFactors {
-    /// Estimates task timeouts from the input size and count using these factors.
-    ///
-    /// # Returns
-    ///
-    /// A [`TimeoutPolicy`] covering download, compression, and upload within Spider's timeout
-    /// limits.
-    fn timeout_policy(
-        &self,
-        estimated_uncompressed_size: u64,
-        num_download_inputs: u64,
-    ) -> TimeoutPolicy {
-        const MIN_SOFT_TIMEOUT_MS: u64 = 1000;
-        const MIN_HARD_TIMEOUT_MS: u64 = 10_000;
-        const MAX_TIMEOUT_MS: u64 = 24 * 60 * 60 * 1000;
+/// Estimates task timeouts from the input size and count using the supplied factors.
+///
+/// # Returns
+///
+/// A [`TimeoutPolicy`] covering download, compression, and upload within Spider's timeout limits.
+fn compression_timeout_policy(
+    factors: &CompressionTimeoutFactors,
+    estimated_uncompressed_size: u64,
+    num_download_inputs: u64,
+) -> TimeoutPolicy {
+    const MIN_SOFT_TIMEOUT_MS: u64 = 1000;
+    const MIN_HARD_TIMEOUT_MS: u64 = 10_000;
+    const MAX_TIMEOUT_MS: u64 = 24 * 60 * 60 * 1000;
 
-        let download_latency_ms =
-            num_download_inputs.saturating_mul(self.download_input_latency_ms);
-        let estimated_compressed_size =
-            estimated_uncompressed_size.div_ceil(self.output_compression_ratio_estimate.get());
-        let timeout_ms = |compression_throughput: NonZeroU64, upload_throughput: NonZeroU64| {
-            let compression_ms = estimated_uncompressed_size
-                .saturating_mul(1000)
-                .div_ceil(compression_throughput.get());
-            let upload_ms = estimated_compressed_size
-                .saturating_mul(1000)
-                .div_ceil(upload_throughput.get());
-            download_latency_ms
-                .saturating_add(compression_ms)
-                .saturating_add(upload_ms)
-        };
-        let soft_timeout_ms = timeout_ms(
-            self.soft_compression_throughput_bytes_per_sec,
-            self.soft_upload_throughput_bytes_per_sec,
-        )
-        .clamp(MIN_SOFT_TIMEOUT_MS, MAX_TIMEOUT_MS - 1);
-        let hard_timeout_ms = timeout_ms(
-            self.hard_compression_throughput_bytes_per_sec,
-            self.hard_upload_throughput_bytes_per_sec,
-        )
-        .clamp(MIN_HARD_TIMEOUT_MS.max(soft_timeout_ms + 1), MAX_TIMEOUT_MS);
-        TimeoutPolicy {
-            soft_timeout_ms,
-            hard_timeout_ms,
-        }
+    let download_latency_ms = num_download_inputs.saturating_mul(factors.download_input_latency_ms);
+    let estimated_compressed_size =
+        estimated_uncompressed_size.div_ceil(factors.output_compression_ratio_estimate.get());
+    let timeout_ms = |compression_throughput: NonZeroU64, upload_throughput: NonZeroU64| {
+        let compression_ms = estimated_uncompressed_size
+            .saturating_mul(1000)
+            .div_ceil(compression_throughput.get());
+        let upload_ms = estimated_compressed_size
+            .saturating_mul(1000)
+            .div_ceil(upload_throughput.get());
+        download_latency_ms
+            .saturating_add(compression_ms)
+            .saturating_add(upload_ms)
+    };
+    let soft_timeout_ms = timeout_ms(
+        factors.soft_compression_throughput_bytes_per_sec,
+        factors.soft_upload_throughput_bytes_per_sec,
+    )
+    .clamp(MIN_SOFT_TIMEOUT_MS, MAX_TIMEOUT_MS - 1);
+    let hard_timeout_ms = timeout_ms(
+        factors.hard_compression_throughput_bytes_per_sec,
+        factors.hard_upload_throughput_bytes_per_sec,
+    )
+    .clamp(MIN_HARD_TIMEOUT_MS.max(soft_timeout_ms + 1), MAX_TIMEOUT_MS);
+    TimeoutPolicy {
+        soft_timeout_ms,
+        hard_timeout_ms,
     }
-}
-
-/// Estimates timeouts for compressing S3 inputs.
-///
-/// # Returns
-///
-/// A [`TimeoutPolicy`] using the S3 input factors for download, compression, and upload.
-fn s3_compression_timeout_policy(
-    estimated_uncompressed_size: u64,
-    num_download_inputs: u64,
-) -> TimeoutPolicy {
-    const FACTORS: CompressionTimeoutFactors = CompressionTimeoutFactors {
-        download_input_latency_ms: 1000,
-        soft_compression_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
-            .expect("40 MiB/s is nonzero"),
-        hard_compression_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
-            .expect("8 MiB/s is nonzero"),
-        output_compression_ratio_estimate: NonZeroU64::new(15).expect("15 is nonzero"),
-        soft_upload_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
-            .expect("40 MiB/s is nonzero"),
-        hard_upload_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
-            .expect("8 MiB/s is nonzero"),
-    };
-
-    FACTORS.timeout_policy(estimated_uncompressed_size, num_download_inputs)
-}
-
-/// Estimates timeouts for compressing filesystem inputs.
-///
-/// # Returns
-///
-/// A [`TimeoutPolicy`] using the filesystem input factors for download, compression, and upload.
-fn fs_compression_timeout_policy(
-    estimated_uncompressed_size: u64,
-    num_download_inputs: u64,
-) -> TimeoutPolicy {
-    const FACTORS: CompressionTimeoutFactors = CompressionTimeoutFactors {
-        download_input_latency_ms: 1000,
-        soft_compression_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
-            .expect("40 MiB/s is nonzero"),
-        hard_compression_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
-            .expect("8 MiB/s is nonzero"),
-        output_compression_ratio_estimate: NonZeroU64::new(15).expect("15 is nonzero"),
-        soft_upload_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
-            .expect("40 MiB/s is nonzero"),
-        hard_upload_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
-            .expect("8 MiB/s is nonzero"),
-    };
-
-    FACTORS.timeout_policy(estimated_uncompressed_size, num_download_inputs)
 }
 
 #[cfg(test)]
@@ -839,8 +813,82 @@ mod tests {
     use crate::partition::FsEntry;
     use crate::partition::FsSource;
 
-    #[test]
-    fn compression_timeouts_include_download_compression_and_upload() -> anyhow::Result<()> {
+    const TEST_MAX_RETRY: u32 = 7;
+
+    #[derive(Clone)]
+    struct UnreachableSubmitter;
+
+    #[async_trait::async_trait]
+    impl CompressionJobSubmitter for UnreachableSubmitter {
+        async fn submit_compression_job<ManifestType: CompressionManifest>(
+            &self,
+            _compression_job_id: CompressionJobId,
+            _resource_group_id: ResourceGroupId,
+            _clp_s_option: ClpSCompressionOption,
+            _dataset: DatasetName,
+            _input_sources: Vec<(ManifestType, ExecutionPolicy)>,
+            _commit_task_execution_policy: ExecutionPolicy,
+        ) -> Result<SpiderJobId, Error> {
+            unreachable!("policy tests do not submit compression jobs")
+        }
+
+        async fn run_compression_job_to_completion(
+            &self,
+            _spider_job_id: SpiderJobId,
+            _initial_poll_backoff: Duration,
+            _max_poll_backoff: Duration,
+        ) -> Result<CompressionJobOutcome, Error> {
+            unreachable!("policy tests do not run compression jobs")
+        }
+    }
+
+    impl CompressionJobHandle<UnreachableSubmitter> {
+        /// # Returns
+        ///
+        /// A compression job handle for policy tests, with a database pool that connects lazily.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the fixture's database URL or filesystem job configuration is invalid.
+        fn new_for_policy_tests() -> Self {
+            use clp_rust_utils::clp_config::package::config::ArchiveOutput;
+            use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+
+            Self::new(
+                Arc::new(CompressionJobHandleContext {
+                    db_pool: MySqlPool::connect_lazy("mysql://localhost/clp-db")
+                        .expect("the fixture database URL is valid"),
+                    db_config: Database::default(),
+                    spider_option: SpiderOption {
+                        compression_task_max_retry: TEST_MAX_RETRY,
+                        commit_task_execution_policy: ExecutionPolicy::default(),
+                        initial_poll_backoff: Duration::from_secs(1),
+                        max_poll_backoff: Duration::from_secs(1),
+                    },
+                }),
+                1,
+                UnreachableSubmitter,
+                ResourceGroupId::from(1),
+                ClpIoConfig {
+                    input: InputConfig::FsInputConfig {
+                        config: FsInputConfig {
+                            dataset: DatasetName::default(),
+                            paths_to_compress: vec![NonEmptyString::from_static_str("/mnt/logs")],
+                            path_prefix_to_remove: None,
+                            timestamp_key: None,
+                            unstructured: false,
+                        },
+                    },
+                    output: (&ArchiveOutput::default()).into(),
+                },
+            )
+            .expect("the fixture uses a supported filesystem input configuration")
+        }
+    }
+
+    #[tokio::test]
+    async fn compression_timeouts_include_download_compression_and_upload() -> anyhow::Result<()> {
+        let handle = CompressionJobHandle::new_for_policy_tests();
         for (size, num_download_inputs, soft_timeout_ms, hard_timeout_ms) in [
             (0, 0, 1000, 10_000),
             (1, 0, 1000, 10_000),
@@ -855,11 +903,12 @@ mod tests {
             (0, 4096, 4_096_000, 4_096_001),
         ] {
             for policy in [
-                s3_compression_timeout_policy(size, num_download_inputs),
-                fs_compression_timeout_policy(size, num_download_inputs),
+                handle.s3_compression_task_execution_policy(size, num_download_inputs),
+                handle.fs_compression_task_execution_policy(size, num_download_inputs),
             ] {
+                assert_eq!(policy.max_num_retry, TEST_MAX_RETRY);
                 assert_eq!(
-                    policy,
+                    policy.timeout_policy,
                     TimeoutPolicy {
                         soft_timeout_ms,
                         hard_timeout_ms
@@ -871,10 +920,7 @@ mod tests {
                             package: "clp".to_owned(),
                             task_func: "compression::commit".to_owned(),
                         },
-                        execution_policy: Some(ExecutionPolicy {
-                            timeout_policy: policy,
-                            ..ExecutionPolicy::default()
-                        }),
+                        execution_policy: Some(policy),
                     }),
                     None,
                 )?;
@@ -896,7 +942,7 @@ mod tests {
             hard_upload_throughput_bytes_per_sec: NonZeroU64::new(2).expect("2 bytes/s is nonzero"),
         };
         assert_eq!(
-            FACTORS.timeout_policy(41, 2),
+            compression_timeout_policy(&FACTORS, 41, 2),
             TimeoutPolicy {
                 soft_timeout_ms: 4750,
                 hard_timeout_ms: 10_100,
@@ -904,8 +950,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn full_filesystem_partition_has_valid_size_based_timeouts() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn full_filesystem_partition_has_valid_size_based_timeouts() -> anyhow::Result<()> {
         const TARGET_ARCHIVE_SIZE: u64 = 256 * 1024 * 1024;
         const NUM_FILES: u64 = 4096;
 
@@ -920,12 +966,13 @@ mod tests {
         assert_eq!(partitions.len(), 1);
         let partition = &partitions[0];
         assert_eq!(partition.input.file_paths.len() as u64, NUM_FILES);
-        let policy = fs_compression_timeout_policy(
+        let handle = CompressionJobHandle::new_for_policy_tests();
+        let policy = handle.fs_compression_task_execution_policy(
             partition.estimated_uncompressed_size,
             partition.input.file_paths.len() as u64,
         );
         assert_eq!(
-            policy,
+            policy.timeout_policy,
             TimeoutPolicy {
                 soft_timeout_ms: 4_102_827,
                 hard_timeout_ms: 4_130_134,
@@ -937,10 +984,7 @@ mod tests {
                     package: "clp".to_owned(),
                     task_func: "compression::commit".to_owned(),
                 },
-                execution_policy: Some(ExecutionPolicy {
-                    timeout_policy: policy,
-                    ..ExecutionPolicy::default()
-                }),
+                execution_policy: Some(policy),
             }),
             None,
         )?;
