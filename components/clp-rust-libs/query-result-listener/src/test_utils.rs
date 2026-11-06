@@ -19,18 +19,11 @@ pub struct QueryResult {
 }
 
 /// A [`ResultEncoding`] that batches [`QueryResult`] values.
-pub struct QueryResultEncoding;
+pub enum QueryResultEncoding {}
 
 impl ResultEncoding for QueryResultEncoding {
     type Batch = Vec<QueryResult>;
     type Encoder = QueryResultEncoder;
-
-    fn encoder(&self, archive_id: ArchiveId) -> QueryResultEncoder {
-        QueryResultEncoder {
-            archive_id,
-            batch: Vec::new(),
-        }
-    }
 }
 
 /// The [`ResultEncoder`] for [`QueryResultEncoding`].
@@ -41,6 +34,13 @@ pub struct QueryResultEncoder {
 
 impl ResultEncoder for QueryResultEncoder {
     type Batch = Vec<QueryResult>;
+
+    fn new(archive_id: ArchiveId) -> Self {
+        Self {
+            archive_id,
+            batch: Vec::new(),
+        }
+    }
 
     fn encode(&mut self, timestamp_millisecs: i64, message: &str) {
         self.batch.push(QueryResult {
