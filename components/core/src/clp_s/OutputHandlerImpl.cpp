@@ -1,5 +1,7 @@
 #include "OutputHandlerImpl.hpp"
 
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -165,6 +167,20 @@ auto NetworkOutputHandler::connect() -> ErrorCode {
         auto const error{std::error_code{errno, std::generic_category()}};
         SPDLOG_ERROR(
                 "Failed to connect to {}:{} - ({}) {}",
+                m_host,
+                m_port,
+                error.value(),
+                error.message()
+        );
+        m_has_failed = true;
+        return ErrorCode::ErrorCodeFailureNetwork;
+    }
+
+    constexpr int cTcpNoDelay{1};
+    if (0 != setsockopt(m_socket_fd, IPPROTO_TCP, TCP_NODELAY, &cTcpNoDelay, sizeof(cTcpNoDelay))) {
+        auto const error{std::error_code{errno, std::generic_category()}};
+        SPDLOG_ERROR(
+                "Failed to set TCP_NODELAY on the connection to {}:{} - ({}) {}",
                 m_host,
                 m_port,
                 error.value(),
