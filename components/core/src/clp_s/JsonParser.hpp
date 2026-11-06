@@ -1,6 +1,5 @@
 #ifndef CLP_S_JSONPARSER_HPP
 #define CLP_S_JSONPARSER_HPP
-
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -12,21 +11,32 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/time_generator_v7.hpp>
+#include <log_surgeon/log_surgeon.hpp>
 #include <simdjson.h>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/ffi/KeyValuePairLogEvent.hpp>
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
 #include <clp/ReaderInterface.hpp>
 #include <clp_s/ArchiveWriter.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ParsedMessage.hpp>
 #include <clp_s/Schema.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/TraceableException.hpp>
+#include <clpp/ParsingSpec.hpp>
 
 namespace clp_s {
+/**
+ * Options for `JsonParser`.
+ *
+ * `retain_float_format` is treated as `true` whenever `flavour` is `ClpFlavour::Clpp`, since the
+ * clpp flavour must reconstruct unstructured text exactly.
+ */
 struct JsonParserOption {
     std::vector<std::pair<Path, std::string>> input_paths_and_canonical_filenames;
     std::string timestamp_key;
@@ -41,6 +51,8 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
+    ClpFlavour flavour{ClpFlavour::Clps};
+    std::optional<Path> parsing_spec_path;
 };
 
 class JsonParser {
@@ -52,11 +64,12 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructor
+    /**
+     * @param option
+     * @throw OperationFailed (ErrorCodeBadParam) if `option.timestamp_key` contains wildcards, or
+     * if the flavour is clpp and the parsing specification is missing or can't be built.
+     */
     explicit JsonParser(JsonParserOption const& option);
-
-    // Destructor
-    ~JsonParser() = default;
 
     /**
      * Ingests the input described by `JsonParserOption`.
@@ -71,6 +84,7 @@ public:
     [[nodiscard]] auto store() -> std::vector<ArchiveStats>;
 
 private:
+    // Methods
     /**
      * Parses JSON input and ingests it into the current archive, splitting the archive if it grows
      * beyond the target encoded size.
@@ -104,13 +118,17 @@ private:
     ) -> bool;
 
     /**
-     * Parses a JSON line
-     * @param line the JSON line
-     * @param parent_node_id the parent node id
-     * @param key the key of the node
+     * Parses a JSON line.
+     * @param line
+     * @param parent_node_id
+     * @param parent_key
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
-    void parse_line(simdjson::ondemand::value line, int32_t parent_node_id, std::string const& key);
+    void parse_line(
+            simdjson::ondemand::value line,
+            mpt_node_id_t parent_node_id,
+            std::string const& parent_key
+    );
 
     /**
      * Determines the archive node type based on the IR node type and value.
@@ -213,8 +231,67 @@ private:
      * Note: this method should be called before parsing a record so that internal fields come first
      * in each table. This isn't strictly necessary, but it is a nice convention.
      */
-    int32_t add_metadata_field(std::string_view const field_name, NodeType type);
+    auto add_metadata_field(std::string_view const field_name, NodeType type) -> mpt_node_id_t;
 
+    /**
+     * Adds a string value to the current parsed message and schema. In the clpp flavour, the value
+     * is handed to `parse_unstructured_text`. In the clp-s flavour, a value containing a space is
+     * stored as a `ClpString` and any other value as a `VarString`.
+     * @tparam ordered Whether the field is a top-level field (added to the ordered region of the
+     * schema) or nested in an array (added to the unordered region).
+     * @param parent_node_id
+     * @param field_key
+     * @param field_value
+     * @throw std::runtime_error if `parse_unstructured_text` fails.
+     */
+    template <bool ordered>
+    auto add_string_value(
+            mpt_node_id_t parent_node_id,
+            std::string_view field_key,
+            std::string_view field_value
+    ) -> void;
+
+    /**
+     * Adds a string value in the clpp flavour. If the parsing spec decides to structurize the value
+     * (`clpp::ParsingSpec::should_structurize`), it is parsed with log-surgeon and stored as a
+     * `StructurizedText` with its structurized components; otherwise it is stored whole as an
+     * `UnstructurizedText`.
+     * @tparam ordered Whether an `UnstructurizedText` is added to the ordered region of the schema
+     * (top-level fields) or to the unordered region (fields nested in arrays). A `StructurizedText`
+     * is always an unordered object.
+     * @param parent_node_id
+     * @param field_key
+     * @param field_value
+     * @return A void result on success, or an error code indicating the failure:
+     * - ClppErrorCodeEnum::Unsupported if the parsing spec or parser don't exist.
+     * - ClppErrorCodeEnum::Failure if log-surgeon fails to parse the value.
+     * - Forwards `m_archive_writer->update_log_shape_dict`'s return values on failure.
+     * - Forwards `m_archive_writer->update_parent_rule_shapes`'s return values on failure.
+     */
+    template <bool ordered>
+    auto parse_unstructured_text(
+            mpt_node_id_t parent_node_id,
+            std::string_view field_key,
+            std::string_view field_value
+    ) -> ystdlib::error_handling::Result<void>;
+
+    /**
+     * Attempts to parse a string lexeme as a float and add it to the current parsed message,
+     * retaining the lexeme's original format. Adds a `FormattedFloat` node when the format can be
+     * encoded losslessly and a `DictionaryFloat` node otherwise.
+     * @param lexeme The string to parse as a float.
+     * @param parent_node_id The parent schema tree node ID.
+     * @param rule_name The rule name for the schema tree node key.
+     * @return The schema node ID of the added float node.
+     * @return std::nullopt if the lexeme cannot be parsed as a float.
+     */
+    auto try_add_float_value(
+            std::string_view lexeme,
+            mpt_node_id_t parent_node_id,
+            std::string_view rule_name
+    ) -> std::optional<mpt_node_id_t>;
+
+    // Data members
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
 
@@ -241,6 +318,10 @@ private:
             m_autogen_ir_node_to_archive_node_id_mapping;
 
     std::vector<ArchiveStats> m_archive_stats;
+
+    // Both are set iff the flavour is clpp.
+    std::optional<clpp::ParsingSpec> m_parsing_spec;
+    std::optional<log_surgeon::Parser> m_log_surgeon_parser;
 };
 }  // namespace clp_s
 

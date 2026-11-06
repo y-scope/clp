@@ -9,13 +9,15 @@
 #include <utility>
 #include <vector>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 
+#include <clp_s/Defs.hpp>
+
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
-#include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonConstructor.hpp"
 #include "../src/clp_s/SchemaTree.hpp"
@@ -38,6 +40,8 @@ constexpr std::string_view cTestEndToEndInvalidFormattedFloatInputFile{
         "test_invalid_formatted_float.jsonl"
 };
 constexpr std::string_view cTestEndToEndTimestampInputFile{"test_timestamp.jsonl"};
+constexpr std::string_view cTestEndToEndEmptyContainersInputFile{"test_empty_containers.jsonl"};
+constexpr std::string_view cTestEndToEndTextInArraysInputFile{"test_text_in_arrays.jsonl"};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
@@ -45,12 +49,42 @@ auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input
 auto get_test_input_local_path(std::string_view const test_input_path) -> std::string;
 auto extract() -> std::filesystem::path;
 void compare(std::filesystem::path const& extracted_json_path);
+void compare_with_input(
+        std::string const& input_file_path,
+        std::filesystem::path const& extracted_json_path
+);
 void literallyCompare(
         std::filesystem::path const& expected_output_json_path,
         std::filesystem::path const& extracted_json_path
 );
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types);
-void validate_archive_header();
+
+/**
+ * Requires that every archive in the test archive directory contains a `StructurizedText` node
+ * nested under a `StructurizedArray` node.
+ */
+auto check_structurized_text_nested_in_structurized_array() -> void;
+
+/**
+ * Compresses a test input file, validates the archive header, and extracts the archive.
+ * @param input_file The input file's name within `test_log_files`.
+ * @param flavour The flavour to compress with.
+ * @param structurize_arrays
+ * @param single_file_archive
+ * @return The path of the extracted JSON file.
+ */
+auto compress_and_extract(
+        std::string_view input_file,
+        clp_s::ClpFlavour flavour,
+        bool structurize_arrays,
+        bool single_file_archive
+) -> std::filesystem::path;
+
+/**
+ * Validates the header of every archive in the test archive directory.
+ * @param expected_flavour The flavour each archive is expected to report.
+ */
+auto validate_archive_header(clp_s::ClpFlavour expected_flavour = clp_s::ClpFlavour::Clps) -> void;
 
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
         -> std::filesystem::path {
@@ -64,15 +98,14 @@ auto get_test_input_local_path(std::string_view const test_input_path) -> std::s
 }
 
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
-    clp_s::ArchiveReader archive_reader;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
-        REQUIRE_NOTHROW(archive_reader.open(
+        clp_s::ArchiveReader archive_reader{
                 clp_s::Path{
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
-                clp_s::NetworkAuthOption{}
-        ));
+                clp_s::ArchiveReader::Options{}
+        };
         auto const schema_tree{archive_reader.get_schema_tree()};
         REQUIRE(nullptr != schema_tree);
         auto const root{schema_tree->get_object_subtree_node_id_for_namespace(
@@ -93,21 +126,84 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
             }
             REQUIRE(0 != types.count(cur_node.get_type()));
         }
-
-        REQUIRE_NOTHROW(archive_reader.close());
     }
 }
 
-void validate_archive_header() {
-    clp_s::ArchiveReader archive_reader;
+auto check_structurized_text_nested_in_structurized_array() -> void {
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
-        REQUIRE_NOTHROW(archive_reader.open(
+        clp_s::ArchiveReader archive_reader{
                 clp_s::Path{
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
-                clp_s::NetworkAuthOption{}
-        ));
+                clp_s::ArchiveReader::Options{}
+        };
+        auto const schema_tree{archive_reader.get_schema_tree()};
+        REQUIRE(nullptr != schema_tree);
+        auto const root{schema_tree->get_object_subtree_node_id_for_namespace(
+                clp_s::constants::cDefaultNamespace
+        )};
+        REQUIRE(clp_s::constants::cRootNodeId != root);
+        bool found{false};
+        std::vector<std::pair<int32_t, bool>> node_id_stack{{root, false}};
+        while (false == node_id_stack.empty()) {
+            auto const [cur_node_id, under_structurized_array]{node_id_stack.back()};
+            node_id_stack.pop_back();
+            auto const& cur_node{schema_tree->get_node(cur_node_id)};
+            bool const cur_under_structurized_array{
+                    under_structurized_array
+                    || clp_s::NodeType::StructurizedArray == cur_node.get_type()
+            };
+            if (cur_under_structurized_array
+                && clp_s::NodeType::StructurizedText == cur_node.get_type())
+            {
+                found = true;
+                break;
+            }
+            for (auto const child_id : cur_node.get_children_ids()) {
+                node_id_stack.emplace_back(child_id, cur_under_structurized_array);
+            }
+        }
+        REQUIRE(found);
+    }
+}
+
+auto compress_and_extract(
+        std::string_view input_file,
+        clp_s::ClpFlavour flavour,
+        bool structurize_arrays,
+        bool single_file_archive
+) -> std::filesystem::path {
+    auto const parsing_spec_path{
+            clp_s::ClpFlavour::Clpp == flavour
+                    ? std::make_optional(get_heuristic_parsing_spec_path())
+                    : std::nullopt
+    };
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(input_file),
+                    std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
+                    false,
+                    single_file_archive,
+                    structurize_arrays,
+                    parsing_spec_path
+            )
+    );
+    validate_archive_header(flavour);
+    return extract();
+}
+
+auto validate_archive_header(clp_s::ClpFlavour expected_flavour) -> void {
+    for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
+        clp_s::ArchiveReader const archive_reader{
+                clp_s::Path{
+                        .source = clp_s::InputSource::Filesystem,
+                        .path = entry.path().string()
+                },
+                clp_s::ArchiveReader::Options{}
+        };
+        REQUIRE(expected_flavour == archive_reader.flavour());
         auto const& archive_header{archive_reader.get_header()};
         REQUIRE(clp_s::cArchiveVersion == archive_header.version);
         auto const [major_version, minor_version, patch_version]
@@ -125,7 +221,22 @@ void validate_archive_header() {
             REQUIRE(0ULL == archive_header.reserved_padding[i]);
         }
 
-        REQUIRE_NOTHROW(archive_reader.close());
+        std::vector<std::string_view> expected_sections;
+        expected_sections.emplace_back(clp_s::constants::cArchiveSchemaTreeFile);
+        expected_sections.emplace_back(clp_s::constants::cArchiveSchemaMapFile);
+        expected_sections.emplace_back(clp_s::constants::cArchiveTableMetadataFile);
+        if (clp_s::ClpFlavour::Clpp == expected_flavour) {
+            expected_sections.emplace_back(clp_s::constants::cArchiveParsingSpecFile);
+        }
+        expected_sections.emplace_back(clp_s::constants::cArchiveVarDictFile);
+        expected_sections.emplace_back(clp_s::constants::cArchiveLogDictFile);
+        expected_sections.emplace_back(clp_s::constants::cArchiveArrayDictFile);
+        if (clp_s::ClpFlavour::Clpp == expected_flavour) {
+            expected_sections.emplace_back(clp_s::constants::cArchiveParentRuleShapesFile);
+            expected_sections.emplace_back(clp_s::constants::cArchiveLogShapeStatsFile);
+        }
+        expected_sections.emplace_back(clp_s::constants::cArchiveTablesFile);
+        REQUIRE(expected_sections == archive_reader.get_sections());
     }
 }
 
@@ -215,12 +326,44 @@ void literallyCompare(
     REQUIRE((0 == WEXITSTATUS(result)));
 }
 
+void compare_with_input(
+        std::string const& input_file_path,
+        std::filesystem::path const& extracted_json_path
+) {
+    int result{std::system("command -v jq >/dev/null 2>&1")};
+    REQUIRE((0 == result));
+    auto command = fmt::format(
+            "jq --sort-keys --compact-output '.' {} | sort > {}",
+            extracted_json_path.string(),
+            cTestEndToEndOutputSortedJson
+    );
+    result = std::system(command.c_str());
+    REQUIRE((0 == result));
+
+    REQUIRE((false == std::filesystem::is_empty(cTestEndToEndOutputSortedJson)));
+
+    result = std::system("command -v diff >/dev/null 2>&1");
+    REQUIRE((0 == result));
+    command = fmt::format(
+            "jq --sort-keys --compact-output '.' {} | sort | diff --unified - {} > /dev/null",
+            input_file_path,
+            cTestEndToEndOutputSortedJson
+    );
+    result = std::system(command.c_str());
+    REQUIRE((true == WIFEXITED(result)));
+    REQUIRE((0 == WEXITSTATUS(result)));
+}
+
 // NOLINTEND(cert-env33-c,concurrency-mt-unsafe)
 }  // namespace
 
 TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
-    auto structurize_arrays = GENERATE(true, false);
-    auto single_file_archive = GENERATE(true, false);
+    auto const flavour{GENERATE(clp_s::ClpFlavour::Clps, clp_s::ClpFlavour::Clpp)};
+    auto const structurize_arrays{GENERATE(true, false)};
+    auto const single_file_archive{GENERATE(true, false)};
+    CAPTURE(flavour);
+    CAPTURE(structurize_arrays);
+    CAPTURE(single_file_archive);
 
     TestOutputCleaner const test_cleanup{
             {std::string{cTestEndToEndArchiveDirectory},
@@ -228,20 +371,12 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
              std::string{cTestEndToEndOutputSortedJson}}
     };
 
-    REQUIRE_NOTHROW(
-            std::ignore = compress_archive(
-                    get_test_input_local_path(cTestEndToEndInputFile),
-                    std::string{cTestEndToEndArchiveDirectory},
-                    std::nullopt,
-                    false,
-                    single_file_archive,
-                    structurize_arrays
-            )
-    );
-    validate_archive_header();
-
-    auto extracted_json_path = extract();
-
+    auto const extracted_json_path{compress_and_extract(
+            cTestEndToEndInputFile,
+            flavour,
+            structurize_arrays,
+            single_file_archive
+    )};
     compare(extracted_json_path);
 }
 
@@ -280,7 +415,7 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
     };
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract();
+    auto extracted_json_path{extract()};
     literallyCompare(
             get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile),
             extracted_json_path
@@ -324,9 +459,69 @@ TEST_CASE("clp-s-compress-extract-invalid-formatted-floats", "[clp-s][end-to-end
     };
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract();
+    auto extracted_json_path{extract()};
     literallyCompare(
             get_test_input_local_path(cTestEndToEndInvalidFormattedFloatInputFile),
+            extracted_json_path
+    );
+}
+
+/**
+ * Tests that empty arrays and objects round-trip correctly under both array-structurization modes.
+ */
+TEST_CASE("clp-s-compress-extract-empty-containers", "[clp-s][end-to-end]") {
+    auto const structurize_arrays{GENERATE(true, false)};
+    auto const single_file_archive{GENERATE(true, false)};
+    CAPTURE(structurize_arrays);
+    CAPTURE(single_file_archive);
+
+    TestOutputCleaner const test_cleanup{
+            {std::string{cTestEndToEndArchiveDirectory},
+             std::string{cTestEndToEndOutputDirectory},
+             std::string{cTestEndToEndOutputSortedJson}}
+    };
+
+    auto const extracted_json_path{compress_and_extract(
+            cTestEndToEndEmptyContainersInputFile,
+            clp_s::ClpFlavour::Clps,
+            structurize_arrays,
+            single_file_archive
+    )};
+    compare_with_input(
+            get_test_input_local_path(cTestEndToEndEmptyContainersInputFile),
+            extracted_json_path
+    );
+}
+
+/**
+ * Tests that unstructured text inside structurized arrays (directly, in nested arrays, and in
+ * objects nested in arrays) round-trips correctly under both flavours.
+ */
+TEST_CASE("clp-s-compress-extract-text-in-arrays", "[clp-s][end-to-end]") {
+    auto const flavour{GENERATE(clp_s::ClpFlavour::Clps, clp_s::ClpFlavour::Clpp)};
+    auto const single_file_archive{GENERATE(true, false)};
+    CAPTURE(flavour);
+    CAPTURE(single_file_archive);
+
+    TestOutputCleaner const test_cleanup{
+            {std::string{cTestEndToEndArchiveDirectory},
+             std::string{cTestEndToEndOutputDirectory},
+             std::string{cTestEndToEndOutputSortedJson}}
+    };
+
+    auto const extracted_json_path{compress_and_extract(
+            cTestEndToEndTextInArraysInputFile,
+            flavour,
+            true,
+            single_file_archive
+    )};
+
+    if (clp_s::ClpFlavour::Clpp == flavour) {
+        check_structurized_text_nested_in_structurized_array();
+    }
+
+    compare_with_input(
+            get_test_input_local_path(cTestEndToEndTextInArraysInputFile),
             extracted_json_path
     );
 }
@@ -357,7 +552,7 @@ TEST_CASE("clp-s-compress-extract-timestamps", "[clp-s][end-to-end]") {
     std::set<clp_s::NodeType> const expected_matching_types{clp_s::NodeType::Timestamp};
     check_all_leaf_nodes_match_types(expected_matching_types);
 
-    auto extracted_json_path = extract();
+    auto extracted_json_path{extract()};
     literallyCompare(
             get_test_input_local_path(cTestEndToEndTimestampInputFile),
             extracted_json_path

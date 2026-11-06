@@ -1,6 +1,7 @@
 #include "NarrowTypes.hpp"
 
 #include <algorithm>
+#include <array>
 
 #include "ConstantProp.hpp"
 #include "EmptyExpr.hpp"
@@ -43,41 +44,40 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
         }
 
         auto literal = filter->get_operand();
-        std::string tmpstring;
-        int64_t tmpint;
-        double tmpdouble;
-        bool tmpbool;
         bool narrowed_clp_string = false;
         bool narrowed_var_string = false;
         bool matches_var_and_clp_string = column->matches_type(LiteralType::ClpStringT)
                                           && column->matches_type(LiteralType::VarStringT);
+        bool const is_negated_equality{
+                (filter->is_inverted() && FilterOperation::EQ == op)
+                || (false == filter->is_inverted() && FilterOperation::NEQ == op)
+        };
 
         if (false == literal->as_any(op)) {
-            if (false == literal->as_clp_string(tmpstring, op)) {
-                narrowed_clp_string = true;
-                column->remove_matching_type(LiteralType::ClpStringT);
-            }
-            if (false == literal->as_var_string(tmpstring, op)) {
-                narrowed_var_string = true;
-                column->remove_matching_type(LiteralType::VarStringT);
-            }
-            if (false == literal->as_int(tmpint, op)) {
-                column->remove_matching_type(LiteralType::IntegerT);
-            }
-            if (false == literal->as_float(tmpdouble, op)) {
-                column->remove_matching_type(LiteralType::FloatT);
-            }
-            if (false == literal->as_bool(tmpbool, op)) {
-                column->remove_matching_type(LiteralType::BooleanT);
-            }
-            if (false == literal->as_array(tmpstring, op)) {
-                column->remove_matching_type(LiteralType::ArrayT);
-            }
-            if (false == literal->as_null(op)) {
-                column->remove_matching_type(LiteralType::NullT);
-            }
-            if (false == literal->as_timestamp()) {
-                column->remove_matching_type(LiteralType::TimestampT);
+            constexpr std::array cNarrowableLiteralTypes{
+                    LiteralType::IntegerT,
+                    LiteralType::FloatT,
+                    LiteralType::ClpStringT,
+                    LiteralType::VarStringT,
+                    LiteralType::BooleanT,
+                    LiteralType::ArrayT,
+                    LiteralType::NullT,
+                    LiteralType::TimestampT,
+                    LiteralType::StringT
+            };
+            for (auto const type : cNarrowableLiteralTypes) {
+                // A wildcard is matched against numeric text, so under a negated equality the
+                // numeric types must stay searchable even when the pattern can't be numeric text:
+                // a number can never match such a pattern, so it always satisfies the negation.
+                if (literal->can_match_op(type, op)
+                    || (is_negated_equality && literal->has_wildcard()
+                        && (LiteralType::IntegerT == type || LiteralType::FloatT == type)))
+                {
+                    continue;
+                }
+                column->remove_matching_type(type);
+                narrowed_clp_string |= LiteralType::ClpStringT == type;
+                narrowed_var_string |= LiteralType::VarStringT == type;
             }
         }
 
@@ -104,10 +104,18 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
          * Really the issue is that we have multiple string types. Technically similar logic applies
          * for the date string column types, but we don't allow string matches against them so we
          * don't have to worry about supporting that here.
+         *
+         * The rewrite doesn't apply to:
+         * - The pure wildcard column `*`: it resolves to every node in a schema, so the existence
+         *   of one node of the other string type says nothing about the values of the others.
+         *   Schema matching has a dedicated negated expansion for pure wildcard filters instead.
+         * - shape() columns: a shape is a template string that is neither a clp string nor a
+         *   variable string, and the EXISTS column would be pinned to a single string type that can
+         *   never resolve to the StructurizedText or ParentRule node a shape() column requires.
          */
-        if (((filter->is_inverted() && FilterOperation::EQ == op)
-             || (false == filter->is_inverted() && FilterOperation::NEQ == op))
-            && matches_var_and_clp_string && narrowed_clp_string != narrowed_var_string)
+        if (is_negated_equality && matches_var_and_clp_string
+            && narrowed_clp_string != narrowed_var_string && false == column->is_pure_wildcard()
+            && false == column->is_shape_query())
         {
             auto exists_column_type
                     = narrowed_clp_string ? LiteralType::ClpStringT : LiteralType::VarStringT;
@@ -120,6 +128,12 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
             // of UUIDs) then we only need to transform one filter expression within the parent
             // OR/AND into an OR with the necessary EXISTS condition. Splitting each filter into an
             // OR could result in a much larger AST than necessary and slow down Schema Matching.
+            // In particular, an AND with N OR children is expanded by OrOfAndForm into the
+            // cartesian product of the children, i.e. 2^N AND clauses.
+            //
+            // TODO: Under an AND parent this is unsound: AND(OR(A, E), B) requires B to hold in
+            // schemas where only E holds, but B's narrowed column doesn't resolve there. The
+            // correct rewrite is OR(AND(A, B), E) at the AND level.
             auto it = std::find_if(
                     m_local_exists_descriptors.begin(),
                     m_local_exists_descriptors.end(),

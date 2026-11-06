@@ -561,7 +561,6 @@ int main(int argc, char const* argv[]) {
             continue;
         }
 
-        // Open archive
         if (!open_archive(archive_path.string(), archive_reader)) {
             return -1;
         }

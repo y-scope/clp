@@ -1,0 +1,6 @@
+{"idx":0,"arr":["task 42 took 1.5s","plain text",7]}
+{"idx":1,"arr":[{"msg":"block 17 ready at 10.0.0.1:8080","n":3},{"msg":"no numbers here"}]}
+{"idx":2,"arr":[["inner 1 text","inner text 2"],["100% done"],"outer 9"]}
+{"idx":3,"msg":"top level 5 text","arr":[{"deep":{"msg":"deep 8 text"}},"sibling 6"]}
+{"idx":4,"arr":[{"a":"first 1","b":"second 2","c":{"d":"third 3"}}]}
+{"idx":5,"arr":[["no leaves here"],{"o":"none here"},"also none"]}

@@ -7,8 +7,11 @@
 
 #include <spdlog/spdlog.h>
 
-#include "../archive_constants.hpp"
-#include "../TimestampDictionaryReader.hpp"
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReader.hpp>
+#include <clp_s/Defs.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
@@ -45,8 +48,14 @@ IndexManager::~IndexManager() {
 void IndexManager::update_metadata(std::string const& dataset_name, Path const& archive_path) {
     m_mysql_index_storage->init(dataset_name, m_should_create_table);
 
-    ArchiveReader archive_reader;
-    archive_reader.open(archive_path, NetworkAuthOption{});
+    ArchiveReader archive_reader{archive_path, ArchiveReader::Options{}};
+    if (ClpFlavour::Clpp == archive_reader.flavour()) {
+        SPDLOG_ERROR(
+                "Indexing clpp-flavour archives is unsupported: {}",
+                archive_reader.get_archive_id()
+        );
+        throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
+    }
 
     traverse_schema_tree_and_update_metadata(
             archive_reader.get_schema_tree(),
@@ -130,8 +139,8 @@ void IndexManager::traverse_schema_tree_and_update_metadata(
 
         auto const& node = schema_tree->get_node(node_id);
         auto node_type = node.get_type();
-        // TODO: Add support for structured arrays
-        if (NodeType::StructuredArray == node_type) {
+        // TODO: Add support for structurized arrays
+        if (NodeType::StructurizedArray == node_type) {
             continue;
         }
         auto const& children_ids = node.get_children_ids();

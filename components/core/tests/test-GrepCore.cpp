@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <clp/GrepCore.hpp>
+#include <clp/Utils.hpp>
 
 using clp::GrepCore;
 using std::string;

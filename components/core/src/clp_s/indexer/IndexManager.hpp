@@ -17,7 +17,7 @@ namespace clp_s::indexer {
  * delimiter `.` at each level.
  *
  * Currently, only leaf nodes with primitive types are indexed. Object nodes and subtrees of
- * structured arrays are not indexed. The results are stored in a database to enable efficient
+ * structurized arrays are not indexed. The results are stored in a database to enable efficient
  * querying.
  *
  * Multiple archives related to the same topic can form a table that can be queried using a SQL
@@ -57,6 +57,7 @@ public:
      * Updates the metadata for a given archive
      * @param dataset_name
      * @param archive_path
+     * @throw OperationFailed with `ErrorCodeUnsupported` if the archive is a clpp-flavour archive.
      */
     void update_metadata(std::string const& dataset_name, Path const& archive_path);
 
