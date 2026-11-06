@@ -170,7 +170,7 @@ if(CLP_NEED_BOOST)
     endif()
     find_package(
         Boost
-        1.81...1.88
+        1.86...1.88
         REQUIRED
             filesystem
             iostreams
@@ -202,9 +202,9 @@ if(CLP_NEED_FMT)
 endif()
 
 if(CLP_NEED_LOG_SURGEON)
-    find_package(log_surgeon REQUIRED)
-    if(log_surgeon_FOUND)
-        message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+    find_package(log-surgeon REQUIRED)
+    if(log-surgeon_FOUND)
+        message(STATUS "Found log-surgeon ${log-surgeon_VERSION}")
     endif()
 endif()
 
@@ -695,6 +695,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::ffi::sfa
             clp_s::filter
             clp_s::json_constructor
+            clp_s::log_converter
             clp_s::search
             clp_s::search::ast
             clp_s::search::kql
@@ -723,6 +724,7 @@ if(CLP_ENABLE_TESTS)
             Boost::url
             Catch2::Catch2WithMain
             clp::unit_test_runtime
+            clp_s::log_converter::unit_test_sources
             clp_s::unit_test_sources
             ${CURL_LIBRARIES}
             date::date
