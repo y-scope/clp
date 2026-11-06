@@ -731,6 +731,12 @@ struct CompressionTimeoutFactors {
 }
 
 impl CompressionTimeoutFactors {
+    /// Estimates task timeouts from the input size and count using these factors.
+    ///
+    /// # Returns
+    ///
+    /// A [`TimeoutPolicy`] covering download, compression, and upload within Spider's timeout
+    /// limits.
     fn timeout_policy(
         &self,
         estimated_uncompressed_size: u64,
@@ -771,6 +777,11 @@ impl CompressionTimeoutFactors {
     }
 }
 
+/// Estimates timeouts for compressing S3 inputs.
+///
+/// # Returns
+///
+/// A [`TimeoutPolicy`] using the S3 input factors for download, compression, and upload.
 fn s3_compression_timeout_policy(
     estimated_uncompressed_size: u64,
     num_download_inputs: u64,
@@ -791,6 +802,11 @@ fn s3_compression_timeout_policy(
     FACTORS.timeout_policy(estimated_uncompressed_size, num_download_inputs)
 }
 
+/// Estimates timeouts for compressing filesystem inputs.
+///
+/// # Returns
+///
+/// A [`TimeoutPolicy`] using the filesystem input factors for download, compression, and upload.
 fn fs_compression_timeout_policy(
     estimated_uncompressed_size: u64,
     num_download_inputs: u64,
