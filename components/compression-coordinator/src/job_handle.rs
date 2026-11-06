@@ -742,7 +742,8 @@ impl CompressionTimeoutFactors {
         estimated_uncompressed_size: u64,
         num_download_inputs: u64,
     ) -> TimeoutPolicy {
-        const MIN_TIMEOUT_MS: u64 = 100;
+        const MIN_SOFT_TIMEOUT_MS: u64 = 1000;
+        const MIN_HARD_TIMEOUT_MS: u64 = 10_000;
         const MAX_TIMEOUT_MS: u64 = 24 * 60 * 60 * 1000;
 
         let download_latency_ms =
@@ -764,12 +765,12 @@ impl CompressionTimeoutFactors {
             self.soft_compression_throughput_bytes_per_sec,
             self.soft_upload_throughput_bytes_per_sec,
         )
-        .clamp(MIN_TIMEOUT_MS, MAX_TIMEOUT_MS - 1);
+        .clamp(MIN_SOFT_TIMEOUT_MS, MAX_TIMEOUT_MS - 1);
         let hard_timeout_ms = timeout_ms(
             self.hard_compression_throughput_bytes_per_sec,
             self.hard_upload_throughput_bytes_per_sec,
         )
-        .clamp(soft_timeout_ms + 1, MAX_TIMEOUT_MS);
+        .clamp(MIN_HARD_TIMEOUT_MS.max(soft_timeout_ms + 1), MAX_TIMEOUT_MS);
         TimeoutPolicy {
             soft_timeout_ms,
             hard_timeout_ms,
@@ -841,10 +842,12 @@ mod tests {
     #[test]
     fn compression_timeouts_include_download_compression_and_upload() -> anyhow::Result<()> {
         for (size, num_download_inputs, soft_timeout_ms, hard_timeout_ms) in [
-            (0, 0, 100, 101),
-            (1, 0, 100, 101),
-            (0, 1, 1000, 1001),
-            (1, 1, 1002, 1003),
+            (0, 0, 1000, 10_000),
+            (1, 0, 1000, 10_000),
+            (0, 1, 1000, 10_000),
+            (1, 1, 1002, 10_000),
+            (0, 9, 9000, 10_000),
+            (0, 10, 10_000, 10_001),
             (40 * 1024 * 1024, 2, 4000, 12_000),
             (1024 * 1024 * 1024 * 1024, 1, 52_429_800, 86_400_000),
             (u64::MAX, 1, 86_399_999, 86_400_000),
