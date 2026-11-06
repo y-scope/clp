@@ -3333,6 +3333,7 @@ dependencies = [
  "clp-rust-utils",
  "dashmap",
  "rmp",
+ "spider-core",
  "thiserror",
  "tokio",
 ]

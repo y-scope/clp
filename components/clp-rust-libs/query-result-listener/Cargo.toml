@@ -12,6 +12,7 @@ bytes = { workspace = true }
 clp-rust-utils = { workspace = true }
 dashmap = { workspace = true }
 rmp = { workspace = true }
+spider-core = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["io-util", "sync"] }
 
