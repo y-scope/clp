@@ -11,6 +11,7 @@ path = "src/lib.rs"
 bytes = { workspace = true }
 clp-rust-utils = { workspace = true }
 rmp = { workspace = true }
+spider-core = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
