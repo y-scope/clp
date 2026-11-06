@@ -13,7 +13,6 @@
 #include <clp/GlobalMetadataDBConfig.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReader.hpp>
-#include <clp_s/Defs.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/SchemaTree.hpp>
