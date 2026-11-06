@@ -2,7 +2,7 @@
 Integration tests verifying how `clp-s s --projection` interprets its column arguments.
 
 Each argument is treated as a double-quoted KQL column name, so `my key` names the key `my key`
-rather than the key `my`.
+rather than the key `my`. Standard KQL escape sequences are accepted.
 """
 
 import json
@@ -53,7 +53,9 @@ def projection_archive(
         pytest.param(['"my key"'], {}, id="quotes_are_literal"),
         pytest.param(["a.b"], {"a": {"b": 2}}, id="dot_is_path_separator"),
         pytest.param(["a\\.b"], {"a.b": 1}, id="escaped_dot"),
+        pytest.param(["foo(bar)"], {"foo(bar)": 3}, id="unescaped_parentheses"),
         pytest.param(["foo\\(bar\\)"], {"foo(bar)": 3}, id="escaped_parentheses"),
+        pytest.param(["foo\\u0028bar\\u0029"], {"foo(bar)": 3}, id="unicode_escapes"),
         pytest.param(["my key", "a.b"], {"my key": "value", "a": {"b": 2}}, id="multiple"),
     ],
 )

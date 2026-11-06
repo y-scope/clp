@@ -113,8 +113,10 @@ Usage:
 * `options` allow you to specify things like a specific archive (from within `archives-path`, if it
   is a directory) to search (`--archive-id <archive-id>`).
   * `--projection '<column>' ...` outputs only the given columns. It must come after all positional
-    arguments. Each column is written as a plain key path (single-quoting is recommended); no KQL
-    quoting is needed, even for keys containing spaces:
+    arguments. Each column is a key path where `.` separates components: escape a literal `.` as
+    `\.` and a literal `\` as `\\`, but otherwise no quoting or escaping is needed (even for keys
+    containing spaces). Standard KQL escape sequences (`\\`, `\"`, `\t`, `\n`, a `\u` followed by
+    four hex digits, `\(`, `\)`, etc.) are also accepted:
 
     ```shell
     ./clp-s s /mnt/data/archives1 '*' --projection 'my key' 'a.b' 'a\.b'
