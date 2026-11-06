@@ -1,10 +1,11 @@
-//! Encoders for the frames of the wire protocol, and an encoder of query results, for tests.
+//! Encoders for the frames of the wire protocol, and an encoding of query results, for tests.
 
 use clp_rust_utils::types::ArchiveId;
 
 use crate::encoding::ResultEncoder;
+use crate::encoding::ResultEncoding;
 
-/// A query result in the batches of a [`QueryResultEncoder`].
+/// A query result in the batches of a [`QueryResultEncoding`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct QueryResult {
     /// The ID of the archive that produced the result.
@@ -17,7 +18,15 @@ pub struct QueryResult {
     pub message: String,
 }
 
-/// A [`ResultEncoder`] that batches [`QueryResult`] values.
+/// A [`ResultEncoding`] that batches [`QueryResult`] values.
+pub enum QueryResultEncoding {}
+
+impl ResultEncoding for QueryResultEncoding {
+    type Batch = Vec<QueryResult>;
+    type Encoder = QueryResultEncoder;
+}
+
+/// The [`ResultEncoder`] for [`QueryResultEncoding`].
 pub struct QueryResultEncoder {
     archive_id: ArchiveId,
     batch: Vec<QueryResult>,
