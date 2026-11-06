@@ -108,7 +108,7 @@ pub async fn wait_for_compression_job_completion_and_update_metadata(
                 compression_job_id = ? compression_job_id,
                 "Compression job succeeded."
             ),
-            CompressionJobStatus::Failed | CompressionJobStatus::Killed => tracing::warn!(
+            CompressionJobStatus::Failed => tracing::warn!(
                 ingestion_job_id = ? ingestion_job_id,
                 compression_job_id = ? compression_job_id,
                 compression_job_status = ? compression_job_status,
