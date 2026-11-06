@@ -13,7 +13,6 @@ use tokio::io::AsyncWriteExt;
 use crate::cursor::Claim;
 use crate::cursor::TaskCursor;
 use crate::encoding::ResultEncoder;
-use crate::encoding::ResultEncoding;
 use crate::error::ConnectionError;
 use crate::error::ProtocolError;
 use crate::protocol::Ack;
@@ -24,24 +23,21 @@ use crate::protocol::Trailer;
 use crate::session::SessionStats;
 use crate::session::State;
 
-const MAX_READ_SIZE: usize = 64 * 1024;
-
 /// A connection that joined a session, streaming the results of one attempt of a query task.
 ///
 /// # Type Parameters
 ///
-/// * `EncodingType` - The encoding of the results the session delivers.
-struct Connection<EncodingType: ResultEncoding> {
-    session: Arc<State<EncodingType>>,
+/// * `EncoderType` - The encoder of the connection's results.
+pub struct Connection<EncoderType: ResultEncoder> {
+    session: Arc<State<EncoderType>>,
     cursor: Arc<TaskCursor>,
-    encoder: EncodingType::Encoder,
+    encoder: EncoderType,
     num_pending_results: u64,
     num_results: u64,
-    trailer: Option<Trailer>,
     stats: SessionStats,
 }
 
-impl<EncodingType: ResultEncoding> Connection<EncodingType> {
+impl<EncoderType: ResultEncoder> Connection<EncoderType> {
     /// Factory function.
     ///
     /// Joins the connection to the task cursor of `session` that `handshake` names, creating the
@@ -57,8 +53,8 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     ///
     /// * [`ProtocolError::ArchiveIdMismatch`] if the cursor of the handshake's task is bound to
     ///   another archive.
-    fn new(
-        session: Arc<State<EncodingType>>,
+    pub fn new(
+        session: Arc<State<EncoderType>>,
         handshake: &Handshake,
     ) -> Result<Self, ProtocolError> {
         let cursor = Arc::clone(
@@ -77,12 +73,11 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
             });
         }
         Ok(Self {
-            encoder: session.encoding.encoder(archive_id),
+            encoder: EncoderType::new(archive_id),
             session,
             cursor,
             num_pending_results: 0,
             num_results: 0,
-            trailer: None,
             stats: SessionStats::default(),
         })
     }
@@ -103,68 +98,66 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     /// * [`ConnectionError::MissingTrailer`] if the connection closes between two frames before
     ///   sending its trailer.
     /// * [`ConnectionError::TruncatedFrame`] if the connection closes in the middle of a frame.
-    /// * Forwards [`Connection::claim_buffered_frames`]'s return values on failure.
-    /// * Forwards [`AsyncReadExt::read_buf`]'s return values on failure.
+    /// * Forwards [`Connection::decode_buffered_frames`]'s return values on failure.
+    /// * Forwards [`read_more`]'s return values on failure.
+    /// * Forwards [`check_eof`]'s return values on failure.
     /// * Forwards [`AsyncWriteExt::write_all`]'s return values on failure.
-    async fn run<StreamType: AsyncRead + AsyncWrite + Unpin>(
+    pub async fn run<StreamType: AsyncRead + AsyncWrite + Unpin>(
         &mut self,
-        stream: &mut StreamType,
-        mut buffered: BytesMut,
+        input_stream: &mut StreamType,
+        mut buffer: BytesMut,
     ) -> Result<(), ConnectionError> {
-        loop {
-            let claimed = self.claim_buffered_frames(&mut buffered);
-            if 0 != self.num_pending_results {
-                self.send_pending_batch().await;
+        let trailer = loop {
+            let decoded = self.decode_buffered_frames(&mut buffer);
+            // Hand on the results claimed so far before acting on a protocol error found later in
+            // the same read, since no other attempt can claim them again.
+            self.send_pending_batch().await;
+            match decoded? {
+                Decoded::NeedMoreBytes => {
+                    if 0 == read_more(input_stream, &mut buffer).await? {
+                        return Err(if buffer.is_empty() {
+                            ConnectionError::MissingTrailer
+                        } else {
+                            ConnectionError::TruncatedFrame
+                        });
+                    }
+                }
+                Decoded::Trailer(trailer) => break trailer,
             }
-            claimed?;
-
-            buffered.reserve(MAX_READ_SIZE);
-            let mut read_window = (&mut buffered).limit(MAX_READ_SIZE);
-            let num_bytes_read = stream.read_buf(&mut read_window).await?;
-            if 0 != num_bytes_read {
-                continue;
-            }
-            if let Some(trailer) = self.trailer {
-                stream
-                    .write_all(
-                        &Ack {
-                            num_results: trailer.num_results,
-                        }
-                        .encode(),
-                    )
-                    .await?;
-                return Ok(());
-            }
-            if buffered.is_empty() {
-                return Err(ConnectionError::MissingTrailer);
-            }
-            return Err(ConnectionError::TruncatedFrame);
-        }
+        };
+        check_eof(input_stream, &mut buffer).await?;
+        input_stream
+            .write_all(
+                &Ack {
+                    num_results: trailer.num_results,
+                }
+                .encode(),
+            )
+            .await?;
+        Ok(())
     }
 
-    /// Decodes each complete frame in `buffer`, encoding the claimed results into the pending
-    /// batch, and checks the trailer against the results the connection streamed.
+    /// Decodes the complete frames in `buffer` up to the trailer, encoding the claimed results into
+    /// the pending batch, and checks the trailer against the results the connection streamed.
+    ///
+    /// # Returns
+    ///
+    /// On success:
+    ///
+    /// * [`Decoded::Trailer`] if `buffer` holds the connection's trailer, leaving the bytes that
+    ///   follow it in `buffer`.
+    /// * [`Decoded::NeedMoreBytes`] if `buffer` ends before the next frame does.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`ProtocolError::DataAfterTrailer`] if any byte follows the trailer.
     /// * [`ProtocolError::ResultCountMismatch`] if the trailer doesn't count the results the
     ///   connection streamed.
     /// * Forwards [`Frame::decode`]'s return values on failure.
     /// * Forwards [`Connection::claim`]'s return values on failure.
-    fn claim_buffered_frames(&mut self, buffer: &mut BytesMut) -> Result<(), ProtocolError> {
-        loop {
-            if self.trailer.is_some() {
-                if buffer.is_empty() {
-                    return Ok(());
-                }
-                return Err(ProtocolError::DataAfterTrailer);
-            }
-            let Some(frame) = Frame::decode(buffer)? else {
-                return Ok(());
-            };
+    fn decode_buffered_frames(&mut self, buffer: &mut BytesMut) -> Result<Decoded, ProtocolError> {
+        while let Some(frame) = Frame::decode(buffer)? {
             match frame {
                 Frame::Result(result) => self.claim(&result)?,
                 Frame::Trailer(trailer) => {
@@ -174,10 +167,11 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
                             num_results: self.num_results,
                         });
                     }
-                    self.trailer = Some(trailer);
+                    return Ok(Decoded::Trailer(trailer));
                 }
             }
         }
+        Ok(Decoded::NeedMoreBytes)
     }
 
     /// Claims `result` on the task's cursor, encoding it into the pending batch unless an attempt
@@ -206,9 +200,12 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
         Ok(())
     }
 
-    /// Sends the pending batch to the session's consumer, or discards it once the consumer has
-    /// dropped its receiver.
+    /// Sends the pending batch, if it holds any result, to the session's consumer, or discards it
+    /// once the consumer has dropped its receiver.
     async fn send_pending_batch(&mut self) {
+        if 0 == self.num_pending_results {
+            return;
+        }
         let num_results = std::mem::take(&mut self.num_pending_results);
         if self
             .session
@@ -224,10 +221,69 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     }
 }
 
-impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
+impl<EncoderType: ResultEncoder> Drop for Connection<EncoderType> {
     fn drop(&mut self) {
         self.session.record(&self.stats);
     }
+}
+
+const MAX_READ_SIZE: usize = 64 * 1024;
+
+/// What decoding a connection's buffered frames found.
+enum Decoded {
+    /// The buffer ends before the next frame does, so the connection must read more bytes.
+    NeedMoreBytes,
+
+    /// The connection sent its trailer, which counts the results it streamed.
+    Trailer(Trailer),
+}
+
+/// Reads at most [`MAX_READ_SIZE`] more bytes from `input_stream` into `buffer`.
+///
+/// # Type Parameters
+///
+/// * `StreamType` - The type of the connection's stream.
+///
+/// # Returns
+///
+/// The number of bytes read on success, which is 0 once `input_stream` has reached EOF.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * Forwards [`AsyncReadExt::read_buf`]'s return values on failure.
+async fn read_more<StreamType: AsyncRead + Unpin>(
+    input_stream: &mut StreamType,
+    buffer: &mut BytesMut,
+) -> std::io::Result<usize> {
+    buffer.reserve(MAX_READ_SIZE);
+    let mut read_window = (&mut *buffer).limit(MAX_READ_SIZE);
+    input_stream.read_buf(&mut read_window).await
+}
+
+/// Checks that no bytes follow the connection's trailer, either left in `buffer` or read next from
+/// `input_stream`.
+///
+/// # Type Parameters
+///
+/// * `StreamType` - The type of the connection's stream.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`ConnectionError::Protocol`] wrapping [`ProtocolError::DataAfterTrailer`] if any byte follows
+///   the trailer.
+/// * Forwards [`read_more`]'s return values on failure.
+async fn check_eof<StreamType: AsyncRead + Unpin>(
+    input_stream: &mut StreamType,
+    buffer: &mut BytesMut,
+) -> Result<(), ConnectionError> {
+    if !buffer.is_empty() || 0 != read_more(input_stream, buffer).await? {
+        return Err(ProtocolError::DataAfterTrailer.into());
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -236,6 +292,7 @@ mod tests {
     use std::time::Duration;
 
     use clp_rust_utils::types::ArchiveId;
+    use spider_core::task::TaskIndex;
     use tokio::io::AsyncReadExt;
     use tokio::io::AsyncWriteExt;
     use tokio::io::DuplexStream;
@@ -250,7 +307,7 @@ mod tests {
     use crate::session::SessionStats;
     use crate::session::State;
     use crate::test_utils::QueryResult;
-    use crate::test_utils::QueryResultEncoding;
+    use crate::test_utils::QueryResultEncoder;
     use crate::test_utils::encode_result;
     use crate::test_utils::encode_trailer;
 
@@ -265,7 +322,7 @@ mod tests {
     /// A session's state, the receiver of the batches its connections send, and the number of bytes
     /// each direction of its connections' in-memory streams buffers.
     struct Harness {
-        state: Arc<State<QueryResultEncoding>>,
+        state: Arc<State<QueryResultEncoder>>,
         batches_receiver: Option<mpsc::Receiver<Vec<QueryResult>>>,
         stream_capacity: usize,
     }
@@ -283,7 +340,7 @@ mod tests {
 
             let (batches_sender, batches_receiver) = mpsc::channel(channel_capacity);
             Self {
-                state: Arc::new(State::new(QueryResultEncoding, batches_sender)),
+                state: Arc::new(State::new(batches_sender)),
                 batches_receiver: Some(batches_receiver),
                 stream_capacity: STREAM_CAPACITY,
             }
@@ -299,7 +356,7 @@ mod tests {
         ///
         /// Panics if `archive_id` isn't a valid UUID, or the cursor of task `task_index` is bound
         /// to another archive.
-        fn connect(&self, task_index: u64, archive_id: &str) -> Attempt {
+        fn connect(&self, task_index: TaskIndex, archive_id: &str) -> Attempt {
             self.connect_with_buffered(task_index, archive_id, &[])
         }
 
@@ -316,7 +373,7 @@ mod tests {
         /// to another archive.
         fn connect_with_buffered(
             &self,
-            task_index: u64,
+            task_index: TaskIndex,
             archive_id: &str,
             buffered: &[u8],
         ) -> Attempt {
@@ -350,9 +407,9 @@ mod tests {
         /// Panics if `archive_id` isn't a valid UUID.
         fn join(
             &self,
-            task_index: u64,
+            task_index: TaskIndex,
             archive_id: &str,
-        ) -> Result<Connection<QueryResultEncoding>, ProtocolError> {
+        ) -> Result<Connection<QueryResultEncoder>, ProtocolError> {
             use clp_rust_utils::types::SessionToken;
 
             use crate::protocol::Handshake;
@@ -442,7 +499,7 @@ mod tests {
         /// Panics if the handler has closed the connection.
         async fn send_results(
             &mut self,
-            task_index: u64,
+            task_index: TaskIndex,
             result_indices: impl IntoIterator<Item = u64>,
         ) {
             self.send(&encode_results(task_index, result_indices)).await;
@@ -526,7 +583,10 @@ mod tests {
     /// # Returns
     ///
     /// The bytes of the result frames at `result_indices` of task `task_index`.
-    fn encode_results(task_index: u64, result_indices: impl IntoIterator<Item = u64>) -> Vec<u8> {
+    fn encode_results(
+        task_index: TaskIndex,
+        result_indices: impl IntoIterator<Item = u64>,
+    ) -> Vec<u8> {
         let mut bytes = Vec::new();
         for result_index in result_indices {
             bytes.extend(encode_result(
@@ -548,7 +608,7 @@ mod tests {
     /// # Returns
     ///
     /// The message of the result at `result_index` of task `task_index`.
-    fn message(task_index: u64, result_index: u64) -> String {
+    fn message(task_index: TaskIndex, result_index: u64) -> String {
         format!("{{\"task\":{task_index},\"result\":{result_index}}}\n")
     }
 
@@ -561,7 +621,7 @@ mod tests {
     ///
     /// Panics if `archive_id` isn't a valid UUID.
     fn expected_results(
-        task_index: u64,
+        task_index: TaskIndex,
         archive_id: &str,
         result_indices: std::ops::Range<u64>,
     ) -> Vec<QueryResult> {
@@ -633,7 +693,7 @@ mod tests {
     #[tokio::test]
     async fn overlapping_attempts_emit_each_result_once_and_are_both_acknowledged()
     -> anyhow::Result<()> {
-        const TASK_INDEX: u64 = 3;
+        const TASK_INDEX: TaskIndex = 3;
 
         let mut harness = Harness::new(CHANNEL_CAPACITY);
         let mut first_attempt = harness.connect(TASK_INDEX, ARCHIVE_ID);

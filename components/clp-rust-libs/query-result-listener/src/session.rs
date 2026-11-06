@@ -5,10 +5,11 @@ use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
 use dashmap::DashMap;
+use spider_core::task::TaskIndex;
 use tokio::sync::mpsc;
 
 use crate::cursor::TaskCursor;
-use crate::encoding::ResultEncoding;
+use crate::encoding::ResultEncoder;
 
 /// Statistics of a session's connections.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -33,23 +34,20 @@ pub struct SessionStats {
 ///
 /// # Type Parameters
 ///
-/// * `EncodingType` - The encoding of the results the session delivers.
-pub struct State<EncodingType: ResultEncoding> {
+/// * `EncoderType` - The encoder of the results the session delivers.
+pub struct State<EncoderType: ResultEncoder> {
     /// The cursors of the session's query tasks, keyed by task index.
-    pub cursors: DashMap<u64, Arc<TaskCursor>>,
-
-    /// The encoding of the results the session delivers.
-    pub encoding: EncodingType,
+    pub cursors: DashMap<TaskIndex, Arc<TaskCursor>>,
 
     /// The sender of the session's batches of encoded results.
-    pub batches_sender: mpsc::Sender<EncodingType::Batch>,
+    pub batches_sender: mpsc::Sender<EncoderType::Batch>,
 
     num_results_emitted: AtomicU64,
     num_duplicates_dropped: AtomicU64,
     num_results_discarded: AtomicU64,
 }
 
-impl<EncodingType: ResultEncoding> State<EncodingType> {
+impl<EncoderType: ResultEncoder> State<EncoderType> {
     /// Factory function.
     ///
     /// Creates the state of a session that sends its batches to `batches_sender`.
@@ -58,10 +56,9 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
     ///
     /// The newly created state.
     #[must_use]
-    pub fn new(encoding: EncodingType, batches_sender: mpsc::Sender<EncodingType::Batch>) -> Self {
+    pub fn new(batches_sender: mpsc::Sender<EncoderType::Batch>) -> Self {
         Self {
             cursors: DashMap::new(),
-            encoding,
             batches_sender,
             num_results_emitted: AtomicU64::new(0),
             num_duplicates_dropped: AtomicU64::new(0),

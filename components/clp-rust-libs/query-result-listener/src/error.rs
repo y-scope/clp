@@ -3,6 +3,7 @@
 use clp_rust_utils::types::ArchiveId;
 use clp_rust_utils::types::ParseArchiveIdError;
 use clp_rust_utils::types::ParseSessionTokenError;
+use spider_core::task::TaskIndex;
 
 /// Violations of the wire protocol.
 #[derive(Debug, thiserror::Error)]
@@ -12,7 +13,7 @@ pub enum ProtocolError {
          {received}"
     )]
     ArchiveIdMismatch {
-        task_index: u64,
+        task_index: TaskIndex,
         expected: ArchiveId,
         received: ArchiveId,
     },
