@@ -39,7 +39,7 @@ public:
      * @param expr the AST to transform
      * @return the transformed AST
      */
-    std::shared_ptr<ast::Expression> run(std::shared_ptr<ast::Expression>& expr) override;
+    auto run(std::shared_ptr<ast::Expression>& expr) -> std::shared_ptr<ast::Expression> override;
 
 private:
     std::optional<std::pair<std::vector<std::string>, std::string>> m_timestamp_column;
