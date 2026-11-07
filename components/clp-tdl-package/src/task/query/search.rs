@@ -44,7 +44,7 @@ use crate::task::utils::s3_credential_env;
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
 /// * `ctx.task_id` isn't a [`TaskId::Index`].
 /// * `output` is [`QueryOutput::File`], which is unsupported.
-/// * Forwards [`build_clp_s_search_args`]'s return values on failure.
+/// * Forwards [`build_clp_s_arg_lists`]'s return values on failure.
 /// * Forwards [`parse_results_cache_uri`]'s return values on failure.
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
@@ -95,7 +95,7 @@ pub(super) fn search(
                 );
             },
         )?;
-    let searches = build_clp_s_search_args(
+    let arg_lists = build_clp_s_arg_lists(
         &archive_descriptor,
         query,
         output,
@@ -107,7 +107,7 @@ pub(super) fn search(
     if matches!(output, QueryOutput::ResultsCache(_)) {
         runtime().block_on(parse_results_cache_uri(config.results_cache.uri().as_str()))?;
     }
-    for args in searches {
+    for args in arg_lists {
         run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
     }
 
@@ -133,18 +133,18 @@ enum ArchiveDescriptor {
     ObjectUrl(String),
 }
 
-/// Builds the ordered searches for normal results and optional timeline aggregation.
+/// Builds arguments for normal results and optional timeline aggregation.
 ///
 /// # Returns
 ///
-/// The argument list for each search on success.
+/// Ordered argument lists on success, each corresponding to an individual `clp-s` invocation.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * `output` is [`QueryOutput::File`], which is unsupported.
-fn build_clp_s_search_args(
+fn build_clp_s_arg_lists(
     archive_descriptor: &ArchiveDescriptor,
     query: &SearchQuery,
     output: &QueryOutput,
@@ -162,7 +162,7 @@ fn build_clp_s_search_args(
                 &query_job_id.to_string(),
                 dataset,
             ));
-            let mut searches = vec![normal_args];
+            let mut arg_lists = vec![normal_args];
             if let Some(Aggregation::CountByTime {
                 bucket_size_millisecs,
             }) = output.aggregation
@@ -178,9 +178,9 @@ fn build_clp_s_search_args(
                     &format!("{query_job_id}-timeline"),
                     dataset,
                 ));
-                searches.push(timeline_args);
+                arg_lists.push(timeline_args);
             }
-            Ok(searches)
+            Ok(arg_lists)
         }
         QueryOutput::Network(network_output) => {
             normal_args.extend(build_clp_s_network_output_args(network_output, task_index));
@@ -439,7 +439,7 @@ mod tests {
     use super::build_clp_s_network_output_args;
     use super::build_clp_s_query_args;
     use super::build_clp_s_results_cache_output_args;
-    use super::build_clp_s_search_args;
+    use super::build_clp_s_arg_lists;
     use super::resolve_archive_input;
     use super::search;
 
@@ -872,7 +872,7 @@ mod tests {
                     bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
                 }),
             });
-            let searches = build_clp_s_search_args(
+            let arg_lists = build_clp_s_arg_lists(
                 &directory_descriptor(),
                 &query,
                 &output,
@@ -881,8 +881,8 @@ mod tests {
                 "ds1",
                 0,
             )?;
-            assert_eq!(searches.len(), 2);
-            let args = &searches[1];
+            assert_eq!(arg_lists.len(), 2);
+            let args = &arg_lists[1];
             let mut expected_normal = [
                 "s",
                 "/archives/ds1",
@@ -906,7 +906,7 @@ mod tests {
                 expected_normal.extend(["--max-num-results", "7"].map(OsString::from));
             }
             expected_normal.extend(["--dataset", "ds1"].map(OsString::from));
-            assert_eq!(searches[0], expected_normal);
+            assert_eq!(arg_lists[0], expected_normal);
             let expected = [
                 "s",
                 "/archives/ds1",
@@ -944,7 +944,7 @@ mod tests {
                 bucket_size_millisecs: PositiveI64::new(i64::MAX).expect("i64::MAX is positive"),
             }),
         });
-        let searches = build_clp_s_search_args(
+        let arg_lists = build_clp_s_arg_lists(
             &ArchiveDescriptor::ObjectUrl("https://bucket.s3.amazonaws.com/archive".to_owned()),
             &unbounded_query(),
             &output,
@@ -953,7 +953,7 @@ mod tests {
             "ds1",
             0,
         )?;
-        let args = &searches[1];
+        let args = &arg_lists[1];
         let expected = [
             "s",
             "https://bucket.s3.amazonaws.com/archive",
