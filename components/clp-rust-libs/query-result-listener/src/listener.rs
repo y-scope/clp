@@ -148,7 +148,6 @@ mod tests {
     use std::time::Duration;
     use std::time::Instant;
 
-    use clp_rust_utils::types::SessionToken;
     use futures::FutureExt;
     use futures::StreamExt;
     use non_empty_string::NonEmptyString;
@@ -247,6 +246,8 @@ mod tests {
 
     #[tokio::test]
     async fn unknown_session_token_is_rejected() -> anyhow::Result<()> {
+        const UNKNOWN_SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
+
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
         let (session, _results) = listener.open_session(SessionConfig::default());
 
@@ -254,12 +255,7 @@ mod tests {
         stranger
             .send(
                 &[
-                    encode_handshake(
-                        PROTOCOL_VERSION,
-                        &SessionToken::generate().to_string(),
-                        0,
-                        ARCHIVE_ID,
-                    ),
+                    encode_handshake(PROTOCOL_VERSION, UNKNOWN_SESSION_TOKEN, 0, ARCHIVE_ID),
                     encode_results(0, 0..3),
                 ]
                 .concat(),
