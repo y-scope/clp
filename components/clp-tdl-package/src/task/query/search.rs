@@ -21,6 +21,7 @@ use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::s3::generate_s3_url;
+use clp_rust_utils::timeline;
 use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 use spider_core::task::TaskIndex;
@@ -172,7 +173,7 @@ fn build_clp_s_arg_lists(
                 timeline_args.extend(build_clp_s_results_cache_output_args(
                     results_cache,
                     None,
-                    &format!("{query_job_id}-timeline"),
+                    &timeline::collection_name(query_job_id),
                     dataset,
                 ));
                 arg_lists.push(timeline_args);

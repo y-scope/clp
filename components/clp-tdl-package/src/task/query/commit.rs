@@ -6,6 +6,7 @@ use anyhow::Context;
 use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::job_config::QueryJobId;
+use clp_rust_utils::timeline;
 use clp_rust_utils::timeline::Bucket;
 use clp_rust_utils::timeline::COMMIT_MARKER_ID;
 use clp_rust_utils::timeline::merge_archive_buckets;
@@ -58,7 +59,7 @@ pub(super) async fn commit_timeline_results(
                     spider_job_id.get()
                 )
             })?;
-    let collection_name = format!("{query_job_id}-timeline");
+    let collection_name = timeline::collection_name(query_job_id);
     let started = Instant::now();
     tracing::info!(query_job_id, "Started timeline commit.");
     let mut options = parse_results_cache_uri(config.results_cache.uri().as_str()).await?;
