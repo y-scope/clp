@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::types::ArchiveId;
+use clp_rust_utils::types::SessionToken;
 use spider_core::task::TaskIndex;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
@@ -73,10 +74,11 @@ impl ResultEncoder for QueryResultEncoder {
 /// A simulated attempt of a `clp-s` query task, streaming its results over TCP.
 pub struct FakeClpS {
     stream: TcpStream,
+    session_token: SessionToken,
 }
 
 impl FakeClpS {
-    /// Connects to the listener that `network_output` names.
+    /// Connects to the listener that `network_output` names, as an attempt for its session.
     ///
     /// # Returns
     ///
@@ -89,7 +91,10 @@ impl FakeClpS {
         let stream = TcpStream::connect((network_output.host.as_str(), network_output.port.get()))
             .await
             .expect("connecting to the listener should succeed");
-        Self { stream }
+        Self {
+            stream,
+            session_token: network_output.session_token,
+        }
     }
 
     /// Sends `bytes` as they are.
@@ -104,21 +109,16 @@ impl FakeClpS {
             .expect("sending to the listener should succeed");
     }
 
-    /// Sends a handshake for task `task_index` of archive `archive_id`, presenting the session
-    /// token of `network_output`.
+    /// Sends a handshake for task `task_index` of archive `archive_id`, presenting the token of the
+    /// session that the attempt connected to.
     ///
     /// # Panics
     ///
     /// Panics if `task_index` doesn't fit in `u64`, or the write fails.
-    pub async fn send_handshake(
-        &mut self,
-        network_output: &NetworkOutput,
-        task_index: TaskIndex,
-        archive_id: &str,
-    ) {
+    pub async fn send_handshake(&mut self, task_index: TaskIndex, archive_id: &str) {
         self.send(&encode_handshake(
             PROTOCOL_VERSION,
-            &network_output.session_token.to_string(),
+            &self.session_token.to_string(),
             u64::try_from(task_index).expect("test task indices fit in `u64`"),
             archive_id,
         ))

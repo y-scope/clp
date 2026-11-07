@@ -81,10 +81,9 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
     ) -> (Self, ResultStream<EncodingType::Batch>) {
         let token = SessionToken::generate();
         let (batches_sender, batches_receiver) = mpsc::channel(config.channel_capacity.get());
+        let previous = sessions.insert(token, Arc::new(State::new(batches_sender)));
         assert!(
-            sessions
-                .insert(token, Arc::new(State::new(batches_sender)))
-                .is_none(),
+            previous.is_none(),
             "a fresh session token shouldn't be registered"
         );
         let session = Self {

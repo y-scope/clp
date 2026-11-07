@@ -274,8 +274,8 @@ pub async fn serve<EncodingType: ResultEncoding>(
     let joined = sessions
         .get(&handshake.session_token)
         .map(|entry| Arc::clone(entry.value()))
-        .ok_or(ProtocolError::UnknownSession(handshake.session_token))
-        .and_then(|session| Connection::new(session, &handshake));
+        .ok_or(ConnectionError::UnknownSession(handshake.session_token))
+        .and_then(|session| Connection::new(session, &handshake).map_err(ConnectionError::from));
     let mut connection = match joined {
         Ok(connection) => connection,
         Err(e) => {

@@ -171,6 +171,7 @@ mod tests {
     use crate::test_utils::expected_results;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    const HANDSHAKE_TIMEOUT_SEC: NonZeroU64 = NonZeroU64::new(1).expect("1 is nonzero");
 
     /// # Returns
     ///
@@ -304,8 +305,6 @@ mod tests {
     -> anyhow::Result<()> {
         use std::time::Instant;
 
-        const HANDSHAKE_TIMEOUT_SEC: NonZeroU64 = NonZeroU64::new(1).expect("1 is nonzero");
-
         let listener = ResultListener::<QueryResultEncoding>::bind(ListenerConfig {
             handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
             ..base_listener_config()
@@ -327,8 +326,6 @@ mod tests {
     #[tokio::test]
     async fn connection_that_sent_its_handshake_outlasts_the_handshake_timeout()
     -> anyhow::Result<()> {
-        const HANDSHAKE_TIMEOUT_SEC: NonZeroU64 = NonZeroU64::new(1).expect("1 is nonzero");
-
         let listener = ResultListener::<QueryResultEncoding>::bind(ListenerConfig {
             handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
             ..base_listener_config()
@@ -337,9 +334,7 @@ mod tests {
         let (session, mut results) = listener.open_session(SessionConfig::default());
 
         let mut attempt = FakeClpS::connect(session.network_output()).await;
-        attempt
-            .send_handshake(session.network_output(), 0, ARCHIVE_ID)
-            .await;
+        attempt.send_handshake(0, ARCHIVE_ID).await;
         tokio::time::sleep(2 * Duration::from_secs(HANDSHAKE_TIMEOUT_SEC.get())).await;
         attempt.send_results(0, 0..3).await;
         let acknowledgement = attempt.finish(3).await;
@@ -387,15 +382,11 @@ mod tests {
         let (second_session, mut second_results) = listener.open_session(SessionConfig::default());
 
         let mut first_attempt = FakeClpS::connect(first_session.network_output()).await;
-        first_attempt
-            .send_handshake(first_session.network_output(), 0, ARCHIVE_ID)
-            .await;
+        first_attempt.send_handshake(0, ARCHIVE_ID).await;
         first_attempt.send_results(0, 0..3).await;
         let first_acknowledgement = first_attempt.finish(3).await;
         let mut second_attempt = FakeClpS::connect(second_session.network_output()).await;
-        second_attempt
-            .send_handshake(second_session.network_output(), 0, OTHER_ARCHIVE_ID)
-            .await;
+        second_attempt.send_handshake(0, OTHER_ARCHIVE_ID).await;
         second_attempt.send_results(0, 0..2).await;
         let second_acknowledgement = second_attempt.finish(2).await;
 
@@ -420,9 +411,7 @@ mod tests {
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
         let (session, mut results) = listener.open_session(SessionConfig::default());
         let mut attempt = FakeClpS::connect(session.network_output()).await;
-        attempt
-            .send_handshake(session.network_output(), 0, ARCHIVE_ID)
-            .await;
+        attempt.send_handshake(0, ARCHIVE_ID).await;
         attempt.send_results(0, 0..2).await;
         let mut received = receive_results(&mut results, 2).await;
 
@@ -457,7 +446,7 @@ mod tests {
         let (session, mut results) = listener.open_session(SessionConfig::default());
         let network_output = session.network_output();
         let mut attempt = FakeClpS::connect(network_output).await;
-        attempt.send_handshake(network_output, 0, ARCHIVE_ID).await;
+        attempt.send_handshake(0, ARCHIVE_ID).await;
         attempt.send_results(0, 0..2).await;
         let mut received = receive_results(&mut results, 2).await;
 

@@ -45,9 +45,6 @@ pub enum ProtocolError {
     #[error("expected result index {expected} on the connection, got {received}")]
     UnexpectedResultIndex { expected: u64, received: u64 },
 
-    #[error("unknown session token {0}")]
-    UnknownSession(SessionToken),
-
     #[error("unsupported protocol version {0}")]
     UnsupportedVersion(u64),
 }
@@ -69,4 +66,7 @@ pub enum ConnectionError {
 
     #[error("the connection closed in the middle of a frame")]
     TruncatedFrame,
+
+    #[error("unknown session token {0}")]
+    UnknownSession(SessionToken),
 }
