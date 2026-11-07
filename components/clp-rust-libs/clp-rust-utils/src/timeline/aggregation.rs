@@ -1,10 +1,14 @@
 //! Aggregation of timeline archive buckets stored in MongoDB.
 
+use futures::Stream;
+use futures::StreamExt;
 use mongodb::Collection;
 use mongodb::bson::Document;
 use mongodb::bson::doc;
 
+use super::Bucket;
 use super::COMMIT_MARKER_ID;
+use super::Error;
 
 /// Combines archive buckets, excluding already published buckets and the commit marker.
 ///
@@ -14,17 +18,20 @@ use super::COMMIT_MARKER_ID;
 ///
 /// # Returns
 ///
-/// A cursor of grouped, timestamp-ordered documents on success. Each document must be validated
-/// with [`super::Bucket::try_from_aggregation_document`] before publication or use.
+/// A stream of validated, timestamp-ordered buckets on success. The stream yields an error if
+/// reading or validating a bucket fails.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * Forwards [`Collection::aggregate`]'s return values on failure.
+///
+/// The returned stream yields [`Error::Mongo`] if reading a bucket fails and forwards
+/// [`Bucket::try_from_aggregation_document`]'s errors.
 pub async fn merge_archive_buckets(
     collection: &Collection<Document>,
-) -> mongodb::error::Result<mongodb::Cursor<Document>> {
+) -> Result<impl Stream<Item = Result<Bucket, Error>> + Unpin, Error> {
     let pipeline = [
         doc! {
             "$match": { "$expr": { "$and": [
@@ -57,5 +64,9 @@ pub async fn merge_archive_buckets(
         },
         doc! { "$sort": { "_id": 1 } },
     ];
-    collection.aggregate(pipeline).await
+    let cursor = collection.aggregate(pipeline).await?;
+    Ok(cursor.map(|document| {
+        let document = document?;
+        Bucket::try_from_aggregation_document(&document)
+    }))
 }

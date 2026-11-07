@@ -179,7 +179,9 @@ fn build_clp_s_arg_lists(
             normal_args.extend(build_clp_s_network_output_args(network_output, task_index));
             vec![normal_args]
         }
-        QueryOutput::File {} => unreachable!("file output must be rejected before building arguments"),
+        QueryOutput::File {} => {
+            unreachable!("file output must be rejected before building arguments")
+        }
     }
 }
 
@@ -429,10 +431,10 @@ mod tests {
     use spider_tdl::TaskContext;
 
     use super::ArchiveDescriptor;
+    use super::build_clp_s_arg_lists;
     use super::build_clp_s_network_output_args;
     use super::build_clp_s_query_args;
     use super::build_clp_s_results_cache_output_args;
-    use super::build_clp_s_arg_lists;
     use super::resolve_archive_input;
     use super::search;
 

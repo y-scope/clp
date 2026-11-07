@@ -1,10 +1,13 @@
-//! Timeline bucket validation errors.
+//! Timeline bucket aggregation and validation errors.
 
 use mongodb::bson::spec::ElementType;
 
-/// Failures when validating aggregated timeline buckets.
+/// Failures when aggregating or validating timeline buckets.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("`mongodb::error::Error`: {0}")]
+    Mongo(#[from] mongodb::error::Error),
+
     #[error("timeline bucket is missing field `{field}`")]
     MissingField { field: &'static str },
 

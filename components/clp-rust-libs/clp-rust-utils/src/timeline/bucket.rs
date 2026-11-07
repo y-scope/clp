@@ -13,7 +13,7 @@ pub struct Bucket {
 }
 
 impl Bucket {
-    /// Constructs a bucket from a document returned by [`super::merge_archive_buckets`].
+    /// Constructs a bucket from a MongoDB aggregation document.
     ///
     /// # Returns
     ///
@@ -220,7 +220,8 @@ mod tests {
                         Bucket::try_from_aggregation_document(&document),
                         Err(Error::InvalidArchiveBucket)
                     ),
-                    "invalid archive buckets must take precedence over count validation: {document}"
+                    "invalid archive buckets must take precedence over count validation: \
+                     {document}"
                 );
             }
         }

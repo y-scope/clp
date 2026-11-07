@@ -7,7 +7,6 @@ use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::timeline;
-use clp_rust_utils::timeline::Bucket;
 use clp_rust_utils::timeline::COMMIT_MARKER_ID;
 use clp_rust_utils::timeline::merge_archive_buckets;
 use futures::TryStreamExt;
@@ -96,16 +95,14 @@ pub(super) async fn commit_timeline_results(
 ///
 /// * Forwards [`merge_archive_buckets`]'s return values on failure.
 /// * Forwards [`TryStreamExt::try_next`]'s return values on failure.
-/// * Forwards [`Bucket::try_from_aggregation_document`]'s return values on failure.
 /// * Forwards [`Client::bulk_write`]'s return values on failure.
 /// * Forwards [`Collection::replace_one`]'s return values on failure.
 async fn publish_timeline_buckets(collection: &Collection<Document>) -> anyhow::Result<()> {
     const BATCH_SIZE: usize = 1_000;
     let client = collection.client();
-    let mut cursor = merge_archive_buckets(collection).await?;
+    let mut buckets = merge_archive_buckets(collection).await?;
     let mut batch = Vec::with_capacity(BATCH_SIZE);
-    while let Some(document) = cursor.try_next().await? {
-        let bucket = Bucket::try_from_aggregation_document(&document)?;
+    while let Some(bucket) = buckets.try_next().await? {
         batch.push(
             ReplaceOneModel::builder()
                 .namespace(collection.namespace())
@@ -115,15 +112,11 @@ async fn publish_timeline_buckets(collection: &Collection<Document>) -> anyhow::
                 .build(),
         );
         if batch.len() == BATCH_SIZE {
-            client
-                .bulk_write(std::mem::take(&mut batch))
-                .await?;
+            client.bulk_write(std::mem::take(&mut batch)).await?;
         }
     }
     if !batch.is_empty() {
-        client
-            .bulk_write(batch)
-            .await?;
+        client.bulk_write(batch).await?;
     }
     collection
         .replace_one(
