@@ -1,268 +1,57 @@
 # Docker Compose deployment
 
-This guide explains how to deploy CLP using Docker Compose. Docker Compose provides a
-straightforward way to orchestrate CLP's services, suitable for both development and production
-environments.
-
-## Deployment options
-
-Docker Compose can be used for:
-
-* A **single-host deployment**: Run all CLP services on a single machine. This is the simplest
-  setup, covered in the [quick-start guides](quick-start/index.md).
-* A **multi-host deployment**: Distribute CLP services across multiple machines for higher
-  throughput and scalability. This is covered in detail below.
-
----
-
-## Multi-host deployment
-
-A multi-host deployment allows you to run CLP across a distributed set of hosts.
-
-:::{note}
-The instructions below use *manual* Docker Compose orchestration. Compared to using
-[Kubernetes][kubernetes-guide] (via Helm), Docker Compose is more lightweight and provides
-fine-grained control over service placement, but requires more configuration.
-:::
+The supplied Docker Compose configuration runs a Spider cluster on a single host. It includes the
+compression and query coordinators, Spider storage and scheduler, and worker pools for compression
+and search. For a multi-host deployment, use the [Kubernetes guide][kubernetes-guide].
 
 ## Requirements
 
 * [Docker] and [Docker Compose][docker-compose]
   * If you're not running as root, ensure Docker can be run [without superuser
     privileges][docker-non-root].
-* One or more hosts networked together
-* When not using S3 storage, a shared filesystem accessible by all worker hosts (e.g., NFS,
-  [SeaweedFS])
-  * See [below](#setting-up-seaweedfs) for how to set up a simple SeaweedFS cluster.
-
-## Cluster overview
-
-The CLP package is composed of several components (services in orchestrator terminology) including
-infrastructure services, schedulers, workers, and supporting services. For a detailed overview of
-all services and their dependencies, see the [deployment orchestration design
-doc][design-orchestration].
-
-In a multi-host cluster:
-
-* *infrastructure services* and *schedulers* should be run once per cluster (they're singleton
-  services).
-* *workers* can be run on multiple hosts to increase parallelism.
+* Filesystem input and archive directories accessible on the deployment host
+  * See [below](#setting-up-seaweedfs) for a SeaweedFS filesystem setup.
 
 ## Configuring CLP
 
-To configure CLP for multi-host deployment, you'll need to:
+1. Extract the CLP package.
+2. Copy `etc/credentials.template.yaml` to `etc/credentials.yaml` and set the credentials.
+3. Edit `etc/clp-config.yaml`:
+   * Set `logs_input.directory` to the directory containing the logs to compress.
+   * Set `archive_output.storage.directory` and `stream_output.storage.directory` when using
+     filesystem storage.
+   * Adjust `spider.worker.pools.general.replicas`, `spider.worker.pools.compression.replicas`, and
+     `spider.worker.pools.query.replicas` to allocate workers for the host's available resources.
 
-1. [configure and run CLP's environment setup scripts](#clp-environment-setup).
-2. [distribute and configure the CLP package on all hosts in your cluster](
-   #distributing-the-set-up-package).
+The compression coordinator and workers mount the same input directory read-only. Workers also
+mount the configured archive and staging directories.
 
-### CLP environment setup
-
-1. Extract the CLP package on one host (the "setup host").
-
-2. Configure credentials:
-
-   * Copy `etc/credentials.template.yaml` to `etc/credentials.yaml`.
-   * Edit `etc/credentials.yaml` to set usernames and passwords.
-
-3. Edit CLP's configuration file:
-
-   * Open `etc/clp-config.yaml`.
-   * Configure which services should be bundled (managed by the `clp-package` Docker Compose
-     project) vs. external.
-
-     ```yaml
-     bundled: [
-       # Remove services you want to run on specific hosts or use external instances
-       "database",       # Remove if running on a dedicated host or using external MariaDB/MySQL
-       "queue",          # Remove if running on a dedicated host or using external RabbitMQ
-       "redis",          # Remove if running on a dedicated host or using external Redis
-       "results_cache",  # Remove if running on a dedicated host or using external MongoDB
-     ]
-     ```
-
-   * For each service, set the `host` and `port` fields to the actual hostname/IP and port where you
-     plan to run the specific service.
-   * When using local filesystem storage (i.e., not S3), set `logs_input.directory`,
-     `archive_output.storage.directory`, and `stream_output.storage.directory` to directories on the
-     shared filesystem.
-   * (Optional) set `scheduler_concurrency` under `query_scheduler` to control
-     the size of the process pool used by the query scheduler. Higher
-     concurrency can help improve throughput when many query jobs can be
-     run concurrently in larger clusters.
-
-4. Set up the CLP package's environment:
-
-   ```bash
-   sbin/start-clp.sh --setup-only
-   ```
-
-   This will:
-
-   * Validate your configuration
-   * Create any necessary directories
-   * Generate an `.env` file with all necessary environment variables
-   * Create `var/log/.clp-config.yaml` (the container-specific configuration file)
-   * Create `etc/webui/settings.json` (the `webui` server's configuration file)
-
-### Distributing the set-up package
-
-With the package set up, we can now distribute it to all hosts in the cluster:
-
-1. Copy the set-up package to all hosts where you want to run CLP services.
-
-    * Ensure the package is copied to the same location on every host or else, on each host, you'll
-      need to modify the paths in `.env` as appropriate.
-
-2. Configure worker concurrency (optional):
-
-   On each worker host, edit the `.env` file to adjust worker concurrency settings as needed:
-
-   * `CLP_COMPRESSION_WORKER_CONCURRENCY`
-   * `CLP_QUERY_WORKER_CONCURRENCY`
-   * `CLP_REDUCER_CONCURRENCY`
-
-   Recommended settings:
-
-   * If workers are started on separate hosts, set each concurrency value to match the CPU count on
-     that host.
-   * If compression and query/reducer workers are started on the same host, set each concurrency
-     value to half the CPU count (e.g., for a 16-core host, set all three to 8).
+To use external MariaDB/MySQL or MongoDB instances, follow the
+[external database setup guide](guides-external-database.md) and remove the corresponding
+`database` or `results_cache` entry from `bundled`.
 
 ## Starting CLP
 
-You can start CLP across multiple hosts by starting each service on the relevant host. The commands
-below indicate how to do so, with comments indicating the startup order and dependencies between
-services.
-
-:::{note}
-For **clp-json + Presto** deployments (`package.storage_engine`: `clp-s` with
-`webui.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
-`reducer` services.
-:::
-
-:::{tip}
-If you want to use your own MariaDB/MySQL or MongoDB servers instead of the Docker Compose managed
-databases, see the [external database setup guide](guides-external-database.md). When using external
-databases, skip starting the `database` and `results-cache` services below.
-:::
-
-All commands below assume you are running them from the root of the CLP package directory.
+Run from the root of the CLP package:
 
 ```bash
-################################################################################
-# Infrastructure services
-################################################################################
-
-# Start database (skip if using external database)
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up database \
-    --no-deps --wait
-
-# Initialize database
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up db-table-creator \
-    --no-deps
-
-# Start queue
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up queue \
-    --no-deps --wait
-
-# Start redis
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up redis \
-    --no-deps --wait
-
-# Start results cache (skip if using external MongoDB)
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up results-cache \
-    --no-deps --wait
-
-# Initialize results cache
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up results-cache-indices-creator \
-    --no-deps
-
-################################################################################
-# Controller services (schedulers, UI, and supporting services)
-################################################################################
-
-# Start compression scheduler
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up compression-scheduler \
-    --no-deps --wait
-    
-# Start query scheduler
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up query-scheduler \
-    --no-deps --wait
-
-# Start API server
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up api-server \
-    --no-deps --wait
-
-# Start log-ingestor (optional, only if configured)
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up log-ingestor \
-    --no-deps --wait
-
-# Start webui
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up webui \
-    --no-deps --wait
-
-# Start garbage collector (optional, only if retention is configured)
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up garbage-collector \
-    --no-deps --wait
-
-# Start MCP server (optional, only if configured)
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up mcp-server \
-    --no-deps --wait
-
-################################################################################
-# Worker services (can be started on multiple hosts)
-################################################################################
-
-# Start compression worker
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up compression-worker \
-    --no-deps --wait
-
-# Start query worker
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up query-worker \
-    --no-deps --wait
-
-# Start reducer
-docker compose \
-  --project-name "clp-package-$(cat var/log/instance-id)" \
-  up reducer \
-    --no-deps --wait
+sbin/start-clp.sh
 ```
 
-:::{note}
-To increase parallelism, start worker services (`compression-worker`, `query-worker`, `reducer`) on
-multiple hosts.
-:::
+The startup script validates configuration, creates directories, generates `.env` and
+`var/log/.clp-config.yaml`, initializes the databases, and starts the configured services.
+Use `sbin/start-clp.sh --setup-only` to generate the environment without starting services.
+
+The Compose services include:
+
+* `database` and `results-cache` for CLP metadata and search results
+* `spider-database`, `spider-storage`, and `spider-scheduler` for Spider task execution
+* `compression-coordinator` and `query-coordinator` for job submission and monitoring
+* `spider-worker`, `spider-worker-compression`, and `spider-worker-query` for the worker pools
+* `api-server` and `webui` for the user interface
+
+The bundled Spider scheduler and workers use container-network endpoints on the same host.
+Copying this Compose configuration to other hosts does not configure a distributed cluster.
 
 ## Using CLP
 
@@ -361,11 +150,9 @@ cases, see the [SeaweedFS docs][seaweedfs-docs].
      * `<master-host>` is the hostname/IP of the master host.
      * `<mount-path>` is the path where you want the mount to be.
 
-[design-orchestration]: ../dev-docs/design-deployment-orchestration.md
 [Docker]: https://docs.docker.com/engine/install/
 [docker-compose]: https://docs.docker.com/compose/
 [docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
 [kubernetes-guide]: guides-k8s-deployment.md
-[SeaweedFS]: https://github.com/seaweedfs/seaweedfs
 [seaweedfs-docs]: https://github.com/seaweedfs/seaweedfs/blob/master/README.md
 [seaweedfs-install-docs]: https://github.com/seaweedfs/seaweedfs?tab=readme-ov-file#quick-start-with-single-binary
