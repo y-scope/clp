@@ -230,7 +230,7 @@ mod tests {
     use super::build_query_task_graph;
 
     #[test]
-    fn timeline_graph_alone_attaches_publication_task() -> anyhow::Result<()> {
+    fn commit_task_is_attached_only_for_count_by_time_output() -> anyhow::Result<()> {
         let query = SearchQuery {
             query_string: NonEmptyString::from_static_str("*"),
             time_range: TimeRange::default(),
