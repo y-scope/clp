@@ -117,14 +117,12 @@ async fn publish_timeline_buckets(collection: &Collection<Document>) -> anyhow::
         if batch.len() == BATCH_SIZE {
             client
                 .bulk_write(std::mem::take(&mut batch))
-                .write_concern(client.write_concern().cloned().unwrap_or_default())
                 .await?;
         }
     }
     if !batch.is_empty() {
         client
             .bulk_write(batch)
-            .write_concern(client.write_concern().cloned().unwrap_or_default())
             .await?;
     }
     collection
