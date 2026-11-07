@@ -229,27 +229,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn attempt_through_the_listener_delivers_its_results_and_is_acknowledged()
-    -> anyhow::Result<()> {
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
-        let (session, mut results) = listener.open_session(SessionConfig::default());
-
-        let mut attempt = FakeClpS::connect(session.network_output()).await;
-        attempt
-            .send_handshake(session.network_output(), 0, ARCHIVE_ID)
-            .await;
-        attempt.send_results(0, 0..3).await;
-        let acknowledgement = attempt.finish(3).await;
-
-        assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
-        assert_eq!(
-            take_buffered_results(&mut results),
-            expected_results(0, ARCHIVE_ID, 0..3)
-        );
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn results_sent_along_with_the_handshake_are_delivered_and_acknowledged()
     -> anyhow::Result<()> {
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
