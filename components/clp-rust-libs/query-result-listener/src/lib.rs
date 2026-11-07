@@ -1,27 +1,19 @@
 //! Receives the results that `clp-s` query tasks stream over TCP.
 
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the TCP listener that runs the connection handler comes in a later change"
-    )
-)]
 mod connection;
 mod cursor;
 pub mod encoding;
 mod error;
+mod listener;
 pub mod protocol;
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the TCP listener that runs the connection handler comes in a later change"
-    )
-)]
 mod session;
 
 pub use error::ProtocolError;
+pub use listener::ListenerConfig;
+pub use listener::ResultListener;
+pub use session::ResultStream;
+pub use session::Session;
+pub use session::SessionConfig;
 
 #[cfg(test)]
 mod test_utils;

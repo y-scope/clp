@@ -1,8 +1,11 @@
 //! Error types for the query result listener.
 
+use std::time::Duration;
+
 use clp_rust_utils::types::ArchiveId;
 use clp_rust_utils::types::ParseArchiveIdError;
 use clp_rust_utils::types::ParseSessionTokenError;
+use clp_rust_utils::types::SessionToken;
 use spider_core::task::TaskIndex;
 
 /// Violations of the wire protocol.
@@ -42,6 +45,9 @@ pub enum ProtocolError {
     #[error("expected result index {expected} on the connection, got {received}")]
     UnexpectedResultIndex { expected: u64, received: u64 },
 
+    #[error("unknown session token {0}")]
+    UnknownSession(SessionToken),
+
     #[error("unsupported protocol version {0}")]
     UnsupportedVersion(u64),
 }
@@ -49,6 +55,9 @@ pub enum ProtocolError {
 /// Reasons a connection from a query task ends without an acknowledgement.
 #[derive(Debug, thiserror::Error)]
 pub enum ConnectionError {
+    #[error("no handshake arrived within {0:?}")]
+    HandshakeTimeout(Duration),
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 

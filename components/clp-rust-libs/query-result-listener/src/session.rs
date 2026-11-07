@@ -1,15 +1,130 @@
 //! Sessions, each of which collects the results streamed for one query job.
 
+use std::num::NonZeroU16;
+use std::num::NonZeroUsize;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
+use std::task::Context;
+use std::task::Poll;
 
+use clp_rust_utils::job_config::NetworkOutput;
+use clp_rust_utils::types::SessionToken;
 use dashmap::DashMap;
+use futures::Stream;
+use non_empty_string::NonEmptyString;
 use spider_core::task::TaskIndex;
 use tokio::sync::mpsc;
 
 use crate::cursor::TaskCursor;
 use crate::encoding::ResultEncoding;
+
+/// The registered sessions of a listener, keyed by their tokens.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the results the sessions deliver.
+pub type Registry<EncodingType> = DashMap<SessionToken, Arc<State<EncodingType>>>;
+
+/// Configuration of a session.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SessionConfig {
+    /// The number of batches buffered for the consumer before the session's connections stop
+    /// reading from their sockets.
+    pub channel_capacity: NonZeroUsize,
+}
+
+impl Default for SessionConfig {
+    fn default() -> Self {
+        Self {
+            channel_capacity: NonZeroUsize::new(16).expect("16 is nonzero"),
+        }
+    }
+}
+
+/// A session that receives the results streamed for one query job.
+///
+/// The session accepts the connections that present its token until it is dropped.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the results the session delivers.
+pub struct Session<EncodingType: ResultEncoding> {
+    _registration: Registration<EncodingType>,
+    network_output: NetworkOutput,
+}
+
+impl<EncodingType: ResultEncoding> Session<EncodingType> {
+    /// # Returns
+    ///
+    /// The network output that directs a query job's tasks to stream their results to this
+    /// session.
+    #[must_use]
+    pub const fn network_output(&self) -> &NetworkOutput {
+        &self.network_output
+    }
+
+    /// Factory function.
+    ///
+    /// Creates a session with a fresh token, reachable at `host` and `port`, and registers it in
+    /// `sessions`.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing:
+    ///
+    /// * The newly created session.
+    /// * The stream of the session's results.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the fresh token is already registered, which a random UUID rules out.
+    pub(crate) fn open(
+        sessions: Arc<Registry<EncodingType>>,
+        host: NonEmptyString,
+        port: NonZeroU16,
+        config: SessionConfig,
+    ) -> (Self, ResultStream<EncodingType::Batch>) {
+        let token = SessionToken::from(uuid::Uuid::new_v4());
+        let (batches_sender, batches_receiver) = mpsc::channel(config.channel_capacity.get());
+        assert!(
+            sessions
+                .insert(token, Arc::new(State::new(batches_sender)))
+                .is_none(),
+            "a fresh session token shouldn't be registered"
+        );
+        let session = Self {
+            _registration: Registration { sessions, token },
+            network_output: NetworkOutput {
+                host,
+                port,
+                session_token: token,
+            },
+        };
+        (session, ResultStream { batches_receiver })
+    }
+}
+
+/// The stream of a session's results, in the batches its connections encoded them into.
+///
+/// The stream ends once its session is dropped and every connection that joined the session has
+/// finished.
+///
+/// # Type Parameters
+///
+/// * `BatchType` - The type of a batch of encoded results.
+pub struct ResultStream<BatchType> {
+    batches_receiver: mpsc::Receiver<BatchType>,
+}
+
+impl<BatchType> Stream for ResultStream<BatchType> {
+    type Item = BatchType;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.batches_receiver.poll_recv(cx)
+    }
+}
 
 /// Statistics of a session's connections.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -79,6 +194,13 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
     /// # Returns
     ///
     /// The statistics recorded by the session's finished connections.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "the session's outcome that reports it comes in a later change"
+        )
+    )]
     #[must_use]
     pub fn stats(&self) -> SessionStats {
         SessionStats {
@@ -86,5 +208,21 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
             num_duplicates_dropped: self.num_duplicates_dropped.load(Ordering::Relaxed),
             num_results_discarded: self.num_results_discarded.load(Ordering::Relaxed),
         }
+    }
+}
+
+/// Keeps a session registered in its listener's registry until dropped.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the results the session delivers.
+struct Registration<EncodingType: ResultEncoding> {
+    sessions: Arc<Registry<EncodingType>>,
+    token: SessionToken,
+}
+
+impl<EncodingType: ResultEncoding> Drop for Registration<EncodingType> {
+    fn drop(&mut self) {
+        self.sessions.remove(&self.token);
     }
 }
