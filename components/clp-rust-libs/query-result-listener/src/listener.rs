@@ -2,6 +2,7 @@
 
 use std::net::SocketAddr;
 use std::num::NonZeroU16;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -26,7 +27,7 @@ pub struct ListenerConfig {
     pub advertised_host: NonEmptyString,
 
     /// How long a new connection may take to send its handshake, in seconds.
-    pub handshake_timeout_sec: u64,
+    pub handshake_timeout_sec: NonZeroU64,
 }
 
 /// A listener that receives the results query tasks stream, and routes each connection to the
@@ -46,6 +47,8 @@ pub struct ResultListener<EncodingType: ResultEncoding> {
 }
 
 impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
+    /// Factory function.
+    ///
     /// Binds a listener to `config.bind_addr` and starts accepting connections in a background
     /// task.
     ///
@@ -71,7 +74,7 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
         let accept_loop = tokio::spawn(accept_connections(
             tcp_listener,
             Arc::clone(&sessions),
-            Duration::from_secs(config.handshake_timeout_sec),
+            Duration::from_secs(config.handshake_timeout_sec.get()),
         ));
         Ok(Self {
             sessions,
@@ -147,6 +150,7 @@ async fn accept_connections<EncodingType: ResultEncoding>(
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU64;
     use std::time::Duration;
 
     use futures::StreamExt;
@@ -186,7 +190,8 @@ mod tests {
             bind_addr: SocketAddr::from((Ipv4Addr::LOCALHOST, 0)),
             advertised_host: NonEmptyString::new("127.0.0.1".to_owned())
                 .expect("the advertised host fixture should be non-empty"),
-            handshake_timeout_sec: 6 * TIMEOUT.as_secs(),
+            handshake_timeout_sec: NonZeroU64::new(6 * TIMEOUT.as_secs())
+                .expect("the base handshake timeout should be nonzero"),
         }
     }
 
@@ -299,7 +304,7 @@ mod tests {
     -> anyhow::Result<()> {
         use std::time::Instant;
 
-        const HANDSHAKE_TIMEOUT_SEC: u64 = 1;
+        const HANDSHAKE_TIMEOUT_SEC: NonZeroU64 = NonZeroU64::new(1).expect("1 is nonzero");
 
         let listener = ResultListener::<QueryResultEncoding>::bind(ListenerConfig {
             handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
@@ -313,8 +318,36 @@ mod tests {
         silent.expect_closed_by_listener().await;
 
         assert!(
-            connected_at.elapsed() >= Duration::from_secs(HANDSHAKE_TIMEOUT_SEC),
+            connected_at.elapsed() >= Duration::from_secs(HANDSHAKE_TIMEOUT_SEC.get()),
             "the listener shouldn't close the connection before the handshake timeout"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn connection_that_sent_its_handshake_outlasts_the_handshake_timeout()
+    -> anyhow::Result<()> {
+        const HANDSHAKE_TIMEOUT_SEC: NonZeroU64 = NonZeroU64::new(1).expect("1 is nonzero");
+
+        let listener = ResultListener::<QueryResultEncoding>::bind(ListenerConfig {
+            handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
+            ..base_listener_config()
+        })
+        .await?;
+        let (session, mut results) = listener.open_session(SessionConfig::default());
+
+        let mut attempt = FakeClpS::connect(session.network_output()).await;
+        attempt
+            .send_handshake(session.network_output(), 0, ARCHIVE_ID)
+            .await;
+        tokio::time::sleep(2 * Duration::from_secs(HANDSHAKE_TIMEOUT_SEC.get())).await;
+        attempt.send_results(0, 0..3).await;
+        let acknowledgement = attempt.finish(3).await;
+
+        assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
+        assert_eq!(
+            take_buffered_results(&mut results),
+            expected_results(0, ARCHIVE_ID, 0..3)
         );
         Ok(())
     }

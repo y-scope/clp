@@ -109,7 +109,7 @@ impl FakeClpS {
     ///
     /// # Panics
     ///
-    /// Panics if the write fails.
+    /// Panics if `task_index` doesn't fit in `u64`, or the write fails.
     pub async fn send_handshake(
         &mut self,
         network_output: &NetworkOutput,
