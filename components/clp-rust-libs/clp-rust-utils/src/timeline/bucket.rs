@@ -13,7 +13,7 @@ pub struct Bucket {
 }
 
 impl Bucket {
-    /// Constructs a bucket from a document returned by [`super::aggregate_source_contributions`].
+    /// Constructs a bucket from a document returned by [`super::merge_archive_buckets`].
     ///
     /// # Returns
     ///
@@ -23,15 +23,16 @@ impl Bucket {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::InvalidSourceContribution`] if the aggregate flags invalid source contributions.
-    /// * [`Error::CountOverflow`] if the sum of valid source counts overflows a BSON integer.
+    /// * [`Error::InvalidArchiveBucket`] if the aggregate flags invalid archive buckets.
+    /// * [`Error::CountOverflow`] if the sum of valid archive bucket counts overflows a BSON
+    ///   integer.
     /// * [`Error::NegativeCount`] if the count is negative.
     /// * Forwards [`get_integer_field`]'s return values on failure.
     pub fn try_from_aggregation_document(document: &Document) -> Result<Self, Error> {
         if get_integer_field(document, "invalid")? != 0 {
-            return Err(Error::InvalidSourceContribution);
+            return Err(Error::InvalidArchiveBucket);
         }
-        // MongoDB promotes an overflowing integer sum to a double. Source validation above
+        // MongoDB promotes an overflowing integer sum to a double. Archive bucket validation above
         // ensures that floating-point operands cannot be mistaken for overflow.
         if matches!(document.get("count"), Some(Bson::Double(_))) {
             return Err(Error::CountOverflow);
@@ -199,9 +200,9 @@ mod tests {
         Ok(())
     }
 
-    /// Distinguishes MongoDB's promoted integer sum from malformed source operands.
+    /// Distinguishes MongoDB's promoted integer sum from malformed archive bucket operands.
     #[test]
-    fn rejects_overflow_and_prioritizes_invalid_sources() -> anyhow::Result<()> {
+    fn rejects_overflow_and_prioritizes_invalid_archive_buckets() -> anyhow::Result<()> {
         let mut document = doc! { "_id": 0, "count": 9_223_372_036_854_775_808.0, "invalid": 0 };
         anyhow::ensure!(
             matches!(
@@ -217,9 +218,9 @@ mod tests {
                 anyhow::ensure!(
                     matches!(
                         Bucket::try_from_aggregation_document(&document),
-                        Err(Error::InvalidSourceContribution)
+                        Err(Error::InvalidArchiveBucket)
                     ),
-                    "invalid sources must take precedence over count validation: {document}"
+                    "invalid archive buckets must take precedence over count validation: {document}"
                 );
             }
         }

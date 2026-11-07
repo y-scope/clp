@@ -17,8 +17,8 @@ pub enum Error {
     #[error("timeline count must be nonnegative, got {count}")]
     NegativeCount { count: i64 },
 
-    #[error("timeline aggregate contains invalid source contributions")]
-    InvalidSourceContribution,
+    #[error("timeline aggregate contains invalid archive buckets")]
+    InvalidArchiveBucket,
 
     #[error("combined timeline count exceeds the signed 64-bit integer range")]
     CountOverflow,

@@ -4,7 +4,7 @@ mod aggregation;
 mod bucket;
 mod error;
 
-pub use aggregation::aggregate_source_contributions;
+pub use aggregation::merge_archive_buckets;
 pub use bucket::Bucket;
 pub use error::Error;
 

@@ -1,4 +1,4 @@
-//! Aggregation of timeline source contributions stored in MongoDB.
+//! Aggregation of timeline archive buckets stored in MongoDB.
 
 use mongodb::Collection;
 use mongodb::bson::Document;
@@ -6,9 +6,9 @@ use mongodb::bson::doc;
 
 use super::COMMIT_MARKER_ID;
 
-/// Combines source contributions, excluding already published buckets and the commit marker.
+/// Combines archive buckets, excluding already published buckets and the commit marker.
 ///
-/// Integer identities are reserved for final buckets. Spider contributions use object identities.
+/// Integer identities are reserved for final buckets. Spider archive buckets use object identities.
 /// Invalid remaining identities and operands are retained and flagged rather than silently
 /// discarded.
 ///
@@ -22,7 +22,7 @@ use super::COMMIT_MARKER_ID;
 /// Returns an error if:
 ///
 /// * Forwards [`Collection::aggregate`]'s return values on failure.
-pub async fn aggregate_source_contributions(
+pub async fn merge_archive_buckets(
     collection: &Collection<Document>,
 ) -> mongodb::error::Result<mongodb::Cursor<Document>> {
     let pipeline = [
