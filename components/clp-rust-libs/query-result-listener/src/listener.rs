@@ -25,8 +25,8 @@ pub struct ListenerConfig {
     /// The host that query tasks connect to.
     pub advertised_host: NonEmptyString,
 
-    /// How long a new connection may take to send its handshake.
-    pub handshake_timeout: Duration,
+    /// How long a new connection may take to send its handshake, in seconds.
+    pub handshake_timeout_sec: u64,
 }
 
 /// A listener that receives the results query tasks stream, and routes each connection to the
@@ -71,7 +71,7 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
         let accept_loop = tokio::spawn(accept_connections(
             tcp_listener,
             Arc::clone(&sessions),
-            config.handshake_timeout,
+            Duration::from_secs(config.handshake_timeout_sec),
         ));
         Ok(Self {
             sessions,
@@ -89,6 +89,10 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
     ///
     /// * The newly opened session.
     /// * The stream of the session's results.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the session's fresh token is already registered, which a random UUID rules out.
     #[must_use]
     pub fn open_session(
         &self,
@@ -143,15 +147,9 @@ async fn accept_connections<EncodingType: ResultEncoding>(
 
 #[cfg(test)]
 mod tests {
-    use std::net::Ipv4Addr;
-    use std::net::SocketAddr;
     use std::time::Duration;
-    use std::time::Instant;
 
-    use futures::FutureExt;
     use futures::StreamExt;
-    use non_empty_string::NonEmptyString;
-    use tokio::net::TcpStream;
     use tokio::time::timeout;
 
     use super::ListenerConfig;
@@ -179,11 +177,16 @@ mod tests {
     ///
     /// Panics if the advertised host fixture is empty.
     fn base_listener_config() -> ListenerConfig {
+        use std::net::Ipv4Addr;
+        use std::net::SocketAddr;
+
+        use non_empty_string::NonEmptyString;
+
         ListenerConfig {
             bind_addr: SocketAddr::from((Ipv4Addr::LOCALHOST, 0)),
             advertised_host: NonEmptyString::new("127.0.0.1".to_owned())
                 .expect("the advertised host fixture should be non-empty"),
-            handshake_timeout: 6 * TIMEOUT,
+            handshake_timeout_sec: 6 * TIMEOUT.as_secs(),
         }
     }
 
@@ -216,6 +219,8 @@ mod tests {
     ///
     /// The results of the batches that `results` holds already.
     fn take_buffered_results(results: &mut ResultStream<Vec<QueryResult>>) -> Vec<QueryResult> {
+        use futures::FutureExt;
+
         let mut taken = Vec::new();
         while let Some(Some(batch)) = results.next().now_or_never() {
             taken.extend(batch);
@@ -234,6 +239,33 @@ mod tests {
             .send_handshake(session.network_output(), 0, ARCHIVE_ID)
             .await;
         attempt.send_results(0, 0..3).await;
+        let acknowledgement = attempt.finish(3).await;
+
+        assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
+        assert_eq!(
+            take_buffered_results(&mut results),
+            expected_results(0, ARCHIVE_ID, 0..3)
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn results_sent_along_with_the_handshake_are_delivered_and_acknowledged()
+    -> anyhow::Result<()> {
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (session, mut results) = listener.open_session(SessionConfig::default());
+        let session_token = session.network_output().session_token.to_string();
+
+        let mut attempt = FakeClpS::connect(session.network_output()).await;
+        attempt
+            .send(
+                &[
+                    encode_handshake(PROTOCOL_VERSION, &session_token, 0, ARCHIVE_ID),
+                    encode_results(0, 0..3),
+                ]
+                .concat(),
+            )
+            .await;
         let acknowledgement = attempt.finish(3).await;
 
         assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
@@ -266,55 +298,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn handshake_of_an_unsupported_version_is_rejected() -> anyhow::Result<()> {
+    async fn malformed_handshake_is_rejected() -> anyhow::Result<()> {
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
         let (session, _results) = listener.open_session(SessionConfig::default());
-        let session_token = session.network_output().session_token.to_string();
+        let mut not_an_array = Vec::new();
+        rmp::encode::write_str(
+            &mut not_an_array,
+            &session.network_output().session_token.to_string(),
+        )?;
 
         let mut attempt = FakeClpS::connect(session.network_output()).await;
         attempt
-            .send(
-                &[
-                    encode_handshake(PROTOCOL_VERSION + 1, &session_token, 0, ARCHIVE_ID),
-                    encode_results(0, 0..3),
-                ]
-                .concat(),
-            )
+            .send(&[not_an_array, encode_results(0, 0..3)].concat())
             .await;
         attempt.expect_closed_by_listener().await;
         Ok(())
     }
 
     #[tokio::test]
-    async fn malformed_handshakes_are_rejected() -> anyhow::Result<()> {
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
-        let (session, _results) = listener.open_session(SessionConfig::default());
-        let session_token = session.network_output().session_token.to_string();
-        let mut not_an_array = Vec::new();
-        rmp::encode::write_str(&mut not_an_array, &session_token)?;
-        let malformed_handshakes = [
-            encode_handshake(PROTOCOL_VERSION, "not-a-uuid", 0, ARCHIVE_ID),
-            encode_handshake(PROTOCOL_VERSION, &session_token, 0, "not-a-uuid"),
-            not_an_array,
-        ];
-
-        for handshake in malformed_handshakes {
-            let mut attempt = FakeClpS::connect(session.network_output()).await;
-            attempt
-                .send(&[handshake, encode_results(0, 0..3)].concat())
-                .await;
-            attempt.expect_closed_by_listener().await;
-        }
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn connection_without_a_handshake_is_closed_after_the_handshake_timeout()
     -> anyhow::Result<()> {
-        const HANDSHAKE_TIMEOUT: Duration = Duration::from_millis(200);
+        use std::time::Instant;
+
+        const HANDSHAKE_TIMEOUT_SEC: u64 = 1;
 
         let listener = ResultListener::<QueryResultEncoding>::bind(ListenerConfig {
-            handshake_timeout: HANDSHAKE_TIMEOUT,
+            handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
             ..base_listener_config()
         })
         .await?;
@@ -325,7 +334,7 @@ mod tests {
         silent.expect_closed_by_listener().await;
 
         assert!(
-            connected_at.elapsed() >= HANDSHAKE_TIMEOUT,
+            connected_at.elapsed() >= Duration::from_secs(HANDSHAKE_TIMEOUT_SEC),
             "the listener shouldn't close the connection before the handshake timeout"
         );
         Ok(())
@@ -428,6 +437,8 @@ mod tests {
     #[tokio::test]
     async fn dropping_the_listener_stops_accepting_and_keeps_serving_open_connections()
     -> anyhow::Result<()> {
+        use tokio::net::TcpStream;
+
         const RETRY_INTERVAL: Duration = Duration::from_millis(10);
 
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;

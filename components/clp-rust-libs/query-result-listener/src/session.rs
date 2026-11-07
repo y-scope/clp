@@ -20,13 +20,6 @@ use tokio::sync::mpsc;
 use crate::cursor::TaskCursor;
 use crate::encoding::ResultEncoding;
 
-/// The registered sessions of a listener, keyed by their tokens.
-///
-/// # Type Parameters
-///
-/// * `EncodingType` - The encoding of the results the sessions deliver.
-pub type Registry<EncodingType> = DashMap<SessionToken, Arc<State<EncodingType>>>;
-
 /// Configuration of a session.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SessionConfig {
@@ -126,13 +119,20 @@ impl<BatchType> Stream for ResultStream<BatchType> {
     }
 }
 
+/// The registered sessions of a listener, keyed by their tokens.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the results the sessions deliver.
+pub(crate) type Registry<EncodingType> = DashMap<SessionToken, Arc<State<EncodingType>>>;
+
 /// Statistics of a session's connections.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[expect(
     clippy::struct_field_names,
     reason = "`num_` marks a count throughout the crate, as in `Trailer::num_results`"
 )]
-pub struct SessionStats {
+pub(crate) struct SessionStats {
     /// The number of results emitted to the consumer.
     pub num_results_emitted: u64,
 
@@ -150,7 +150,7 @@ pub struct SessionStats {
 /// # Type Parameters
 ///
 /// * `EncodingType` - The encoding of the results the session delivers.
-pub struct State<EncodingType: ResultEncoding> {
+pub(crate) struct State<EncodingType: ResultEncoding> {
     /// The cursors of the session's query tasks, keyed by task index.
     pub cursors: DashMap<TaskIndex, Arc<TaskCursor>>,
 

@@ -281,7 +281,6 @@ pub async fn serve<EncodingType: ResultEncoding>(
         Err(e) => {
             tracing::warn!(
                 peer_addr = % peer_addr,
-                session_token = % handshake.session_token,
                 task_index = handshake.task_index,
                 error = % e,
                 "Rejecting a connection."
@@ -293,7 +292,6 @@ pub async fn serve<EncodingType: ResultEncoding>(
     if let Err(e) = connection.run(&mut stream, buffer).await {
         tracing::warn!(
             peer_addr = % peer_addr,
-            session_token = % handshake.session_token,
             task_index = handshake.task_index,
             error = % e,
             "Closing a connection without acknowledging its results."
