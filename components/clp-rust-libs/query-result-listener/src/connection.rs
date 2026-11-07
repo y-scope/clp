@@ -1,7 +1,9 @@
-//! Serving a connection from a query task: the results it streams after its handshake, then the
+//! Serving a connection from a query task: its handshake, then the results it streams, then the
 //! trailer that the connection's acknowledgement answers.
 
+use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::BufMut;
 use bytes::BytesMut;
@@ -9,6 +11,7 @@ use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
 
 use crate::cursor::Claim;
 use crate::cursor::TaskCursor;
@@ -21,6 +24,7 @@ use crate::protocol::Frame;
 use crate::protocol::Handshake;
 use crate::protocol::ResultFrame;
 use crate::protocol::Trailer;
+use crate::session::Registry;
 use crate::session::SessionStats;
 use crate::session::State;
 
@@ -228,6 +232,73 @@ impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
     }
 }
 
+/// Serves a connection from a query task until it ends, and logs why if it ends without an
+/// acknowledgement.
+///
+/// Reads the connection's handshake within `handshake_timeout`, then joins the connection to the
+/// session in `sessions` that the handshake names.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the results the sessions deliver.
+pub async fn serve<EncodingType: ResultEncoding>(
+    mut stream: TcpStream,
+    peer_addr: SocketAddr,
+    sessions: Arc<Registry<EncodingType>>,
+    handshake_timeout: Duration,
+) {
+    let mut buffer = BytesMut::new();
+    let handshake =
+        match tokio::time::timeout(handshake_timeout, read_handshake(&mut stream, &mut buffer))
+            .await
+            .unwrap_or(Err(ConnectionError::HandshakeTimeout(handshake_timeout)))
+        {
+            Ok(Some(handshake)) => handshake,
+            Ok(None) => {
+                tracing::debug!(
+                    peer_addr = % peer_addr,
+                    "Connection closed before sending a handshake."
+                );
+                return;
+            }
+            Err(e) => {
+                tracing::warn!(
+                    peer_addr = % peer_addr,
+                    error = % e,
+                    "Closing a connection without a valid handshake."
+                );
+                return;
+            }
+        };
+
+    let joined = sessions
+        .get(&handshake.session_token)
+        .map(|entry| Arc::clone(entry.value()))
+        .ok_or(ConnectionError::UnknownSession(handshake.session_token))
+        .and_then(|session| Connection::new(session, &handshake).map_err(ConnectionError::from));
+    let mut connection = match joined {
+        Ok(connection) => connection,
+        Err(e) => {
+            tracing::warn!(
+                peer_addr = % peer_addr,
+                task_index = handshake.task_index,
+                error = % e,
+                "Rejecting a connection."
+            );
+            return;
+        }
+    };
+
+    if let Err(e) = connection.run(&mut stream, buffer).await {
+        tracing::warn!(
+            peer_addr = % peer_addr,
+            task_index = handshake.task_index,
+            error = % e,
+            "Closing a connection without acknowledging its results."
+        );
+    }
+}
+
 const MAX_READ_SIZE: usize = 64 * 1024;
 
 /// What decoding a connection's buffered frames found.
@@ -237,6 +308,40 @@ enum Decoded {
 
     /// The connection sent its trailer, which counts the results it streamed.
     Trailer(Trailer),
+}
+
+/// Reads the handshake a query task sends first on its connection, leaving the bytes read after it
+/// in `buffer`.
+///
+/// # Returns
+///
+/// On success:
+///
+/// * The handshake.
+/// * `None` if the connection closes before sending any byte.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`ConnectionError::TruncatedFrame`] if the connection closes in the middle of the handshake.
+/// * Forwards [`Handshake::decode`]'s return values on failure.
+/// * Forwards [`read_more`]'s return values on failure.
+async fn read_handshake(
+    stream: &mut TcpStream,
+    buffer: &mut BytesMut,
+) -> Result<Option<Handshake>, ConnectionError> {
+    loop {
+        if let Some(handshake) = Handshake::decode(buffer)? {
+            return Ok(Some(handshake));
+        }
+        if 0 == read_more(stream, buffer).await? {
+            if buffer.is_empty() {
+                return Ok(None);
+            }
+            return Err(ConnectionError::TruncatedFrame);
+        }
+    }
 }
 
 /// Reads at most [`MAX_READ_SIZE`] more bytes from `input_stream` into `buffer`.
@@ -309,16 +414,18 @@ mod tests {
     use crate::session::State;
     use crate::test_utils::QueryResult;
     use crate::test_utils::QueryResultEncoding;
+    use crate::test_utils::TIMEOUT;
     use crate::test_utils::encode_result;
+    use crate::test_utils::encode_results;
     use crate::test_utils::encode_trailer;
+    use crate::test_utils::expected_results;
+    use crate::test_utils::message;
+    use crate::test_utils::timestamp;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
     /// The number of batches a session's channel holds, unless a test needs it to fill up.
     const CHANNEL_CAPACITY: usize = 1024;
-
-    /// The longest a test waits for a connection handler before failing.
-    const TIMEOUT: Duration = Duration::from_secs(10);
 
     /// A session's state, the receiver of the batches its connections send, and the number of bytes
     /// each direction of its connections' in-memory streams buffers.
@@ -579,63 +686,6 @@ mod tests {
     struct ConnectionEnd {
         received: Vec<u8>,
         result: Result<(), ConnectionError>,
-    }
-
-    /// # Returns
-    ///
-    /// The bytes of the result frames at `result_indices` of task `task_index`.
-    fn encode_results(
-        task_index: TaskIndex,
-        result_indices: impl IntoIterator<Item = u64>,
-    ) -> Vec<u8> {
-        let mut bytes = Vec::new();
-        for result_index in result_indices {
-            bytes.extend(encode_result(
-                result_index,
-                timestamp(result_index),
-                &message(task_index, result_index),
-            ));
-        }
-        bytes
-    }
-
-    /// # Returns
-    ///
-    /// The timestamp of the result at `result_index`.
-    fn timestamp(result_index: u64) -> i64 {
-        1_700_000_000_000 + i64::try_from(result_index).expect("test result indices fit in `i64`")
-    }
-
-    /// # Returns
-    ///
-    /// The message of the result at `result_index` of task `task_index`.
-    fn message(task_index: TaskIndex, result_index: u64) -> String {
-        format!("{{\"task\":{task_index},\"result\":{result_index}}}\n")
-    }
-
-    /// # Returns
-    ///
-    /// The results at `result_indices` of task `task_index` of archive `archive_id`, in index
-    /// order.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `archive_id` isn't a valid UUID.
-    fn expected_results(
-        task_index: TaskIndex,
-        archive_id: &str,
-        result_indices: std::ops::Range<u64>,
-    ) -> Vec<QueryResult> {
-        let archive_id = archive_id
-            .parse::<ArchiveId>()
-            .expect("archive ID fixtures should be valid UUIDs");
-        result_indices
-            .map(|result_index| QueryResult {
-                archive_id,
-                timestamp_millisecs: timestamp(result_index),
-                message: message(task_index, result_index),
-            })
-            .collect()
     }
 
     #[tokio::test]

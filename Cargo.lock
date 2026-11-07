@@ -3332,10 +3332,13 @@ dependencies = [
  "bytes",
  "clp-rust-utils",
  "dashmap",
+ "futures",
+ "non-empty-string",
  "rmp",
  "spider-core",
  "thiserror",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
