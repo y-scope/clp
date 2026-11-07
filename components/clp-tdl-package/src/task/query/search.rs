@@ -44,7 +44,6 @@ use crate::task::utils::s3_credential_env;
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
 /// * `ctx.task_id` isn't a [`TaskId::Index`].
 /// * `output` is [`QueryOutput::File`], which is unsupported.
-/// * Forwards [`build_clp_s_arg_lists`]'s return values on failure.
 /// * Forwards [`parse_results_cache_uri`]'s return values on failure.
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
@@ -103,7 +102,7 @@ pub(super) fn search(
         query_job_id,
         dataset.as_str(),
         task_index,
-    )?;
+    );
     if matches!(output, QueryOutput::ResultsCache(_)) {
         runtime().block_on(parse_results_cache_uri(config.results_cache.uri().as_str()))?;
     }
@@ -137,13 +136,11 @@ enum ArchiveDescriptor {
 ///
 /// # Returns
 ///
-/// Ordered argument lists on success, each corresponding to an individual `clp-s` invocation.
+/// Ordered argument lists, each corresponding to an individual `clp-s` invocation.
 ///
-/// # Errors
+/// # Panics
 ///
-/// Returns an error if:
-///
-/// * `output` is [`QueryOutput::File`], which is unsupported.
+/// Panics if `output` is [`QueryOutput::File`], which the caller must reject.
 fn build_clp_s_arg_lists(
     archive_descriptor: &ArchiveDescriptor,
     query: &SearchQuery,
@@ -152,7 +149,7 @@ fn build_clp_s_arg_lists(
     query_job_id: QueryJobId,
     dataset: &str,
     task_index: TaskIndex,
-) -> anyhow::Result<Vec<Vec<OsString>>> {
+) -> Vec<Vec<OsString>> {
     let mut normal_args = build_clp_s_query_args(archive_descriptor, query);
     match output {
         QueryOutput::ResultsCache(output) => {
@@ -180,13 +177,13 @@ fn build_clp_s_arg_lists(
                 ));
                 arg_lists.push(timeline_args);
             }
-            Ok(arg_lists)
+            arg_lists
         }
         QueryOutput::Network(network_output) => {
             normal_args.extend(build_clp_s_network_output_args(network_output, task_index));
-            Ok(vec![normal_args])
+            vec![normal_args]
         }
-        QueryOutput::File {} => anyhow::bail!("unsupported query output: file"),
+        QueryOutput::File {} => unreachable!("file output must be rejected before building arguments"),
     }
 }
 
@@ -880,7 +877,7 @@ mod tests {
                 42,
                 "ds1",
                 0,
-            )?;
+            );
             assert_eq!(arg_lists.len(), 2);
             let args = &arg_lists[1];
             let mut expected_normal = [
@@ -952,7 +949,7 @@ mod tests {
             42,
             "ds1",
             0,
-        )?;
+        );
         let args = &arg_lists[1];
         let expected = [
             "s",
