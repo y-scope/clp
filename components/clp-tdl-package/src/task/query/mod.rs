@@ -45,17 +45,6 @@ pub(crate) fn clp_s_search_task(
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
 }
 
-/// Publishes the timeline histogram after all archive tasks complete successfully.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`TdlError::ExecutionError`] if [`commit::commit_timeline_results`] fails.
-///
-/// # Panics
-///
-/// Panics if the TDL package has not initialized its runtime or configuration.
 #[task(name = "query::commit_timeline")]
 pub(crate) fn commit_timeline_task(ctx: TaskContext) -> Result<(), TdlError> {
     crate::common::runtime()
