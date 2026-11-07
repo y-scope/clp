@@ -148,6 +148,7 @@ mod tests {
     use std::time::Duration;
     use std::time::Instant;
 
+    use clp_rust_utils::types::SessionToken;
     use futures::FutureExt;
     use futures::StreamExt;
     use non_empty_string::NonEmptyString;
@@ -255,7 +256,7 @@ mod tests {
                 &[
                     encode_handshake(
                         PROTOCOL_VERSION,
-                        &uuid::Uuid::new_v4().to_string(),
+                        &SessionToken::generate().to_string(),
                         0,
                         ARCHIVE_ID,
                     ),

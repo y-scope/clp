@@ -86,7 +86,7 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
         port: NonZeroU16,
         config: SessionConfig,
     ) -> (Self, ResultStream<EncodingType::Batch>) {
-        let token = SessionToken::from(uuid::Uuid::new_v4());
+        let token = SessionToken::generate();
         let (batches_sender, batches_receiver) = mpsc::channel(config.channel_capacity.get());
         assert!(
             sessions
@@ -211,7 +211,7 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
     }
 }
 
-/// Keeps a session registered in its listener's registry until dropped.
+/// A session's entry in its listener's registry, removed when dropped.
 ///
 /// # Type Parameters
 ///
