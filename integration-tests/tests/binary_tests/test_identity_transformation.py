@@ -5,6 +5,7 @@ compression and decompression.
 
 import pytest
 
+from tests.binary_tests import clp_s_utils
 from tests.utils.archive import create_tar_gz_from_dir
 from tests.utils.classes import ClpAction, IntegrationTestPathConfig, SampleDataset
 from tests.utils.config import (
@@ -139,14 +140,9 @@ def _clp_s_compress_and_decompress(
     test_paths: CompressionTestPathConfig,
 ) -> None:
     test_paths.clear_test_outputs()
-    bin_path = str(clp_core_path_config.clp_s_binary_path)
-    src_path = str(test_paths.logs_source_path)
-    compression_path = str(test_paths.compression_dir)
-    decompression_path = str(test_paths.decompression_dir)
-    compression_action = ClpAction.from_cmd([bin_path, "c", compression_path, src_path])
-    compression_result = compression_action.verify_returncode()
-    assert compression_result, compression_result.failure_message
-
-    decompression_action = ClpAction.from_cmd([bin_path, "x", compression_path, decompression_path])
-    decompression_result = decompression_action.verify_returncode()
-    assert decompression_result, decompression_result.failure_message
+    clp_s_utils.compress(
+        clp_core_path_config, test_paths.compression_dir, test_paths.logs_source_path
+    )
+    clp_s_utils.extract(
+        clp_core_path_config, test_paths.compression_dir, test_paths.decompression_dir
+    )
