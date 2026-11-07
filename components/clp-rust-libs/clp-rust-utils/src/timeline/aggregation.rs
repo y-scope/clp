@@ -10,25 +10,30 @@ use super::Bucket;
 use super::COMMIT_MARKER_ID;
 use super::Error;
 
-/// Combines archive buckets, excluding already published buckets and the commit marker.
-///
-/// Integer identities are reserved for final buckets. Spider archive buckets use object identities.
-/// Invalid remaining identities and operands are retained and flagged rather than silently
-/// discarded.
+/// Merges per-archive timeline buckets into final buckets, excluding already published final
+/// buckets and the commit marker.
 ///
 /// # Returns
 ///
-/// A stream of validated, timestamp-ordered buckets on success. The stream yields an error if
-/// reading or validating a bucket fails.
+/// A stream of the merged buckets in ascending timestamp order on success. Each item in the stream
+/// is a [`Result`] that:
+///
+/// ## Returns
+///
+/// A validated bucket on success.
+///
+/// ## Errors
+///
+/// Returns an error if:
+///
+/// * [`Error::Mongo`] if reading the next document from the cursor fails.
+/// * Forwards [`Bucket::try_from_aggregation_document`]'s return values on failure.
 ///
 /// # Errors
 ///
 /// Returns an error if:
 ///
 /// * Forwards [`Collection::aggregate`]'s return values on failure.
-///
-/// The returned stream yields [`Error::Mongo`] if reading a bucket fails and forwards
-/// [`Bucket::try_from_aggregation_document`]'s errors.
 pub async fn merge_archive_buckets(
     collection: &Collection<Document>,
 ) -> Result<impl Stream<Item = Result<Bucket, Error>> + Unpin, Error> {

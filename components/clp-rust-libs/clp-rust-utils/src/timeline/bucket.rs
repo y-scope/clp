@@ -28,7 +28,7 @@ impl Bucket {
     ///   integer.
     /// * [`Error::NegativeCount`] if the count is negative.
     /// * Forwards [`get_integer_field`]'s return values on failure.
-    pub fn try_from_aggregation_document(document: &Document) -> Result<Self, Error> {
+    pub(super) fn try_from_aggregation_document(document: &Document) -> Result<Self, Error> {
         if get_integer_field(document, "invalid")? != 0 {
             return Err(Error::InvalidArchiveBucket);
         }
