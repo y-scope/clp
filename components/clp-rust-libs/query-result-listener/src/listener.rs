@@ -140,3 +140,322 @@ async fn accept_connections<EncodingType: ResultEncoding>(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::net::Ipv4Addr;
+    use std::net::SocketAddr;
+    use std::time::Duration;
+    use std::time::Instant;
+
+    use futures::FutureExt;
+    use futures::StreamExt;
+    use non_empty_string::NonEmptyString;
+    use tokio::net::TcpStream;
+    use tokio::time::timeout;
+
+    use super::ListenerConfig;
+    use super::ResultListener;
+    use crate::protocol::Ack;
+    use crate::protocol::PROTOCOL_VERSION;
+    use crate::session::ResultStream;
+    use crate::session::SessionConfig;
+    use crate::test_utils::FakeClpS;
+    use crate::test_utils::QueryResult;
+    use crate::test_utils::QueryResultEncoding;
+    use crate::test_utils::TIMEOUT;
+    use crate::test_utils::encode_handshake;
+    use crate::test_utils::encode_results;
+    use crate::test_utils::expected_results;
+
+    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+
+    /// # Returns
+    ///
+    /// The configuration of a loopback listener whose handshake timeout outlasts [`TIMEOUT`], so
+    /// that only a rejection closes a connection within a test's wait.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the advertised host fixture is empty.
+    fn base_listener_config() -> ListenerConfig {
+        ListenerConfig {
+            bind_addr: SocketAddr::from((Ipv4Addr::LOCALHOST, 0)),
+            advertised_host: NonEmptyString::new("127.0.0.1".to_owned())
+                .expect("the advertised host fixture should be non-empty"),
+            handshake_timeout: 6 * TIMEOUT,
+        }
+    }
+
+    /// Receives batches from `results` until they hold `num_results` results.
+    ///
+    /// # Returns
+    ///
+    /// The received results.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stream ends, or the results don't arrive within [`TIMEOUT`].
+    async fn receive_results(
+        results: &mut ResultStream<Vec<QueryResult>>,
+        num_results: usize,
+    ) -> Vec<QueryResult> {
+        let mut received = Vec::new();
+        while received.len() < num_results {
+            received.extend(
+                timeout(TIMEOUT, results.next())
+                    .await
+                    .expect("a batch should arrive")
+                    .expect("the result stream shouldn't end yet"),
+            );
+        }
+        received
+    }
+
+    /// # Returns
+    ///
+    /// The results of the batches that `results` holds already.
+    fn take_buffered_results(results: &mut ResultStream<Vec<QueryResult>>) -> Vec<QueryResult> {
+        let mut taken = Vec::new();
+        while let Some(Some(batch)) = results.next().now_or_never() {
+            taken.extend(batch);
+        }
+        taken
+    }
+
+    #[tokio::test]
+    async fn attempt_through_the_listener_delivers_its_results_and_is_acknowledged()
+    -> anyhow::Result<()> {
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (session, mut results) = listener.open_session(SessionConfig::default());
+
+        let mut attempt = FakeClpS::connect(session.network_output()).await;
+        attempt
+            .send_handshake(session.network_output(), 0, ARCHIVE_ID)
+            .await;
+        attempt.send_results(0, 0..3).await;
+        let acknowledgement = attempt.finish(3).await;
+
+        assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
+        assert_eq!(
+            take_buffered_results(&mut results),
+            expected_results(0, ARCHIVE_ID, 0..3)
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn unknown_session_token_is_rejected() -> anyhow::Result<()> {
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (session, _results) = listener.open_session(SessionConfig::default());
+
+        let mut stranger = FakeClpS::connect(session.network_output()).await;
+        stranger
+            .send(
+                &[
+                    encode_handshake(
+                        PROTOCOL_VERSION,
+                        &uuid::Uuid::new_v4().to_string(),
+                        0,
+                        ARCHIVE_ID,
+                    ),
+                    encode_results(0, 0..3),
+                ]
+                .concat(),
+            )
+            .await;
+        stranger.expect_closed_by_listener().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn handshake_of_an_unsupported_version_is_rejected() -> anyhow::Result<()> {
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (session, _results) = listener.open_session(SessionConfig::default());
+        let session_token = session.network_output().session_token.to_string();
+
+        let mut attempt = FakeClpS::connect(session.network_output()).await;
+        attempt
+            .send(
+                &[
+                    encode_handshake(PROTOCOL_VERSION + 1, &session_token, 0, ARCHIVE_ID),
+                    encode_results(0, 0..3),
+                ]
+                .concat(),
+            )
+            .await;
+        attempt.expect_closed_by_listener().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn malformed_handshakes_are_rejected() -> anyhow::Result<()> {
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (session, _results) = listener.open_session(SessionConfig::default());
+        let session_token = session.network_output().session_token.to_string();
+        let mut not_an_array = Vec::new();
+        rmp::encode::write_str(&mut not_an_array, &session_token)?;
+        let malformed_handshakes = [
+            encode_handshake(PROTOCOL_VERSION, "not-a-uuid", 0, ARCHIVE_ID),
+            encode_handshake(PROTOCOL_VERSION, &session_token, 0, "not-a-uuid"),
+            not_an_array,
+        ];
+
+        for handshake in malformed_handshakes {
+            let mut attempt = FakeClpS::connect(session.network_output()).await;
+            attempt
+                .send(&[handshake, encode_results(0, 0..3)].concat())
+                .await;
+            attempt.expect_closed_by_listener().await;
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn connection_without_a_handshake_is_closed_after_the_handshake_timeout()
+    -> anyhow::Result<()> {
+        const HANDSHAKE_TIMEOUT: Duration = Duration::from_millis(200);
+
+        let listener = ResultListener::<QueryResultEncoding>::bind(ListenerConfig {
+            handshake_timeout: HANDSHAKE_TIMEOUT,
+            ..base_listener_config()
+        })
+        .await?;
+        let (session, _results) = listener.open_session(SessionConfig::default());
+
+        let connected_at = Instant::now();
+        let silent = FakeClpS::connect(session.network_output()).await;
+        silent.expect_closed_by_listener().await;
+
+        assert!(
+            connected_at.elapsed() >= HANDSHAKE_TIMEOUT,
+            "the listener shouldn't close the connection before the handshake timeout"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dropping_a_session_unregisters_it() -> anyhow::Result<()> {
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (session, _results) = listener.open_session(SessionConfig::default());
+        let network_output = session.network_output().clone();
+        drop(session);
+
+        let mut late_attempt = FakeClpS::connect(&network_output).await;
+        late_attempt
+            .send(
+                &[
+                    encode_handshake(
+                        PROTOCOL_VERSION,
+                        &network_output.session_token.to_string(),
+                        0,
+                        ARCHIVE_ID,
+                    ),
+                    encode_results(0, 0..3),
+                ]
+                .concat(),
+            )
+            .await;
+        late_attempt.expect_closed_by_listener().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn sessions_on_one_listener_receive_only_their_own_results() -> anyhow::Result<()> {
+        const OTHER_ARCHIVE_ID: &str = "4b0c2f8e-6d13-4f4e-9a57-1c2d3e4f5a6b";
+
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (first_session, mut first_results) = listener.open_session(SessionConfig::default());
+        let (second_session, mut second_results) = listener.open_session(SessionConfig::default());
+
+        let mut first_attempt = FakeClpS::connect(first_session.network_output()).await;
+        first_attempt
+            .send_handshake(first_session.network_output(), 0, ARCHIVE_ID)
+            .await;
+        first_attempt.send_results(0, 0..3).await;
+        let first_acknowledgement = first_attempt.finish(3).await;
+        let mut second_attempt = FakeClpS::connect(second_session.network_output()).await;
+        second_attempt
+            .send_handshake(second_session.network_output(), 0, OTHER_ARCHIVE_ID)
+            .await;
+        second_attempt.send_results(0, 0..2).await;
+        let second_acknowledgement = second_attempt.finish(2).await;
+
+        assert_eq!(first_acknowledgement, Ack { num_results: 3 }.encode());
+        assert_eq!(second_acknowledgement, Ack { num_results: 2 }.encode());
+        assert_eq!(
+            take_buffered_results(&mut first_results),
+            expected_results(0, ARCHIVE_ID, 0..3)
+        );
+        assert_eq!(
+            take_buffered_results(&mut second_results),
+            expected_results(0, OTHER_ARCHIVE_ID, 0..2)
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn result_stream_ends_once_its_session_is_dropped_and_its_connections_have_finished()
+    -> anyhow::Result<()> {
+        const STREAM_OPEN_CHECK_DURATION: Duration = Duration::from_millis(100);
+
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (session, mut results) = listener.open_session(SessionConfig::default());
+        let mut attempt = FakeClpS::connect(session.network_output()).await;
+        attempt
+            .send_handshake(session.network_output(), 0, ARCHIVE_ID)
+            .await;
+        attempt.send_results(0, 0..2).await;
+        let mut received = receive_results(&mut results, 2).await;
+
+        drop(session);
+        let stream_open_check = timeout(STREAM_OPEN_CHECK_DURATION, results.next()).await;
+        attempt.send_results(0, 2..4).await;
+        let acknowledgement = attempt.finish(4).await;
+        received.extend(
+            timeout(TIMEOUT, results.concat())
+                .await
+                .expect("the result stream should end"),
+        );
+
+        assert!(
+            stream_open_check.is_err(),
+            "the result stream shouldn't end or yield while its connection is open: \
+             {stream_open_check:?}"
+        );
+        assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
+        assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..4));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dropping_the_listener_stops_accepting_and_keeps_serving_open_connections()
+    -> anyhow::Result<()> {
+        const RETRY_INTERVAL: Duration = Duration::from_millis(10);
+
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let (session, mut results) = listener.open_session(SessionConfig::default());
+        let network_output = session.network_output();
+        let mut attempt = FakeClpS::connect(network_output).await;
+        attempt.send_handshake(network_output, 0, ARCHIVE_ID).await;
+        attempt.send_results(0, 0..2).await;
+        let mut received = receive_results(&mut results, 2).await;
+
+        drop(listener);
+        let address = (network_output.host.as_str(), network_output.port.get());
+        timeout(TIMEOUT, async {
+            while TcpStream::connect(address).await.is_ok() {
+                tokio::time::sleep(RETRY_INTERVAL).await;
+            }
+        })
+        .await
+        .expect("the listener should stop accepting connections");
+        attempt.send_results(0, 2..4).await;
+        let acknowledgement = attempt.finish(4).await;
+        received.extend(take_buffered_results(&mut results));
+
+        assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
+        assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..4));
+        Ok(())
+    }
+}

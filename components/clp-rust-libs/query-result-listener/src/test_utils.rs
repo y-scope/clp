@@ -1,9 +1,24 @@
-//! Encoders for the frames of the wire protocol, and an encoding of query results, for tests.
+//! Encoders for the frames of the wire protocol, an encoding of query results, and a simulated
+//! `clp-s` query task, for tests.
 
+use std::io::ErrorKind;
+use std::ops::Range;
+use std::time::Duration;
+
+use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::types::ArchiveId;
+use spider_core::task::TaskIndex;
+use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
+use tokio::time::timeout;
 
 use crate::encoding::ResultEncoder;
 use crate::encoding::ResultEncoding;
+use crate::protocol::PROTOCOL_VERSION;
+
+/// The longest a test waits for the listener or a connection handler before failing.
+pub const TIMEOUT: Duration = Duration::from_secs(10);
 
 /// A query result in the batches of a [`QueryResultEncoding`].
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -55,6 +70,130 @@ impl ResultEncoder for QueryResultEncoder {
     }
 }
 
+/// A simulated attempt of a `clp-s` query task, streaming its results over TCP.
+pub struct FakeClpS {
+    stream: TcpStream,
+}
+
+impl FakeClpS {
+    /// Connects to the listener that `network_output` names.
+    ///
+    /// # Returns
+    ///
+    /// The connected attempt.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the connection fails.
+    pub async fn connect(network_output: &NetworkOutput) -> Self {
+        let stream = TcpStream::connect((network_output.host.as_str(), network_output.port.get()))
+            .await
+            .expect("connecting to the listener should succeed");
+        Self { stream }
+    }
+
+    /// Sends `bytes` as they are.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the write fails.
+    pub async fn send(&mut self, bytes: &[u8]) {
+        self.stream
+            .write_all(bytes)
+            .await
+            .expect("sending to the listener should succeed");
+    }
+
+    /// Sends a handshake for task `task_index` of archive `archive_id`, presenting the session
+    /// token of `network_output`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the write fails.
+    pub async fn send_handshake(
+        &mut self,
+        network_output: &NetworkOutput,
+        task_index: TaskIndex,
+        archive_id: &str,
+    ) {
+        self.send(&encode_handshake(
+            PROTOCOL_VERSION,
+            &network_output.session_token.to_string(),
+            u64::try_from(task_index).expect("test task indices fit in `u64`"),
+            archive_id,
+        ))
+        .await;
+    }
+
+    /// Sends the results at `result_indices` of task `task_index` in a single write.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the write fails.
+    pub async fn send_results(
+        &mut self,
+        task_index: TaskIndex,
+        result_indices: impl IntoIterator<Item = u64>,
+    ) {
+        self.send(&encode_results(task_index, result_indices)).await;
+    }
+
+    /// Ends the stream the way `clp-s` does: sends a trailer counting `num_results` results, then
+    /// EOF, and waits until the listener closes the connection.
+    ///
+    /// # Returns
+    ///
+    /// The bytes the listener sent back.
+    ///
+    /// # Panics
+    ///
+    /// Panics if sending fails, or the listener doesn't close the connection within [`TIMEOUT`].
+    pub async fn finish(mut self, num_results: u64) -> Vec<u8> {
+        self.send(&encode_trailer(num_results)).await;
+        self.stream
+            .shutdown()
+            .await
+            .expect("sending EOF to the listener should succeed");
+        self.read_until_closed().await
+    }
+
+    /// Waits until the listener closes the connection without sending anything.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the listener sends anything, or doesn't close the connection within [`TIMEOUT`].
+    pub async fn expect_closed_by_listener(self) {
+        assert_eq!(
+            self.read_until_closed().await,
+            [] as [u8; 0],
+            "the listener shouldn't acknowledge the connection"
+        );
+    }
+
+    /// Waits until the listener closes the connection, either cleanly or with a reset.
+    ///
+    /// # Returns
+    ///
+    /// The bytes the listener sent before closing.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the listener doesn't close the connection within [`TIMEOUT`], or reading fails
+    /// with an error other than a reset.
+    async fn read_until_closed(mut self) -> Vec<u8> {
+        let mut received = Vec::new();
+        match timeout(TIMEOUT, self.stream.read_to_end(&mut received))
+            .await
+            .expect("the listener should close the connection")
+        {
+            Ok(_) => received,
+            // The listener resets the connection if it closes it before reading every byte sent.
+            Err(e) if ErrorKind::ConnectionReset == e.kind() => received,
+            Err(e) => panic!("reading from the listener failed: {e}"),
+        }
+    }
+}
+
 /// # Returns
 ///
 /// The bytes of a handshake with the given fields.
@@ -96,4 +235,68 @@ pub fn encode_trailer(num_results: u64) -> Vec<u8> {
     rmp::encode::write_array_len(&mut bytes, 1);
     rmp::encode::write_uint(&mut bytes, num_results);
     bytes.into_vec()
+}
+
+/// # Returns
+///
+/// The bytes of the result frames at `result_indices` of task `task_index`.
+#[must_use]
+pub fn encode_results(
+    task_index: TaskIndex,
+    result_indices: impl IntoIterator<Item = u64>,
+) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for result_index in result_indices {
+        bytes.extend(encode_result(
+            result_index,
+            timestamp(result_index),
+            &message(task_index, result_index),
+        ));
+    }
+    bytes
+}
+
+/// # Returns
+///
+/// The timestamp of the result at `result_index`.
+///
+/// # Panics
+///
+/// Panics if `result_index` doesn't fit in `i64`.
+#[must_use]
+pub fn timestamp(result_index: u64) -> i64 {
+    1_700_000_000_000 + i64::try_from(result_index).expect("test result indices fit in `i64`")
+}
+
+/// # Returns
+///
+/// The message of the result at `result_index` of task `task_index`.
+#[must_use]
+pub fn message(task_index: TaskIndex, result_index: u64) -> String {
+    format!("{{\"task\":{task_index},\"result\":{result_index}}}\n")
+}
+
+/// # Returns
+///
+/// The results at `result_indices` of task `task_index` of archive `archive_id`, in index order.
+///
+/// # Panics
+///
+/// Panics if `archive_id` isn't a valid UUID.
+#[must_use]
+pub fn expected_results(
+    task_index: TaskIndex,
+    archive_id: &str,
+    result_indices: Range<u64>,
+) -> Vec<QueryResult> {
+    let archive_id = archive_id
+        .parse::<ArchiveId>()
+        .expect("archive ID fixtures should be valid UUIDs");
+    result_indices
+        .map(|result_index| QueryResult {
+            archive_id,
+            timestamp_millisecs: timestamp(result_index),
+            message: message(task_index, result_index),
+        })
+        .collect()
 }

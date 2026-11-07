@@ -416,16 +416,18 @@ mod tests {
     use crate::session::State;
     use crate::test_utils::QueryResult;
     use crate::test_utils::QueryResultEncoding;
+    use crate::test_utils::TIMEOUT;
     use crate::test_utils::encode_result;
+    use crate::test_utils::encode_results;
     use crate::test_utils::encode_trailer;
+    use crate::test_utils::expected_results;
+    use crate::test_utils::message;
+    use crate::test_utils::timestamp;
 
     const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
     /// The number of batches a session's channel holds, unless a test needs it to fill up.
     const CHANNEL_CAPACITY: usize = 1024;
-
-    /// The longest a test waits for a connection handler before failing.
-    const TIMEOUT: Duration = Duration::from_secs(10);
 
     /// A session's state, the receiver of the batches its connections send, and the number of bytes
     /// each direction of its connections' in-memory streams buffers.
@@ -686,63 +688,6 @@ mod tests {
     struct ConnectionEnd {
         received: Vec<u8>,
         result: Result<(), ConnectionError>,
-    }
-
-    /// # Returns
-    ///
-    /// The bytes of the result frames at `result_indices` of task `task_index`.
-    fn encode_results(
-        task_index: TaskIndex,
-        result_indices: impl IntoIterator<Item = u64>,
-    ) -> Vec<u8> {
-        let mut bytes = Vec::new();
-        for result_index in result_indices {
-            bytes.extend(encode_result(
-                result_index,
-                timestamp(result_index),
-                &message(task_index, result_index),
-            ));
-        }
-        bytes
-    }
-
-    /// # Returns
-    ///
-    /// The timestamp of the result at `result_index`.
-    fn timestamp(result_index: u64) -> i64 {
-        1_700_000_000_000 + i64::try_from(result_index).expect("test result indices fit in `i64`")
-    }
-
-    /// # Returns
-    ///
-    /// The message of the result at `result_index` of task `task_index`.
-    fn message(task_index: TaskIndex, result_index: u64) -> String {
-        format!("{{\"task\":{task_index},\"result\":{result_index}}}\n")
-    }
-
-    /// # Returns
-    ///
-    /// The results at `result_indices` of task `task_index` of archive `archive_id`, in index
-    /// order.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `archive_id` isn't a valid UUID.
-    fn expected_results(
-        task_index: TaskIndex,
-        archive_id: &str,
-        result_indices: std::ops::Range<u64>,
-    ) -> Vec<QueryResult> {
-        let archive_id = archive_id
-            .parse::<ArchiveId>()
-            .expect("archive ID fixtures should be valid UUIDs");
-        result_indices
-            .map(|result_index| QueryResult {
-                archive_id,
-                timestamp_millisecs: timestamp(result_index),
-                message: message(task_index, result_index),
-            })
-            .collect()
     }
 
     #[tokio::test]
