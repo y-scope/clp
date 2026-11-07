@@ -29,7 +29,6 @@ use spider_core::types::id::TaskId;
 
 use crate::common::clp_home;
 use crate::common::runtime;
-use crate::task::query::results_cache::parse_results_cache_uri;
 use crate::task::utils::clp_binary_path;
 use crate::task::utils::s3_credential_env;
 
@@ -45,7 +44,6 @@ use crate::task::utils::s3_credential_env;
 /// * The configured storage engine is not [`StorageEngine::ClpS`].
 /// * `ctx.task_id` isn't a [`TaskId::Index`].
 /// * `output` is [`QueryOutput::File`], which is unsupported.
-/// * Forwards [`parse_results_cache_uri`]'s return values on failure.
 /// * Forwards [`resolve_archive_input`]'s return values on failure.
 /// * Forwards [`run_clp_s_search`]'s return values on failure.
 pub(super) fn search(
@@ -104,9 +102,6 @@ pub(super) fn search(
         dataset.as_str(),
         task_index,
     );
-    if matches!(output, QueryOutput::ResultsCache(_)) {
-        runtime().block_on(parse_results_cache_uri(config.results_cache.uri().as_str()))?;
-    }
     for args in arg_lists {
         run_clp_s_search(&clp_binary_path(clp_home, "clp-s"), args, &credential_env)?;
     }
