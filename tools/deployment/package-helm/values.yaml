@@ -41,14 +41,6 @@ image:
     repository: "ghcr.io/y-scope/presto/prestissimo-worker"
     pullPolicy: "IfNotPresent"
     tag: "clp-v0.10.0-fix.1"
-  queue:
-    repository: "rabbitmq"
-    pullPolicy: "Always"
-    tag: "4.2.6"
-  redis:
-    repository: "redis"
-    pullPolicy: "Always"
-    tag: "7.4.8"
   resultsCache:
     repository: "mongo"
     pullPolicy: "Always"
@@ -69,14 +61,13 @@ distributedDeployment: false
 #
 # Example:
 #   scheduling:
-#     compressionWorker:
-#       replicas: 3
+#     queryCoordinator:
 #       nodeSelector:
-#         yscope.io/nodeType: "compression"
+#         yscope.io/nodeType: "query"
 #       tolerations:
 #         - key: "yscope.io/dedicated"
 #           operator: "Equal"
-#           value: "compression"
+#           value: "query"
 #           effect: "NoSchedule"
 #       topologySpreadConstraints:
 #         - maxSkew: 1
@@ -84,30 +75,17 @@ distributedDeployment: false
 #           whenUnsatisfiable: "DoNotSchedule"
 scheduling:
   # Worker
-  compressionWorker:
-    replicas: 1
-    slotsPerPod: 8
-  queryWorker:
-    replicas: 1
-    slotsPerPod: 8
-  reducer:
-    replicas: 1
-    slotsPerPod: 8
   prestoWorker:
     replicas: 1
 
   # Database
   database: {}
-  queue: {}
-  redis: {}
   resultsCache: {}
 
   # Core
   compressionCoordinator: {}
-  compressionScheduler: {}
   logIngestor: {}
   queryCoordinator: {}
-  queryScheduler: {}
   prestoCoordinator: {}
   garbageCollector: {}
   apiServer: {}
@@ -123,23 +101,16 @@ scheduling:
 # When omitted, no resource requests or limits are configured.
 resources:
   # Worker
-  compressionWorker: {}
-  queryWorker: {}
-  reducer: {}
   prestoWorker: {}
 
   # Database
   database: {}
-  queue: {}
-  redis: {}
   resultsCache: {}
 
   # Core
   compressionCoordinator: {}
-  compressionScheduler: {}
   logIngestor: {}
   queryCoordinator: {}
-  queryScheduler: {}
   prestoCoordinator: {}
   garbageCollector: {}
   apiServer: {}
@@ -151,7 +122,6 @@ resources:
   dbTableCreator: {}
   prestoWorkerSetupConfigs: {}
   resultsCacheIndicesCreator: {}
-  topologyMetricsEmitter: {}
 
 clpConfig:
   # List of third-party services bundled (deployed) as part of the chart.
@@ -159,8 +129,6 @@ clpConfig:
   # accordingly in the service-specific sections below.
   bundled: [
     "database",
-    "queue",
-    "redis",
     "results_cache",
     "otel_collector",
     "presto",
@@ -211,12 +179,6 @@ clpConfig:
       max_backoff_millisecs: 1000
     termination_timeout_secs: 30
 
-  compression_scheduler:
-    jobs_poll_delay: 0.1  # seconds
-    logging_level: "INFO"
-    max_concurrent_tasks_per_job: 0  # A value of 0 disables the limit
-    telemetry_update_interval_ms: 60000
-
   query_coordinator:
     database_connection_pool_size: 10
     job_polling_interval_millisecs: 100
@@ -226,30 +188,6 @@ clpConfig:
     query_task_max_retry: 1
     result_polling_interval_millisecs: 100
     termination_timeout_secs: 30
-
-  query_scheduler:
-    jobs_poll_delay: 0.1  # seconds
-    max_datasets_per_query: 10  # Set to null to disable the limit
-    num_archives_to_search_per_sub_job: 16
-    logging_level: "INFO"
-    scheduler_concurrency: 4
-    telemetry_update_interval_ms: 60000
-
-  queue:
-    # Host and port for the queue service. When "queue" is in `bundled`, the host is automatically
-    # set to the bundled service name (ignored). When external, set these to the external service's
-    # address.
-    host: "localhost"
-    port: 5672
-
-  redis:
-    # Host and port for the Redis service. When "redis" is in `bundled`, the host is automatically
-    # set to the bundled service name (ignored). When external, set these to the external service's
-    # address.
-    host: "localhost"
-    port: 6379
-    query_backend_database: 0
-    compression_backend_database: 1
 
   results_cache:
     # Host and port for the results cache service. When "results_cache" is in `bundled`, the host is
@@ -269,23 +207,6 @@ clpConfig:
     # to the external service's address.
     host: "localhost"
     port: 4318
-
-  compression_worker:
-    logging_level: "INFO"
-    task_soft_time_limit: 600
-    task_time_limit: 1200
-    telemetry_update_interval_ms: 60000
-
-  query_worker:
-    logging_level: "INFO"
-    task_soft_time_limit: 600
-    task_time_limit: 1200
-    telemetry_update_interval_ms: 60000
-    query_trace_sampling_probability: 0.01
-
-  reducer:
-    logging_level: "INFO"
-    upsert_interval: 100  # milliseconds
 
   webui:
     serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
@@ -385,13 +306,6 @@ credentials:
     root_username: "root"
     root_password: "root-pass"
 
-  queue:
-    username: "clp-user"
-    password: "pass"
-
-  redis:
-    password: "pass"
-
   spiderResourceGroups:
     compression: "compression-pass"
     query: "query-pass"
@@ -403,7 +317,7 @@ serviceAccount:
 
 # Overrides for the Spider subchart's `values.yaml`
 spider:
-  enabled: false
+  enabled: true
   image:
     # Temporary pin: upcoming Spider `main` changes may break, and its next release is a while away.
     scheduler:

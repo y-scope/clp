@@ -71,6 +71,9 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
+            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
+            {{- end }}
           command: [
             "/opt/clp/bin/compression-coordinator",
             "--config", "/etc/clp-config.yaml"
@@ -79,4 +82,7 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        - {{- include "clp.logsInputVolume" . | nindent 10 }}
+        {{- end }}
 {{- end }}
