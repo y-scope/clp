@@ -8,9 +8,9 @@ use super::COMMIT_MARKER_ID;
 
 /// Combines source contributions, excluding already published buckets and the commit marker.
 ///
-/// Integer identities are reserved for final buckets. Compact Spider contributions use object
-/// identities; legacy Celery buckets use object IDs and a top-level timestamp. Invalid remaining
-/// identities and operands are retained and flagged rather than silently discarded.
+/// Integer identities are reserved for final buckets. Spider contributions use object identities.
+/// Invalid remaining identities and operands are retained and flagged rather than silently
+/// discarded.
 ///
 /// # Returns
 ///
@@ -34,12 +34,8 @@ pub async fn aggregate_source_contributions(
         },
         doc! {
             "$project": {
-                "timestamp": { "$cond": [
-                    { "$eq": [{ "$type": "$_id" }, "object"] },
-                    "$_id.timestamp",
-                    "$timestamp",
-                ] },
-                "valid_identity": { "$in": [{ "$type": "$_id" }, ["object", "objectId"]] },
+                "timestamp": "$_id.timestamp",
+                "valid_identity": { "$eq": [{ "$type": "$_id" }, "object"] },
                 "count": 1,
             },
         },
