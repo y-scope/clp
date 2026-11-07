@@ -1,6 +1,7 @@
 #ifndef CLP_S_INPUTCONFIG_HPP
 #define CLP_S_INPUTCONFIG_HPP
 
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -11,6 +12,7 @@
 #include <variant>
 #include <vector>
 
+#include "../clp/aws/AwsAuthenticationSigner.hpp"
 #include "../clp/ReaderInterface.hpp"
 
 namespace clp_s {
@@ -48,10 +50,59 @@ enum class AuthMethod : uint8_t {
 };
 
 /**
+ * Struct representing a snapshot of the AWS credentials used to sign a network request.
+ */
+struct AwsCredentials {
+    std::string access_key_id;
+    std::string secret_access_key;
+    std::optional<std::string> session_token;
+};
+
+/**
+ * Callback that supplies the AWS credentials for signing a single network request.
+ *
+ * The callback is invoked synchronously each time a network request is authenticated (i.e., each
+ * time a network reader is created, including on retries), immediately before the request's URL is
+ * signed. It should return credentials that are valid at the time of the call. The returned
+ * credentials are used for that request only and aren't cached.
+ *
+ * Requirements:
+ * - Thread safety: The callback may be invoked concurrently from multiple threads, through the same
+ *   `NetworkAuthOption` or through its copies, so it must be safe to call concurrently.
+ * - Lifetime: `NetworkAuthOption` is copied by value (e.g., into each archive reader), so any state
+ *   that the callback captures must remain valid for as long as any copy may be used. Prefer
+ *   capturing shared ownership of that state (e.g., through a `std::shared_ptr`).
+ * - Failure: The callback should return `std::nullopt` if credentials are unavailable. The request
+ *   then fails without falling back to any other source of credentials. Exceptions thrown by the
+ *   callback propagate to the caller of the function that authenticates the request (e.g.,
+ *   `try_create_reader`).
+ *
+ * @return The credentials, or `std::nullopt` if they're unavailable. The access key ID and secret
+ * access key must be non-empty, and the session token, if present, must be non-empty.
+ */
+using AwsCredentialsProvider = std::function<std::optional<AwsCredentials>()>;
+
+/**
  * Struct encapsulating information needed to authenticate network requests.
  */
 struct NetworkAuthOption {
     AuthMethod method{AuthMethod::None};
+
+    /**
+     * Supplies the credentials used to sign each request when `method` is
+     * `AuthMethod::S3PresignedUrlV4`. If empty, the credentials are read from the
+     * `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` environment variables.
+     */
+    AwsCredentialsProvider aws_credentials_provider;
+
+    /**
+     * How long presigned URLs remain valid when `method` is `AuthMethod::S3PresignedUrlV4`.
+     * Requests fail if this is outside the range that AWS Signature Version 4 allows (see
+     * `clp::aws::AwsAuthenticationSigner`).
+     */
+    std::chrono::seconds presigned_url_expire_time{
+            clp::aws::AwsAuthenticationSigner::cDefaultExpireTime
+    };
 };
 
 /**
@@ -131,10 +182,22 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
         -> bool;
 
 /**
+ * Tries to authenticate a network request URL using the given NetworkAuthOption.
+ * @param url
+ * @param network_auth
+ * @return The URL to request (presigned if `network_auth` requires it), or `std::nullopt` on
+ * error.
+ * @throw Propagates any exception thrown by `network_auth.aws_credentials_provider`.
+ */
+[[nodiscard]] auto try_authenticate_url(std::string_view url, NetworkAuthOption const& network_auth)
+        -> std::optional<std::string>;
+
+/**
  * Tries to open a clp::ReaderInterface using the given Path and NetworkAuthOption.
  * @param path
  * @param network_auth
  * @return the opened clp::ReaderInterface or nullptr on error
+ * @throw Propagates any exception thrown by `network_auth.aws_credentials_provider`.
  */
 [[nodiscard]] auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         -> std::shared_ptr<clp::ReaderInterface>;
@@ -165,6 +228,7 @@ void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> con
  * @param max_retries Maximum number of retry attempts after the initial attempt.
  * @return A pair of (nested_readers, file_type). On unrecoverable failure, returns an empty vector
  * and `FileType::Unknown`.
+ * @throw Propagates any exception thrown by `network_auth.aws_credentials_provider`.
  */
 [[nodiscard]] auto try_create_reader_and_deduce_type_with_retries(
         Path const& path,
