@@ -13,6 +13,22 @@ pub struct Bucket {
 }
 
 impl Bucket {
+    /// # Returns
+    ///
+    /// The bucket timestamp in Unix epoch milliseconds.
+    #[must_use]
+    pub const fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+
+    /// # Returns
+    ///
+    /// The number of matching events in the bucket.
+    #[must_use]
+    pub const fn count(&self) -> i64 {
+        self.count
+    }
+
     /// Constructs a bucket from a MongoDB aggregation document.
     ///
     /// # Returns
@@ -47,22 +63,6 @@ impl Bucket {
             });
         }
         Ok(bucket)
-    }
-
-    /// # Returns
-    ///
-    /// The bucket timestamp in Unix epoch milliseconds.
-    #[must_use]
-    pub const fn timestamp(&self) -> i64 {
-        self.timestamp
-    }
-
-    /// # Returns
-    ///
-    /// The number of matching events in the bucket.
-    #[must_use]
-    pub const fn count(&self) -> i64 {
-        self.count
     }
 }
 
