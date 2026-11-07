@@ -185,7 +185,7 @@ def main(argv):
     if clp_config.logs_input.type != StorageType.FS:
         logger.error(
             "Filesystem compression expects `logs_input.type` to be `%s`, but `%s` is found. For S3"
-            " compression, use `compress-from-s3.sh` instead.",
+            " inputs, use S3 ingestion instead.",
             StorageType.FS,
             clp_config.logs_input.type,
         )
@@ -213,8 +213,8 @@ def main(argv):
                 "`--timestamp-key` and `--unstructured` are not compatible. The input logs will be "
                 "treated as unstructured, and the argument to `--timestamp-key` will be ignored."
             )
-    elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+    else:
+        logger.error("Spider compression supports only the CLP-S storage engine.")
         return -1
 
     # Validate filesystem input arguments
