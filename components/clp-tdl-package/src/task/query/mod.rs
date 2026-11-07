@@ -13,17 +13,6 @@ mod commit;
 mod results_cache;
 mod search;
 
-/// Runs an archive's normal search and any configured timeline aggregation.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`TdlError::ExecutionError`] if [`search::search`] fails.
-///
-/// # Panics
-///
-/// Panics if the TDL package has not initialized its runtime, configuration, or CLP home.
 #[task(name = "query::clp_s_search")]
 pub(crate) fn clp_s_search_task(
     ctx: TaskContext,
