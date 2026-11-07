@@ -10,34 +10,31 @@ providing the following benefits:
 * **Minimized scheduling overhead**
 * **Maximized utilization of compute resources**
 
-:::{note}
-In the current release, CLP uses Spider only for compression jobs coordinated by
-`compression-coordinator`. Support for orchestrating search jobs with Spider is planned for a future
-release.
-
-Spider is planned to become the default job execution framework for CLP, eventually replacing the
-existing Celery-based job orchestration components.
-:::
-
 ## Deployment
 
-When Spider is enabled, compatible CLP coordinators are automatically deployed and submit supported
-jobs to Spider for scheduling and execution. Currently, Spider and its related CLP components can be
-enabled only in [Kubernetes deployments][k8s-deployment] using the CLP Helm chart.
+Spider, `compression-coordinator`, and `query-coordinator` start with the CLP package by default.
 
-:::{note}
-Spider is not supported in Docker Compose deployments in the current release. Support for Docker
-Compose is planned for a future release.
-:::
+### Docker Compose
+
+Set `logs_input.directory` in `etc/clp-config.yaml` to the directory containing your input logs,
+then start the package:
+
+```bash
+./sbin/start-clp.sh
+```
+
+This starts Spider storage, scheduler, workers, and both coordinators. The compression coordinator and workers
+mount the input directory read-only beneath
+`/mnt/logs`, preserving its absolute host path. For example, `/srv/logs` is mounted at
+`/mnt/logs/srv/logs`. Workers also mount the configured archive output directory.
 
 ### Kubernetes (Helm)
 
-When deploying CLP on Kubernetes using Helm, enable Spider by setting `spider.enabled` to `true`.
-The CLP Helm chart will then automatically deploy the following components:
+The CLP Helm chart enables Spider by default and deploys the following components:
 
 * **Spider subchart**: Deploys all the Spider services required to schedule and execute jobs.
-* **compression-coordinator**: Coordinates CLP compression jobs and submits them to Spider for
-  execution.
+* **compression-coordinator**: Submits CLP compression jobs to Spider.
+* **query-coordinator**: Submits CLP query jobs to Spider.
 
   :::{note}
   In the current release, `compression-coordinator` supports only compression jobs that use certain
@@ -81,8 +78,6 @@ The CLP Helm chart will then automatically deploy the following components:
        max_concurrent_jobs: 1000
    
      logs_input:
-       # In the current release, compression jobs coordinated by `compression-coordinator` require
-       # input logs to be stored in S3.
        type: "s3"
        aws_authentication:
          type: "credentials"
@@ -92,7 +87,6 @@ The CLP Helm chart will then automatically deploy the following components:
 
      archive_output:
        storage:
-         # In the current release, `compression-coordinator` supports only S3 archive output.
          type: "s3"
          s3_config:
            region_code: "us-east-2"
@@ -146,7 +140,7 @@ The following settings are commonly adjusted when deploying Spider with CLP.
 
 :::{confval} spider.enabled
 :type: `bool`
-:default: `false`
+:default: `true`
 
 Enables Spider and deploys its related CLP components.
 :::
