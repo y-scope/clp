@@ -30,6 +30,7 @@ non-empty-string = { workspace = true }
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 pin-project-lite = { workspace = true }
+query-result-listener = { workspace = true }
 rmp-serde = { workspace = true }
 secrecy = { workspace = true }
 serde = { workspace = true }
@@ -44,4 +45,5 @@ utoipa-axum = { workspace = true }
 
 [dev-dependencies]
 http-body-util = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 tower = { workspace = true }
