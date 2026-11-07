@@ -90,21 +90,17 @@ auto NetworkOutputHandler::write(
             return ecode;
         }
     }
-    auto const is_buffer_empty{0 == m_buffer.size()};
+    auto const now{std::chrono::steady_clock::now()};
+    if (0 == m_buffer.size()) {
+        m_oldest_buffered_result_time = now;
+    }
     msgpack::packer<msgpack::sbuffer> packer{m_buffer};
-    if (-1 == m_socket_fd) {
-        if (auto const ecode{connect()}; ErrorCode::ErrorCodeSuccess != ecode) {
-            return ecode;
-        }
+    if (0 == m_next_result_idx) {
         packer.pack_array(cNumHandshakeFields);
         packer.pack_uint8(cProtocolVersion);
         packer.pack(m_session_token);
         packer.pack_uint64(m_task_idx);
         packer.pack(archive_id);
-    }
-    auto const now{std::chrono::steady_clock::now()};
-    if (is_buffer_empty) {
-        m_oldest_buffered_result_time = now;
     }
     packer.pack_array(cNumResultFields);
     packer.pack_uint64(m_next_result_idx);
@@ -128,7 +124,7 @@ auto NetworkOutputHandler::finish() -> ErrorCode {
     if (m_has_failed) {
         return ErrorCode::ErrorCodeFailureNetwork;
     }
-    if (-1 == m_socket_fd) {
+    if (0 == m_next_result_idx) {
         return ErrorCode::ErrorCodeSuccess;
     }
 
@@ -194,6 +190,11 @@ auto NetworkOutputHandler::connect() -> ErrorCode {
 }
 
 auto NetworkOutputHandler::send_buffer() -> ErrorCode {
+    if (-1 == m_socket_fd) {
+        if (auto const ecode{connect()}; ErrorCode::ErrorCodeSuccess != ecode) {
+            return ecode;
+        }
+    }
     if (clp::ErrorCode_Success
         != clp::networking::try_send(m_socket_fd, m_buffer.data(), m_buffer.size()))
     {

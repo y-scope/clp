@@ -121,10 +121,9 @@ public:
 
     // Methods inherited from OutputHandler
     /**
-     * Connects to the network destination and buffers the handshake before the first result. Sends
-     * the buffered frames before the result would grow them past `cBufferSizeSendThreshold` bytes,
-     * after a result that alone reaches it, or once the oldest of them has been buffered for
-     * `cBufferedResultAgeSendThreshold`.
+     * Buffers the handshake before the first result. Sends the buffered frames before the result
+     * would grow them past `cBufferSizeSendThreshold` bytes, when they reach it, or once the oldest
+     * of them has been buffered for `cBufferedResultAgeSendThreshold`.
      *
      * @return ErrorCodeFailureNetwork if connecting or sending to the network destination fails, or
      * if an earlier call failed to.
@@ -148,8 +147,8 @@ public:
      * connection, and waits for the listener's acknowledgement. Returns immediately if no result
      * was written.
      *
-     * @return ErrorCodeFailureNetwork if an earlier call failed to connect or send, if sending the
-     * buffered results and the trailer, shutting down the write side, or receiving the
+     * @return ErrorCodeFailureNetwork if an earlier call failed to connect or send, if connecting,
+     * sending the buffered results and the trailer, shutting down the write side, or receiving the
      * acknowledgement fails, or if the acknowledgement is malformed or doesn't match the number of
      * results sent.
      */
@@ -166,11 +165,11 @@ private:
     [[nodiscard]] auto connect() -> ErrorCode;
 
     /**
-     * Sends the serialized messages in the buffer to the network destination, and then clears the
-     * buffer.
+     * Connects to the network destination if not yet connected, sends the serialized messages in
+     * the buffer to it, and then clears the buffer.
      *
      * @return ErrorCodeSuccess on success.
-     * @return ErrorCodeFailureNetwork if sending fails.
+     * @return ErrorCodeFailureNetwork if connecting or sending fails.
      */
     [[nodiscard]] auto send_buffer() -> ErrorCode;
 
