@@ -89,11 +89,11 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             if not no_progress_reporting:
                 logger.info("Compression finished.")
                 print_compression_job_status(job_row)
-            break  # Done
+            return CompressionJobCompletionStatus.SUCCEEDED
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
             logger.error(f"Compression failed. {job_row['status_msg']}")
-            break  # Done
+            return CompressionJobCompletionStatus.FAILED
 
         if CompressionJobStatus.RUNNING == job_status:
             if not no_progress_reporting:
@@ -127,14 +127,10 @@ def handle_job(sql_adapter: SqlAdapter, clp_io_config: ClpIoConfig, no_progress_
             job_id = db_cursor.lastrowid
             logger.info(f"Compression job {job_id} submitted.")
 
-            handle_job_update(db, db_cursor, job_id, no_progress_reporting)
+            return handle_job_update(db, db_cursor, job_id, no_progress_reporting)
         except Exception as ex:
             logger.error(ex)
             return CompressionJobCompletionStatus.FAILED
-
-        logger.debug(f"Finished job {job_id}")
-
-        return CompressionJobCompletionStatus.SUCCEEDED
 
 
 def _generate_clp_io_config(
