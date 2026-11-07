@@ -186,7 +186,7 @@ services:
       RUST_LOG: "${CLP_COMPRESSION_COORDINATOR_LOGGING_LEVEL:-INFO}"
     volumes:
       - *volume_clp_config_readonly
-      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:/mnt/logs:ro"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
