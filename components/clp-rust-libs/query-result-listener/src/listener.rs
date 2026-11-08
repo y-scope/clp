@@ -106,10 +106,6 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
     ///
     /// * The newly opened session.
     /// * The stream of the session's results.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the session's fresh token is already registered, which a random UUID rules out.
     #[must_use]
     pub fn open_session(
         &self,
