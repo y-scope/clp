@@ -288,7 +288,7 @@ export interface components {
             unstructured?: boolean | null;
         };
         /** @enum {string} */
-        CompressionJobStatus: "Pending" | "Running" | "Succeeded" | "Failed" | "Killed";
+        CompressionJobStatus: "Pending" | "Running" | "Succeeded" | "Failed";
         /** @description The metadata of a compression job, with the display fields of its config. */
         CompressionMetadata: {
             /**
@@ -1250,8 +1250,8 @@ export interface operations {
                 /**
                  * @description Job statuses to include as a comma-separated list (e.g.
                  *     `job_status=succeeded,failed`). Recognized values (case-insensitive):
-                 *     `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
-                 *     Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
+                 *     `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`.
+                 *     Defaults to `SUCCEEDED,FAILED` (all terminal states).
                  */
                 job_status?: string;
                 /** @description Maximum number of jobs to return. Must be > 0; defaults to 1000. */

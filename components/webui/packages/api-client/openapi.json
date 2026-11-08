@@ -625,7 +625,7 @@
           {
             "name": "job_status",
             "in": "query",
-            "description": "Job statuses to include as a comma-separated list (e.g.\n`job_status=succeeded,failed`). Recognized values (case-insensitive):\n`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.\nDefaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).",
+            "description": "Job statuses to include as a comma-separated list (e.g.\n`job_status=succeeded,failed`). Recognized values (case-insensitive):\n`PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`.\nDefaults to `SUCCEEDED,FAILED` (all terminal states).",
             "required": false,
             "schema": {
               "type": "string"
@@ -735,8 +735,7 @@
           "Pending",
           "Running",
           "Succeeded",
-          "Failed",
-          "Killed"
+          "Failed"
         ]
       },
       "CompressionMetadata": {
