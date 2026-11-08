@@ -205,12 +205,8 @@ pub(crate) struct SessionStats {
 ///
 /// * `EncodingType` - The encoding of the results the session delivers.
 pub(crate) struct State<EncodingType: ResultEncoding> {
-    /// The cursors of the session's query tasks, keyed by task index.
     cursors: DashMap<TaskIndex, Arc<TaskCursor>>,
-
-    /// The sender of the session's batches of encoded results.
     batches_sender: mpsc::Sender<EncodingType::Batch>,
-
     num_results_emitted: AtomicU64,
     num_duplicates_dropped: AtomicU64,
     num_results_discarded: AtomicU64,
@@ -370,7 +366,7 @@ mod tests {
 
     #[test]
     fn join_returns_unknown_session_for_an_unregistered_token() -> anyhow::Result<()> {
-        use crate::test_utils::SESSION_TOKEN as UNKNOWN_SESSION_TOKEN;
+        use crate::test_utils::UNKNOWN_SESSION_TOKEN;
 
         let registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
         let _session = open_session(&registry);
@@ -394,7 +390,7 @@ mod tests {
     }
 
     #[test]
-    fn join_returns_archive_id_mismatch_for_another_archive_than_the_tasks_first_connection()
+    fn join_returns_archive_id_mismatch_for_a_different_archive_from_the_tasks_first_connection()
     -> anyhow::Result<()> {
         use crate::test_utils::OTHER_ARCHIVE_ID;
 

@@ -211,34 +211,36 @@ impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
 ///
 /// * `EncodingType` - The encoding of the results the sessions deliver.
 pub async fn serve<EncodingType: ResultEncoding>(
-    mut stream: TcpStream,
+    mut input_stream: TcpStream,
     peer_addr: SocketAddr,
     sessions: Arc<SessionRegistry<EncodingType>>,
     handshake_timeout: Duration,
 ) {
     let mut buffer = BytesMut::new();
-    let handshake =
-        match tokio::time::timeout(handshake_timeout, read_handshake(&mut stream, &mut buffer))
-            .await
-            .unwrap_or(Err(ConnectionError::HandshakeTimeout(handshake_timeout)))
-        {
-            Ok(Some(handshake)) => handshake,
-            Ok(None) => {
-                tracing::debug!(
-                    peer_addr = % peer_addr,
-                    "Connection closed before sending a handshake."
-                );
-                return;
-            }
-            Err(e) => {
-                tracing::warn!(
-                    peer_addr = % peer_addr,
-                    error = % e,
-                    "Closing a connection without a valid handshake."
-                );
-                return;
-            }
-        };
+    let handshake = match tokio::time::timeout(
+        handshake_timeout,
+        read_handshake(&mut input_stream, &mut buffer),
+    )
+    .await
+    .unwrap_or(Err(ConnectionError::HandshakeTimeout(handshake_timeout)))
+    {
+        Ok(Some(handshake)) => handshake,
+        Ok(None) => {
+            tracing::debug!(
+                peer_addr = % peer_addr,
+                "Connection closed before sending a handshake."
+            );
+            return;
+        }
+        Err(e) => {
+            tracing::warn!(
+                peer_addr = % peer_addr,
+                error = % e,
+                "Closing a connection without a valid handshake."
+            );
+            return;
+        }
+    };
 
     let mut connection = match sessions.join(&handshake) {
         Ok(connection) => connection,
@@ -253,7 +255,7 @@ pub async fn serve<EncodingType: ResultEncoding>(
         }
     };
 
-    if let Err(e) = connection.run(&mut stream, buffer).await {
+    if let Err(e) = connection.run(&mut input_stream, buffer).await {
         tracing::warn!(
             peer_addr = % peer_addr,
             task_index = handshake.task_index,
@@ -292,14 +294,14 @@ enum Decoded {
 /// * Forwards [`Handshake::decode`]'s return values on failure.
 /// * Forwards [`read_more`]'s return values on failure.
 async fn read_handshake(
-    stream: &mut TcpStream,
+    input_stream: &mut TcpStream,
     buffer: &mut BytesMut,
 ) -> Result<Option<Handshake>, ConnectionError> {
     loop {
         if let Some(handshake) = Handshake::decode(buffer)? {
             return Ok(Some(handshake));
         }
-        if 0 == read_more(stream, buffer).await? {
+        if 0 == read_more(input_stream, buffer).await? {
             if buffer.is_empty() {
                 return Ok(None);
             }
@@ -459,7 +461,7 @@ mod tests {
                         .parse::<ArchiveId>()
                         .expect("archive ID fixtures should be valid UUIDs"),
                 )
-                .expect("the attempt should join the session");
+                .expect("the task's first connection should get a cursor");
             let mut connection = Connection::new(Arc::clone(&self.state), cursor);
             let buffered = BytesMut::from(buffered);
             let handler =
