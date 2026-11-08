@@ -13,10 +13,11 @@ use tokio::task::JoinHandle;
 
 use crate::connection;
 use crate::encoding::ResultEncoding;
-use crate::session::Registry;
+use crate::error::SessionError;
 use crate::session::ResultStream;
 use crate::session::Session;
 use crate::session::SessionConfig;
+use crate::session::SessionRegistry;
 
 /// Configuration of a listener.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -41,7 +42,7 @@ pub struct ListenerConfig {
 ///
 /// * `EncodingType` - The encoding of the results the listener's sessions deliver.
 pub struct ResultListener<EncodingType: ResultEncoding> {
-    sessions: Arc<Registry<EncodingType>>,
+    sessions: Arc<SessionRegistry<EncodingType>>,
     advertised_host: NonEmptyString,
     port: NonZeroU16,
     accept_loop: JoinHandle<()>,
@@ -84,7 +85,7 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
         let tcp_listener = tcp_socket.listen(LISTEN_BACKLOG)?;
         let port =
             NonZeroU16::new(tcp_listener.local_addr()?.port()).expect("a bound port is nonzero");
-        let sessions = Arc::new(Registry::new());
+        let sessions = Arc::new(SessionRegistry::new());
         let accept_loop = tokio::spawn(accept_connections(
             tcp_listener,
             Arc::clone(&sessions),
@@ -102,21 +103,22 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
     ///
     /// # Returns
     ///
-    /// A tuple containing:
+    /// On success, a tuple containing:
     ///
     /// * The newly opened session.
     /// * The stream of the session's results.
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards `SessionRegistry::open`'s return values on failure.
     pub fn open_session(
         &self,
         config: SessionConfig,
-    ) -> (Session<EncodingType>, ResultStream<EncodingType::Batch>) {
-        Session::open(
-            Arc::clone(&self.sessions),
-            self.advertised_host.clone(),
-            self.port,
-            config,
-        )
+    ) -> Result<(Session<EncodingType>, ResultStream<EncodingType::Batch>), SessionError> {
+        self.sessions
+            .open(self.advertised_host.clone(), self.port, config)
     }
 }
 
@@ -141,7 +143,7 @@ const LISTEN_BACKLOG: u32 = 1024;
 /// * `EncodingType` - The encoding of the results the sessions deliver.
 async fn accept_connections<EncodingType: ResultEncoding>(
     tcp_listener: TcpListener,
-    sessions: Arc<Registry<EncodingType>>,
+    sessions: Arc<SessionRegistry<EncodingType>>,
     handshake_timeout: Duration,
 ) {
     loop {
@@ -252,7 +254,7 @@ mod tests {
     async fn results_sent_along_with_the_handshake_are_delivered_and_acknowledged()
     -> anyhow::Result<()> {
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
-        let (session, mut results) = listener.open_session(SessionConfig::default());
+        let (session, mut results) = listener.open_session(SessionConfig::default())?;
         let session_token = session.network_output().session_token.to_string();
 
         let mut attempt = FakeClpS::connect(session.network_output()).await;
@@ -280,7 +282,7 @@ mod tests {
         use crate::test_utils::SESSION_TOKEN as UNKNOWN_SESSION_TOKEN;
 
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
-        let (session, _results) = listener.open_session(SessionConfig::default());
+        let (session, _results) = listener.open_session(SessionConfig::default())?;
 
         let mut stranger = FakeClpS::connect(session.network_output()).await;
         stranger
@@ -299,7 +301,7 @@ mod tests {
     #[tokio::test]
     async fn malformed_handshake_is_rejected() -> anyhow::Result<()> {
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
-        let (session, _results) = listener.open_session(SessionConfig::default());
+        let (session, _results) = listener.open_session(SessionConfig::default())?;
         let mut not_an_array = Vec::new();
         rmp::encode::write_str(
             &mut not_an_array,
@@ -323,7 +325,7 @@ mod tests {
             handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
             ..base_listener_config()
         })?;
-        let (session, _results) = listener.open_session(SessionConfig::default());
+        let (session, _results) = listener.open_session(SessionConfig::default())?;
 
         let connected_at = Instant::now();
         let silent = FakeClpS::connect(session.network_output()).await;
@@ -343,7 +345,7 @@ mod tests {
             handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
             ..base_listener_config()
         })?;
-        let (session, mut results) = listener.open_session(SessionConfig::default());
+        let (session, mut results) = listener.open_session(SessionConfig::default())?;
 
         let mut attempt = FakeClpS::connect(session.network_output()).await;
         attempt.send_handshake(0, ARCHIVE_ID).await;
@@ -362,7 +364,7 @@ mod tests {
     #[tokio::test]
     async fn dropping_a_session_unregisters_it() -> anyhow::Result<()> {
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
-        let (session, _results) = listener.open_session(SessionConfig::default());
+        let (session, _results) = listener.open_session(SessionConfig::default())?;
         let network_output = session.network_output().clone();
         drop(session);
 
@@ -390,8 +392,9 @@ mod tests {
         use crate::test_utils::OTHER_ARCHIVE_ID;
 
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
-        let (first_session, mut first_results) = listener.open_session(SessionConfig::default());
-        let (second_session, mut second_results) = listener.open_session(SessionConfig::default());
+        let (first_session, mut first_results) = listener.open_session(SessionConfig::default())?;
+        let (second_session, mut second_results) =
+            listener.open_session(SessionConfig::default())?;
 
         let mut first_attempt = FakeClpS::connect(first_session.network_output()).await;
         first_attempt.send_handshake(0, ARCHIVE_ID).await;
@@ -421,7 +424,7 @@ mod tests {
         const STREAM_OPEN_CHECK_DURATION: Duration = Duration::from_millis(100);
 
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
-        let (session, mut results) = listener.open_session(SessionConfig::default());
+        let (session, mut results) = listener.open_session(SessionConfig::default())?;
         let mut attempt = FakeClpS::connect(session.network_output()).await;
         attempt.send_handshake(0, ARCHIVE_ID).await;
         attempt.send_results(0, 0..2).await;
@@ -455,7 +458,7 @@ mod tests {
         const RETRY_INTERVAL: Duration = Duration::from_millis(10);
 
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
-        let (session, mut results) = listener.open_session(SessionConfig::default());
+        let (session, mut results) = listener.open_session(SessionConfig::default())?;
         let network_output = session.network_output();
         let mut attempt = FakeClpS::connect(network_output).await;
         attempt.send_handshake(0, ARCHIVE_ID).await;

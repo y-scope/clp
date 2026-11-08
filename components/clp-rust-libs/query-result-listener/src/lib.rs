@@ -9,6 +9,7 @@ pub mod protocol;
 pub mod session;
 
 pub use error::ProtocolError;
+pub use error::SessionError;
 
 #[cfg(test)]
 mod test_utils;

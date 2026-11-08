@@ -10,15 +10,22 @@ use std::task::Context;
 use std::task::Poll;
 
 use clp_rust_utils::job_config::NetworkOutput;
+use clp_rust_utils::types::ArchiveId;
 use clp_rust_utils::types::SessionToken;
 use dashmap::DashMap;
+use dashmap::Entry;
 use futures::Stream;
 use non_empty_string::NonEmptyString;
 use spider_core::task::TaskIndex;
 use tokio::sync::mpsc;
 
+use crate::connection::Connection;
 use crate::cursor::TaskCursor;
 use crate::encoding::ResultEncoding;
+use crate::error::ConnectionError;
+use crate::error::ProtocolError;
+use crate::error::SessionError;
+use crate::protocol::Handshake;
 
 /// Configuration of a session.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -56,45 +63,6 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
     pub const fn network_output(&self) -> &NetworkOutput {
         &self.network_output
     }
-
-    /// Factory function.
-    ///
-    /// Creates a session with a fresh token, reachable at `host` and `port`, and registers it in
-    /// `sessions`.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing:
-    ///
-    /// * The newly created session.
-    /// * The stream of the session's results.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the fresh token is already registered, which a random UUID rules out.
-    pub(crate) fn open(
-        sessions: Arc<Registry<EncodingType>>,
-        host: NonEmptyString,
-        port: NonZeroU16,
-        config: SessionConfig,
-    ) -> (Self, ResultStream<EncodingType::Batch>) {
-        let token = SessionToken::generate();
-        let (batches_sender, batches_receiver) = mpsc::channel(config.channel_capacity.get());
-        let previous = sessions.insert(token, Arc::new(State::new(batches_sender)));
-        assert!(
-            previous.is_none(),
-            "a fresh session token shouldn't be registered"
-        );
-        let session = Self {
-            _registration: Registration { sessions, token },
-            network_output: NetworkOutput {
-                host,
-                port,
-                session_token: token,
-            },
-        };
-        (session, ResultStream { batches_receiver })
-    }
 }
 
 /// The stream of a session's results, in the batches its connections encoded them into.
@@ -117,12 +85,100 @@ impl<BatchType> Stream for ResultStream<BatchType> {
     }
 }
 
-/// The registered sessions of a listener, keyed by their tokens.
+/// The sessions registered on a listener, keyed by their tokens.
 ///
 /// # Type Parameters
 ///
 /// * `EncodingType` - The encoding of the results the sessions deliver.
-pub(crate) type Registry<EncodingType> = DashMap<SessionToken, Arc<State<EncodingType>>>;
+pub(crate) struct SessionRegistry<EncodingType: ResultEncoding> {
+    sessions: DashMap<SessionToken, Arc<State<EncodingType>>>,
+}
+
+impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
+    /// Factory function.
+    ///
+    /// Creates a registry without any session.
+    ///
+    /// # Returns
+    ///
+    /// The newly created registry.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            sessions: DashMap::new(),
+        }
+    }
+
+    /// Opens a session with a fresh token, reachable at `host` and `port`, and registered before
+    /// this method returns.
+    ///
+    /// # Returns
+    ///
+    /// On success, a tuple containing:
+    ///
+    /// * The newly opened session.
+    /// * The stream of the session's results.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`SessionError::TokenCollision`] if the fresh token is already registered.
+    pub fn open(
+        self: &Arc<Self>,
+        host: NonEmptyString,
+        port: NonZeroU16,
+        config: SessionConfig,
+    ) -> Result<(Session<EncodingType>, ResultStream<EncodingType::Batch>), SessionError> {
+        let token = SessionToken::generate();
+        let Entry::Vacant(entry) = self.sessions.entry(token) else {
+            return Err(SessionError::TokenCollision(token));
+        };
+        let (batches_sender, batches_receiver) = mpsc::channel(config.channel_capacity.get());
+        entry.insert(Arc::new(State::new(batches_sender)));
+        let session = Session {
+            _registration: Registration {
+                sessions: Arc::clone(self),
+                token,
+            },
+            network_output: NetworkOutput {
+                host,
+                port,
+                session_token: token,
+            },
+        };
+        Ok((session, ResultStream { batches_receiver }))
+    }
+
+    /// Joins a connection to the session and task cursor that `handshake` names.
+    ///
+    /// # Returns
+    ///
+    /// The joined connection on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ConnectionError::UnknownSession`] if no session is registered under the handshake's
+    ///   token.
+    /// * Forwards [`State::cursor`]'s return values on failure.
+    pub fn join(&self, handshake: &Handshake) -> Result<Connection<EncodingType>, ConnectionError> {
+        let session = self
+            .sessions
+            .get(&handshake.session_token)
+            .map(|entry| Arc::clone(entry.value()))
+            .ok_or(ConnectionError::UnknownSession(handshake.session_token))?;
+        let cursor = session.cursor(handshake.task_index, handshake.archive_id)?;
+        Ok(Connection::new(session, cursor))
+    }
+
+    /// Removes the session registered under `token`. Called only by [`Registration`]'s [`Drop`]
+    /// implementation.
+    fn unregister(&self, token: &SessionToken) {
+        self.sessions.remove(token);
+    }
+}
 
 /// Statistics of a session's connections.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -150,10 +206,10 @@ pub(crate) struct SessionStats {
 /// * `EncodingType` - The encoding of the results the session delivers.
 pub(crate) struct State<EncodingType: ResultEncoding> {
     /// The cursors of the session's query tasks, keyed by task index.
-    pub cursors: DashMap<TaskIndex, Arc<TaskCursor>>,
+    cursors: DashMap<TaskIndex, Arc<TaskCursor>>,
 
     /// The sender of the session's batches of encoded results.
-    pub batches_sender: mpsc::Sender<EncodingType::Batch>,
+    batches_sender: mpsc::Sender<EncodingType::Batch>,
 
     num_results_emitted: AtomicU64,
     num_duplicates_dropped: AtomicU64,
@@ -177,6 +233,50 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
             num_duplicates_dropped: AtomicU64::new(0),
             num_results_discarded: AtomicU64::new(0),
         }
+    }
+
+    /// Gets or creates the cursor of task `task_index`, checking that it is bound to `archive_id`.
+    ///
+    /// # Returns
+    ///
+    /// The cursor of task `task_index` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ProtocolError::ArchiveIdMismatch`] if the cursor of task `task_index` is bound to
+    ///   another archive.
+    pub fn cursor(
+        &self,
+        task_index: TaskIndex,
+        archive_id: ArchiveId,
+    ) -> Result<Arc<TaskCursor>, ProtocolError> {
+        let cursor = Arc::clone(
+            self.cursors
+                .entry(task_index)
+                .or_insert_with(|| Arc::new(TaskCursor::new(archive_id)))
+                .value(),
+        );
+        let expected = cursor.archive_id();
+        if expected != archive_id {
+            return Err(ProtocolError::ArchiveIdMismatch {
+                task_index,
+                expected,
+                received: archive_id,
+            });
+        }
+        Ok(cursor)
+    }
+
+    /// Hands `batch` to the session's consumer.
+    ///
+    /// # Returns
+    ///
+    /// Whether the consumer still holds the receiver of the session's batches, so that a connection
+    /// can count `batch` as emitted or discarded.
+    pub async fn send(&self, batch: EncodingType::Batch) -> bool {
+        self.batches_sender.send(batch).await.is_ok()
     }
 
     /// Adds the statistics of a finished connection to the session's statistics.
@@ -209,18 +309,123 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
     }
 }
 
-/// A session's entry in its listener's registry, removed when dropped.
+/// A session's entry in a [`SessionRegistry`], unregistered when dropped.
 ///
 /// # Type Parameters
 ///
 /// * `EncodingType` - The encoding of the results the session delivers.
 struct Registration<EncodingType: ResultEncoding> {
-    sessions: Arc<Registry<EncodingType>>,
+    sessions: Arc<SessionRegistry<EncodingType>>,
     token: SessionToken,
 }
 
 impl<EncodingType: ResultEncoding> Drop for Registration<EncodingType> {
     fn drop(&mut self) {
-        self.sessions.remove(&self.token);
+        self.sessions.unregister(&self.token);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use clp_rust_utils::types::ArchiveId;
+    use clp_rust_utils::types::SessionToken;
+
+    use super::Session;
+    use super::SessionConfig;
+    use super::SessionRegistry;
+    use crate::error::ConnectionError;
+    use crate::error::ProtocolError;
+    use crate::protocol::Handshake;
+    use crate::test_utils::ARCHIVE_ID;
+    use crate::test_utils::QueryResultEncoding;
+
+    /// Opens a session on `registry`, dropping the stream of its results.
+    ///
+    /// # Returns
+    ///
+    /// The newly opened session.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the host fixture is empty, or the session's fresh token is already registered.
+    fn open_session(
+        registry: &Arc<SessionRegistry<QueryResultEncoding>>,
+    ) -> Session<QueryResultEncoding> {
+        use std::num::NonZeroU16;
+
+        use non_empty_string::NonEmptyString;
+
+        let (session, _results) = registry
+            .open(
+                NonEmptyString::new("127.0.0.1".to_owned())
+                    .expect("the host fixture should be non-empty"),
+                NonZeroU16::new(4000).expect("4000 is nonzero"),
+                SessionConfig::default(),
+            )
+            .expect("a fresh session token shouldn't be registered");
+        session
+    }
+
+    #[test]
+    fn join_returns_unknown_session_for_an_unregistered_token() -> anyhow::Result<()> {
+        use crate::test_utils::SESSION_TOKEN as UNKNOWN_SESSION_TOKEN;
+
+        let registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
+        let _session = open_session(&registry);
+        let unknown_session_token = UNKNOWN_SESSION_TOKEN.parse::<SessionToken>()?;
+        let Err(error) = registry.join(&Handshake {
+            session_token: unknown_session_token,
+            task_index: 0,
+            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+        }) else {
+            anyhow::bail!("an attempt presenting an unknown token shouldn't join a session");
+        };
+
+        assert!(
+            matches!(
+                error,
+                ConnectionError::UnknownSession(token) if unknown_session_token == token
+            ),
+            "unexpected error: {error:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn join_returns_archive_id_mismatch_for_another_archive_than_the_tasks_first_connection()
+    -> anyhow::Result<()> {
+        use crate::test_utils::OTHER_ARCHIVE_ID;
+
+        let registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
+        let session = open_session(&registry);
+        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
+        let other_archive_id = OTHER_ARCHIVE_ID.parse::<ArchiveId>()?;
+        let handshake = Handshake {
+            session_token: session.network_output().session_token,
+            task_index: 0,
+            archive_id,
+        };
+        registry.join(&handshake)?;
+        let Err(error) = registry.join(&Handshake {
+            archive_id: other_archive_id,
+            ..handshake
+        }) else {
+            anyhow::bail!("an attempt of another archive shouldn't join the session");
+        };
+
+        assert!(
+            matches!(
+                error,
+                ConnectionError::Protocol(ProtocolError::ArchiveIdMismatch {
+                    task_index: 0,
+                    expected,
+                    received,
+                }) if archive_id == expected && other_archive_id == received
+            ),
+            "unexpected error: {error:?}"
+        );
+        Ok(())
     }
 }

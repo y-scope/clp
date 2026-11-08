@@ -24,7 +24,7 @@ use crate::protocol::Frame;
 use crate::protocol::Handshake;
 use crate::protocol::ResultFrame;
 use crate::protocol::Trailer;
-use crate::session::Registry;
+use crate::session::SessionRegistry;
 use crate::session::SessionStats;
 use crate::session::State;
 
@@ -45,46 +45,21 @@ pub struct Connection<EncodingType: ResultEncoding> {
 impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     /// Factory function.
     ///
-    /// Joins the connection to the task cursor of `session` that `handshake` names, creating the
-    /// cursor if this is the task's first connection.
+    /// Creates a connection that joined `session`, claiming the results it streams on `cursor`.
     ///
     /// # Returns
     ///
-    /// The joined connection on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ProtocolError::ArchiveIdMismatch`] if the cursor of the handshake's task is bound to
-    ///   another archive.
-    pub fn new(
-        session: Arc<State<EncodingType>>,
-        handshake: &Handshake,
-    ) -> Result<Self, ProtocolError> {
-        let cursor = Arc::clone(
-            session
-                .cursors
-                .entry(handshake.task_index)
-                .or_insert_with(|| Arc::new(TaskCursor::new(handshake.archive_id)))
-                .value(),
-        );
-        let archive_id = cursor.archive_id();
-        if archive_id != handshake.archive_id {
-            return Err(ProtocolError::ArchiveIdMismatch {
-                task_index: handshake.task_index,
-                expected: archive_id,
-                received: handshake.archive_id,
-            });
-        }
-        Ok(Self {
-            encoder: EncodingType::Encoder::new(archive_id),
+    /// The newly created connection.
+    #[must_use]
+    pub fn new(session: Arc<State<EncodingType>>, cursor: Arc<TaskCursor>) -> Self {
+        Self {
+            encoder: EncodingType::Encoder::new(cursor.archive_id()),
             session,
             cursor,
             num_pending_results: 0,
             num_results: 0,
             stats: SessionStats::default(),
-        })
+        }
     }
 
     /// Claims the results the connection streams, encodes the results claimed from each socket
@@ -212,13 +187,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
             return;
         }
         let num_results = std::mem::take(&mut self.num_pending_results);
-        if self
-            .session
-            .batches_sender
-            .send(self.encoder.take_batch())
-            .await
-            .is_ok()
-        {
+        if self.session.send(self.encoder.take_batch()).await {
             self.stats.num_results_emitted += num_results;
         } else {
             self.stats.num_results_discarded += num_results;
@@ -244,7 +213,7 @@ impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
 pub async fn serve<EncodingType: ResultEncoding>(
     mut stream: TcpStream,
     peer_addr: SocketAddr,
-    sessions: Arc<Registry<EncodingType>>,
+    sessions: Arc<SessionRegistry<EncodingType>>,
     handshake_timeout: Duration,
 ) {
     let mut buffer = BytesMut::new();
@@ -271,12 +240,7 @@ pub async fn serve<EncodingType: ResultEncoding>(
             }
         };
 
-    let joined = sessions
-        .get(&handshake.session_token)
-        .map(|entry| Arc::clone(entry.value()))
-        .ok_or(ConnectionError::UnknownSession(handshake.session_token))
-        .and_then(|session| Connection::new(session, &handshake).map_err(ConnectionError::from));
-    let mut connection = match joined {
+    let mut connection = match sessions.join(&handshake) {
         Ok(connection) => connection,
         Err(e) => {
             tracing::warn!(
@@ -487,51 +451,20 @@ mod tests {
             use bytes::BytesMut;
 
             let (stream, mut handler_stream) = tokio::io::duplex(self.stream_capacity);
-            let mut connection = self
-                .join(task_index, archive_id)
+            let cursor = self
+                .state
+                .cursor(
+                    task_index,
+                    archive_id
+                        .parse::<ArchiveId>()
+                        .expect("archive ID fixtures should be valid UUIDs"),
+                )
                 .expect("the attempt should join the session");
+            let mut connection = Connection::new(Arc::clone(&self.state), cursor);
             let buffered = BytesMut::from(buffered);
             let handler =
                 tokio::spawn(async move { connection.run(&mut handler_stream, buffered).await });
             Attempt { stream, handler }
-        }
-
-        /// Joins a connection of an attempt of task `task_index` of archive `archive_id` to the
-        /// session.
-        ///
-        /// # Returns
-        ///
-        /// The joined connection on success.
-        ///
-        /// # Errors
-        ///
-        /// Returns an error if:
-        ///
-        /// * Forwards [`Connection::new`]'s return values on failure.
-        ///
-        /// # Panics
-        ///
-        /// Panics if `archive_id` isn't a valid UUID.
-        fn join(
-            &self,
-            task_index: TaskIndex,
-            archive_id: &str,
-        ) -> Result<Connection<QueryResultEncoding>, ProtocolError> {
-            use clp_rust_utils::types::SessionToken;
-
-            use crate::protocol::Handshake;
-            use crate::test_utils::SESSION_TOKEN;
-
-            let handshake = Handshake {
-                session_token: SESSION_TOKEN
-                    .parse::<SessionToken>()
-                    .expect("session token fixture should be a valid UUID"),
-                task_index,
-                archive_id: archive_id
-                    .parse::<ArchiveId>()
-                    .expect("archive ID fixtures should be valid UUIDs"),
-            };
-            Connection::new(Arc::clone(&self.state), &handshake)
         }
 
         /// # Returns
@@ -981,32 +914,6 @@ mod tests {
                 num_duplicates_dropped: 2,
                 ..SessionStats::default()
             }
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn archive_id_mismatch_is_rejected() -> anyhow::Result<()> {
-        use crate::test_utils::OTHER_ARCHIVE_ID;
-
-        let harness = Harness::new(CHANNEL_CAPACITY);
-        harness.join(0, ARCHIVE_ID)?;
-        let Err(error) = harness.join(0, OTHER_ARCHIVE_ID) else {
-            anyhow::bail!("an attempt of another archive shouldn't join the session");
-        };
-
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-        let other_archive_id = OTHER_ARCHIVE_ID.parse::<ArchiveId>()?;
-        assert!(
-            matches!(
-                error,
-                ProtocolError::ArchiveIdMismatch {
-                    task_index: 0,
-                    expected,
-                    received,
-                } if archive_id == expected && other_archive_id == received
-            ),
-            "unexpected error: {error:?}"
         );
         Ok(())
     }

@@ -70,3 +70,10 @@ pub enum ConnectionError {
     #[error("unknown session token {0}")]
     UnknownSession(SessionToken),
 }
+
+/// Reasons a session can't be opened.
+#[derive(Debug, thiserror::Error)]
+pub enum SessionError {
+    #[error("session token {0} is already registered")]
+    TokenCollision(SessionToken),
+}
