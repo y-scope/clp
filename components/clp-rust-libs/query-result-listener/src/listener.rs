@@ -71,10 +71,7 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
     ///
     /// # Panics
     ///
-    /// Panics if:
-    ///
-    /// * It's called outside a Tokio runtime.
-    /// * The bound port is 0, which the OS never assigns.
+    /// Panics if the bound port is 0, which the OS never assigns.
     pub fn bind(config: ListenerConfig) -> Result<Self, std::io::Error> {
         let tcp_socket = match config.bind_addr {
             SocketAddr::V4(_) => TcpSocket::new_v4()?,
