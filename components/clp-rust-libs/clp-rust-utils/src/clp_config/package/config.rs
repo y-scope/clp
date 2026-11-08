@@ -897,6 +897,22 @@ mod tests {
     }
 
     #[test]
+    fn executor_config_reads_results_cache_destination() -> anyhow::Result<()> {
+        let config: SpiderTaskExecutorConfig = serde_json::from_value(serde_json::json!({
+            "results_cache": {
+                "host": "results-cache",
+                "port": 27018,
+                "db_name": "timeline-results",
+            },
+        }))?;
+        assert_eq!(
+            config.results_cache.uri().as_str(),
+            "mongodb://results-cache:27018/timeline-results"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn abs_tmp_directory_joins_relative_path() {
         let config = SpiderTaskExecutorConfig {
             tmp_directory: "var/tmp".to_owned(),
