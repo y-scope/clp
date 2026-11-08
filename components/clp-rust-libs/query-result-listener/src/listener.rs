@@ -281,7 +281,7 @@ mod tests {
 
     #[tokio::test]
     async fn unknown_session_token_is_rejected() -> anyhow::Result<()> {
-        use crate::test_utils::SESSION_TOKEN;
+        use crate::test_utils::SESSION_TOKEN as UNKNOWN_SESSION_TOKEN;
 
         let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
         let (session, _results) = listener.open_session(SessionConfig::default());
@@ -290,7 +290,7 @@ mod tests {
         stranger
             .send(
                 &[
-                    encode_handshake(PROTOCOL_VERSION, SESSION_TOKEN, 0, ARCHIVE_ID),
+                    encode_handshake(PROTOCOL_VERSION, UNKNOWN_SESSION_TOKEN, 0, ARCHIVE_ID),
                     encode_results(0, 0..3),
                 ]
                 .concat(),
