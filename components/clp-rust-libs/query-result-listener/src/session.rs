@@ -51,8 +51,7 @@ pub struct Session<EncodingType: ResultEncoding> {
 impl<EncodingType: ResultEncoding> Session<EncodingType> {
     /// # Returns
     ///
-    /// The network output that directs a query job's tasks to stream their results to this
-    /// session.
+    /// The network output that directs a query job's tasks to stream their results to this session.
     #[must_use]
     pub const fn network_output(&self) -> &NetworkOutput {
         &self.network_output

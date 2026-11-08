@@ -412,6 +412,7 @@ mod tests {
     use crate::protocol::Ack;
     use crate::session::SessionStats;
     use crate::session::State;
+    use crate::test_utils::ARCHIVE_ID;
     use crate::test_utils::QueryResult;
     use crate::test_utils::QueryResultEncoding;
     use crate::test_utils::TIMEOUT;
@@ -421,8 +422,6 @@ mod tests {
     use crate::test_utils::expected_results;
     use crate::test_utils::message;
     use crate::test_utils::timestamp;
-
-    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
     /// The number of batches a session's channel holds, unless a test needs it to fill up.
     const CHANNEL_CAPACITY: usize = 1024;
@@ -521,8 +520,7 @@ mod tests {
             use clp_rust_utils::types::SessionToken;
 
             use crate::protocol::Handshake;
-
-            const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
+            use crate::test_utils::SESSION_TOKEN;
 
             let handshake = Handshake {
                 session_token: SESSION_TOKEN
@@ -989,7 +987,7 @@ mod tests {
 
     #[test]
     fn archive_id_mismatch_is_rejected() -> anyhow::Result<()> {
-        const OTHER_ARCHIVE_ID: &str = "4b0c2f8e-6d13-4f4e-9a57-1c2d3e4f5a6b";
+        use crate::test_utils::OTHER_ARCHIVE_ID;
 
         let harness = Harness::new(CHANNEL_CAPACITY);
         harness.join(0, ARCHIVE_ID)?;

@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use non_empty_string::NonEmptyString;
 use tokio::net::TcpListener;
+use tokio::net::TcpSocket;
 use tokio::task::JoinHandle;
 
 use crate::connection;
@@ -60,14 +61,27 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`TcpListener::bind`]'s return values on failure.
+    /// * Forwards [`TcpSocket::new_v4`]'s return values on failure.
+    /// * Forwards [`TcpSocket::new_v6`]'s return values on failure.
+    /// * Forwards [`TcpSocket::set_reuseaddr`]'s return values on failure.
+    /// * Forwards [`TcpSocket::bind`]'s return values on failure.
+    /// * Forwards [`TcpSocket::listen`]'s return values on failure.
     /// * Forwards [`TcpListener::local_addr`]'s return values on failure.
     ///
     /// # Panics
     ///
-    /// Panics if the bound port is 0, which the OS never assigns.
-    pub async fn bind(config: ListenerConfig) -> Result<Self, std::io::Error> {
-        let tcp_listener = TcpListener::bind(config.bind_addr).await?;
+    /// Panics if:
+    ///
+    /// * It's called outside a Tokio runtime.
+    /// * The bound port is 0, which the OS never assigns.
+    pub fn bind(config: ListenerConfig) -> Result<Self, std::io::Error> {
+        let tcp_socket = match config.bind_addr {
+            SocketAddr::V4(_) => TcpSocket::new_v4()?,
+            SocketAddr::V6(_) => TcpSocket::new_v6()?,
+        };
+        tcp_socket.set_reuseaddr(true)?;
+        tcp_socket.bind(config.bind_addr)?;
+        let tcp_listener = tcp_socket.listen(LISTEN_BACKLOG)?;
         let port =
             NonZeroU16::new(tcp_listener.local_addr()?.port()).expect("a bound port is nonzero");
         let sessions = Arc::new(Registry::new());
@@ -120,6 +134,10 @@ impl<EncodingType: ResultEncoding> Drop for ResultListener<EncodingType> {
 /// running out of file descriptors doesn't spin.
 const ACCEPT_RETRY_DELAY: Duration = Duration::from_millis(100);
 
+/// The maximum number of connections waiting to be accepted on the listening socket. Linux caps it
+/// at `net.core.somaxconn`.
+const LISTEN_BACKLOG: u32 = 1024;
+
 /// Accepts connections on `tcp_listener` and serves each one in its own task.
 ///
 /// # Type Parameters
@@ -162,6 +180,7 @@ mod tests {
     use crate::protocol::PROTOCOL_VERSION;
     use crate::session::ResultStream;
     use crate::session::SessionConfig;
+    use crate::test_utils::ARCHIVE_ID;
     use crate::test_utils::FakeClpS;
     use crate::test_utils::QueryResult;
     use crate::test_utils::QueryResultEncoding;
@@ -170,7 +189,6 @@ mod tests {
     use crate::test_utils::encode_results;
     use crate::test_utils::expected_results;
 
-    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
     const HANDSHAKE_TIMEOUT_SEC: NonZeroU64 = NonZeroU64::new(1).expect("1 is nonzero");
 
     /// # Returns
@@ -237,7 +255,7 @@ mod tests {
     #[tokio::test]
     async fn results_sent_along_with_the_handshake_are_delivered_and_acknowledged()
     -> anyhow::Result<()> {
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
         let (session, mut results) = listener.open_session(SessionConfig::default());
         let session_token = session.network_output().session_token.to_string();
 
@@ -263,16 +281,16 @@ mod tests {
 
     #[tokio::test]
     async fn unknown_session_token_is_rejected() -> anyhow::Result<()> {
-        const UNKNOWN_SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
+        use crate::test_utils::SESSION_TOKEN;
 
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
         let (session, _results) = listener.open_session(SessionConfig::default());
 
         let mut stranger = FakeClpS::connect(session.network_output()).await;
         stranger
             .send(
                 &[
-                    encode_handshake(PROTOCOL_VERSION, UNKNOWN_SESSION_TOKEN, 0, ARCHIVE_ID),
+                    encode_handshake(PROTOCOL_VERSION, SESSION_TOKEN, 0, ARCHIVE_ID),
                     encode_results(0, 0..3),
                 ]
                 .concat(),
@@ -284,7 +302,7 @@ mod tests {
 
     #[tokio::test]
     async fn malformed_handshake_is_rejected() -> anyhow::Result<()> {
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
         let (session, _results) = listener.open_session(SessionConfig::default());
         let mut not_an_array = Vec::new();
         rmp::encode::write_str(
@@ -308,8 +326,7 @@ mod tests {
         let listener = ResultListener::<QueryResultEncoding>::bind(ListenerConfig {
             handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
             ..base_listener_config()
-        })
-        .await?;
+        })?;
         let (session, _results) = listener.open_session(SessionConfig::default());
 
         let connected_at = Instant::now();
@@ -329,8 +346,7 @@ mod tests {
         let listener = ResultListener::<QueryResultEncoding>::bind(ListenerConfig {
             handshake_timeout_sec: HANDSHAKE_TIMEOUT_SEC,
             ..base_listener_config()
-        })
-        .await?;
+        })?;
         let (session, mut results) = listener.open_session(SessionConfig::default());
 
         let mut attempt = FakeClpS::connect(session.network_output()).await;
@@ -349,7 +365,7 @@ mod tests {
 
     #[tokio::test]
     async fn dropping_a_session_unregisters_it() -> anyhow::Result<()> {
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
         let (session, _results) = listener.open_session(SessionConfig::default());
         let network_output = session.network_output().clone();
         drop(session);
@@ -375,9 +391,9 @@ mod tests {
 
     #[tokio::test]
     async fn sessions_on_one_listener_receive_only_their_own_results() -> anyhow::Result<()> {
-        const OTHER_ARCHIVE_ID: &str = "4b0c2f8e-6d13-4f4e-9a57-1c2d3e4f5a6b";
+        use crate::test_utils::OTHER_ARCHIVE_ID;
 
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
         let (first_session, mut first_results) = listener.open_session(SessionConfig::default());
         let (second_session, mut second_results) = listener.open_session(SessionConfig::default());
 
@@ -408,7 +424,7 @@ mod tests {
     -> anyhow::Result<()> {
         const STREAM_OPEN_CHECK_DURATION: Duration = Duration::from_millis(100);
 
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
         let (session, mut results) = listener.open_session(SessionConfig::default());
         let mut attempt = FakeClpS::connect(session.network_output()).await;
         attempt.send_handshake(0, ARCHIVE_ID).await;
@@ -442,7 +458,7 @@ mod tests {
 
         const RETRY_INTERVAL: Duration = Duration::from_millis(10);
 
-        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config()).await?;
+        let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
         let (session, mut results) = listener.open_session(SessionConfig::default());
         let network_output = session.network_output();
         let mut attempt = FakeClpS::connect(network_output).await;
