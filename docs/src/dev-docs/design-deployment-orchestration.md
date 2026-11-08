@@ -319,7 +319,7 @@ When issues arise, use the appropriate commands for your orchestration method:
 ## User guides
 
 * [Kubernetes deployment][kubernetes-guide]: Deploying CLP with Helm
-* [Docker Compose deployment][docker-compose-guide]: Deploying CLP on a single host
+* [Multi-host deployment][docker-compose-multi-host]: Manual Docker Compose across multiple hosts
 
 [docker-compose]: https://docs.docker.com/compose/
 [docker-compose-debugging]: ../user-docs/guides-docker-compose-deployment.md#monitoring-and-debugging
@@ -327,5 +327,5 @@ When issues arise, use the appropriate commands for your orchestration method:
 [kubernetes]: https://kubernetes.io/
 [kubernetes-debugging]: ../user-docs/guides-k8s-deployment.md#monitoring-and-debugging
 [kubernetes-guide]: ../user-docs/guides-k8s-deployment.md
-[docker-compose-guide]: ../user-docs/guides-docker-compose-deployment.md
+[docker-compose-multi-host]: ../user-docs/guides-docker-compose-deployment.md#multi-host-deployment
 [presto-integration]: ../user-docs/guides-using-presto.md

@@ -122,6 +122,41 @@ archive_output:
 
 ## Compressing logs from S3-compatible storage
 
-Use [log-ingestor](../guides-using-log-ingestor.md) to ingest and compress logs from S3-compatible
-storage. Create an [S3 scanner ingestion job](../guides-using-log-ingestor.md#s3-scanner) with the
-endpoint URL, bucket, and key prefix for your storage service.
+To compress logs from S3-compatible storage, use the `sbin/compress-from-s3.sh` script with
+"path-style" object URLs:
+
+```text
+http://<host>:<port>/<bucket-name>/<object-key>
+```
+
+or for key prefix mode:
+
+```text
+http://<host>:<port>/<bucket-name>/<key-prefix>
+```
+
+```{code-block} bash
+:caption: Example: Compressing specific objects
+
+sbin/compress-from-s3.sh \
+  --timestamp-key @timestamp \
+  --dataset default \
+  s3-object \
+  http://10.0.0.1:9000/bucket/logs/app.log
+```
+
+```{code-block} bash
+:caption: Example: Compressing all objects under a prefix
+
+sbin/compress-from-s3.sh \
+  --timestamp-key @timestamp \
+  --dataset default \
+  s3-key-prefix \
+  http://10.0.0.1:9000/bucket/logs/
+```
+
+:::{tip}
+You can also specify input URLs in a text file using the `--inputs-from` flag. See the
+[AWS S3 usage guide](aws-s3/using-clp-with-aws-s3.md#s3-object-compression-mode) for more details on
+this and other options.
+:::

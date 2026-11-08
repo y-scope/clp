@@ -1,9 +1,18 @@
 # Using `compression-coordinator`
 
-`compression-coordinator` coordinates compression jobs scheduled via [Spider][spider].
+`compression-coordinator` is a new component that coordinates compression jobs scheduled via
+[Spider][spider]. `compression-coordinator` is designed to replace the existing
+`compression-scheduler` which schedules compression jobs using Celery.
 
-`compression-coordinator` starts with the CLP package. See
-[Using Spider scheduler][using-spider-scheduler] for startup instructions.
+:::{note}
+`compression-coordinator` has not yet reached feature-parity with `compression-scheduler` (see
+the [limitations](#limitations) section for details). Until then, the two are meant to run
+side-by-side, with `compression-scheduler` handling any jobs that `compression-coordinator` doesn't
+yet support.
+:::
+
+To use `compression-coordinator`, enable the Spider scheduling framework when starting the CLP
+package. See [Using Spider scheduler][using-spider-scheduler] for details.
 
 ## Benefits
 
@@ -60,57 +69,16 @@ user-experience, reliability, and performance improvements:
 ### Functional limitations
 
 * It's only available when using `clp-json`.
+* It only handles compression jobs created by `log-ingestor`.
+* It only supports writing archives to S3.
 
 Additional capabilities will be introduced in future releases as it moves toward feature parity with
 `compression-scheduler`.
 
-### Filesystem mounts in Kubernetes
+### Deployment limitations
 
-For filesystem input, mount the same input directory in the coordinator and Spider workers.
-The coordinator mount follows `clpConfig.logs_input.directory`. Add the worker mounts explicitly,
-retaining its config, archive, and staging mounts because Helm replaces these lists.
-
-For a release named `clp`, save the following as `filesystem-values.yaml` and pass it to
-`helm install` with `-f filesystem-values.yaml`:
-
-```yaml
-clpConfig:
-  logs_input:
-    type: "fs"
-    directory: "/srv/clp/logs"
-spider:
-  spiderConfig:
-    worker:
-      extra_volume_mounts: |-
-        - name: "clp-config"
-          mountPath: "/etc/clp-config.yaml"
-          subPath: "clp-config.yaml"
-          readOnly: true
-        - name: "logs-input"
-          mountPath: "/mnt/logs"
-          readOnly: true
-        - name: "shared-data-archives"
-          mountPath: "/var/data/archives"
-        - name: "staged-archives"
-          mountPath: "/var/data/staged-archives"
-      extra_volumes: |-
-        - name: "clp-config"
-          configMap:
-            name: "clp-config"
-        - name: "logs-input"
-          hostPath:
-            path: "/srv/clp/logs"
-            type: "Directory"
-        - name: "shared-data-archives"
-          persistentVolumeClaim:
-            claimName: "clp-shared-data-archives"
-        - name: "staged-archives"
-          emptyDir: {}
-```
-
-Use the appropriate config map and archive claim names for a different release name. The input
-path must exist on every node running a coordinator or worker and expose the same files. For
-workers on multiple nodes, use shared archive storage with a suitable PVC access mode.
+Currently, `compression-coordinator` can be deployed via Kubernetes and not via Docker Compose.
+Support for Docker Compose is planned for a future release.
 
 [column-metadata-issue]: https://github.com/y-scope/clp/issues/2480
 [spider]: https://github.com/y-scope/spider

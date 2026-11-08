@@ -25,8 +25,8 @@ logs_input:
 
 :::{note}
 Unlike archive and stream storage, the S3 bucket and key prefix for input logs are not specified in
-the configuration file. Instead, specify them when creating an
-[S3 ingestion job](../../guides-using-log-ingestor.md#s3-scanner).
+the configuration file. Instead, they are specified at compression time via object URLs passed to
+[sbin/compress-from-s3.sh](using-clp-with-aws-s3.md#compressing-logs-from-aws-s3).
 :::
 
 ## Configuration for archive storage
