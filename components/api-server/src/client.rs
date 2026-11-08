@@ -34,11 +34,10 @@ use utoipa::ToSchema;
 pub use crate::error::ClientError;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
-/// Covers all terminal states that consumed compute resources (succeeded, failed, killed).
+/// Covers all terminal states that consumed compute resources (succeeded, failed).
 pub const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
     CompressionJobStatus::Succeeded,
     CompressionJobStatus::Failed,
-    CompressionJobStatus::Killed,
 ];
 
 /// Query parameters for the compression usage endpoint.
@@ -51,8 +50,8 @@ pub struct CompressionUsageParams {
     pub time_range_end_millisecs: i64,
     /// Job statuses to include as a comma-separated list (e.g.
     /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
-    /// `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
-    /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
+    /// `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`.
+    /// Defaults to `SUCCEEDED,FAILED` (all terminal states).
     #[serde(default)]
     pub job_status: Option<String>,
     /// Maximum number of jobs to return. Must be > 0; defaults to 1000.
@@ -722,7 +721,7 @@ impl Client {
             // Task durations are summed regardless of individual task status so
             // that failed jobs still report the compute resources they consumed.
             //
-            // INNER JOIN filters out jobs with zero tasks (e.g. killed before
+            // INNER JOIN filters out jobs with zero tasks (e.g. failed before
             // task creation) since they consumed no compute resources.
             "SELECT \
               j.id, \
