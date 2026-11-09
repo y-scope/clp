@@ -5,8 +5,10 @@ use std::collections::hash_map::Entry;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
+use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::job_config::SearchQuery;
 use spider_client::SpiderClient;
 use spider_client::error::ClientError;
@@ -16,6 +18,7 @@ use spider_core::task::ExecutionPolicy;
 use spider_core::task::TaskDescriptor;
 use spider_core::task::TaskGraph;
 use spider_core::task::TdlContext;
+use spider_core::task::TerminationTaskDescriptor;
 use spider_core::task::ValueTypeDescriptor;
 use spider_core::types::id::JobId;
 use spider_core::types::id::ResourceGroupId;
@@ -118,7 +121,10 @@ impl QueryJobSubmitter for SpiderClient {
     }
 }
 
-/// Builds independent archive-search tasks and their positionally ordered external inputs.
+/// Builds archive-search tasks and a final publication task for timeline queries.
+///
+/// Spider may accept cancellation while the commit task runs. Published timeline data must remain
+/// hidden unless the query job reaches its successful terminal state.
 ///
 /// # Returns
 ///
@@ -147,7 +153,25 @@ fn build_query_task_graph(
     const CLP_TDL_PACKAGE_NAME: &str = "clp";
     const QUERY_TASK_FUNC: &str = "query::clp_s_search";
 
-    let mut graph = TaskGraph::new(None, None)?;
+    let commit_task = matches!(
+        output,
+        QueryOutput::ResultsCache(ResultsCacheOutput {
+            aggregation: Some(Aggregation::CountByTime { .. }),
+            ..
+        })
+    )
+    .then(|| TerminationTaskDescriptor {
+        tdl_context: TdlContext {
+            package: CLP_TDL_PACKAGE_NAME.to_owned(),
+            task_func: "query::commit_timeline".to_owned(),
+        },
+        execution_policy: Some(ExecutionPolicy {
+            max_num_retry: 3,
+            max_num_instances: 1,
+            ..ExecutionPolicy::default()
+        }),
+    });
+    let mut graph = TaskGraph::new(commit_task, None)?;
 
     let mut inputs = TaskGraphInputBuilder::new();
     let query_job_id_input = inputs.create_shared_input_payload(&query_job_id)?;
@@ -186,4 +210,73 @@ fn build_query_task_graph(
     }
 
     Ok((graph, inputs.build()))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroU16;
+
+    use clp_rust_utils::job_config::Aggregation;
+    use clp_rust_utils::job_config::NetworkOutput;
+    use clp_rust_utils::job_config::QueryOutput;
+    use clp_rust_utils::job_config::ResultsCacheOutput;
+    use clp_rust_utils::job_config::SearchQuery;
+    use clp_rust_utils::job_config::TimeRange;
+    use clp_rust_utils::types::PositiveI64;
+    use clp_rust_utils::types::SessionToken;
+    use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+    use non_empty_string::NonEmptyString;
+
+    use super::build_query_task_graph;
+
+    #[test]
+    fn commit_task_is_attached_only_for_count_by_time_output() -> anyhow::Result<()> {
+        let query = SearchQuery {
+            query_string: NonEmptyString::from_static_str("*"),
+            time_range: TimeRange::default(),
+            ignore_case: false,
+        };
+        for (output, has_commit) in [
+            (
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results: None,
+                    aggregation: Some(Aggregation::CountByTime {
+                        bucket_size_millisecs: PositiveI64::new(60_000)
+                            .expect("60,000 is positive"),
+                    }),
+                }),
+                true,
+            ),
+            (
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results: None,
+                    aggregation: None,
+                }),
+                false,
+            ),
+            (
+                QueryOutput::Network(NetworkOutput {
+                    host: NonEmptyString::from_static_str("localhost"),
+                    port: NonZeroU16::new(1234).expect("1,234 is nonzero"),
+                    session_token: SessionToken::from(uuid::Uuid::nil()),
+                }),
+                false,
+            ),
+        ] {
+            let (graph, _) = build_query_task_graph(42, &query, &output, vec![])?;
+            let commit = graph.get_commit_task_descriptor();
+            assert_eq!(commit.is_some(), has_commit);
+            if let Some(commit) = commit {
+                assert_eq!(commit.tdl_context.package, "clp");
+                assert_eq!(commit.tdl_context.task_func, "query::commit_timeline");
+                let policy = commit
+                    .execution_policy
+                    .as_ref()
+                    .expect("commit policy is set");
+                assert_eq!(policy.max_num_retry, 3);
+                assert_eq!(policy.max_num_instances, 1);
+            }
+        }
+        Ok(())
+    }
 }
