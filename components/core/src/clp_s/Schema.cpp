@@ -1,6 +1,7 @@
 #include "Schema.hpp"
 
 #include <algorithm>
+#include <cstdint>
 
 namespace clp_s {
 void Schema::insert_ordered(int32_t mst_node_id) {
