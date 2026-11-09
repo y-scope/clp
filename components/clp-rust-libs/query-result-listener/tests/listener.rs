@@ -247,6 +247,122 @@ async fn sessions_on_one_listener_receive_only_their_own_results() -> Result<()>
 }
 
 #[tokio::test]
+async fn tasks_connecting_one_after_another_are_each_delivered_and_acknowledged() -> Result<()> {
+    use query_result_listener::test_utils::OTHER_ARCHIVE_ID;
+
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig::default())?;
+
+    let mut first_task_attempt = FakeClpS::connect(session.network_output()).await;
+    first_task_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_task_attempt.send_results(0, 0..3).await;
+    let first_task_acknowledgement = first_task_attempt.finish(3).await;
+    let mut second_task_attempt = FakeClpS::connect(session.network_output()).await;
+    second_task_attempt
+        .send_handshake(1, OTHER_ARCHIVE_ID)
+        .await;
+    second_task_attempt.send_results(1, 0..2).await;
+    let second_task_acknowledgement = second_task_attempt.finish(2).await;
+
+    assert_eq!(first_task_acknowledgement, Ack { num_results: 3 }.encode());
+    assert_eq!(second_task_acknowledgement, Ack { num_results: 2 }.encode());
+    assert_eq!(
+        take_buffered_results(&mut results),
+        [
+            expected_results(0, ARCHIVE_ID, 0..3),
+            expected_results(1, OTHER_ARCHIVE_ID, 0..2),
+        ]
+        .concat()
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn tasks_connected_at_the_same_time_are_each_delivered_and_acknowledged() -> Result<()> {
+    use clp_rust_utils::types::ArchiveId;
+    use query_result_listener::test_utils::OTHER_ARCHIVE_ID;
+
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig::default())?;
+
+    let mut first_task_attempt = FakeClpS::connect(session.network_output()).await;
+    first_task_attempt.send_handshake(0, ARCHIVE_ID).await;
+    let mut second_task_attempt = FakeClpS::connect(session.network_output()).await;
+    second_task_attempt
+        .send_handshake(1, OTHER_ARCHIVE_ID)
+        .await;
+    first_task_attempt.send_results(0, 0..1).await;
+    second_task_attempt.send_results(1, 0..2).await;
+    first_task_attempt.send_results(0, 1..3).await;
+    let second_task_acknowledgement = second_task_attempt.finish(2).await;
+    let first_task_acknowledgement = first_task_attempt.finish(3).await;
+    let first_task_archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
+    let (first_task_results, second_task_results): (Vec<_>, Vec<_>) =
+        take_buffered_results(&mut results)
+            .into_iter()
+            .partition(|result| first_task_archive_id == result.archive_id);
+
+    assert_eq!(first_task_acknowledgement, Ack { num_results: 3 }.encode());
+    assert_eq!(second_task_acknowledgement, Ack { num_results: 2 }.encode());
+    assert_eq!(first_task_results, expected_results(0, ARCHIVE_ID, 0..3));
+    assert_eq!(
+        second_task_results,
+        expected_results(1, OTHER_ARCHIVE_ID, 0..2)
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn retry_after_a_partial_attempt_delivers_only_the_missing_results_and_is_acknowledged()
+-> Result<()> {
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig::default())?;
+
+    let mut first_attempt = FakeClpS::connect(session.network_output()).await;
+    first_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_attempt.send_results(0, 0..2).await;
+    let first_attempt_results = receive_results(&mut results, 2).await;
+    drop(first_attempt);
+    let mut retry = FakeClpS::connect(session.network_output()).await;
+    retry.send_handshake(0, ARCHIVE_ID).await;
+    retry.send_results(0, 0..4).await;
+    let acknowledgement = retry.finish(4).await;
+
+    assert_eq!(first_attempt_results, expected_results(0, ARCHIVE_ID, 0..2));
+    assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
+    assert_eq!(
+        take_buffered_results(&mut results),
+        expected_results(0, ARCHIVE_ID, 2..4)
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn concurrent_attempts_of_one_task_deliver_each_result_once_and_are_both_acknowledged()
+-> Result<()> {
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig::default())?;
+
+    let mut first_attempt = FakeClpS::connect(session.network_output()).await;
+    first_attempt.send_handshake(0, ARCHIVE_ID).await;
+    let mut second_attempt = FakeClpS::connect(session.network_output()).await;
+    second_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_attempt.send_results(0, 0..2).await;
+    let mut received = receive_results(&mut results, 2).await;
+    second_attempt.send_results(0, 0..3).await;
+    received.extend(receive_results(&mut results, 1).await);
+    first_attempt.send_results(0, 2..3).await;
+    let first_acknowledgement = first_attempt.finish(3).await;
+    let second_acknowledgement = second_attempt.finish(3).await;
+    received.extend(take_buffered_results(&mut results));
+
+    assert_eq!(first_acknowledgement, Ack { num_results: 3 }.encode());
+    assert_eq!(second_acknowledgement, Ack { num_results: 3 }.encode());
+    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..3));
+    Ok(())
+}
+
+#[tokio::test]
 async fn result_stream_ends_once_its_session_is_dropped_and_its_connections_have_finished()
 -> Result<()> {
     const STREAM_OPEN_CHECK_DURATION: Duration = Duration::from_millis(100);
