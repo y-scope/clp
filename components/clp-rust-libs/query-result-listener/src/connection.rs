@@ -723,12 +723,13 @@ mod tests {
     #[tokio::test]
     async fn two_tasks_in_one_session_each_emit_every_result_and_are_acknowledged()
     -> anyhow::Result<()> {
-        const SECOND_TASK_ARCHIVE_ID: &str = "9c3e7a1d-2f5b-4e8c-b6d0-7a1f3e5c9b24";
+        use crate::test_utils::OTHER_ARCHIVE_ID;
+
         const NUM_RESULTS: u64 = 3;
 
         let mut harness = Harness::new(CHANNEL_CAPACITY);
         let mut first_task_attempt = harness.connect(0, ARCHIVE_ID);
-        let mut second_task_attempt = harness.connect(1, SECOND_TASK_ARCHIVE_ID);
+        let mut second_task_attempt = harness.connect(1, OTHER_ARCHIVE_ID);
         let mut first_task_batches = Vec::new();
         let mut second_task_batches = Vec::new();
         for result_index in 0..NUM_RESULTS {
@@ -754,7 +755,7 @@ mod tests {
         );
         assert_eq!(
             second_task_batches.concat(),
-            expected_results(1, SECOND_TASK_ARCHIVE_ID, 0..NUM_RESULTS)
+            expected_results(1, OTHER_ARCHIVE_ID, 0..NUM_RESULTS)
         );
         assert_eq!(
             harness.state.stats(),

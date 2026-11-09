@@ -11,6 +11,7 @@ use query_result_listener::session::ResultStream;
 use query_result_listener::session::SessionConfig;
 use query_result_listener::test_utils::ARCHIVE_ID;
 use query_result_listener::test_utils::FakeClpS;
+use query_result_listener::test_utils::OTHER_ARCHIVE_ID;
 use query_result_listener::test_utils::QueryResult;
 use query_result_listener::test_utils::QueryResultEncoding;
 use query_result_listener::test_utils::TIMEOUT;
@@ -218,8 +219,6 @@ async fn dropping_a_session_unregisters_it() -> Result<()> {
 
 #[tokio::test]
 async fn sessions_on_one_listener_receive_only_their_own_results() -> Result<()> {
-    use query_result_listener::test_utils::OTHER_ARCHIVE_ID;
-
     let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
     let (first_session, mut first_results) = listener.open_session(SessionConfig::default())?;
     let (second_session, mut second_results) = listener.open_session(SessionConfig::default())?;
@@ -247,9 +246,8 @@ async fn sessions_on_one_listener_receive_only_their_own_results() -> Result<()>
 }
 
 #[tokio::test]
-async fn tasks_connecting_one_after_another_are_each_delivered_and_acknowledged() -> Result<()> {
-    use query_result_listener::test_utils::OTHER_ARCHIVE_ID;
-
+async fn tasks_connecting_one_after_another_each_deliver_their_results_and_are_acknowledged()
+-> Result<()> {
     let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
     let (session, mut results) = listener.open_session(SessionConfig::default())?;
 
@@ -278,9 +276,8 @@ async fn tasks_connecting_one_after_another_are_each_delivered_and_acknowledged(
 }
 
 #[tokio::test]
-async fn tasks_connected_at_the_same_time_are_each_delivered_and_acknowledged() -> Result<()> {
+async fn concurrent_tasks_each_deliver_their_results_and_are_acknowledged() -> Result<()> {
     use clp_rust_utils::types::ArchiveId;
-    use query_result_listener::test_utils::OTHER_ARCHIVE_ID;
 
     let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
     let (session, mut results) = listener.open_session(SessionConfig::default())?;
@@ -321,19 +318,16 @@ async fn retry_after_a_partial_attempt_delivers_only_the_missing_results_and_is_
     let mut first_attempt = FakeClpS::connect(session.network_output()).await;
     first_attempt.send_handshake(0, ARCHIVE_ID).await;
     first_attempt.send_results(0, 0..2).await;
-    let first_attempt_results = receive_results(&mut results, 2).await;
+    let mut received = receive_results(&mut results, 2).await;
     drop(first_attempt);
     let mut retry = FakeClpS::connect(session.network_output()).await;
     retry.send_handshake(0, ARCHIVE_ID).await;
     retry.send_results(0, 0..4).await;
     let acknowledgement = retry.finish(4).await;
+    received.extend(take_buffered_results(&mut results));
 
-    assert_eq!(first_attempt_results, expected_results(0, ARCHIVE_ID, 0..2));
     assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
-    assert_eq!(
-        take_buffered_results(&mut results),
-        expected_results(0, ARCHIVE_ID, 2..4)
-    );
+    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..4));
     Ok(())
 }
 

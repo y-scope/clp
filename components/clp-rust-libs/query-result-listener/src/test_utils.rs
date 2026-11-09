@@ -24,7 +24,7 @@ pub const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 /// The ID of an archive other than [`ARCHIVE_ID`].
 pub const OTHER_ARCHIVE_ID: &str = "4b0c2f8e-6d13-4f4e-9a57-1c2d3e4f5a6b";
 
-/// A session token fixture.
+/// The session token that the tests' handshakes carry.
 pub const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
 
 /// A session token that no session is registered under.
