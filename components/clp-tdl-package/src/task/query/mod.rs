@@ -9,6 +9,8 @@ use spider_tdl::TaskContext;
 use spider_tdl::TdlError;
 use spider_tdl::task;
 
+mod commit;
+mod results_cache;
 mod search;
 
 #[task(name = "query::clp_s_search")]
@@ -30,4 +32,14 @@ pub(crate) fn clp_s_search_task(
         &output,
     )
     .map_err(|e| TdlError::ExecutionError(format!("{e:#}")))
+}
+
+#[task(name = "query::commit_timeline")]
+pub(crate) fn commit_timeline_task(ctx: TaskContext) -> Result<(), TdlError> {
+    crate::common::runtime()
+        .block_on(commit::commit_timeline_results(
+            ctx.job_id,
+            crate::common::spider_task_executor_config(),
+        ))
+        .map_err(|error| TdlError::ExecutionError(format!("{error:#}")))
 }
