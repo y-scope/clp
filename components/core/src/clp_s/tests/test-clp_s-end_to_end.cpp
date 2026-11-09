@@ -231,8 +231,7 @@ void compare_with_input(
 
     // Canonicalize both sides identically: sorted keys, one compact object per line, lines sorted.
     // `--slurp` makes `jq` parse the whole file before emitting anything, so a malformed record
-    // fails the command rather than truncating its output. Each `jq` writes its own file so its
-    // exit status is checked directly rather than being hidden behind a pipeline.
+    // fails the command instead of silently truncating its output.
     constexpr std::string_view cCanonicalizeCommandFormat{
             "jq --sort-keys --compact-output --slurp 'sort | .[]' '{}' > '{}'"
     };
