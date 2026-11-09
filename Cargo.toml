@@ -30,6 +30,7 @@ chrono = { version = "0.4.45", features = ["serde"] }
 clap = { version = "4.6.6", features = ["derive"] }
 clp-rust-utils = { path = "components/clp-rust-libs/clp-rust-utils" }
 const_format = "0.2.36"
+dashmap = "6.2.1"
 futures = "0.3.33"
 http-body-util = "0.1.4"
 mongodb = "3.8.0"

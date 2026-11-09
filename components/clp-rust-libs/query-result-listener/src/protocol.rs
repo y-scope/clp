@@ -14,6 +14,7 @@ use rmp::decode::Bytes;
 use rmp::decode::NumValueReadError;
 use rmp::decode::ValueReadError;
 use rmp::decode::bytes::BytesReadError;
+use spider_core::task::TaskIndex;
 
 use crate::error::ProtocolError;
 
@@ -27,7 +28,7 @@ pub struct Handshake {
     pub session_token: SessionToken,
 
     /// The task's index within its query job.
-    pub task_index: u64,
+    pub task_index: TaskIndex,
 
     /// The ID of the archive the task searches.
     pub archive_id: ArchiveId,
@@ -321,6 +322,7 @@ mod tests {
     use bytes::BytesMut;
     use clp_rust_utils::types::ArchiveId;
     use clp_rust_utils::types::SessionToken;
+    use spider_core::task::TaskIndex;
 
     use super::Ack;
     use super::Frame;
@@ -372,7 +374,7 @@ mod tests {
             Handshake::decode(&mut buffer)?,
             Some(Handshake {
                 session_token: SESSION_TOKEN.parse::<SessionToken>()?,
-                task_index: TASK_INDEX,
+                task_index: TaskIndex::try_from(TASK_INDEX)?,
                 archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
             })
         );
