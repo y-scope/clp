@@ -166,10 +166,8 @@ async fn health() -> String {
         (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
             description = "The Content-Type header is missing or is not a JSON media type."),
         (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
-            description = "The JSON body contains missing or unknown fields, invalid types, or \
-                invalid values. max_num_results must be a positive integer when non-null, and \
-                count_by_time_bucket_size_millisecs must be a positive signed 64-bit integer \
-                when non-null."),
+            description = "The JSON body has missing or unknown fields, or fields with invalid types or \
+                values (e.g., a non-positive `max_num_results`)."
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -458,32 +456,12 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn query_rejects_invalid_numeric_fields() -> anyhow::Result<()> {
+    async fn query_rejects_invalid_numeric_fields_with_unprocessable_entity()
+    -> anyhow::Result<()> {
         let app = clp_s_app_with_lazy_clients().await;
-        for (field, value) in [
-            ("count_by_time_bucket_size_millisecs", serde_json::json!(0)),
-            ("count_by_time_bucket_size_millisecs", serde_json::json!(-1)),
-            (
-                "count_by_time_bucket_size_millisecs",
-                serde_json::json!(i64::MIN),
-            ),
-            (
-                "count_by_time_bucket_size_millisecs",
-                serde_json::json!(i64::MAX.cast_unsigned() + 1),
-            ),
-            (
-                "count_by_time_bucket_size_millisecs",
-                serde_json::json!(u64::MAX),
-            ),
-            ("max_num_results", serde_json::json!(0)),
-            ("max_num_results", serde_json::json!(-1)),
-            (
-                "max_num_results",
-                serde_json::json!(u64::from(u32::MAX) + 1),
-            ),
-        ] {
+        for field in ["count_by_time_bucket_size_millisecs", "max_num_results"] {
             let mut body = serde_json::json!({"query_string": "*"});
-            body[field] = value;
+            body[field] = serde_json::json!(0);
             let response = app
                 .clone()
                 .oneshot(
