@@ -141,7 +141,10 @@ struct ParentScope {
  * of `leaf`. Returns the schema tree node ID of the innermost open scope (that new leaf rule schema
  * nodes should use).
  * The open schema unordered object that are not parents of `leaf` are closed, while new unordered
- * objects are begun for parent rules of `leaf` not already in `open_scopes`.
+ * objects are begun for parent rules of `leaf` not already in `open_scopes`. The parent chain is
+ * matched against `open_scopes` from the outermost end, so a scope shared by consecutive leaf
+ * subtrees stays open; distinct occurrences are distinct `Match` objects, so only genuinely shared
+ * parents are retained.
  *
  * @param leaf The leaf match to update the open scopes to.
  * @param open_scopes The current stack of open scopes to update (outermost->innermost).
@@ -178,8 +181,8 @@ auto update_open_parent_scopes(
 
     size_t common_parents{0};
     while (common_parents < open_scopes.size() && common_parents < parent_matches.size()
-           && open_scopes.at(open_scopes.size() - 1 - common_parents).match
-                      == parent_matches.at(common_parents))
+           && open_scopes.at(common_parents).match
+                      == parent_matches.at(parent_matches.size() - 1 - common_parents))
     {
         ++common_parents;
     }
@@ -187,7 +190,7 @@ auto update_open_parent_scopes(
         schema.end_unordered_object(open_scopes.back().scope_schema_idx);
         open_scopes.pop_back();
     }
-    for (size_t i{parent_matches.size()}; i > common_parents;) {
+    for (size_t i{parent_matches.size() - common_parents}; i > 0;) {
         --i;
         auto const* parent{parent_matches.at(i)};
         auto const parent_node_id{

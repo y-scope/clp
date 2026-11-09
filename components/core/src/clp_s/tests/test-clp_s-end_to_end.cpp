@@ -1,5 +1,6 @@
 #include <sys/wait.h>
 
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <optional>
@@ -42,6 +43,12 @@ constexpr std::string_view cTestEndToEndInvalidFormattedFloatInputFile{
 constexpr std::string_view cTestEndToEndTimestampInputFile{"test_timestamp.jsonl"};
 constexpr std::string_view cTestEndToEndEmptyContainersInputFile{"test_empty_containers.jsonl"};
 constexpr std::string_view cTestEndToEndTextInArraysInputFile{"test_text_in_arrays.jsonl"};
+constexpr std::string_view cTestEndToEndNestedParentRulesInputFile{
+        "test_clpp_nested_parent_rules.jsonl"
+};
+constexpr std::string_view cTestEndToEndNestedParentRulesSpecFile{
+        "test_clpp_nested_parent_rules_spec.txt"
+};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
@@ -58,6 +65,14 @@ void literallyCompare(
         std::filesystem::path const& extracted_json_path
 );
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types);
+
+/**
+ * Requires that every archive's schema tree represents each occurrence of the nested `memory`
+ * parent rule as a single scope shared by its `used` and `total` child rules. The fixture has two
+ * `memory` occurrences in one message, so the `memory` node must be counted exactly as often as
+ * each child rule (twice), rather than once per child-rule subtree.
+ */
+auto check_nested_parent_rule_schema() -> void;
 
 /**
  * Requires that every archive in the test archive directory contains a `StructurizedText` node
@@ -126,6 +141,50 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
             }
             REQUIRE(0 != types.count(cur_node.get_type()));
         }
+    }
+}
+
+auto check_nested_parent_rule_schema() -> void {
+    for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
+        clp_s::ArchiveReader archive_reader{
+                clp_s::Path{
+                        .source = clp_s::InputSource::Filesystem,
+                        .path = entry.path().string()
+                },
+                clp_s::ArchiveReader::Options{}
+        };
+        auto const schema_tree{archive_reader.get_schema_tree()};
+        REQUIRE(nullptr != schema_tree);
+        std::optional<uint32_t> memory_count;
+        std::optional<uint32_t> used_count;
+        std::optional<uint32_t> total_count;
+        for (auto const& node : schema_tree->get_nodes()) {
+            if (clp_s::NodeType::ParentRule != node.get_type()) {
+                continue;
+            }
+            auto const key_name{node.get_key_name()};
+            if ("memory" == key_name) {
+                REQUIRE(false == memory_count.has_value());
+                memory_count = node.get_count();
+                std::set<std::string> child_names;
+                for (auto const child_id : node.get_children_ids()) {
+                    child_names.emplace(schema_tree->get_node(child_id).get_key_name());
+                }
+                REQUIRE(std::set<std::string>{"used", "total"} == child_names);
+            } else if ("used" == key_name) {
+                REQUIRE(false == used_count.has_value());
+                used_count = node.get_count();
+            } else if ("total" == key_name) {
+                REQUIRE(false == total_count.has_value());
+                total_count = node.get_count();
+            }
+        }
+        REQUIRE(memory_count.has_value());
+        REQUIRE(used_count.has_value());
+        REQUIRE(total_count.has_value());
+        REQUIRE(std::optional<uint32_t>{2} == memory_count);
+        REQUIRE(memory_count == used_count);
+        REQUIRE(memory_count == total_count);
     }
 }
 
@@ -522,6 +581,44 @@ TEST_CASE("clp-s-compress-extract-text-in-arrays", "[clp-s][end-to-end]") {
 
     compare_with_input(
             get_test_input_local_path(cTestEndToEndTextInArraysInputFile),
+            extracted_json_path
+    );
+}
+
+/**
+ * Tests that a parent rule containing multiple child parent rules keeps one schema scope per
+ * occurrence: consecutive leaf subtrees must not close their shared parent's scope, and separate
+ * occurrences in the same message must still produce separate scopes.
+ */
+TEST_CASE("clp-s-compress-clpp-nested-parent-rules", "[clp-s][end-to-end]") {
+    auto const single_file_archive{GENERATE(true, false)};
+    CAPTURE(single_file_archive);
+
+    TestOutputCleaner const test_cleanup{
+            {std::string{cTestEndToEndArchiveDirectory},
+             std::string{cTestEndToEndOutputDirectory},
+             std::string{cTestEndToEndOutputSortedJson}}
+    };
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestEndToEndNestedParentRulesInputFile),
+                    std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
+                    false,
+                    single_file_archive,
+                    false,
+                    std::filesystem::path{
+                            get_test_input_local_path(cTestEndToEndNestedParentRulesSpecFile)
+                    }
+            )
+    );
+    validate_archive_header(clp_s::ClpFlavour::Clpp);
+    check_nested_parent_rule_schema();
+
+    auto const extracted_json_path{extract()};
+    compare_with_input(
+            get_test_input_local_path(cTestEndToEndNestedParentRulesInputFile),
             extracted_json_path
     );
 }
