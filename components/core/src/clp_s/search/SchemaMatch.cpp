@@ -714,7 +714,8 @@ auto SchemaMatch::populate_column_mapping(
 
         // Currently we only allow fully resolved, non-shape() descriptors for precise array search
         if (NodeType::UnstructuredArray == cur_node.get_type()
-            && false == column->is_unresolved_descriptor() && false == is_shape_query)
+            && false == column->is_unresolved_descriptor() && false == is_shape_query
+            && column->matches_type(LiteralType::ArrayT))
         {
             /**
              * TODO: This doesn't work in general, but it had the same limitation in the previous
@@ -1483,6 +1484,13 @@ auto SchemaMatch::build_decomposable_node_filter(
                 find_schemas_containing_node(decomposition_root),
                 existence_filter_holds_when_absent(filter)
         );
+    }
+    if (FilterOperation::NEQ == op) {
+        throw std::runtime_error{fmt::format(
+                "Column \"{}\" matches a StructurizedText or ParentRule node, which only supports "
+                "`=` and `NOT =`; `!=` is not supported.",
+                column->to_string()
+        )};
     }
 
     auto const operand_query{operand_as_string(filter)};

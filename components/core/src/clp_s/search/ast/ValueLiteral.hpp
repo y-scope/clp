@@ -75,10 +75,10 @@ public:
      * Checks compatibility with a value type and comparison operation without converting the
      * literal. For a wildcard pattern, numeric compatibility only indicates that the pattern's
      * characters could appear in a number's text; it does not guarantee a match against any
-     * particular value. Conversely, a pattern reported as incompatible with a numeric type (e.g.,
-     * `*abc*` against integers) still satisfies a negated equality (`NEQ`, or `NOT` + `EQ`) for
-     * every value of that type, since no value's text matches the pattern; callers must keep the
-     * numeric types searchable in that case.
+     * particular value. A type reported as incompatible has no occurrence the filter can be
+     * evaluated on, so callers narrow it away regardless of whether the filter is negated. An
+     * unstructured array is compatible if the literal is compatible with any type its elements can
+     * have, so that the array is scanned for a compatible element.
      * @param type The single value type to test.
      * @param op The comparison operation; existence operations are handled separately by callers.
      * @return Whether the literal is compatible with `type` under `op`.
@@ -118,6 +118,16 @@ private:
               m_wildcard_types{wildcard_types} {}
 
     // Methods
+    /**
+     * `can_match_op` for a single non-array value type. `can_match_op` handles
+     * `LiteralType::ArrayT` by delegating to this for each type an unstructured array's elements
+     * can have.
+     * @param type The non-array value type to test.
+     * @param op The comparison operation.
+     * @return Whether the literal is compatible with `type` under `op`.
+     */
+    [[nodiscard]] auto can_match_scalar_op(LiteralType type, FilterOperation op) const -> bool;
+
     /**
      * Resolves the integer bound this literal compares against under `op`: ordering operations
      * resolve to the corresponding bound, equality operations require the bounds to coincide.

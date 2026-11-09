@@ -1,5 +1,7 @@
 #include "ValueLiteral.hpp"
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <ios>
@@ -23,6 +25,18 @@ constexpr std::string_view cTrueString{"true"};
 constexpr std::string_view cFalseString{"false"};
 constexpr std::string_view cNullString{"null"};
 constexpr std::string_view cMatchAnyString{"*"};
+
+// The value types an element of an unstructured array is matched as during an array scan (see
+// `QueryRunner::prepare_array_search`). A string element may or may not contain a space, so both
+// string types apply.
+constexpr std::array cUnstructuredArrayElementTypes{
+        LiteralType::VarStringT,
+        LiteralType::ClpStringT,
+        LiteralType::IntegerT,
+        LiteralType::FloatT,
+        LiteralType::BooleanT,
+        LiteralType::NullT
+};
 
 // Characters allowed in a cleaned wildcard query that may match numeric text. The query is matched
 // against the original text as strings, so we must allow all characters in a numeric encoding.
@@ -257,6 +271,18 @@ auto ValueLiteral::as_any(FilterOperation op) -> bool {
 }
 
 auto ValueLiteral::can_match_op(LiteralType type, FilterOperation op) const -> bool {
+    if (LiteralType::ArrayT == type) {
+        return std::ranges::any_of(
+                cUnstructuredArrayElementTypes,
+                [&](LiteralType const element_type) -> bool {
+                    return can_match_scalar_op(element_type, op);
+                }
+        );
+    }
+    return can_match_scalar_op(type, op);
+}
+
+auto ValueLiteral::can_match_scalar_op(LiteralType type, FilterOperation op) const -> bool {
     switch (type) {
         case LiteralType::IntegerT:
             return (is_equality_op(op) && 0 != (m_wildcard_types & LiteralType::IntegerT))
@@ -271,11 +297,9 @@ auto ValueLiteral::can_match_op(LiteralType type, FilterOperation op) const -> b
             return is_equality_op(op) && matches_type(type);
         case LiteralType::BooleanT:
             return is_equality_op(op) && m_bool_option.has_value();
-        case LiteralType::ArrayT:
-            return is_equality_op(op)
-                   && matches_any(LiteralType::ClpStringT | LiteralType::VarStringT);
         case LiteralType::TimestampT:
             return matches_type(LiteralType::TimestampT);
+        case LiteralType::ArrayT:
         case LiteralType::TypesEnd:
         case LiteralType::UnknownT:
             return false;

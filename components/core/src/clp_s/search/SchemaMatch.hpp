@@ -309,7 +309,9 @@ private:
      * @return The transformed expression on success, or nullptr if no schema matches, the filter
      * has no operand, or the operand can not be converted to a string for the filter's operation
      * (e.g. a range operation).
-     * @throws std::runtime_error if `ClppMatcher::should_structurize` returns an error.
+     * @throws std::runtime_error if the operation is NEQ, which the decomposition paths don't
+     * support (they take the operation to be EQ and read only the filter's inversion), or if
+     * `ClppMatcher::should_structurize` returns an error.
      */
     auto build_decomposable_node_filter(
             std::shared_ptr<ast::ColumnDescriptor> const& column,

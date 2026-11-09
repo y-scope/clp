@@ -119,6 +119,44 @@ protected:
     void initialize_reader(int32_t column_id, BaseColumnReader* column_reader);
 
 private:
+    /**
+     * The outcome of scanning the elements of an unstructured array for a filter. A filter is only
+     * defined on an array containing an element it can be evaluated against (one of a type
+     * compatible with the operation and operand, at the filter's path); it holds if some such
+     * element satisfies it.
+     */
+    struct ArrayScanResult {
+        // Whether some element is compatible with the filter.
+        bool compatible{false};
+        // Whether some compatible element satisfies the filter. Implies `compatible`.
+        bool matched{false};
+
+        /**
+         * Merges the result of scanning another element into this one.
+         * @param other The result of scanning another element.
+         * @return Whether the merged result is already a match, so the scan can stop.
+         */
+        auto merge(ArrayScanResult other) -> bool {
+            compatible |= other.compatible;
+            matched |= other.matched;
+            return matched;
+        }
+
+        /**
+         * Converts the merged result into the value of the filter on the array.
+         * @param negate Whether the filter's operation was rewritten to its negation (see
+         * `rewrite_nexists_array_op` in QueryRunner.cpp); such a filter is defined on every array.
+         * @return `EvaluatedValue::Unknown` if no element was compatible with the filter and
+         * `negate` is false; otherwise whether the filter holds.
+         */
+        auto to_value(bool negate) const -> EvaluatedValue {
+            if (false == negate && false == compatible) {
+                return EvaluatedValue::Unknown;
+            }
+            return (matched != negate) ? EvaluatedValue::True : EvaluatedValue::False;
+        }
+    };
+
     enum class ExpressionType : uint8_t {
         And,
         Or,
@@ -181,29 +219,71 @@ private:
     void init(SchemaReader* reader, std::vector<BaseColumnReader*> const& column_readers) override;
 
     /**
-     * Evaluates an expression
+     * Evaluates an expression against the current message. A filter that is undefined on the
+     * message (see `evaluate_filter`) doesn't hold whether or not it is inverted.
      * @param expr
      * @param schema
-     * @return true if the expression evaluates to true, false otherwise
+     * @return Whether the expression holds.
      */
     auto evaluate(ast::Expression* expr, int32_t schema) -> bool;
 
     /**
-     * Evaluates a filter expression
+     * Evaluates a filter expression against the current message, applying the filter's inversion.
+     * A filter that is undefined on the message doesn't hold whether or not it is inverted.
      * @param expr
      * @param schema
-     * @return Whether the expression evaluates to true.
-     * @throws Forwards `ast::ColumnDescriptor::get_bound_node_id`'s exceptions.
+     * @return Whether the filter holds.
+     * @throws Forwards `evaluate_filter`'s exceptions.
      */
-    auto evaluate_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
+    auto evaluate_inverted_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
 
     /**
-     * Evaluates a wildcard filter expression
+     * Evaluates a filter expression against the current message, before the filter's inversion is
+     * applied.
      * @param expr
      * @param schema
-     * @return true if the expression evaluates to true, false otherwise
+     * @return `EvaluatedValue::Unknown` if the filter is undefined on the message, i.e. its column
+     * is an unstructured array on which the filter is undefined (see `evaluate_array_filter`);
+     * otherwise whether the filter holds.
+     * @throws Forwards `ast::ColumnDescriptor::get_bound_node_id`'s exceptions.
      */
-    auto evaluate_wildcard_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
+    auto evaluate_filter(ast::FilterExpr* expr, int32_t schema) -> EvaluatedValue;
+
+    /**
+     * Evaluates a filter expression whose column is bound to a node that isn't an unstructured
+     * array, before the filter's inversion is applied.
+     * @param expr
+     * @param schema
+     * @return Whether the filter holds.
+     * @throws Forwards `ast::ColumnDescriptor::get_bound_node_id`'s exceptions.
+     */
+    auto evaluate_scalar_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
+
+    /**
+     * Evaluates a wildcard filter expression against the current message, before the filter's
+     * inversion is applied.
+     * @param expr
+     * @param schema
+     * @return `EvaluatedValue::Unknown` if the only columns the wildcard resolves to are
+     * unstructured arrays on which the filter is undefined; otherwise whether the filter holds for
+     * some resolved column.
+     */
+    auto evaluate_wildcard_filter(ast::FilterExpr* expr, int32_t schema) -> EvaluatedValue;
+
+    /**
+     * Evaluates a wildcard filter against one resolved basic (non-string) column of the current
+     * schema.
+     * @param op The filter operation.
+     * @param column_id The column to evaluate.
+     * @param literal The filter operand.
+     * @return `EvaluatedValue::Unknown` if the column is an unstructured array on which the filter
+     * is undefined; otherwise whether the filter holds for the column.
+     */
+    auto evaluate_wildcard_basic_column(
+            ast::FilterOperation op,
+            int32_t column_id,
+            std::shared_ptr<ast::Literal> const& literal
+    ) -> EvaluatedValue;
 
     /**
      * Evaluates a int filter expression
@@ -330,21 +410,52 @@ private:
     ) const -> bool;
 
     /**
-     * Evaluates an array filter expression against an unstructured array. A NEXISTS filter holds
-     * when no element of the array contains the path given by `unresolved_tokens`, and an NEQ
-     * filter holds when no element's located value matches the operand.
+     * Evaluates an array filter expression against an unstructured array. A value filter (including
+     * NEQ) is defined if some element at the path given by `unresolved_tokens` is compatible with
+     * it, and holds when some such element satisfies it; an EXISTS filter is defined if some
+     * element contains the path, and holds accordingly; a NEXISTS filter is always defined and
+     * holds when no element contains the path.
      * @param op The filter operation.
      * @param unresolved_tokens The column's unresolved key tokens to locate inside the array.
      * @param array_text The array's raw JSON text; padded in place if parsing requires it.
      * @param operand The filter operand; unused for EXISTS and NEXISTS.
-     * @return Whether the expression evaluates to true.
+     * @return `EvaluatedValue::Unknown` if the filter is undefined on the array; otherwise whether
+     * it holds.
      */
     auto evaluate_array_filter(
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
             std::string& array_text,
             std::shared_ptr<ast::Literal> const& operand
-    ) -> bool;
+    ) -> EvaluatedValue;
+
+    /**
+     * Evaluates a filter expression on a single scalar value of an unstructured array. Requires
+     * matching state prepared by `prepare_array_search` for the same operand and operation. The
+     * `null` literal is compatible with every element type; it equals a null element and, as a
+     * string, the element "null", and matches nothing else.
+     * @param item The scalar value to evaluate.
+     * @param op The filter operation.
+     * @param operand The filter operand.
+     * @return The scan result for `item`: compatible if `item`'s type is compatible with the
+     * filter, and matched if `item` also satisfies the operation.
+     */
+    [[nodiscard]] auto evaluate_array_filter_scalar(
+            simdjson::ondemand::value& item,
+            ast::FilterOperation op,
+            std::shared_ptr<ast::Literal> const& operand
+    ) const -> ArrayScanResult;
+
+    /**
+     * Evaluates a `null` operand against a non-string element of an unstructured array.
+     * @param op The filter operation; EXISTS is never compatible here.
+     * @param operand The filter operand.
+     * @return An empty scan result if `operand` has no `null` interpretation; otherwise a
+     * compatible result, matched only under NEQ.
+     */
+    [[nodiscard]] static auto
+    null_operand_scan_result(ast::FilterOperation op, std::shared_ptr<ast::Literal> const& operand)
+            -> ArrayScanResult;
 
     /**
      * Evaluates a filter expression on a single value for precise array search.
@@ -353,7 +464,7 @@ private:
      * @param unresolved_tokens
      * @param cur_idx
      * @param operand
-     * @return true if the expression evaluates to true, false otherwise
+     * @return The scan result for `item` and any values nested inside it.
      */
     inline auto evaluate_array_filter_value(
             simdjson::ondemand::value& item,
@@ -361,7 +472,7 @@ private:
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) const -> bool;
+    ) const -> ArrayScanResult;
 
     /**
      * Evaluates a filter expression on an array (top level or nested) for precise array search.
@@ -370,7 +481,7 @@ private:
      * @param unresolved_tokens
      * @param cur_idx
      * @param operand
-     * @return true if the expression evaluates to true, false otherwise
+     * @return The scan result merged over the array's elements.
      */
     auto evaluate_array_filter_array(
             simdjson::ondemand::array& array,
@@ -378,7 +489,7 @@ private:
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) const -> bool;
+    ) const -> ArrayScanResult;
 
     /**
      * Evaluates a filter expression on an object inside of an array for precise array search.
@@ -387,7 +498,8 @@ private:
      * @param unresolved_tokens
      * @param cur_idx
      * @param operand
-     * @return true if the expression evaluates to true, false otherwise
+     * @return The scan result for the object's field(s) named by the next unresolved token, or an
+     * empty result (neither compatible nor matched) if the object has no such field.
      */
     auto evaluate_array_filter_object(
             simdjson::ondemand::object& object,
@@ -395,47 +507,49 @@ private:
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) const -> bool;
+    ) const -> ArrayScanResult;
 
     /**
-     * Evaluates a wildcard array filter expression. An NEQ filter holds when no element of the
-     * array matches the operand.
+     * Evaluates a wildcard array filter expression. A value filter (including NEQ) is defined if
+     * some element of the array is compatible with it, and holds when some such element satisfies
+     * it.
      * @param op The filter operation.
      * @param value The array's raw JSON text; padded in place if parsing requires it.
      * @param operand The filter operand.
-     * @return Whether the expression evaluates to true.
+     * @return `EvaluatedValue::Unknown` if the filter is undefined on the array; otherwise whether
+     * it holds.
      */
     auto evaluate_wildcard_array_filter(
             ast::FilterOperation op,
             std::string& value,
             std::shared_ptr<ast::Literal> const& operand
-    ) -> bool;
+    ) -> EvaluatedValue;
 
     /**
      * The implementation of evaluate_wildcard_array_filter
      * @param array
      * @param op
      * @param operand
-     * @return true if the expression evaluates to true, false otherwise
+     * @return The scan result merged over the array's elements.
      */
     auto evaluate_wildcard_array_filter(
             simdjson::ondemand::array& array,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
-    ) const -> bool;
+    ) const -> ArrayScanResult;
 
     /**
      * The implementation of evaluate_wildcard_array_filter
      * @param object
      * @param op
      * @param operand
-     * @return true if the expression evaluates to true, false otherwise
+     * @return The scan result merged over the object's values.
      */
     auto evaluate_wildcard_array_filter(
             simdjson::ondemand::object& object,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
-    ) const -> bool;
+    ) const -> ArrayScanResult;
 
     /**
      * Evaluates a wildcard filter against a single element of an unstructured array, recursing
@@ -444,13 +558,13 @@ private:
      * @param item The element to evaluate.
      * @param op The filter operation.
      * @param operand The filter operand.
-     * @return Whether the element satisfies the filter.
+     * @return The scan result for `item` and any values nested inside it.
      */
     [[nodiscard]] auto evaluate_wildcard_array_filter_value(
             simdjson::ondemand::value& item,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
-    ) const -> bool;
+    ) const -> ArrayScanResult;
 
     /**
      * Evaluates a bool filter expression
@@ -511,6 +625,28 @@ private:
      * if the expression evaluates to false, EvaluatedValue::Unknown otherwise
      */
     auto constant_propagate(std::shared_ptr<ast::Expression> const& expr) -> EvaluatedValue;
+
+    /**
+     * Propagates what the per-schema string dictionaries prove about a pure-wildcard filter with
+     * string types, setting up the schema's string matching state for it (`m_expr_clp_query` and
+     * `m_expr_var_match_map`). A string type the dictionaries prove cannot match is narrowed away
+     * from the column, but only when the column retains no other type: with an unstructured array
+     * in play, a record's definedness on the filter depends on its string occurrences, so the scan
+     * must still see them even when the dictionary proves they can't match.
+     * @param expr
+     * @param filter `expr`, as a filter whose column is the pure wildcard and matches at least one
+     * string type.
+     * @return The filter's constant value for the current schema, or `EvaluatedValue::Unknown` if
+     * it must be evaluated per record.
+     * @throws ReaderUtils::OperationFailed if the filter has a non-equality operation or an operand
+     * without a string interpretation for the operation. NarrowTypes removes the column's string
+     * types in both situations, so neither can occur for a filter that went through the
+     * transformations.
+     */
+    auto propagate_pure_wildcard_string_filter(
+            std::shared_ptr<ast::Expression> const& expr,
+            std::shared_ptr<ast::FilterExpr> const& filter
+    ) -> EvaluatedValue;
 
     /**
      * Populates searched wildcard columns
