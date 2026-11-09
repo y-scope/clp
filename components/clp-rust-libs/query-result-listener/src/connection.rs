@@ -1,7 +1,9 @@
-//! Serving a connection from a query task: the results it streams after its handshake, then the
+//! Serving a connection from a query task: its handshake, then the results it streams, then the
 //! trailer that the connection's acknowledgement answers.
 
+use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::BufMut;
 use bytes::BytesMut;
@@ -9,6 +11,7 @@ use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
 
 use crate::cursor::Claim;
 use crate::cursor::TaskCursor;
@@ -21,6 +24,7 @@ use crate::protocol::Frame;
 use crate::protocol::Handshake;
 use crate::protocol::ResultFrame;
 use crate::protocol::Trailer;
+use crate::session::SessionRegistry;
 use crate::session::SessionStats;
 use crate::session::State;
 
@@ -30,7 +34,7 @@ use crate::session::State;
 ///
 /// * `EncodingType` - The encoding of the results the session delivers.
 pub struct Connection<EncodingType: ResultEncoding> {
-    session: Arc<State<EncodingType>>,
+    session_state: Arc<State<EncodingType>>,
     cursor: Arc<TaskCursor>,
     encoder: EncodingType::Encoder,
     num_pending_results: u64,
@@ -41,46 +45,22 @@ pub struct Connection<EncodingType: ResultEncoding> {
 impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     /// Factory function.
     ///
-    /// Joins the connection to the task cursor of `session` that `handshake` names, creating the
-    /// cursor if this is the task's first connection.
+    /// Creates a connection that joined the session of `session_state`, claiming the results it
+    /// streams on `cursor`.
     ///
     /// # Returns
     ///
-    /// The joined connection on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ProtocolError::ArchiveIdMismatch`] if the cursor of the handshake's task is bound to
-    ///   another archive.
-    pub fn new(
-        session: Arc<State<EncodingType>>,
-        handshake: &Handshake,
-    ) -> Result<Self, ProtocolError> {
-        let cursor = Arc::clone(
-            session
-                .cursors
-                .entry(handshake.task_index)
-                .or_insert_with(|| Arc::new(TaskCursor::new(handshake.archive_id)))
-                .value(),
-        );
-        let archive_id = cursor.archive_id();
-        if archive_id != handshake.archive_id {
-            return Err(ProtocolError::ArchiveIdMismatch {
-                task_index: handshake.task_index,
-                expected: archive_id,
-                received: handshake.archive_id,
-            });
-        }
-        Ok(Self {
-            encoder: EncodingType::Encoder::new(archive_id),
-            session,
+    /// The newly created connection.
+    #[must_use]
+    pub fn new(session_state: Arc<State<EncodingType>>, cursor: Arc<TaskCursor>) -> Self {
+        Self {
+            encoder: EncodingType::Encoder::new(cursor.archive_id()),
+            session_state,
             cursor,
             num_pending_results: 0,
             num_results: 0,
             stats: SessionStats::default(),
-        })
+        }
     }
 
     /// Claims the results the connection streams, encodes the results claimed from each socket
@@ -208,13 +188,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
             return;
         }
         let num_results = std::mem::take(&mut self.num_pending_results);
-        if self
-            .session
-            .batches_sender
-            .send(self.encoder.take_batch())
-            .await
-            .is_ok()
-        {
+        if self.session_state.send(self.encoder.take_batch()).await {
             self.stats.num_results_emitted += num_results;
         } else {
             self.stats.num_results_discarded += num_results;
@@ -224,7 +198,71 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
 
 impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
     fn drop(&mut self) {
-        self.session.record(&self.stats);
+        self.session_state.record(&self.stats);
+    }
+}
+
+/// Serves a connection from a query task until it ends, and logs why if it ends without an
+/// acknowledgement.
+///
+/// Reads the connection's handshake within `handshake_timeout`, then joins the connection to the
+/// session in `session_registry` that the handshake names.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the results the sessions deliver.
+pub async fn serve<EncodingType: ResultEncoding>(
+    mut input_stream: TcpStream,
+    peer_addr: SocketAddr,
+    session_registry: Arc<SessionRegistry<EncodingType>>,
+    handshake_timeout: Duration,
+) {
+    let mut buffer = BytesMut::new();
+    let handshake = match tokio::time::timeout(
+        handshake_timeout,
+        read_handshake(&mut input_stream, &mut buffer),
+    )
+    .await
+    .unwrap_or(Err(ConnectionError::HandshakeTimeout(handshake_timeout)))
+    {
+        Ok(Some(handshake)) => handshake,
+        Ok(None) => {
+            tracing::debug!(
+                peer_addr = % peer_addr,
+                "Connection closed before sending a handshake."
+            );
+            return;
+        }
+        Err(e) => {
+            tracing::warn!(
+                peer_addr = % peer_addr,
+                error = % e,
+                "Closing a connection without a valid handshake."
+            );
+            return;
+        }
+    };
+
+    let mut connection = match session_registry.join(&handshake) {
+        Ok(connection) => connection,
+        Err(e) => {
+            tracing::warn!(
+                peer_addr = % peer_addr,
+                task_index = handshake.task_index,
+                error = % e,
+                "Rejecting a connection."
+            );
+            return;
+        }
+    };
+
+    if let Err(e) = connection.run(&mut input_stream, buffer).await {
+        tracing::warn!(
+            peer_addr = % peer_addr,
+            task_index = handshake.task_index,
+            error = % e,
+            "Closing a connection without acknowledging its results."
+        );
     }
 }
 
@@ -237,6 +275,40 @@ enum Decoded {
 
     /// The connection sent its trailer, which counts the results it streamed.
     Trailer(Trailer),
+}
+
+/// Reads the handshake a query task sends first on its connection, leaving the bytes read after it
+/// in `buffer`.
+///
+/// # Returns
+///
+/// On success:
+///
+/// * The handshake.
+/// * `None` if the connection closes before sending any byte.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`ConnectionError::TruncatedFrame`] if the connection closes in the middle of the handshake.
+/// * Forwards [`Handshake::decode`]'s return values on failure.
+/// * Forwards [`read_more`]'s return values on failure.
+async fn read_handshake(
+    input_stream: &mut TcpStream,
+    buffer: &mut BytesMut,
+) -> Result<Option<Handshake>, ConnectionError> {
+    loop {
+        if let Some(handshake) = Handshake::decode(buffer)? {
+            return Ok(Some(handshake));
+        }
+        if 0 == read_more(input_stream, buffer).await? {
+            if buffer.is_empty() {
+                return Ok(None);
+            }
+            return Err(ConnectionError::TruncatedFrame);
+        }
+    }
 }
 
 /// Reads at most [`MAX_READ_SIZE`] more bytes from `input_stream` into `buffer`.
@@ -307,23 +379,24 @@ mod tests {
     use crate::protocol::Ack;
     use crate::session::SessionStats;
     use crate::session::State;
+    use crate::test_utils::ARCHIVE_ID;
     use crate::test_utils::QueryResult;
     use crate::test_utils::QueryResultEncoding;
+    use crate::test_utils::TIMEOUT;
     use crate::test_utils::encode_result;
+    use crate::test_utils::encode_results;
     use crate::test_utils::encode_trailer;
-
-    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+    use crate::test_utils::expected_results;
+    use crate::test_utils::message;
+    use crate::test_utils::timestamp;
 
     /// The number of batches a session's channel holds, unless a test needs it to fill up.
     const CHANNEL_CAPACITY: usize = 1024;
 
-    /// The longest a test waits for a connection handler before failing.
-    const TIMEOUT: Duration = Duration::from_secs(10);
-
     /// A session's state, the receiver of the batches its connections send, and the number of bytes
     /// each direction of its connections' in-memory streams buffers.
     struct Harness {
-        state: Arc<State<QueryResultEncoding>>,
+        session_state: Arc<State<QueryResultEncoding>>,
         batches_receiver: Option<mpsc::Receiver<Vec<QueryResult>>>,
         stream_capacity: usize,
     }
@@ -341,7 +414,7 @@ mod tests {
 
             let (batches_sender, batches_receiver) = mpsc::channel(channel_capacity);
             Self {
-                state: Arc::new(State::new(batches_sender)),
+                session_state: Arc::new(State::new(batches_sender)),
                 batches_receiver: Some(batches_receiver),
                 stream_capacity: STREAM_CAPACITY,
             }
@@ -381,52 +454,20 @@ mod tests {
             use bytes::BytesMut;
 
             let (stream, mut handler_stream) = tokio::io::duplex(self.stream_capacity);
-            let mut connection = self
-                .join(task_index, archive_id)
-                .expect("the attempt should join the session");
+            let cursor = self
+                .session_state
+                .cursor(
+                    task_index,
+                    archive_id
+                        .parse::<ArchiveId>()
+                        .expect("archive ID fixtures should be valid UUIDs"),
+                )
+                .expect("the task's first connection should get a cursor");
+            let mut connection = Connection::new(Arc::clone(&self.session_state), cursor);
             let buffered = BytesMut::from(buffered);
             let handler =
                 tokio::spawn(async move { connection.run(&mut handler_stream, buffered).await });
             Attempt { stream, handler }
-        }
-
-        /// Joins a connection of an attempt of task `task_index` of archive `archive_id` to the
-        /// session.
-        ///
-        /// # Returns
-        ///
-        /// The joined connection on success.
-        ///
-        /// # Errors
-        ///
-        /// Returns an error if:
-        ///
-        /// * Forwards [`Connection::new`]'s return values on failure.
-        ///
-        /// # Panics
-        ///
-        /// Panics if `archive_id` isn't a valid UUID.
-        fn join(
-            &self,
-            task_index: TaskIndex,
-            archive_id: &str,
-        ) -> Result<Connection<QueryResultEncoding>, ProtocolError> {
-            use clp_rust_utils::types::SessionToken;
-
-            use crate::protocol::Handshake;
-
-            const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
-
-            let handshake = Handshake {
-                session_token: SESSION_TOKEN
-                    .parse::<SessionToken>()
-                    .expect("session token fixture should be a valid UUID"),
-                task_index,
-                archive_id: archive_id
-                    .parse::<ArchiveId>()
-                    .expect("archive ID fixtures should be valid UUIDs"),
-            };
-            Connection::new(Arc::clone(&self.state), &handshake)
         }
 
         /// # Returns
@@ -581,63 +622,6 @@ mod tests {
         result: Result<(), ConnectionError>,
     }
 
-    /// # Returns
-    ///
-    /// The bytes of the result frames at `result_indices` of task `task_index`.
-    fn encode_results(
-        task_index: TaskIndex,
-        result_indices: impl IntoIterator<Item = u64>,
-    ) -> Vec<u8> {
-        let mut bytes = Vec::new();
-        for result_index in result_indices {
-            bytes.extend(encode_result(
-                result_index,
-                timestamp(result_index),
-                &message(task_index, result_index),
-            ));
-        }
-        bytes
-    }
-
-    /// # Returns
-    ///
-    /// The timestamp of the result at `result_index`.
-    fn timestamp(result_index: u64) -> i64 {
-        1_700_000_000_000 + i64::try_from(result_index).expect("test result indices fit in `i64`")
-    }
-
-    /// # Returns
-    ///
-    /// The message of the result at `result_index` of task `task_index`.
-    fn message(task_index: TaskIndex, result_index: u64) -> String {
-        format!("{{\"task\":{task_index},\"result\":{result_index}}}\n")
-    }
-
-    /// # Returns
-    ///
-    /// The results at `result_indices` of task `task_index` of archive `archive_id`, in index
-    /// order.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `archive_id` isn't a valid UUID.
-    fn expected_results(
-        task_index: TaskIndex,
-        archive_id: &str,
-        result_indices: std::ops::Range<u64>,
-    ) -> Vec<QueryResult> {
-        let archive_id = archive_id
-            .parse::<ArchiveId>()
-            .expect("archive ID fixtures should be valid UUIDs");
-        result_indices
-            .map(|result_index| QueryResult {
-                archive_id,
-                timestamp_millisecs: timestamp(result_index),
-                message: message(task_index, result_index),
-            })
-            .collect()
-    }
-
     #[tokio::test]
     async fn acknowledgement_waits_until_the_last_batch_is_handed_to_the_consumer()
     -> anyhow::Result<()> {
@@ -681,7 +665,7 @@ mod tests {
             [expected_results(0, ARCHIVE_ID, 0..3)]
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: 3,
                 num_duplicates_dropped: 3,
@@ -727,7 +711,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: 6,
                 num_duplicates_dropped: 6,
@@ -774,7 +758,7 @@ mod tests {
             expected_results(1, SECOND_TASK_ARCHIVE_ID, 0..NUM_RESULTS)
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: 2 * NUM_RESULTS,
                 ..SessionStats::default()
@@ -814,7 +798,7 @@ mod tests {
                 "{out_of_order_indices:?}"
             );
             assert_eq!(
-                harness.state.stats(),
+                harness.session_state.stats(),
                 SessionStats {
                     num_results_emitted: 4,
                     num_duplicates_dropped: 1,
@@ -927,38 +911,12 @@ mod tests {
             expected_results(0, ARCHIVE_ID, 0..4)
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: 4,
                 num_duplicates_dropped: 2,
                 ..SessionStats::default()
             }
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn archive_id_mismatch_is_rejected() -> anyhow::Result<()> {
-        const OTHER_ARCHIVE_ID: &str = "4b0c2f8e-6d13-4f4e-9a57-1c2d3e4f5a6b";
-
-        let harness = Harness::new(CHANNEL_CAPACITY);
-        harness.join(0, ARCHIVE_ID)?;
-        let Err(error) = harness.join(0, OTHER_ARCHIVE_ID) else {
-            anyhow::bail!("an attempt of another archive shouldn't join the session");
-        };
-
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-        let other_archive_id = OTHER_ARCHIVE_ID.parse::<ArchiveId>()?;
-        assert!(
-            matches!(
-                error,
-                ProtocolError::ArchiveIdMismatch {
-                    task_index: 0,
-                    expected,
-                    received,
-                } if archive_id == expected && other_archive_id == received
-            ),
-            "unexpected error: {error:?}"
         );
         Ok(())
     }
@@ -1122,7 +1080,7 @@ mod tests {
             .encode()
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: NUM_RESULTS_RECEIVED,
                 num_duplicates_dropped: 0,
