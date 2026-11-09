@@ -138,7 +138,7 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
         entry.insert(Arc::new(State::new(batches_sender)));
         let session = Session {
             _registration: Registration {
-                sessions: Arc::clone(self),
+                session_registry: Arc::clone(self),
                 token,
             },
             network_output: NetworkOutput {
@@ -311,13 +311,13 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
 ///
 /// * `EncodingType` - The encoding of the results the session delivers.
 struct Registration<EncodingType: ResultEncoding> {
-    sessions: Arc<SessionRegistry<EncodingType>>,
+    session_registry: Arc<SessionRegistry<EncodingType>>,
     token: SessionToken,
 }
 
 impl<EncodingType: ResultEncoding> Drop for Registration<EncodingType> {
     fn drop(&mut self) {
-        self.sessions.unregister(&self.token);
+        self.session_registry.unregister(&self.token);
     }
 }
 
@@ -337,7 +337,7 @@ mod tests {
     use crate::test_utils::ARCHIVE_ID;
     use crate::test_utils::QueryResultEncoding;
 
-    /// Opens a session on `registry`, dropping the stream of its results.
+    /// Opens a session on `session_registry`, dropping the stream of its results.
     ///
     /// # Returns
     ///
@@ -347,13 +347,13 @@ mod tests {
     ///
     /// Panics if the host fixture is empty, or the session's fresh token is already registered.
     fn open_session(
-        registry: &Arc<SessionRegistry<QueryResultEncoding>>,
+        session_registry: &Arc<SessionRegistry<QueryResultEncoding>>,
     ) -> Session<QueryResultEncoding> {
         use std::num::NonZeroU16;
 
         use non_empty_string::NonEmptyString;
 
-        let (session, _results) = registry
+        let (session, _results) = session_registry
             .open(
                 NonEmptyString::new("127.0.0.1".to_owned())
                     .expect("the host fixture should be non-empty"),
@@ -368,10 +368,10 @@ mod tests {
     fn join_returns_unknown_session_for_an_unregistered_token() -> anyhow::Result<()> {
         use crate::test_utils::UNKNOWN_SESSION_TOKEN;
 
-        let registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
-        let _session = open_session(&registry);
+        let session_registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
+        let _session = open_session(&session_registry);
         let unknown_session_token = UNKNOWN_SESSION_TOKEN.parse::<SessionToken>()?;
-        let Err(error) = registry.join(&Handshake {
+        let Err(error) = session_registry.join(&Handshake {
             session_token: unknown_session_token,
             task_index: 0,
             archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
@@ -394,8 +394,8 @@ mod tests {
     -> anyhow::Result<()> {
         use crate::test_utils::OTHER_ARCHIVE_ID;
 
-        let registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
-        let session = open_session(&registry);
+        let session_registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
+        let session = open_session(&session_registry);
         let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
         let other_archive_id = OTHER_ARCHIVE_ID.parse::<ArchiveId>()?;
         let handshake = Handshake {
@@ -403,8 +403,8 @@ mod tests {
             task_index: 0,
             archive_id,
         };
-        registry.join(&handshake)?;
-        let Err(error) = registry.join(&Handshake {
+        session_registry.join(&handshake)?;
+        let Err(error) = session_registry.join(&Handshake {
             archive_id: other_archive_id,
             ..handshake
         }) else {
