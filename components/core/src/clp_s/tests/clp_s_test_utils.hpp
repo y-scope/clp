@@ -5,8 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "../src/clp_s/ArchiveWriter.hpp"
-#include "../src/clp_s/InputConfig.hpp"
+#include <clp_s/ArchiveWriter.hpp>
 
 /**
  * Compresses a file into an archive directory according to a given set of configuration options.

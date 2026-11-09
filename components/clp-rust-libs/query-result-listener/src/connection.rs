@@ -34,7 +34,7 @@ use crate::session::State;
 ///
 /// * `EncodingType` - The encoding of the results the session delivers.
 pub struct Connection<EncodingType: ResultEncoding> {
-    session: Arc<State<EncodingType>>,
+    session_state: Arc<State<EncodingType>>,
     cursor: Arc<TaskCursor>,
     encoder: EncodingType::Encoder,
     num_pending_results: u64,
@@ -45,16 +45,17 @@ pub struct Connection<EncodingType: ResultEncoding> {
 impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     /// Factory function.
     ///
-    /// Creates a connection that joined `session`, claiming the results it streams on `cursor`.
+    /// Creates a connection that joined the session of `session_state`, claiming the results it
+    /// streams on `cursor`.
     ///
     /// # Returns
     ///
     /// The newly created connection.
     #[must_use]
-    pub fn new(session: Arc<State<EncodingType>>, cursor: Arc<TaskCursor>) -> Self {
+    pub fn new(session_state: Arc<State<EncodingType>>, cursor: Arc<TaskCursor>) -> Self {
         Self {
             encoder: EncodingType::Encoder::new(cursor.archive_id()),
-            session,
+            session_state,
             cursor,
             num_pending_results: 0,
             num_results: 0,
@@ -187,7 +188,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
             return;
         }
         let num_results = std::mem::take(&mut self.num_pending_results);
-        if self.session.send(self.encoder.take_batch()).await {
+        if self.session_state.send(self.encoder.take_batch()).await {
             self.stats.num_results_emitted += num_results;
         } else {
             self.stats.num_results_discarded += num_results;
@@ -197,7 +198,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
 
 impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
     fn drop(&mut self) {
-        self.session.record(&self.stats);
+        self.session_state.record(&self.stats);
     }
 }
 
@@ -395,7 +396,7 @@ mod tests {
     /// A session's state, the receiver of the batches its connections send, and the number of bytes
     /// each direction of its connections' in-memory streams buffers.
     struct Harness {
-        state: Arc<State<QueryResultEncoding>>,
+        session_state: Arc<State<QueryResultEncoding>>,
         batches_receiver: Option<mpsc::Receiver<Vec<QueryResult>>>,
         stream_capacity: usize,
     }
@@ -413,7 +414,7 @@ mod tests {
 
             let (batches_sender, batches_receiver) = mpsc::channel(channel_capacity);
             Self {
-                state: Arc::new(State::new(batches_sender)),
+                session_state: Arc::new(State::new(batches_sender)),
                 batches_receiver: Some(batches_receiver),
                 stream_capacity: STREAM_CAPACITY,
             }
@@ -454,7 +455,7 @@ mod tests {
 
             let (stream, mut handler_stream) = tokio::io::duplex(self.stream_capacity);
             let cursor = self
-                .state
+                .session_state
                 .cursor(
                     task_index,
                     archive_id
@@ -462,7 +463,7 @@ mod tests {
                         .expect("archive ID fixtures should be valid UUIDs"),
                 )
                 .expect("the task's first connection should get a cursor");
-            let mut connection = Connection::new(Arc::clone(&self.state), cursor);
+            let mut connection = Connection::new(Arc::clone(&self.session_state), cursor);
             let buffered = BytesMut::from(buffered);
             let handler =
                 tokio::spawn(async move { connection.run(&mut handler_stream, buffered).await });
@@ -664,7 +665,7 @@ mod tests {
             [expected_results(0, ARCHIVE_ID, 0..3)]
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: 3,
                 num_duplicates_dropped: 3,
@@ -710,7 +711,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: 6,
                 num_duplicates_dropped: 6,
@@ -758,7 +759,7 @@ mod tests {
             expected_results(1, OTHER_ARCHIVE_ID, 0..NUM_RESULTS)
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: 2 * NUM_RESULTS,
                 ..SessionStats::default()
@@ -798,7 +799,7 @@ mod tests {
                 "{out_of_order_indices:?}"
             );
             assert_eq!(
-                harness.state.stats(),
+                harness.session_state.stats(),
                 SessionStats {
                     num_results_emitted: 4,
                     num_duplicates_dropped: 1,
@@ -911,7 +912,7 @@ mod tests {
             expected_results(0, ARCHIVE_ID, 0..4)
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: 4,
                 num_duplicates_dropped: 2,
@@ -1080,7 +1081,7 @@ mod tests {
             .encode()
         );
         assert_eq!(
-            harness.state.stats(),
+            harness.session_state.stats(),
             SessionStats {
                 num_results_emitted: NUM_RESULTS_RECEIVED,
                 num_duplicates_dropped: 0,
