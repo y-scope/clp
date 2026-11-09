@@ -205,7 +205,7 @@ impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
 /// acknowledgement.
 ///
 /// Reads the connection's handshake within `handshake_timeout`, then joins the connection to the
-/// session in `sessions` that the handshake names.
+/// session in `session_registry` that the handshake names.
 ///
 /// # Type Parameters
 ///
@@ -213,7 +213,7 @@ impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
 pub async fn serve<EncodingType: ResultEncoding>(
     mut input_stream: TcpStream,
     peer_addr: SocketAddr,
-    sessions: Arc<SessionRegistry<EncodingType>>,
+    session_registry: Arc<SessionRegistry<EncodingType>>,
     handshake_timeout: Duration,
 ) {
     let mut buffer = BytesMut::new();
@@ -242,7 +242,7 @@ pub async fn serve<EncodingType: ResultEncoding>(
         }
     };
 
-    let mut connection = match sessions.join(&handshake) {
+    let mut connection = match session_registry.join(&handshake) {
         Ok(connection) => connection,
         Err(e) => {
             tracing::warn!(

@@ -42,7 +42,7 @@ pub struct ListenerConfig {
 ///
 /// * `EncodingType` - The encoding of the results the listener's sessions deliver.
 pub struct ResultListener<EncodingType: ResultEncoding> {
-    sessions: Arc<SessionRegistry<EncodingType>>,
+    session_registry: Arc<SessionRegistry<EncodingType>>,
     advertised_host: NonEmptyString,
     port: NonZeroU16,
     accept_loop: JoinHandle<()>,
@@ -82,14 +82,14 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
         let tcp_listener = tcp_socket.listen(LISTEN_BACKLOG)?;
         let port =
             NonZeroU16::new(tcp_listener.local_addr()?.port()).expect("a bound port is nonzero");
-        let sessions = Arc::new(SessionRegistry::new());
+        let session_registry = Arc::new(SessionRegistry::new());
         let accept_loop = tokio::spawn(accept_connections(
             tcp_listener,
-            Arc::clone(&sessions),
+            Arc::clone(&session_registry),
             Duration::from_secs(config.handshake_timeout_sec.get()),
         ));
         Ok(Self {
-            sessions,
+            session_registry,
             advertised_host: config.advertised_host,
             port,
             accept_loop,
@@ -114,7 +114,7 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
         &self,
         config: SessionConfig,
     ) -> Result<(Session<EncodingType>, ResultStream<EncodingType::Batch>), SessionError> {
-        self.sessions
+        self.session_registry
             .open(self.advertised_host.clone(), self.port, config)
     }
 }
@@ -140,7 +140,7 @@ const LISTEN_BACKLOG: u32 = 1024;
 /// * `EncodingType` - The encoding of the results the sessions deliver.
 async fn accept_connections<EncodingType: ResultEncoding>(
     tcp_listener: TcpListener,
-    sessions: Arc<SessionRegistry<EncodingType>>,
+    session_registry: Arc<SessionRegistry<EncodingType>>,
     handshake_timeout: Duration,
 ) {
     loop {
@@ -149,7 +149,7 @@ async fn accept_connections<EncodingType: ResultEncoding>(
                 tokio::spawn(connection::serve(
                     stream,
                     peer_addr,
-                    Arc::clone(&sessions),
+                    Arc::clone(&session_registry),
                     handshake_timeout,
                 ));
             }
