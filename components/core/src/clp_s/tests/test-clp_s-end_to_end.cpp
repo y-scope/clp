@@ -15,7 +15,6 @@
 
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
-#include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonConstructor.hpp"
 #include "../src/clp_s/SchemaTree.hpp"
@@ -38,6 +37,8 @@ constexpr std::string_view cTestEndToEndInvalidFormattedFloatInputFile{
         "test_invalid_formatted_float.jsonl"
 };
 constexpr std::string_view cTestEndToEndTimestampInputFile{"test_timestamp.jsonl"};
+constexpr std::string_view cTestEndToEndEmptyContainersInputFile{"test_empty_containers.jsonl"};
+constexpr std::string_view cTestEndToEndTextInArraysInputFile{"test_text_in_arrays.jsonl"};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
@@ -45,6 +46,10 @@ auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input
 auto get_test_input_local_path(std::string_view const test_input_path) -> std::string;
 auto extract() -> std::filesystem::path;
 void compare(std::filesystem::path const& extracted_json_path);
+void compare_with_input(
+        std::string const& input_file_path,
+        std::filesystem::path const& extracted_json_path
+);
 void literallyCompare(
         std::filesystem::path const& expected_output_json_path,
         std::filesystem::path const& extracted_json_path
@@ -215,6 +220,49 @@ void literallyCompare(
     REQUIRE((0 == WEXITSTATUS(result)));
 }
 
+void compare_with_input(
+        std::string const& input_file_path,
+        std::filesystem::path const& extracted_json_path
+) {
+    int result{std::system("command -v jq >/dev/null 2>&1")};
+    REQUIRE((0 == result));
+    result = std::system("command -v diff >/dev/null 2>&1");
+    REQUIRE((0 == result));
+
+    // Canonicalize both sides identically: sorted keys, one compact object per line, lines sorted.
+    // `--slurp` makes `jq` parse the whole file before emitting anything, so a malformed record
+    // fails the command instead of silently truncating its output.
+    constexpr std::string_view cCanonicalizeCommandFormat{
+            "jq --sort-keys --compact-output --slurp 'sort | .[]' '{}' > '{}'"
+    };
+    auto command = fmt::format(
+            cCanonicalizeCommandFormat,
+            input_file_path,
+            cTestEndToEndExpectedOutputSortedFile
+    );
+    result = std::system(command.c_str());
+    REQUIRE((0 == result));
+    REQUIRE_FALSE(std::filesystem::is_empty(cTestEndToEndExpectedOutputSortedFile));
+
+    command = fmt::format(
+            cCanonicalizeCommandFormat,
+            extracted_json_path.string(),
+            cTestEndToEndOutputSortedJson
+    );
+    result = std::system(command.c_str());
+    REQUIRE((0 == result));
+    REQUIRE_FALSE(std::filesystem::is_empty(cTestEndToEndOutputSortedJson));
+
+    command = fmt::format(
+            "diff --unified '{}' '{}' > /dev/null",
+            cTestEndToEndExpectedOutputSortedFile,
+            cTestEndToEndOutputSortedJson
+    );
+    result = std::system(command.c_str());
+    REQUIRE((true == WIFEXITED(result)));
+    REQUIRE((0 == WEXITSTATUS(result)));
+}
+
 // NOLINTEND(cert-env33-c,concurrency-mt-unsafe)
 }  // namespace
 
@@ -327,6 +375,77 @@ TEST_CASE("clp-s-compress-extract-invalid-formatted-floats", "[clp-s][end-to-end
     auto extracted_json_path = extract();
     literallyCompare(
             get_test_input_local_path(cTestEndToEndInvalidFormattedFloatInputFile),
+            extracted_json_path
+    );
+}
+
+/**
+ * Tests that empty arrays and objects round-trip correctly under both array-structurization modes.
+ */
+TEST_CASE("clp-s-compress-extract-empty-containers", "[clp-s][end-to-end]") {
+    auto structurize_arrays = GENERATE(true, false);
+    auto single_file_archive = GENERATE(true, false);
+    CAPTURE(structurize_arrays);
+    CAPTURE(single_file_archive);
+
+    TestOutputCleaner const test_cleanup{
+            {std::string{cTestEndToEndArchiveDirectory},
+             std::string{cTestEndToEndOutputDirectory},
+             std::string{cTestEndToEndOutputSortedJson},
+             std::string{cTestEndToEndExpectedOutputSortedFile}}
+    };
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestEndToEndEmptyContainersInputFile),
+                    std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
+                    false,
+                    single_file_archive,
+                    structurize_arrays
+            )
+    );
+    validate_archive_header();
+
+    auto const extracted_json_path{extract()};
+    compare_with_input(
+            get_test_input_local_path(cTestEndToEndEmptyContainersInputFile),
+            extracted_json_path
+    );
+}
+
+/**
+ * Tests that strings nested inside arrays (directly, in nested arrays, and in objects nested in
+ * arrays) round-trip correctly under both array-structurization modes.
+ */
+TEST_CASE("clp-s-compress-extract-text-in-arrays", "[clp-s][end-to-end]") {
+    auto structurize_arrays = GENERATE(true, false);
+    auto single_file_archive = GENERATE(true, false);
+    CAPTURE(structurize_arrays);
+    CAPTURE(single_file_archive);
+
+    TestOutputCleaner const test_cleanup{
+            {std::string{cTestEndToEndArchiveDirectory},
+             std::string{cTestEndToEndOutputDirectory},
+             std::string{cTestEndToEndOutputSortedJson},
+             std::string{cTestEndToEndExpectedOutputSortedFile}}
+    };
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestEndToEndTextInArraysInputFile),
+                    std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
+                    false,
+                    single_file_archive,
+                    structurize_arrays
+            )
+    );
+    validate_archive_header();
+
+    auto const extracted_json_path{extract()};
+    compare_with_input(
+            get_test_input_local_path(cTestEndToEndTextInArraysInputFile),
             extracted_json_path
     );
 }

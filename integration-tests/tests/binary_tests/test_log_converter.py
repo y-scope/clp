@@ -3,13 +3,13 @@ Integration tests verifying that the log-converter to clp-s pipeline is able to 
 logs as expected.
 """
 
-import json
+from pathlib import Path
 
 import pytest
 
+from tests.binary_tests import clp_s_utils
 from tests.utils.archive import create_tar_gz_from_dir
 from tests.utils.classes import (
-    ClpAction,
     IntegrationTestPathConfig,
     NonClpAction,
     SampleDataset,
@@ -75,52 +75,44 @@ def _convert_and_compress(
     clp_core_path_config: ClpCorePathConfig,
     test_paths: ConversionTestPathConfig,
 ) -> None:
-    log_converter_bin_path = str(clp_core_path_config.log_converter_binary_path)
-    clp_s_bin_path = str(clp_core_path_config.clp_s_binary_path)
-    src_path = str(test_paths.logs_source_path)
-    conversion_path = str(test_paths.conversion_dir)
-    compression_path = str(test_paths.compression_dir)
     conversion_action = NonClpAction(
-        cmd=[log_converter_bin_path, src_path, "--output-dir", conversion_path]
+        cmd=[
+            str(clp_core_path_config.log_converter_binary_path),
+            str(test_paths.logs_source_path),
+            "--output-dir",
+            str(test_paths.conversion_dir),
+        ]
     )
     conversion_action.check_returncode()
 
-    compression_action = ClpAction.from_cmd(
-        [
-            clp_s_bin_path,
-            "c",
-            compression_path,
-            conversion_path,
-            "--timestamp-key",
-            LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY,
-        ]
+    clp_s_utils.compress(
+        clp_core_path_config,
+        test_paths.compression_dir,
+        test_paths.conversion_dir,
+        timestamp_key=LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY,
     )
-    compression_result = compression_action.verify_returncode()
-    assert compression_result, compression_result.failure_message
 
-    _verify_search_results(clp_s_bin_path, compression_path, test_paths.num_log_events)
+    _verify_search_results(
+        clp_core_path_config, test_paths.compression_dir, test_paths.num_log_events
+    )
 
 
 def _verify_search_results(
-    clp_s_bin_path: str,
-    compression_path: str,
+    clp_core_path_config: ClpCorePathConfig,
+    archives_dir: Path,
     num_log_events: int | None,
 ) -> None:
     if num_log_events is None:
         return
 
-    search_action = ClpAction.from_cmd([clp_s_bin_path, "s", compression_path, "timestamp > 0"])
-    search_result = search_action.verify_returncode()
-    assert search_result, search_result.failure_message
-    lines = search_action.completed_proc.stdout.splitlines()
-    if len(lines) != num_log_events:
+    events = clp_s_utils.search(clp_core_path_config, archives_dir, "timestamp > 0")
+    if len(events) != num_log_events:
         pytest.fail(
-            f"Expected {num_log_events} log events after conversion, but found {len(lines)}."
+            f"Expected {num_log_events} log events after conversion, but found {len(events)}."
         )
 
     # Verify every event's message field.
-    for idx, line in enumerate(lines):
-        event = json.loads(line)
+    for idx, event in enumerate(events):
         message = event.get("message", "")
         if f"TEST{idx + 1}" not in message:
             pytest.fail(f"Expected 'TEST{idx + 1}' in message of event {idx + 1}, but got: {event}")
