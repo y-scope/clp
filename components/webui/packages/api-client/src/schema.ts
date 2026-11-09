@@ -1043,7 +1043,7 @@ export interface operations {
                     "text/plain": string;
                 };
             };
-            /** @description The JSON body contains missing or unknown fields, invalid types, or invalid values. max_num_results must be a positive integer when non-null, and count_by_time_bucket_size_millisecs must be a positive signed 64-bit integer when non-null. */
+            /** @description The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., a non-positive `max_num_results`). */
             422: {
                 headers: {
                     [name: string]: unknown;

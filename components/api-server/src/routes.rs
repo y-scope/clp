@@ -166,8 +166,8 @@ async fn health() -> String {
         (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
             description = "The Content-Type header is missing or is not a JSON media type."),
         (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
-            description = "The JSON body has missing or unknown fields, or fields with invalid types or \
-                values (e.g., a non-positive `max_num_results`)."
+            description = "The JSON body has missing or unknown fields, or fields with invalid \
+                types or values (e.g., a non-positive `max_num_results`)."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -456,8 +456,8 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn query_rejects_invalid_numeric_fields_with_unprocessable_entity()
-    -> anyhow::Result<()> {
+    async fn query_rejects_invalid_numeric_fields_with_unprocessable_entity() -> anyhow::Result<()>
+    {
         let app = clp_s_app_with_lazy_clients().await;
         for field in ["count_by_time_bucket_size_millisecs", "max_num_results"] {
             let mut body = serde_json::json!({"query_string": "*"});
