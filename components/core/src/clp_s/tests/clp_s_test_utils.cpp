@@ -3,14 +3,14 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "../src/clp_s/ArchiveWriter.hpp"
-#include "../src/clp_s/InputConfig.hpp"
-#include "../src/clp_s/JsonParser.hpp"
-#include "../src/clp_s/TimestampPattern.hpp"
+#include <clp_s/ArchiveWriter.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/JsonParser.hpp>
 
 auto compress_archive(
         std::string const& file_path,
