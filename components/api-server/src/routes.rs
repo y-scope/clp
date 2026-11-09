@@ -726,7 +726,7 @@ mod tests {
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
-        assert_eq!(body, "[2,3,4]"); // SUCCEEDED, FAILED, KILLED
+        assert_eq!(body, "[2,3]"); // SUCCEEDED, FAILED
         Ok(())
     }
 
@@ -795,14 +795,33 @@ mod tests {
                 Request::builder()
                     .uri(
                         "/usage/compression?time_range_begin_millisecs=0&\
-                         time_range_end_millisecs=100&job_status=KILLED",
+                         time_range_end_millisecs=100&job_status=FAILED",
                     )
                     .body(Body::empty())?,
             )
             .await?;
         assert_eq!(response.status(), StatusCode::OK);
         let body = get_body(response).await;
-        assert_eq!(body, "[4]");
+        assert_eq!(body, "[3]");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reject_killed_job_status() -> anyhow::Result<()> {
+        let app = compression_usage_test_app();
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri(
+                        "/usage/compression?time_range_begin_millisecs=0&\
+                         time_range_end_millisecs=100&job_status=KILLED",
+                    )
+                    .body(Body::empty())?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = get_body(response).await;
+        assert!(body.contains("Unknown job_status: KILLED"));
         Ok(())
     }
 
