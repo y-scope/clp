@@ -164,13 +164,13 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
     ///   token.
     /// * Forwards [`State::cursor`]'s return values on failure.
     pub fn join(&self, handshake: &Handshake) -> Result<Connection<EncodingType>, ConnectionError> {
-        let session = self
+        let session_state = self
             .sessions
             .get(&handshake.session_token)
             .map(|entry| Arc::clone(entry.value()))
             .ok_or(ConnectionError::UnknownSession(handshake.session_token))?;
-        let cursor = session.cursor(handshake.task_index, handshake.archive_id)?;
-        Ok(Connection::new(session, cursor))
+        let cursor = session_state.cursor(handshake.task_index, handshake.archive_id)?;
+        Ok(Connection::new(session_state, cursor))
     }
 
     /// Removes the session registered under `token`. Called only by [`Registration`]'s [`Drop`]
