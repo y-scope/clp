@@ -1,17 +1,19 @@
 #include "ConstantProp.hpp"
 
+#include <memory>
 #include <vector>
 
-#include "AndExpr.hpp"
-#include "EmptyExpr.hpp"
-#include "OrExpr.hpp"
+#include <clp_s/search/ast/AndExpr.hpp>
+#include <clp_s/search/ast/EmptyExpr.hpp>
+#include <clp_s/search/ast/Expression.hpp>
+#include <clp_s/search/ast/OrExpr.hpp>
 
 namespace clp_s::search::ast {
-std::shared_ptr<Expression> ConstantProp::run(std::shared_ptr<Expression>& expr) {
+auto ConstantProp::run(std::shared_ptr<Expression>& expr) -> std::shared_ptr<Expression> {
     return propagate_empty(expr);
 }
 
-std::shared_ptr<Expression> ConstantProp::propagate_empty(std::shared_ptr<Expression> cur) {
+auto ConstantProp::propagate_empty(std::shared_ptr<Expression> cur) -> std::shared_ptr<Expression> {
     if (std::dynamic_pointer_cast<OrExpr>(cur)) {
         std::vector<OpList::iterator> deleted;
         for (auto it = cur->op_begin(); it != cur->op_end(); it++) {
