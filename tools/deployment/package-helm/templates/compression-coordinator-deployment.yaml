@@ -1,4 +1,3 @@
-{{- if .Values.spider.enabled }}
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -85,4 +84,3 @@ spec:
         {{- if eq .Values.clpConfig.logs_input.type "fs" }}
         - {{- include "clp.logsInputVolume" . | nindent 10 }}
         {{- end }}
-{{- end }}

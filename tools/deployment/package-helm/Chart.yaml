@@ -19,4 +19,3 @@ dependencies:
   - name: "spider"
     version: "0.2.0-dev.6"
     repository: "https://github.com/y-scope/spider/raw/gh-pages"
-    condition: "spider.enabled"

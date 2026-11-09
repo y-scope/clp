@@ -1,6 +1,3 @@
-{{- if not .Values.spider.enabled }}
-{{- fail "Spider is required for compression; spider.enabled must be true." }}
-{{- end }}
 {{- $logIngestorEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
     (eq .Values.clpConfig.logs_input.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
 {{- if not (has .Values.global.archiveOutputStorageType (list "fs" "s3")) }}
@@ -76,7 +73,6 @@ data:
         | int }}
       target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
         | int }}
-    {{- if .Values.spider.enabled }}
     compression_coordinator:
       commit_task_hard_timeout_secs: {{
         .Values.clpConfig.compression_coordinator.commit_task_hard_timeout_secs | int }}
@@ -102,7 +98,6 @@ data:
     spider:
       host: "{{ include "clp.spiderStorageHost" . }}"
       port: {{ include "clp.spiderStoragePort" . | int }}
-    {{- end }}
     data_directory: "/var/data"
     garbage_collector:
       logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}

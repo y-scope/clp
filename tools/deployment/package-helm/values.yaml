@@ -317,7 +317,6 @@ serviceAccount:
 
 # Overrides for the Spider subchart's `values.yaml`
 spider:
-  enabled: true
   image:
     # Temporary pin: upcoming Spider `main` changes may break, and its next release is a while away.
     scheduler:
