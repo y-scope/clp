@@ -1,6 +1,7 @@
 """Helpers for driving the `clp-s` binary in integration tests."""
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -10,12 +11,21 @@ from tests.utils.classes import ClpAction
 from tests.utils.config import ClpCorePathConfig
 
 
+@dataclass(frozen=True, kw_only=True)
+class CompressOptions:
+    """Optional arguments for `clp-s c`."""
+
+    timestamp_key: str | None = None
+    single_file_archive: bool = False
+    target_encoded_size: int | None = None
+
+
 def compress(
     clp_core_path_config: ClpCorePathConfig,
     archives_dir: Path,
     input_path: Path,
     *,
-    timestamp_key: str | None = None,
+    options: CompressOptions | None = None,
 ) -> None:
     """
     Runs `clp-s c`, failing the test on a non-zero exit.
@@ -23,11 +33,16 @@ def compress(
     :param clp_core_path_config:
     :param archives_dir:
     :param input_path:
-    :param timestamp_key: Passed via `--timestamp-key` when set.
+    :param options: Optional arguments for `clp-s c`.
     """
+    options = CompressOptions() if options is None else options
     cmd = [str(clp_core_path_config.clp_s_binary_path), "c"]
-    if timestamp_key is not None:
-        cmd.extend(["--timestamp-key", timestamp_key])
+    if options.timestamp_key is not None:
+        cmd.extend(["--timestamp-key", options.timestamp_key])
+    if options.single_file_archive:
+        cmd.append("--single-file-archive")
+    if options.target_encoded_size is not None:
+        cmd.extend(["--target-encoded-size", str(options.target_encoded_size)])
     cmd.extend([str(archives_dir), str(input_path)])
     _run_and_verify(cmd)
 

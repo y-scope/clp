@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <memory>
 #include <system_error>
 #include <utility>
@@ -15,35 +16,50 @@
 #include <clp/type_utils.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/ColumnReader.hpp>
 #include <clp_s/DictionaryEntry.hpp>
+#include <clp_s/DictionaryReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/InputConfig.hpp>
 #include <clp_s/ReaderUtils.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
-void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& network_auth) {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-    m_is_open = true;
+namespace {
+/**
+ * Loads a dictionary's entries, translating reader exceptions into
+ * `ArchiveReader::OperationFailed`.
+ * @param dictionary The dictionary to load.
+ * @param lazy Whether to defer entry decoding.
+ * @throws ArchiveReader::OperationFailed if the dictionary can't be read.
+ */
+template <typename DictionaryReaderType>
+auto load_dictionary(std::shared_ptr<DictionaryReaderType> const& dictionary, bool lazy) -> void;
 
+template <typename DictionaryReaderType>
+auto load_dictionary(std::shared_ptr<DictionaryReaderType> const& dictionary, bool lazy) -> void {
+    try {
+        dictionary->read_entries(lazy);
+    } catch (TraceableException const& e) {
+        throw ArchiveReader::OperationFailed(e.get_error_code(), __FILENAME__, __LINE__);
+    }
+}
+}  // namespace
+
+ArchiveReader::ArchiveReader(Path const& archive_path, Options const& options) {
     if (false == get_archive_id_from_path(archive_path, m_archive_id)) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
-    m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(archive_path, network_auth);
+    m_archive_reader_adaptor
+            = std::make_shared<ArchiveReaderAdaptor>(archive_path, options.network_auth);
     initialize_archive_reader();
 }
 
-auto ArchiveReader::open(
+ArchiveReader::ArchiveReader(
         std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
         std::string_view archive_id
-) -> void {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-    m_is_open = true;
-
+) {
     if (nullptr == single_file_archive_reader || archive_id.empty()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
@@ -52,6 +68,14 @@ auto ArchiveReader::open(
     m_archive_reader_adaptor
             = std::make_shared<ArchiveReaderAdaptor>(std::move(single_file_archive_reader));
     initialize_archive_reader();
+}
+
+ArchiveReader::~ArchiveReader() {
+    try {
+        m_stream_reader.close();
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to close packed streams for archive {} - {}", m_archive_id, e.what());
+    }
 }
 
 auto ArchiveReader::initialize_archive_reader() -> void {
@@ -64,9 +88,39 @@ auto ArchiveReader::initialize_archive_reader() -> void {
 
     m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
-    m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
-    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
-    m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
+    m_var_dict = std::make_shared<VariableDictionaryReader>(
+            *m_archive_reader_adaptor,
+            std::string{static_cast<char const*>(constants::cArchiveVarDictFile)}
+    );
+    m_log_dict = std::make_shared<LogTypeDictionaryReader>(
+            *m_archive_reader_adaptor,
+            std::string{static_cast<char const*>(constants::cArchiveLogDictFile)}
+    );
+    m_array_dict = std::make_shared<LogTypeDictionaryReader>(
+            *m_archive_reader_adaptor,
+            std::string{static_cast<char const*>(constants::cArchiveArrayDictFile)}
+    );
+}
+
+auto ArchiveReader::get_variable_dictionary() -> std::shared_ptr<VariableDictionaryReader> {
+    load_dictionary(m_var_dict, true);
+    return m_var_dict;
+}
+
+auto ArchiveReader::get_log_type_dictionary() -> std::shared_ptr<LogTypeDictionaryReader> {
+    load_dictionary(m_log_dict, true);
+    return m_log_dict;
+}
+
+auto ArchiveReader::get_array_dictionary() -> std::shared_ptr<LogTypeDictionaryReader> {
+    load_dictionary(m_array_dict, true);
+    return m_array_dict;
+}
+
+auto ArchiveReader::get_read_dictionaries() const -> ReadDictionaries {
+    return {.var_dict = m_var_dict->has_read_entries(),
+            .log_type_dict = m_log_dict->has_read_entries(),
+            .array_dict = m_array_dict->has_read_entries()};
 }
 
 auto ArchiveReader::read_single_schema_metadata()
@@ -117,6 +171,10 @@ auto ArchiveReader::read_single_schema_metadata()
 }
 
 auto ArchiveReader::read_metadata() -> ystdlib::error_handling::Result<void> {
+    if (m_has_read_metadata) {
+        return ystdlib::error_handling::success();
+    }
+
     constexpr size_t cDecompressorFileReadBufferCapacity{64 * 1024};  // 64 KiB
     auto table_metadata_reader = m_archive_reader_adaptor->checkout_reader_for_section(
             constants::cArchiveTableMetadataFile
@@ -182,20 +240,21 @@ auto ArchiveReader::read_metadata() -> ystdlib::error_handling::Result<void> {
     m_table_metadata_decompressor.close();
 
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveTableMetadataFile);
+    m_has_read_metadata = true;
 
     return ystdlib::error_handling::success();
 }
 
-void ArchiveReader::read_dictionaries_and_metadata() {
+auto ArchiveReader::read_dictionaries_and_metadata() -> void {
     if (auto const result{read_metadata()}; result.has_error()) {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
-    m_var_dict->read_entries();
-    m_log_dict->read_entries();
-    m_array_dict->read_entries();
+    load_dictionary(m_var_dict, false);
+    load_dictionary(m_log_dict, false);
+    load_dictionary(m_array_dict, false);
 }
 
-void ArchiveReader::open_packed_streams() {
+auto ArchiveReader::open_packed_streams() -> void {
     m_stream_reader.open_packed_streams(m_archive_reader_adaptor);
 }
 
@@ -243,57 +302,79 @@ std::vector<std::shared_ptr<SchemaReader>> ArchiveReader::read_all_tables() {
     return readers;
 }
 
-BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int32_t column_id) {
-    BaseColumnReader* column_reader = nullptr;
+auto ArchiveReader::make_column_reader(int32_t column_id, bool is_unordered_object)
+        -> std::unique_ptr<BaseColumnReader> {
     auto const& node = m_schema_tree->get_node(column_id);
     switch (node.get_type()) {
         case NodeType::Integer:
-            column_reader = new Int64ColumnReader(column_id);
-            break;
+            return std::make_unique<Int64ColumnReader>(column_id);
         case NodeType::DeltaInteger:
-            column_reader = new DeltaEncodedInt64ColumnReader(column_id);
-            break;
+            return std::make_unique<DeltaEncodedInt64ColumnReader>(column_id);
         case NodeType::Float:
-            column_reader = new FloatColumnReader(column_id);
-            break;
+            return std::make_unique<FloatColumnReader>(column_id);
         case NodeType::FormattedFloat:
-            column_reader = new FormattedFloatColumnReader(column_id);
-            break;
+            return std::make_unique<FormattedFloatColumnReader>(column_id);
         case NodeType::DictionaryFloat:
-            column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
-            break;
+            return std::make_unique<DictionaryFloatColumnReader>(
+                    column_id,
+                    get_variable_dictionary()
+            );
         case NodeType::ClpString:
-            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
-            break;
+            return std::make_unique<ClpStringColumnReader>(
+                    column_id,
+                    get_variable_dictionary(),
+                    get_log_type_dictionary()
+            );
         case NodeType::VarString:
-            column_reader = new VariableStringColumnReader(column_id, m_var_dict);
-            break;
+            return std::make_unique<VariableStringColumnReader>(
+                    column_id,
+                    get_variable_dictionary()
+            );
         case NodeType::Boolean:
-            column_reader = new BooleanColumnReader(column_id);
-            break;
+            return std::make_unique<BooleanColumnReader>(column_id);
         case NodeType::UnstructuredArray:
-            column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
-            break;
+            if (is_unordered_object) {
+                return nullptr;
+            }
+            return std::make_unique<ClpStringColumnReader>(
+                    column_id,
+                    get_variable_dictionary(),
+                    get_array_dictionary(),
+                    true
+            );
         case NodeType::DeprecatedDateString:
-            column_reader
-                    = new DeprecatedDateStringColumnReader(column_id, get_timestamp_dictionary());
-            break;
+            if (is_unordered_object) {
+                return nullptr;
+            }
+            return std::make_unique<DeprecatedDateStringColumnReader>(
+                    column_id,
+                    get_timestamp_dictionary()
+            );
         case NodeType::Timestamp:
-            column_reader = new TimestampColumnReader(column_id, get_timestamp_dictionary());
-            break;
-        // No need to push columns without associated object readers into the SchemaReader.
+            if (is_unordered_object) {
+                return nullptr;
+            }
+            return std::make_unique<TimestampColumnReader>(column_id, get_timestamp_dictionary());
+        // No need to create readers for columns without associated object readers.
         case NodeType::Metadata:
         case NodeType::NullValue:
         case NodeType::Object:
         case NodeType::StructuredArray:
         case NodeType::Unknown:
-            break;
+            return nullptr;
     }
+    return nullptr;
+}
 
-    if (column_reader) {
-        reader.append_column(column_reader);
+auto ArchiveReader::append_reader_column(SchemaReader& reader, int32_t column_id)
+        -> BaseColumnReader* {
+    auto column_reader{make_column_reader(column_id, false)};
+    if (nullptr == column_reader) {
+        return nullptr;
     }
-    return column_reader;
+    auto* const column_reader_ptr{column_reader.get()};
+    reader.append_column(column_reader.release());
+    return column_reader_ptr;
 }
 
 void ArchiveReader::append_unordered_reader_columns(
@@ -307,49 +388,11 @@ void ArchiveReader::append_unordered_reader_columns(
         if (Schema::schema_entry_is_unordered_object(column_id)) {
             continue;
         }
-        BaseColumnReader* column_reader = nullptr;
-        auto const& node = m_schema_tree->get_node(column_id);
-        switch (node.get_type()) {
-            case NodeType::Integer:
-                column_reader = new Int64ColumnReader(column_id);
-                break;
-            case NodeType::DeltaInteger:
-                column_reader = new DeltaEncodedInt64ColumnReader(column_id);
-                break;
-            case NodeType::Float:
-                column_reader = new FloatColumnReader(column_id);
-                break;
-            case NodeType::FormattedFloat:
-                column_reader = new FormattedFloatColumnReader(column_id);
-                break;
-            case NodeType::DictionaryFloat:
-                column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
-                break;
-            case NodeType::ClpString:
-                column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
-                break;
-            case NodeType::VarString:
-                column_reader = new VariableStringColumnReader(column_id, m_var_dict);
-                break;
-            case NodeType::Boolean:
-                column_reader = new BooleanColumnReader(column_id);
-                break;
-            // UnstructuredArray, DeprecatedDateString, and Timestamp currently aren't supported as
-            // part of any unordered object, so we disregard them here
-            case NodeType::UnstructuredArray:
-            case NodeType::DeprecatedDateString:
-            case NodeType::Timestamp:
-            // No need to push columns without associated object readers into the SchemaReader.
-            case NodeType::StructuredArray:
-            case NodeType::Object:
-            case NodeType::Metadata:
-            case NodeType::NullValue:
-            case NodeType::Unknown:
-                break;
-        }
-
+        // UnstructuredArray, DeprecatedDateString, and Timestamp currently aren't supported as part
+        // of any unordered object, so `make_column_reader` returns nullptr for them.
+        auto column_reader{make_column_reader(column_id, true)};
         if (column_reader) {
-            reader.append_unordered_column(column_reader);
+            reader.append_unordered_column(column_reader.release());
         }
     }
 
@@ -428,27 +471,6 @@ void ArchiveReader::store(FileWriter& writer) {
             writer.write(message.c_str(), message.length());
         }
     }
-}
-
-void ArchiveReader::close() {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
-    }
-    m_is_open = false;
-
-    m_var_dict->close();
-    m_log_dict->close();
-    m_array_dict->close();
-
-    m_stream_reader.close();
-    m_archive_reader_adaptor.reset();
-
-    m_id_to_schema_metadata.clear();
-    m_schema_ids.clear();
-    m_cur_stream_id = 0;
-    m_stream_buffer.reset();
-    m_stream_buffer_size = 0ULL;
-    m_log_event_idx_column_id = -1;
 }
 
 std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_buffer) {

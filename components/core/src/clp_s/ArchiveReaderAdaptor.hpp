@@ -2,10 +2,12 @@
 #define CLP_S_ARCHIVEREADERADAPTOR_HPP
 
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -76,22 +78,37 @@ public:
     ErrorCode load_archive_metadata();
 
     /**
-     * Checks out a reader for a given section of the archive. Reader must be checked back in with
-     * the `checkin_reader_for_section` method.
+     * Checks out a reader for a given section of the archive. The reader must be checked back in
+     * with `checkin_reader_for_section`.
+     *
+     * In a multi-file archive every section is its own file, so any number of sections can be
+     * checked out at once, in any order. In a single-file archive the sections share one forward-
+     * only stream, so only one stream section can be checked out at a time; any unread section the
+     * stream skips over is retained in memory (compressed) so that it can be checked out later.
+     * Buffered bytes remain resident until they are released with `release_buffered_section` or
+     * this adaptor is destroyed. Readers over buffered bytes must not outlive this adaptor.
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
-     * @throw OperationFailed if a reader is already checked out, or checking out this section would
-     *        force a backwards seek.
+     * @throws OperationFailed if another single-file archive stream section is checked out, if the
+     * section doesn't exist, or on any I/O error.
      */
-    std::unique_ptr<clp::ReaderInterface> checkout_reader_for_section(std::string_view section);
+    auto checkout_reader_for_section(std::string_view section)
+            -> std::unique_ptr<clp::ReaderInterface>;
 
     /**
-     * Checks in a reader for a given section of the archive.
+     * Checks in a reader for a given section of the archive. This is a no-op for multi-file archive
+     * sections and buffered single-file archive sections.
      * @param section
-     * @throw OperationFailed if no reader is checked out, or if the section being checked in does
-     *        not match the section currently checked out.
+     * @throws OperationFailed if the section is a single-file archive stream section and either no
+     * reader is checked out or the section doesn't match the section currently checked out.
      */
-    void checkin_reader_for_section(std::string_view section);
+    auto checkin_reader_for_section(std::string_view section) -> void;
+
+    /**
+     * Releases the buffered bytes of a single-file archive section, if any.
+     * @param section The section whose buffered bytes should be released.
+     */
+    auto release_buffered_section(std::string_view section) -> void;
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
         return m_timestamp_dictionary;
@@ -160,13 +177,31 @@ private:
     std::shared_ptr<clp::ReaderInterface> try_create_reader_at_header();
 
     /**
-     * Checks out a reader for a given section of the single file archive.
+     * Checks out a reader for a given section of the single-file archive's stream, buffering the
+     * unread sections the stream skips over to reach it.
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
-     * @throw OperationFailed if the requested section does not exist in ArchiveFileInfo, if
-     *        checking out the section would force a backward seek, or on any I/O error.
+     * @throws OperationFailed if another stream section is checked out, if the requested section
+     * doesn't exist, if checking out the section would force a backward seek, or on any I/O error.
      */
-    std::unique_ptr<clp::ReaderInterface> checkout_reader_for_sfa_section(std::string_view section);
+    auto checkout_reader_for_sfa_section(std::string_view section)
+            -> std::unique_ptr<clp::ReaderInterface>;
+
+    /**
+     * Gets the absolute byte range of a single-file archive section.
+     * @param section_it An iterator into `m_archive_file_info.files`.
+     * @return The section's inclusive begin offset and exclusive end offset.
+     * @throws OperationFailed if the archive's size or section offsets are invalid.
+     */
+    auto get_sfa_section_bounds(std::vector<ArchiveFileInfo>::const_iterator section_it) const
+            -> std::pair<size_t, size_t>;
+
+    /**
+     * Seeks the single-file archive stream to an absolute offset, avoiding redundant seeks.
+     * @param offset
+     * @throws OperationFailed on any I/O error.
+     */
+    auto seek_to(size_t offset) -> void;
 
     /**
      * Tries to read the header for the archive from the given reader.
@@ -192,6 +227,7 @@ private:
     ArchiveInfoPacket m_archive_info{};
     size_t m_files_section_offset{};
     std::optional<std::string> m_current_reader_holder;
+    std::unordered_map<std::string, std::vector<char>> m_buffered_sections;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
     std::shared_ptr<clp::ReaderInterface> m_reader;
     std::vector<RangeIndexEntry> m_range_index;
