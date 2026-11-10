@@ -12,6 +12,7 @@ use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
+use tokio_util::sync::CancellationToken;
 
 use crate::cursor::Claim;
 use crate::cursor::TaskCursor;
@@ -80,7 +81,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     ///   sending its trailer.
     /// * [`ConnectionError::TruncatedFrame`] if the connection closes in the middle of a frame.
     /// * Forwards [`Connection::decode_buffered_frames`]'s return values on failure.
-    /// * Forwards [`read_more`]'s return values on failure.
+    /// * Forwards [`read_more_unless_ended`]'s return values on failure.
     /// * Forwards [`check_eof`]'s return values on failure.
     /// * Forwards [`AsyncWriteExt::write_all`]'s return values on failure.
     pub async fn run<StreamType: AsyncRead + AsyncWrite + Unpin>(
@@ -95,7 +96,13 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
             self.send_pending_batch().await;
             match decoded? {
                 Decoded::NeedMoreBytes => {
-                    if 0 == read_more(input_stream, &mut buffer).await? {
+                    if 0 == read_more_unless_ended(
+                        input_stream,
+                        &mut buffer,
+                        self.session_state.end_signal(),
+                    )
+                    .await?
+                    {
                         return Err(if buffer.is_empty() {
                             ConnectionError::MissingTrailer
                         } else {
@@ -106,7 +113,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
                 Decoded::Trailer(trailer) => break trailer,
             }
         };
-        check_eof(input_stream, &mut buffer).await?;
+        check_eof(input_stream, &mut buffer, self.session_state.end_signal()).await?;
         input_stream
             .write_all(
                 &Ack {
@@ -190,8 +197,6 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
         let num_results = std::mem::take(&mut self.num_pending_results);
         if self.session_state.send(self.encoder.take_batch()).await {
             self.stats.num_results_emitted += num_results;
-        } else {
-            self.stats.num_results_discarded += num_results;
         }
     }
 }
@@ -335,6 +340,35 @@ async fn read_more<StreamType: AsyncRead + Unpin>(
     input_stream.read_buf(&mut read_window).await
 }
 
+/// Reads more bytes from `input_stream` into `buffer` through [`read_more`], unless `end_signal` is
+/// cancelled first.
+///
+/// # Type Parameters
+///
+/// * `StreamType` - The type of the connection's stream.
+///
+/// # Returns
+///
+/// The number of bytes read on success, which is 0 once `input_stream` has reached EOF.
+///
+/// # Errors
+///
+/// Returns an error if:
+///
+/// * [`ConnectionError::SessionEnded`] if `end_signal` is cancelled before the read completes.
+/// * Forwards [`read_more`]'s return values on failure.
+async fn read_more_unless_ended<StreamType: AsyncRead + Unpin>(
+    input_stream: &mut StreamType,
+    buffer: &mut BytesMut,
+    end_signal: &CancellationToken,
+) -> Result<usize, ConnectionError> {
+    tokio::select! {
+        biased;
+        () = end_signal.cancelled() => Err(ConnectionError::SessionEnded),
+        read_result = read_more(input_stream, buffer) => Ok(read_result?),
+    }
+}
+
 /// Checks that no bytes follow the connection's trailer, either left in `buffer` or read next from
 /// `input_stream`.
 ///
@@ -348,12 +382,13 @@ async fn read_more<StreamType: AsyncRead + Unpin>(
 ///
 /// * [`ConnectionError::Protocol`] wrapping [`ProtocolError::DataAfterTrailer`] if any byte follows
 ///   the trailer.
-/// * Forwards [`read_more`]'s return values on failure.
+/// * Forwards [`read_more_unless_ended`]'s return values on failure.
 async fn check_eof<StreamType: AsyncRead + Unpin>(
     input_stream: &mut StreamType,
     buffer: &mut BytesMut,
+    end_signal: &CancellationToken,
 ) -> Result<(), ConnectionError> {
-    if !buffer.is_empty() || 0 != read_more(input_stream, buffer).await? {
+    if !buffer.is_empty() || 0 != read_more_unless_ended(input_stream, buffer, end_signal).await? {
         return Err(ProtocolError::DataAfterTrailer.into());
     }
     Ok(())
@@ -377,6 +412,7 @@ mod tests {
     use crate::error::ConnectionError;
     use crate::error::ProtocolError;
     use crate::protocol::Ack;
+    use crate::session::AtomicSessionStats;
     use crate::session::SessionStats;
     use crate::session::State;
     use crate::test_utils::ARCHIVE_ID;
@@ -393,11 +429,13 @@ mod tests {
     /// The number of batches a session's channel holds, unless a test needs it to fill up.
     const CHANNEL_CAPACITY: usize = 1024;
 
-    /// A session's state, the receiver of the batches its connections send, and the number of bytes
-    /// each direction of its connections' in-memory streams buffers.
+    /// A session's state, the receiver of the batches its connections send, the statistics they
+    /// record, and the number of bytes each direction of its connections' in-memory streams
+    /// buffers.
     struct Harness {
         session_state: Arc<State<QueryResultEncoding>>,
         batches_receiver: Option<mpsc::Receiver<Vec<QueryResult>>>,
+        stats: Arc<AtomicSessionStats>,
         stream_capacity: usize,
     }
 
@@ -413,9 +451,11 @@ mod tests {
             const STREAM_CAPACITY: usize = 64 * 1024;
 
             let (batches_sender, batches_receiver) = mpsc::channel(channel_capacity);
+            let stats = Arc::new(AtomicSessionStats::default());
             Self {
-                session_state: Arc::new(State::new(batches_sender)),
+                session_state: Arc::new(State::new(batches_sender, Arc::clone(&stats))),
                 batches_receiver: Some(batches_receiver),
+                stats,
                 stream_capacity: STREAM_CAPACITY,
             }
         }
@@ -665,11 +705,10 @@ mod tests {
             [expected_results(0, ARCHIVE_ID, 0..3)]
         );
         assert_eq!(
-            harness.session_state.stats(),
+            harness.stats.load(),
             SessionStats {
                 num_results_emitted: 3,
                 num_duplicates_dropped: 3,
-                ..SessionStats::default()
             }
         );
         Ok(())
@@ -711,11 +750,10 @@ mod tests {
             ]
         );
         assert_eq!(
-            harness.session_state.stats(),
+            harness.stats.load(),
             SessionStats {
                 num_results_emitted: 6,
                 num_duplicates_dropped: 6,
-                ..SessionStats::default()
             }
         );
         Ok(())
@@ -759,7 +797,7 @@ mod tests {
             expected_results(1, OTHER_ARCHIVE_ID, 0..NUM_RESULTS)
         );
         assert_eq!(
-            harness.session_state.stats(),
+            harness.stats.load(),
             SessionStats {
                 num_results_emitted: 2 * NUM_RESULTS,
                 ..SessionStats::default()
@@ -799,11 +837,10 @@ mod tests {
                 "{out_of_order_indices:?}"
             );
             assert_eq!(
-                harness.session_state.stats(),
+                harness.stats.load(),
                 SessionStats {
                     num_results_emitted: 4,
                     num_duplicates_dropped: 1,
-                    ..SessionStats::default()
                 },
                 "{out_of_order_indices:?}"
             );
@@ -912,11 +949,10 @@ mod tests {
             expected_results(0, ARCHIVE_ID, 0..4)
         );
         assert_eq!(
-            harness.session_state.stats(),
+            harness.stats.load(),
             SessionStats {
                 num_results_emitted: 4,
                 num_duplicates_dropped: 2,
-                ..SessionStats::default()
             }
         );
         Ok(())
@@ -1081,11 +1117,10 @@ mod tests {
             .encode()
         );
         assert_eq!(
-            harness.session_state.stats(),
+            harness.stats.load(),
             SessionStats {
                 num_results_emitted: NUM_RESULTS_RECEIVED,
                 num_duplicates_dropped: 0,
-                num_results_discarded: NUM_RESULTS - NUM_RESULTS_RECEIVED,
             }
         );
         Ok(())

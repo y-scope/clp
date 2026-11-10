@@ -64,6 +64,9 @@ pub enum ConnectionError {
     #[error(transparent)]
     Protocol(#[from] ProtocolError),
 
+    #[error("the connection's session has ended")]
+    SessionEnded,
+
     #[error("the connection closed in the middle of a frame")]
     TruncatedFrame,
 

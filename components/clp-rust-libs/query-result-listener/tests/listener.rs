@@ -202,6 +202,19 @@ async fn receive_results(
 
 /// # Returns
 ///
+/// The results of the batches that `results` yields until it ends.
+///
+/// # Panics
+///
+/// Panics if the stream doesn't end within [`TIMEOUT`].
+async fn collect_results(results: &mut ResultStream<Vec<QueryResult>>) -> Vec<QueryResult> {
+    timeout(TIMEOUT, results.concat())
+        .await
+        .expect("the result stream should end")
+}
+
+/// # Returns
+///
 /// The results of the batches that `results` holds already.
 fn take_buffered_results(results: &mut ResultStream<Vec<QueryResult>>) -> Vec<QueryResult> {
     use futures::FutureExt;
@@ -487,10 +500,8 @@ async fn concurrent_attempts_of_one_task_deliver_each_result_once_and_are_both_a
 }
 
 #[tokio::test]
-async fn result_stream_ends_once_its_session_is_dropped_and_its_connections_have_finished()
+async fn result_stream_ends_once_its_session_is_dropped_and_its_open_connection_is_cut_off()
 -> Result<()> {
-    const STREAM_OPEN_CHECK_DURATION: Duration = Duration::from_millis(100);
-
     let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
     let (session, mut results) = listener.open_session(SessionConfig::default())?;
     let mut attempt = FakeClpS::connect(session.network_output()).await;
@@ -499,22 +510,10 @@ async fn result_stream_ends_once_its_session_is_dropped_and_its_connections_have
     let mut received = receive_results(&mut results, 2).await;
 
     drop(session);
-    let stream_open_check = timeout(STREAM_OPEN_CHECK_DURATION, results.next()).await;
-    attempt.send_results(0, 2..4).await;
-    let acknowledgement = attempt.finish(4).await;
-    received.extend(
-        timeout(TIMEOUT, results.concat())
-            .await
-            .expect("the result stream should end"),
-    );
+    received.extend(collect_results(&mut results).await);
+    attempt.expect_closed_by_listener().await;
 
-    assert!(
-        stream_open_check.is_err(),
-        "the result stream shouldn't end or yield while its connection is open: \
-         {stream_open_check:?}"
-    );
-    assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
-    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..4));
+    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..2));
     Ok(())
 }
 
