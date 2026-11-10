@@ -3338,6 +3338,7 @@ dependencies = [
  "dashmap",
  "futures",
  "non-empty-string",
+ "query-result-listener",
  "rmp",
  "spider-core",
  "thiserror",
