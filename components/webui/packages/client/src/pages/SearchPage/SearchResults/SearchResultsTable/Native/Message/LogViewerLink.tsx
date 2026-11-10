@@ -7,38 +7,36 @@ import {
     Typography,
 } from "antd";
 
-import {STREAM_TYPE} from "../../../../../../config";
 import styles from "./index.module.css";
 
 
 interface LogViewerLinkProps {
+    archiveId: string;
     dataset: string;
     fileText: string;
     logEventIdx: number;
-    streamId: string;
 }
 
 /**
  * Render a link to the log viewer.
  *
  * @param props
+ * @param props.archiveId
  * @param props.dataset
  * @param props.fileText
  * @param props.logEventIdx
- * @param props.streamId
  * @return
  */
 const LogViewerLink = ({
+    archiveId,
     dataset,
     fileText,
     logEventIdx,
-    streamId,
 }: LogViewerLinkProps) => {
     const {token} = theme.useToken();
 
     const searchParams = new URLSearchParams({
-        type: encodeURIComponent(STREAM_TYPE),
-        streamId: encodeURIComponent(streamId),
+        archiveId: encodeURIComponent(archiveId),
         logEventIdx: encodeURIComponent(logEventIdx),
     });
 

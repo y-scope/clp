@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "Expression.hpp"
-#include "Literal.hpp"
 
 namespace clp_s::search::ast {
 /**

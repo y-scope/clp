@@ -10,8 +10,15 @@ path = "src/lib.rs"
 [dependencies]
 bytes = { workspace = true }
 clp-rust-utils = { workspace = true }
+dashmap = { workspace = true }
+futures = { workspace = true }
+non-empty-string = { workspace = true }
 rmp = { workspace = true }
+spider-core = { workspace = true }
 thiserror = { workspace = true }
+tokio = { workspace = true, features = ["io-util", "net", "sync"] }
+tracing = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
+tokio = { workspace = true, features = ["macros"] }

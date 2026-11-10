@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
-#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/time_generator_v7.hpp>
 #include <simdjson.h>
 
 #include <clp/ffi/KeyValuePairLogEvent.hpp>
@@ -54,9 +54,6 @@ public:
 
     // Constructor
     explicit JsonParser(JsonParserOption const& option);
-
-    // Destructor
-    ~JsonParser() = default;
 
     /**
      * Ingests the input described by `JsonParserOption`.
@@ -110,7 +107,8 @@ private:
      * @param key the key of the node
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
-    void parse_line(simdjson::ondemand::value line, int32_t parent_node_id, std::string const& key);
+    auto parse_line(simdjson::ondemand::value line, int32_t parent_node_id, std::string const& key)
+            -> void;
 
     /**
      * Determines the archive node type based on the IR node type and value.
@@ -177,35 +175,35 @@ private:
      * @tparam autogen whether this node is being added in the auto-generated subtree or not
      */
     template <bool autogen>
-    void parse_kv_log_event_subtree(
+    auto parse_kv_log_event_subtree(
             clp::ffi::KeyValuePairLogEvent::NodeIdValuePairs const& kv_pairs,
             clp::ffi::SchemaTree const& tree
-    );
+    ) -> void;
 
     /**
      * Parses a Key Value Log Event.
      * @param kv the Key Value Log Event
      */
-    void parse_kv_log_event(clp::ffi::KeyValuePairLogEvent const& kv);
+    auto parse_kv_log_event(clp::ffi::KeyValuePairLogEvent const& kv) -> void;
 
     /**
      * Parses an array within a JSON line
      * @param line the JSON array
      * @param parent_node_id the parent node id
      */
-    void parse_array(simdjson::ondemand::array line, int32_t parent_node_id);
+    auto parse_array(simdjson::ondemand::array line, int32_t parent_node_id) -> void;
 
     /**
      * Parses an object within an array in a JSON line
      * @param line the JSON object
      * @param parent_node_id the parent node id
      */
-    void parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id);
+    auto parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id) -> void;
 
     /**
      * Splits the archive if the size of the archive exceeds the maximum size
      */
-    void split_archive();
+    auto split_archive() -> void;
 
     /**
      * Adds an internal field to the MPT and get its Id.
@@ -213,7 +211,7 @@ private:
      * Note: this method should be called before parsing a record so that internal fields come first
      * in each table. This isn't strictly necessary, but it is a nice convention.
      */
-    int32_t add_metadata_field(std::string_view const field_name, NodeType type);
+    auto add_metadata_field(std::string_view field_name, NodeType type) -> int32_t;
 
     std::vector<std::pair<Path, std::string>> m_input_paths_and_canonical_filenames;
     NetworkAuthOption m_network_auth{};
@@ -225,7 +223,7 @@ private:
     std::vector<std::string> m_timestamp_column;
     std::string m_timestamp_namespace;
 
-    boost::uuids::random_generator m_generator;
+    boost::uuids::time_generator_v7 m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
     ArchiveWriterOption m_archive_options{};
     size_t m_target_encoded_size;
@@ -233,7 +231,7 @@ private:
     bool m_structurize_arrays{false};
     bool m_record_log_order{true};
     bool m_retain_float_format{false};
-    std::optional<std::string> m_path_prefix_to_remove{};
+    std::optional<std::string> m_path_prefix_to_remove;
 
     absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_ir_node_to_archive_node_id_mapping;
