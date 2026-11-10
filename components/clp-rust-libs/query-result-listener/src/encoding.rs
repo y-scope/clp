@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn query_result_encoder_stamps_the_archive_id_and_starts_next_batch_empty() -> Result<()> {
-        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+        use crate::test_utils::ARCHIVE_ID;
 
         let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
         let query_result = |timestamp_millisecs: i64, message: &str| QueryResult {

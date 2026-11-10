@@ -332,12 +332,12 @@ mod tests {
     use super::ResultFrame;
     use super::Trailer;
     use crate::error::ProtocolError;
+    use crate::test_utils::ARCHIVE_ID;
+    use crate::test_utils::SESSION_TOKEN;
     use crate::test_utils::encode_handshake;
     use crate::test_utils::encode_result;
     use crate::test_utils::encode_trailer;
 
-    const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
-    const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
     const TASK_INDEX: u64 = 7;
 
     /// # Returns
