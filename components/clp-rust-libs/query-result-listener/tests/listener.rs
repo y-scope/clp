@@ -96,6 +96,25 @@ impl FakeClpS {
         self.send(&encode_results(task_index, result_indices)).await;
     }
 
+    /// Sends the results at `result_indices` of task `task_index` one at a time, until every result
+    /// is sent or the listener has closed the connection.
+    async fn send_results_until_closed(
+        mut self,
+        task_index: TaskIndex,
+        result_indices: impl IntoIterator<Item = u64>,
+    ) {
+        for result_index in result_indices {
+            if self
+                .stream
+                .write_all(&encode_results(task_index, [result_index]))
+                .await
+                .is_err()
+            {
+                return;
+            }
+        }
+    }
+
     /// Ends the stream the way `clp-s` does: sends a trailer counting `num_results` results, then
     /// EOF, and waits until the listener closes the connection.
     ///
@@ -546,5 +565,101 @@ async fn dropping_the_listener_stops_accepting_and_keeps_serving_open_connection
 
     assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
     assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..4));
+    Ok(())
+}
+
+#[tokio::test]
+async fn connection_streaming_past_its_sessions_drop_delivers_only_the_results_it_had_claimed()
+-> Result<()> {
+    use std::num::NonZeroUsize;
+
+    const NUM_RESULTS: u64 = 1000;
+    const READ_DELAY: Duration = Duration::from_millis(100);
+
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig {
+        channel_capacity: NonZeroUsize::MIN,
+    })?;
+    let mut attempt = FakeClpS::connect(session.network_output()).await;
+    attempt.send_handshake(0, ARCHIVE_ID).await;
+    // Separate reads, so that the first batch fills the channel and the connection waits to send
+    // the second instead of reading the results streamed once the session is dropped.
+    attempt.send_results(0, 0..5).await;
+    tokio::time::sleep(READ_DELAY).await;
+    attempt.send_results(0, 5..10).await;
+    tokio::time::sleep(READ_DELAY).await;
+
+    drop(session);
+    tokio::spawn(attempt.send_results_until_closed(0, 10..NUM_RESULTS));
+    // Lets the results streamed since the session was dropped reach the connection's socket before
+    // the consumer makes room for the batch the connection waits to send.
+    tokio::time::sleep(READ_DELAY).await;
+    let received = collect_results(&mut results).await;
+
+    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..10));
+    Ok(())
+}
+
+#[tokio::test]
+async fn connection_waiting_for_eof_after_its_trailer_is_cut_off_once_its_session_is_dropped()
+-> Result<()> {
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig::default())?;
+    let mut attempt = FakeClpS::connect(session.network_output()).await;
+    attempt.send_handshake(0, ARCHIVE_ID).await;
+    // One write, so that the batch shows that the connection has read the trailer.
+    attempt
+        .send(&[encode_results(0, 0..2), encode_trailer(2)].concat())
+        .await;
+    receive_results(&mut results, 2).await;
+
+    drop(session);
+    attempt.expect_closed_by_listener().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn dropping_a_session_does_not_cut_off_another_sessions_connection() -> Result<()> {
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (first_session, _first_results) = listener.open_session(SessionConfig::default())?;
+    let (second_session, mut second_results) = listener.open_session(SessionConfig::default())?;
+    let mut attempt = FakeClpS::connect(second_session.network_output()).await;
+    attempt.send_handshake(0, ARCHIVE_ID).await;
+    attempt.send_results(0, 0..2).await;
+    receive_results(&mut second_results, 2).await;
+
+    drop(first_session);
+    attempt.send_results(0, 2..4).await;
+    let acknowledgement = attempt.finish(4).await;
+
+    assert_eq!(acknowledgement, Ack { num_results: 4 }.encode());
+    Ok(())
+}
+
+#[tokio::test]
+async fn result_stream_reports_its_sessions_statistics_once_it_has_ended() -> Result<()> {
+    use query_result_listener::session::SessionStats;
+
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig::default())?;
+    let mut first_attempt = FakeClpS::connect(session.network_output()).await;
+    first_attempt.send_handshake(0, ARCHIVE_ID).await;
+    first_attempt.send_results(0, 0..3).await;
+    first_attempt.finish(3).await;
+    let mut retry = FakeClpS::connect(session.network_output()).await;
+    retry.send_handshake(0, ARCHIVE_ID).await;
+    retry.send_results(0, 0..5).await;
+    retry.finish(5).await;
+
+    drop(session);
+    collect_results(&mut results).await;
+
+    assert_eq!(
+        results.stats(),
+        SessionStats {
+            num_results_emitted: 5,
+            num_duplicates_dropped: 3,
+        }
+    );
     Ok(())
 }
