@@ -18,6 +18,7 @@ use futures::Stream;
 use non_empty_string::NonEmptyString;
 use spider_core::task::TaskIndex;
 use tokio::sync::mpsc;
+use tokio_util::sync::CancellationToken;
 
 use crate::connection::Connection;
 use crate::cursor::TaskCursor;
@@ -45,7 +46,8 @@ impl Default for SessionConfig {
 
 /// A session that receives the results streamed for one query job.
 ///
-/// The session accepts the connections that present its token until it is dropped.
+/// The session accepts the connections that present its token until it is dropped. Dropping it also
+/// stops its open connections from reading, which then end without an acknowledgement.
 ///
 /// # Type Parameters
 ///
@@ -68,13 +70,24 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
 /// The stream of a session's results, in the batches its connections encoded them into.
 ///
 /// The stream ends once its session is dropped and every connection that joined the session has
-/// finished.
+/// finished, after which [`Self::stats`] reports the session's final statistics.
 ///
 /// # Type Parameters
 ///
 /// * `BatchType` - The type of a batch of encoded results.
 pub struct ResultStream<BatchType> {
     batches_receiver: mpsc::Receiver<BatchType>,
+    stats: Arc<AtomicSessionStats>,
+}
+
+impl<BatchType> ResultStream<BatchType> {
+    /// # Returns
+    ///
+    /// The statistics recorded by the session's finished connections.
+    #[must_use]
+    pub fn stats(&self) -> SessionStats {
+        self.stats.load()
+    }
 }
 
 impl<BatchType> Stream for ResultStream<BatchType> {
@@ -83,6 +96,17 @@ impl<BatchType> Stream for ResultStream<BatchType> {
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.batches_receiver.poll_recv(cx)
     }
+}
+
+/// Statistics of a session's connections.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct SessionStats {
+    /// The number of results emitted to the consumer.
+    pub num_results_emitted: u64,
+
+    /// The number of results dropped because another attempt of their task had already emitted
+    /// them.
+    pub num_duplicates_dropped: u64,
 }
 
 /// The sessions registered on a listener, keyed by their tokens.
@@ -135,7 +159,8 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
             return Err(SessionError::TokenCollision(token));
         };
         let (batches_sender, batches_receiver) = mpsc::channel(config.channel_capacity.get());
-        entry.insert(Arc::new(State::new(batches_sender)));
+        let stats = Arc::new(AtomicSessionStats::default());
+        entry.insert(Arc::new(State::new(batches_sender, Arc::clone(&stats))));
         let session = Session {
             _registration: Registration {
                 session_registry: Arc::clone(self),
@@ -147,7 +172,13 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
                 session_token: token,
             },
         };
-        Ok((session, ResultStream { batches_receiver }))
+        Ok((
+            session,
+            ResultStream {
+                batches_receiver,
+                stats,
+            },
+        ))
     }
 
     /// Joins a connection to the session and task cursor that `handshake` names.
@@ -173,30 +204,19 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
         Ok(Connection::new(session_state, cursor))
     }
 
-    /// Removes the session registered under `token`. Called only by [`Registration`]'s [`Drop`]
-    /// implementation.
+    /// Removes the session registered under `token`, and signals its connections that it has ended.
+    /// Called only by [`Registration`]'s [`Drop`] implementation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if no session is registered under `token`.
     fn unregister(&self, token: &SessionToken) {
-        self.sessions.remove(token);
+        let (_, session_state) = self
+            .sessions
+            .remove(token)
+            .expect("a session should stay registered until it is dropped");
+        session_state.end_signal.cancel();
     }
-}
-
-/// Statistics of a session's connections.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[expect(
-    clippy::struct_field_names,
-    reason = "`num_` marks a count throughout the crate, as in `Trailer::num_results`"
-)]
-pub(crate) struct SessionStats {
-    /// The number of results emitted to the consumer.
-    pub num_results_emitted: u64,
-
-    /// The number of results dropped because another attempt of their task had already emitted
-    /// them.
-    pub num_duplicates_dropped: u64,
-
-    /// The number of claimed results discarded because the consumer had dropped the receiver of
-    /// the session's batches.
-    pub num_results_discarded: u64,
 }
 
 /// The state of a session shared with its connections.
@@ -207,27 +227,29 @@ pub(crate) struct SessionStats {
 pub(crate) struct State<EncodingType: ResultEncoding> {
     cursors: DashMap<TaskIndex, Arc<TaskCursor>>,
     batches_sender: mpsc::Sender<EncodingType::Batch>,
-    num_results_emitted: AtomicU64,
-    num_duplicates_dropped: AtomicU64,
-    num_results_discarded: AtomicU64,
+    end_signal: CancellationToken,
+    stats: Arc<AtomicSessionStats>,
 }
 
 impl<EncodingType: ResultEncoding> State<EncodingType> {
     /// Factory function.
     ///
-    /// Creates the state of a session that sends its batches to `batches_sender`.
+    /// Creates the state of a session that sends its batches to `batches_sender`, and adds the
+    /// statistics of its finished connections to `stats`.
     ///
     /// # Returns
     ///
     /// The newly created state.
     #[must_use]
-    pub fn new(batches_sender: mpsc::Sender<EncodingType::Batch>) -> Self {
+    pub fn new(
+        batches_sender: mpsc::Sender<EncodingType::Batch>,
+        stats: Arc<AtomicSessionStats>,
+    ) -> Self {
         Self {
             cursors: DashMap::new(),
             batches_sender,
-            num_results_emitted: AtomicU64::new(0),
-            num_duplicates_dropped: AtomicU64::new(0),
-            num_results_discarded: AtomicU64::new(0),
+            end_signal: CancellationToken::new(),
+            stats,
         }
     }
 
@@ -265,42 +287,55 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
         Ok(cursor)
     }
 
+    /// # Returns
+    ///
+    /// The signal cancelled once the session has ended.
+    #[must_use]
+    pub const fn end_signal(&self) -> &CancellationToken {
+        &self.end_signal
+    }
+
     /// Hands `batch` to the session's consumer.
     ///
     /// # Returns
     ///
     /// Whether the consumer still holds the receiver of the session's batches, so that a connection
-    /// can count `batch` as emitted or discarded.
+    /// can tell whether to count `batch` as emitted.
     pub async fn send(&self, batch: EncodingType::Batch) -> bool {
         self.batches_sender.send(batch).await.is_ok()
     }
 
     /// Adds the statistics of a finished connection to the session's statistics.
     pub fn record(&self, stats: &SessionStats) {
+        self.stats.add(stats);
+    }
+}
+
+/// The statistics of a session's connections, shared between the session's state and its result
+/// stream.
+#[derive(Default)]
+pub(crate) struct AtomicSessionStats {
+    num_results_emitted: AtomicU64,
+    num_duplicates_dropped: AtomicU64,
+}
+
+impl AtomicSessionStats {
+    /// Adds `stats` to the statistics.
+    pub fn add(&self, stats: &SessionStats) {
         self.num_results_emitted
             .fetch_add(stats.num_results_emitted, Ordering::Relaxed);
         self.num_duplicates_dropped
             .fetch_add(stats.num_duplicates_dropped, Ordering::Relaxed);
-        self.num_results_discarded
-            .fetch_add(stats.num_results_discarded, Ordering::Relaxed);
     }
 
     /// # Returns
     ///
-    /// The statistics recorded by the session's finished connections.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the session's outcome that reports it comes in a later change"
-        )
-    )]
+    /// The statistics added so far.
     #[must_use]
-    pub fn stats(&self) -> SessionStats {
+    pub fn load(&self) -> SessionStats {
         SessionStats {
             num_results_emitted: self.num_results_emitted.load(Ordering::Relaxed),
             num_duplicates_dropped: self.num_duplicates_dropped.load(Ordering::Relaxed),
-            num_results_discarded: self.num_results_discarded.load(Ordering::Relaxed),
         }
     }
 }
