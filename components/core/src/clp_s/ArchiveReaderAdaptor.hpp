@@ -182,7 +182,8 @@ private:
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
      * @throws OperationFailed if another stream section is checked out, if the requested section
-     * doesn't exist, if checking out the section would force a backward seek, or on any I/O error.
+     * doesn't exist or was already passed by the stream, if any section skipped to reach it was
+     * partially consumed, or on any I/O error.
      */
     auto checkout_reader_for_sfa_section(std::string_view section)
             -> std::unique_ptr<clp::ReaderInterface>;

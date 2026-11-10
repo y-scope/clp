@@ -13,6 +13,7 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp/ir/types.hpp>
+#include <clp/TraceableException.hpp>
 #include <clp/type_utils.hpp>
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReaderAdaptor.hpp>
@@ -42,6 +43,12 @@ auto load_dictionary(std::shared_ptr<DictionaryReaderType> const& dictionary, bo
         dictionary->read_entries(lazy);
     } catch (TraceableException const& e) {
         throw ArchiveReader::OperationFailed(e.get_error_code(), __FILENAME__, __LINE__);
+    } catch (clp::TraceableException const& e) {
+        throw ArchiveReader::OperationFailed(
+                static_cast<ErrorCode>(e.get_error_code()),
+                __FILENAME__,
+                __LINE__
+        );
     }
 }
 }  // namespace

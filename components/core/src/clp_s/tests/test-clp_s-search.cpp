@@ -16,10 +16,13 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include <clp/ReaderInterface.hpp>
+#include <clp_s/archive_constants.hpp>
+#include <clp_s/ArchiveReaderAdaptor.hpp>
 #include <clp_s/ArchiveWriter.hpp>
+#include <clp_s/ErrorCode.hpp>
 #include <clp_s/TraceableException.hpp>
 
-#include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/OutputHandlerImpl.hpp"
@@ -527,6 +530,78 @@ TEST_CASE("clp-s-search-skips-unused-missing-dictionary", "[clp-s][search]") {
 
     REQUIRE_NOTHROW(search("b: null", false, {1}));
     REQUIRE_THROWS_AS(search("a: \"x\"", false, {0}), clp_s::ArchiveReader::OperationFailed);
+}
+
+TEST_CASE("clp-s-search-rejects-truncated-required-dictionary", "[clp-s][search]") {
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchPureWildcardFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    false,
+                    false
+            )
+    );
+
+    auto const archive_entry{std::filesystem::directory_iterator(cTestSearchArchiveDirectory)};
+    REQUIRE(archive_entry != std::filesystem::directory_iterator{});
+    REQUIRE(archive_entry->is_directory());
+    std::filesystem::resize_file(
+            archive_entry->path().string()
+                    + std::string{static_cast<char const*>(clp_s::constants::cArchiveVarDictFile)},
+            0
+    );
+
+    REQUIRE_THROWS_AS(search("a: \"x\"", false, {0}), clp_s::ArchiveReader::OperationFailed);
+}
+
+TEST_CASE("clp-s-archive-reader-adaptor-rejects-partially-consumed-section", "[clp-s][search]") {
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchPureWildcardFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
+                    true,
+                    false
+            )
+    );
+
+    auto const archive_entry{std::filesystem::directory_iterator(cTestSearchArchiveDirectory)};
+    REQUIRE(archive_entry != std::filesystem::directory_iterator{});
+    REQUIRE(archive_entry->is_regular_file());
+    clp_s::ArchiveReaderAdaptor archive_reader_adaptor{
+            clp_s::Path{
+                    .source = clp_s::InputSource::Filesystem,
+                    .path = archive_entry->path().string()
+            },
+            clp_s::NetworkAuthOption{}
+    };
+    REQUIRE(clp_s::ErrorCodeSuccess == archive_reader_adaptor.load_archive_metadata());
+
+    auto const* const var_dict_section{
+            static_cast<char const*>(clp_s::constants::cArchiveVarDictFile)
+    };
+    auto dictionary_reader{archive_reader_adaptor.checkout_reader_for_section(var_dict_section)};
+    char byte{};
+    size_t num_bytes_read{};
+    REQUIRE(dictionary_reader->read(&byte, sizeof(byte), num_bytes_read));
+    REQUIRE(sizeof(byte) == num_bytes_read);
+    REQUIRE_NOTHROW(archive_reader_adaptor.checkin_reader_for_section(var_dict_section));
+    dictionary_reader.reset();
+
+    try {
+        std::ignore = archive_reader_adaptor.checkout_reader_for_section(
+                static_cast<char const*>(clp_s::constants::cArchiveTablesFile)
+        );
+        FAIL("Expected checking out tables after partially consuming the variable dictionary to "
+             "fail.");
+    } catch (clp_s::ArchiveReaderAdaptor::OperationFailed const& e) {
+        REQUIRE(clp_s::ErrorCodeNotReady == e.get_error_code());
+    }
 }
 
 TEST_CASE("clp-s-search-truncated-single-file-archive", "[clp-s][search]") {
