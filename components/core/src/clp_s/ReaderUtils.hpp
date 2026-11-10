@@ -13,10 +13,9 @@
 
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
+#include "ErrorCode.hpp"
 #include "Schema.hpp"
-#include "SchemaReader.hpp"
 #include "SchemaTree.hpp"
-#include "TimestampDictionaryReader.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
@@ -30,21 +29,21 @@ public:
     };
 
     using SchemaMap = std::map<int32_t, Schema>;
-    static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
+    static constexpr size_t cDecompressorFileReadBufferCapacity{64ULL * 1024ULL};  // 64 KiB
 
     /**
      * Reads the schema tree from an archive
      * @param adaptor
      * @return The schema tree
      */
-    static std::shared_ptr<SchemaTree> read_schema_tree(ArchiveReaderAdaptor& adaptor);
+    static auto read_schema_tree(ArchiveReaderAdaptor& adaptor) -> std::shared_ptr<SchemaTree>;
 
     /**
      * Reads the schema map from an archive
      * @param adaptor
      * @return the schema map
      */
-    static std::shared_ptr<SchemaMap> read_schemas(ArchiveReaderAdaptor& archives_dir);
+    static auto read_schemas(ArchiveReaderAdaptor& adaptor) -> std::shared_ptr<SchemaMap>;
 
     /**
      * Reads the parsing specification from an archive.
@@ -69,28 +68,6 @@ public:
         }
         return static_cast<size_t>(value);
     }
-
-private:
-    /**
-     * Appends a column to the given schema reader
-     * @param reader
-     * @param column_id
-     * @param schema_tree
-     * @param var_dict
-     * @param log_dict
-     * @param array_dict
-     * @param timestamp_dict
-     * @return the appended reader column
-     */
-    static BaseColumnReader* append_reader_column(
-            SchemaReader* reader,
-            int32_t column_id,
-            std::shared_ptr<SchemaTree> const& schema_tree,
-            std::shared_ptr<VariableDictionaryReader> const& var_dict,
-            std::shared_ptr<LogTypeDictionaryReader> const& log_dict,
-            std::shared_ptr<LogTypeDictionaryReader> const& array_dict,
-            std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
-    );
 };
 }  // namespace clp_s
 

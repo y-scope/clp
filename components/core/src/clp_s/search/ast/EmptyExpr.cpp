@@ -39,6 +39,7 @@ auto EmptyExpr::print() const -> void {
 }
 
 auto EmptyExpr::copy() const -> std::shared_ptr<Expression> {
+    // Copy on EmptyExpr can use default shallow copy
     return std::shared_ptr<Expression>(static_cast<Expression*>(new EmptyExpr(*this)));
 }
 }  // namespace clp_s::search::ast

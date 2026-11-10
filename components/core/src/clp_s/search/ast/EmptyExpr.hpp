@@ -62,7 +62,7 @@ public:
 
 private:
     // Constructors
-    explicit EmptyExpr(Expression* parent);
+    explicit EmptyExpr(Expression* parent = nullptr);
 
     EmptyExpr(EmptyExpr const&) = default;
 };

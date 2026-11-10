@@ -45,7 +45,7 @@ auto ColumnDescriptor::str_to_function(std::string_view function_name) -> std::o
     return std::nullopt;
 }
 
-DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors) {
+auto tokenize_descriptor(std::vector<std::string> const& descriptors) -> DescriptorList {
     DescriptorList list;
     for (std::string const& descriptor : descriptors) {
         list.push_back(DescriptorToken::create_descriptor_from_escaped_token(descriptor));
@@ -53,7 +53,7 @@ DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors) 
     return list;
 }
 
-void ColumnDescriptor::check_and_set_unresolved_descriptor_flag() {
+auto ColumnDescriptor::check_and_set_unresolved_descriptor_flag() -> void {
     m_unresolved_descriptors = false;
     m_pure_wildcard = m_descriptors.size() == 1 && m_descriptors[0].wildcard();
     for (auto const& token : m_descriptors) {
@@ -92,21 +92,21 @@ ColumnDescriptor::ColumnDescriptor(
     }
 }
 
-std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_escaped_tokens(
+auto ColumnDescriptor::create_from_escaped_tokens(
         std::vector<std::string> const& tokens,
         std::string_view descriptor_namespace,
         Function function
-) {
+) -> std::shared_ptr<ColumnDescriptor> {
     return std::shared_ptr<ColumnDescriptor>(
             new ColumnDescriptor(tokens, descriptor_namespace, function)
     );
 }
 
-std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_descriptors(
+auto ColumnDescriptor::create_from_descriptors(
         DescriptorList const& descriptors,
         std::string_view descriptor_namespace,
         Function function
-) {
+) -> std::shared_ptr<ColumnDescriptor> {
     return std::shared_ptr<ColumnDescriptor>(
             new ColumnDescriptor(descriptors, descriptor_namespace, function)
     );
@@ -117,6 +117,7 @@ ColumnDescriptor::ColumnDescriptor(ColumnDescriptor const& other)
           m_unresolved_tokens{other.m_unresolved_tokens},
           m_namespace{other.m_namespace},
           m_flags{other.m_flags},
+          m_id{other.m_id},
           m_unresolved_descriptors{other.m_unresolved_descriptors},
           m_pure_wildcard{other.m_pure_wildcard},
           m_subtree_type{other.m_subtree_type},
@@ -195,11 +196,11 @@ auto ColumnDescriptor::to_string() const -> std::string {
     return result;
 }
 
-void ColumnDescriptor::print() const {
+auto ColumnDescriptor::print() const -> void {
     auto& os = get_print_stream();
     os << "ColumnDescriptor<";
     for (uint32_t flag = LiteralType::TypesBegin; flag < LiteralType::TypesEnd; flag <<= 1) {
-        if (m_flags & flag) {
+        if (0 != (m_flags & flag)) {
             os << Literal::type_to_string(static_cast<LiteralType>(flag));
 
             // If there are any types remaining add a comma
@@ -235,13 +236,13 @@ void ColumnDescriptor::print() const {
     os << "])";
 }
 
-void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {
+auto ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) -> void {
     m_unresolved_tokens.assign(it, descriptor_end());
 }
 
-bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
+auto ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const -> bool {
     return m_bound_node_id == rhs.m_bound_node_id && m_descriptors == rhs.m_descriptors
-           && m_flags == rhs.m_flags && m_function == rhs.m_function
+           && m_flags == rhs.m_flags && m_function == rhs.m_function && m_id == rhs.m_id
            && m_pinned_leaf == rhs.m_pinned_leaf && m_namespace == rhs.m_namespace
            && m_pure_wildcard == rhs.m_pure_wildcard && m_subtree_type == rhs.m_subtree_type
            && m_excludes_decomposable_nodes == rhs.m_excludes_decomposable_nodes
@@ -249,7 +250,7 @@ bool ColumnDescriptor::operator==(ColumnDescriptor const& rhs) const {
            && m_unresolved_tokens == rhs.m_unresolved_tokens;
 }
 
-void ColumnDescriptor::simplify_descriptor_wildcards() {
+auto ColumnDescriptor::simplify_descriptor_wildcards() -> void {
     DescriptorList new_descriptor_list;
     bool prev_was_wildcard = false;
     for (auto& token : m_descriptors) {

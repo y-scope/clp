@@ -9,7 +9,6 @@
 #include <clp_s/search/ast/ColumnDescriptor.hpp>
 
 #include "Expression.hpp"
-#include "Literal.hpp"
 
 namespace clp_s::search::ast {
 /**

@@ -158,7 +158,7 @@ auto SchemaTree::store(std::string const& archives_dir, int compression_level) -
     }
 
     schema_tree_compressor.close();
-    size_t compressed_size = schema_tree_writer.get_pos();
+    auto const compressed_size{schema_tree_writer.get_pos()};
     schema_tree_writer.close();
     return compressed_size;
 }

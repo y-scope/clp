@@ -1,6 +1,7 @@
 #include "Schema.hpp"
 
 #include <algorithm>
+#include <cstdint>
 
 #include <clp_s/SchemaTree.hpp>
 

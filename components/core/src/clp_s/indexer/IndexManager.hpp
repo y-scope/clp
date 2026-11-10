@@ -1,13 +1,20 @@
 #ifndef CLP_S_INDEXER_INDEXMANAGER_HPP
 #define CLP_S_INDEXER_INDEXMANAGER_HPP
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 
-#include "../../clp/GlobalMetadataDBConfig.hpp"
-#include "../ArchiveReader.hpp"
-#include "../TimestampDictionaryReader.hpp"
+#include <clp/GlobalMetadataDBConfig.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/TimestampDictionaryReader.hpp>
+#include <clp_s/TraceableException.hpp>
+
 #include "MySQLIndexStorage.hpp"
 
 namespace clp_s::indexer {
@@ -49,6 +56,14 @@ public:
             bool should_create_table = false
     );
 
+    // Delete copy constructor and assignment operator
+    IndexManager(IndexManager const&) = delete;
+    auto operator=(IndexManager const&) -> IndexManager& = delete;
+
+    // Delete move constructor and assignment operator
+    IndexManager(IndexManager&&) = delete;
+    auto operator=(IndexManager&&) -> IndexManager& = delete;
+
     // Destructor
     ~IndexManager();
 
@@ -59,7 +74,7 @@ public:
      * @param archive_path
      * @throw OperationFailed with `ErrorCodeUnsupported` if the archive is a clpp-flavour archive.
      */
-    void update_metadata(std::string const& dataset_name, Path const& archive_path);
+    auto update_metadata(std::string const& dataset_name, Path const& archive_path) -> void;
 
 private:
     /**
@@ -67,17 +82,17 @@ private:
      * @param key_name
      * @return the escaped key name
      */
-    static std::string escape_key_name(std::string_view const key_name);
+    static auto escape_key_name(std::string_view key_name) -> std::string;
 
     /**
      * Traverses the schema tree and updates the metadata
      * @param schema_tree
      * @param timestamp_dict
      */
-    void traverse_schema_tree_and_update_metadata(
+    auto traverse_schema_tree_and_update_metadata(
             std::shared_ptr<SchemaTree> const& schema_tree,
             std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
-    );
+    ) -> void;
 
     OutputType m_output_type{OutputType::Database};
     std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;
