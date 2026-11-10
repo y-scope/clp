@@ -45,4 +45,5 @@ utoipa-axum = { workspace = true }
 
 [dev-dependencies]
 http-body-util = { workspace = true }
+query-result-listener = { workspace = true, features = ["test-utils"] }
 tower = { workspace = true }
