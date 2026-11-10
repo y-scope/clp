@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use clp_rust_utils::job_config::NetworkOutput;
+use clp_rust_utils::types::ArchiveId;
 use clp_rust_utils::types::SessionToken;
 use futures::StreamExt;
 use query_result_listener::listener::ListenerConfig;
@@ -13,14 +14,19 @@ use query_result_listener::protocol::PROTOCOL_VERSION;
 use query_result_listener::session::ResultStream;
 use query_result_listener::session::SessionConfig;
 use query_result_listener::test_utils::ARCHIVE_ID;
+use query_result_listener::test_utils::EncodingError;
+use query_result_listener::test_utils::FallibleQueryResultEncoding;
 use query_result_listener::test_utils::OTHER_ARCHIVE_ID;
 use query_result_listener::test_utils::QueryResult;
 use query_result_listener::test_utils::QueryResultEncoding;
 use query_result_listener::test_utils::TIMEOUT;
+use query_result_listener::test_utils::UNENCODABLE_MESSAGE;
 use query_result_listener::test_utils::encode_handshake;
+use query_result_listener::test_utils::encode_result;
 use query_result_listener::test_utils::encode_results;
 use query_result_listener::test_utils::encode_trailer;
 use query_result_listener::test_utils::expected_results;
+use query_result_listener::test_utils::timestamp;
 use spider_core::task::TaskIndex;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
@@ -28,6 +34,9 @@ use tokio::net::TcpStream;
 use tokio::time::timeout;
 
 const HANDSHAKE_TIMEOUT_SEC: NonZeroU64 = NonZeroU64::new(1).expect("1 is nonzero");
+
+/// How long a test waits to check that a session hasn't failed.
+const PENDING_CHECK_DURATION: Duration = Duration::from_millis(100);
 
 /// A simulated attempt of a `clp-s` query task, streaming its results over TCP.
 struct FakeClpS {
@@ -439,8 +448,6 @@ async fn tasks_connecting_one_after_another_each_deliver_their_results_and_are_a
 
 #[tokio::test]
 async fn concurrent_tasks_each_deliver_their_results_and_are_acknowledged() -> Result<()> {
-    use clp_rust_utils::types::ArchiveId;
-
     let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
     let (session, mut results) = listener.open_session(SessionConfig::default())?;
 
@@ -660,6 +667,200 @@ async fn result_stream_reports_its_sessions_statistics_once_it_has_ended() -> Re
             num_results_emitted: 5,
             num_duplicates_dropped: 3,
         }
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn encoding_failure_fails_the_session_without_acknowledging_the_failing_connection()
+-> Result<()> {
+    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
+    let (session, _results) = listener.open_session(SessionConfig::default())?;
+    let mut failing_attempt = FakeClpS::connect(session.network_output()).await;
+    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    let (failure, ()) = tokio::join!(timeout(TIMEOUT, session.failed()), async move {
+        failing_attempt
+            .send(
+                &[
+                    encode_results(0, 0..2),
+                    encode_result(2, timestamp(2), UNENCODABLE_MESSAGE),
+                    encode_trailer(3),
+                ]
+                .concat(),
+            )
+            .await;
+        failing_attempt.expect_closed_by_listener().await;
+    });
+
+    assert_eq!(
+        failure?,
+        &EncodingError::UnencodableMessage {
+            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+            timestamp_millisecs: timestamp(2),
+        }
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn encoder_creation_failure_fails_the_session_without_acknowledging_the_connection()
+-> Result<()> {
+    use query_result_listener::test_utils::UNENCODABLE_ARCHIVE_ID;
+
+    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
+    let (session, _results) = listener.open_session(SessionConfig::default())?;
+    let mut failing_attempt = FakeClpS::connect(session.network_output()).await;
+    failing_attempt
+        .send_handshake(0, UNENCODABLE_ARCHIVE_ID)
+        .await;
+    failing_attempt
+        .send(&[encode_results(0, 0..2), encode_trailer(2)].concat())
+        .await;
+    failing_attempt.expect_closed_by_listener().await;
+
+    assert_eq!(
+        timeout(TIMEOUT, session.failed()).await?,
+        &EncodingError::UnencodableArchive(UNENCODABLE_ARCHIVE_ID.parse::<ArchiveId>()?)
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn encoding_failure_cuts_off_the_sessions_other_open_connections() -> Result<()> {
+    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig::default())?;
+    let mut streaming_attempt = FakeClpS::connect(session.network_output()).await;
+    streaming_attempt.send_handshake(1, ARCHIVE_ID).await;
+    streaming_attempt.send_results(1, 0..2).await;
+    receive_results(&mut results, 2).await;
+    let mut finished_attempt = FakeClpS::connect(session.network_output()).await;
+    finished_attempt.send_handshake(2, ARCHIVE_ID).await;
+    // One write, so that the batch shows that the connection has read the trailer.
+    finished_attempt
+        .send(&[encode_results(2, 0..2), encode_trailer(2)].concat())
+        .await;
+    receive_results(&mut results, 2).await;
+
+    let mut failing_attempt = FakeClpS::connect(session.network_output()).await;
+    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    failing_attempt
+        .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
+        .await;
+    failing_attempt.expect_closed_by_listener().await;
+    streaming_attempt.expect_closed_by_listener().await;
+    finished_attempt.expect_closed_by_listener().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn retry_of_the_task_that_failed_its_session_is_rejected() -> Result<()> {
+    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig::default())?;
+    let mut failing_attempt = FakeClpS::connect(session.network_output()).await;
+    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    failing_attempt
+        .send(
+            &[
+                encode_results(0, 0..2),
+                encode_result(2, timestamp(2), UNENCODABLE_MESSAGE),
+            ]
+            .concat(),
+        )
+        .await;
+    failing_attempt.expect_closed_by_listener().await;
+
+    let mut retry = FakeClpS::connect(session.network_output()).await;
+    retry
+        .send(
+            &[
+                encode_handshake(
+                    PROTOCOL_VERSION,
+                    &session.network_output().session_token.to_string(),
+                    0,
+                    ARCHIVE_ID,
+                ),
+                encode_results(0, 0..4),
+                encode_trailer(4),
+            ]
+            .concat(),
+        )
+        .await;
+    retry.expect_closed_by_listener().await;
+    let received = take_buffered_results(&mut results);
+
+    let failing_read_results = expected_results(0, ARCHIVE_ID, 0..2);
+    assert!(
+        received
+            .iter()
+            .all(|result| failing_read_results.contains(result)),
+        "the retry's results shouldn't be delivered: {received:?}"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn encoding_failure_in_one_session_does_not_affect_another_session() -> Result<()> {
+    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
+    let (failing_session, _failing_results) = listener.open_session(SessionConfig::default())?;
+    let (other_session, mut other_results) = listener.open_session(SessionConfig::default())?;
+    let mut other_session_attempt = FakeClpS::connect(other_session.network_output()).await;
+    other_session_attempt.send_handshake(0, ARCHIVE_ID).await;
+    other_session_attempt.send_results(0, 0..2).await;
+    let mut received = receive_results(&mut other_results, 2).await;
+
+    let mut failing_attempt = FakeClpS::connect(failing_session.network_output()).await;
+    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    failing_attempt
+        .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
+        .await;
+    failing_attempt.expect_closed_by_listener().await;
+    timeout(TIMEOUT, failing_session.failed()).await?;
+    other_session_attempt.send_results(0, 2..3).await;
+    let acknowledgement = other_session_attempt.finish(3).await;
+    let mut late_attempt = FakeClpS::connect(other_session.network_output()).await;
+    late_attempt.send_handshake(1, ARCHIVE_ID).await;
+    late_attempt.send_results(1, 0..1).await;
+    let late_acknowledgement = late_attempt.finish(1).await;
+    received.extend(take_buffered_results(&mut other_results));
+    let other_session_failure_check = timeout(PENDING_CHECK_DURATION, other_session.failed()).await;
+
+    assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
+    assert_eq!(late_acknowledgement, Ack { num_results: 1 }.encode());
+    assert_eq!(
+        received,
+        [
+            expected_results(0, ARCHIVE_ID, 0..3),
+            expected_results(1, ARCHIVE_ID, 0..1),
+        ]
+        .concat()
+    );
+    assert!(
+        other_session_failure_check.is_err(),
+        "the other session shouldn't fail: {other_session_failure_check:?}"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn healthy_session_does_not_fail() -> Result<()> {
+    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
+    let (session, results) = listener.open_session(SessionConfig::default())?;
+    drop(results);
+    let mut acknowledged_attempt = FakeClpS::connect(session.network_output()).await;
+    acknowledged_attempt.send_handshake(0, ARCHIVE_ID).await;
+    acknowledged_attempt.send_results(0, 0..3).await;
+    let acknowledgement = acknowledged_attempt.finish(3).await;
+    let mut rejected_attempt = FakeClpS::connect(session.network_output()).await;
+    rejected_attempt.send_handshake(1, ARCHIVE_ID).await;
+    rejected_attempt.send_results(1, [1]).await;
+    rejected_attempt.expect_closed_by_listener().await;
+
+    let failure_check = timeout(PENDING_CHECK_DURATION, session.failed()).await;
+
+    assert_eq!(acknowledgement, Ack { num_results: 3 }.encode());
+    assert!(
+        failure_check.is_err(),
+        "a session whose results are all encoded shouldn't fail: {failure_check:?}"
     );
     Ok(())
 }

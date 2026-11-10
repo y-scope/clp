@@ -4,6 +4,7 @@ use std::num::NonZeroU16;
 use std::num::NonZeroUsize;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::task::Context;
@@ -46,8 +47,10 @@ impl Default for SessionConfig {
 
 /// A session that receives the results streamed for one query job.
 ///
-/// The session accepts the connections that present its token until it is dropped. Dropping it also
-/// stops its open connections from reading, which then end without an acknowledgement.
+/// The session accepts the connections that present its token until it is dropped or fails, which
+/// it does once creating the encoder of one of its connections, or encoding one of its results,
+/// fails. Dropping it, or its failure, also stops its open connections from reading, which then end
+/// without an acknowledgement.
 ///
 /// # Type Parameters
 ///
@@ -55,6 +58,7 @@ impl Default for SessionConfig {
 pub struct Session<EncodingType: ResultEncoding> {
     _registration: Registration<EncodingType>,
     network_output: NetworkOutput,
+    state: Arc<State<EncodingType>>,
 }
 
 impl<EncodingType: ResultEncoding> Session<EncodingType> {
@@ -64,6 +68,29 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
     #[must_use]
     pub const fn network_output(&self) -> &NetworkOutput {
         &self.network_output
+    }
+
+    /// Waits until the session fails, which it does once creating the encoder of one of its
+    /// connections, or encoding one of its results, fails.
+    ///
+    /// The session's end signal is cancelled either once the session fails or once it is dropped,
+    /// and the latter can't happen while the session is borrowed, so the wait ends only once the
+    /// session has failed. It never ends for a session that doesn't fail.
+    ///
+    /// # Returns
+    ///
+    /// The error of the first failure to create the encoder of one of the session's connections or
+    /// to encode one of its results.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the session's end signal is cancelled without an encoding error recorded, which
+    /// can't happen while the session is borrowed.
+    pub async fn failed(&self) -> &EncodingType::Error {
+        self.state.end_signal.cancelled().await;
+        self.state
+            .encoding_error()
+            .expect("a session's end signal is cancelled only once it fails or is dropped")
     }
 }
 
@@ -160,7 +187,8 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
         };
         let (batches_sender, batches_receiver) = mpsc::channel(config.channel_capacity.get());
         let stats = Arc::new(AtomicSessionStats::default());
-        entry.insert(Arc::new(State::new(batches_sender, Arc::clone(&stats))));
+        let session_state = Arc::new(State::new(batches_sender, Arc::clone(&stats)));
+        entry.insert(Arc::clone(&session_state));
         let session = Session {
             _registration: Registration {
                 session_registry: Arc::clone(self),
@@ -171,6 +199,7 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
                 port,
                 session_token: token,
             },
+            state: session_state,
         };
         Ok((
             session,
@@ -193,15 +222,20 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
     ///
     /// * [`ConnectionError::UnknownSession`] if no session is registered under the handshake's
     ///   token.
+    /// * [`ConnectionError::SessionFailed`] if the session has failed.
     /// * Forwards [`State::cursor`]'s return values on failure.
+    /// * Forwards [`Connection::new`]'s return values on failure.
     pub fn join(&self, handshake: &Handshake) -> Result<Connection<EncodingType>, ConnectionError> {
         let session_state = self
             .sessions
             .get(&handshake.session_token)
             .map(|entry| Arc::clone(entry.value()))
             .ok_or(ConnectionError::UnknownSession(handshake.session_token))?;
+        if session_state.encoding_error().is_some() {
+            return Err(ConnectionError::SessionFailed);
+        }
         let cursor = session_state.cursor(handshake.task_index, handshake.archive_id)?;
-        Ok(Connection::new(session_state, cursor))
+        Connection::new(session_state, cursor)
     }
 
     /// Removes the session registered under `token`, and signals its connections that it has ended.
@@ -228,6 +262,7 @@ pub(crate) struct State<EncodingType: ResultEncoding> {
     cursors: DashMap<TaskIndex, Arc<TaskCursor>>,
     batches_sender: mpsc::Sender<EncodingType::Batch>,
     end_signal: CancellationToken,
+    encoding_error: OnceLock<EncodingType::Error>,
     stats: Arc<AtomicSessionStats>,
 }
 
@@ -249,6 +284,7 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
             cursors: DashMap::new(),
             batches_sender,
             end_signal: CancellationToken::new(),
+            encoding_error: OnceLock::new(),
             stats,
         }
     }
@@ -287,12 +323,45 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
         Ok(cursor)
     }
 
+    /// Waits until the session ends, either because it has failed or because it has been dropped.
+    ///
     /// # Returns
     ///
-    /// The signal cancelled once the session has ended.
+    /// The reason that a connection cut off by the session's end ends without an acknowledgement:
+    ///
+    /// * [`ConnectionError::SessionFailed`] if the session has failed.
+    /// * [`ConnectionError::SessionEnded`] if the session has been dropped without failing.
+    pub async fn ended(&self) -> ConnectionError {
+        self.end_signal.cancelled().await;
+        if self.encoding_error().is_some() {
+            ConnectionError::SessionFailed
+        } else {
+            ConnectionError::SessionEnded
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The error of the first failure to create the encoder of one of the session's connections or
+    /// to encode one of its results, or `None` if the session hasn't failed.
     #[must_use]
-    pub const fn end_signal(&self) -> &CancellationToken {
-        &self.end_signal
+    pub fn encoding_error(&self) -> Option<&EncodingType::Error> {
+        self.encoding_error.get()
+    }
+
+    /// Fails the session with `error`, unless it has already failed, and signals its connections
+    /// that it has ended.
+    ///
+    /// # Returns
+    ///
+    /// [`ConnectionError::Encoding`] carrying the message of `error`, which ends the connection
+    /// whose encoder failed.
+    #[must_use]
+    pub fn fail(&self, error: EncodingType::Error) -> ConnectionError {
+        let message = error.to_string();
+        self.encoding_error.get_or_init(|| error);
+        self.end_signal.cancel();
+        ConnectionError::Encoding(message)
     }
 
     /// Hands `batch` to the session's consumer.
@@ -366,13 +435,21 @@ mod tests {
     use super::Session;
     use super::SessionConfig;
     use super::SessionRegistry;
+    use crate::encoding::ResultEncoding;
     use crate::error::ConnectionError;
     use crate::error::ProtocolError;
     use crate::protocol::Handshake;
     use crate::test_utils::ARCHIVE_ID;
+    use crate::test_utils::FallibleQueryResultEncoding;
     use crate::test_utils::QueryResultEncoding;
+    use crate::test_utils::TIMEOUT;
+    use crate::test_utils::UNENCODABLE_ARCHIVE_ID;
 
     /// Opens a session on `session_registry`, dropping the stream of its results.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `EncodingType` - The encoding of the results the session delivers.
     ///
     /// # Returns
     ///
@@ -381,9 +458,9 @@ mod tests {
     /// # Panics
     ///
     /// Panics if the host fixture is empty, or the session's fresh token is already registered.
-    fn open_session(
-        session_registry: &Arc<SessionRegistry<QueryResultEncoding>>,
-    ) -> Session<QueryResultEncoding> {
+    fn open_session<EncodingType: ResultEncoding>(
+        session_registry: &Arc<SessionRegistry<EncodingType>>,
+    ) -> Session<EncodingType> {
         use std::num::NonZeroU16;
 
         use non_empty_string::NonEmptyString;
@@ -456,6 +533,89 @@ mod tests {
                 }) if archive_id == expected && other_archive_id == received
             ),
             "unexpected error: {error:?}"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn join_fails_the_session_if_the_connections_encoder_cannot_be_created()
+    -> anyhow::Result<()> {
+        use crate::test_utils::EncodingError;
+
+        let session_registry = Arc::new(SessionRegistry::<FallibleQueryResultEncoding>::new());
+        let session = open_session(&session_registry);
+        let unencodable_archive_id = UNENCODABLE_ARCHIVE_ID.parse::<ArchiveId>()?;
+        let Err(error) = session_registry.join(&Handshake {
+            session_token: session.network_output().session_token,
+            task_index: 0,
+            archive_id: unencodable_archive_id,
+        }) else {
+            anyhow::bail!("an attempt whose encoder can't be created shouldn't join the session");
+        };
+
+        let expected_error = EncodingError::UnencodableArchive(unencodable_archive_id);
+        assert!(
+            matches!(
+                &error,
+                ConnectionError::Encoding(message) if expected_error.to_string() == *message
+            ),
+            "unexpected error: {error:?}"
+        );
+        assert_eq!(
+            tokio::time::timeout(TIMEOUT, session.failed()).await?,
+            &expected_error
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn join_returns_session_failed_for_a_failed_session() -> anyhow::Result<()> {
+        let session_registry = Arc::new(SessionRegistry::<FallibleQueryResultEncoding>::new());
+        let session = open_session(&session_registry);
+        let handshake = Handshake {
+            session_token: session.network_output().session_token,
+            task_index: 0,
+            archive_id: UNENCODABLE_ARCHIVE_ID.parse::<ArchiveId>()?,
+        };
+        let Err(ConnectionError::Encoding(_)) = session_registry.join(&handshake) else {
+            anyhow::bail!("an attempt whose encoder can't be created shouldn't join the session");
+        };
+        let Err(error) = session_registry.join(&Handshake {
+            task_index: 0,
+            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+            ..handshake
+        }) else {
+            anyhow::bail!("an attempt shouldn't join a failed session");
+        };
+
+        assert!(
+            matches!(error, ConnectionError::SessionFailed),
+            "unexpected error: {error:?}"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn dropping_a_session_ends_its_connection_with_session_ended() -> anyhow::Result<()> {
+        use bytes::BytesMut;
+
+        let session_registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
+        let session = open_session(&session_registry);
+        let mut connection = session_registry.join(&Handshake {
+            session_token: session.network_output().session_token,
+            task_index: 0,
+            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
+        })?;
+        let (_stream, mut handler_stream) = tokio::io::duplex(1024);
+        let handler =
+            tokio::spawn(async move { connection.run(&mut handler_stream, BytesMut::new()).await });
+
+        drop(session);
+        let result = tokio::time::timeout(TIMEOUT, handler).await??;
+
+        assert!(
+            matches!(result, Err(ConnectionError::SessionEnded)),
+            "unexpected result: {result:?}"
         );
         Ok(())
     }

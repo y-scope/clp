@@ -52,6 +52,9 @@ pub enum ProtocolError {
 /// Reasons a connection from a query task ends without an acknowledgement.
 #[derive(Debug, thiserror::Error)]
 pub enum ConnectionError {
+    #[error("the connection's results can't be encoded: {0}")]
+    Encoding(String),
+
     #[error("no handshake arrived within {0:?}")]
     HandshakeTimeout(Duration),
 
@@ -66,6 +69,9 @@ pub enum ConnectionError {
 
     #[error("the connection's session has ended")]
     SessionEnded,
+
+    #[error("the connection's session has failed")]
+    SessionFailed,
 
     #[error("the connection closed in the middle of a frame")]
     TruncatedFrame,
