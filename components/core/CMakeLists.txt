@@ -242,6 +242,13 @@ if(CLP_NEED_SPDLOG)
     endif()
 endif()
 
+# Check the packages actually selected by CMake rather than maintaining a version matrix.
+# Embedded builds may provide non-imported targets that cannot be used by try_compile.
+if(PROJECT_IS_TOP_LEVEL AND CLP_NEED_FMT AND CLP_NEED_SPDLOG)
+    include(CheckSpdlogFmtCompatibility)
+    clp_check_spdlog_fmt_compatibility()
+endif()
+
 # Find and setup libarchive
 if(CLP_NEED_LIBARCHIVE)
     if(CLP_USE_STATIC_LIBS)
