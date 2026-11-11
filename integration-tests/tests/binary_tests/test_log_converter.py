@@ -89,7 +89,7 @@ def _convert_and_compress(
         clp_core_path_config,
         test_paths.compression_dir,
         test_paths.conversion_dir,
-        timestamp_key=LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY,
+        options=clp_s_utils.CompressOptions(timestamp_key=LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY),
     )
 
     _verify_search_results(

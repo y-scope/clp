@@ -15,6 +15,7 @@ from tests.binary_tests.clp_s_utils import (
     clpp_archive_for,
     ClppArchive,
     compress,
+    CompressOptions,
     search,
 )
 from tests.utils.classes import (
@@ -820,7 +821,12 @@ def test_clpp_projection_parent_rule_occurrence_shapes(
     log_path = tmp_path / "event.log"
     log_path.write_text(f'{{"message":"{scenario.message}"}}\n')
     archive_path = tmp_path / "archives"
-    compress(clp_core_path_config, archive_path, log_path, parsing_spec_path=spec_path)
+    compress(
+        clp_core_path_config,
+        archive_path,
+        log_path,
+        options=CompressOptions(parsing_spec_path=spec_path),
+    )
 
     query = "message: *"
     for projection, expected_message in scenario.expected_messages:

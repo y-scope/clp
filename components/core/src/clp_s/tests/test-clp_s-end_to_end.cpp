@@ -114,7 +114,7 @@ auto get_test_input_local_path(std::string_view const test_input_path) -> std::s
 
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
-        clp_s::ArchiveReader archive_reader{
+        clp_s::ArchiveReader const archive_reader{
                 clp_s::Path{
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
@@ -146,7 +146,7 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
 
 auto check_nested_parent_rule_schema() -> void {
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
-        clp_s::ArchiveReader archive_reader{
+        clp_s::ArchiveReader const archive_reader{
                 clp_s::Path{
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()

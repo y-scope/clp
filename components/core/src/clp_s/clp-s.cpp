@@ -281,6 +281,23 @@ auto create_output_handler(CommandLineArguments const& cli_args, std::string_vie
     }
 }
 
+/**
+ * Searches one archive, converting any thrown exception into a logged failure.
+ * @param command_line_arguments The parsed command-line options.
+ * @param archive_reader The archive to search.
+ * @param expr A copy of the search AST which may be modified.
+ * @param projection_columns The columns to project in search results.
+ * @param telemetry_span The span to record search telemetry onto, or null if telemetry is disabled.
+ * @return Whether the search succeeded.
+ */
+auto try_search_archive(
+        CommandLineArguments const& command_line_arguments,
+        std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
+        std::shared_ptr<ast::Expression> expr,
+        std::vector<std::shared_ptr<ast::ColumnDescriptor>> const& projection_columns,
+        std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
+) -> bool;
+
 bool compress(CommandLineArguments const& command_line_arguments) {
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
 
@@ -341,7 +358,7 @@ auto handle_stats_queries(CommandLineArguments const& cli_args) -> int {
         try {
             archive_reader = std::make_shared<clp_s::ArchiveReader>(
                     input_path,
-                    clp_s::ArchiveReader::Options{.m_network_auth = cli_args.get_network_auth()}
+                    clp_s::ArchiveReader::Options{.network_auth = cli_args.get_network_auth()}
             );
         } catch (std::exception const& e) {
             SPDLOG_ERROR("Failed to open archive - {}", e.what());
@@ -675,6 +692,30 @@ bool search_archive(
     }
     return success;
 }
+
+auto try_search_archive(
+        CommandLineArguments const& command_line_arguments,
+        std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
+        std::shared_ptr<ast::Expression> expr,
+        std::vector<std::shared_ptr<ast::ColumnDescriptor>> const& projection_columns,
+        std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
+) -> bool {
+    try {
+        return search_archive(
+                command_line_arguments,
+                archive_reader,
+                std::move(expr),
+                projection_columns,
+                telemetry_span
+        );
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to search archive - {}", e.what());
+        if (nullptr != telemetry_span) {
+            telemetry_span->set_error("failed to search archive");
+        }
+        return false;
+    }
+}
 }  // namespace
 
 int main(int argc, char const* argv[]) {
@@ -857,7 +898,7 @@ int main(int argc, char const* argv[]) {
                 archive_reader = std::make_shared<clp_s::ArchiveReader>(
                         input_path,
                         clp_s::ArchiveReader::Options{
-                                .m_network_auth = command_line_arguments.get_network_auth()
+                                .network_auth = command_line_arguments.get_network_auth()
                         }
                 );
             } catch (std::exception const& e) {
@@ -879,7 +920,7 @@ int main(int argc, char const* argv[]) {
                 return 1;
             }
             if (false
-                == search_archive(
+                == try_search_archive(
                         command_line_arguments,
                         archive_reader,
                         expr->copy(),

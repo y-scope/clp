@@ -17,6 +17,7 @@
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ColumnReader.hpp>
 #include <clp_s/Defs.hpp>
+#include <clp_s/DictionaryEntry.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/ReaderUtils.hpp>
 #include <clp_s/Schema.hpp>

@@ -1,6 +1,7 @@
 #include "JsonConstructor.hpp"
 
 #include <filesystem>
+#include <memory>
 #include <queue>
 #include <system_error>
 
@@ -11,6 +12,8 @@
 #include <mongocxx/uri.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+
+#include <clp_s/ArchiveReader.hpp>
 
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
@@ -36,7 +39,7 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option) : m_option
 void JsonConstructor::store() {
     m_archive_reader = std::make_unique<ArchiveReader>(
             m_option.archive_path,
-            ArchiveReader::Options{.m_network_auth = m_option.network_auth, .m_extract_mode = true}
+            ArchiveReader::Options{.network_auth = m_option.network_auth, .m_extract_mode = true}
     );
     m_archive_reader->read_dictionaries_and_metadata();
 
@@ -60,7 +63,6 @@ void JsonConstructor::store() {
     } else {
         construct_in_order();
     }
-    m_archive_reader.reset();
 }
 
 void JsonConstructor::construct_in_order() {

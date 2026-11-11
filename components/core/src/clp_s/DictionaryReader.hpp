@@ -34,7 +34,9 @@ public:
 
     // Constructors
     /**
-     * @param adaptor The adaptor for the archive containing the dictionary.
+     * Binds this reader to a dictionary section; entries are loaded on the first `read_entries`.
+     * @param adaptor The adaptor for the archive containing the dictionary; must outlive this
+     * reader.
      * @param dictionary_path The archive section holding the dictionary.
      */
     DictionaryReader(ArchiveReaderAdaptor& adaptor, std::string dictionary_path)
@@ -53,7 +55,7 @@ public:
     auto read_entries(bool lazy = false) -> void;
 
     /**
-     * @return Whether all entries have been read successfully; false does not imply retry safety.
+     * @return Whether all entries have been read successfully (false does not imply retry safety).
      */
     [[nodiscard]] auto has_read_entries() const -> bool { return m_has_read_entries; }
 
@@ -112,7 +114,7 @@ using LogTypeDictionaryReader
         = DictionaryReader<clp::logtype_dictionary_id_t, LogTypeDictionaryEntry>;
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) {
+auto DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) -> void {
     if (m_has_read_entries) {
         return;
     }
@@ -133,11 +135,16 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) {
 
     m_dictionary_decompressor.close();
     m_adaptor.checkin_reader_for_section(m_dictionary_path);
+    dictionary_reader.reset();
+    m_adaptor.release_buffered_section(m_dictionary_path);
     m_has_read_entries = true;
 }
 
 template <typename DictionaryIdType, typename EntryType>
-EntryType& DictionaryReader<DictionaryIdType, EntryType>::get_entry(DictionaryIdType id) {
+auto DictionaryReader<DictionaryIdType, EntryType>::get_entry(DictionaryIdType id) -> EntryType& {
+    if (false == m_has_read_entries) {
+        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
+    }
     if (id >= m_entries.size()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }

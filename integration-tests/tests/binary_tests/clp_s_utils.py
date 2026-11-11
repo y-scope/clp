@@ -38,13 +38,22 @@ def get_parsing_spec_path(integration_test_path_config: IntegrationTestPathConfi
     return parsing_spec_path
 
 
+@dataclass(frozen=True, kw_only=True)
+class CompressOptions:
+    """Optional arguments for `clp-s c`."""
+
+    timestamp_key: str | None = None
+    single_file_archive: bool = False
+    target_encoded_size: int | None = None
+    parsing_spec_path: Path | None = None
+
+
 def compress(
     clp_core_path_config: ClpCorePathConfig,
     archives_dir: Path,
     input_path: Path,
     *,
-    timestamp_key: str | None = None,
-    parsing_spec_path: Path | None = None,
+    options: CompressOptions | None = None,
 ) -> None:
     """
     Runs `clp-s c`, failing the test on a non-zero exit.
@@ -52,15 +61,25 @@ def compress(
     :param clp_core_path_config:
     :param archives_dir:
     :param input_path:
-    :param timestamp_key: Passed via `--timestamp-key` when set.
-    :param parsing_spec_path: When set, compresses with `--flavour clpp` using this parsing
-        specification; otherwise compresses with the default clp-s flavour.
+    :param options: Optional arguments for `clp-s c`. Setting `options.parsing_spec_path` selects
+        the clpp flavour; otherwise compression uses the default clp-s flavour.
     """
+    options = CompressOptions() if options is None else options
     cmd = [str(clp_core_path_config.clp_s_binary_path), "c"]
-    if timestamp_key is not None:
-        cmd.extend(["--timestamp-key", timestamp_key])
-    if parsing_spec_path is not None:
-        cmd.extend(["--flavour", "clpp", f"--parsing-specification={parsing_spec_path}"])
+    if options.timestamp_key is not None:
+        cmd.extend(["--timestamp-key", options.timestamp_key])
+    if options.single_file_archive:
+        cmd.append("--single-file-archive")
+    if options.target_encoded_size is not None:
+        cmd.extend(["--target-encoded-size", str(options.target_encoded_size)])
+    if options.parsing_spec_path is not None:
+        cmd.extend(
+            [
+                "--flavour",
+                "clpp",
+                f"--parsing-specification={options.parsing_spec_path}",
+            ]
+        )
     cmd.extend([str(archives_dir), str(input_path)])
     _run_and_verify(cmd)
 
@@ -86,8 +105,10 @@ def compress_dataset_with_clpp(
         clp_core_path_config,
         archives_dir,
         dataset.logs_path,
-        timestamp_key=timestamp_key,
-        parsing_spec_path=get_parsing_spec_path(integration_test_path_config),
+        options=CompressOptions(
+            timestamp_key=timestamp_key,
+            parsing_spec_path=get_parsing_spec_path(integration_test_path_config),
+        ),
     )
 
 

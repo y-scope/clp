@@ -42,10 +42,10 @@ concept SectionReaderReq
 
 /**
  * Reads a single archive. Each instance is bound to one archive for its whole lifetime: the
- * constructors open the archive and read its schema tree and schema map, sections are read lazily
- * through the `get_`/`read_` accessors, and the destructor releases every resource. If reading a
- * section fails, the instance is left in an unspecified state and should be destroyed. Instances
- * can't be copied or moved, so the archive's resources are never shared or left dangling.
+ * constructors open the archive and read its schema tree and schema map, dictionaries and sections
+ * are read on demand, and the destructor releases the archive's resources. If a read fails, the
+ * instance is left in an unspecified state and should be destroyed. Instances can't be copied or
+ * moved, so the archive's resources are never shared or left dangling.
  */
 class ArchiveReader {
 public:
@@ -57,8 +57,9 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    /** Options controlling how an archive is read. */
     struct Options {
-        NetworkAuthOption m_network_auth{};
+        NetworkAuthOption network_auth{};
         bool m_extract_mode{false};
     };
 
@@ -79,8 +80,8 @@ public:
     // Constructors
     /**
      * Opens an archive for reading.
-     * @param archive_path
-     * @param options
+     * @param archive_path Path to the archive directory or single-file archive.
+     * @param options Options controlling how the archive is read.
      * @throws OperationFailed if the archive ID can't be derived from `archive_path`.
      * @throws OperationFailed if the archive metadata can't be loaded.
      */
@@ -114,14 +115,17 @@ public:
     // Methods
     /**
      * Reads the dictionaries and metadata.
-     * @throws OperationFailed if reading or decompressing metadata fails.
+     * @throws OperationFailed if reading or decompressing the metadata or a dictionary fails.
      */
-    void read_dictionaries_and_metadata();
+    auto read_dictionaries_and_metadata() -> void;
 
     /**
      * Opens packed streams for reading.
+     * @note In a single-file archive the dictionary sections must precede the tables section;
+     * opening the packed streams buffers the skipped dictionary sections so later lazy dictionary
+     * reads can succeed.
      */
-    void open_packed_streams();
+    auto open_packed_streams() -> void;
 
     /**
      * Reads the log shape statistics from the archive.
@@ -172,23 +176,27 @@ public:
 
     /**
      * @return The variable dictionary, reading it from the archive if it hasn't been read yet.
+     * @throws OperationFailed if the dictionary can't be read from the archive.
      */
     auto get_variable_dictionary() -> std::shared_ptr<VariableDictionaryReader>;
 
     /**
      * @return The log type dictionary, reading it from the archive if it hasn't been read yet.
      * Always null for a clpp-flavour archive, which stores log shapes instead.
+     * @throws OperationFailed if the dictionary can't be read from the archive.
      */
     auto get_log_type_dictionary() -> std::shared_ptr<LogTypeDictionaryReader>;
 
     /**
      * @return The array dictionary, reading it from the archive if it hasn't been read yet.
+     * @throws OperationFailed if the dictionary can't be read from the archive.
      */
     auto get_array_dictionary() -> std::shared_ptr<LogTypeDictionaryReader>;
 
     /**
      * @return The log shape dictionary, reading it from the archive if it hasn't been read yet, or
      * null if the archive isn't clpp-flavour.
+     * @throws OperationFailed if the dictionary can't be read from the archive.
      */
     auto get_log_shape_dictionary() -> std::shared_ptr<LogShapeDictionaryReader>;
 
@@ -201,7 +209,7 @@ public:
         return m_archive_reader_adaptor->get_timestamp_dictionary();
     }
 
-    std::shared_ptr<SchemaTree> get_schema_tree() { return m_schema_tree; }
+    auto get_schema_tree() const -> std::shared_ptr<SchemaTree> { return m_schema_tree; }
 
     std::shared_ptr<ReaderUtils::SchemaMap> get_schema_map() { return m_schema_map; }
 
@@ -334,7 +342,16 @@ private:
      * @return a pointer to the newly appended column reader or nullptr if no column reader was
      * created
      */
-    BaseColumnReader* append_reader_column(SchemaReader& reader, int32_t column_id);
+    auto append_reader_column(SchemaReader& reader, int32_t column_id) -> BaseColumnReader*;
+
+    /**
+     * Creates the column reader for a schema column.
+     * @param column_id The schema-tree node ID of the column.
+     * @param is_unordered_object Whether the column is part of an unordered object.
+     * @return The new column reader, or nullptr if the column has no associated reader.
+     */
+    auto make_column_reader(int32_t column_id, bool is_unordered_object)
+            -> std::unique_ptr<BaseColumnReader>;
 
     /**
      * Resolves the schema-tree node ID of an unordered object. Returns the root node ID stored in

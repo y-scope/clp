@@ -23,11 +23,9 @@
 #include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
 #include "../ColumnReader.hpp"
-#include "../DictionaryReader.hpp"
 #include "../ReaderUtils.hpp"
 #include "../SchemaReader.hpp"
 #include "../SchemaTree.hpp"
-#include "../TimestampDictionaryReader.hpp"
 #include "../Utils.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
@@ -60,7 +58,6 @@ public:
               m_schema_expressions(match->release_schema_expressions()),
               m_ignore_case(ignore_case),
               m_schema_tree(m_archive_reader->get_schema_tree()),
-              m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
               m_schemas(m_archive_reader->get_schema_map()),
               m_flavour(m_archive_reader->flavour()) {}
 
@@ -175,7 +172,6 @@ private:
     SchemaReader* m_reader{nullptr};
 
     std::shared_ptr<SchemaTree> m_schema_tree;
-    std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
     ClpFlavour m_flavour{ClpFlavour::Clps};

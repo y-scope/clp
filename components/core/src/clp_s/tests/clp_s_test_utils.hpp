@@ -24,7 +24,7 @@ constexpr size_t cDefaultTestTargetEncodedSize{8ULL * 1024 * 1024 * 1024};  // 8
  * @param structurize_arrays
  * @param parsing_spec_path Path to a parsing specification file. When set, the archive is
  * compressed with the clpp flavour.
- * @param target_encoded_size The encoded size at which the input is split into a new archive.
+ * @param target_encoded_size The archive split threshold, or the default threshold if empty.
  * @return Statistics for every compressed archive.
  */
 [[nodiscard]] auto compress_archive(
@@ -35,7 +35,7 @@ constexpr size_t cDefaultTestTargetEncodedSize{8ULL * 1024 * 1024 * 1024};  // 8
         bool single_file_archive,
         bool structurize_arrays,
         std::optional<std::filesystem::path> parsing_spec_path = std::nullopt,
-        size_t target_encoded_size = cDefaultTestTargetEncodedSize
+        std::optional<std::size_t> target_encoded_size = std::nullopt
 ) -> std::vector<clp_s::ArchiveStats>;
 
 [[nodiscard]] auto get_heuristic_parsing_spec_path() -> std::filesystem::path;
