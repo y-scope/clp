@@ -54,8 +54,7 @@ pub trait ResultEncoder: Send + Sized + 'static {
     ///
     /// Returns an error if:
     ///
-    /// * [`Self::Error`] if the query result can't be encoded, which must leave the pending batch
-    ///   as it was.
+    /// * [`Self::Error`] if the query result can't be encoded.
     fn encode(&mut self, timestamp_millisecs: i64, message: &str) -> Result<(), Self::Error>;
 
     /// Takes the pending batch and starts a new empty batch.

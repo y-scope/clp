@@ -47,18 +47,18 @@ impl Default for SessionConfig {
 
 /// A session that receives the results streamed for one query job.
 ///
-/// The session accepts the connections that present its token until it is dropped or fails, which
-/// it does once creating the encoder of one of its connections, or encoding one of its results,
-/// fails. Dropping it, or its failure, also cuts off its open connections at whatever they are
-/// waiting on, including the send of a batch they have claimed and their acknowledgement, so they
-/// end without an acknowledgement.
+/// The session accepts the connections that present its token until it ends, either once it is
+/// dropped or once it fails, which it does once creating the encoder of one of its connections, or
+/// encoding one of its results, fails. Ending it stops its open connections from reading, so they
+/// claim no more results and end without an acknowledgement, but a batch that a connection has
+/// already claimed is still handed on, unless that connection's own encoding failed.
 ///
-/// A connection can be cut off at any point since the session ends only once nothing its
-/// connections still hold needs to be delivered: it has failed, its consumer is gone, or its query
-/// job has terminated. If the job succeeded, every task's results were acknowledged, and an attempt
-/// is acknowledged only after its last batch was handed on; otherwise, the results are incomplete
-/// anyway. A reason to end a session while its connections' results still matter would have to
-/// revisit this.
+/// The session's [`ResultStream`] ends once the session is dropped and every connection has
+/// released it, so its end means that every claimed result has been handed on. A consumer must
+/// treat the stream's end, not the query job's status, as the end of the results: the job can
+/// succeed while a batch claimed by one attempt of a task still waits for room in the channel,
+/// since another attempt of the task can be acknowledged with only the duplicates of that batch's
+/// results.
 ///
 /// # Type Parameters
 ///
@@ -105,7 +105,9 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
 /// The stream of a session's results, in the batches its connections encoded them into.
 ///
 /// The stream ends once its session is dropped and every connection that joined the session has
-/// finished, after which [`Self::stats`] reports the session's final statistics.
+/// released it, after which [`Self::stats`] reports the session's final statistics. Its end
+/// therefore means that every claimed result has been handed on, so a consumer must treat it, not
+/// the query job's status, as the end of the results, as [`Session`] explains.
 ///
 /// # Type Parameters
 ///
@@ -333,8 +335,8 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
 
     /// Waits until the session ends, either because it has failed or because it has been dropped.
     ///
-    /// The session's connections are cut off at whatever they are waiting on once it ends, since
-    /// nothing they still hold needs to be delivered by then, as [`Session`] explains.
+    /// The session's connections stop reading once it ends, but still hand on the batches they
+    /// have already claimed, as [`Session`] explains.
     ///
     /// # Returns
     ///
@@ -620,58 +622,6 @@ mod tests {
         let (_stream, mut handler_stream) = tokio::io::duplex(1024);
         let handler =
             tokio::spawn(async move { connection.run(&mut handler_stream, BytesMut::new()).await });
-
-        drop(session);
-        let result = tokio::time::timeout(TIMEOUT, handler).await??;
-
-        assert!(
-            matches!(result, Err(ConnectionError::SessionEnded)),
-            "unexpected result: {result:?}"
-        );
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn dropping_a_session_cuts_off_its_connection_blocked_on_a_full_channel()
-    -> anyhow::Result<()> {
-        use std::num::NonZeroU16;
-        use std::num::NonZeroUsize;
-        use std::time::Duration;
-
-        use bytes::BytesMut;
-        use non_empty_string::NonEmptyString;
-        use tokio::io::AsyncWriteExt;
-
-        use crate::test_utils::encode_results;
-
-        const BLOCKED_CHECK_DURATION: Duration = Duration::from_millis(100);
-
-        let session_registry = Arc::new(SessionRegistry::<QueryResultEncoding>::new());
-        let (session, _results) = session_registry.open(
-            NonEmptyString::new("127.0.0.1".to_owned())
-                .expect("the host fixture should be non-empty"),
-            NonZeroU16::new(4000).expect("4000 is nonzero"),
-            SessionConfig {
-                channel_capacity: NonZeroUsize::MIN,
-            },
-        )?;
-        let mut connection = session_registry.join(&Handshake {
-            session_token: session.network_output().session_token,
-            task_index: 0,
-            archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
-        })?;
-        let (mut stream, mut handler_stream) = tokio::io::duplex(1024);
-        // The batch of the results read with the handshake fills the channel, so the next batch
-        // waits to be sent.
-        let buffered = BytesMut::from(&encode_results(0, 0..2)[..]);
-        let mut handler =
-            tokio::spawn(async move { connection.run(&mut handler_stream, buffered).await });
-        stream.write_all(&encode_results(0, 2..4)).await?;
-        let blocked_check = tokio::time::timeout(BLOCKED_CHECK_DURATION, &mut handler).await;
-        assert!(
-            blocked_check.is_err(),
-            "the connection should wait to send its next batch: {blocked_check:?}"
-        );
 
         drop(session);
         let result = tokio::time::timeout(TIMEOUT, handler).await??;

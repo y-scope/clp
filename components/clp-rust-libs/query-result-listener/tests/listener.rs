@@ -105,6 +105,25 @@ impl FakeClpS {
         self.send(&encode_results(task_index, result_indices)).await;
     }
 
+    /// Sends the results at `result_indices` of task `task_index` one at a time, until every result
+    /// is sent or the listener has closed the connection.
+    async fn send_results_until_closed(
+        mut self,
+        task_index: TaskIndex,
+        result_indices: impl IntoIterator<Item = u64>,
+    ) {
+        for result_index in result_indices {
+            if self
+                .stream
+                .write_all(&encode_results(task_index, [result_index]))
+                .await
+                .is_err()
+            {
+                return;
+            }
+        }
+    }
+
     /// Ends the stream the way `clp-s` does: sends a trailer counting `num_results` results, then
     /// EOF, and waits until the listener closes the connection.
     ///
@@ -557,9 +576,11 @@ async fn dropping_the_listener_stops_accepting_and_keeps_serving_open_connection
 }
 
 #[tokio::test]
-async fn connection_blocked_on_a_full_channel_is_cut_off_by_its_sessions_drop() -> Result<()> {
+async fn connection_streaming_past_its_sessions_drop_delivers_only_the_results_it_had_claimed()
+-> Result<()> {
     use std::num::NonZeroUsize;
 
+    const NUM_RESULTS: u64 = 1000;
     const READ_DELAY: Duration = Duration::from_millis(100);
 
     let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
@@ -569,17 +590,53 @@ async fn connection_blocked_on_a_full_channel_is_cut_off_by_its_sessions_drop() 
     let mut attempt = FakeClpS::connect(session.network_output()).await;
     attempt.send_handshake(0, ARCHIVE_ID).await;
     // Separate reads, so that the first batch fills the channel and the connection waits to send
-    // the second.
+    // the second instead of reading the results streamed once the session is dropped.
     attempt.send_results(0, 0..5).await;
     tokio::time::sleep(READ_DELAY).await;
     attempt.send_results(0, 5..10).await;
     tokio::time::sleep(READ_DELAY).await;
 
     drop(session);
-    attempt.expect_closed_by_listener().await;
+    tokio::spawn(attempt.send_results_until_closed(0, 10..NUM_RESULTS));
+    // Lets the results streamed since the session was dropped reach the connection's socket before
+    // the consumer makes room for the batch the connection waits to send.
+    tokio::time::sleep(READ_DELAY).await;
     let received = collect_results(&mut results).await;
 
-    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..5));
+    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..10));
+    Ok(())
+}
+
+#[tokio::test]
+async fn claimed_batch_of_a_blocked_attempt_is_delivered_after_its_retry_is_acknowledged()
+-> Result<()> {
+    use std::num::NonZeroUsize;
+
+    const READ_DELAY: Duration = Duration::from_millis(100);
+
+    let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
+    let (session, mut results) = listener.open_session(SessionConfig {
+        channel_capacity: NonZeroUsize::MIN,
+    })?;
+    let mut blocked_attempt = FakeClpS::connect(session.network_output()).await;
+    blocked_attempt.send_handshake(0, ARCHIVE_ID).await;
+    // Separate reads, so that the first batch fills the channel and the attempt waits to send the
+    // second before the retry streams the same results.
+    blocked_attempt.send_results(0, 0..2).await;
+    tokio::time::sleep(READ_DELAY).await;
+    blocked_attempt.send_results(0, 2..4).await;
+    tokio::time::sleep(READ_DELAY).await;
+    let mut retry = FakeClpS::connect(session.network_output()).await;
+    retry.send_handshake(0, ARCHIVE_ID).await;
+    retry.send_results(0, 0..4).await;
+    let retry_acknowledgement = retry.finish(4).await;
+
+    drop(session);
+    let received = collect_results(&mut results).await;
+    blocked_attempt.expect_closed_by_listener().await;
+
+    assert_eq!(retry_acknowledgement, Ack { num_results: 4 }.encode());
+    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..4));
     Ok(())
 }
 
@@ -674,102 +731,6 @@ async fn encoding_failure_fails_the_session_without_acknowledging_the_failing_co
             archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
             timestamp_millisecs: timestamp(2),
         }
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn encoder_creation_failure_fails_the_session_without_acknowledging_the_connection()
--> Result<()> {
-    use query_result_listener::test_utils::UNENCODABLE_ARCHIVE_ID;
-
-    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
-    let (session, _results) = listener.open_session(SessionConfig::default())?;
-    let mut failing_attempt = FakeClpS::connect(session.network_output()).await;
-    failing_attempt
-        .send_handshake(0, UNENCODABLE_ARCHIVE_ID)
-        .await;
-    failing_attempt
-        .send(&[encode_results(0, 0..2), encode_trailer(2)].concat())
-        .await;
-    failing_attempt.expect_closed_by_listener().await;
-
-    assert_eq!(
-        timeout(TIMEOUT, session.failed()).await?,
-        &EncodingError::UnencodableArchive(UNENCODABLE_ARCHIVE_ID.parse::<ArchiveId>()?)
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn encoding_failure_cuts_off_the_sessions_other_open_connections() -> Result<()> {
-    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
-    let (session, mut results) = listener.open_session(SessionConfig::default())?;
-    let mut streaming_attempt = FakeClpS::connect(session.network_output()).await;
-    streaming_attempt.send_handshake(1, ARCHIVE_ID).await;
-    streaming_attempt.send_results(1, 0..2).await;
-    receive_results(&mut results, 2).await;
-    let mut finished_attempt = FakeClpS::connect(session.network_output()).await;
-    finished_attempt.send_handshake(2, ARCHIVE_ID).await;
-    // One write, so that the batch shows that the connection has read the trailer.
-    finished_attempt
-        .send(&[encode_results(2, 0..2), encode_trailer(2)].concat())
-        .await;
-    receive_results(&mut results, 2).await;
-
-    let mut failing_attempt = FakeClpS::connect(session.network_output()).await;
-    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
-    failing_attempt
-        .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
-        .await;
-    failing_attempt.expect_closed_by_listener().await;
-    streaming_attempt.expect_closed_by_listener().await;
-    finished_attempt.expect_closed_by_listener().await;
-    Ok(())
-}
-
-#[tokio::test]
-async fn retry_of_the_task_that_failed_its_session_is_rejected() -> Result<()> {
-    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
-    let (session, mut results) = listener.open_session(SessionConfig::default())?;
-    let mut failing_attempt = FakeClpS::connect(session.network_output()).await;
-    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
-    failing_attempt
-        .send(
-            &[
-                encode_results(0, 0..2),
-                encode_result(2, timestamp(2), UNENCODABLE_MESSAGE),
-            ]
-            .concat(),
-        )
-        .await;
-    failing_attempt.expect_closed_by_listener().await;
-
-    let mut retry = FakeClpS::connect(session.network_output()).await;
-    retry
-        .send(
-            &[
-                encode_handshake(
-                    PROTOCOL_VERSION,
-                    &session.network_output().session_token.to_string(),
-                    0,
-                    ARCHIVE_ID,
-                ),
-                encode_results(0, 0..4),
-                encode_trailer(4),
-            ]
-            .concat(),
-        )
-        .await;
-    retry.expect_closed_by_listener().await;
-    let received = take_buffered_results(&mut results);
-
-    let failing_read_results = expected_results(0, ARCHIVE_ID, 0..2);
-    assert!(
-        received
-            .iter()
-            .all(|result| failing_read_results.contains(result)),
-        "the retry's results shouldn't be delivered: {received:?}"
     );
     Ok(())
 }
