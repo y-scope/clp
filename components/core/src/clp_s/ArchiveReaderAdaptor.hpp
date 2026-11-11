@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -179,10 +180,16 @@ private:
     /**
      * Checks out a reader for a given section of the single-file archive's stream, buffering the
      * unread sections the stream skips over to reach it.
+     *
+     * A checked-in section may still have unread trailing bytes since a streaming decompressor can
+     * produce all expected output before consuming the compressed frame's trailer. Such a section
+     * is skipped without buffering, and the forward seek to the requested section discards the
+     * remainder. A partially consumed section that was never checked in is rejected since its
+     * contents may not have been read successfully.
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
      * @throws OperationFailed if another stream section is checked out, if the requested section
-     * doesn't exist or was already passed by the stream, if any section skipped to reach it was
+     * doesn't exist or was already passed by the stream, if a section that wasn't checked in was
      * partially consumed, or on any I/O error.
      */
     auto checkout_reader_for_sfa_section(std::string_view section)
@@ -228,6 +235,7 @@ private:
     ArchiveInfoPacket m_archive_info{};
     size_t m_files_section_offset{};
     std::optional<std::string> m_current_reader_holder;
+    std::unordered_set<std::string> m_checked_in_sections;
     std::unordered_map<std::string, std::vector<char>> m_buffered_sections;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
     std::shared_ptr<clp::ReaderInterface> m_reader;

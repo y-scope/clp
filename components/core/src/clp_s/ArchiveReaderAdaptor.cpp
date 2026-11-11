@@ -350,11 +350,14 @@ auto ArchiveReaderAdaptor::checkout_reader_for_sfa_section(std::string_view sect
             continue;
         }
         if (skipped_begin_offset < curr_pos) {
-            SPDLOG_ERROR(
-                    "Section '{}' was only partially consumed and cannot be re-read.",
-                    skipped_it->n
-            );
-            throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
+            if (false == m_checked_in_sections.contains(skipped_it->n)) {
+                SPDLOG_ERROR(
+                        "Section '{}' was only partially consumed and cannot be re-read.",
+                        skipped_it->n
+                );
+                throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
+            }
+            continue;
         }
         seek_to(skipped_begin_offset);
         std::vector<char> buffer(skipped_end_offset - skipped_begin_offset);
@@ -425,6 +428,7 @@ auto ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) 
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 
+    m_checked_in_sections.emplace(section);
     m_current_reader_holder.reset();
 }
 

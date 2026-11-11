@@ -557,7 +557,7 @@ TEST_CASE("clp-s-search-rejects-truncated-required-dictionary", "[clp-s][search]
     REQUIRE_THROWS_AS(search("a: \"x\"", false, {0}), clp_s::ArchiveReader::OperationFailed);
 }
 
-TEST_CASE("clp-s-archive-reader-adaptor-rejects-partially-consumed-section", "[clp-s][search]") {
+TEST_CASE("clp-s-archive-reader-adaptor-skips-checked-in-section-remainder", "[clp-s][search]") {
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
@@ -593,15 +593,13 @@ TEST_CASE("clp-s-archive-reader-adaptor-rejects-partially-consumed-section", "[c
     REQUIRE_NOTHROW(archive_reader_adaptor.checkin_reader_for_section(var_dict_section));
     dictionary_reader.reset();
 
-    try {
-        std::ignore = archive_reader_adaptor.checkout_reader_for_section(
-                static_cast<char const*>(clp_s::constants::cArchiveTablesFile)
-        );
-        FAIL("Expected checking out tables after partially consuming the variable dictionary to "
-             "fail.");
-    } catch (clp_s::ArchiveReaderAdaptor::OperationFailed const& e) {
-        REQUIRE(clp_s::ErrorCodeNotReady == e.get_error_code());
-    }
+    auto const tables_reader{archive_reader_adaptor.checkout_reader_for_section(
+            static_cast<char const*>(clp_s::constants::cArchiveTablesFile)
+    )};
+    REQUIRE(nullptr != tables_reader);
+    REQUIRE_NOTHROW(archive_reader_adaptor.checkin_reader_for_section(
+            static_cast<char const*>(clp_s::constants::cArchiveTablesFile)
+    ));
 }
 
 TEST_CASE("clp-s-search-truncated-single-file-archive", "[clp-s][search]") {
