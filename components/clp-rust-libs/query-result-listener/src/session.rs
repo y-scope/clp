@@ -257,7 +257,7 @@ pub(crate) enum SessionEnd {
     /// The session was dropped.
     Dropped,
 
-    /// Creating the encoder of one of its connections, or encoding one of its results, failed.
+    /// The session failed, as [`Session`] defines it.
     Failed,
 }
 
