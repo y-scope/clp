@@ -263,6 +263,15 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
     }
 }
 
+/// Why a session has ended.
+pub(crate) enum SessionEnd {
+    /// The session was dropped.
+    Dropped,
+
+    /// Creating the encoder of one of its connections, or encoding one of its results, failed.
+    Failed,
+}
+
 /// The state of a session shared with its connections.
 ///
 /// # Type Parameters
@@ -340,16 +349,16 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
     ///
     /// # Returns
     ///
-    /// The reason that a connection cut off by the session's end ends without an acknowledgement:
+    /// Why the session has ended:
     ///
-    /// * [`ConnectionError::SessionFailed`] if the session has failed.
-    /// * [`ConnectionError::SessionEnded`] if the session has been dropped without failing.
-    pub async fn ended(&self) -> ConnectionError {
+    /// * [`SessionEnd::Failed`] if the session has failed.
+    /// * [`SessionEnd::Dropped`] if the session has been dropped without failing.
+    pub async fn ended(&self) -> SessionEnd {
         self.end_signal.cancelled().await;
         if self.encoding_error().is_some() {
-            ConnectionError::SessionFailed
+            SessionEnd::Failed
         } else {
-            ConnectionError::SessionEnded
+            SessionEnd::Dropped
         }
     }
 

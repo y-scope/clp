@@ -24,6 +24,7 @@ use crate::protocol::Frame;
 use crate::protocol::Handshake;
 use crate::protocol::ResultFrame;
 use crate::protocol::Trailer;
+use crate::session::SessionEnd;
 use crate::session::SessionRegistry;
 use crate::session::SessionStats;
 use crate::session::State;
@@ -383,7 +384,10 @@ async fn read_more_unless_ended<EncodingType: ResultEncoding, StreamType: AsyncR
 ) -> Result<usize, ConnectionError> {
     tokio::select! {
         biased;
-        error = session_state.ended() => Err(error),
+        end = session_state.ended() => Err(match end {
+            SessionEnd::Dropped => ConnectionError::SessionEnded,
+            SessionEnd::Failed => ConnectionError::SessionFailed,
+        }),
         read_result = read_more(input_stream, buffer) => Ok(read_result?),
     }
 }
