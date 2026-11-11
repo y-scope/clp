@@ -7,15 +7,22 @@ edition = { workspace = true }
 name = "query_result_listener"
 path = "src/lib.rs"
 
+[features]
+test-utils = []
+
 [dependencies]
 bytes = { workspace = true }
 clp-rust-utils = { workspace = true }
 dashmap = { workspace = true }
+futures = { workspace = true }
+non-empty-string = { workspace = true }
 rmp = { workspace = true }
 spider-core = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["io-util", "sync"] }
+tokio = { workspace = true, features = ["io-util", "net", "sync"] }
+tracing = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
+query-result-listener = { path = ".", features = ["test-utils"] }
 tokio = { workspace = true, features = ["macros"] }
