@@ -118,12 +118,6 @@ public:
     std::vector<RangeIndexEntry> const& get_range_index() const { return m_range_index; }
 
     /**
-     * @param section The section name to check.
-     * @return Whether the section exists in the archive.
-     */
-    [[nodiscard]] auto has_section(std::string_view section) const -> bool;
-
-    /**
      * @return The names of every section in the archive, in on-disk order.
      */
     [[nodiscard]] auto get_sections() const -> std::vector<std::string_view>;

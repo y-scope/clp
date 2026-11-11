@@ -436,15 +436,6 @@ auto ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) 
     m_current_reader_holder.reset();
 }
 
-auto ArchiveReaderAdaptor::has_section(std::string_view section) const -> bool {
-    return m_archive_file_info.files.end()
-           != std::find_if(
-                   m_archive_file_info.files.begin(),
-                   m_archive_file_info.files.end(),
-                   [&](ArchiveFileInfo const& info) { return info.n == section; }
-           );
-}
-
 auto ArchiveReaderAdaptor::get_sections() const -> std::vector<std::string_view> {
     std::vector<std::string_view> sections;
     sections.reserve(m_archive_file_info.files.size());
