@@ -54,20 +54,6 @@ public:
      */
     void add_searched_column_to_schema(int32_t schema, int32_t column);
 
-    /**
-     * Checks if the schema has an array field
-     * @param schema_id
-     * @return true if the schema has, false otherwise
-     */
-    bool has_array(int32_t schema_id);
-
-    /**
-     * Checks if the schema has an array field to be searched against
-     * @param schema_id
-     * @return true if the schema has, false otherwise
-     */
-    bool has_array_search(int32_t schema_id);
-
 private:
     std::unordered_map<uint32_t, std::set<std::shared_ptr<ast::ColumnDescriptor>>>
             m_column_to_descriptor;
@@ -78,7 +64,6 @@ private:
     std::map<ast::ColumnDescriptor*, std::set<int32_t>> m_unresolved_descriptor_to_descriptor;
     std::unordered_map<ast::Expression*, std::unordered_set<int32_t>> m_expression_to_schemas;
     std::unordered_set<int32_t> m_matched_schema_ids;
-    std::unordered_set<int32_t> m_array_schema_ids;
     std::unordered_set<int32_t> m_array_search_schema_ids;
     std::map<int32_t, std::shared_ptr<ast::Expression>> m_schema_to_query;
 
