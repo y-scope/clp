@@ -123,11 +123,6 @@ public:
     [[nodiscard]] auto get_sections() const -> std::vector<std::string_view>;
 
     /**
-     * @return Whether this archive is a single-file archive.
-     */
-    [[nodiscard]] auto is_single_file_archive() const -> bool { return m_single_file_archive; }
-
-    /**
      * @return The flavour of CLP the archive was compressed with.
      */
     [[nodiscard]] auto flavour() const -> ClpFlavour { return m_archive_info.flavour; }
