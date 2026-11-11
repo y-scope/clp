@@ -50,9 +50,9 @@ impl Default for SessionConfig {
 /// The session accepts the connections that present its token until it ends. A session ends if:
 ///
 /// * It is dropped.
-/// * It is failed because:
-///   * A connection fails to create an encoder.
-///   * A connection fails to encode a received result.
+/// * It fails, which happens if:
+///   * A connection fails to create its encoder.
+///   * A connection fails to encode a result it received.
 ///
 /// Once a session ends, its open connections stop reading and end without an acknowledgement, but
 /// still hand on the batches they've claimed.
