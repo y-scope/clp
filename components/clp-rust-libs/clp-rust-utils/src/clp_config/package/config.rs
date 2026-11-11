@@ -307,7 +307,7 @@ pub struct Package {
 impl Default for Package {
     fn default() -> Self {
         Self {
-            storage_engine: StorageEngine::Clp,
+            storage_engine: StorageEngine::ClpS,
         }
     }
 }
