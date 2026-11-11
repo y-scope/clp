@@ -19,10 +19,10 @@ non-empty-string = { workspace = true }
 rmp = { workspace = true }
 spider-core = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["io-util", "net", "sync"] }
+tokio = { workspace = true, features = ["io-util", "macros", "net", "sync"] }
+tokio-util = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
 query-result-listener = { path = ".", features = ["test-utils"] }
-tokio = { workspace = true, features = ["macros"] }
