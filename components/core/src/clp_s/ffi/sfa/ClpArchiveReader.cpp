@@ -64,7 +64,11 @@ auto ClpArchiveReader::create(
                 archive_data_owner->size()
         )};
 
-        archive_reader = std::make_unique<clp_s::ArchiveReader>(reader, cDefaultArchiveId, options);
+        archive_reader = std::make_unique<clp_s::ArchiveReader>(
+                std::move(reader),
+                cDefaultArchiveId,
+                options
+        );
         auto clp_archive_reader{
                 ClpArchiveReader{std::move(archive_reader), std::move(archive_data_owner)}
         };
