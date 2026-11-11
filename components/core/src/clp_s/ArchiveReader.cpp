@@ -358,9 +358,6 @@ auto ArchiveReader::make_column_reader(int32_t column_id, bool is_unordered_obje
                     get_timestamp_dictionary()
             );
         case NodeType::Timestamp:
-            if (is_unordered_object) {
-                return nullptr;
-            }
             return std::make_unique<TimestampColumnReader>(column_id, get_timestamp_dictionary());
         // No need to create readers for columns without associated object readers.
         case NodeType::Metadata:
@@ -395,8 +392,8 @@ void ArchiveReader::append_unordered_reader_columns(
         if (Schema::schema_entry_is_unordered_object(column_id)) {
             continue;
         }
-        // UnstructuredArray, DeprecatedDateString, and Timestamp currently aren't supported as part
-        // of any unordered object, so `make_column_reader` returns nullptr for them.
+        // UnstructuredArray and DeprecatedDateString currently aren't supported as part of any
+        // unordered object, so `make_column_reader` returns nullptr for them.
         auto column_reader{make_column_reader(column_id, true)};
         if (column_reader) {
             reader.append_unordered_column(column_reader.release());

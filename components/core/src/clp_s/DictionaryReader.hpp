@@ -132,9 +132,8 @@ auto DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) -> v
     }
 
     m_dictionary_decompressor.close();
-    m_adaptor.checkin_reader_for_section(m_dictionary_path);
     dictionary_reader.reset();
-    m_adaptor.release_buffered_section(m_dictionary_path);
+    m_adaptor.checkin_reader_for_section(m_dictionary_path);
     m_has_read_entries = true;
 }
 

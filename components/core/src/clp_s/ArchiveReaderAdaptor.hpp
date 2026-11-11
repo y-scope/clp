@@ -18,6 +18,7 @@
 // NOLINTNEXTLINE(misc-include-cleaner)
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
+#include <ystdlib/containers/Array.hpp>
 
 #include "../clp/BoundedReader.hpp"
 #include "../clp/ReaderInterface.hpp"
@@ -86,8 +87,8 @@ public:
      * checked out at once, in any order. In a single-file archive the sections share one forward-
      * only stream, so only one stream section can be checked out at a time; any unread section the
      * stream skips over is retained in memory (compressed) so that it can be checked out later.
-     * Buffered bytes remain resident until they are released with `release_buffered_section` or
-     * this adaptor is destroyed. Readers over buffered bytes must not outlive this adaptor.
+     * Buffered bytes are released when the section is checked in or when this adaptor is destroyed.
+     * Readers over buffered bytes must be destroyed before check-in.
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
      * @throws OperationFailed if another single-file archive stream section is checked out, if the
@@ -97,19 +98,14 @@ public:
             -> std::unique_ptr<clp::ReaderInterface>;
 
     /**
-     * Checks in a reader for a given section of the archive. This is a no-op for multi-file archive
-     * sections and buffered single-file archive sections.
-     * @param section
+     * Checks in a reader for a given section of the archive, releasing the section's buffered bytes
+     * if any. This is a no-op for multi-file archive sections.
+     * @param section The section being checked in. Readers over its buffered bytes must already
+     * have been destroyed.
      * @throws OperationFailed if the section is a single-file archive stream section and either no
      * reader is checked out or the section doesn't match the section currently checked out.
      */
     auto checkin_reader_for_section(std::string_view section) -> void;
-
-    /**
-     * Releases the buffered bytes of a single-file archive section, if any.
-     * @param section The section whose buffered bytes should be released.
-     */
-    auto release_buffered_section(std::string_view section) -> void;
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
         return m_timestamp_dictionary;
@@ -205,9 +201,10 @@ private:
             -> std::pair<size_t, size_t>;
 
     /**
-     * Seeks the single-file archive stream to an absolute offset, avoiding redundant seeks.
+     * Seeks the single-file archive stream to an absolute offset, avoiding redundant seeks. Seeking
+     * to the end of the stream is permitted so that an empty trailing section can be checked out.
      * @param offset
-     * @throws OperationFailed on any I/O error.
+     * @throws OperationFailed on any I/O error other than reaching the end of the stream.
      */
     auto seek_to(size_t offset) -> void;
 
@@ -236,7 +233,7 @@ private:
     size_t m_files_section_offset{};
     std::optional<std::string> m_current_reader_holder;
     std::unordered_set<std::string> m_checked_in_sections;
-    std::unordered_map<std::string, std::vector<char>> m_buffered_sections;
+    std::unordered_map<std::string, ystdlib::containers::Array<char>> m_buffered_sections;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
     std::shared_ptr<clp::ReaderInterface> m_reader;
     std::vector<RangeIndexEntry> m_range_index;

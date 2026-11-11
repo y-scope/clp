@@ -507,7 +507,7 @@ TEST_CASE("clp-s-search-reads-only-required-dictionaries", "[clp-s][search]") {
     }
 }
 
-TEST_CASE("clp-s-search-skips-unused-missing-dictionary", "[clp-s][search]") {
+TEST_CASE("clp-s-search-rejects-unreadable-required-dictionary", "[clp-s][search]") {
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
@@ -523,37 +523,14 @@ TEST_CASE("clp-s-search-skips-unused-missing-dictionary", "[clp-s][search]") {
     auto const archive_entry{std::filesystem::directory_iterator(cTestSearchArchiveDirectory)};
     REQUIRE(archive_entry != std::filesystem::directory_iterator{});
     REQUIRE(archive_entry->is_directory());
-    REQUIRE(std::filesystem::remove(
+    auto const var_dict_path{
             archive_entry->path().string()
             + std::string{static_cast<char const*>(clp_s::constants::cArchiveVarDictFile)}
-    ));
-
-    REQUIRE_NOTHROW(search("b: null", false, {1}));
+    };
+    std::filesystem::resize_file(var_dict_path, 0);
     REQUIRE_THROWS_AS(search("a: \"x\"", false, {0}), clp_s::ArchiveReader::OperationFailed);
-}
 
-TEST_CASE("clp-s-search-rejects-truncated-required-dictionary", "[clp-s][search]") {
-    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
-    REQUIRE_NOTHROW(
-            std::ignore = compress_archive(
-                    get_test_input_local_path(cTestSearchPureWildcardFile),
-                    std::string{cTestSearchArchiveDirectory},
-                    std::string{cTestIdxKey},
-                    false,
-                    false,
-                    false
-            )
-    );
-
-    auto const archive_entry{std::filesystem::directory_iterator(cTestSearchArchiveDirectory)};
-    REQUIRE(archive_entry != std::filesystem::directory_iterator{});
-    REQUIRE(archive_entry->is_directory());
-    std::filesystem::resize_file(
-            archive_entry->path().string()
-                    + std::string{static_cast<char const*>(clp_s::constants::cArchiveVarDictFile)},
-            0
-    );
-
+    REQUIRE(std::filesystem::remove(var_dict_path));
     REQUIRE_THROWS_AS(search("a: \"x\"", false, {0}), clp_s::ArchiveReader::OperationFailed);
 }
 
