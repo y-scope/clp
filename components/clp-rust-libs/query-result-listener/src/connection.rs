@@ -115,9 +115,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
             self.send_pending_batch().await;
             match decoded? {
                 Decoded::NeedMoreBytes => {
-                    // Stop reading once the session ends. `biased` checks the end first, so that a
-                    // connection doesn't read more once its session has ended, even if bytes are
-                    // ready.
+                    // Stop reading once the session ends.
                     let num_bytes_read = tokio::select! {
                         biased;
                         end = self.session_state.ended() => return Err(end.into()),
@@ -135,7 +133,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
             }
         };
 
-        // Stop waiting for EOF once the session ends. `biased` checks the end first, so that a
+        // Stop waiting for EOF once the session ends. `biased` must check the end first, so that a
         // connection of a failed session isn't acknowledged, even if its EOF is already ready.
         tokio::select! {
             biased;
