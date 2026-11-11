@@ -1,6 +1,16 @@
 global:
   # Where archives are stored: "fs" or "s3".
   archiveOutputStorageType: "fs"
+
+  # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
+  # workers.
+  logsInput:
+    type: "fs"
+
+    # NOTE: This directory will be exposed inside the container, so symbolic links to files outside
+    # this directory will be ignored.
+    directory: "/"
+
   fullnameOverride: ""
   nameOverride: ""
 
@@ -128,15 +138,6 @@ clpConfig:
       max_backoff_ms: 5000
     stream_file_extraction_timeout_secs: 270
 
-  # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
-  # workers.
-  logs_input:
-    type: "fs"
-
-    # NOTE: This directory will be exposed inside the container, so symbolic links to files outside
-    # this directory will be ignored.
-    directory: "/"
-
   database:
     type: "mariadb"  # "mariadb" or "mysql"
     # Host and port for the database service. When "database" is in `bundled`, the host is
@@ -222,7 +223,7 @@ clpConfig:
   #   # See https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
   #   split_filter: {}
 
-  # log-ingestor config. Currently, the config is applicable only if `logs_input.type` is "s3".
+  # log-ingestor config. Applicable only when `global.logsInput.type` is "s3".
   log_ingestor:
     serviceType: "ClusterIP"  # "NodePort", "ClusterIP", or "LoadBalancer"
     port: 30302  # Specifies the service's nodePort. Ignored unless serviceType is "NodePort".
@@ -342,6 +343,9 @@ spider:
               name: "{{ include \"clp.fullname\" . }}-database"
               key: "password"
       extra_volume_mounts: |-
+        {{- if eq .Values.global.logsInput.type "fs" }}
+        - {{- include "clp.logsInputVolumeMount" . | nindent 2 }}
+        {{- end }}
         - name: "clp-config"
           mountPath: "/etc/clp-config.yaml"
           subPath: "clp-config.yaml"
@@ -353,6 +357,9 @@ spider:
           mountPath: "/var/data/archives"
         {{- end }}
       extra_volumes: |-
+        {{- if eq .Values.global.logsInput.type "fs" }}
+        - {{- include "clp.logsInputVolume" . | nindent 2 }}
+        {{- end }}
         - name: "clp-config"
           configMap:
             name: "{{ include "clp.fullname" . }}-config"

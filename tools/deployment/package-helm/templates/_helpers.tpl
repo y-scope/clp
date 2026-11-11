@@ -382,7 +382,7 @@ Creates a volume for the logs input directory.
 {{- define "clp.logsInputVolume" -}}
 name: "logs-input"
 hostPath:
-  path: {{ .Values.clpConfig.logs_input.directory | quote }}
+  path: {{ .Values.global.logsInput.directory | quote }}
   type: "Directory"
 {{- end }}
 

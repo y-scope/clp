@@ -70,7 +70,7 @@ spec:
               mountPath: "/etc/clp-config.yaml"
               subPath: "clp-config.yaml"
               readOnly: true
-            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            {{- if eq .Values.global.logsInput.type "fs" }}
             - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             {{- end }}
           command: [
@@ -81,6 +81,6 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        {{- if eq .Values.global.logsInput.type "fs" }}
         - {{- include "clp.logsInputVolume" . | nindent 10 }}
         {{- end }}

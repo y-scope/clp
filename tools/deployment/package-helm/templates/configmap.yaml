@@ -1,5 +1,5 @@
 {{- $logIngestorEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
-    (eq .Values.clpConfig.logs_input.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
+    (eq .Values.global.logsInput.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
 {{- if not (has .Values.global.archiveOutputStorageType (list "fs" "s3")) }}
 {{- fail (printf
   "global.archiveOutputStorageType (%v) must be \"fs\" or \"s3\""
@@ -114,7 +114,7 @@ data:
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
     logs_directory: "/var/log"
-    {{- with .Values.clpConfig.logs_input }}
+    {{- with .Values.global.logsInput }}
     logs_input:
       {{- if eq .type "fs" }}
       directory: "/mnt/logs"
@@ -137,7 +137,7 @@ data:
         {{- end }}
       {{- end }}{{/* with .aws_authentication */}}
       {{- end }}{{/* if eq .type "fs" */}}
-    {{- end }}{{/* with .Values.clpConfig.logs_input */}}
+    {{- end }}{{/* with .Values.global.logsInput */}}
     {{- with .Values.clpConfig.log_ingestor }}
     log_ingestor:
       host: "localhost"
@@ -264,7 +264,7 @@ data:
         "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
         "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
 
-        "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
+        "LogsInputType": {{ .Values.global.logsInput.type | quote }},
         "LogIngestorEnabled": {{ $logIngestorEnabled }},
 
         {{- with .Values.clpConfig.query_coordinator.max_datasets_per_query }}
