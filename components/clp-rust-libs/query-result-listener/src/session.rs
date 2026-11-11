@@ -50,7 +50,9 @@ impl Default for SessionConfig {
 /// The session accepts the connections that present its token until it ends. A session ends if:
 ///
 /// * It is dropped.
-/// * A connection fails to create its encoder or to encode a result.
+/// * It is failed because:
+///   * A connection fails to create an encoder.
+///   * A connection fails to encode a received result.
 ///
 /// Once a session ends, its open connections stop reading and end without an acknowledgement, but
 /// still hand on the batches they've claimed.
@@ -73,17 +75,12 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
         &self.network_output
     }
 
-    /// Waits until the session fails, which it does once creating the encoder of one of its
-    /// connections, or encoding one of its results, fails.
-    ///
-    /// The session's end signal is cancelled either once the session fails or once it is dropped,
-    /// and the latter can't happen while the session is borrowed, so the wait ends only once the
-    /// session has failed. It never ends for a session that doesn't fail.
+    /// Waits until the session fails, as [`Session`] defines it. Never returns for a session that
+    /// doesn't fail.
     ///
     /// # Returns
     ///
-    /// The error of the first failure to create the encoder of one of the session's connections or
-    /// to encode one of its results.
+    /// The error of the session's first failure.
     ///
     /// # Panics
     ///
@@ -99,10 +96,7 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
 
 /// The stream of a session's results, in the batches its connections encoded them into.
 ///
-/// The stream ends once its session is dropped and every connection has released it, so its end
-/// means every claimed result has been handed on. Treat its end, not the query job's status, as the
-/// end of the results: a job can succeed while a claimed batch still waits for room in the channel.
-/// [`Self::stats`] is final once the stream has ended.
+/// The stream ends once its session is dropped and all its connections have ended.
 ///
 /// # Type Parameters
 ///
