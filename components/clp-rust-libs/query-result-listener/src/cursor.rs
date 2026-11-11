@@ -83,7 +83,7 @@ mod tests {
     fn new_cursor() -> TaskCursor {
         use clp_rust_utils::types::ArchiveId;
 
-        const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
+        use crate::test_utils::ARCHIVE_ID;
 
         TaskCursor::new(
             ARCHIVE_ID
