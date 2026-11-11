@@ -471,7 +471,7 @@ When distributedDeployment is false (single-node mode), a control-plane tolerati
 added so pods can be scheduled on tainted control-plane nodes without manual untainting.
 
 @param {object} root Root template context
-@param {string} component Key name under .Values.scheduling (e.g., "queryWorker", "database")
+@param {string} component Key name under .Values.scheduling (e.g., "queryCoordinator", "database")
 @return {string} YAML-formatted scheduling fields (nodeSelector, affinity, tolerations,
   topologySpreadConstraints)
 */}}
@@ -507,7 +507,7 @@ topologySpreadConstraints:
 Creates resource requests and limits configuration for a component.
 
 @param {object} root Root template context
-@param {string} component Key name under .Values.resources (e.g., "queryWorker", "database")
+@param {string} component Key name under .Values.resources (e.g., "queryCoordinator", "database")
 @return {string} YAML-formatted resources block (requests, limits) nested under a resources key
 */}}
 {{- define "clp.createResourceLimits" -}}
