@@ -691,7 +691,6 @@ auto EncodedVariableInterpreter::add_dict_var(
 
     return id;
 }
-
 }  // namespace clp
 
 #endif  // CLP_ENCODEDVARIABLEINTERPRETER_HPP
