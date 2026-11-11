@@ -24,7 +24,6 @@ use crate::protocol::Frame;
 use crate::protocol::Handshake;
 use crate::protocol::ResultFrame;
 use crate::protocol::Trailer;
-use crate::session::SessionEnd;
 use crate::session::SessionRegistry;
 use crate::session::SessionStats;
 use crate::session::State;
@@ -75,10 +74,10 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
         })
     }
 
-    /// Claims the results the connection streams, encodes the results claimed from each socket
-    /// read into one batch, and sends the batch to the session's consumer, or discards it once the
-    /// consumer has dropped its receiver. Once the connection has sent its trailer and EOF, and
-    /// its last batch has been sent or discarded, acknowledges its results.
+    /// Claims the results the connection streams, encodes the results claimed from each socket read
+    /// into one batch, and sends the batch to the session's consumer, or discards it once the
+    /// consumer has dropped its receiver. Once the connection has sent its trailer and EOF, and its
+    /// last batch has been sent or discarded, acknowledges its results.
     ///
     /// # Type Parameters
     ///
@@ -91,8 +90,12 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     /// * [`ConnectionError::MissingTrailer`] if the connection closes between two frames before
     ///   sending its trailer.
     /// * [`ConnectionError::TruncatedFrame`] if the connection closes in the middle of a frame.
+    /// * [`ConnectionError::SessionEnded`] if the session is dropped while the connection waits for
+    ///   more bytes or for EOF.
+    /// * [`ConnectionError::SessionFailed`] if the session fails while the connection waits for
+    ///   more bytes or for EOF.
     /// * Forwards [`Connection::decode_buffered_frames`]'s return values on failure.
-    /// * Forwards [`read_more_unless_ended`]'s return values on failure.
+    /// * Forwards [`read_more`]'s return values on failure.
     /// * Forwards [`check_eof`]'s return values on failure.
     /// * Forwards [`AsyncWriteExt::write_all`]'s return values on failure.
     pub async fn run<StreamType: AsyncRead + AsyncWrite + Unpin>(
@@ -106,13 +109,18 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
                 decoded => decoded,
             };
             // Hand on the results claimed so far before acting on a protocol error found later in
-            // the same read, since no other attempt can claim them again.
+            // the same read, and before the next read, which the session's end can cut off, since
+            // no other attempt can claim them again.
             self.send_pending_batch().await;
             match decoded? {
                 Decoded::NeedMoreBytes => {
-                    if 0 == read_more_unless_ended(input_stream, &mut buffer, &self.session_state)
-                        .await?
-                    {
+                    // Stop reading once the session ends.
+                    let num_bytes_read = tokio::select! {
+                        biased;
+                        end = self.session_state.ended() => return Err(end.into()),
+                        read_result = read_more(input_stream, &mut buffer) => read_result?,
+                    };
+                    if 0 == num_bytes_read {
                         return Err(if buffer.is_empty() {
                             ConnectionError::MissingTrailer
                         } else {
@@ -123,7 +131,12 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
                 Decoded::Trailer(trailer) => break trailer,
             }
         };
-        check_eof(input_stream, &mut buffer, &self.session_state).await?;
+        // Stop waiting for EOF once the session ends.
+        tokio::select! {
+            biased;
+            end = self.session_state.ended() => return Err(end.into()),
+            result = check_eof(input_stream, &mut buffer) => result?,
+        }
         input_stream
             .write_all(
                 &Ack {
@@ -358,46 +371,11 @@ async fn read_more<StreamType: AsyncRead + Unpin>(
     input_stream.read_buf(&mut read_window).await
 }
 
-/// Reads more bytes from `input_stream` into `buffer` through [`read_more`], unless the session of
-/// `session_state` ends first.
-///
-/// # Type Parameters
-///
-/// * `EncodingType` - The encoding of the results the session delivers.
-/// * `StreamType` - The type of the connection's stream.
-///
-/// # Returns
-///
-/// The number of bytes read on success, which is 0 once `input_stream` has reached EOF.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`ConnectionError::SessionFailed`] if the session fails before the read completes.
-/// * [`ConnectionError::SessionEnded`] if the session is dropped before the read completes.
-/// * Forwards [`read_more`]'s return values on failure.
-async fn read_more_unless_ended<EncodingType: ResultEncoding, StreamType: AsyncRead + Unpin>(
-    input_stream: &mut StreamType,
-    buffer: &mut BytesMut,
-    session_state: &State<EncodingType>,
-) -> Result<usize, ConnectionError> {
-    tokio::select! {
-        biased;
-        end = session_state.ended() => Err(match end {
-            SessionEnd::Dropped => ConnectionError::SessionEnded,
-            SessionEnd::Failed => ConnectionError::SessionFailed,
-        }),
-        read_result = read_more(input_stream, buffer) => Ok(read_result?),
-    }
-}
-
 /// Checks that no bytes follow the connection's trailer, either left in `buffer` or read next from
 /// `input_stream`.
 ///
 /// # Type Parameters
 ///
-/// * `EncodingType` - The encoding of the results the connection's session delivers.
 /// * `StreamType` - The type of the connection's stream.
 ///
 /// # Errors
@@ -406,15 +384,12 @@ async fn read_more_unless_ended<EncodingType: ResultEncoding, StreamType: AsyncR
 ///
 /// * [`ConnectionError::Protocol`] wrapping [`ProtocolError::DataAfterTrailer`] if any byte follows
 ///   the trailer.
-/// * Forwards [`read_more_unless_ended`]'s return values on failure.
-async fn check_eof<EncodingType: ResultEncoding, StreamType: AsyncRead + Unpin>(
+/// * Forwards [`read_more`]'s return values on failure.
+async fn check_eof<StreamType: AsyncRead + Unpin>(
     input_stream: &mut StreamType,
     buffer: &mut BytesMut,
-    session_state: &State<EncodingType>,
 ) -> Result<(), ConnectionError> {
-    if !buffer.is_empty()
-        || 0 != read_more_unless_ended(input_stream, buffer, session_state).await?
-    {
+    if !buffer.is_empty() || 0 != read_more(input_stream, buffer).await? {
         return Err(ProtocolError::DataAfterTrailer.into());
     }
     Ok(())

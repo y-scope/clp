@@ -272,6 +272,15 @@ pub(crate) enum SessionEnd {
     Failed,
 }
 
+impl From<SessionEnd> for ConnectionError {
+    fn from(end: SessionEnd) -> Self {
+        match end {
+            SessionEnd::Dropped => Self::SessionEnded,
+            SessionEnd::Failed => Self::SessionFailed,
+        }
+    }
+}
+
 /// The state of a session shared with its connections.
 ///
 /// # Type Parameters
@@ -344,8 +353,8 @@ impl<EncodingType: ResultEncoding> State<EncodingType> {
 
     /// Waits until the session ends, either because it has failed or because it has been dropped.
     ///
-    /// The session's connections stop reading once it ends, but still hand on the batches they
-    /// have already claimed, as [`Session`] explains.
+    /// The session's connections stop reading once it ends, but still hand on the batches they have
+    /// already claimed, as [`Session`] explains.
     ///
     /// # Returns
     ///
