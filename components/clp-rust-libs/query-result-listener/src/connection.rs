@@ -108,13 +108,16 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
                 Err(e @ ConnectionError::Encoding(_)) => return Err(e),
                 decoded => decoded,
             };
+
             // Hand on the results claimed so far before acting on a protocol error found later in
             // the same read, and before the next read, which the session's end can cut off, since
             // no other attempt can claim them again.
             self.send_pending_batch().await;
             match decoded? {
                 Decoded::NeedMoreBytes => {
-                    // Stop reading once the session ends.
+                    // Stop reading once the session ends. `biased` checks the end first, so that a
+                    // connection doesn't read more once its session has ended, even if bytes are
+                    // ready.
                     let num_bytes_read = tokio::select! {
                         biased;
                         end = self.session_state.ended() => return Err(end.into()),
@@ -131,12 +134,15 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
                 Decoded::Trailer(trailer) => break trailer,
             }
         };
-        // Stop waiting for EOF once the session ends.
+
+        // Stop waiting for EOF once the session ends. `biased` checks the end first, so that a
+        // connection of a failed session isn't acknowledged, even if its EOF is already ready.
         tokio::select! {
             biased;
             end = self.session_state.ended() => return Err(end.into()),
             result = check_eof(input_stream, &mut buffer) => result?,
         }
+
         input_stream
             .write_all(
                 &Ack {
