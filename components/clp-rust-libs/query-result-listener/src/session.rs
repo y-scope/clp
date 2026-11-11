@@ -47,18 +47,13 @@ impl Default for SessionConfig {
 
 /// A session that receives the results streamed for one query job.
 ///
-/// The session accepts the connections that present its token until it ends, either once it is
-/// dropped or once it fails, which it does once creating the encoder of one of its connections, or
-/// encoding one of its results, fails. Ending it stops its open connections from reading, so they
-/// claim no more results and end without an acknowledgement, but a batch that a connection has
-/// already claimed is still handed on, unless that connection's own encoding failed.
+/// The session accepts the connections that present its token until it ends. A session ends if:
 ///
-/// The session's [`ResultStream`] ends once the session is dropped and every connection has
-/// released it, so its end means that every claimed result has been handed on. A consumer must
-/// treat the stream's end, not the query job's status, as the end of the results: the job can
-/// succeed while a batch claimed by one attempt of a task still waits for room in the channel,
-/// since another attempt of the task can be acknowledged with only the duplicates of that batch's
-/// results.
+/// * It is dropped.
+/// * A connection fails to create its encoder or to encode a result.
+///
+/// Once a session ends, its open connections stop reading and end without an acknowledgement, but
+/// still hand on the batches they've claimed.
 ///
 /// # Type Parameters
 ///
@@ -104,10 +99,10 @@ impl<EncodingType: ResultEncoding> Session<EncodingType> {
 
 /// The stream of a session's results, in the batches its connections encoded them into.
 ///
-/// The stream ends once its session is dropped and every connection that joined the session has
-/// released it, after which [`Self::stats`] reports the session's final statistics. Its end
-/// therefore means that every claimed result has been handed on, so a consumer must treat it, not
-/// the query job's status, as the end of the results, as [`Session`] explains.
+/// The stream ends once its session is dropped and every connection has released it, so its end
+/// means every claimed result has been handed on. Treat its end, not the query job's status, as the
+/// end of the results: a job can succeed while a claimed batch still waits for room in the channel.
+/// [`Self::stats`] is final once the stream has ended.
 ///
 /// # Type Parameters
 ///
