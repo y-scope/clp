@@ -218,7 +218,8 @@ pub struct QueryConfig {
     /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
     /// search job, and its results are always buffered in `MongoDB`.
     #[serde(default)]
-    pub count_by_time_bucket_size_millisecs: Option<i64>,
+    #[schema(value_type = Option<i64>, minimum = 1)]
+    pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
 
 impl TryFrom<QueryConfig> for QueryJobConfig {
@@ -237,12 +238,7 @@ impl TryFrom<QueryConfig> for QueryJobConfig {
             )
         })?;
         let output = match value.count_by_time_bucket_size_millisecs {
-            Some(bucket_size) => {
-                let bucket_size_millisecs = PositiveI64::new(bucket_size).ok_or_else(|| {
-                    ClientError::InvalidInput(
-                        "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
-                    )
-                })?;
+            Some(bucket_size_millisecs) => {
                 // Aggregation results are always buffered in MongoDB.
                 QueryOutput::ResultsCache(ResultsCacheOutput {
                     max_num_results: value.max_num_results,
@@ -849,7 +845,7 @@ mod tests {
         for (query_config, expected_output) in [
             (
                 QueryConfig {
-                    count_by_time_bucket_size_millisecs: Some(60_000),
+                    count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
                     ..base_query_config()
                 },
                 QueryOutput::ResultsCache(ResultsCacheOutput {
@@ -914,13 +910,6 @@ mod tests {
                     ..base_query_config()
                 },
                 "time_range_begin_millisecs",
-            ),
-            (
-                QueryConfig {
-                    count_by_time_bucket_size_millisecs: Some(0),
-                    ..base_query_config()
-                },
-                "count_by_time_bucket_size_millisecs",
             ),
         ] {
             let error = QueryJobConfig::try_from(query_config.clone())
