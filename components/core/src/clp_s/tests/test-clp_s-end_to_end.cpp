@@ -69,15 +69,14 @@ auto get_test_input_local_path(std::string_view const test_input_path) -> std::s
 }
 
 void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
-    clp_s::ArchiveReader archive_reader;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
-        REQUIRE_NOTHROW(archive_reader.open(
+        clp_s::ArchiveReader const archive_reader{
                 clp_s::Path{
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
-                clp_s::NetworkAuthOption{}
-        ));
+                clp_s::ArchiveReader::Options{}
+        };
         auto const schema_tree{archive_reader.get_schema_tree()};
         REQUIRE(nullptr != schema_tree);
         auto const root{schema_tree->get_object_subtree_node_id_for_namespace(
@@ -98,21 +97,18 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
             }
             REQUIRE(0 != types.count(cur_node.get_type()));
         }
-
-        REQUIRE_NOTHROW(archive_reader.close());
     }
 }
 
 void validate_archive_header() {
-    clp_s::ArchiveReader archive_reader;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
-        REQUIRE_NOTHROW(archive_reader.open(
+        clp_s::ArchiveReader const archive_reader{
                 clp_s::Path{
                         .source = clp_s::InputSource::Filesystem,
                         .path = entry.path().string()
                 },
-                clp_s::NetworkAuthOption{}
-        ));
+                clp_s::ArchiveReader::Options{}
+        };
         auto const& archive_header{archive_reader.get_header()};
         REQUIRE(clp_s::cArchiveVersion == archive_header.version);
         auto const [major_version, minor_version, patch_version]
@@ -129,8 +125,6 @@ void validate_archive_header() {
         for (size_t i{0}; i < cReservedPaddingLength; ++i) {
             REQUIRE(0ULL == archive_header.reserved_padding[i]);
         }
-
-        REQUIRE_NOTHROW(archive_reader.close());
     }
 }
 

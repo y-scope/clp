@@ -1,5 +1,6 @@
 #include "clp_s_test_utils.hpp"
 
+#include <cstddef>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -18,7 +19,8 @@ auto compress_archive(
         std::optional<std::string> timestamp_key,
         bool retain_float_format,
         bool single_file_archive,
-        bool structurize_arrays
+        bool structurize_arrays,
+        std::optional<std::size_t> target_encoded_size
 ) -> std::vector<clp_s::ArchiveStats> {
     constexpr auto cDefaultTargetEncodedSize{8ULL * 1024 * 1024 * 1024};  // 8 GiB
     constexpr auto cDefaultMaxDocumentSize{512ULL * 1024 * 1024};  // 512 MiB
@@ -35,7 +37,7 @@ auto compress_archive(
             file_path
     );
     parser_option.archives_dir = archive_directory;
-    parser_option.target_encoded_size = cDefaultTargetEncodedSize;
+    parser_option.target_encoded_size = target_encoded_size.value_or(cDefaultTargetEncodedSize);
     parser_option.max_document_size = cDefaultMaxDocumentSize;
     parser_option.min_table_size = cDefaultMinTableSize;
     parser_option.compression_level = cDefaultCompressionLevel;
