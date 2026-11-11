@@ -63,7 +63,7 @@ async fn sse_encoder_matches_axum_json_events() -> Result<()> {
     const TIMESTAMP_MILLISECS: i64 = -1;
 
     let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-    let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id);
+    let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id)?;
     let mut axum_events = Vec::new();
     for (message, event_message) in [
         ("{\"quoted\":\"value\"}\n", "{\"quoted\":\"value\"}"),
@@ -73,7 +73,7 @@ async fn sse_encoder_matches_axum_json_events() -> Result<()> {
         ("", ""),
         ("\n", ""),
     ] {
-        encoder.encode(TIMESTAMP_MILLISECS, message);
+        encoder.encode(TIMESTAMP_MILLISECS, message)?;
         axum_events.push(axum_result_event(
             archive_id,
             TIMESTAMP_MILLISECS,
@@ -88,10 +88,10 @@ async fn sse_encoder_matches_axum_json_events() -> Result<()> {
 #[tokio::test]
 async fn sse_encoder_starts_the_next_batch_empty() -> Result<()> {
     let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-    let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id);
-    encoder.encode(1, "first\n");
+    let mut encoder = <SseEncoding as ResultEncoding>::Encoder::new(archive_id)?;
+    encoder.encode(1, "first\n")?;
     encoder.take_batch();
-    encoder.encode(2, "second\n");
+    encoder.encode(2, "second\n")?;
 
     assert_eq!(
         encoder.take_batch(),

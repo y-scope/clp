@@ -12,6 +12,7 @@ pub enum SseEncoding {}
 impl ResultEncoding for SseEncoding {
     type Batch = Bytes;
     type Encoder = SseEncoder;
+    type Error = serde_json::Error;
 }
 
 /// The [`ResultEncoder`] for [`SseEncoding`].
@@ -20,19 +21,31 @@ pub struct SseEncoder {
     batch: Vec<u8>,
 }
 
-impl SseEncoder {
-    /// Appends the event of one result to the pending batch.
-    ///
+impl ResultEncoder for SseEncoder {
+    type Batch = Bytes;
+    type Error = serde_json::Error;
+
     /// # Errors
     ///
     /// Returns an error if:
     ///
     /// * Forwards [`serde_json::to_writer`]'s return values on failure.
-    fn write_event(
-        &mut self,
-        timestamp_millisecs: i64,
-        message: &str,
-    ) -> Result<(), serde_json::Error> {
+    fn new(archive_id: ArchiveId) -> Result<Self, serde_json::Error> {
+        let mut event_prefix = b"data: {\"archive_id\":".to_vec();
+        serde_json::to_writer(&mut event_prefix, &archive_id)?;
+        event_prefix.extend_from_slice(b",\"timestamp_millisecs\":");
+        Ok(Self {
+            event_prefix: event_prefix.into_boxed_slice(),
+            batch: Vec::new(),
+        })
+    }
+
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`serde_json::to_writer`]'s return values on failure.
+    fn encode(&mut self, timestamp_millisecs: i64, message: &str) -> Result<(), serde_json::Error> {
         self.batch.extend_from_slice(&self.event_prefix);
         serde_json::to_writer(&mut self.batch, &timestamp_millisecs)?;
         self.batch.extend_from_slice(b",\"message\":");
@@ -42,32 +55,6 @@ impl SseEncoder {
         )?;
         self.batch.extend_from_slice(b"}\n\n");
         Ok(())
-    }
-}
-
-impl ResultEncoder for SseEncoder {
-    type Batch = Bytes;
-
-    /// # Panics
-    ///
-    /// Panics if serializing the archive ID into a `Vec` fails, which it never does.
-    fn new(archive_id: ArchiveId) -> Self {
-        let mut event_prefix = b"data: {\"archive_id\":".to_vec();
-        serde_json::to_writer(&mut event_prefix, &archive_id)
-            .expect("serializing into a `Vec` shouldn't fail");
-        event_prefix.extend_from_slice(b",\"timestamp_millisecs\":");
-        Self {
-            event_prefix: event_prefix.into_boxed_slice(),
-            batch: Vec::new(),
-        }
-    }
-
-    /// # Panics
-    ///
-    /// Panics if serializing the result into a `Vec` fails, which it never does.
-    fn encode(&mut self, timestamp_millisecs: i64, message: &str) {
-        self.write_event(timestamp_millisecs, message)
-            .expect("serializing into a `Vec` shouldn't fail");
     }
 
     fn take_batch(&mut self) -> Bytes {
