@@ -71,6 +71,10 @@ CLP+ always retains the original format of floats so that log messages can be re
 exactly. Supplying `--no-retain-float-format` with `--flavour clpp` is an error.
 :::
 
+:::{note}
+CLP+ accepts JSON input only. KV-IR input, including KV-IR files inside tarballs, is rejected.
+:::
+
 ### Examples
 
 **Compress `/mnt/logs/app.log` into `/mnt/data/archives`:**

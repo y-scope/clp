@@ -994,6 +994,15 @@ auto JsonParser::ingest_kvir(
         std::string const& file_name_in_metadata,
         std::string const& archive_creator_id
 ) -> bool {
+    if (ClpFlavour::Clpp == m_archive_options.flavour) {
+        SPDLOG_ERROR(
+                "Ingesting KV-IR input {} is not supported by the clpp flavour; only JSON input is"
+                " supported.",
+                path.path
+        );
+        return false;
+    }
+
     auto deserializer_result{Deserializer<IrUnitHandler>::create(*reader, IrUnitHandler{})};
     if (deserializer_result.has_error()) {
         auto err = deserializer_result.error();

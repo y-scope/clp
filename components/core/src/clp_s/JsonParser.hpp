@@ -103,7 +103,7 @@ private:
 
     /**
      * Parses KV-IR input and ingests it into the current archive, splitting the archive if it grows
-     * beyond the target encoded size.
+     * beyond the target encoded size. KV-IR ingestion is unsupported for the clpp flavour.
      * @param reader
      * @param path
      * @param file_name_in_metadata
