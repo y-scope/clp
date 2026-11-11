@@ -57,8 +57,9 @@ transparently and is what makes numeric comparisons work:
 ./clp-s s /mnt/data/archives 'message.block_id.num > 1073746400'
 ```
 
-**`header` rules are not used by `clp-s`.** A `header` rule marks where one log message ends and the
-next begins, which matters only to the log converter. `clp-s c` ingests JSON, whose log messages are
-already separated, so it ignores these rules.
+**`header` rules have no separator role under `clp-s`.** In log-surgeon, a `header` rule at the
+start of a line marks the start of a new log event. `clp-s c` parses each JSON string value as a
+single event, so a `header` rule behaves like any other rule: its matches become a `header` parent
+rule whose leaves (e.g. `message.header.timestamp`) are queryable.
 
 [spec]: https://github.com/y-scope/log-surgeon/blob/log-mechanic/rust/docs/parsing-specification.md
