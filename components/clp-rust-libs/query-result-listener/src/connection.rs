@@ -74,10 +74,43 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
         })
     }
 
-    /// Claims the results the connection streams, encodes the results claimed from each socket
-    /// read into one batch, and sends the batch to the session's consumer, or discards it once the
-    /// consumer has dropped its receiver. Once the connection has sent its trailer and EOF, and
-    /// its last batch has been sent or discarded, acknowledges its results.
+    /// Serves the connection through [`Connection::receive_and_acknowledge`] until it ends, unless
+    /// the end of the session cuts it off first.
+    ///
+    /// The cut-off drops the connection at whatever it is waiting on: a read, the send of a batch
+    /// it has claimed, or its acknowledgement. Nothing the connection still holds needs to be
+    /// delivered by then, as [`crate::session::Session`] explains.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `StreamType` - The type of the connection's stream.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ConnectionError::SessionFailed`] if the session fails before the connection is
+    ///   acknowledged.
+    /// * [`ConnectionError::SessionEnded`] if the session is dropped before the connection is
+    ///   acknowledged.
+    /// * Forwards [`Connection::receive_and_acknowledge`]'s return values on failure.
+    pub async fn run<StreamType: AsyncRead + AsyncWrite + Unpin>(
+        &mut self,
+        input_stream: &mut StreamType,
+        buffer: BytesMut,
+    ) -> Result<(), ConnectionError> {
+        let session_state = Arc::clone(&self.session_state);
+        tokio::select! {
+            biased;
+            error = session_state.ended() => Err(error),
+            result = self.receive_and_acknowledge(input_stream, buffer) => result,
+        }
+    }
+
+    /// Claims the results the connection streams, encodes the results claimed from each socket read
+    /// into one batch, and sends the batch to the session's consumer, or discards it once the
+    /// consumer has dropped its receiver. Once the connection has sent its trailer and EOF, and its
+    /// last batch has been sent or discarded, acknowledges its results.
     ///
     /// # Type Parameters
     ///
@@ -91,24 +124,25 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
     ///   sending its trailer.
     /// * [`ConnectionError::TruncatedFrame`] if the connection closes in the middle of a frame.
     /// * Forwards [`Connection::decode_buffered_frames`]'s return values on failure.
-    /// * Forwards [`read_more_unless_ended`]'s return values on failure.
+    /// * Forwards [`read_more`]'s return values on failure.
     /// * Forwards [`check_eof`]'s return values on failure.
     /// * Forwards [`AsyncWriteExt::write_all`]'s return values on failure.
-    pub async fn run<StreamType: AsyncRead + AsyncWrite + Unpin>(
+    async fn receive_and_acknowledge<StreamType: AsyncRead + AsyncWrite + Unpin>(
         &mut self,
         input_stream: &mut StreamType,
         mut buffer: BytesMut,
     ) -> Result<(), ConnectionError> {
         let trailer = loop {
-            let decoded = self.decode_buffered_frames(&mut buffer);
-            // Hand on the results claimed so far before acting on an error found later in the same
-            // read, since no other attempt can claim them again.
+            let decoded = match self.decode_buffered_frames(&mut buffer) {
+                Err(e @ ConnectionError::Encoding(_)) => return Err(e),
+                decoded => decoded,
+            };
+            // Hand on the results claimed so far before acting on a protocol error found later in
+            // the same read, since no other attempt can claim them again.
             self.send_pending_batch().await;
             match decoded? {
                 Decoded::NeedMoreBytes => {
-                    if 0 == read_more_unless_ended(input_stream, &mut buffer, &self.session_state)
-                        .await?
-                    {
+                    if 0 == read_more(input_stream, &mut buffer).await? {
                         return Err(if buffer.is_empty() {
                             ConnectionError::MissingTrailer
                         } else {
@@ -119,7 +153,7 @@ impl<EncodingType: ResultEncoding> Connection<EncodingType> {
                 Decoded::Trailer(trailer) => break trailer,
             }
         };
-        check_eof(input_stream, &mut buffer, &self.session_state).await?;
+        check_eof(input_stream, &mut buffer).await?;
         input_stream
             .write_all(
                 &Ack {
@@ -354,43 +388,11 @@ async fn read_more<StreamType: AsyncRead + Unpin>(
     input_stream.read_buf(&mut read_window).await
 }
 
-/// Reads more bytes from `input_stream` into `buffer` through [`read_more`], unless the session of
-/// `session_state` ends first.
-///
-/// # Type Parameters
-///
-/// * `EncodingType` - The encoding of the results the session delivers.
-/// * `StreamType` - The type of the connection's stream.
-///
-/// # Returns
-///
-/// The number of bytes read on success, which is 0 once `input_stream` has reached EOF.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`ConnectionError::SessionFailed`] if the session fails before the read completes.
-/// * [`ConnectionError::SessionEnded`] if the session is dropped before the read completes.
-/// * Forwards [`read_more`]'s return values on failure.
-async fn read_more_unless_ended<EncodingType: ResultEncoding, StreamType: AsyncRead + Unpin>(
-    input_stream: &mut StreamType,
-    buffer: &mut BytesMut,
-    session_state: &State<EncodingType>,
-) -> Result<usize, ConnectionError> {
-    tokio::select! {
-        biased;
-        error = session_state.ended() => Err(error),
-        read_result = read_more(input_stream, buffer) => Ok(read_result?),
-    }
-}
-
 /// Checks that no bytes follow the connection's trailer, either left in `buffer` or read next from
 /// `input_stream`.
 ///
 /// # Type Parameters
 ///
-/// * `EncodingType` - The encoding of the results the connection's session delivers.
 /// * `StreamType` - The type of the connection's stream.
 ///
 /// # Errors
@@ -399,15 +401,12 @@ async fn read_more_unless_ended<EncodingType: ResultEncoding, StreamType: AsyncR
 ///
 /// * [`ConnectionError::Protocol`] wrapping [`ProtocolError::DataAfterTrailer`] if any byte follows
 ///   the trailer.
-/// * Forwards [`read_more_unless_ended`]'s return values on failure.
-async fn check_eof<EncodingType: ResultEncoding, StreamType: AsyncRead + Unpin>(
+/// * Forwards [`read_more`]'s return values on failure.
+async fn check_eof<StreamType: AsyncRead + Unpin>(
     input_stream: &mut StreamType,
     buffer: &mut BytesMut,
-    session_state: &State<EncodingType>,
 ) -> Result<(), ConnectionError> {
-    if !buffer.is_empty()
-        || 0 != read_more_unless_ended(input_stream, buffer, session_state).await?
-    {
+    if !buffer.is_empty() || 0 != read_more(input_stream, buffer).await? {
         return Err(ProtocolError::DataAfterTrailer.into());
     }
     Ok(())
@@ -1151,15 +1150,17 @@ mod tests {
     #[tokio::test]
     async fn encoding_failure_fails_the_session_and_ends_the_connection_without_an_acknowledgement()
     -> anyhow::Result<()> {
-        let harness = Harness::new(CHANNEL_CAPACITY);
-        let mut attempt = harness.connect(0, ARCHIVE_ID);
+        let mut harness = Harness::new(1);
+        // The batch of the results read with the handshake fills the channel, so the batch claimed
+        // before the unencodable result can't be sent.
+        let mut attempt = harness.connect_with_buffered(0, ARCHIVE_ID, &encode_results(0, 0..2));
         attempt
             .send(
                 &[
-                    encode_results(0, 0..2),
-                    encode_result(2, timestamp(2), UNENCODABLE_MESSAGE),
-                    encode_results(0, [3]),
-                    encode_trailer(4),
+                    encode_results(0, 2..4),
+                    encode_result(4, timestamp(4), UNENCODABLE_MESSAGE),
+                    encode_results(0, [5]),
+                    encode_trailer(6),
                 ]
                 .concat(),
             )
@@ -1168,7 +1169,7 @@ mod tests {
 
         let expected_error = EncodingError::UnencodableMessage {
             archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
-            timestamp_millisecs: timestamp(2),
+            timestamp_millisecs: timestamp(4),
         };
         assert_eq!(end.received, [] as [u8; 0]);
         assert!(
@@ -1182,6 +1183,10 @@ mod tests {
         assert_eq!(
             harness.session_state.encoding_error(),
             Some(&expected_error)
+        );
+        assert_eq!(
+            harness.take_batches(),
+            [expected_results(0, ARCHIVE_ID, 0..2)]
         );
         Ok(())
     }
@@ -1218,7 +1223,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn connection_blocked_on_a_full_channel_is_cut_off_with_session_failed_once_it_sends() {
+    async fn connection_blocked_on_a_full_channel_is_cut_off_with_session_failed() {
         let mut harness = Harness::new(1);
         // The batch of the results read with the handshake fills the channel, so the next batch
         // waits to be sent.
@@ -1236,12 +1241,51 @@ mod tests {
             &encode_result(0, timestamp(0), UNENCODABLE_MESSAGE),
         );
         failing_attempt.wait_closed().await;
-        let first_batch = harness.next_batch().await;
-        let second_batch = harness.next_batch().await;
         let blocked_end = blocked_attempt.wait_closed().await;
 
-        assert_eq!(first_batch, expected_results(1, ARCHIVE_ID, 0..2));
-        assert_eq!(second_batch, expected_results(1, ARCHIVE_ID, 2..4));
+        assert_eq!(blocked_end.received, [] as [u8; 0]);
+        assert!(
+            matches!(blocked_end.result, Err(ConnectionError::SessionFailed)),
+            "unexpected result: {:?}",
+            blocked_end.result
+        );
+        assert_eq!(
+            harness.take_batches(),
+            [expected_results(1, ARCHIVE_ID, 0..2)]
+        );
+        assert_eq!(
+            harness.stats.load(),
+            SessionStats {
+                num_results_emitted: 2,
+                num_duplicates_dropped: 0,
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn connection_blocked_writing_its_acknowledgement_is_cut_off_with_session_failed() {
+        // A stream that buffers no byte keeps the acknowledgement from being written.
+        let mut harness = Harness {
+            stream_capacity: 0,
+            ..Harness::new(CHANNEL_CAPACITY)
+        };
+        let mut blocked_attempt = harness.connect_with_buffered(
+            1,
+            ARCHIVE_ID,
+            &[encode_results(1, 0..2), encode_trailer(2)].concat(),
+        );
+        blocked_attempt.shut_down_write().await;
+        harness.next_batch().await;
+        blocked_attempt.expect_open().await;
+
+        let failing_attempt = harness.connect_with_buffered(
+            0,
+            ARCHIVE_ID,
+            &encode_result(0, timestamp(0), UNENCODABLE_MESSAGE),
+        );
+        failing_attempt.wait_closed().await;
+        let blocked_end = blocked_attempt.wait_closed().await;
+
         assert_eq!(blocked_end.received, [] as [u8; 0]);
         assert!(
             matches!(blocked_end.result, Err(ConnectionError::SessionFailed)),
@@ -1251,39 +1295,66 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn connection_started_after_its_session_failed_hands_on_nothing_and_is_not_acknowledged()
+    {
+        /// Enough attempts that an unbiased race against the end of the session lets one through.
+        const NUM_LATE_ATTEMPTS: TaskIndex = 32;
+
+        let mut harness = Harness::new(CHANNEL_CAPACITY);
+        let failing_attempt = harness.connect_with_buffered(
+            0,
+            ARCHIVE_ID,
+            &encode_result(0, timestamp(0), UNENCODABLE_MESSAGE),
+        );
+        failing_attempt.wait_closed().await;
+
+        for task_index in 1..=NUM_LATE_ATTEMPTS {
+            let mut late_attempt = harness.connect_with_buffered(
+                task_index,
+                ARCHIVE_ID,
+                &[encode_results(task_index, 0..2), encode_trailer(2)].concat(),
+            );
+            late_attempt.shut_down_write().await;
+            let end = late_attempt.wait_closed().await;
+
+            assert_eq!(end.received, [] as [u8; 0], "{task_index}");
+            assert!(
+                matches!(end.result, Err(ConnectionError::SessionFailed)),
+                "{task_index}: unexpected result: {:?}",
+                end.result
+            );
+        }
+        assert_eq!(harness.take_batches(), [] as [Vec<QueryResult>; 0]);
+    }
+
+    #[tokio::test]
     async fn only_the_first_encoding_failure_of_a_session_is_recorded() -> anyhow::Result<()> {
+        use crate::test_utils::UNENCODABLE_ARCHIVE_ID;
+
         let harness = Harness::new(CHANNEL_CAPACITY);
-        let mut first_failing_attempt = harness.connect(0, ARCHIVE_ID);
-        first_failing_attempt
+        let mut failing_attempt = harness.connect(0, ARCHIVE_ID);
+        failing_attempt
             .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
             .await;
-        first_failing_attempt.wait_closed().await;
-        // The result read along with the handshake is decoded before the end of the session can cut
-        // off the connection.
-        let second_failing_attempt = harness.connect_with_buffered(
-            1,
-            ARCHIVE_ID,
-            &encode_result(0, timestamp(1), UNENCODABLE_MESSAGE),
-        );
-        let second_end = second_failing_attempt.wait_closed().await;
-
-        let archive_id = ARCHIVE_ID.parse::<ArchiveId>()?;
-        let second_error = EncodingError::UnencodableMessage {
-            archive_id,
-            timestamp_millisecs: timestamp(1),
+        failing_attempt.wait_closed().await;
+        let unencodable_archive_id = UNENCODABLE_ARCHIVE_ID.parse::<ArchiveId>()?;
+        let cursor = harness.session_state.cursor(1, unencodable_archive_id)?;
+        let Err(second_error) = Connection::new(Arc::clone(&harness.session_state), cursor) else {
+            anyhow::bail!("a connection whose encoder can't be created shouldn't be created");
         };
+
+        let expected_second_error = EncodingError::UnencodableArchive(unencodable_archive_id);
         assert!(
             matches!(
-                &second_end.result,
-                Err(ConnectionError::Encoding(message)) if second_error.to_string() == *message
+                &second_error,
+                ConnectionError::Encoding(message) if expected_second_error.to_string() == *message
             ),
-            "unexpected result: {:?}",
-            second_end.result
+            "unexpected error: {second_error:?}"
         );
         assert_eq!(
             harness.session_state.encoding_error(),
             Some(&EncodingError::UnencodableMessage {
-                archive_id,
+                archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
                 timestamp_millisecs: timestamp(0),
             })
         );

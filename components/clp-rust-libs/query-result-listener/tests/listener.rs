@@ -105,25 +105,6 @@ impl FakeClpS {
         self.send(&encode_results(task_index, result_indices)).await;
     }
 
-    /// Sends the results at `result_indices` of task `task_index` one at a time, until every result
-    /// is sent or the listener has closed the connection.
-    async fn send_results_until_closed(
-        mut self,
-        task_index: TaskIndex,
-        result_indices: impl IntoIterator<Item = u64>,
-    ) {
-        for result_index in result_indices {
-            if self
-                .stream
-                .write_all(&encode_results(task_index, [result_index]))
-                .await
-                .is_err()
-            {
-                return;
-            }
-        }
-    }
-
     /// Ends the stream the way `clp-s` does: sends a trailer counting `num_results` results, then
     /// EOF, and waits until the listener closes the connection.
     ///
@@ -576,11 +557,9 @@ async fn dropping_the_listener_stops_accepting_and_keeps_serving_open_connection
 }
 
 #[tokio::test]
-async fn connection_streaming_past_its_sessions_drop_delivers_only_the_results_it_had_claimed()
--> Result<()> {
+async fn connection_blocked_on_a_full_channel_is_cut_off_by_its_sessions_drop() -> Result<()> {
     use std::num::NonZeroUsize;
 
-    const NUM_RESULTS: u64 = 1000;
     const READ_DELAY: Duration = Duration::from_millis(100);
 
     let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
@@ -590,20 +569,17 @@ async fn connection_streaming_past_its_sessions_drop_delivers_only_the_results_i
     let mut attempt = FakeClpS::connect(session.network_output()).await;
     attempt.send_handshake(0, ARCHIVE_ID).await;
     // Separate reads, so that the first batch fills the channel and the connection waits to send
-    // the second instead of reading the results streamed once the session is dropped.
+    // the second.
     attempt.send_results(0, 0..5).await;
     tokio::time::sleep(READ_DELAY).await;
     attempt.send_results(0, 5..10).await;
     tokio::time::sleep(READ_DELAY).await;
 
     drop(session);
-    tokio::spawn(attempt.send_results_until_closed(0, 10..NUM_RESULTS));
-    // Lets the results streamed since the session was dropped reach the connection's socket before
-    // the consumer makes room for the batch the connection waits to send.
-    tokio::time::sleep(READ_DELAY).await;
+    attempt.expect_closed_by_listener().await;
     let received = collect_results(&mut results).await;
 
-    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..10));
+    assert_eq!(received, expected_results(0, ARCHIVE_ID, 0..5));
     Ok(())
 }
 
