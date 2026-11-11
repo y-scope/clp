@@ -15,6 +15,7 @@
 #include <msgpack.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+#include <ystdlib/containers/Array.hpp>
 
 #include <clp/BufferReader.hpp>
 
@@ -360,7 +361,7 @@ auto ArchiveReaderAdaptor::checkout_reader_for_sfa_section(std::string_view sect
             continue;
         }
         seek_to(skipped_begin_offset);
-        std::vector<char> buffer(skipped_end_offset - skipped_begin_offset);
+        ystdlib::containers::Array<char> buffer(skipped_end_offset - skipped_begin_offset);
         if (auto const rc{m_reader->try_read_exact_length(buffer.data(), buffer.size())};
             clp::ErrorCode::ErrorCode_Success != rc)
         {
@@ -409,14 +410,17 @@ auto ArchiveReaderAdaptor::seek_to(size_t offset) -> void {
         return;
     }
     if (auto const rc{m_reader->try_seek_from_begin(offset)};
-        clp::ErrorCode::ErrorCode_Success != rc)
+        clp::ErrorCode::ErrorCode_Success != rc && clp::ErrorCode::ErrorCode_EndOfFile != rc)
     {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 }
 
 auto ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) -> void {
-    if (false == m_single_file_archive || m_buffered_sections.contains(std::string{section})) {
+    if (false == m_single_file_archive) {
+        return;
+    }
+    if (m_buffered_sections.erase(std::string{section}) > 0) {
         return;
     }
 
@@ -430,10 +434,6 @@ auto ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) 
 
     m_checked_in_sections.emplace(section);
     m_current_reader_holder.reset();
-}
-
-auto ArchiveReaderAdaptor::release_buffered_section(std::string_view section) -> void {
-    m_buffered_sections.erase(std::string{section});
 }
 
 auto ArchiveReaderAdaptor::has_section(std::string_view section) const -> bool {

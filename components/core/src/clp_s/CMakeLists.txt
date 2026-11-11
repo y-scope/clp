@@ -421,6 +421,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 simdjson::simdjson
+                ystdlib::containers
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
