@@ -90,6 +90,23 @@ bool search_archive(
         std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
 );
 
+/**
+ * Searches one archive, converting any thrown exception into a logged failure.
+ * @param command_line_arguments The parsed command-line options.
+ * @param archive_reader The archive to search.
+ * @param expr A copy of the search AST which may be modified.
+ * @param reducer_socket_fd The reducer socket file descriptor, or -1 if unused.
+ * @param telemetry_span The span to record search telemetry onto, or null if telemetry is disabled.
+ * @return Whether the search succeeded.
+ */
+auto try_search_archive(
+        CommandLineArguments const& command_line_arguments,
+        std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
+        std::shared_ptr<ast::Expression> expr,
+        int reducer_socket_fd,
+        std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
+) -> bool;
+
 bool compress(CommandLineArguments const& command_line_arguments) {
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
 
@@ -408,6 +425,30 @@ bool search_archive(
     }
     return success;
 }
+
+auto try_search_archive(
+        CommandLineArguments const& command_line_arguments,
+        std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
+        std::shared_ptr<ast::Expression> expr,
+        int reducer_socket_fd,
+        std::shared_ptr<SearchTelemetrySpan> const& telemetry_span
+) -> bool {
+    try {
+        return search_archive(
+                command_line_arguments,
+                archive_reader,
+                std::move(expr),
+                reducer_socket_fd,
+                telemetry_span
+        );
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to search archive - {}", e.what());
+        if (nullptr != telemetry_span) {
+            telemetry_span->set_error("failed to search archive");
+        }
+        return false;
+    }
+}
 }  // namespace
 
 int main(int argc, char const* argv[]) {
@@ -502,7 +543,6 @@ int main(int argc, char const* argv[]) {
             }
         }
 
-        auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         for (auto const& input_path : command_line_arguments.get_input_paths()) {
             if (std::string::npos != input_path.path.find(clp::ir::cIrFileExtension)) {
                 auto const result{clp_s::search_kv_ir_stream(
@@ -569,8 +609,14 @@ int main(int argc, char const* argv[]) {
             };
             utils::profiling::Reporter const profiler_reporter{"search", emit_measurement};
 
+            std::shared_ptr<clp_s::ArchiveReader> archive_reader;
             try {
-                archive_reader->open(input_path, command_line_arguments.get_network_auth());
+                archive_reader = std::make_shared<clp_s::ArchiveReader>(
+                        input_path,
+                        clp_s::ArchiveReader::Options{
+                                .network_auth = command_line_arguments.get_network_auth()
+                        }
+                );
             } catch (std::exception const& e) {
                 SPDLOG_ERROR("Failed to open archive - {}", e.what());
                 if (nullptr != telemetry_span) {
@@ -579,7 +625,7 @@ int main(int argc, char const* argv[]) {
                 return 1;
             }
             if (false
-                == search_archive(
+                == try_search_archive(
                         command_line_arguments,
                         archive_reader,
                         expr->copy(),
@@ -589,7 +635,6 @@ int main(int argc, char const* argv[]) {
             {
                 return 1;
             }
-            archive_reader->close();
         }
     }
 

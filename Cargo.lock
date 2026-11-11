@@ -3344,6 +3344,7 @@ dependencies = [
  "spider-core",
  "thiserror",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 

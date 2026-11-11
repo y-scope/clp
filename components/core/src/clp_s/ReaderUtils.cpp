@@ -7,7 +7,6 @@
 
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReaderAdaptor.hpp>
-#include <clp_s/DictionaryReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/TraceableException.hpp>
@@ -66,27 +65,6 @@ auto ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) -> std::shared
     adaptor.checkin_reader_for_section(constants::cArchiveSchemaTreeFile);
 
     return tree;
-}
-
-auto ReaderUtils::get_variable_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-        -> std::shared_ptr<VariableDictionaryReader> {
-    auto reader = std::make_shared<VariableDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveVarDictFile);
-    return reader;
-}
-
-auto ReaderUtils::get_log_type_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-        -> std::shared_ptr<LogTypeDictionaryReader> {
-    auto reader = std::make_shared<LogTypeDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveLogDictFile);
-    return reader;
-}
-
-auto ReaderUtils::get_array_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-        -> std::shared_ptr<LogTypeDictionaryReader> {
-    auto reader = std::make_shared<LogTypeDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveArrayDictFile);
-    return reader;
 }
 
 auto ReaderUtils::read_schemas(ArchiveReaderAdaptor& adaptor)

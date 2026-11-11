@@ -21,11 +21,9 @@
 #include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
 #include "../ColumnReader.hpp"
-#include "../DictionaryReader.hpp"
 #include "../ReaderUtils.hpp"
 #include "../SchemaReader.hpp"
 #include "../SchemaTree.hpp"
-#include "../TimestampDictionaryReader.hpp"
 #include "../Utils.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
@@ -56,10 +54,6 @@ public:
               m_match(match),
               m_ignore_case(ignore_case),
               m_schema_tree(m_archive_reader->get_schema_tree()),
-              m_var_dict(m_archive_reader->get_variable_dictionary()),
-              m_log_dict(m_archive_reader->get_log_type_dictionary()),
-              m_array_dict(m_archive_reader->get_array_dictionary()),
-              m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
               m_schemas(m_archive_reader->get_schema_map()) {}
 
     // Destructor
@@ -132,10 +126,6 @@ private:
     SchemaReader* m_reader{nullptr};
 
     std::shared_ptr<SchemaTree> m_schema_tree;
-    std::shared_ptr<VariableDictionaryReader> m_var_dict;
-    std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
-    std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
-    std::shared_ptr<TimestampDictionaryReader> m_timestamp_dict;
 
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
 

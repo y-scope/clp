@@ -25,8 +25,15 @@
 #include <clp_s/TimestampDictionaryReader.hpp>
 
 namespace clp_s {
+/**
+ * Reads a single archive. Each instance is bound to one archive for its whole lifetime: the
+ * constructors open the archive and read its schema tree and schema map, dictionaries are read on
+ * demand, and the destructor releases the archive's resources. If a read fails, the instance is
+ * left in an unspecified state and should be destroyed.
+ */
 class ArchiveReader {
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
         // Constructors
@@ -34,66 +41,67 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructor
-    ArchiveReader() : m_is_open(false) {}
+    /** Options controlling how an archive is read. */
+    struct Options {
+        NetworkAuthOption network_auth{};
+    };
 
+    /** Which of an archive's dictionaries have been read. */
+    struct ReadDictionaries {
+        bool var_dict{false};
+        bool log_type_dict{false};
+        bool array_dict{false};
+
+        [[nodiscard]] auto operator==(ReadDictionaries const&) const -> bool = default;
+    };
+
+    // Constructors
     /**
      * Opens an archive for reading.
-     * @param archive_path
-     * @param network_auth
+     * @param archive_path Path to the archive directory or single-file archive.
+     * @param options Options controlling how the archive is read.
+     * @throws OperationFailed if the archive ID can't be derived from `archive_path`.
+     * @throws OperationFailed if the archive metadata can't be loaded.
      */
-    void open(Path const& archive_path, NetworkAuthOption const& network_auth);
+    ArchiveReader(Path const& archive_path, Options const& options);
 
     /**
      * Opens a single-file archive for reading from an already open `clp::ReaderInterface`.
-     * @param single_file_archive_reader The already opened archive reader
-     * @param archive_id The unique name or identifier for the archive
+     * @param single_file_archive_reader The already opened archive reader.
+     * @param archive_id The unique name or identifier for the archive.
+     * @throws OperationFailed if `single_file_archive_reader` is null or `archive_id` is empty.
+     * @throws OperationFailed if the archive metadata can't be loaded.
      */
-    auto open(
+    ArchiveReader(
             std::shared_ptr<clp::ReaderInterface> single_file_archive_reader,
             std::string_view archive_id
-    ) -> void;
+    );
 
+    // Delete copy constructor and assignment operator
+    ArchiveReader(ArchiveReader const&) = delete;
+    auto operator=(ArchiveReader const&) -> ArchiveReader& = delete;
+
+    // Delete move constructor and assignment operator
+    ArchiveReader(ArchiveReader&&) = delete;
+    auto operator=(ArchiveReader&&) -> ArchiveReader& = delete;
+
+    // Destructor
+    ~ArchiveReader();
+
+    // Methods
     /**
      * Reads the dictionaries and metadata.
-     * @throws OperationFailed if reading or decompressing metadata fails.
+     * @throws OperationFailed if reading or decompressing the metadata or a dictionary fails.
      */
-    void read_dictionaries_and_metadata();
+    auto read_dictionaries_and_metadata() -> void;
 
     /**
      * Opens packed streams for reading.
+     * @note In a single-file archive the dictionary sections must precede the tables section;
+     * opening the packed streams buffers the skipped dictionary sections so later lazy dictionary
+     * reads can succeed.
      */
-    void open_packed_streams();
-
-    /**
-     * Reads the variable dictionary from the archive.
-     * @param lazy
-     * @return the variable dictionary reader
-     */
-    std::shared_ptr<VariableDictionaryReader> read_variable_dictionary(bool lazy = false) {
-        m_var_dict->read_entries(lazy);
-        return m_var_dict;
-    }
-
-    /**
-     * Reads the log type dictionary from the archive.
-     * @param lazy
-     * @return the log type dictionary reader
-     */
-    std::shared_ptr<LogTypeDictionaryReader> read_log_type_dictionary(bool lazy = false) {
-        m_log_dict->read_entries(lazy);
-        return m_log_dict;
-    }
-
-    /**
-     * Reads the array dictionary from the archive.
-     * @param lazy
-     * @return the array dictionary reader
-     */
-    std::shared_ptr<LogTypeDictionaryReader> read_array_dictionary(bool lazy = false) {
-        m_array_dict->read_entries(lazy);
-        return m_array_dict;
-    }
+    auto open_packed_streams() -> void;
 
     /**
      * Reads the metadata from the archive.
@@ -127,17 +135,34 @@ public:
 
     std::string_view get_archive_id() { return m_archive_id; }
 
-    std::shared_ptr<VariableDictionaryReader> get_variable_dictionary() { return m_var_dict; }
+    /**
+     * @return The variable dictionary, reading it from the archive if it hasn't been read yet.
+     * @throws OperationFailed if the dictionary can't be read from the archive.
+     */
+    auto get_variable_dictionary() -> std::shared_ptr<VariableDictionaryReader>;
 
-    std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary() { return m_log_dict; }
+    /**
+     * @return The log type dictionary, reading it from the archive if it hasn't been read yet.
+     * @throws OperationFailed if the dictionary can't be read from the archive.
+     */
+    auto get_log_type_dictionary() -> std::shared_ptr<LogTypeDictionaryReader>;
 
-    std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary() { return m_array_dict; }
+    /**
+     * @return The array dictionary, reading it from the archive if it hasn't been read yet.
+     * @throws OperationFailed if the dictionary can't be read from the archive.
+     */
+    auto get_array_dictionary() -> std::shared_ptr<LogTypeDictionaryReader>;
+
+    /**
+     * @return Which dictionaries have been read from the archive so far.
+     */
+    [[nodiscard]] auto get_read_dictionaries() const -> ReadDictionaries;
 
     std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary() {
         return m_archive_reader_adaptor->get_timestamp_dictionary();
     }
 
-    std::shared_ptr<SchemaTree> get_schema_tree() { return m_schema_tree; }
+    auto get_schema_tree() const -> std::shared_ptr<SchemaTree> { return m_schema_tree; }
 
     std::shared_ptr<ReaderUtils::SchemaMap> get_schema_map() { return m_schema_map; }
 
@@ -154,11 +179,6 @@ public:
      * @param writer
      */
     void store(FileWriter& writer);
-
-    /**
-     * Closes the archive.
-     */
-    void close();
 
     /**
      * @return The schema ids in the archive. It also defines the order that tables should be
@@ -242,7 +262,16 @@ private:
      * @return a pointer to the newly appended column reader or nullptr if no column reader was
      * created
      */
-    BaseColumnReader* append_reader_column(SchemaReader& reader, int32_t column_id);
+    auto append_reader_column(SchemaReader& reader, int32_t column_id) -> BaseColumnReader*;
+
+    /**
+     * Creates the column reader for a schema column.
+     * @param column_id The schema-tree node ID of the column.
+     * @param is_unordered_object Whether the column is part of an unordered object.
+     * @return The new column reader, or nullptr if the column has no associated reader.
+     */
+    auto make_column_reader(int32_t column_id, bool is_unordered_object)
+            -> std::unique_ptr<BaseColumnReader>;
 
     /**
      * Appends columns for the entire schema of an unordered object.
@@ -271,7 +300,7 @@ private:
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
 
-    bool m_is_open;
+    bool m_has_read_metadata{false};
     std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;

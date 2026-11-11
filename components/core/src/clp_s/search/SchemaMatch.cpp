@@ -341,9 +341,6 @@ void SchemaMatch::populate_schema_mapping() {
             if (Schema::schema_entry_is_unordered_object(column_id)) {
                 continue;
             }
-            if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
-                m_array_schema_ids.insert(schema_id);
-            }
             if (false == m_column_to_descriptor.count(column_id)) {
                 continue;
             }
@@ -582,14 +579,6 @@ bool SchemaMatch::schema_searches_against_column(int32_t schema, int32_t column_
 
 void SchemaMatch::add_searched_column_to_schema(int32_t schema, int32_t column) {
     m_schema_to_searched_columns[schema].insert(column);
-}
-
-bool SchemaMatch::has_array(int32_t schema_id) {
-    return m_array_schema_ids.count(schema_id);
-}
-
-bool SchemaMatch::has_array_search(int32_t schema_id) {
-    return m_array_search_schema_ids.count(schema_id);
 }
 
 LiteralType SchemaMatch::get_literal_type_for_column(ColumnDescriptor* column, int32_t schema) {
