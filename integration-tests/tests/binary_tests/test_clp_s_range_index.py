@@ -64,7 +64,8 @@ def test_clp_s_json_range_index(
     for file_name in json_multifile.metadata.file_names:
         file_path = json_multifile.logs_path / file_name
         with file_path.open(encoding="utf-8") as f:
-            timestamps_millis = [json.loads(line)[timestamp_key] for line in f]
+            timestamps_millis_str = [json.loads(line)[timestamp_key] for line in f]
+            timestamps_millis = list(map(_parse_leading_timestamp_millis, timestamps_millis_str))
         expected_metadata[Path(file_name).name] = _get_expected_metadata(
             file_path.stat().st_size, timestamps_millis if use_timestamp_key else None
         )
@@ -85,6 +86,7 @@ def test_clp_s_json_range_index(
                 print_archive_stats=True,
             ),
         )
+        assert archive_stats is not None
         _verify_ingestion_unit_metadata(archive_stats, expected_metadata)
     finally:
         test_paths.clear_test_outputs()
@@ -142,6 +144,7 @@ def test_clp_s_kv_ir_range_index(
                 print_archive_stats=True,
             ),
         )
+        assert archive_stats is not None
         _verify_ingestion_unit_metadata(archive_stats, expected_metadata)
     finally:
         test_paths.clear_test_outputs()
@@ -213,7 +216,10 @@ def _convert_to_uncompressed_kv_ir(
 
 def _parse_leading_timestamp_millis(line: str) -> int:
     """:return: The zoneless ISO 8601 timestamp that begins `line`, as UTC epoch milliseconds."""
-    timestamp = datetime.fromisoformat(line.split(" ", 1)[0]).replace(tzinfo=timezone.utc)
+    timestamp_str = line.split(" ", 1)[0]
+    if timestamp_str and timestamp_str[-1] == "Z":
+        timestamp_str = timestamp_str[:-1]
+    timestamp = datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)
     return (timestamp - _UNIX_EPOCH) // timedelta(milliseconds=1)
 
 
