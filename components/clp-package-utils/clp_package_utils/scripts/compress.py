@@ -185,7 +185,7 @@ def main(argv):
     if clp_config.logs_input.type != StorageType.FS:
         logger.error(
             "Filesystem compression expects `logs_input.type` to be `%s`, but `%s` is found. For S3"
-            " inputs, use S3 ingestion instead.",
+            " inputs, use `log-ingestor` instead.",
             StorageType.FS,
             clp_config.logs_input.type,
         )

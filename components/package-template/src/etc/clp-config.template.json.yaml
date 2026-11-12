@@ -50,7 +50,6 @@ telemetry:
 #  names:
 #    clp: "clp-db"
 #
-## Spider, compression_coordinator, and query_coordinator are enabled by default.
 #spider:
 ##  host: "localhost"
 ##  port: 50051
