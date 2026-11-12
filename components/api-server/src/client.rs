@@ -1057,6 +1057,69 @@ mod tests {
         }
     }
 
+    #[test]
+    fn streaming_query_job_config_keeps_the_query_and_streams_to_the_network_output()
+    -> anyhow::Result<()> {
+        let other_dataset: DatasetName = "other".parse()?;
+        let network_output = network_output();
+        let actual = QueryConfig {
+            datasets: Some(vec![other_dataset.clone()]),
+            max_num_results: None,
+            ..base_query_config()
+        }
+        .into_streaming_query_job_config(network_output.clone())?;
+
+        assert_eq!(
+            actual,
+            QueryJobConfig {
+                datasets: vec![other_dataset],
+                query: SearchQuery {
+                    query_string: NonEmptyString::new("level: ERROR".to_owned())
+                        .expect("query string is non-empty"),
+                    time_range: TimeRange::new(Some(1), Some(2)).expect("range is ordered"),
+                    ignore_case: true,
+                },
+                output: QueryOutput::Network(network_output),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn query_config_setting_an_option_that_does_not_apply_to_streaming_is_rejected() {
+        for (query_config, rejected_option) in [
+            (base_query_config(), "max_num_results"),
+            (
+                QueryConfig {
+                    max_num_results: None,
+                    buffer_results_in_mongodb: true,
+                    ..base_query_config()
+                },
+                "buffer_results_in_mongodb",
+            ),
+            (
+                QueryConfig {
+                    max_num_results: None,
+                    count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
+                    ..base_query_config()
+                },
+                "count_by_time_bucket_size_millisecs",
+            ),
+        ] {
+            let error = query_config
+                .clone()
+                .into_streaming_query_job_config(network_output())
+                .expect_err("query config should be rejected");
+            assert!(
+                matches!(
+                    &error,
+                    ClientError::InvalidInput(message) if message.contains(rejected_option)
+                ),
+                "unexpected error for {query_config:?}: {error:?}"
+            );
+        }
+    }
+
     /// # Returns
     ///
     /// A valid query config whose results are buffered in files.
@@ -1070,6 +1133,27 @@ mod tests {
             ignore_case: true,
             buffer_results_in_mongodb: false,
             count_by_time_bucket_size_millisecs: None,
+        }
+    }
+
+    /// # Returns
+    ///
+    /// The network output of a query result listener's session.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the session token fixture isn't a valid UUID.
+    fn network_output() -> NetworkOutput {
+        use std::num::NonZeroU16;
+
+        use query_result_listener::test_utils::SESSION_TOKEN;
+
+        NetworkOutput {
+            host: NonEmptyString::new("127.0.0.1".to_owned()).expect("host is non-empty"),
+            port: NonZeroU16::new(4000).expect("4000 is nonzero"),
+            session_token: SESSION_TOKEN
+                .parse()
+                .expect("the session token fixture should be a valid UUID"),
         }
     }
 }
