@@ -44,6 +44,8 @@ log_ingestor: null
 ## Remove any bundled services below if you wish to use your own.
 #bundled: [
 #  "database",
+#  "queue",
+#  "redis",
 #  "results_cache",
 #  "otel_collector",
 #]
@@ -55,7 +57,42 @@ log_ingestor: null
 #  names:
 #    clp: "clp-db"
 #
-#query_coordinator:
+#compression_scheduler:
+#  jobs_poll_delay: 0.1  # seconds
+#  logging_level: "INFO"
+#  telemetry_update_interval_ms: 60000
+#
+## `spider`, `compression_coordinator` and `query_coordinator` are unsupported with CLP Text and
+## must stay `null`.
+#spider: null
+#compression_coordinator: null
+#query_coordinator: null
+#
+#query_scheduler:
+#  host: "localhost"
+#  port: 7000
+#  jobs_poll_delay: 0.1  # seconds
+#  max_datasets_per_query: 10  # Set to null to disable the limit
+#  num_archives_to_search_per_sub_job: 16
+#  logging_level: "INFO"
+#  scheduler_concurrency: 4
+#  telemetry_update_interval_ms: 60000
+#
+#queue:
+#  host: "localhost"
+#  port: 5672
+#
+#redis:
+#  host: "localhost"
+#  port: 6379
+#  query_backend_database: 0
+#  compression_backend_database: 1
+#
+#reducer:
+#  host: "localhost"
+#  base_port: 14009
+#  logging_level: "INFO"
+#  upsert_interval: 100  # milliseconds
 #
 #results_cache:
 #  host: "localhost"
@@ -69,6 +106,17 @@ log_ingestor: null
 #otel_collector:
 #  host: "localhost"
 #  port: 4318
+#
+#compression_worker:
+#  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
+#  telemetry_update_interval_ms: 60000
+#
+#query_worker:
+#  logging_level: "INFO"
+#  task_soft_time_limit: 600  # A value of 0 disables the limit
+#  task_time_limit: 1200  # A value of 0 disables the limit
 #
 
 #
