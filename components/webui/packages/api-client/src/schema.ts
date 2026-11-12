@@ -262,6 +262,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description An aggregation over a query job's results. */
+        Aggregation: {
+            /** Format: int64 */
+            bucket_size_millisecs: number;
+            /** @enum {string} */
+            type: "count_by_time";
+        };
         /** @description Response body of the compression-job submission endpoint. */
         CompressionJob: {
             /**
@@ -487,28 +494,12 @@ export interface components {
         };
         /** @description Defines the request configuration for submitting a search query. */
         QueryConfig: {
-            /**
-             * @description Whether to buffer search results in `MongoDB`.
-             *     By default, search results are buffered in temporary files. When set to `true`, results
-             *     will be stored in `MongoDB` instead.
-             */
-            buffer_results_in_mongodb?: boolean;
-            /**
-             * Format: int64
-             * @description The size of each time bucket (in milliseconds) for count-by-time aggregation.
-             *     When set, the job is submitted as a count-by-time aggregation job instead of a plain
-             *     search job, and its results are always buffered in `MongoDB`.
-             */
-            count_by_time_bucket_size_millisecs?: number | null;
             /** @description The datasets to search within. If not provided, only `default` dataset will be searched. */
             datasets?: string[] | null;
             /** @description Whether the string match should be case-insensitive. */
             ignore_case?: boolean;
-            /**
-             * Format: int32
-             * @description The maximum number of results to return. Omit for no limit.
-             */
-            max_num_results?: number | null;
+            /** @description Where to buffer the search results. */
+            output: components["schemas"]["QueryOutputConfig"];
             /** @description The search query as a KQL string. */
             query_string: string;
             /**
@@ -521,6 +512,20 @@ export interface components {
              * @description The ending timestamp (in epoch milliseconds) for the search range (inclusive).
              */
             time_range_end_millisecs?: number | null;
+        };
+        /** @description Defines where a submitted search query's results are buffered. */
+        QueryOutputConfig: {
+            aggregation?: null | components["schemas"]["Aggregation"];
+            /**
+             * Format: int32
+             * @description The maximum number of results to return. Omit for no limit.
+             */
+            max_num_results?: number | null;
+            /** @enum {string} */
+            type: "results_cache";
+        } | {
+            /** @enum {string} */
+            type: "file";
         };
         QueryResultsUri: {
             /** @description The uri to get the query results. */
@@ -994,8 +999,10 @@ export interface operations {
                  *       "time_range_begin_millisecs": 0,
                  *       "time_range_end_millisecs": 17356896,
                  *       "ignore_case": true,
-                 *       "buffer_results_in_mongodb": true,
-                 *       "count_by_time_bucket_size_millisecs": null
+                 *       "output": {
+                 *         "type": "results_cache",
+                 *         "max_num_results": 100
+                 *       }
                  *     }
                  */
                 "application/json": components["schemas"]["QueryConfig"];
@@ -1043,7 +1050,7 @@ export interface operations {
                     "text/plain": string;
                 };
             };
-            /** @description The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., a non-positive `max_num_results`). */
+            /** @description The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., a non-positive `output.max_num_results`). */
             422: {
                 headers: {
                     [name: string]: unknown;
