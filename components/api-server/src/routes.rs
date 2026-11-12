@@ -11,6 +11,7 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::logs_input::LogsInputError;
 use futures::Stream;
 use futures::StreamExt;
@@ -148,8 +149,7 @@ async fn health() -> String {
             "time_range_begin_millisecs": 0,
             "time_range_end_millisecs": 17_356_896,
             "ignore_case": true,
-            "buffer_results_in_mongodb": true,
-            "count_by_time_bucket_size_millisecs": null
+            "output": {"type": "results_cache", "max_num_results": 100}
         })),
     responses(
         (
@@ -167,7 +167,7 @@ async fn health() -> String {
             description = "The Content-Type header is missing or is not a JSON media type."),
         (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
             description = "The JSON body has missing or unknown fields, or fields with invalid \
-                types or values (e.g., a non-positive `max_num_results`)."),
+                types or values (e.g., a non-positive `output.max_num_results`)."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -176,7 +176,11 @@ async fn query(
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
     tracing::info!("Submitting query: {:?}", query_config);
-    let query_job_id = match client.submit_query(query_config).await {
+    let submission = async {
+        let query_job_config = QueryJobConfig::try_from(query_config)?;
+        client.submit_query(&query_job_config).await
+    };
+    let query_job_id = match submission.await {
         Ok(id) => {
             tracing::info!("Submitted query job ID: {}", id);
             id
@@ -456,12 +460,46 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn query_rejects_invalid_numeric_fields_with_unprocessable_entity() -> anyhow::Result<()>
-    {
+    async fn query_rejects_malformed_bodies_with_unprocessable_entity() -> anyhow::Result<()> {
         let app = clp_s_app_with_lazy_clients().await;
-        for field in ["count_by_time_bucket_size_millisecs", "max_num_results"] {
-            let mut body = serde_json::json!({"query_string": "*"});
-            body[field] = serde_json::json!(0);
+        for (body, expected_error) in [
+            (
+                serde_json::json!({
+                    "query_string": "*",
+                    "output": {"type": "results_cache", "max_num_results": 0},
+                }),
+                "output: invalid value: integer `0`, expected a nonzero u32",
+            ),
+            (
+                serde_json::json!({
+                    "query_string": "*",
+                    "output": {
+                        "type": "results_cache",
+                        "aggregation": {"type": "count_by_time", "bucket_size_millisecs": 0},
+                    },
+                }),
+                "output: invalid value: integer `0`, expected a nonzero u64",
+            ),
+            (
+                serde_json::json!({
+                    "query_string": "*",
+                    "output": {
+                        "type": "network",
+                        "host": "localhost",
+                        "port": 8080,
+                        "session_token": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
+                    },
+                }),
+                "output.type: unknown variant `network`",
+            ),
+            (
+                serde_json::json!({
+                    "query_string": "*",
+                    "output": {"type": "file", "max_num_results": 1},
+                }),
+                "output: unknown field `max_num_results`",
+            ),
+        ] {
             let response = app
                 .clone()
                 .oneshot(
@@ -479,7 +517,43 @@ mod tests {
                 response.headers()["content-type"],
                 "text/plain; charset=utf-8"
             );
-            assert!(get_body(response).await.contains(field), "{body}");
+            let response_body = get_body(response).await;
+            assert!(
+                response_body.contains(expected_error),
+                "{body}: {response_body}"
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn query_rejects_invalid_search_fields_with_bad_request() -> anyhow::Result<()> {
+        let app = clp_s_app_with_lazy_clients().await;
+        for (body, expected_response_body) in [
+            (
+                serde_json::json!({"query_string": "", "output": {"type": "file"}}),
+                "Invalid input: query_string must not be empty",
+            ),
+            (
+                serde_json::json!({
+                    "query_string": "*",
+                    "time_range_begin_millisecs": 2,
+                    "time_range_end_millisecs": 1,
+                    "output": {"type": "file"},
+                }),
+                "Invalid input: time_range_begin_millisecs must be <= time_range_end_millisecs",
+            ),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::post("/query")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body.to_string()))?,
+                )
+                .await?;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{body}");
+            assert_eq!(get_body(response).await, expected_response_body, "{body}");
         }
         Ok(())
     }

@@ -147,11 +147,14 @@ pub struct ResultsCacheOutput {
 }
 
 /// An aggregation over a query job's results.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
 pub enum Aggregation {
     /// Counts the matching log events in each time bucket of the given width.
-    CountByTime { bucket_size_millisecs: PositiveI64 },
+    CountByTime {
+        #[schema(value_type = i64, minimum = 1)]
+        bucket_size_millisecs: PositiveI64,
+    },
 }
 
 /// The TCP listener that a query job's results are streamed to.
