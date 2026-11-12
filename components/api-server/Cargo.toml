@@ -38,6 +38,7 @@ serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["chrono"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+tokio-util = { workspace = true, features = ["rt"] }
 tower-http = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras", "chrono"] }

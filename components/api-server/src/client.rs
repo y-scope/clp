@@ -1,5 +1,6 @@
 use std::num::NonZeroU32;
 use std::pin::Pin;
+use std::time::Duration;
 
 use async_stream::stream;
 use chrono::DateTime;
@@ -13,6 +14,7 @@ use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
+use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -25,6 +27,9 @@ use futures::Stream;
 use futures::StreamExt;
 use non_empty_string::NonEmptyString;
 use pin_project_lite::pin_project;
+use query_result_listener::encoding::ResultEncoding;
+use query_result_listener::listener::ResultListener;
+use query_result_listener::session::SessionConfig;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::Row;
@@ -32,6 +37,9 @@ use utoipa::IntoParams;
 use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
+use crate::streaming_query;
+use crate::streaming_query::StreamingQuery;
+use crate::streaming_query::StreamingQueryEvent;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
 /// Covers all terminal states that consumed compute resources (succeeded, failed).
@@ -222,6 +230,49 @@ pub struct QueryConfig {
     pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
 
+impl QueryConfig {
+    /// Converts the config into the config of a query job whose tasks stream their results to
+    /// `network_output`.
+    ///
+    /// # Returns
+    ///
+    /// The query job config on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::InvalidInput`] if the config sets an option that doesn't apply to streamed
+    ///   results: `max_num_results`, `buffer_results_in_mongodb` or
+    ///   `count_by_time_bucket_size_millisecs`.
+    /// * Forwards [`QueryJobConfig::try_from`]'s return values on failure.
+    pub(crate) fn into_streaming_query_job_config(
+        self,
+        network_output: NetworkOutput,
+    ) -> Result<QueryJobConfig, ClientError> {
+        if self.max_num_results.is_some() {
+            return Err(ClientError::InvalidInput(
+                "max_num_results must be omitted from a streaming query".to_owned(),
+            ));
+        }
+        if self.buffer_results_in_mongodb {
+            return Err(ClientError::InvalidInput(
+                "buffer_results_in_mongodb must be false for a streaming query".to_owned(),
+            ));
+        }
+        if self.count_by_time_bucket_size_millisecs.is_some() {
+            return Err(ClientError::InvalidInput(
+                "count_by_time_bucket_size_millisecs must be omitted from a streaming query"
+                    .to_owned(),
+            ));
+        }
+        Ok(QueryJobConfig {
+            output: QueryOutput::Network(network_output),
+            ..QueryJobConfig::try_from(self)?
+        })
+    }
+}
+
 impl TryFrom<QueryConfig> for QueryJobConfig {
     type Error = ClientError;
 
@@ -313,6 +364,88 @@ impl Client {
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let query_job_config = QueryJobConfig::try_from(query_config)?;
         Ok(query_job::submit(&self.sql_pool, &query_job_config).await?)
+    }
+
+    /// Submits a query job whose tasks stream their results to a new session of `listener`.
+    ///
+    /// The returned query's events are streamed as [`streaming_query::stream_events`] describes.
+    /// The stream finds the job terminated by reading its status at a fixed interval, and ends with
+    /// an error if the status can't be read or the job doesn't exist. It requests the job's
+    /// cancellation with [`Client::cancel_query_job`], and logs the request's outcome.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `EncodingType` - The encoding of the query's results.
+    ///
+    /// # Returns
+    ///
+    /// The submitted query on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`ResultListener::open_session`]'s return values on failure.
+    /// * Forwards [`QueryConfig::into_streaming_query_job_config`]'s return values on failure.
+    /// * Forwards [`query_job::submit`]'s return values on failure.
+    #[expect(
+        dead_code,
+        reason = "the streaming query endpoint that submits its queries comes in a later change"
+    )]
+    pub(crate) async fn submit_streaming_query<EncodingType: ResultEncoding>(
+        &self,
+        listener: &ResultListener<EncodingType>,
+        query_config: QueryConfig,
+    ) -> Result<
+        StreamingQuery<
+            impl Stream<Item = StreamingQueryEvent<EncodingType::Batch>> + Send + use<EncodingType>,
+        >,
+        ClientError,
+    > {
+        /// The interval between the end of one read of the job's status and the start of the next.
+        const QUERY_JOB_STATUS_POLL_INTERVAL: Duration = Duration::from_millis(100);
+
+        let (session, results) = listener.open_session(SessionConfig::default())?;
+        let query_job_config =
+            query_config.into_streaming_query_job_config(session.network_output().clone())?;
+        let query_job_id = query_job::submit(&self.sql_pool, &query_job_config).await?;
+        let termination = {
+            let client = self.clone();
+            async move {
+                loop {
+                    tokio::time::sleep(QUERY_JOB_STATUS_POLL_INTERVAL).await;
+                    let status = client.get_status(query_job_id).await?;
+                    if status.is_terminal() {
+                        return Ok(status);
+                    }
+                }
+            }
+        };
+        let cancellation = {
+            let client = self.clone();
+            async move {
+                match client.cancel_query_job(query_job_id).await {
+                    Ok(()) => tracing::info!(
+                        query_job_id,
+                        "Requested the cancellation of a streaming query's job."
+                    ),
+                    Err(ClientError::QueryJobAlreadyTerminated(_)) => tracing::info!(
+                        query_job_id,
+                        "Requested the cancellation of a streaming query's job, which had already \
+                         terminated."
+                    ),
+                    Err(e) => tracing::warn!(
+                        query_job_id,
+                        error = % e,
+                        "Failed to request the cancellation of a streaming query's job."
+                    ),
+                }
+            }
+        };
+        Ok(StreamingQuery {
+            query_job_id,
+            events: streaming_query::stream_events(session, results, termination, cancellation),
+        })
     }
 
     /// Asynchronously fetches the results of a completed query job.
