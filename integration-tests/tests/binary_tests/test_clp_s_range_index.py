@@ -10,8 +10,8 @@ from typing import Any
 
 import pytest
 
+from tests.binary_tests.clp_s_utils import compress, CompressOptions
 from tests.utils.classes import (
-    ClpAction,
     IntegrationTestPathConfig,
     NonClpAction,
     SampleDataset,
@@ -76,13 +76,16 @@ def test_clp_s_json_range_index(
     )
     test_paths.clear_test_outputs()
     try:
-        compression_action = _compress_with_archive_stats(
+        archive_stats = compress(
             clp_core_path_config,
             test_paths.compression_dir,
-            [test_paths.logs_source_path],
-            ["--timestamp-key", timestamp_key] if use_timestamp_key else [],
+            test_paths.logs_source_path,
+            options=CompressOptions(
+                timestamp_key=timestamp_key if use_timestamp_key else None,
+                print_archive_stats=True,
+            ),
         )
-        _verify_ingestion_unit_metadata(compression_action, expected_metadata)
+        _verify_ingestion_unit_metadata(archive_stats, expected_metadata)
     finally:
         test_paths.clear_test_outputs()
 
@@ -130,13 +133,16 @@ def test_clp_s_kv_ir_range_index(
                 kv_ir_path.stat().st_size, timestamps_millis if use_timestamp_key else None
             )
 
-        compression_action = _compress_with_archive_stats(
+        archive_stats = compress(
             clp_core_path_config,
             test_paths.compression_dir,
-            sorted(test_paths.conversion_dir.glob("*/*")),
-            ["--timestamp-key", LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY] if use_timestamp_key else [],
+            test_paths.conversion_dir,
+            options=CompressOptions(
+                timestamp_key=LOG_CONVERTER_OUTPUT_TIMESTAMP_KEY if use_timestamp_key else None,
+                print_archive_stats=True,
+            ),
         )
-        _verify_ingestion_unit_metadata(compression_action, expected_metadata)
+        _verify_ingestion_unit_metadata(archive_stats, expected_metadata)
     finally:
         test_paths.clear_test_outputs()
 
@@ -164,39 +170,21 @@ def test_clp_s_disable_log_order_omits_range_index(
     )
     test_paths.clear_test_outputs()
     try:
-        compression_action = _compress_with_archive_stats(
+        archive_stats = compress(
             clp_core_path_config,
             test_paths.compression_dir,
-            [test_paths.logs_source_path],
-            ["--disable-log-order", "--timestamp-key", timestamp_key],
+            test_paths.logs_source_path,
+            options=CompressOptions(
+                timestamp_key=timestamp_key,
+                disable_log_order=True,
+                print_archive_stats=True,
+            ),
         )
-        archive_stats = _get_archive_stats(compression_action)
-        assert len(archive_stats) > 0, "Expected `clp-s` to print stats for at least one archive."
+        assert archive_stats, "Expected `clp-s` to print stats for at least one archive."
         for stats in archive_stats:
             assert stats["range_index"] == [], f"Expected an empty range index: {stats}"
     finally:
         test_paths.clear_test_outputs()
-
-
-def _compress_with_archive_stats(
-    clp_core_path_config: ClpCorePathConfig,
-    compression_dir: Path,
-    input_paths: list[Path],
-    options: list[str],
-) -> ClpAction:
-    compression_action = ClpAction.from_cmd(
-        [
-            str(clp_core_path_config.clp_s_binary_path),
-            "c",
-            "--print-archive-stats",
-            *options,
-            str(compression_dir),
-            *(str(path) for path in input_paths),
-        ]
-    )
-    compression_result = compression_action.verify_returncode()
-    assert compression_result, compression_result.failure_message
-    return compression_action
 
 
 def _convert_to_uncompressed_kv_ir(
@@ -238,20 +226,16 @@ def _get_expected_metadata(num_bytes: int, timestamps_millis: list[int] | None) 
     }
 
 
-def _get_archive_stats(compression_action: ClpAction) -> list[dict[str, Any]]:
-    return [json.loads(line) for line in compression_action.completed_proc.stdout.splitlines()]
-
-
 def _verify_ingestion_unit_metadata(
-    compression_action: ClpAction,
+    archive_stats: list[dict[str, Any]],
     expected_metadata: dict[str, dict[str, Any]],
 ) -> None:
     """
-    :param compression_action: A `clp-s` compression run with `--print-archive-stats`.
+    :param archive_stats: The stats `clp-s` printed for each archive it created.
     :param expected_metadata: Map from each ingestion unit's file name to its expected metadata.
     """
     metadata: dict[str, dict[str, Any]] = {}
-    for stats in _get_archive_stats(compression_action):
+    for stats in archive_stats:
         for range_entry in stats["range_index"]:
             fields = range_entry[RANGE_FIELDS_KEY]
             metadata[Path(fields[FILENAME_KEY]).name] = {
@@ -263,6 +247,4 @@ def _verify_ingestion_unit_metadata(
                 )
                 if key in fields
             }
-    assert metadata == expected_metadata, (
-        f"See subprocess log at: '{compression_action.log_file_path}'."
-    )
+    assert metadata == expected_metadata
