@@ -436,6 +436,15 @@ auto ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) 
     m_current_reader_holder.reset();
 }
 
+auto ArchiveReaderAdaptor::get_sections() const -> std::vector<std::string_view> {
+    std::vector<std::string_view> sections;
+    sections.reserve(m_archive_file_info.files.size());
+    for (auto const& info : m_archive_file_info.files) {
+        sections.emplace_back(info.n);
+    }
+    return sections;
+}
+
 auto ArchiveReaderAdaptor::get_metadata_for_log_event(int64_t log_event_idx)
         -> nlohmann::json const& {
     auto const it{m_non_empty_range_metadata_map.upper_bound(log_event_idx)};

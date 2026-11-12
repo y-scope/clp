@@ -59,6 +59,18 @@ public:
         return mask == cTimestampLiteralTypes;
     }
 
+    /**
+     * Checks compatibility with numeric and timestamp value types.
+     * @param type The single value type to test.
+     * @param op The comparison operation; unused.
+     * @return Whether `type` is integer, float, or timestamp.
+     */
+    [[nodiscard]] auto can_match_op(LiteralType type, FilterOperation /*op*/) const
+            -> bool override {
+        return LiteralType::IntegerT == type || LiteralType::FloatT == type
+               || LiteralType::TimestampT == type;
+    }
+
     auto as_timestamp() -> bool override { return true; }
 
     auto as_int(int64_t& ret, FilterOperation op) -> bool override;

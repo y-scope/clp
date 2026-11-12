@@ -10,6 +10,7 @@ import pytest
 from tests.binary_tests import clp_s_utils
 from tests.utils.archive import create_tar_gz_from_dir
 from tests.utils.classes import (
+    ClpAction,
     IntegrationTestPathConfig,
     NonClpAction,
     SampleDataset,
@@ -67,6 +68,60 @@ def test_log_converter_transform(
     )
     try:
         _convert_and_compress(clp_core_path_config, test_paths)
+    finally:
+        test_paths.clear_test_outputs()
+
+
+@pytest.mark.clpp
+def test_log_converter_clpp_flavour_rejected(
+    clp_core_path_config: ClpCorePathConfig,
+    integration_test_path_config: IntegrationTestPathConfig,
+    text_singlefile: SampleDataset,
+) -> None:
+    """
+    Validates that `clp-s c --flavour clpp` rejects KV-IR input with an error instead of crashing.
+
+    :param clp_core_path_config:
+    :param integration_test_path_config:
+    :param text_singlefile:
+    """
+    test_paths = ConversionTestPathConfig(
+        test_name=f"clpp-kv-ir-{text_singlefile.dataset_name}",
+        logs_source_path=text_singlefile.logs_path,
+        integration_test_path_config=integration_test_path_config,
+    )
+    try:
+        conversion_action = NonClpAction(
+            cmd=[
+                str(clp_core_path_config.log_converter_binary_path),
+                str(test_paths.logs_source_path),
+                "--output-dir",
+                str(test_paths.conversion_dir),
+            ]
+        )
+        conversion_action.check_returncode()
+
+        parsing_spec_path = clp_s_utils.get_parsing_spec_path(integration_test_path_config)
+        action = ClpAction.from_cmd(
+            [
+                str(clp_core_path_config.clp_s_binary_path),
+                "c",
+                "--flavour",
+                "clpp",
+                f"--parsing-specification={parsing_spec_path}",
+                str(test_paths.compression_dir),
+                str(test_paths.conversion_dir),
+            ]
+        )
+        assert action.completed_proc.returncode > 0, (
+            "Compressing KV-IR with the clpp flavour should fail without crashing.\n"
+            f"stdout: {action.completed_proc.stdout!r}\n"
+            f"stderr: {action.completed_proc.stderr!r}"
+        )
+        assert "not supported by the clpp flavour" in action.completed_proc.stderr, (
+            "Compressing KV-IR with the clpp flavour did not produce the expected error.\n"
+            f"stderr: {action.completed_proc.stderr!r}"
+        )
     finally:
         test_paths.clear_test_outputs()
 

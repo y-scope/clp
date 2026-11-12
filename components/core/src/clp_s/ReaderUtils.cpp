@@ -58,7 +58,16 @@ auto ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) -> std::shared
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        tree->add_node(parent_id, static_cast<NodeType>(node_type), key);
+        if (adaptor.get_header().mpt_has_node_count()) {
+            uint32_t count{0};
+            error_code = schema_tree_decompressor.try_read_numeric_value(count);
+            if (ErrorCodeSuccess != error_code) {
+                throw OperationFailed(error_code, __FILENAME__, __LINE__);
+            }
+            tree->add_node(parent_id, static_cast<NodeType>(node_type), key, count);
+        } else {
+            tree->add_node(parent_id, static_cast<NodeType>(node_type), key);
+        }
     }
 
     schema_tree_decompressor.close();
@@ -122,5 +131,29 @@ auto ReaderUtils::read_schemas(ArchiveReaderAdaptor& adaptor)
     adaptor.checkin_reader_for_section(constants::cArchiveSchemaMapFile);
 
     return schemas_pointer;
+}
+
+auto ReaderUtils::read_parsing_spec(ArchiveReaderAdaptor& adaptor) -> std::string {
+    auto reader = adaptor.checkout_reader_for_section(constants::cArchiveParsingSpecFile);
+
+    ZstdDecompressor decompressor;
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    uint64_t schema_size{0};
+    auto error_code{decompressor.try_read_numeric_value(schema_size)};
+    if (ErrorCodeSuccess != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+
+    std::string schema_text(schema_size, '\0');
+    error_code = decompressor.try_read_exact_length(schema_text.data(), schema_size);
+    if (ErrorCodeSuccess != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+
+    decompressor.close();
+    adaptor.checkin_reader_for_section(constants::cArchiveParsingSpecFile);
+
+    return schema_text;
 }
 }  // namespace clp_s

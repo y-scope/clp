@@ -2,11 +2,14 @@
 #define CLP_S_TEST_UTILS_HPP
 
 #include <cstddef>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include <clp_s/ArchiveWriter.hpp>
+
+constexpr size_t cDefaultTestTargetEncodedSize{8ULL * 1024 * 1024 * 1024};  // 8 GiB
 
 /**
  * Compresses a file into an archive directory according to a given set of configuration options.
@@ -19,6 +22,8 @@
  * @param retain_float_format
  * @param single_file_archive
  * @param structurize_arrays
+ * @param parsing_spec_path Path to a parsing specification file. When set, the archive is
+ * compressed with the clpp flavour.
  * @param target_encoded_size The archive split threshold, or the default threshold if empty.
  * @return Statistics for every compressed archive.
  */
@@ -29,6 +34,9 @@
         bool retain_float_format,
         bool single_file_archive,
         bool structurize_arrays,
+        std::optional<std::filesystem::path> parsing_spec_path = std::nullopt,
         std::optional<std::size_t> target_encoded_size = std::nullopt
 ) -> std::vector<clp_s::ArchiveStats>;
+
+[[nodiscard]] auto get_heuristic_parsing_spec_path() -> std::filesystem::path;
 #endif  // CLP_S_TEST_UTILS_HPP

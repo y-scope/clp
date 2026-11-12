@@ -20,6 +20,8 @@
 #include <nlohmann/json_fwd.hpp>
 #include <ystdlib/containers/Array.hpp>
 
+#include <clp_s/Defs.hpp>
+
 #include "../clp/BoundedReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "InputConfig.hpp"
@@ -116,6 +118,16 @@ public:
     std::vector<RangeIndexEntry> const& get_range_index() const { return m_range_index; }
 
     /**
+     * @return The names of every section in the archive, in on-disk order.
+     */
+    [[nodiscard]] auto get_sections() const -> std::vector<std::string_view>;
+
+    /**
+     * @return The flavour of CLP the archive was compressed with.
+     */
+    [[nodiscard]] auto flavour() const -> ClpFlavour { return m_archive_info.flavour; }
+
+    /**
      * @param log_event_idx
      * @return The file-level metadata associated with the record at `log_event_idx`.
      * @throws OperationFailed when `log_event_idx` cannot be mapped to any metadata.
@@ -192,13 +204,17 @@ private:
             -> std::unique_ptr<clp::ReaderInterface>;
 
     /**
-     * Gets the absolute byte range of a single-file archive section.
      * @param section_it An iterator into `m_archive_file_info.files`.
-     * @return The section's inclusive begin offset and exclusive end offset.
-     * @throws OperationFailed if the archive's size or section offsets are invalid.
+     * @return A pair of offsets into the single file archive's stream:
+     * - The offset of the section's first byte.
+     * - The offset one past the section's last byte.
+     * @throws OperationFailed with ErrorCodeOutOfBounds if the archive size doesn't fit in size_t.
+     * @throws OperationFailed with ErrorCodeCorrupt if the section bounds are reversed or outside
+     * the archive's files region.
      */
-    auto get_sfa_section_bounds(std::vector<ArchiveFileInfo>::const_iterator section_it) const
-            -> std::pair<size_t, size_t>;
+    [[nodiscard]] auto get_sfa_section_bounds(
+            std::vector<ArchiveFileInfo>::const_iterator section_it
+    ) const -> std::pair<size_t, size_t>;
 
     /**
      * Seeks the single-file archive stream to an absolute offset, avoiding redundant seeks. Seeking
