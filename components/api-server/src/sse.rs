@@ -25,11 +25,6 @@ impl ResultEncoder for SseEncoder {
     type Batch = Bytes;
     type Error = serde_json::Error;
 
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`serde_json::to_writer`]'s return values on failure.
     fn new(archive_id: ArchiveId) -> Result<Self, serde_json::Error> {
         let mut event_prefix = b"data: {\"archive_id\":".to_vec();
         serde_json::to_writer(&mut event_prefix, &archive_id)?;
@@ -40,11 +35,6 @@ impl ResultEncoder for SseEncoder {
         })
     }
 
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`serde_json::to_writer`]'s return values on failure.
     fn encode(&mut self, timestamp_millisecs: i64, message: &str) -> Result<(), serde_json::Error> {
         self.batch.extend_from_slice(&self.event_prefix);
         serde_json::to_writer(&mut self.batch, &timestamp_millisecs)?;
