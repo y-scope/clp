@@ -38,7 +38,13 @@ public:
 
     virtual std::any visitColumn_value_expression(KqlParser::Column_value_expressionContext *context) = 0;
 
+    virtual std::any visitFunction_call(KqlParser::Function_callContext *context) = 0;
+
     virtual std::any visitColumn(KqlParser::ColumnContext *context) = 0;
+
+    virtual std::any visitColumn_literal(KqlParser::Column_literalContext *context) = 0;
+
+    virtual std::any visitProjection_column(KqlParser::Projection_columnContext *context) = 0;
 
     virtual std::any visitValue_expression(KqlParser::Value_expressionContext *context) = 0;
 

@@ -6,6 +6,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <string>
 #include <system_error>
 
 #include <ystdlib/error_handling/Result.hpp>
@@ -42,6 +43,14 @@ public:
      * @return the schema map
      */
     static auto read_schemas(ArchiveReaderAdaptor& adaptor) -> std::shared_ptr<SchemaMap>;
+
+    /**
+     * Reads the parsing specification from an archive.
+     * @param adaptor
+     * @return The parsing specification contents.
+     * @throw OperationFailed if the schema is missing or corrupt.
+     */
+    static auto read_parsing_spec(ArchiveReaderAdaptor& adaptor) -> std::string;
 
     /**
      * Converts a serialized 64-bit numeric value into `size_t` with bounds checking.

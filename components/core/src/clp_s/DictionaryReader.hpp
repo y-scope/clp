@@ -12,9 +12,10 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "../clp/Defs.h"
-#include "ArchiveReaderAdaptor.hpp"
-#include "DictionaryEntry.hpp"
+#include <clp/Defs.h>
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clpp/Defs.hpp>
 
 namespace clp_s {
 template <typename DictionaryIdType, typename EntryType>
@@ -106,6 +107,7 @@ private:
     bool m_has_read_entries{false};
 };
 
+using LogShapeDictionaryReader = DictionaryReader<clpp::log_shape_id_t, VariableDictionaryEntry>;
 using VariableDictionaryReader
         = DictionaryReader<clp::variable_dictionary_id_t, VariableDictionaryEntry>;
 using LogTypeDictionaryReader

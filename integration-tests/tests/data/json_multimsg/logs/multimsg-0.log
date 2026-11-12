@@ -1,0 +1,5 @@
+{"@timestamp":"2023-03-28T04:00:00.000Z","level":"INFO","message":"alpha 111 beta","details":"gamma 222 delta"}
+{"@timestamp":"2023-03-28T04:00:01.000Z","level":"INFO","message":"shared 333 text","details":"shared 444 text"}
+{"@timestamp":"2023-03-28T04:00:02.000Z","level":"INFO","message":"count: 10 done","details":"count: 20 done"}
+{"@timestamp":"2023-03-28T04:00:03.000Z","level":"WARN","message":"solo field 555"}
+{"@timestamp":"2023-03-28T04:00:04.000Z","level":"ERROR","message":"alpha 666 beta","details":"shared 777 text"}

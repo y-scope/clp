@@ -1,0 +1,10 @@
+{"idx": 0, "arr": [{"k": "a b"}, {"k": "plain"}]}
+{"idx": 1, "arr": [{"k": "plain"}, {"k": "a b"}]}
+{"idx": 2, "arr": [{"k": "a b"}, {"k": "plain"}, {"k": "gamma"}]}
+{"idx": 3, "arr": [{"k": "alpha"}, {"k": "plain"}]}
+{"idx": 4, "arr": [{"k": 1.5}, {"k": 3}]}
+{"idx": 5, "arr": [{"k": 3}, {"k": 1.5}]}
+{"idx": 6, "arr": [{"k": "x"}, {"k": 5}]}
+{"idx": 7, "arr": [{"k": 5}, {"k": "x"}]}
+{"idx": 8, "arr": [{"k": true}, {"k": "x y"}]}
+{"idx": 9, "noarr": 1}

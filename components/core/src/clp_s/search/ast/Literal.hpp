@@ -12,6 +12,12 @@
 namespace clp_s::search::ast {
 /**
  * An enum representing all of the Literal types that can show up in the AST.
+ *
+ * `ClpStringT` and `VarStringT` are the string types of the clp-s flavour: a `NodeType::ClpString`
+ * value contains a space and a `NodeType::VarString` value doesn't. `StringT` is the string type of
+ * the clpp flavour (`NodeType::UnstructurizedText`, `NodeType::StructurizedText` and
+ * `NodeType::ParentRule`); it carries no invariant about a value's content, so a string literal can
+ * always match it and the node type decides how the match is evaluated.
  */
 enum LiteralType : uint32_t {
     TypesBegin = 1,
@@ -23,7 +29,8 @@ enum LiteralType : uint32_t {
     ArrayT = 1 << 5,
     NullT = 1 << 6,
     TimestampT = 1 << 7,
-    TypesEnd = 1 << 8,
+    StringT = 1 << 8,
+    TypesEnd = 1 << 9,
     UnknownT = static_cast<uint32_t>(1) << 31
 };
 
@@ -76,6 +83,8 @@ public:
                 return "null";
             case LiteralType::TimestampT:
                 return "timestamp";
+            case LiteralType::StringT:
+                return "string";
             default:
                 return "errtype";
         }
@@ -92,6 +101,10 @@ public:
         return false;
     }
 
+    /**
+     * Casts the literal to a string matched whole against a variable dictionary value, i.e.
+     * against a `VarStringT` or `StringT` column.
+     */
     virtual auto as_var_string(std::string& /*ret*/, FilterOperation /*op*/) -> bool {
         return false;
     }
@@ -111,6 +124,21 @@ public:
     virtual auto as_timestamp() -> bool { return false; }
 
     virtual auto as_any(FilterOperation /*op*/) -> bool { return false; }
+
+    /**
+     * Checks compatibility with a value type and comparison operation without converting the
+     * literal. Unlike `matches_type()`, which reports the interpretations the literal carries,
+     * this also accounts for `op` and for wildcard patterns; wildcard compatibility may be
+     * conservative and does not guarantee a match against any particular value.
+     * @param type The single value type to test.
+     * @param op The comparison operation; existence operations are handled separately by callers.
+     * @return Whether the literal is compatible with `type` under `op`.
+     */
+    [[nodiscard]] virtual auto can_match_op(LiteralType type, FilterOperation op) const -> bool {
+        return false;
+    }
+
+    [[nodiscard]] virtual auto has_wildcard() const -> bool { return false; }
 };
 }  // namespace clp_s::search::ast
 
