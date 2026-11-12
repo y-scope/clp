@@ -25,6 +25,7 @@ from job_orchestration.scheduler.constants import (
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     FsInputConfig,
+    InputType,
     OutputConfig,
     S3InputConfig,
 )
@@ -93,10 +94,6 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             # One or more tasks in the job has failed
             logger.error(f"Compression failed. {job_row['status_msg']}")
             break  # Done
-        if CompressionJobStatus.KILLED == job_status:
-            # The job is killed
-            logger.error(f"Compression killed. {job_row['status_msg']}")
-            break  # Done
 
         if CompressionJobStatus.RUNNING == job_status:
             if not no_progress_reporting:
@@ -151,6 +148,7 @@ def _generate_clp_io_config(
         if len(logs_to_compress) == 0:
             raise ValueError("No input paths given.")
         return FsInputConfig(
+            type=InputType.FS.value,
             dataset=parsed_args.dataset,
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
@@ -174,6 +172,7 @@ def _generate_clp_io_config(
             urls
         )
         return S3InputConfig(
+            type=InputType.S3.value,
             dataset=parsed_args.dataset,
             endpoint_url=endpoint_url,
             region_code=region_code,
@@ -191,6 +190,7 @@ def _generate_clp_io_config(
             )
         endpoint_url, region_code, bucket, key_prefix = parse_s3_url(urls[0])
         return S3InputConfig(
+            type=InputType.S3.value,
             dataset=parsed_args.dataset,
             endpoint_url=endpoint_url,
             region_code=region_code,

@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <list>
 #include <memory>
+#include <optional>
 
 #include "Literal.hpp"
 #include "Value.hpp"
@@ -19,16 +20,26 @@ using OpList = std::list<std::shared_ptr<Value>>;
  */
 class Expression : public Value {
 public:
+    // Delete copy assignment operator
+    auto operator=(Expression const&) -> Expression& = delete;
+
+    // Delete move constructor and assignment operator
+    Expression(Expression&&) = delete;
+    auto operator=(Expression&&) -> Expression& = delete;
+
+    // Destructor
+    ~Expression() override = default;
+
     /**
      * True if this expression is inverted
      * @return Whether the expression is inverted
      */
-    bool is_inverted() const { return m_inverted; }
+    [[nodiscard]] auto is_inverted() const -> bool { return m_inverted; }
 
     /**
      * Flip whether the expression is inverted
      */
-    void invert() { m_inverted = !m_inverted; }
+    auto invert() -> void { m_inverted = !m_inverted; }
 
     /**
      * @return The number of operands that this expression has
@@ -39,52 +50,52 @@ public:
      * Gets iterators to this `Expression`'s OpList.
      * @return Iterators to the beginning/end of the OpList
      */
-    OpList::iterator op_begin() { return m_operands.begin(); }
+    [[nodiscard]] auto op_begin() -> OpList::iterator { return m_operands.begin(); }
 
-    OpList::iterator op_end() { return m_operands.end(); }
+    [[nodiscard]] auto op_end() -> OpList::iterator { return m_operands.end(); }
 
-    OpList::const_iterator op_begin() const { return m_operands.cbegin(); }
+    [[nodiscard]] auto op_begin() const -> OpList::const_iterator { return m_operands.cbegin(); }
 
-    OpList::const_iterator op_end() const { return m_operands.cend(); }
+    [[nodiscard]] auto op_end() const -> OpList::const_iterator { return m_operands.cend(); }
 
     /**
      * @return A reference to the underlying OpList. Useful in cases where certain children
      * need to be deleted, or multiple children need to be spliced in.
      */
-    OpList& get_op_list() { return m_operands; }
+    auto get_op_list() -> OpList& { return m_operands; }
 
     /**
      * Add an operand to the end of the OpList. When the operand is an
      * Expression its parent is set to this Expression.
      * @param operand the operand to append to the OpList
      */
-    void add_operand(std::shared_ptr<Expression> const& operand);
+    auto add_operand(std::shared_ptr<Expression> const& operand) -> void;
 
-    void add_operand(std::shared_ptr<Literal> const& operand);
+    auto add_operand(std::shared_ptr<Literal> const& operand) -> void;
 
     /**
      * @return The parent for this Expression. Can be nullptr if this is the top level.
      */
-    auto get_parent() const -> Expression* { return m_parent; }
+    [[nodiscard]] auto get_parent() const -> Expression* { return m_parent; }
 
     /**
      * Set the parent for this Expression
      * @param parent this Expression's new parent
      */
-    void set_parent(Expression* parent) { m_parent = parent; }
+    auto set_parent(Expression* parent) -> void { m_parent = parent; }
 
     /**
      * Deep copy
      * @return A deep copy of this expression
      */
-    virtual std::shared_ptr<Expression> copy() const = 0;
+    [[nodiscard]] virtual auto copy() const -> std::shared_ptr<Expression> = 0;
 
     /**
      * Deep copy this expression and append it into *parent*'s OpList.
      * Also sets the parent for copy to parent.
      * @param parent the parent to copy into
      */
-    void copy_append(Expression* parent) const;
+    auto copy_append(Expression* parent) const -> void;
 
     /**
      * Deep copy this expression and replace a specific operand in the
@@ -93,16 +104,16 @@ public:
      * @param it an iterator into the parent's OpList representing the operand that will get
      * replaced
      */
-    void copy_replace(Expression* parent, OpList::iterator it) const;
+    auto copy_replace(Expression* parent, OpList::iterator it) const -> void;
 
     /**
      * Whether this Expression's operands are all Expression
      * @return true if this Expression's operands are all Expression
      */
-    virtual bool has_only_expression_operands() = 0;
+    [[nodiscard]] virtual auto has_only_expression_operands() -> bool = 0;
 
     // Methods inherited from Value
-    void print() const override = 0;
+    auto print() const -> void override = 0;
 
 protected:
     /**

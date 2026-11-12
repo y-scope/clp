@@ -1,6 +1,8 @@
 #include "NarrowTypes.hpp"
 
 #include <algorithm>
+#include <array>
+#include <memory>
 
 #include "ConstantProp.hpp"
 #include "EmptyExpr.hpp"
@@ -43,41 +45,30 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
         }
 
         auto literal = filter->get_operand();
-        std::string tmpstring;
-        int64_t tmpint;
-        double tmpdouble;
-        bool tmpbool;
         bool narrowed_clp_string = false;
         bool narrowed_var_string = false;
-        bool matches_var_and_clp_string = column->matches_type(LiteralType::ClpStringT)
-                                          && column->matches_type(LiteralType::VarStringT);
+        bool const matches_var_and_clp_string = column->matches_type(LiteralType::VarStringT)
+                                                && column->matches_type(LiteralType::ClpStringT);
 
         if (false == literal->as_any(op)) {
-            if (false == literal->as_clp_string(tmpstring, op)) {
-                narrowed_clp_string = true;
-                column->remove_matching_type(LiteralType::ClpStringT);
-            }
-            if (false == literal->as_var_string(tmpstring, op)) {
-                narrowed_var_string = true;
-                column->remove_matching_type(LiteralType::VarStringT);
-            }
-            if (false == literal->as_int(tmpint, op)) {
-                column->remove_matching_type(LiteralType::IntegerT);
-            }
-            if (false == literal->as_float(tmpdouble, op)) {
-                column->remove_matching_type(LiteralType::FloatT);
-            }
-            if (false == literal->as_bool(tmpbool, op)) {
-                column->remove_matching_type(LiteralType::BooleanT);
-            }
-            if (false == literal->as_array(tmpstring, op)) {
-                column->remove_matching_type(LiteralType::ArrayT);
-            }
-            if (false == literal->as_null(op)) {
-                column->remove_matching_type(LiteralType::NullT);
-            }
-            if (false == literal->as_timestamp()) {
-                column->remove_matching_type(LiteralType::TimestampT);
+            constexpr std::array cNarrowableLiteralTypes{
+                    LiteralType::IntegerT,
+                    LiteralType::FloatT,
+                    LiteralType::ClpStringT,
+                    LiteralType::VarStringT,
+                    LiteralType::BooleanT,
+                    LiteralType::ArrayT,
+                    LiteralType::NullT,
+                    LiteralType::TimestampT,
+                    LiteralType::StringT
+            };
+            for (auto const type : cNarrowableLiteralTypes) {
+                if (literal->can_match_op(type, op)) {
+                    continue;
+                }
+                column->remove_matching_type(type);
+                narrowed_clp_string |= LiteralType::ClpStringT == type;
+                narrowed_var_string |= LiteralType::VarStringT == type;
             }
         }
 
@@ -85,54 +76,61 @@ std::shared_ptr<Expression> NarrowTypes::narrow(std::shared_ptr<Expression> cur)
             return EmptyExpr::create();
         }
 
-        /**
-         * Fix for bug y-scope/clp#254.
-         * If:
-         * - a filtering operation that can match a clp string and a var string is narrowed to just
-         *   one of those underlying types
-         * - AND the filter is performing a not equals operation
-         * then we need to replace the filter with an OR across:
-         * - the filter expression
-         * - and an EXISTS expression for the other underlying type.
-         *
-         * This is because if we are trying to determine if some value is not equal to a specific
-         * variable string, we can guarantee that every clp string is not equal to that specific
-         * variable string (because that variable string must not contain a space, but any clp
-         * string must). The reverse is true for checking if some value matches a specific clp
-         * string.
-         *
-         * Really the issue is that we have multiple string types. Technically similar logic applies
-         * for the date string column types, but we don't allow string matches against them so we
-         * don't have to worry about supporting that here.
-         */
-        if (((filter->is_inverted() && FilterOperation::EQ == op)
-             || (false == filter->is_inverted() && FilterOperation::NEQ == op))
-            && matches_var_and_clp_string && narrowed_clp_string != narrowed_var_string)
+        if (auto const rewritten{rewrite_negated_string_equality(
+                    filter,
+                    matches_var_and_clp_string,
+                    narrowed_clp_string,
+                    narrowed_var_string
+            )};
+            nullptr != rewritten)
         {
-            auto exists_column_type
-                    = narrowed_clp_string ? LiteralType::ClpStringT : LiteralType::VarStringT;
-            auto exists_column = filter->get_column()->copy();
-            exists_column->set_matching_type(exists_column_type);
-
-            // This is an optimization to avoid creating multiple equivalent expressions in this
-            // subtree of the AST. If the user has specified a long list of not equals expressions
-            // on the same column (as is common when someone tries to filter out, e.g., a long list
-            // of UUIDs) then we only need to transform one filter expression within the parent
-            // OR/AND into an OR with the necessary EXISTS condition. Splitting each filter into an
-            // OR could result in a much larger AST than necessary and slow down Schema Matching.
-            auto it = std::find_if(
-                    m_local_exists_descriptors.begin(),
-                    m_local_exists_descriptors.end(),
-                    [exists_column](auto const& rhs) -> bool { return *exists_column == *rhs; }
-            );
-            if (m_local_exists_descriptors.end() == it) {
-                m_local_exists_descriptors.push_back(exists_column);
-                auto exists_expr = FilterExpr::create(exists_column, FilterOperation::EXISTS);
-                auto filter_as_expr_type = std::static_pointer_cast<Expression>(filter);
-                return OrExpr::create(filter_as_expr_type, exists_expr);
-            }
+            return rewritten;
         }
     }
     return cur;
+}
+
+auto NarrowTypes::rewrite_negated_string_equality(
+        std::shared_ptr<FilterExpr> const& filter,
+        bool matches_var_and_clp_string,
+        bool narrowed_clp_string,
+        bool narrowed_var_string
+) -> std::shared_ptr<Expression> {
+    auto const& column{filter->get_column()};
+    auto const op{filter->get_operation()};
+    bool const is_negated_equality{
+            (filter->is_inverted() && FilterOperation::EQ == op)
+            || (false == filter->is_inverted() && FilterOperation::NEQ == op)
+    };
+    if (false == is_negated_equality || false == matches_var_and_clp_string
+        || narrowed_clp_string == narrowed_var_string || column->is_pure_wildcard()
+        || column->is_shape_query())
+    {
+        return nullptr;
+    }
+
+    auto exists_column_type
+            = narrowed_clp_string ? LiteralType::ClpStringT : LiteralType::VarStringT;
+    auto exists_column = column->copy();
+    exists_column->set_matching_type(exists_column_type);
+
+    // Reuse a sibling's EXISTS expression when it pins the same column and type.
+    //
+    // TODO: Under an AND parent this rewrite is unsound: AND(OR(A, E), B) requires B to hold in
+    // schemas where only E holds, but B's narrowed column doesn't resolve there. The correct
+    // rewrite is OR(AND(A, B), E) at the AND level.
+    auto it = std::find_if(
+            m_local_exists_descriptors.begin(),
+            m_local_exists_descriptors.end(),
+            [exists_column](auto const& rhs) -> bool { return *exists_column == *rhs; }
+    );
+    if (m_local_exists_descriptors.end() != it) {
+        return nullptr;
+    }
+
+    m_local_exists_descriptors.push_back(exists_column);
+    auto exists_expr = FilterExpr::create(exists_column, FilterOperation::EXISTS);
+    auto filter_as_expr_type = std::static_pointer_cast<Expression>(filter);
+    return OrExpr::create(filter_as_expr_type, exists_expr);
 }
 }  // namespace clp_s::search::ast

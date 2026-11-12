@@ -85,7 +85,7 @@ public:
     /**
      * @return The ColumnDescriptor that this Filter acts on.
      */
-    [[nodiscard]] auto get_column() -> std::shared_ptr<ColumnDescriptor> {
+    [[nodiscard]] auto get_column() const -> std::shared_ptr<ColumnDescriptor> {
         return std::static_pointer_cast<ColumnDescriptor>(*op_begin());
     }
 

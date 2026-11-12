@@ -1,0 +1,12 @@
+{
+    "dataset_name": "json_clpp_synthetic",
+    "unstructured": false,
+    "timestamp_key": "@timestamp",
+    "begin_ts": 1679976000500,
+    "end_ts": 1679976000500,
+    "logs_subdir": "logs",
+    "file_names": [
+        "synthetic.log"
+    ],
+    "single_match_wildcard_query": "\"message\":\"clppmulti clppmulti_a: 1234 clppmulti_b=replicated\""
+}

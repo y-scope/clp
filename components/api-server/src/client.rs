@@ -34,11 +34,10 @@ use utoipa::ToSchema;
 pub use crate::error::ClientError;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
-/// Covers all terminal states that consumed compute resources (succeeded, failed, killed).
+/// Covers all terminal states that consumed compute resources (succeeded, failed).
 pub const DEFAULT_JOB_STATUSES: &[CompressionJobStatus] = &[
     CompressionJobStatus::Succeeded,
     CompressionJobStatus::Failed,
-    CompressionJobStatus::Killed,
 ];
 
 /// Query parameters for the compression usage endpoint.
@@ -51,8 +50,8 @@ pub struct CompressionUsageParams {
     pub time_range_end_millisecs: i64,
     /// Job statuses to include as a comma-separated list (e.g.
     /// `job_status=succeeded,failed`). Recognized values (case-insensitive):
-    /// `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
-    /// Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
+    /// `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`.
+    /// Defaults to `SUCCEEDED,FAILED` (all terminal states).
     #[serde(default)]
     pub job_status: Option<String>,
     /// Maximum number of jobs to return. Must be > 0; defaults to 1000.
@@ -219,7 +218,8 @@ pub struct QueryConfig {
     /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
     /// search job, and its results are always buffered in `MongoDB`.
     #[serde(default)]
-    pub count_by_time_bucket_size_millisecs: Option<i64>,
+    #[schema(value_type = Option<i64>, minimum = 1)]
+    pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
 
 impl TryFrom<QueryConfig> for QueryJobConfig {
@@ -238,12 +238,7 @@ impl TryFrom<QueryConfig> for QueryJobConfig {
             )
         })?;
         let output = match value.count_by_time_bucket_size_millisecs {
-            Some(bucket_size) => {
-                let bucket_size_millisecs = PositiveI64::new(bucket_size).ok_or_else(|| {
-                    ClientError::InvalidInput(
-                        "count_by_time_bucket_size_millisecs must be > 0".to_owned(),
-                    )
-                })?;
+            Some(bucket_size_millisecs) => {
                 // Aggregation results are always buffered in MongoDB.
                 QueryOutput::ResultsCache(ResultsCacheOutput {
                     max_num_results: value.max_num_results,
@@ -722,7 +717,7 @@ impl Client {
             // Task durations are summed regardless of individual task status so
             // that failed jobs still report the compute resources they consumed.
             //
-            // INNER JOIN filters out jobs with zero tasks (e.g. killed before
+            // INNER JOIN filters out jobs with zero tasks (e.g. failed before
             // task creation) since they consumed no compute resources.
             "SELECT \
               j.id, \
@@ -850,7 +845,7 @@ mod tests {
         for (query_config, expected_output) in [
             (
                 QueryConfig {
-                    count_by_time_bucket_size_millisecs: Some(60_000),
+                    count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
                     ..base_query_config()
                 },
                 QueryOutput::ResultsCache(ResultsCacheOutput {
@@ -915,13 +910,6 @@ mod tests {
                     ..base_query_config()
                 },
                 "time_range_begin_millisecs",
-            ),
-            (
-                QueryConfig {
-                    count_by_time_bucket_size_millisecs: Some(0),
-                    ..base_query_config()
-                },
-                "count_by_time_bucket_size_millisecs",
             ),
         ] {
             let error = QueryJobConfig::try_from(query_config.clone())

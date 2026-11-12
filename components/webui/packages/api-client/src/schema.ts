@@ -288,7 +288,7 @@ export interface components {
             unstructured?: boolean | null;
         };
         /** @enum {string} */
-        CompressionJobStatus: "Pending" | "Running" | "Succeeded" | "Failed" | "Killed";
+        CompressionJobStatus: "Pending" | "Running" | "Succeeded" | "Failed";
         /** @description The metadata of a compression job, with the display fields of its config. */
         CompressionMetadata: {
             /**
@@ -1016,12 +1016,41 @@ export interface operations {
                     "application/json": components["schemas"]["QueryResultsUri"];
                 };
             };
-            /** @description Invalid query config (e.g., empty query_string, time_range_begin_millisecs > time_range_end_millisecs, count_by_time_bucket_size_millisecs <= 0) */
+            /** @description The request body is not valid JSON or could not be read, query_string is empty, or time_range_begin_millisecs > time_range_end_millisecs. */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The request body exceeds the configured size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The Content-Type header is missing or is not a JSON media type. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., a non-positive `max_num_results`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
             };
             500: {
                 headers: {
@@ -1048,6 +1077,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description The query job ID is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
             };
             /** @description No query job with the given ID was found. */
             404: {
@@ -1104,6 +1142,15 @@ export interface operations {
                 content: {
                     /** @example data: {"timestamp": 1633036800, "message": "Example log message"}\n */
                     "text/event-stream": string;
+                };
+            };
+            /** @description The query job ID or query parameters are invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
                 };
             };
             /** @description No query job with the given ID was found. */
@@ -1203,8 +1250,8 @@ export interface operations {
                 /**
                  * @description Job statuses to include as a comma-separated list (e.g.
                  *     `job_status=succeeded,failed`). Recognized values (case-insensitive):
-                 *     `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `KILLED`.
-                 *     Defaults to `SUCCEEDED,FAILED,KILLED` (all terminal states).
+                 *     `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`.
+                 *     Defaults to `SUCCEEDED,FAILED` (all terminal states).
                  */
                 job_status?: string;
                 /** @description Maximum number of jobs to return. Must be > 0; defaults to 1000. */
@@ -1229,7 +1276,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/plain": string;
+                };
             };
             500: {
                 headers: {

@@ -1,5 +1,6 @@
-//! Handle for driving a single S3 compression job to completion.
+//! Handle for driving a single compression job to completion.
 
+use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -9,10 +10,14 @@ use clp_rust_utils::job_config::COMPRESSION_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::ClpIoConfig;
 use clp_rust_utils::job_config::CompressionJobId;
 use clp_rust_utils::job_config::CompressionJobStatus;
+use clp_rust_utils::job_config::FsInputConfig;
 use clp_rust_utils::job_config::InputConfig;
+use clp_rust_utils::job_config::S3ObjectMetadataInputConfig;
+use clp_rust_utils::logs_input::default_mount_point;
 use clp_rust_utils::s3::ObjectMetadata;
 use clp_rust_utils::s3::S3ObjectMetadataId;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
+use clp_rust_utils::task_io::compression::FsInputSource;
 use clp_rust_utils::task_io::compression::S3InputSource;
 use const_format::formatcp;
 use non_empty_string::NonEmptyString;
@@ -24,8 +29,11 @@ use sqlx::MySqlPool;
 
 use crate::Error;
 use crate::compression_job_submitter::CompressionJobOutcome;
-use crate::compression_job_submitter::S3CompressionJobSubmitter;
+use crate::compression_job_submitter::CompressionJobSubmitter;
+use crate::compression_job_submitter::CompressionManifest;
+use crate::input::discover_fs_entries;
 use crate::partition::CompressionInputBuilder;
+use crate::partition::FsSource;
 
 /// Options for a compression job running in Spider.
 pub struct SpiderOption {
@@ -35,14 +43,20 @@ pub struct SpiderOption {
     pub max_poll_backoff: Duration,
 }
 
-/// Handles the asynchronous submission of an S3 compression job and the retrieval of its result.
+/// Resources and execution options shared by compression job handles.
+pub struct CompressionJobHandleContext {
+    pub db_pool: MySqlPool,
+    pub db_config: Database,
+    pub spider_option: SpiderOption,
+}
+
+/// Handles the asynchronous submission of a compression job and the retrieval of its result.
 ///
 /// # Type Parameters
 ///
 /// * `SubmitterType` - The type of the job submitter for Spider job submission.
-pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
-    db_pool: MySqlPool,
-    db_config: Database,
+pub struct CompressionJobHandle<SubmitterType: CompressionJobSubmitter> {
+    context: Arc<CompressionJobHandleContext>,
     compression_job_id: CompressionJobId,
     job_submitter: SubmitterType,
     resource_group_id: ResourceGroupId,
@@ -51,57 +65,54 @@ pub struct S3CompressionJobHandle<SubmitterType: S3CompressionJobSubmitter> {
     clp_s_compression_option: ClpSCompressionOption,
     dataset: DatasetName,
     target_archive_size: u64,
-
-    spider_option: Arc<SpiderOption>,
 }
 
-impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterType> {
+impl<SubmitterType: CompressionJobSubmitter> CompressionJobHandle<SubmitterType> {
     /// Factory function.
     ///
     /// # Returns
     ///
-    /// A newly created [`S3CompressionJobHandle`] for the given compression job, with the `clp-s`
+    /// A newly created [`CompressionJobHandle`] for the given compression job, with the `clp-s`
     /// compression options derived from `clp_io_config`'s output config.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::UnsupportedInputConfig`] if `clp_io_config`'s input config is not an
-    ///   [`InputConfig::S3ObjectMetadataInputConfig`].
+    /// * [`Error::UnsupportedInputConfig`] if `clp_io_config` requests direct S3 discovery.
     pub fn new(
-        db_pool: MySqlPool,
-        db_config: Database,
+        context: Arc<CompressionJobHandleContext>,
         compression_job_id: CompressionJobId,
         job_submitter: SubmitterType,
         resource_group_id: ResourceGroupId,
         clp_io_config: ClpIoConfig,
-        spider_option: Arc<SpiderOption>,
     ) -> Result<Self, Error> {
         let input_config = clp_io_config.input;
-        let InputConfig::S3ObjectMetadataInputConfig {
-            config: s3_object_metadata_config,
-        } = &input_config
-        else {
-            return Err(Error::UnsupportedInputConfig);
+        let (dataset, timestamp_key, unstructured) = match &input_config {
+            InputConfig::S3ObjectMetadataInputConfig { config } => (
+                config.dataset.clone(),
+                config.timestamp_key.clone(),
+                config.unstructured,
+            ),
+            InputConfig::FsInputConfig { config } => (
+                config.dataset.clone(),
+                config.timestamp_key.clone(),
+                config.unstructured,
+            ),
+            InputConfig::S3InputConfig { .. } => return Err(Error::UnsupportedInputConfig),
         };
-        let dataset = s3_object_metadata_config.dataset.clone();
 
         let output_config = clp_io_config.output;
         let clp_s_compression_option = ClpSCompressionOption {
             target_encoded_size: output_config.target_segment_size
                 + output_config.target_dictionaries_size,
             compression_level: output_config.compression_level,
-            timestamp_key: s3_object_metadata_config
-                .timestamp_key
-                .clone()
-                .map(String::from),
-            unstructured: s3_object_metadata_config.unstructured,
+            timestamp_key: timestamp_key.map(String::from),
+            unstructured,
         };
 
         Ok(Self {
-            db_pool,
-            db_config,
+            context,
             compression_job_id,
             job_submitter,
             resource_group_id,
@@ -109,7 +120,6 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             clp_s_compression_option,
             dataset,
             target_archive_size: output_config.target_archive_size,
-            spider_option,
         })
     }
 
@@ -171,27 +181,64 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::prepare_task_inputs`]'s return values on failure.
-    /// * Forwards [`Self::upsert_metadata_tables`]'s return values on failure.
-    /// * Forwards [`S3CompressionJobSubmitter::submit_s3_compression_job`]'s return values on
-    ///   failure.
-    /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
+    /// * Forwards [`Self::prepare_s3_task_inputs`]'s return values on failure.
+    /// * Forwards [`Self::prepare_fs_task_inputs`]'s return values on failure.
+    /// * Forwards [`Self::submit`]'s return values on failure.
     /// * Forwards [`Self::to_completion`]'s return values on failure.
     async fn submit_and_wait(&self) -> Result<(), Error> {
-        let input_sources = self.prepare_task_inputs().await?;
+        let spider_job_id = match &self.input_config {
+            InputConfig::S3ObjectMetadataInputConfig { config } => {
+                self.submit(self.prepare_s3_task_inputs(config).await?)
+                    .await?
+            }
+            InputConfig::FsInputConfig { config } => {
+                self.submit(self.prepare_fs_task_inputs(config).await?)
+                    .await?
+            }
+            InputConfig::S3InputConfig { .. } => {
+                unreachable!("the input config is validated in the factory")
+            }
+        };
+        self.to_completion(spider_job_id).await
+    }
+
+    /// Submits the compression job and persists its Spider association.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `ManifestType` - The concrete input manifest consumed by each compression task.
+    ///
+    /// # Returns
+    ///
+    /// The submitted Spider job ID on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::upsert_metadata_tables`]'s return values on failure.
+    /// * Forwards [`CompressionJobSubmitter::submit_compression_job`]'s return values on failure.
+    /// * Forwards [`Self::persist_spider_job_id`]'s return values on failure.
+    async fn submit<ManifestType: CompressionManifest>(
+        &self,
+        input_sources: Vec<(ManifestType, ExecutionPolicy)>,
+    ) -> Result<SpiderJobId, Error> {
         let num_tasks = input_sources.len();
 
         self.upsert_metadata_tables().await?;
 
         let spider_job_id = self
             .job_submitter
-            .submit_s3_compression_job(
+            .submit_compression_job(
                 self.compression_job_id,
                 self.resource_group_id,
                 self.clp_s_compression_option.clone(),
                 self.dataset.clone(),
                 input_sources,
-                self.spider_option.commit_task_execution_policy.clone(),
+                self.context
+                    .spider_option
+                    .commit_task_execution_policy
+                    .clone(),
             )
             .await?;
         tracing::info!(
@@ -207,7 +254,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             "Compression job submission persisted.",
         );
 
-        self.to_completion(spider_job_id).await
+        Ok(spider_job_id)
     }
 
     /// Reports a compression job failure.
@@ -261,14 +308,14 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     /// * [`Error::NoTaskInputs`] if no compression task inputs are produced.
     /// * Forwards [`CompressionInputBuilder::add`]'s return values on failure.
     /// * Forwards [`sqlx::query::QueryAs::fetch_all`]'s return values on failure.
-    async fn prepare_task_inputs(&self) -> Result<Vec<(S3InputSource, ExecutionPolicy)>, Error> {
+    async fn prepare_s3_task_inputs(
+        &self,
+        config: &S3ObjectMetadataInputConfig,
+    ) -> Result<Vec<(S3InputSource, ExecutionPolicy)>, Error> {
         // NOTE: We batch the metadata fetch to avoid hitting the maximum placeholder limit of
         // MySQL.
         const FETCH_CHUNK_SIZE: usize = 1000;
 
-        let InputConfig::S3ObjectMetadataInputConfig { config } = &self.input_config else {
-            unreachable!("the input config is validated in the factory")
-        };
         if config.s3_object_metadata_ids.is_empty() {
             return Err(Error::NoS3ObjectMetadata(config.ingestion_job_id));
         }
@@ -310,7 +357,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
 
             let metadata_rows = query_builder
                 .build_query_as::<S3ObjectMetadataRow>()
-                .fetch_all(&self.db_pool)
+                .fetch_all(&self.context.db_pool)
                 .await?;
 
             let mut row_iter = metadata_rows.into_iter().peekable();
@@ -344,30 +391,141 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             }
         }
 
-        let manifests = input_builder.build();
-        if manifests.is_empty() {
+        let partitions = input_builder.build();
+        if partitions.is_empty() {
             return Err(Error::NoTaskInputs);
         }
 
-        Ok(manifests
+        Ok(partitions
             .into_iter()
-            .map(|manifest| {
-                // NOTE: The timeout policy scales with the number of objects assigned to the task.
-                // Each object contributes three minutes to the soft timeout and five minutes to
-                // the hard timeout. This heuristic does not account for object size and can be
-                // refined in the future.
-                let num_objects = manifest.object_keys.len() as u64;
-                let execution_policy = ExecutionPolicy {
-                    max_num_retry: self.spider_option.compression_task_max_retry,
-                    timeout_policy: TimeoutPolicy {
-                        soft_timeout_ms: num_objects * 3 * 60 * 1000,
-                        hard_timeout_ms: num_objects * 5 * 60 * 1000,
-                    },
-                    ..ExecutionPolicy::default()
-                };
-                (manifest, execution_policy)
+            .map(|partition| {
+                let execution_policy = self.s3_compression_task_execution_policy(
+                    partition.estimated_uncompressed_size,
+                    partition.input.object_keys.len() as u64,
+                );
+                (partition.input, execution_policy)
             })
             .collect())
+    }
+
+    /// Discovers and partitions filesystem inputs and attaches each task's execution policy.
+    ///
+    /// # Returns
+    ///
+    /// Regular-file manifests paired with their execution policies on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`Error::NoFsInputPaths`] if no input paths are requested.
+    /// * [`Error::FsDiscoveryJoin`] if the blocking discovery task cannot be joined.
+    /// * [`Error::NoTaskInputs`] if the selection contains no regular files.
+    /// * Forwards [`default_mount_point`]'s return values on failure.
+    /// * Forwards [`discover_fs_entries`]'s return values on failure.
+    /// * Forwards [`CompressionInputBuilder::add`]'s return values on failure.
+    async fn prepare_fs_task_inputs(
+        &self,
+        config: &FsInputConfig,
+    ) -> Result<Vec<(FsInputSource, ExecutionPolicy)>, Error> {
+        if config.paths_to_compress.is_empty() {
+            return Err(Error::NoFsInputPaths);
+        }
+        let paths = config.paths_to_compress.clone();
+        let entries = tokio::task::spawn_blocking(move || {
+            discover_fs_entries(&paths, default_mount_point()?)
+        })
+        .await??;
+        let mut input_builder = CompressionInputBuilder::new(FsSource, self.target_archive_size);
+        for entry in entries {
+            input_builder.add(entry)?;
+        }
+        let partitions = input_builder.build();
+        if partitions.is_empty() {
+            return Err(Error::NoTaskInputs);
+        }
+        Ok(partitions
+            .into_iter()
+            .map(|partition| {
+                let execution_policy = self.fs_compression_task_execution_policy(
+                    partition.estimated_uncompressed_size,
+                    partition.input.file_paths.len() as u64,
+                );
+                (partition.input, execution_policy)
+            })
+            .collect())
+    }
+
+    /// Derives an S3 compression task's retry and timeout policy from its input size and download
+    /// input count.
+    ///
+    /// # Returns
+    ///
+    /// The configured retry policy with compression and upload timeouts based on estimated sizes
+    /// and per-input download latency.
+    fn s3_compression_task_execution_policy(
+        &self,
+        estimated_uncompressed_size: u64,
+        num_download_inputs: u64,
+    ) -> ExecutionPolicy {
+        const FACTORS: CompressionTimeoutFactors = CompressionTimeoutFactors {
+            download_input_latency_ms: 1000,
+            soft_compression_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
+                .expect("40 MiB/s is nonzero"),
+            hard_compression_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
+                .expect("8 MiB/s is nonzero"),
+            output_compression_ratio_estimate: NonZeroU64::new(15).expect("15 is nonzero"),
+            soft_upload_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
+                .expect("40 MiB/s is nonzero"),
+            hard_upload_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
+                .expect("8 MiB/s is nonzero"),
+        };
+
+        ExecutionPolicy {
+            max_num_retry: self.context.spider_option.compression_task_max_retry,
+            timeout_policy: compression_timeout_policy(
+                &FACTORS,
+                estimated_uncompressed_size,
+                num_download_inputs,
+            ),
+            ..ExecutionPolicy::default()
+        }
+    }
+
+    /// Derives a filesystem compression task's retry and timeout policy from its input size and
+    /// download input count.
+    ///
+    /// # Returns
+    ///
+    /// The configured retry policy with compression and upload timeouts based on estimated sizes
+    /// and per-input download latency.
+    fn fs_compression_task_execution_policy(
+        &self,
+        estimated_uncompressed_size: u64,
+        num_download_inputs: u64,
+    ) -> ExecutionPolicy {
+        const FACTORS: CompressionTimeoutFactors = CompressionTimeoutFactors {
+            download_input_latency_ms: 1000,
+            soft_compression_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
+                .expect("40 MiB/s is nonzero"),
+            hard_compression_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
+                .expect("8 MiB/s is nonzero"),
+            output_compression_ratio_estimate: NonZeroU64::new(15).expect("15 is nonzero"),
+            soft_upload_throughput_bytes_per_sec: NonZeroU64::new(40 * 1024 * 1024)
+                .expect("40 MiB/s is nonzero"),
+            hard_upload_throughput_bytes_per_sec: NonZeroU64::new(8 * 1024 * 1024)
+                .expect("8 MiB/s is nonzero"),
+        };
+
+        ExecutionPolicy {
+            max_num_retry: self.context.spider_option.compression_task_max_retry,
+            timeout_policy: compression_timeout_policy(
+                &FACTORS,
+                estimated_uncompressed_size,
+                num_download_inputs,
+            ),
+            ..ExecutionPolicy::default()
+        }
     }
 
     /// Ensures that the required metadata tables exist for the configured dataset.
@@ -383,8 +541,11 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// * [`Error::MetadataTableCreation`] if either table cannot be created.
     async fn upsert_metadata_tables(&self) -> Result<(), Error> {
-        let archives_table = self.db_config.archives_table_name(&self.dataset);
-        let column_metadata_table = self.db_config.column_metadata_table_name(&self.dataset);
+        let archives_table = self.context.db_config.archives_table_name(&self.dataset);
+        let column_metadata_table = self
+            .context
+            .db_config
+            .column_metadata_table_name(&self.dataset);
 
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS `{archives_table}` (
@@ -401,7 +562,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                 PRIMARY KEY (`pagination_id`)
             )"
         ))
-        .execute(&self.db_pool)
+        .execute(&self.context.db_pool)
         .await
         .map_err(|source| Error::MetadataTableCreation {
             table: archives_table,
@@ -415,7 +576,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                 PRIMARY KEY (`name`, `type`)
             )"
         ))
-        .execute(&self.db_pool)
+        .execute(&self.context.db_pool)
         .await
         .map_err(|source| Error::MetadataTableCreation {
             table: column_metadata_table,
@@ -458,7 +619,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         .bind(CompressionJobStatus::Running)
         .bind(num_tasks)
         .bind(self.compression_job_id)
-        .execute(&self.db_pool)
+        .execute(&self.context.db_pool)
         .await?;
 
         Ok(())
@@ -473,17 +634,17 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`S3CompressionJobSubmitter::run_s3_compression_job_to_completion`]'s return
-    ///   values on failure.
+    /// * Forwards [`CompressionJobSubmitter::run_compression_job_to_completion`]'s return values on
+    ///   failure.
     /// * Forwards [`Self::update_job_status`]'s return values on failure.
     /// * Forwards [`Self::get_job_status`]'s return values on failure.
     async fn to_completion(&self, spider_job_id: SpiderJobId) -> Result<(), Error> {
         let outcome = self
             .job_submitter
-            .run_s3_compression_job_to_completion(
+            .run_compression_job_to_completion(
                 spider_job_id,
-                self.spider_option.initial_poll_backoff,
-                self.spider_option.max_poll_backoff,
+                self.context.spider_option.initial_poll_backoff,
+                self.context.spider_option.max_poll_backoff,
             )
             .await?;
         tracing::info!(
@@ -520,7 +681,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
                     return Ok(());
                 }
                 self.update_job_status(
-                    CompressionJobStatus::Killed,
+                    CompressionJobStatus::Failed,
                     Some("The Spider compression job was cancelled.".to_owned()),
                 )
                 .await
@@ -544,7 +705,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
             "SELECT `status` FROM `{COMPRESSION_JOBS_TABLE_NAME}` WHERE `id` = ?"
         ))
         .bind(self.compression_job_id)
-        .fetch_one(&self.db_pool)
+        .fetch_one(&self.context.db_pool)
         .await?;
 
         Ok(job_status)
@@ -570,7 +731,7 @@ impl<SubmitterType: S3CompressionJobSubmitter> S3CompressionJobHandle<SubmitterT
         .bind(job_status)
         .bind(status_message)
         .bind(self.compression_job_id)
-        .execute(&self.db_pool)
+        .execute(&self.context.db_pool)
         .await?;
 
         Ok(())
@@ -586,4 +747,264 @@ struct S3ObjectMetadataRow {
     bucket: String,
     key: String,
     size: u64,
+}
+
+/// Throughput and latency assumptions for estimating a compression task's timeouts.
+///
+/// A task's timeout is its input download allowance plus the time to compress its estimated
+/// uncompressed size and to upload its estimated compressed size. The soft timeout uses the
+/// expected throughputs, and the hard timeout uses the pessimistic ones.
+struct CompressionTimeoutFactors {
+    /// The allowance for downloading each input file or object.
+    download_input_latency_ms: u64,
+
+    /// The expected compression throughput, used for the soft timeout.
+    soft_compression_throughput_bytes_per_sec: NonZeroU64,
+
+    /// The pessimistic compression throughput, used for the hard timeout.
+    hard_compression_throughput_bytes_per_sec: NonZeroU64,
+
+    /// The estimated ratio of uncompressed input size to archive size, used to estimate the
+    /// archive size to upload.
+    output_compression_ratio_estimate: NonZeroU64,
+
+    /// The expected archive upload throughput, used for the soft timeout.
+    soft_upload_throughput_bytes_per_sec: NonZeroU64,
+
+    /// The pessimistic archive upload throughput, used for the hard timeout.
+    hard_upload_throughput_bytes_per_sec: NonZeroU64,
+}
+
+/// Estimates task timeouts from the input size and count using the supplied factors.
+///
+/// # Returns
+///
+/// A [`TimeoutPolicy`] covering download, compression, and upload within Spider's timeout limits.
+fn compression_timeout_policy(
+    factors: &CompressionTimeoutFactors,
+    estimated_uncompressed_size: u64,
+    num_download_inputs: u64,
+) -> TimeoutPolicy {
+    const MIN_SOFT_TIMEOUT_MS: u64 = 1000;
+    const MIN_HARD_TIMEOUT_MS: u64 = 10_000;
+    const MAX_TIMEOUT_MS: u64 = 24 * 60 * 60 * 1000;
+
+    let download_latency_ms = num_download_inputs.saturating_mul(factors.download_input_latency_ms);
+    let estimated_compressed_size =
+        estimated_uncompressed_size.div_ceil(factors.output_compression_ratio_estimate.get());
+    let timeout_ms = |compression_throughput: NonZeroU64, upload_throughput: NonZeroU64| {
+        let compression_ms = estimated_uncompressed_size
+            .saturating_mul(1000)
+            .div_ceil(compression_throughput.get());
+        let upload_ms = estimated_compressed_size
+            .saturating_mul(1000)
+            .div_ceil(upload_throughput.get());
+        download_latency_ms
+            .saturating_add(compression_ms)
+            .saturating_add(upload_ms)
+    };
+    let soft_timeout_ms = timeout_ms(
+        factors.soft_compression_throughput_bytes_per_sec,
+        factors.soft_upload_throughput_bytes_per_sec,
+    )
+    .clamp(MIN_SOFT_TIMEOUT_MS, MAX_TIMEOUT_MS - 1);
+    let hard_timeout_ms = timeout_ms(
+        factors.hard_compression_throughput_bytes_per_sec,
+        factors.hard_upload_throughput_bytes_per_sec,
+    )
+    .clamp(MIN_HARD_TIMEOUT_MS.max(soft_timeout_ms + 1), MAX_TIMEOUT_MS);
+    TimeoutPolicy {
+        soft_timeout_ms,
+        hard_timeout_ms,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clp_rust_utils::logs_input::LogsInputPath;
+    use spider_core::task::TaskGraph;
+    use spider_core::task::TdlContext;
+    use spider_core::task::TerminationTaskDescriptor;
+
+    use super::*;
+    use crate::partition::FsEntry;
+    use crate::partition::FsSource;
+
+    const TEST_MAX_RETRY: u32 = 7;
+
+    #[derive(Clone)]
+    struct UnreachableSubmitter;
+
+    #[async_trait::async_trait]
+    impl CompressionJobSubmitter for UnreachableSubmitter {
+        async fn submit_compression_job<ManifestType: CompressionManifest>(
+            &self,
+            _compression_job_id: CompressionJobId,
+            _resource_group_id: ResourceGroupId,
+            _clp_s_option: ClpSCompressionOption,
+            _dataset: DatasetName,
+            _input_sources: Vec<(ManifestType, ExecutionPolicy)>,
+            _commit_task_execution_policy: ExecutionPolicy,
+        ) -> Result<SpiderJobId, Error> {
+            unreachable!("policy tests do not submit compression jobs")
+        }
+
+        async fn run_compression_job_to_completion(
+            &self,
+            _spider_job_id: SpiderJobId,
+            _initial_poll_backoff: Duration,
+            _max_poll_backoff: Duration,
+        ) -> Result<CompressionJobOutcome, Error> {
+            unreachable!("policy tests do not run compression jobs")
+        }
+    }
+
+    impl CompressionJobHandle<UnreachableSubmitter> {
+        /// # Returns
+        ///
+        /// A compression job handle for policy tests, with a database pool that connects lazily.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the fixture's database URL or filesystem job configuration is invalid.
+        fn new_for_policy_tests() -> Self {
+            use clp_rust_utils::clp_config::package::config::ArchiveOutput;
+            use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
+
+            Self::new(
+                Arc::new(CompressionJobHandleContext {
+                    db_pool: MySqlPool::connect_lazy("mysql://localhost/clp-db")
+                        .expect("the fixture database URL is valid"),
+                    db_config: Database::default(),
+                    spider_option: SpiderOption {
+                        compression_task_max_retry: TEST_MAX_RETRY,
+                        commit_task_execution_policy: ExecutionPolicy::default(),
+                        initial_poll_backoff: Duration::from_secs(1),
+                        max_poll_backoff: Duration::from_secs(1),
+                    },
+                }),
+                1,
+                UnreachableSubmitter,
+                ResourceGroupId::from(1),
+                ClpIoConfig {
+                    input: InputConfig::FsInputConfig {
+                        config: FsInputConfig {
+                            dataset: DatasetName::default(),
+                            paths_to_compress: vec![NonEmptyString::from_static_str("/mnt/logs")],
+                            path_prefix_to_remove: None,
+                            timestamp_key: None,
+                            unstructured: false,
+                        },
+                    },
+                    output: (&ArchiveOutput::default()).into(),
+                },
+            )
+            .expect("the fixture uses a supported filesystem input configuration")
+        }
+    }
+
+    #[tokio::test]
+    async fn compression_timeouts_include_download_compression_and_upload() -> anyhow::Result<()> {
+        let handle = CompressionJobHandle::new_for_policy_tests();
+        for (size, num_download_inputs, soft_timeout_ms, hard_timeout_ms) in [
+            (0, 0, 1000, 10_000),
+            (1, 0, 1000, 10_000),
+            (0, 1, 1000, 10_000),
+            (1, 1, 1002, 10_000),
+            (0, 9, 9000, 10_000),
+            (0, 10, 10_000, 10_001),
+            (40 * 1024 * 1024, 2, 3067, 10_000),
+            (15 * 40 * 1024 * 1024 + 1, 1, 17_002, 81_002),
+            (1024 * 1024 * 1024 * 1024, 1, 27_963_027, 86_400_000),
+            (u64::MAX, 1, 86_399_999, 86_400_000),
+            (0, 4096, 4_096_000, 4_096_001),
+        ] {
+            for policy in [
+                handle.s3_compression_task_execution_policy(size, num_download_inputs),
+                handle.fs_compression_task_execution_policy(size, num_download_inputs),
+            ] {
+                assert_eq!(policy.max_num_retry, TEST_MAX_RETRY);
+                assert_eq!(
+                    policy.timeout_policy,
+                    TimeoutPolicy {
+                        soft_timeout_ms,
+                        hard_timeout_ms
+                    }
+                );
+                TaskGraph::new(
+                    Some(TerminationTaskDescriptor {
+                        tdl_context: TdlContext {
+                            package: "clp".to_owned(),
+                            task_func: "compression::commit".to_owned(),
+                        },
+                        execution_policy: Some(policy),
+                    }),
+                    None,
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn timeout_factors_control_each_budget_and_round_up_output_size() {
+        const FACTORS: CompressionTimeoutFactors = CompressionTimeoutFactors {
+            download_input_latency_ms: 250,
+            soft_compression_throughput_bytes_per_sec: NonZeroU64::new(20)
+                .expect("20 bytes/s is nonzero"),
+            hard_compression_throughput_bytes_per_sec: NonZeroU64::new(10)
+                .expect("10 bytes/s is nonzero"),
+            output_compression_ratio_estimate: NonZeroU64::new(4).expect("4 is nonzero"),
+            soft_upload_throughput_bytes_per_sec: NonZeroU64::new(5).expect("5 bytes/s is nonzero"),
+            hard_upload_throughput_bytes_per_sec: NonZeroU64::new(2).expect("2 bytes/s is nonzero"),
+        };
+        assert_eq!(
+            compression_timeout_policy(&FACTORS, 41, 2),
+            TimeoutPolicy {
+                soft_timeout_ms: 4750,
+                hard_timeout_ms: 10_100,
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn full_filesystem_partition_has_valid_size_based_timeouts() -> anyhow::Result<()> {
+        const TARGET_ARCHIVE_SIZE: u64 = 256 * 1024 * 1024;
+        const NUM_FILES: u64 = 4096;
+
+        let mut builder = CompressionInputBuilder::new(FsSource, TARGET_ARCHIVE_SIZE);
+        for index in 0..NUM_FILES {
+            builder.add(FsEntry {
+                path: LogsInputPath::try_from(format!("/logs/{index}"))?,
+                size: TARGET_ARCHIVE_SIZE / NUM_FILES,
+            })?;
+        }
+        let partitions = builder.build();
+        assert_eq!(partitions.len(), 1);
+        let partition = &partitions[0];
+        assert_eq!(partition.input.file_paths.len() as u64, NUM_FILES);
+        let handle = CompressionJobHandle::new_for_policy_tests();
+        let policy = handle.fs_compression_task_execution_policy(
+            partition.estimated_uncompressed_size,
+            partition.input.file_paths.len() as u64,
+        );
+        assert_eq!(
+            policy.timeout_policy,
+            TimeoutPolicy {
+                soft_timeout_ms: 4_102_827,
+                hard_timeout_ms: 4_130_134,
+            }
+        );
+        TaskGraph::new(
+            Some(TerminationTaskDescriptor {
+                tdl_context: TdlContext {
+                    package: "clp".to_owned(),
+                    task_func: "compression::commit".to_owned(),
+                },
+                execution_policy: Some(policy),
+            }),
+            None,
+        )?;
+        Ok(())
+    }
 }

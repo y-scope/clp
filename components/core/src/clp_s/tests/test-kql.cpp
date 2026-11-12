@@ -1,5 +1,9 @@
+#include <cstddef>
+#include <cstdint>
 #include <sstream>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -7,6 +11,9 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
+
+#include <clp_s/Defs.hpp>
+#include <clp_s/search/ast/Literal.hpp>
 
 #include "../src/clp_s/search/ast/AndExpr.hpp"
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
@@ -17,12 +24,14 @@
 #include "LogSuppressor.hpp"
 
 using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::DescriptorToken;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::TimestampLiteral;
 using clp_s::search::kql::parse_kql_expression;
+using clp_s::search::kql::parse_projection_column;
 using std::string;
 using std::stringstream;
 using std::vector;
@@ -56,6 +65,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(filter->get_column()->is_pure_wildcard());
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
+        REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         std::string extracted_value;
         REQUIRE(filter->get_operand()->as_var_string(extracted_value, filter->get_operation()));
@@ -75,6 +85,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
+        REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         auto const key_token = DescriptorToken::create_descriptor_from_escaped_token("key");
         REQUIRE(key_token == *filter->get_column()->descriptor_begin());
         std::string extracted_value;
@@ -95,6 +106,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(1 == not_filter->get_column()->get_descriptor_list().size());
         REQUIRE(not_filter->get_column()->get_namespace().empty());
         REQUIRE(false == not_filter->get_column()->get_subtree_type().has_value());
+        REQUIRE(ColumnDescriptor::Function::None == not_filter->get_column()->get_function());
         auto const key_token = DescriptorToken::create_descriptor_from_escaped_token("key");
         REQUIRE(key_token == *not_filter->get_column()->descriptor_begin());
         std::string extracted_value;
@@ -145,6 +157,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(key_token == *filter->get_column()->descriptor_begin());
             REQUIRE(filter->get_column()->get_namespace().empty());
             REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
+            REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
             ++suffix_number;
         }
     }
@@ -197,6 +210,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(key_token == *filter->get_column()->descriptor_begin());
             REQUIRE(filter->get_column()->get_namespace().empty());
             REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
+            REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
             ++suffix_number;
         }
     }
@@ -227,6 +241,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(2 == filter->get_column()->get_descriptor_list().size());
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
+        REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         auto it = filter->get_column()->descriptor_begin();
         auto const a_b_token = DescriptorToken::create_descriptor_from_escaped_token("a.b");
         REQUIRE(a_b_token == *it++);
@@ -283,6 +298,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(true == filter->get_column()->is_pure_wildcard());
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
+        REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         std::string literal;
         REQUIRE(true == filter->get_operand()->as_var_string(literal, FilterOperation::EQ));
         REQUIRE(literal == translated_pair.second);
@@ -303,6 +319,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         REQUIRE(namespace_name == filter->get_column()->get_namespace());
         REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
+        REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
         auto it = filter->get_column()->descriptor_begin();
         auto const column_token = DescriptorToken::create_descriptor_from_escaped_token("column");
@@ -327,10 +344,117 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE(false == filter->get_column()->get_subtree_type().has_value());
+        REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
         auto it = filter->get_column()->descriptor_begin();
         auto const column_token = DescriptorToken::create_descriptor_from_escaped_token(column);
         REQUIRE(column_token == *it);
+    }
+
+    SECTION("shape() filters apply the Shape function to their column") {
+        auto const [query, expected_operation, expected_inverted] = GENERATE(
+                std::make_tuple("shape(key): value", FilterOperation::EQ, false),
+                std::make_tuple(" shape( key ) : \"value\" ", FilterOperation::EQ, false),
+                std::make_tuple("not shape(key): value", FilterOperation::EQ, true),
+                std::make_tuple("shape(key) > value", FilterOperation::GT, false)
+        );
+        stringstream query_stream{query};
+        auto filter{std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query_stream))};
+        REQUIRE(nullptr != filter);
+        REQUIRE(nullptr != filter->get_column());
+        REQUIRE(expected_operation == filter->get_operation());
+        REQUIRE(expected_inverted == filter->is_inverted());
+        REQUIRE(filter->get_column()->is_shape_query());
+        REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
+        auto const key_token = DescriptorToken::create_descriptor_from_escaped_token("key");
+        REQUIRE(key_token == *filter->get_column()->descriptor_begin());
+    }
+
+    SECTION("Functions that are unsupported in filters are rejected") {
+        auto const* query = GENERATE(
+                "decompose(key): value",
+                "decompose(key) > value",
+                "bogus(key): value",
+                "shape(key): {nested: value}",
+                "decompose(key): {nested: value}"
+        );
+        stringstream query_stream{query};
+        REQUIRE(nullptr == parse_kql_expression(query_stream));
+    }
+
+    SECTION("Projection columns carry their function") {
+        auto const [column_str, expected_function] = GENERATE(
+                std::make_pair("key", ColumnDescriptor::Function::None),
+                std::make_pair("shape(key)", ColumnDescriptor::Function::Shape),
+                std::make_pair("shape(\"key\")", ColumnDescriptor::Function::Shape),
+                std::make_pair("decompose(key)", ColumnDescriptor::Function::Decompose)
+        );
+        auto column{parse_projection_column(column_str)};
+        REQUIRE(nullptr != column);
+        REQUIRE(expected_function == column->get_function());
+        REQUIRE(1 == column->get_descriptor_list().size());
+        auto const key_token = DescriptorToken::create_descriptor_from_escaped_token("key");
+        REQUIRE(key_token == *column->descriptor_begin());
+    }
+
+    SECTION("Bare projection columns are taken literally as a whole") {
+        auto const [column_str, expected_tokens] = GENERATE(
+                std::make_pair("my key", vector<string>{"my key"}),
+                std::make_pair("my key extra", vector<string>{"my key extra"}),
+                std::make_pair("\"my key\"", vector<string>{"\"my key\""}),
+                std::make_pair("a.b", vector<string>{"a", "b"}),
+                std::make_pair("a\\.b", vector<string>{"a.b"}),
+                std::make_pair("foo\\(bar\\)", vector<string>{"foo(bar)"}),
+                std::make_pair("shape(key", vector<string>{"shape(key"}),
+                std::make_pair("(key)", vector<string>{"(key)"})
+        );
+        auto column{parse_projection_column(column_str)};
+        REQUIRE(nullptr != column);
+        REQUIRE(ColumnDescriptor::Function::None == column->get_function());
+        REQUIRE(expected_tokens.size() == column->get_descriptor_list().size());
+        auto token_it{column->descriptor_begin()};
+        for (auto const& expected_token : expected_tokens) {
+            auto const expected{
+                    DescriptorToken::create_descriptor_from_escaped_token(expected_token)
+            };
+            REQUIRE(expected == *token_it);
+            ++token_it;
+        }
+    }
+
+    SECTION("Projection function arguments follow KQL column syntax") {
+        auto const [column_str, expected_tokens] = GENERATE(
+                std::make_pair("shape(\"my key\")", vector<string>{"my key"}),
+                std::make_pair("shape(a.b)", vector<string>{"a", "b"}),
+                std::make_pair("shape(a\\.b)", vector<string>{"a.b"}),
+                std::make_pair("decompose( \"a.b\" )", vector<string>{"a", "b"})
+        );
+        auto column{parse_projection_column(column_str)};
+        REQUIRE(nullptr != column);
+        REQUIRE(ColumnDescriptor::Function::None != column->get_function());
+        REQUIRE(expected_tokens.size() == column->get_descriptor_list().size());
+        auto token_it{column->descriptor_begin()};
+        for (auto const& expected_token : expected_tokens) {
+            auto const expected{
+                    DescriptorToken::create_descriptor_from_escaped_token(expected_token)
+            };
+            REQUIRE(expected == *token_it);
+            ++token_it;
+        }
+    }
+
+    SECTION("Malformed projection function calls are rejected") {
+        auto const* column_str = GENERATE(
+                "bogus(key)",
+                "shape()",
+                "shape(a, b)",
+                "shape(my key)",
+                "shape(key) extra)",
+                "shape(key))",
+                "shape((key))",
+                "shape(key)(key)"
+        );
+        REQUIRE(nullptr == parse_projection_column(column_str));
     }
 
     SECTION("Timestamp expressions are parsed correctly.") {
@@ -358,6 +482,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(filter->get_column()->is_pure_wildcard());
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE_FALSE(filter->get_column()->get_subtree_type().has_value());
+        REQUIRE(ColumnDescriptor::Function::None == filter->get_column()->get_function());
         auto timestamp_literal{std::dynamic_pointer_cast<TimestampLiteral>(filter->get_operand())};
         REQUIRE(nullptr != timestamp_literal);
         REQUIRE(1 == timestamp_literal->as_precision(TimestampLiteral::Precision::Nanoseconds));
@@ -378,4 +503,76 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         stringstream invalid_query_stream{invalid_query};
         REQUIRE(nullptr == parse_kql_expression(invalid_query_stream));
     }
+}
+
+TEST_CASE("ColumnDescriptor preserves and resets occurrence bindings", "[ColumnDescriptor]") {
+    using clp_s::search::ast::LiteralType;
+
+    constexpr clp_s::mpt_node_id_t cNodeId{42};
+    constexpr clp_s::mpt_node_id_t cOtherNodeId{43};
+    constexpr int32_t cSchemaId{7};
+    constexpr size_t cLeafPosition{3};
+    constexpr size_t cOccurrenceIdx{1};
+    constexpr size_t cOtherOccurrenceIdx{2};
+
+    auto column{ColumnDescriptor::create_from_escaped_tokens({"message", "value"}, "")};
+    column->set_matching_type(LiteralType::IntegerT);
+    column->bind_as_decomposed_leaf(cNodeId, cLeafPosition, cOccurrenceIdx, {cSchemaId});
+
+    REQUIRE(column->is_bound());
+    REQUIRE(column->is_bound_by_decomposition());
+    REQUIRE(cNodeId == column->get_bound_node_id());
+    REQUIRE(cLeafPosition == column->get_leaf_position());
+    REQUIRE(cOccurrenceIdx == column->get_structurized_text_occurrence_idx());
+
+    SECTION("Different occurrences of the same leaf compare unequal") {
+        auto other{column->copy()};
+        REQUIRE(*column == *other);
+
+        other->bind_as_decomposed_leaf(cNodeId, cLeafPosition, cOtherOccurrenceIdx, {cSchemaId});
+        REQUIRE_FALSE(*column == *other);
+    }
+
+    SECTION("Copy preserves the leaf, occurrence, and resolved nodes") {
+        auto copied{column->copy()};
+        REQUIRE(copied.get() != column.get());
+        REQUIRE(*column == *copied);
+        REQUIRE(copied->is_bound_by_decomposition());
+        REQUIRE(cNodeId == copied->get_bound_node_id());
+        REQUIRE(cLeafPosition == copied->get_leaf_position());
+        REQUIRE(cOccurrenceIdx == copied->get_structurized_text_occurrence_idx());
+        REQUIRE(column->resolved_nodes().schema_to_node_ids
+                == copied->resolved_nodes().schema_to_node_ids);
+    }
+
+    SECTION("Rebinding preserves the leaf and occurrence but clears resolved nodes") {
+        auto rebound{column->copy_bound_to(cOtherNodeId, LiteralType::IntegerT)};
+        REQUIRE(rebound->is_bound());
+        REQUIRE(rebound->is_bound_by_decomposition());
+        REQUIRE(cOtherNodeId == rebound->get_bound_node_id());
+        REQUIRE(rebound->matches_exactly(LiteralType::IntegerT));
+        REQUIRE(cLeafPosition == rebound->get_leaf_position());
+        REQUIRE(cOccurrenceIdx == rebound->get_structurized_text_occurrence_idx());
+        REQUIRE(rebound->resolved_nodes().schema_to_node_ids.empty());
+        REQUIRE(rebound->resolved_nodes().wildcard_node_ids.empty());
+    }
+
+    SECTION("Unbound copy clears both the leaf and occurrence") {
+        auto unbound{column->copy_unbound()};
+        REQUIRE_FALSE(unbound->is_bound());
+        REQUIRE_FALSE(unbound->is_bound_by_decomposition());
+        REQUIRE_FALSE(unbound->get_leaf_position().has_value());
+        REQUIRE_FALSE(unbound->get_structurized_text_occurrence_idx().has_value());
+        REQUIRE(unbound->resolved_nodes().schema_to_node_ids.empty());
+        REQUIRE(unbound->resolved_nodes().wildcard_node_ids.empty());
+
+        auto expected{ColumnDescriptor::create_from_escaped_tokens({"message", "value"}, "")};
+        expected->set_matching_type(LiteralType::IntegerT);
+        REQUIRE(*expected == *unbound);
+    }
+
+    REQUIRE(cNodeId == column->get_bound_node_id());
+    REQUIRE(cLeafPosition == column->get_leaf_position());
+    REQUIRE(cOccurrenceIdx == column->get_structurized_text_occurrence_idx());
+    REQUIRE(std::vector{cNodeId} == column->resolved_nodes().schema_to_node_ids.at(cSchemaId));
 }

@@ -9,6 +9,7 @@
 #include <string_view>
 #include <utility>
 
+#include <opentelemetry/exporters/ostream/span_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_http_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_http_exporter_options.h>
 #include <opentelemetry/nostd/shared_ptr.h>
@@ -24,6 +25,7 @@
 #include <spdlog/spdlog.h>
 
 namespace otlp = opentelemetry::exporter::otlp;
+namespace ostream_exporter = opentelemetry::exporter::trace;
 namespace resource = opentelemetry::sdk::resource;
 namespace trace_api = opentelemetry::trace;
 namespace trace_sdk = opentelemetry::sdk::trace;
@@ -33,6 +35,12 @@ namespace {
 constexpr std::string_view cServiceNameKey{"service.name"};
 constexpr std::string_view cDefaultServiceName{"clp-search"};
 constexpr std::string_view cTracesPath{"/v1/traces"};
+
+/**
+ * Sentinel value for `CLP_TELEMETRY_ENDPOINT` that selects the OStream span exporter (writes spans
+ * to `std::cerr`) instead of the OTLP HTTP exporter.
+ */
+constexpr std::string_view cOStreamEndpoint{"ostream"};
 
 /**
  * Bound on how long the destructor blocks while draining buffered spans on exit.
@@ -52,7 +60,12 @@ constexpr std::chrono::seconds cShutdownTimeout{1};
  * honoured natively by `OtlpHttpExporterOptions`, so this only supplies an override derived from
  * CLP's `CLP_TELEMETRY_ENDPOINT` when none of the standard variables are set.
  *
- * @return The fully-qualified traces URL, or std::nullopt if opentelemetry defaults should be used.
+ * If `CLP_TELEMETRY_ENDPOINT` is set to the sentinel value `cOStreamEndpoint` ("ostream"), the
+ * OStream span exporter is used instead of the OTLP HTTP exporter, writing spans to `std::cerr`.
+ * This is useful for local debugging and evaluation without an OTLP collector.
+ *
+ * @return The fully-qualified traces URL, the sentinel `cOStreamEndpoint`, or std::nullopt if
+ * opentelemetry defaults should be used.
  */
 [[nodiscard]] auto resolve_clp_endpoint() -> std::optional<std::string>;
 
@@ -86,6 +99,9 @@ auto resolve_clp_endpoint() -> std::optional<std::string> {
     if (endpoint.empty()) {
         return std::nullopt;
     }
+    if (cOStreamEndpoint == endpoint) {
+        return endpoint;
+    }
     endpoint.append(cTracesPath);
     return endpoint;
 }
@@ -104,12 +120,18 @@ public:
     // Constructors
     Impl() {
         try {
-            otlp::OtlpHttpExporterOptions exporter_options{};
-            if (auto const endpoint{resolve_clp_endpoint()}; endpoint.has_value()) {
-                exporter_options.url = *endpoint;
+            std::unique_ptr<trace_sdk::SpanExporter> exporter;
+            auto const endpoint{resolve_clp_endpoint()};
+            if (endpoint.has_value() && cOStreamEndpoint == *endpoint) {
+                exporter = ostream_exporter::OStreamSpanExporterFactory::Create(std::cerr);
+            } else {
+                otlp::OtlpHttpExporterOptions exporter_options{};
+                if (endpoint.has_value()) {
+                    exporter_options.url = *endpoint;
+                }
+                exporter_options.content_type = otlp::HttpRequestContentType::kBinary;
+                exporter = otlp::OtlpHttpExporterFactory::Create(exporter_options);
             }
-            exporter_options.content_type = otlp::HttpRequestContentType::kBinary;
-            auto exporter{otlp::OtlpHttpExporterFactory::Create(exporter_options)};
 
             trace_sdk::BatchSpanProcessorOptions const processor_options{};
             auto processor{trace_sdk::BatchSpanProcessorFactory::Create(
