@@ -114,6 +114,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "pin-project-lite",
+ "query-result-listener",
  "rmp-serde",
  "secrecy",
  "serde",
