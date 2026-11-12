@@ -14,7 +14,6 @@ use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
-use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobStatus;
@@ -28,8 +27,8 @@ use futures::StreamExt;
 use non_empty_string::NonEmptyString;
 use pin_project_lite::pin_project;
 use query_result_listener::encoding::ResultEncoding;
-use query_result_listener::listener::ResultListener;
-use query_result_listener::session::SessionConfig;
+use query_result_listener::session::ResultStream;
+use query_result_listener::session::Session;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::Row;
@@ -38,7 +37,6 @@ use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
 use crate::streaming_query;
-use crate::streaming_query::StreamingQuery;
 use crate::streaming_query::StreamingQueryEvent;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
@@ -230,49 +228,6 @@ pub struct QueryConfig {
     pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
 }
 
-impl QueryConfig {
-    /// Converts the config into the config of a query job whose tasks stream their results to
-    /// `network_output`.
-    ///
-    /// # Returns
-    ///
-    /// The query job config on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * [`ClientError::InvalidInput`] if the config sets an option that doesn't apply to streamed
-    ///   results: `max_num_results`, `buffer_results_in_mongodb` or
-    ///   `count_by_time_bucket_size_millisecs`.
-    /// * Forwards [`QueryJobConfig::try_from`]'s return values on failure.
-    pub(crate) fn into_streaming_query_job_config(
-        self,
-        network_output: NetworkOutput,
-    ) -> Result<QueryJobConfig, ClientError> {
-        if self.max_num_results.is_some() {
-            return Err(ClientError::InvalidInput(
-                "max_num_results must be omitted from a streaming query".to_owned(),
-            ));
-        }
-        if self.buffer_results_in_mongodb {
-            return Err(ClientError::InvalidInput(
-                "buffer_results_in_mongodb must be false for a streaming query".to_owned(),
-            ));
-        }
-        if self.count_by_time_bucket_size_millisecs.is_some() {
-            return Err(ClientError::InvalidInput(
-                "count_by_time_bucket_size_millisecs must be omitted from a streaming query"
-                    .to_owned(),
-            ));
-        }
-        Ok(QueryJobConfig {
-            output: QueryOutput::Network(network_output),
-            ..QueryJobConfig::try_from(self)?
-        })
-    }
-}
-
 impl TryFrom<QueryConfig> for QueryJobConfig {
     type Error = ClientError;
 
@@ -364,88 +319,6 @@ impl Client {
     pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
         let query_job_config = QueryJobConfig::try_from(query_config)?;
         Ok(query_job::submit(&self.sql_pool, &query_job_config).await?)
-    }
-
-    /// Submits a query job whose tasks stream their results to a new session of `listener`.
-    ///
-    /// The returned query's events are streamed as [`streaming_query::stream_events`] describes.
-    /// The stream finds the job terminated by reading its status at a fixed interval, and ends with
-    /// an error if the status can't be read or the job doesn't exist. It requests the job's
-    /// cancellation with [`Client::cancel_query_job`], and logs the request's outcome.
-    ///
-    /// # Type Parameters
-    ///
-    /// * `EncodingType` - The encoding of the query's results.
-    ///
-    /// # Returns
-    ///
-    /// The submitted query on success.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    ///
-    /// * Forwards [`ResultListener::open_session`]'s return values on failure.
-    /// * Forwards [`QueryConfig::into_streaming_query_job_config`]'s return values on failure.
-    /// * Forwards [`query_job::submit`]'s return values on failure.
-    #[expect(
-        dead_code,
-        reason = "the streaming query endpoint that submits its queries comes in a later change"
-    )]
-    pub(crate) async fn submit_streaming_query<EncodingType: ResultEncoding>(
-        &self,
-        listener: &ResultListener<EncodingType>,
-        query_config: QueryConfig,
-    ) -> Result<
-        StreamingQuery<
-            impl Stream<Item = StreamingQueryEvent<EncodingType::Batch>> + Send + use<EncodingType>,
-        >,
-        ClientError,
-    > {
-        /// The interval between the end of one read of the job's status and the start of the next.
-        const QUERY_JOB_STATUS_POLL_INTERVAL: Duration = Duration::from_millis(100);
-
-        let (session, results) = listener.open_session(SessionConfig::default())?;
-        let query_job_config =
-            query_config.into_streaming_query_job_config(session.network_output().clone())?;
-        let query_job_id = query_job::submit(&self.sql_pool, &query_job_config).await?;
-        let termination = {
-            let client = self.clone();
-            async move {
-                loop {
-                    tokio::time::sleep(QUERY_JOB_STATUS_POLL_INTERVAL).await;
-                    let status = client.get_status(query_job_id).await?;
-                    if status.is_terminal() {
-                        return Ok(status);
-                    }
-                }
-            }
-        };
-        let cancellation = {
-            let client = self.clone();
-            async move {
-                match client.cancel_query_job(query_job_id).await {
-                    Ok(()) => tracing::info!(
-                        query_job_id,
-                        "Requested the cancellation of a streaming query's job."
-                    ),
-                    Err(ClientError::QueryJobAlreadyTerminated(_)) => tracing::info!(
-                        query_job_id,
-                        "Requested the cancellation of a streaming query's job, which had already \
-                         terminated."
-                    ),
-                    Err(e) => tracing::warn!(
-                        query_job_id,
-                        error = % e,
-                        "Failed to request the cancellation of a streaming query's job."
-                    ),
-                }
-            }
-        };
-        Ok(StreamingQuery {
-            query_job_id,
-            events: streaming_query::stream_events(session, results, termination, cancellation),
-        })
     }
 
     /// Asynchronously fetches the results of a completed query job.
@@ -576,6 +449,71 @@ impl Client {
         query_job::get_status(&self.sql_pool, query_job_id)
             .await?
             .ok_or(ClientError::QueryJobNotFound(query_job_id))
+    }
+
+    /// Streams the results of a submitted query job from `session`, which the job's tasks stream
+    /// their results to, and its `results`.
+    ///
+    /// The stream yields the events that [`streaming_query::stream_events`] describes. The stream
+    /// finds the job terminated by reading its status at a fixed interval, and ends with an error
+    /// if the status can't be read or the job doesn't exist. It requests the job's cancellation
+    /// with [`Client::cancel_query_job`], and logs the request's outcome.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `EncodingType` - The encoding of the job's results.
+    ///
+    /// # Returns
+    ///
+    /// The stream of the job's results.
+    #[expect(
+        dead_code,
+        reason = "the streaming query endpoint that streams query results comes in a later change"
+    )]
+    pub(crate) fn stream_results<EncodingType: ResultEncoding>(
+        &self,
+        query_job_id: u64,
+        session: Session<EncodingType>,
+        results: ResultStream<EncodingType::Batch>,
+    ) -> impl Stream<Item = StreamingQueryEvent<EncodingType::Batch>> + Send + use<EncodingType>
+    {
+        /// The interval between the end of one read of the job's status and the start of the next.
+        const QUERY_JOB_STATUS_POLL_INTERVAL: Duration = Duration::from_millis(100);
+
+        let termination = {
+            let client = self.clone();
+            async move {
+                loop {
+                    tokio::time::sleep(QUERY_JOB_STATUS_POLL_INTERVAL).await;
+                    let status = client.get_status(query_job_id).await?;
+                    if status.is_terminal() {
+                        return Ok(status);
+                    }
+                }
+            }
+        };
+        let cancellation = {
+            let client = self.clone();
+            async move {
+                match client.cancel_query_job(query_job_id).await {
+                    Ok(()) => tracing::info!(
+                        query_job_id,
+                        "Requested the cancellation of a streaming query's job."
+                    ),
+                    Err(ClientError::QueryJobAlreadyTerminated(_)) => tracing::info!(
+                        query_job_id,
+                        "Requested the cancellation of a streaming query's job, which had already \
+                         terminated."
+                    ),
+                    Err(e) => tracing::warn!(
+                        query_job_id,
+                        error = % e,
+                        "Failed to request the cancellation of a streaming query's job."
+                    ),
+                }
+            }
+        };
+        streaming_query::stream_events(session, results, termination, cancellation)
     }
 
     async fn get_job_config(&self, query_job_id: u64) -> Result<QueryJobConfig, ClientError> {
@@ -1057,69 +995,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn streaming_query_job_config_keeps_the_query_and_streams_to_the_network_output()
-    -> anyhow::Result<()> {
-        let other_dataset: DatasetName = "other".parse()?;
-        let network_output = network_output();
-        let actual = QueryConfig {
-            datasets: Some(vec![other_dataset.clone()]),
-            max_num_results: None,
-            ..base_query_config()
-        }
-        .into_streaming_query_job_config(network_output.clone())?;
-
-        assert_eq!(
-            actual,
-            QueryJobConfig {
-                datasets: vec![other_dataset],
-                query: SearchQuery {
-                    query_string: NonEmptyString::new("level: ERROR".to_owned())
-                        .expect("query string is non-empty"),
-                    time_range: TimeRange::new(Some(1), Some(2)).expect("range is ordered"),
-                    ignore_case: true,
-                },
-                output: QueryOutput::Network(network_output),
-            }
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn query_config_setting_an_option_that_does_not_apply_to_streaming_is_rejected() {
-        for (query_config, rejected_option) in [
-            (base_query_config(), "max_num_results"),
-            (
-                QueryConfig {
-                    max_num_results: None,
-                    buffer_results_in_mongodb: true,
-                    ..base_query_config()
-                },
-                "buffer_results_in_mongodb",
-            ),
-            (
-                QueryConfig {
-                    max_num_results: None,
-                    count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
-                    ..base_query_config()
-                },
-                "count_by_time_bucket_size_millisecs",
-            ),
-        ] {
-            let error = query_config
-                .clone()
-                .into_streaming_query_job_config(network_output())
-                .expect_err("query config should be rejected");
-            assert!(
-                matches!(
-                    &error,
-                    ClientError::InvalidInput(message) if message.contains(rejected_option)
-                ),
-                "unexpected error for {query_config:?}: {error:?}"
-            );
-        }
-    }
-
     /// # Returns
     ///
     /// A valid query config whose results are buffered in files.
@@ -1133,27 +1008,6 @@ mod tests {
             ignore_case: true,
             buffer_results_in_mongodb: false,
             count_by_time_bucket_size_millisecs: None,
-        }
-    }
-
-    /// # Returns
-    ///
-    /// The network output of a query result listener's session.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the session token fixture isn't a valid UUID.
-    fn network_output() -> NetworkOutput {
-        use std::num::NonZeroU16;
-
-        use query_result_listener::test_utils::SESSION_TOKEN;
-
-        NetworkOutput {
-            host: NonEmptyString::new("127.0.0.1".to_owned()).expect("host is non-empty"),
-            port: NonZeroU16::new(4000).expect("4000 is nonzero"),
-            session_token: SESSION_TOKEN
-                .parse()
-                .expect("the session token fixture should be a valid UUID"),
         }
     }
 }

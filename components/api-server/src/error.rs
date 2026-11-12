@@ -8,7 +8,6 @@ use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::logs_input::LogsInputError;
 use clp_rust_utils::types::ArchiveId;
 use num_enum::TryFromPrimitive;
-use query_result_listener::SessionError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -45,9 +44,6 @@ pub enum ClientError {
 
     #[error("the results of a streaming query can't be encoded: {0}")]
     QueryResultEncoding(String),
-
-    #[error(transparent)]
-    QueryResultSession(#[from] SessionError),
 
     #[error("Invalid input: {0}")]
     InvalidInput(String),

@@ -1,5 +1,5 @@
-//! Streaming queries, each of which forwards the results that its query job's tasks stream to the
-//! API server while the job runs, and ends with the job's terminal status.
+//! The event streams of streaming queries, each of which forwards the results that its query job's
+//! tasks stream to the API server while the job runs, and ends with the job's terminal status.
 
 use std::future::Future;
 
@@ -14,19 +14,6 @@ use query_result_listener::session::SessionStats;
 use tokio_util::task::AbortOnDropHandle;
 
 use crate::error::ClientError;
-
-/// A streaming query whose job has been submitted.
-///
-/// # Type Parameters
-///
-/// * `EventStreamType` - The type of the stream of the query's events.
-pub struct StreamingQuery<EventStreamType> {
-    /// The ID of the query's job.
-    pub query_job_id: u64,
-
-    /// The stream of the query's events, as [`stream_events`] describes.
-    pub events: EventStreamType,
-}
 
 /// An item of a streaming query's stream.
 ///
