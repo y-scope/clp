@@ -1,0 +1,21 @@
+{"idx":0,"edge":["my edge case 1","my edge case 2"]}
+{"idx":1,"edge":["my edge case 3","my edge case 4"]}
+{"idx":2,"edge":["my edge case 2","my edge case 2"]}
+{"idx":3,"zero_first":["no variables here","my edge case 5"]}
+{"idx":4,"zero_last":["my edge case 5","no variables here"]}
+{"idx":5,"zero_first":["no variables here","my edge case 6"]}
+{"idx":6,"zero_last":["my edge case 7","no variables here"]}
+{"idx":7,"shapes":["alpha 11","beta 22"]}
+{"idx":8,"shapes":["alpha 33","beta 44"]}
+{"idx":9,"pairs":["a=1","b=2"]}
+{"idx":10,"pairs":["a=3","b=4"]}
+{"idx":11,"pairs":["a=2","b=1"]}
+{"idx":12,"repeated":["a=1 b=2","a=3 b=4"]}
+{"idx":13,"repeated":["a=5 b=6","a=7 b=8"]}
+{"idx":14,"variables":["user=alice","role=bob"]}
+{"idx":15,"variables":["user=carol","role=dave"]}
+{"idx":16,"variables":["user=bob","role=alice"]}
+{"idx":17,"groups":[{"messages":["nested 1","nested 2"]},{"messages":["nested 3"]}]}
+{"idx":18,"groups":[{"messages":["nested 4","nested 5"]},{"messages":["nested 6"]}]}
+{"idx":19,"variable_shapes":["alpha user=alice","beta user=bob"]}
+{"idx":20,"variable_shapes":["alpha user=carol","beta user=dave"]}
