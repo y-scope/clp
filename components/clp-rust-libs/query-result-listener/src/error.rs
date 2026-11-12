@@ -1,8 +1,11 @@
 //! Error types for the query result listener.
 
+use std::time::Duration;
+
 use clp_rust_utils::types::ArchiveId;
 use clp_rust_utils::types::ParseArchiveIdError;
 use clp_rust_utils::types::ParseSessionTokenError;
+use clp_rust_utils::types::SessionToken;
 use spider_core::task::TaskIndex;
 
 /// Violations of the wire protocol.
@@ -49,6 +52,12 @@ pub enum ProtocolError {
 /// Reasons a connection from a query task ends without an acknowledgement.
 #[derive(Debug, thiserror::Error)]
 pub enum ConnectionError {
+    #[error("the connection's results can't be encoded: {0}")]
+    Encoding(String),
+
+    #[error("no handshake arrived within {0:?}")]
+    HandshakeTimeout(Duration),
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
@@ -58,6 +67,22 @@ pub enum ConnectionError {
     #[error(transparent)]
     Protocol(#[from] ProtocolError),
 
+    #[error("the connection's session has ended")]
+    SessionEnded,
+
+    #[error("the connection's session has failed")]
+    SessionFailed,
+
     #[error("the connection closed in the middle of a frame")]
     TruncatedFrame,
+
+    #[error("unknown session token {0}")]
+    UnknownSession(SessionToken),
+}
+
+/// Reasons a session can't be opened.
+#[derive(Debug, thiserror::Error)]
+pub enum SessionError {
+    #[error("session token {0} is already registered")]
+    TokenCollision(SessionToken),
 }

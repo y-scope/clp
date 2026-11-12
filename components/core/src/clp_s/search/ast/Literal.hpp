@@ -12,6 +12,12 @@
 namespace clp_s::search::ast {
 /**
  * An enum representing all of the Literal types that can show up in the AST.
+ *
+ * `ClpStringT` and `VarStringT` are the string types of the clp-s flavour: a `NodeType::ClpString`
+ * value contains a space and a `NodeType::VarString` value doesn't. `StringT` is the string type of
+ * the clpp flavour (`NodeType::UnstructurizedText`, `NodeType::StructurizedText` and
+ * `NodeType::ParentRule`); it carries no invariant about a value's content, so a string literal can
+ * always match it and the node type decides how the match is evaluated.
  */
 enum LiteralType : uint32_t {
     TypesBegin = 1,
@@ -23,8 +29,9 @@ enum LiteralType : uint32_t {
     ArrayT = 1 << 5,
     NullT = 1 << 6,
     TimestampT = 1 << 7,
-    TypesEnd = 1 << 8,
-    UnknownT = ((uint32_t)1) << 31
+    StringT = 1 << 8,
+    TypesEnd = 1 << 9,
+    UnknownT = static_cast<uint32_t>(1) << 31
 };
 
 using literal_type_bitmask_t = std::underlying_type_t<LiteralType>;
@@ -47,18 +54,18 @@ public:
      * Strict checks for type matching against a given literal type.
      * @return true if the check succeeds
      */
-    virtual bool matches_type(LiteralType type) = 0;
+    [[nodiscard]] virtual auto matches_type(LiteralType type) const -> bool = 0;
 
-    virtual bool matches_any(literal_type_bitmask_t mask) = 0;
+    [[nodiscard]] virtual auto matches_any(literal_type_bitmask_t mask) const -> bool = 0;
 
-    virtual bool matches_exactly(literal_type_bitmask_t mask) = 0;
+    [[nodiscard]] virtual auto matches_exactly(literal_type_bitmask_t mask) const -> bool = 0;
 
     /**
      * Convert LiteralType enum values to strings . Only used for printing.
      * @param type the enum value being turned in a string
      * @return A string representing the enum value
      */
-    static std::string type_to_string(LiteralType type) {
+    static auto type_to_string(LiteralType type) -> std::string {
         switch (type) {
             case LiteralType::IntegerT:
                 return "int";
@@ -76,6 +83,8 @@ public:
                 return "null";
             case LiteralType::TimestampT:
                 return "timestamp";
+            case LiteralType::StringT:
+                return "string";
             default:
                 return "errtype";
         }
@@ -88,25 +97,48 @@ public:
      * @param op the FilterOperation operating on the Literal
      * @return true if cast is successful
      */
-    virtual bool as_clp_string(std::string& ret, FilterOperation op) { return false; }
+    virtual auto as_clp_string(std::string& /*ret*/, FilterOperation /*op*/) -> bool {
+        return false;
+    }
 
-    virtual bool as_var_string(std::string& ret, FilterOperation op) { return false; }
+    /**
+     * Casts the literal to a string matched whole against a variable dictionary value, i.e.
+     * against a `VarStringT` or `StringT` column.
+     */
+    virtual auto as_var_string(std::string& /*ret*/, FilterOperation /*op*/) -> bool {
+        return false;
+    }
 
-    virtual bool as_float(double& ret, FilterOperation op) { return false; }
+    virtual auto as_float(double& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
-    virtual bool as_int(int64_t& ret, FilterOperation op) { return false; }
+    virtual auto as_int(int64_t& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
-    virtual bool as_bool(bool& ret, FilterOperation op) { return false; }
+    virtual auto as_bool(bool& /*ret*/, FilterOperation /*op*/) -> bool { return false; }
 
-    virtual bool as_null(FilterOperation op) { return false; }
+    virtual auto as_null(FilterOperation /*op*/) -> bool { return false; }
 
-    inline bool as_array(std::string& ret, FilterOperation op) {
+    auto as_array(std::string& ret, FilterOperation op) -> bool {
         return as_var_string(ret, op) || as_clp_string(ret, op);
     }
 
-    virtual bool as_timestamp() { return false; }
+    virtual auto as_timestamp() -> bool { return false; }
 
-    virtual bool as_any(FilterOperation op) { return false; }
+    virtual auto as_any(FilterOperation /*op*/) -> bool { return false; }
+
+    /**
+     * Checks compatibility with a value type and comparison operation without converting the
+     * literal. Unlike `matches_type()`, which reports the interpretations the literal carries,
+     * this also accounts for `op` and for wildcard patterns; wildcard compatibility may be
+     * conservative and does not guarantee a match against any particular value.
+     * @param type The single value type to test.
+     * @param op The comparison operation; existence operations are handled separately by callers.
+     * @return Whether the literal is compatible with `type` under `op`.
+     */
+    [[nodiscard]] virtual auto can_match_op(LiteralType type, FilterOperation op) const -> bool {
+        return false;
+    }
+
+    [[nodiscard]] virtual auto has_wildcard() const -> bool { return false; }
 };
 }  // namespace clp_s::search::ast
 

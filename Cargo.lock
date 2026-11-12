@@ -114,6 +114,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "pin-project-lite",
+ "query-result-listener",
  "rmp-serde",
  "secrecy",
  "serde",
@@ -3336,10 +3337,15 @@ dependencies = [
  "bytes",
  "clp-rust-utils",
  "dashmap",
+ "futures",
+ "non-empty-string",
+ "query-result-listener",
  "rmp",
  "spider-core",
  "thiserror",
  "tokio",
+ "tokio-util",
+ "tracing",
 ]
 
 [[package]]
