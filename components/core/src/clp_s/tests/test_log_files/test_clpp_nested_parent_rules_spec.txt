@@ -1,0 +1,8 @@
+# Nested parent rules: `memory` contains two child parent rules (`used`/`total`), each with two
+# leaves. Consecutive leaf subtrees must not close their shared `memory` scope.
+
+delimiters: " \t\r\n!\"#$%&'()*,:;<=>?@[]^_`{|}~"
+
+!float: "-?\d+\.\d+([eE]-?\d+)?"
+
+memory: "(?<used>(?<value>(?<float>)) (?<unit>GB|MB|KB)) of (?<total>(?<value>(?<float>)) (?<unit>GB|MB|KB)) used"

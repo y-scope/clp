@@ -89,17 +89,20 @@ bool is_multi_file_archive(std::string_view const path) {
             || constants::cArchiveVarDictFile == formatted_name
             || constants::cArchiveLogDictFile == formatted_name
             || constants::cArchiveArrayDictFile == formatted_name
-            || constants::cArchiveTableMetadataFile == formatted_name)
+            || constants::cArchiveTableMetadataFile == formatted_name
+            || constants::cArchiveParentRuleShapesFile == formatted_name
+            || constants::cArchiveLogShapeStatsFile == formatted_name
+            || constants::cArchiveParsingSpecFile == formatted_name)
         {
             continue;
-        } else {
-            uint64_t segment_file_number{};
-            auto const* begin = file_name.data();
-            auto const* end = file_name.data() + file_name.size();
-            auto [last, rc] = std::from_chars(begin, end, segment_file_number);
-            if (std::errc{} != rc || last != end) {
-                return false;
-            }
+        }
+
+        uint64_t segment_file_number{};
+        auto const* begin = file_name.data();
+        auto const* end = file_name.data() + file_name.size();
+        auto [last, rc] = std::from_chars(begin, end, segment_file_number);
+        if (std::errc{} != rc || last != end) {
+            return false;
         }
     }
     return true;

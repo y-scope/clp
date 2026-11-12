@@ -12,9 +12,10 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "../clp/Defs.h"
-#include "ArchiveReaderAdaptor.hpp"
-#include "DictionaryEntry.hpp"
+#include <clp/Defs.h>
+#include <clp_s/ArchiveReaderAdaptor.hpp>
+#include <clp_s/DictionaryEntry.hpp>
+#include <clpp/Defs.hpp>
 
 namespace clp_s {
 template <typename DictionaryIdType, typename EntryType>
@@ -32,24 +33,31 @@ public:
     using Entry = EntryType;
 
     // Constructors
-    DictionaryReader(ArchiveReaderAdaptor& adaptor) : m_is_open(false), m_adaptor(adaptor) {}
+    /**
+     * Binds this reader to a dictionary section; entries are loaded on the first `read_entries`.
+     * @param adaptor The adaptor for the archive containing the dictionary; must outlive this
+     * reader.
+     * @param dictionary_path The archive section holding the dictionary.
+     */
+    DictionaryReader(ArchiveReaderAdaptor& adaptor, std::string dictionary_path)
+            : m_adaptor(adaptor),
+              m_dictionary_path(std::move(dictionary_path)) {}
 
     // Methods
     /**
-     * Opens dictionary for reading
-     * @param dictionary_path
+     * Reads all entries from the archive, unless they have already been read successfully.
+     * Subsequent calls are no-ops, even if `lazy` differs from the first call. After a failure,
+     * discard the owning archive reader; partial loading is not retry-safe.
+     * @param lazy Whether to defer entry decoding on the first load. Ignored after a successful
+     * load.
+     * @throws Propagates exceptions from section checkout, entry reading, and section check-in.
      */
-    void open(std::string const& dictionary_path);
+    auto read_entries(bool lazy = false) -> void;
 
     /**
-     * Closes the dictionary
+     * @return Whether all entries have been read successfully (false does not imply retry safety).
      */
-    void close();
-
-    /**
-     * Reads all entries from disk
-     */
-    void read_entries(bool lazy = false);
+    [[nodiscard]] auto has_read_entries() const -> bool { return m_has_read_entries; }
 
     /**
      * @return All dictionary entries
@@ -90,40 +98,25 @@ public:
     ) const;
 
 protected:
-    bool m_is_open;
     ArchiveReaderAdaptor& m_adaptor;
     std::string m_dictionary_path;
     ZstdDecompressor m_dictionary_decompressor;
     std::vector<EntryType> m_entries;
+
+private:
+    bool m_has_read_entries{false};
 };
 
+using LogShapeDictionaryReader = DictionaryReader<clpp::log_shape_id_t, VariableDictionaryEntry>;
 using VariableDictionaryReader
         = DictionaryReader<clp::variable_dictionary_id_t, VariableDictionaryEntry>;
 using LogTypeDictionaryReader
         = DictionaryReader<clp::logtype_dictionary_id_t, LogTypeDictionaryEntry>;
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryReader<DictionaryIdType, EntryType>::open(std::string const& dictionary_path) {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-
-    m_dictionary_path = dictionary_path;
-    m_is_open = true;
-}
-
-template <typename DictionaryIdType, typename EntryType>
-void DictionaryReader<DictionaryIdType, EntryType>::close() {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-    m_is_open = false;
-}
-
-template <typename DictionaryIdType, typename EntryType>
-void DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
+auto DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) -> void {
+    if (m_has_read_entries) {
+        return;
     }
 
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KiB
@@ -141,12 +134,14 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) {
     }
 
     m_dictionary_decompressor.close();
+    dictionary_reader.reset();
     m_adaptor.checkin_reader_for_section(m_dictionary_path);
+    m_has_read_entries = true;
 }
 
 template <typename DictionaryIdType, typename EntryType>
-EntryType& DictionaryReader<DictionaryIdType, EntryType>::get_entry(DictionaryIdType id) {
-    if (false == m_is_open) {
+auto DictionaryReader<DictionaryIdType, EntryType>::get_entry(DictionaryIdType id) -> EntryType& {
+    if (false == m_has_read_entries) {
         throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
     }
     if (id >= m_entries.size()) {
