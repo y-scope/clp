@@ -208,10 +208,6 @@ impl Ending {
     /// # Returns
     ///
     /// The results of the received batches, and the stream's last item.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the stream doesn't end after its end or failure.
     async fn receive(events: &mut (impl Stream<Item = TestEvent> + Unpin)) -> Self {
         let ending = Self::receive_without_polling_further(events).await;
         expect_end(events).await;
