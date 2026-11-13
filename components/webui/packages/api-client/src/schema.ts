@@ -495,8 +495,6 @@ export interface components {
         NonEmptyDatasetNames: string[];
         /** @description Defines the request configuration for submitting a search query. */
         QueryConfig: {
-            /** @description The datasets to search within. */
-            datasets: components["schemas"]["NonEmptyDatasetNames"];
             /** @description Where to buffer the search results. */
             output: components["schemas"]["QueryOutputConfig"];
             /** @description The search to run. */
@@ -535,6 +533,8 @@ export interface components {
         };
         /** @description The search a query job runs. */
         SearchQuery: {
+            /** @description The datasets to search within. */
+            datasets: components["schemas"]["NonEmptyDatasetNames"];
             /** @description Whether the string match should be case-insensitive. */
             ignore_case?: boolean;
             /** @description The search query as a KQL string. */
@@ -995,10 +995,10 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "datasets": [
-                 *         "default"
-                 *       ],
                  *       "query": {
+                 *         "datasets": [
+                 *           "default"
+                 *         ],
                  *         "query_string": "*",
                  *         "time_range": {
                  *           "begin_timestamp_millisecs": 0,
@@ -1057,7 +1057,7 @@ export interface operations {
                     "text/plain": string;
                 };
             };
-            /** @description The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., an empty `datasets` or `query.query_string`, a `query.time_range` whose begin timestamp exceeds its end timestamp, or a non-positive `output.max_num_results`). */
+            /** @description The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., an empty `query.datasets` or `query.query_string`, a `query.time_range` whose begin timestamp exceeds its end timestamp, or a non-positive `output.max_num_results`). */
             422: {
                 headers: {
                     [name: string]: unknown;

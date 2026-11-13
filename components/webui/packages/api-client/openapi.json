@@ -364,10 +364,10 @@
                 "$ref": "#/components/schemas/QueryConfig"
               },
               "example": {
-                "datasets": [
-                  "default"
-                ],
                 "query": {
+                  "datasets": [
+                    "default"
+                  ],
                   "query_string": "*",
                   "time_range": {
                     "begin_timestamp_millisecs": 0,
@@ -429,7 +429,7 @@
             }
           },
           "422": {
-            "description": "The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., an empty `datasets` or `query.query_string`, a `query.time_range` whose begin timestamp exceeds its end timestamp, or a non-positive `output.max_num_results`).",
+            "description": "The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., an empty `query.datasets` or `query.query_string`, a `query.time_range` whose begin timestamp exceeds its end timestamp, or a non-positive `output.max_num_results`).",
             "content": {
               "text/plain": {
                 "schema": {
@@ -1095,15 +1095,10 @@
         "type": "object",
         "description": "Defines the request configuration for submitting a search query.",
         "required": [
-          "datasets",
           "query",
           "output"
         ],
         "properties": {
-          "datasets": {
-            "$ref": "#/components/schemas/NonEmptyDatasetNames",
-            "description": "The datasets to search within."
-          },
           "output": {
             "$ref": "#/components/schemas/QueryOutputConfig",
             "description": "Where to buffer the search results."
@@ -1207,9 +1202,14 @@
         "type": "object",
         "description": "The search a query job runs.",
         "required": [
+          "datasets",
           "query_string"
         ],
         "properties": {
+          "datasets": {
+            "$ref": "#/components/schemas/NonEmptyDatasetNames",
+            "description": "The datasets to search within."
+          },
           "ignore_case": {
             "type": "boolean",
             "description": "Whether the string match should be case-insensitive."
