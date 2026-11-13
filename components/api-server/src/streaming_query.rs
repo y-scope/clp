@@ -46,22 +46,22 @@ pub struct StreamingQueryEnd {
 /// Streams the events of a streaming query from `session`, which the tasks of the query's job
 /// stream their results to, and its `results`.
 ///
-/// The stream yields the batches of the query's results as they arrive, until `termination`
-/// resolves. Once `termination` resolves with the job's terminal status, the stream ends the
-/// session, yields the batches that the session's connections had already claimed until `results`
-/// ends, and then yields a [`StreamingQueryEvent::End`]. Instead, if the session fails, or
-/// `termination` resolves with an error or panics, the stream requests the job's cancellation and
-/// yields a [`StreamingQueryEvent::Error`].
+/// The stream yields the batches of the query's results as they arrive, until
+/// `wait_for_termination` resolves. Once `wait_for_termination` resolves with the job's terminal
+/// status, the stream ends the session, yields the batches that the session's connections had
+/// already claimed until `results` ends, and then yields a [`StreamingQueryEvent::End`]. Instead,
+/// if the session fails, or `wait_for_termination` resolves with an error or panics, the stream
+/// requests the job's cancellation and yields a [`StreamingQueryEvent::Error`].
 ///
-/// `termination` runs in a task of its own on the current Tokio runtime from when this function is
-/// called, so that it makes progress even while the stream isn't polled.
+/// `wait_for_termination` runs in a task of its own on the current Tokio runtime from when this
+/// function is called, so that it makes progress even while the stream isn't polled.
 ///
-/// Dropping the stream ends the session and stops the task that runs `termination`. If the stream
-/// hasn't yet found the job terminated or yielded an error, dropping it also requests the job's
-/// cancellation.
+/// Dropping the stream ends the session and stops the task that runs `wait_for_termination`. If the
+/// stream hasn't yet found the job terminated or yielded an error, dropping it also requests the
+/// job's cancellation.
 ///
-/// The stream requests the job's cancellation by spawning `cancellation` on the current Tokio
-/// runtime. Outside a Tokio runtime, it only logs that the cancellation can't be requested.
+/// The stream requests the job's cancellation by spawning `request_cancellation` on the current
+/// Tokio runtime. Outside a Tokio runtime, it only logs that the cancellation can't be requested.
 ///
 /// # Type Parameters
 ///
@@ -78,11 +78,13 @@ pub struct StreamingQueryEnd {
 pub fn stream_events<EncodingType: ResultEncoding>(
     session: Session<EncodingType>,
     mut results: ResultStream<EncodingType::Batch>,
-    termination: impl Future<Output = Result<QueryJobStatus, ClientError>> + Send + 'static,
-    cancellation: impl Future<Output = ()> + Send + 'static,
+    wait_for_termination: impl Future<Output = Result<QueryJobStatus, crate::error::ClientError>>
+    + Send
+    + 'static,
+    request_cancellation: impl Future<Output = ()> + Send + 'static,
 ) -> impl Stream<Item = StreamingQueryEvent<EncodingType::Batch>> + Send {
-    let mut cancellation = CancellationGuard::new(cancellation);
-    let mut termination = AbortOnDropHandle::new(tokio::spawn(termination));
+    let mut cancellation_guard = CancellationGuard::new(request_cancellation);
+    let mut termination_task = AbortOnDropHandle::new(tokio::spawn(wait_for_termination));
     stream! {
         let end = loop {
             // `biased`, so that a session failure isn't missed because the job's status was seen
@@ -92,7 +94,7 @@ pub fn stream_events<EncodingType: ResultEncoding>(
                 error = session.failed() => {
                     break Err(ClientError::QueryResultEncoding(error.to_string()));
                 }
-                status = &mut termination => {
+                status = &mut termination_task => {
                     break status.unwrap_or_else(|error| Err(ClientError::TaskJoin(error)));
                 }
                 batch = results.next() => yield StreamingQueryEvent::Results(batch.expect(
@@ -103,7 +105,7 @@ pub fn stream_events<EncodingType: ResultEncoding>(
         drop(session);
         match end {
             Ok(status) => {
-                cancellation.disarm();
+                cancellation_guard.disarm();
                 while let Some(batch) = results.next().await {
                     yield StreamingQueryEvent::Results(batch);
                 }
@@ -114,7 +116,7 @@ pub fn stream_events<EncodingType: ResultEncoding>(
             }
             Err(error) => {
                 drop(results);
-                cancellation.request();
+                cancellation_guard.request();
                 yield StreamingQueryEvent::Error(error);
             }
         }
@@ -321,17 +323,17 @@ mod tests {
     /// # Panics
     ///
     /// The returned future panics if the sender is dropped without sending a result.
-    fn termination() -> (
+    fn wait_for_termination() -> (
         oneshot::Sender<Result<QueryJobStatus, ClientError>>,
         impl Future<Output = Result<QueryJobStatus, ClientError>> + Send + 'static,
     ) {
         let (sender, receiver) = oneshot::channel();
-        let termination = async move {
+        let wait_for_termination = async move {
             receiver
                 .await
                 .expect("the test should send the job's termination before dropping its sender")
         };
-        (sender, termination)
+        (sender, wait_for_termination)
     }
 
     /// # Returns
@@ -346,17 +348,17 @@ mod tests {
     /// # Panics
     ///
     /// The returned future panics if the receiver has been dropped.
-    fn cancellation() -> (
+    fn request_cancellation() -> (
         impl Future<Output = ()> + Send + 'static,
         mpsc::UnboundedReceiver<()>,
     ) {
         let (sender, receiver) = mpsc::unbounded();
-        let cancellation = async move {
+        let request_cancellation = async move {
             sender
                 .unbounded_send(())
                 .expect("the test should receive the cancellation request");
         };
-        (cancellation, receiver)
+        (request_cancellation, receiver)
     }
 
     /// # Returns
@@ -426,8 +428,13 @@ mod tests {
         let listener = bind_listener::<QueryResultEncoding>();
         let (session, results) = listener.open_session(SessionConfig::default())?;
         let network_output = session.network_output().clone();
-        let (termination_sender, termination) = termination();
-        let mut events = Box::pin(stream_events(session, results, termination, async {}));
+        let (termination_sender, wait_for_termination) = wait_for_termination();
+        let mut events = Box::pin(stream_events(
+            session,
+            results,
+            wait_for_termination,
+            async {},
+        ));
         let mut attempt = FakeClpS::connect(&network_output).await;
         attempt.send_handshake(TASK_INDEX, ARCHIVE_ID).await;
         attempt.send_results(TASK_INDEX, 0..3).await;
@@ -464,8 +471,13 @@ mod tests {
             channel_capacity: NonZeroUsize::MIN,
         })?;
         let network_output = session.network_output().clone();
-        let (termination_sender, termination) = termination();
-        let mut events = Box::pin(stream_events(session, results, termination, async {}));
+        let (termination_sender, wait_for_termination) = wait_for_termination();
+        let mut events = Box::pin(stream_events(
+            session,
+            results,
+            wait_for_termination,
+            async {},
+        ));
         let _attempt = connect_attempt_blocked_on_its_second_batch(&network_output).await;
         termination_sender
             .send(Ok(QueryJobStatus::Succeeded))
@@ -494,19 +506,19 @@ mod tests {
     async fn termination_is_waited_for_while_the_stream_is_not_polled() -> Result<()> {
         let listener = bind_listener::<QueryResultEncoding>();
         let (session, results) = listener.open_session(SessionConfig::default())?;
-        let (termination_finished_sender, termination_finished) = oneshot::channel();
-        let termination = async move {
+        let (wait_finished_sender, wait_finished) = oneshot::channel();
+        let wait_for_termination = async move {
             for _ in 0..3 {
                 yield_now().await;
             }
-            termination_finished_sender
+            wait_finished_sender
                 .send(())
                 .expect("the test should wait for the job's termination to finish");
             Ok(QueryJobStatus::Succeeded)
         };
-        let _events = stream_events(session, results, termination, async {});
+        let _events = stream_events(session, results, wait_for_termination, async {});
 
-        timeout(TIMEOUT, termination_finished).await??;
+        timeout(TIMEOUT, wait_finished).await??;
         Ok(())
     }
 
@@ -523,9 +535,14 @@ mod tests {
         let listener = bind_listener::<FallibleQueryResultEncoding>();
         let (session, results) = listener.open_session(SessionConfig::default())?;
         let network_output = session.network_output().clone();
-        let (termination_sender, termination) = termination();
-        let (cancellation, cancellation_requests) = cancellation();
-        let mut events = Box::pin(stream_events(session, results, termination, cancellation));
+        let (termination_sender, wait_for_termination) = wait_for_termination();
+        let (request_cancellation, cancellation_requests) = request_cancellation();
+        let mut events = Box::pin(stream_events(
+            session,
+            results,
+            wait_for_termination,
+            request_cancellation,
+        ));
         let mut failing_attempt = FakeClpS::connect(&network_output).await;
         failing_attempt.send_handshake(TASK_INDEX, ARCHIVE_ID).await;
         failing_attempt
@@ -571,9 +588,14 @@ mod tests {
             channel_capacity: NonZeroUsize::MIN,
         })?;
         let network_output = session.network_output().clone();
-        let (termination_sender, termination) = termination();
-        let (cancellation, cancellation_requests) = cancellation();
-        let mut events = Box::pin(stream_events(session, results, termination, cancellation));
+        let (termination_sender, wait_for_termination) = wait_for_termination();
+        let (request_cancellation, cancellation_requests) = request_cancellation();
+        let mut events = Box::pin(stream_events(
+            session,
+            results,
+            wait_for_termination,
+            request_cancellation,
+        ));
         let attempt = connect_attempt_blocked_on_its_second_batch(&network_output).await;
         termination_sender
             .send(Err(ClientError::Io(std::io::Error::other(
@@ -606,12 +628,12 @@ mod tests {
     -> Result<()> {
         let listener = bind_listener::<QueryResultEncoding>();
         let (session, results) = listener.open_session(SessionConfig::default())?;
-        let (cancellation, cancellation_requests) = cancellation();
+        let (request_cancellation, cancellation_requests) = request_cancellation();
         let mut events = Box::pin(stream_events(
             session,
             results,
-            async { panic!("the test's termination panics") },
-            cancellation,
+            async { panic!("the test's wait for the job's termination panics") },
+            request_cancellation,
         ));
 
         let ending = Ending::receive(&mut events).await;
@@ -633,8 +655,13 @@ mod tests {
         let listener = bind_listener::<QueryResultEncoding>();
         let (session, results) = listener.open_session(SessionConfig::default())?;
         let network_output = session.network_output().clone();
-        let (cancellation, cancellation_requests) = cancellation();
-        let events = stream_events(session, results, std::future::pending(), cancellation);
+        let (request_cancellation, cancellation_requests) = request_cancellation();
+        let events = stream_events(
+            session,
+            results,
+            std::future::pending(),
+            request_cancellation,
+        );
         let mut attempt = FakeClpS::connect(&network_output).await;
         attempt.send_handshake(TASK_INDEX, ARCHIVE_ID).await;
         // Lets the listener join the attempt to the session while the job runs.
@@ -651,8 +678,8 @@ mod tests {
     async fn dropping_the_stream_while_the_job_runs_stops_waiting_for_termination() -> Result<()> {
         let listener = bind_listener::<QueryResultEncoding>();
         let (session, results) = listener.open_session(SessionConfig::default())?;
-        let (mut termination_sender, termination) = termination();
-        let events = stream_events(session, results, termination, async {});
+        let (mut termination_sender, wait_for_termination) = wait_for_termination();
+        let events = stream_events(session, results, wait_for_termination, async {});
 
         drop(events);
 
@@ -670,9 +697,14 @@ mod tests {
             channel_capacity: NonZeroUsize::MIN,
         })?;
         let network_output = session.network_output().clone();
-        let (termination_sender, termination) = termination();
-        let (cancellation, cancellation_requests) = cancellation();
-        let mut events = Box::pin(stream_events(session, results, termination, cancellation));
+        let (termination_sender, wait_for_termination) = wait_for_termination();
+        let (request_cancellation, cancellation_requests) = request_cancellation();
+        let mut events = Box::pin(stream_events(
+            session,
+            results,
+            wait_for_termination,
+            request_cancellation,
+        ));
         let _attempt = connect_attempt_blocked_on_its_second_batch(&network_output).await;
         termination_sender
             .send(Ok(QueryJobStatus::Succeeded))
@@ -696,12 +728,17 @@ mod tests {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?;
-        let (cancellation, cancellation_requests) = cancellation();
+        let (request_cancellation, cancellation_requests) = request_cancellation();
         let events = {
             let _runtime_context = runtime.enter();
             let listener = bind_listener::<QueryResultEncoding>();
             let (session, results) = listener.open_session(SessionConfig::default())?;
-            stream_events(session, results, std::future::pending(), cancellation)
+            stream_events(
+                session,
+                results,
+                std::future::pending(),
+                request_cancellation,
+            )
         };
         drop(runtime);
 

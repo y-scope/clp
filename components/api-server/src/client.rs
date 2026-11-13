@@ -480,7 +480,7 @@ impl Client {
         /// The interval between the end of one read of the job's status and the start of the next.
         const QUERY_JOB_STATUS_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
-        let termination = {
+        let wait_for_termination = {
             let client = self.clone();
             async move {
                 loop {
@@ -492,7 +492,7 @@ impl Client {
                 }
             }
         };
-        let cancellation = {
+        let request_cancellation = {
             let client = self.clone();
             async move {
                 match client.cancel_query_job(query_job_id).await {
@@ -513,7 +513,7 @@ impl Client {
                 }
             }
         };
-        streaming_query::stream_events(session, results, termination, cancellation)
+        streaming_query::stream_events(session, results, wait_for_termination, request_cancellation)
     }
 
     async fn get_job_config(&self, query_job_id: u64) -> Result<QueryJobConfig, ClientError> {
