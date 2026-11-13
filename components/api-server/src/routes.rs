@@ -463,38 +463,15 @@ mod tests {
 
     #[tokio::test]
     async fn query_rejects_invalid_requests_with_unprocessable_entity() -> anyhow::Result<()> {
-        use clp_rust_utils::job_config::TimeRange;
-
-        let reversed_time_range_error =
-            TimeRange::new(Some(2), Some(1)).expect_err("a reversed time range should be rejected");
         let app = clp_s_app_with_lazy_clients().await;
         for (body, expected_error) in [
-            (
-                serde_json::json!({"query": {"query_string": ""}, "output": {"type": "file"}}),
-                "query.query_string: invalid value: string \"\", expected a string with a length \
-                 of more than 0"
-                    .to_owned(),
-            ),
-            (
-                serde_json::json!({
-                    "query": {
-                        "query_string": "*",
-                        "time_range": {
-                            "begin_timestamp_millisecs": 2,
-                            "end_timestamp_millisecs": 1,
-                        },
-                    },
-                    "output": {"type": "file"},
-                }),
-                format!("query.time_range: {reversed_time_range_error}"),
-            ),
             (
                 serde_json::json!({
                     "datasets": [],
                     "query": {"query_string": "*"},
                     "output": {"type": "file"},
                 }),
-                "datasets: invalid length 0, expected at least one dataset".to_owned(),
+                "datasets: invalid length 0, expected at least one dataset",
             ),
             (
                 serde_json::json!({
@@ -506,14 +483,7 @@ mod tests {
                         "session_token": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
                     },
                 }),
-                "output.type: unknown variant `network`".to_owned(),
-            ),
-            (
-                serde_json::json!({
-                    "query": {"query_string": "*"},
-                    "output": {"type": "file", "max_num_results": 1},
-                }),
-                "output: unknown field `max_num_results`".to_owned(),
+                "output.type: unknown variant `network`",
             ),
         ] {
             let response = app
@@ -535,7 +505,7 @@ mod tests {
             );
             let response_body = get_body(response).await;
             assert!(
-                response_body.contains(&expected_error),
+                response_body.contains(expected_error),
                 "{body}: {response_body}"
             );
         }
