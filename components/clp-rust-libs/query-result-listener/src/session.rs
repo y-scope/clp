@@ -74,22 +74,18 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
 
     /// Streams the events of the session's query job.
     ///
-    /// The stream yields the batches of the job's results as they arrive, until
-    /// `wait_for_termination` resolves. Once `wait_for_termination` resolves with the job's
-    /// terminal status, the stream ends the session, yields the batches that the session's
-    /// connections had already claimed until the session's result stream ends, and then yields a
-    /// [`SessionEvent::Ended`]. Instead, if the session fails, or `wait_for_termination` resolves
-    /// with an error or panics, the stream awaits `request_cancellation` and then yields a
-    /// [`SessionEvent::Failed`].
+    /// The stream yields the job's results as [`SessionEvent::Results`].
     ///
-    /// `wait_for_termination` runs in a task of its own on the current Tokio runtime from when this
-    /// method is called, so that it makes progress even while the stream isn't polled.
+    /// Once `wait_for_termination` resolves with the job's terminal status, the stream ends the
+    /// session, yields the results its connections had already claimed, and then yields
+    /// [`SessionEvent::Ended`].
     ///
-    /// Dropping the stream ends the session and stops the task that runs `wait_for_termination`. If
-    /// the stream hasn't yet found the job terminated or started to request the job's cancellation,
-    /// dropping it also requests the cancellation, by spawning `request_cancellation` on the
-    /// current Tokio runtime. Outside a Tokio runtime, it only logs that the cancellation can't be
-    /// requested. A request that the stream is awaiting when it's dropped is abandoned.
+    /// If the session fails, or `wait_for_termination` fails or panics, the stream requests the
+    /// job's cancellation through `request_cancellation` and yields [`SessionEvent::Failed`]
+    /// instead.
+    ///
+    /// Dropping the stream before it has seen the job terminate or failed requests the job's
+    /// cancellation, so `request_cancellation` must tolerate a job that has already terminated.
     ///
     /// # Type Parameters
     ///
@@ -102,7 +98,7 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
     /// # Panics
     ///
     /// The returned stream panics if the session's result stream ends while the session is open,
-    /// which the listener never lets it do.
+    /// which should never happen in practice (assuming called inside a Tokio runtime).
     pub fn into_events<TerminationErrorType: std::error::Error + Send + Sync + 'static>(
         self,
         wait_for_termination: impl Future<Output = Result<QueryJobStatus, TerminationErrorType>>
