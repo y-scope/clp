@@ -13,6 +13,11 @@ use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::mysql::MySqlTypeInfo;
 use sqlx::mysql::MySqlValueRef;
+use utoipa::PartialSchema;
+use utoipa::ToSchema;
+use utoipa::openapi::RefOr;
+use utoipa::openapi::schema::ArrayBuilder;
+use utoipa::openapi::schema::Schema;
 
 use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 
@@ -161,6 +166,50 @@ pub enum ParseDatasetNameError {
     TooLong(String),
 }
 
+/// A non-empty list of dataset names.
+///
+/// It serializes as a list of dataset names, and deserializes from one that isn't empty.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(try_from = "Vec<DatasetName>", into = "Vec<DatasetName>")]
+pub struct NonEmptyDatasetNames {
+    dataset_names: Vec<DatasetName>,
+}
+
+impl TryFrom<Vec<DatasetName>> for NonEmptyDatasetNames {
+    type Error = EmptyDatasetNamesError;
+
+    fn try_from(value: Vec<DatasetName>) -> Result<Self, Self::Error> {
+        if value.is_empty() {
+            return Err(EmptyDatasetNamesError);
+        }
+        Ok(Self {
+            dataset_names: value,
+        })
+    }
+}
+
+impl PartialSchema for NonEmptyDatasetNames {
+    fn schema() -> RefOr<Schema> {
+        ArrayBuilder::new()
+            .items(String::schema())
+            .min_items(Some(1))
+            .into()
+    }
+}
+
+impl ToSchema for NonEmptyDatasetNames {}
+
+impl From<NonEmptyDatasetNames> for Vec<DatasetName> {
+    fn from(dataset_names: NonEmptyDatasetNames) -> Self {
+        dataset_names.dataset_names
+    }
+}
+
+/// An error returned when a list of dataset names is empty.
+#[derive(Debug, Eq, PartialEq, thiserror::Error)]
+#[error("at least one dataset name is required")]
+pub struct EmptyDatasetNamesError;
+
 /// The name of the dataset used when none is specified.
 const CLP_DEFAULT_DATASET_NAME: &str = "default";
 
@@ -186,6 +235,8 @@ mod tests {
 
     use super::DATASET_NAME_MAX_LEN;
     use super::DatasetName;
+    use super::EmptyDatasetNamesError;
+    use super::NonEmptyDatasetNames;
     use super::ParseDatasetNameError;
 
     #[test]
@@ -385,5 +436,23 @@ mod tests {
                 .expect("name should be a valid dataset name")
                 .is_default()
         );
+    }
+
+    #[test]
+    fn non_empty_dataset_names_rejects_only_an_empty_list() -> anyhow::Result<()> {
+        let dataset_names: NonEmptyDatasetNames =
+            serde_json::from_value(serde_json::json!(["logs", "metrics"]))?;
+        assert_eq!(
+            Vec::from(dataset_names),
+            vec![
+                "logs".parse::<DatasetName>()?,
+                "metrics".parse::<DatasetName>()?
+            ]
+        );
+
+        let error = serde_json::from_value::<NonEmptyDatasetNames>(serde_json::json!([]))
+            .expect_err("an empty list should be rejected");
+        assert_eq!(error.to_string(), EmptyDatasetNamesError.to_string());
+        Ok(())
     }
 }
