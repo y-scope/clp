@@ -119,6 +119,7 @@ public:
             -> std::optional<std::pair<epochtime_t, epochtime_t>>;
 
 private:
+    // Methods
     /**
      * Merges time ranges for the current file split with the archive's time range.
      * @throws OperationFailed if the file split's timestamp column node ID doesn't match the

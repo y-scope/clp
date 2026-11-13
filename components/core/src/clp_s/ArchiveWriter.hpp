@@ -310,8 +310,8 @@ public:
      * Closes the time range of the current file split, resetting the accumulated time ranges for
      * the next file split.
      *
-     * @return An option containing a pair representing the start and end timestamp of the closed
-     * file split as milliseconds since the UNIX epoch.
+     * @return A pair representing the start and end timestamp of the closed file split as milliseconds
+     * since the UNIX epoch.
      * @return std::nullopt if the file split has no timestamps.
      */
     [[nodiscard]] auto close_current_file_split_time_range()
