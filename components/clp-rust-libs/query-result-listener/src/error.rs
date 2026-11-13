@@ -102,5 +102,5 @@ pub enum SessionEventError<TerminationErrorType> {
     Termination(TerminationErrorType),
 
     #[error("the task waiting for the query job's termination failed: {0}")]
-    TerminationPanicked(JoinError),
+    TerminationTaskFailed(JoinError),
 }

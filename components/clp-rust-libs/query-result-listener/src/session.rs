@@ -129,7 +129,7 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
                     status = &mut termination_task => {
                         break match status {
                             Ok(status) => status.map_err(SessionEventError::Termination),
-                            Err(error) => Err(SessionEventError::TerminationPanicked(error)),
+                            Err(error) => Err(SessionEventError::TerminationTaskFailed(error)),
                         };
                     }
                     batch = results.next() => yield SessionEvent::Results(batch.expect(
