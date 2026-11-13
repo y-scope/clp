@@ -202,7 +202,8 @@ struct Ending {
 }
 
 impl Ending {
-    /// Receives the items of `events` until its end or failure, without polling it further.
+    /// Receives the items of `events` until its end or failure, and checks that the stream ends
+    /// after it.
     ///
     /// # Returns
     ///
@@ -210,7 +211,7 @@ impl Ending {
     ///
     /// # Panics
     ///
-    /// Panics if the stream ends without an end or a failure.
+    /// Panics if the stream ends without an end or a failure, or doesn't end after it.
     async fn receive(events: &mut (impl Stream<Item = TestEvent> + Unpin)) -> Self {
         let mut results = Vec::new();
         let last_event = loop {
@@ -222,6 +223,10 @@ impl Ending {
                 last_event => break last_event,
             }
         };
+        assert!(
+            next_event(events).await.is_none(),
+            "the event stream should end after its last event"
+        );
         Self {
             results,
             last_event,
