@@ -49,7 +49,6 @@ fn log_unexpected_error(operation: &str, error: &ClientError) {
         | ClientError::StreamExtractionTimeout(_)
         | ClientError::ExtractionJobFailed { .. }
         | ClientError::ExtractionJobNotFound(_)
-        | ClientError::QueryResultEncoding(_)
         | ClientError::LogsInput(
             LogsInputError::MountPointUnavailable(_)
             | LogsInputError::RelativeContainerPath(_)

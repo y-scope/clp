@@ -1,6 +1,5 @@
 use std::num::NonZeroU32;
 use std::pin::Pin;
-use std::time::Duration;
 
 use async_stream::stream;
 use chrono::DateTime;
@@ -26,9 +25,6 @@ use futures::Stream;
 use futures::StreamExt;
 use non_empty_string::NonEmptyString;
 use pin_project_lite::pin_project;
-use query_result_listener::encoding::ResultEncoding;
-use query_result_listener::session::ResultStream;
-use query_result_listener::session::Session;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::Row;
@@ -36,8 +32,6 @@ use utoipa::IntoParams;
 use utoipa::ToSchema;
 
 pub use crate::error::ClientError;
-use crate::streaming_query;
-use crate::streaming_query::StreamingQueryEvent;
 
 /// Default job statuses to include when the caller does not specify `job_status`.
 /// Covers all terminal states that consumed compute resources (succeeded, failed).
@@ -449,71 +443,6 @@ impl Client {
         query_job::get_status(&self.sql_pool, query_job_id)
             .await?
             .ok_or(ClientError::QueryJobNotFound(query_job_id))
-    }
-
-    /// Streams the results of a submitted query job from `session`, which the job's tasks stream
-    /// their results to, and its `results`.
-    ///
-    /// The stream yields the events that [`streaming_query::stream_events`] describes. The stream
-    /// finds the job terminated by reading its status at a fixed interval, and ends with an error
-    /// if the status can't be read or the job doesn't exist. It requests the job's cancellation
-    /// with [`Client::cancel_query_job`], and logs the request's outcome.
-    ///
-    /// # Type Parameters
-    ///
-    /// * `EncodingType` - The encoding of the job's results.
-    ///
-    /// # Returns
-    ///
-    /// The stream of the job's results.
-    #[expect(
-        dead_code,
-        reason = "the streaming query endpoint that streams query results comes in a later change"
-    )]
-    pub(crate) fn stream_results<EncodingType: ResultEncoding>(
-        &self,
-        query_job_id: u64,
-        session: Session<EncodingType>,
-        results: ResultStream<EncodingType::Batch>,
-    ) -> impl Stream<Item = StreamingQueryEvent<EncodingType::Batch>> + Send + use<EncodingType>
-    {
-        /// The interval between the end of one read of the job's status and the start of the next.
-        const QUERY_JOB_STATUS_POLL_INTERVAL: Duration = Duration::from_millis(100);
-
-        let wait_for_termination = {
-            let client = self.clone();
-            async move {
-                loop {
-                    tokio::time::sleep(QUERY_JOB_STATUS_POLL_INTERVAL).await;
-                    let status = client.get_status(query_job_id).await?;
-                    if status.is_terminal() {
-                        return Ok(status);
-                    }
-                }
-            }
-        };
-        let request_cancellation = {
-            let client = self.clone();
-            async move {
-                match client.cancel_query_job(query_job_id).await {
-                    Ok(()) => tracing::info!(
-                        query_job_id,
-                        "Requested the cancellation of a streaming query's job."
-                    ),
-                    Err(ClientError::QueryJobAlreadyTerminated(_)) => tracing::info!(
-                        query_job_id,
-                        "Requested the cancellation of a streaming query's job, which had already \
-                         terminated."
-                    ),
-                    Err(e) => tracing::warn!(
-                        query_job_id,
-                        error = % e,
-                        "Failed to request the cancellation of a streaming query's job."
-                    ),
-                }
-            }
-        };
-        streaming_query::stream_events(session, results, wait_for_termination, request_cancellation)
     }
 
     async fn get_job_config(&self, query_job_id: u64) -> Result<QueryJobConfig, ClientError> {

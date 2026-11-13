@@ -122,7 +122,6 @@ dependencies = [
  "sqlx",
  "thiserror",
  "tokio",
- "tokio-util",
  "tower",
  "tower-http 0.7.0",
  "tracing",
@@ -3335,6 +3334,7 @@ name = "query-result-listener"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
+ "async-stream",
  "bytes",
  "clp-rust-utils",
  "dashmap",

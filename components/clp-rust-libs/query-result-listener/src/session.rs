@@ -1,5 +1,6 @@
 //! Sessions, each of which collects the results streamed for one query job.
 
+use std::future::Future;
 use std::num::NonZeroU16;
 use std::num::NonZeroUsize;
 use std::pin::Pin;
@@ -10,16 +11,20 @@ use std::sync::atomic::Ordering;
 use std::task::Context;
 use std::task::Poll;
 
+use async_stream::stream;
 use clp_rust_utils::job_config::NetworkOutput;
+use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::types::ArchiveId;
 use clp_rust_utils::types::SessionToken;
 use dashmap::DashMap;
 use dashmap::Entry;
 use futures::Stream;
+use futures::StreamExt;
 use non_empty_string::NonEmptyString;
 use spider_core::task::TaskIndex;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
+use tokio_util::task::AbortOnDropHandle;
 
 use crate::connection::Connection;
 use crate::cursor::TaskCursor;
@@ -27,6 +32,7 @@ use crate::encoding::ResultEncoding;
 use crate::error::ConnectionError;
 use crate::error::ProtocolError;
 use crate::error::SessionError;
+use crate::error::SessionEventError;
 use crate::protocol::Handshake;
 
 /// Configuration of a session.
@@ -124,6 +130,32 @@ impl<BatchType> Stream for ResultStream<BatchType> {
     }
 }
 
+/// An event of a session's query job.
+///
+/// # Type Parameters
+///
+/// * `BatchType` - The type of a batch of encoded results.
+/// * `TerminationErrorType` - The error of a failure to wait for the job's termination.
+#[derive(Debug)]
+pub enum SessionEvent<BatchType, TerminationErrorType> {
+    /// A batch of the job's results.
+    Results(BatchType),
+
+    /// The end of the events, once the job has terminated and the session's result stream has
+    /// ended.
+    Ended {
+        /// The terminal status of the job.
+        status: QueryJobStatus,
+
+        /// The statistics of the session.
+        stats: SessionStats,
+    },
+
+    /// The end of the events because the session failed or waiting for the job's termination
+    /// failed. The job's cancellation has been requested.
+    Failed(SessionEventError<TerminationErrorType>),
+}
+
 /// Statistics of a session's connections.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct SessionStats {
@@ -133,6 +165,92 @@ pub struct SessionStats {
     /// The number of results dropped because another attempt of their task had already emitted
     /// them.
     pub num_duplicates_dropped: u64,
+}
+
+/// Streams the events of a query job from `session`, which the job's tasks stream their results to,
+/// and its `results`.
+///
+/// The stream yields the batches of the job's results as they arrive, until `wait_for_termination`
+/// resolves. Once `wait_for_termination` resolves with the job's terminal status, the stream ends
+/// the session, yields the batches that the session's connections had already claimed until
+/// `results` ends, and then yields a [`SessionEvent::Ended`]. Instead, if the session fails, or
+/// `wait_for_termination` resolves with an error or panics, the stream requests the job's
+/// cancellation and yields a [`SessionEvent::Failed`].
+///
+/// `wait_for_termination` runs in a task of its own on the current Tokio runtime from when this
+/// function is called, so that it makes progress even while the stream isn't polled.
+///
+/// Dropping the stream ends the session and stops the task that runs `wait_for_termination`. If the
+/// stream hasn't yet found the job terminated or yielded a [`SessionEvent::Failed`], dropping it
+/// also requests the job's cancellation.
+///
+/// The stream requests the job's cancellation by spawning `request_cancellation` on the current
+/// Tokio runtime. Outside a Tokio runtime, it only logs that the cancellation can't be requested.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the job's results.
+/// * `TerminationErrorType` - The error of a failure to wait for the job's termination.
+///
+/// # Returns
+///
+/// The stream of the job's events.
+///
+/// # Panics
+///
+/// The returned stream panics if `results` ends while `session` is open, which the listener never
+/// lets it do.
+pub fn stream_events<EncodingType: ResultEncoding, TerminationErrorType: Send + 'static>(
+    session: Session<EncodingType>,
+    mut results: ResultStream<EncodingType::Batch>,
+    wait_for_termination: impl Future<Output = Result<QueryJobStatus, TerminationErrorType>>
+    + Send
+    + 'static,
+    request_cancellation: impl Future<Output = ()> + Send + 'static,
+) -> impl Stream<Item = SessionEvent<EncodingType::Batch, TerminationErrorType>> + Send {
+    let cancellation_guard = CancellationGuard::new(request_cancellation);
+    let mut termination_task = AbortOnDropHandle::new(tokio::spawn(wait_for_termination));
+    stream! {
+        let end = loop {
+            // `biased`, so that a session failure isn't missed because the job's status was seen
+            // first, and a steady flow of batches doesn't keep the job's status from being noticed.
+            tokio::select! {
+                biased;
+                error = session.failed() => {
+                    break Err(SessionEventError::Encoding(error.to_string()));
+                }
+                status = &mut termination_task => {
+                    break match status {
+                        Ok(status) => status.map_err(SessionEventError::Termination),
+                        Err(error) => Err(SessionEventError::TerminationPanicked(error)),
+                    };
+                }
+                batch = results.next() => yield SessionEvent::Results(batch.expect(
+                    "a session's result stream shouldn't end while the session is open",
+                )),
+            }
+        };
+        drop(session);
+        match end {
+            Ok(status) => {
+                cancellation_guard.disarm();
+                while let Some(batch) = results.next().await {
+                    yield SessionEvent::Results(batch);
+                }
+                yield SessionEvent::Ended {
+                    status,
+                    stats: results.stats(),
+                };
+            }
+            Err(error) => {
+                drop(results);
+                // Fires the cancellation before the failure is yielded, rather than once the stream
+                // ends or is dropped.
+                drop(cancellation_guard);
+                yield SessionEvent::Failed(error);
+            }
+        }
+    }
 }
 
 /// The sessions registered on a listener, keyed by their tokens.
@@ -442,6 +560,50 @@ struct Registration<EncodingType: ResultEncoding> {
 impl<EncodingType: ResultEncoding> Drop for Registration<EncodingType> {
     fn drop(&mut self) {
         self.session_registry.unregister(&self.token);
+    }
+}
+
+/// A guard that fires the cancellation on drop.
+///
+/// # Type Parameters
+///
+/// * `CancellationType` - The type of the future that requests the cancellation.
+struct CancellationGuard<CancellationType: Future<Output = ()> + Send + 'static> {
+    cancellation: Option<CancellationType>,
+}
+
+impl<CancellationType: Future<Output = ()> + Send + 'static> CancellationGuard<CancellationType> {
+    /// Factory function.
+    ///
+    /// # Returns
+    ///
+    /// A newly created guard that requests the cancellation by running `cancellation`.
+    const fn new(cancellation: CancellationType) -> Self {
+        Self {
+            cancellation: Some(cancellation),
+        }
+    }
+
+    /// Disarms the guard, dropping it without firing the cancellation.
+    fn disarm(mut self) {
+        self.cancellation = None;
+    }
+}
+
+impl<CancellationType: Future<Output = ()> + Send + 'static> Drop
+    for CancellationGuard<CancellationType>
+{
+    fn drop(&mut self) {
+        let Some(cancellation) = self.cancellation.take() else {
+            return;
+        };
+        let Ok(runtime) = tokio::runtime::Handle::try_current() else {
+            tracing::warn!(
+                "Can't request the cancellation of a session's query job outside a Tokio runtime."
+            );
+            return;
+        };
+        runtime.spawn(cancellation);
     }
 }
 
