@@ -25,9 +25,7 @@ import {unquoteString} from "./utils";
  * @return
  */
 const buildQueryConfig = (payload: QueryJobCreation, aggregation?: Aggregation): QueryConfig => ({
-    datasets: 0 < payload.datasets.length ?
-        payload.datasets :
-        null,
+    datasets: payload.datasets,
 
     // Buffer results in the results cache (MongoDB) so that the results contain structured metadata
     // (e.g., timestamps and original file paths). Also, the `clp` storage engine doesn't support

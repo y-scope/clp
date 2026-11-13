@@ -413,24 +413,25 @@
           }
         }
       },
+      "NonEmptyDatasetNames": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1
+      },
       "QueryConfig": {
         "type": "object",
         "description": "Defines the request configuration for submitting a search query.",
         "required": [
+          "datasets",
           "query",
           "output"
         ],
         "properties": {
           "datasets": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "string"
-            },
-            "description": "The datasets to search within. If not provided, only `default` dataset will be searched.",
-            "minItems": 1
+            "$ref": "#/components/schemas/NonEmptyDatasetNames",
+            "description": "The datasets to search within."
           },
           "output": {
             "$ref": "#/components/schemas/QueryOutputConfig",

@@ -462,53 +462,37 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn query_rejects_invalid_requests_with_unprocessable_entity() -> anyhow::Result<()> {
+    async fn query_rejects_a_network_output_with_unprocessable_entity() -> anyhow::Result<()> {
         let app = clp_s_app_with_lazy_clients().await;
-        for (body, expected_error) in [
-            (
-                serde_json::json!({
-                    "datasets": [],
-                    "query": {"query_string": "*"},
-                    "output": {"type": "file"},
-                }),
-                "datasets: invalid length 0, expected at least one dataset",
-            ),
-            (
-                serde_json::json!({
-                    "query": {"query_string": "*"},
-                    "output": {
-                        "type": "network",
-                        "host": "localhost",
-                        "port": 8080,
-                        "session_token": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
-                    },
-                }),
-                "output.type: unknown variant `network`",
-            ),
-        ] {
-            let response = app
-                .clone()
-                .oneshot(
-                    Request::post("/query")
-                        .header("content-type", "application/json")
-                        .body(Body::from(body.to_string()))?,
-                )
-                .await?;
-            assert_eq!(
-                response.status(),
-                StatusCode::UNPROCESSABLE_ENTITY,
-                "{body}"
-            );
-            assert_eq!(
-                response.headers()["content-type"],
-                "text/plain; charset=utf-8"
-            );
-            let response_body = get_body(response).await;
-            assert!(
-                response_body.contains(expected_error),
-                "{body}: {response_body}"
-            );
-        }
+        let body = serde_json::json!({
+            "datasets": ["default"],
+            "query": {"query_string": "*"},
+            "output": {
+                "type": "network",
+                "host": "localhost",
+                "port": 8080,
+                "session_token": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
+            },
+        });
+
+        let response = app
+            .oneshot(
+                Request::post("/query")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body.to_string()))?,
+            )
+            .await?;
+
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            response.headers()["content-type"],
+            "text/plain; charset=utf-8"
+        );
+        let response_body = get_body(response).await;
+        assert!(
+            response_body.contains("output.type: unknown variant `network`"),
+            "{response_body}"
+        );
         Ok(())
     }
 

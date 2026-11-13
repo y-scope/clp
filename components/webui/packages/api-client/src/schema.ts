@@ -492,10 +492,11 @@ export interface components {
              */
             num_messages: number;
         };
+        NonEmptyDatasetNames: string[];
         /** @description Defines the request configuration for submitting a search query. */
         QueryConfig: {
-            /** @description The datasets to search within. If not provided, only `default` dataset will be searched. */
-            datasets?: string[] | null;
+            /** @description The datasets to search within. */
+            datasets: components["schemas"]["NonEmptyDatasetNames"];
             /** @description Where to buffer the search results. */
             output: components["schemas"]["QueryOutputConfig"];
             /** @description The search to run. */

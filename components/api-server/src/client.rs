@@ -9,7 +9,7 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::database::mysql::query_job;
-use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::dataset::NonEmptyDatasetNames;
 use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
@@ -23,7 +23,6 @@ use futures::Stream;
 use futures::StreamExt;
 use pin_project_lite::pin_project;
 use serde::Deserialize;
-use serde::Deserializer;
 use serde::Serialize;
 use sqlx::Row;
 use utoipa::IntoParams;
@@ -181,10 +180,8 @@ pub struct CompressionUsage {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QueryConfig {
-    /// The datasets to search within. If not provided, only `default` dataset will be searched.
-    #[serde(default, deserialize_with = "deserialize_non_empty_datasets")]
-    #[schema(value_type = Option<Vec<String>>, min_items = 1)]
-    pub datasets: Option<Vec<DatasetName>>,
+    /// The datasets to search within.
+    pub datasets: NonEmptyDatasetNames,
 
     /// The search to run.
     pub query: SearchQuery,
@@ -206,7 +203,7 @@ impl From<QueryConfig> for QueryJobConfig {
             QueryOutputConfig::File {} => QueryOutput::File {},
         };
         Self {
-            datasets: value.datasets.unwrap_or_else(Self::default_datasets),
+            datasets: value.datasets.into(),
             query: value.query,
             output,
         }
@@ -777,36 +774,11 @@ where
     }
 }
 
-/// Deserializes the datasets of a [`QueryConfig`], which may be `null` but not empty.
-///
-/// # Type Parameters
-///
-/// * `DeserializerType` - The type of the deserializer to read the datasets from.
-///
-/// # Returns
-///
-/// The deserialized datasets on success, or `None` if the value is `null`.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`serde::de::Error::invalid_length`] if the value is an empty array.
-/// * Forwards [`Option::<Vec<DatasetName>>::deserialize`]'s return values on failure.
-fn deserialize_non_empty_datasets<'de, DeserializerType: Deserializer<'de>>(
-    deserializer: DeserializerType,
-) -> Result<Option<Vec<DatasetName>>, DeserializerType::Error> {
-    let datasets = Option::<Vec<DatasetName>>::deserialize(deserializer)?;
-    if datasets.as_ref().is_some_and(Vec::is_empty) {
-        return Err(serde::de::Error::invalid_length(0, &"at least one dataset"));
-    }
-    Ok(datasets)
-}
-
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
+    use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::TimeRange;
     use non_empty_string::NonEmptyString;
 
@@ -869,7 +841,7 @@ mod tests {
                 ..base_query_config()
             };
             let expected = QueryJobConfig {
-                datasets: vec![DatasetName::default()],
+                datasets: base_query_config().datasets.into(),
                 query: base_query_config().query,
                 output: expected_output,
             };
@@ -879,47 +851,6 @@ mod tests {
                 "query config: {query_config:?}"
             );
         }
-
-        let other_dataset: DatasetName = "other"
-            .parse()
-            .expect("name should be a valid dataset name");
-        assert_eq!(
-            QueryJobConfig::from(QueryConfig {
-                datasets: Some(vec![other_dataset.clone()]),
-                ..base_query_config()
-            }),
-            QueryJobConfig {
-                datasets: vec![other_dataset],
-                query: base_query_config().query,
-                output: QueryOutput::File {},
-            }
-        );
-    }
-
-    #[test]
-    fn query_config_without_datasets_searches_the_default_dataset() -> anyhow::Result<()> {
-        let expected = QueryJobConfig {
-            datasets: vec![DatasetName::default()],
-            query: SearchQuery {
-                query_string: NonEmptyString::new("*".to_owned())
-                    .expect("query string is non-empty"),
-                time_range: TimeRange::default(),
-                ignore_case: false,
-            },
-            output: QueryOutput::File {},
-        };
-        for body in [
-            serde_json::json!({"query": {"query_string": "*"}, "output": {"type": "file"}}),
-            serde_json::json!({
-                "datasets": null,
-                "query": {"query_string": "*"},
-                "output": {"type": "file"},
-            }),
-        ] {
-            let query_config: QueryConfig = serde_json::from_value(body.clone())?;
-            assert_eq!(QueryJobConfig::from(query_config), expected, "{body}");
-        }
-        Ok(())
     }
 
     /// # Returns
@@ -927,7 +858,12 @@ mod tests {
     /// A valid query config whose results are buffered in files.
     fn base_query_config() -> QueryConfig {
         QueryConfig {
-            datasets: None,
+            datasets: NonEmptyDatasetNames::try_from(vec![
+                "logs"
+                    .parse::<DatasetName>()
+                    .expect("name should be a valid dataset name"),
+            ])
+            .expect("dataset names are non-empty"),
             query: SearchQuery {
                 query_string: NonEmptyString::new("level: ERROR".to_owned())
                     .expect("query string is non-empty"),
