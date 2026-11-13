@@ -6,6 +6,7 @@ import {
 import {message} from "antd";
 
 import {
+    type Aggregation,
     cancelQuery,
     type QueryConfig,
     submitQuery,
@@ -20,23 +21,27 @@ import {unquoteString} from "./utils";
  * Builds an API server query config from a query job creation payload.
  *
  * @param payload
+ * @param aggregation
  * @return
  */
-const buildQueryConfig = (payload: QueryJobCreation): QueryConfig => ({
-    // Buffer results in MongoDB so that the results contain structured metadata (e.g.,
-    // timestamps and original file paths). Also, the `clp` storage engine doesn't support
-    // writing search results to files.
-    buffer_results_in_mongodb: true,
-    datasets: 0 < payload.datasets.length ?
-        payload.datasets :
-        null,
-    ignore_case: payload.ignoreCase,
-    ...("undefined" === typeof payload.maxNumResults ?
-        {} :
-        {max_num_results: payload.maxNumResults}),
-    query_string: payload.queryString,
-    time_range_begin_millisecs: payload.timestampBegin,
-    time_range_end_millisecs: payload.timestampEnd,
+const buildQueryConfig = (payload: QueryJobCreation, aggregation?: Aggregation): QueryConfig => ({
+    datasets: payload.datasets,
+    output: {
+        ...("undefined" === typeof aggregation ?
+            {} :
+            {aggregation}),
+        ...("undefined" === typeof payload.maxNumResults ?
+            {} :
+            {max_num_results: payload.maxNumResults}),
+    },
+    query: {
+        ignore_case: payload.ignoreCase,
+        query_string: payload.queryString,
+        time_range: {
+            begin_timestamp_millisecs: payload.timestampBegin,
+            end_timestamp_millisecs: payload.timestampEnd,
+        },
+    },
 });
 
 /**
@@ -85,13 +90,12 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
     store.updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
-    const queryConfig = buildQueryConfig(payload);
     Promise.all([
-        submitQuery(queryConfig),
-        submitQuery({
-            ...queryConfig,
-            count_by_time_bucket_size_millisecs: payload.timeRangeBucketSizeMillis,
-        }),
+        submitQuery(buildQueryConfig(payload)),
+        submitQuery(buildQueryConfig(payload, {
+            bucket_size_millisecs: payload.timeRangeBucketSizeMillis,
+            type: "count_by_time",
+        })),
     ])
         .then(([searchJobId, aggregationJobId]) => {
             store.updateSearchJobId(searchJobId.toString());

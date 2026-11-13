@@ -1,17 +1,21 @@
 import {
+    type components,
     createApiClient,
     type paths,
 } from "@webui/api-client";
 
 
-type QueryConfig = paths["/query"]["post"]["requestBody"]["content"]["application/json"];
+type Aggregation = components["schemas"]["Aggregation"];
+
+type QueryConfig =
+    paths["/query/results_cache"]["post"]["requestBody"]["content"]["application/json"];
 
 const API_SERVER_BASE_URL = "/api/v1";
 
 const apiClient = createApiClient({baseUrl: API_SERVER_BASE_URL});
 
 /**
- * Submits a query job to the API server.
+ * Submits a query job whose results are buffered in the results cache to the API server.
  *
  * @param queryConfig
  * @return The ID of the newly created query job.
@@ -20,8 +24,11 @@ const apiClient = createApiClient({baseUrl: API_SERVER_BASE_URL});
 const submitQuery = async (queryConfig: QueryConfig): Promise<number> => {
     console.log("Submitting query:", JSON.stringify(queryConfig));
 
+    // Buffer results in the results cache (MongoDB) so that the results contain structured metadata
+    // (e.g., timestamps and original file paths). Also, the `clp` storage engine doesn't support
+    // writing search results to files.
     // eslint-disable-next-line new-cap
-    const {data, response} = await apiClient.POST("/query", {body: queryConfig});
+    const {data, response} = await apiClient.POST("/query/results_cache", {body: queryConfig});
     if ("undefined" === typeof data) {
         throw new Error(`Failed to submit query: HTTP ${response.status}`);
     }
@@ -53,7 +60,10 @@ const cancelQuery = async (queryJobId: number): Promise<void> => {
     }
 };
 
-export type {QueryConfig};
+export type {
+    Aggregation,
+    QueryConfig,
+};
 export {
     apiClient,
     cancelQuery,

@@ -1,3 +1,4 @@
+mod query;
 mod webui;
 
 use axum::Json;
@@ -15,13 +16,11 @@ use clp_rust_utils::logs_input::LogsInputError;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
-use serde::Serialize;
 use thiserror::Error;
 use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use utoipa::IntoParams;
 use utoipa::OpenApi;
-use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -29,7 +28,6 @@ use crate::client::Client;
 use crate::client::ClientError;
 use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
-use crate::client::QueryConfig;
 use crate::client::ValidatedCompressionUsageParams;
 use crate::webui_client::WebuiClient;
 
@@ -69,7 +67,7 @@ pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error
     let (public_routes, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(health))
         .routes(routes!(health))
-        .routes(routes!(query))
+        .merge(query::router())
         .routes(routes!(query_results))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
@@ -93,11 +91,13 @@ mod api_doc {
     use super::__path_cancel_query;
     use super::__path_compression_usage;
     use super::__path_health;
-    use super::__path_query;
     use super::__path_query_results;
     use super::CompressionUsage;
     use super::OpenApi;
     use super::OpenApiRouter;
+    use super::query::__path_submit_query_to_file;
+    use super::query::__path_submit_query_to_results_cache;
+    use super::query::__path_submit_query_to_stream;
     use super::webui;
     use crate::client::CompressionJobStatus;
 
@@ -108,7 +108,15 @@ mod api_doc {
             description = "API Server for CLP",
             contact(name = "YScope")
         ),
-        paths(health, query, query_results, cancel_query, compression_usage),
+        paths(
+            health,
+            submit_query_to_results_cache,
+            submit_query_to_file,
+            submit_query_to_stream,
+            query_results,
+            cancel_query,
+            compression_usage
+        ),
         components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
@@ -134,69 +142,6 @@ pub use api_doc::*;
 )]
 async fn health() -> String {
     "API server is running".to_owned()
-}
-
-#[utoipa::path(
-    post,
-    path = "/query",
-    description = "Submits a new query job.",
-    request_body(
-        content= QueryConfig,
-        example = json!({
-            "query_string": "*",
-            "datasets": ["default"],
-            "time_range_begin_millisecs": 0,
-            "time_range_end_millisecs": 17_356_896,
-            "ignore_case": true,
-            "buffer_results_in_mongodb": true,
-            "count_by_time_bucket_size_millisecs": null
-        })),
-    responses(
-        (
-            status = OK,
-            body = QueryResultsUri,
-            description = "The URI to fetch the results of the submitted query.",
-            example = json!({"query_results_uri":"query_results/1"})
-        ),
-        (status = BAD_REQUEST, body = String, content_type = "text/plain",
-            description = "The request body is not valid JSON or could not be read, query_string \
-                is empty, or time_range_begin_millisecs > time_range_end_millisecs."),
-        (status = PAYLOAD_TOO_LARGE, body = String, content_type = "text/plain",
-            description = "The request body exceeds the configured size limit."),
-        (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
-            description = "The Content-Type header is missing or is not a JSON media type."),
-        (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
-            description = "The JSON body has missing or unknown fields, or fields with invalid \
-                types or values (e.g., a non-positive `max_num_results`)."),
-        (status = INTERNAL_SERVER_ERROR)
-    )
-)]
-async fn query(
-    State(client): State<Client>,
-    Json(query_config): Json<QueryConfig>,
-) -> Result<Json<QueryResultsUri>, HandlerError> {
-    tracing::info!("Submitting query: {:?}", query_config);
-    let query_job_id = match client.submit_query(query_config).await {
-        Ok(id) => {
-            tracing::info!("Submitted query job ID: {}", id);
-            id
-        }
-        Err(err) => {
-            tracing::error!("Failed to submit query: {:?}", err);
-            return Err(err.into());
-        }
-    };
-    let uri = format!("query_results/{query_job_id}");
-    Ok(Json(QueryResultsUri {
-        query_results_uri: uri,
-    }))
-}
-
-#[derive(Clone, Serialize, Deserialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-struct QueryResultsUri {
-    /// The uri to get the query results.
-    query_results_uri: String,
 }
 
 /// Query parameters for the query results endpoint.
@@ -375,6 +320,8 @@ enum HandlerError {
     BadRequest(String),
     #[error("Gateway timeout: {0}")]
     GatewayTimeout(String),
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
 }
 
 impl From<axum::Error> for HandlerError {
@@ -428,6 +375,7 @@ impl IntoResponse for HandlerError {
             Self::InternalServer => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
             Self::GatewayTimeout(msg) => (StatusCode::GATEWAY_TIMEOUT, msg).into_response(),
+            Self::NotImplemented(msg) => (StatusCode::NOT_IMPLEMENTED, msg).into_response(),
         }
     }
 }
@@ -454,35 +402,6 @@ mod tests {
     use tower::ServiceExt;
 
     use super::*;
-
-    #[tokio::test]
-    async fn query_rejects_invalid_numeric_fields_with_unprocessable_entity() -> anyhow::Result<()>
-    {
-        let app = clp_s_app_with_lazy_clients().await;
-        for field in ["count_by_time_bucket_size_millisecs", "max_num_results"] {
-            let mut body = serde_json::json!({"query_string": "*"});
-            body[field] = serde_json::json!(0);
-            let response = app
-                .clone()
-                .oneshot(
-                    Request::post("/query")
-                        .header("content-type", "application/json")
-                        .body(Body::from(body.to_string()))?,
-                )
-                .await?;
-            assert_eq!(
-                response.status(),
-                StatusCode::UNPROCESSABLE_ENTITY,
-                "{body}"
-            );
-            assert_eq!(
-                response.headers()["content-type"],
-                "text/plain; charset=utf-8"
-            );
-            assert!(get_body(response).await.contains(field), "{body}");
-        }
-        Ok(())
-    }
 
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
