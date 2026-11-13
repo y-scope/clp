@@ -11,6 +11,7 @@ use axum::response::Sse;
 use axum::response::sse::Event;
 use axum::response::sse::KeepAlive;
 use axum::routing::get;
+use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::logs_input::LogsInputError;
 use futures::Stream;
 use futures::StreamExt;
@@ -143,13 +144,16 @@ async fn health() -> String {
     request_body(
         content= QueryConfig,
         example = json!({
-            "query_string": "*",
             "datasets": ["default"],
-            "time_range_begin_millisecs": 0,
-            "time_range_end_millisecs": 17_356_896,
-            "ignore_case": true,
-            "buffer_results_in_mongodb": true,
-            "count_by_time_bucket_size_millisecs": null
+            "query": {
+                "query_string": "*",
+                "time_range": {
+                    "begin_timestamp_millisecs": 0,
+                    "end_timestamp_millisecs": 17_356_896
+                },
+                "ignore_case": true
+            },
+            "output": {"type": "results_cache", "max_num_results": 100}
         })),
     responses(
         (
@@ -159,15 +163,16 @@ async fn health() -> String {
             example = json!({"query_results_uri":"query_results/1"})
         ),
         (status = BAD_REQUEST, body = String, content_type = "text/plain",
-            description = "The request body is not valid JSON or could not be read, query_string \
-                is empty, or time_range_begin_millisecs > time_range_end_millisecs."),
+            description = "The request body is not valid JSON or could not be read."),
         (status = PAYLOAD_TOO_LARGE, body = String, content_type = "text/plain",
             description = "The request body exceeds the configured size limit."),
         (status = UNSUPPORTED_MEDIA_TYPE, body = String, content_type = "text/plain",
             description = "The Content-Type header is missing or is not a JSON media type."),
         (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
             description = "The JSON body has missing or unknown fields, or fields with invalid \
-                types or values (e.g., a non-positive `max_num_results`)."),
+                types or values (e.g., an empty `datasets` or `query.query_string`, a \
+                `query.time_range` whose begin timestamp exceeds its end timestamp, or a \
+                non-positive `output.max_num_results`)."),
         (status = INTERNAL_SERVER_ERROR)
     )
 )]
@@ -176,7 +181,8 @@ async fn query(
     Json(query_config): Json<QueryConfig>,
 ) -> Result<Json<QueryResultsUri>, HandlerError> {
     tracing::info!("Submitting query: {:?}", query_config);
-    let query_job_id = match client.submit_query(query_config).await {
+    let query_job_config = QueryJobConfig::from(query_config);
+    let query_job_id = match client.submit_query(&query_job_config).await {
         Ok(id) => {
             tracing::info!("Submitted query job ID: {}", id);
             id
@@ -450,18 +456,65 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::QueryJobStatus;
+    use clp_rust_utils::job_config::TimeRange;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     use super::*;
 
     #[tokio::test]
-    async fn query_rejects_invalid_numeric_fields_with_unprocessable_entity() -> anyhow::Result<()>
-    {
+    async fn query_rejects_invalid_requests_with_unprocessable_entity() -> anyhow::Result<()> {
+        let reversed_time_range_error =
+            TimeRange::new(Some(2), Some(1)).expect_err("a reversed time range should be rejected");
         let app = clp_s_app_with_lazy_clients().await;
-        for field in ["count_by_time_bucket_size_millisecs", "max_num_results"] {
-            let mut body = serde_json::json!({"query_string": "*"});
-            body[field] = serde_json::json!(0);
+        for (body, expected_error) in [
+            (
+                serde_json::json!({"query": {"query_string": ""}, "output": {"type": "file"}}),
+                "query.query_string: invalid value: string \"\", expected a string with a length \
+                 of more than 0"
+                    .to_owned(),
+            ),
+            (
+                serde_json::json!({
+                    "query": {
+                        "query_string": "*",
+                        "time_range": {
+                            "begin_timestamp_millisecs": 2,
+                            "end_timestamp_millisecs": 1,
+                        },
+                    },
+                    "output": {"type": "file"},
+                }),
+                format!("query.time_range: {reversed_time_range_error}"),
+            ),
+            (
+                serde_json::json!({
+                    "datasets": [],
+                    "query": {"query_string": "*"},
+                    "output": {"type": "file"},
+                }),
+                "datasets: invalid length 0, expected at least one dataset".to_owned(),
+            ),
+            (
+                serde_json::json!({
+                    "query": {"query_string": "*"},
+                    "output": {
+                        "type": "network",
+                        "host": "localhost",
+                        "port": 8080,
+                        "session_token": "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11",
+                    },
+                }),
+                "output.type: unknown variant `network`".to_owned(),
+            ),
+            (
+                serde_json::json!({
+                    "query": {"query_string": "*"},
+                    "output": {"type": "file", "max_num_results": 1},
+                }),
+                "output: unknown field `max_num_results`".to_owned(),
+            ),
+        ] {
             let response = app
                 .clone()
                 .oneshot(
@@ -479,7 +532,11 @@ mod tests {
                 response.headers()["content-type"],
                 "text/plain; charset=utf-8"
             );
-            assert!(get_body(response).await.contains(field), "{body}");
+            let response_body = get_body(response).await;
+            assert!(
+                response_body.contains(&expected_error),
+                "{body}: {response_body}"
+            );
         }
         Ok(())
     }

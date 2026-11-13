@@ -41,19 +41,28 @@ impl QueryJobConfig {
 }
 
 /// The search a query job runs.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SearchQuery {
+    /// The search query as a KQL string.
+    #[schema(value_type = String, min_length = 1)]
     pub query_string: NonEmptyString,
+
+    /// The range of timestamps to search within. Omit or set to `null` for no bounds.
     #[serde(default, deserialize_with = "deserialize_nullable_time_range")]
+    // Inlined because the API server's `WebUI` OpenAPI document has another schema named
+    // `TimeRange`.
+    #[schema(inline, nullable)]
     pub time_range: TimeRange,
+
+    /// Whether the string match should be case-insensitive.
     #[serde(default)]
     pub ignore_case: bool,
 }
 
 /// An inclusive range of timestamps in Unix epoch milliseconds, where a missing bound leaves that
 /// side unbounded. The begin timestamp never exceeds the end timestamp.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
 #[serde(try_from = "UncheckedTimeRange")]
 pub struct TimeRange {
     begin_timestamp_millisecs: Option<i64>,
@@ -147,11 +156,14 @@ pub struct ResultsCacheOutput {
 }
 
 /// An aggregation over a query job's results.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
 pub enum Aggregation {
     /// Counts the matching log events in each time bucket of the given width.
-    CountByTime { bucket_size_millisecs: PositiveI64 },
+    CountByTime {
+        #[schema(value_type = i64, minimum = 1)]
+        bucket_size_millisecs: PositiveI64,
+    },
 }
 
 /// The TCP listener that a query job's results are streamed to.
