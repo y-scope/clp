@@ -69,7 +69,7 @@ spec:
             {{- if eq .Values.global.logsInput.type "fs" }}
             - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             {{- end }}
-            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+            {{- if eq .Values.global.streamOutputStorageType "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "streams"
@@ -100,7 +100,7 @@ spec:
         {{- if eq .Values.global.logsInput.type "fs" }}
         - {{- include "clp.logsInputVolume" . | nindent 10 }}
         {{- end }}
-        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+        {{- if eq .Values.global.streamOutputStorageType "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"
