@@ -51,7 +51,7 @@ const SETTLE_DELAY: Duration = Duration::from_millis(100);
 type TerminationError = std::io::Error;
 
 /// An item of a session's event stream in the tests.
-type TestEvent = SessionEvent<Vec<QueryResult>, TerminationError>;
+type TestEvent = SessionEvent<Vec<QueryResult>>;
 
 /// A simulated attempt of a `clp-s` query task, streaming its results over TCP.
 struct FakeClpS {
@@ -255,7 +255,7 @@ impl Ending {
     /// # Panics
     ///
     /// Panics if the stream's last item isn't a failure.
-    fn error(&self) -> &SessionEventError<TerminationError> {
+    fn error(&self) -> &SessionEventError {
         let SessionEvent::Failed(error) = &self.last_event else {
             panic!(
                 "the event stream should end with a failure: {:?}",
@@ -1361,7 +1361,10 @@ async fn failed_termination_ends_the_stream_with_its_error_and_requests_cancella
     assert!(
         matches!(
             ending.error(),
-            SessionEventError::Termination(error) if TERMINATION_ERROR == error.to_string()
+            SessionEventError::Termination(error)
+                if error
+                    .downcast_ref::<TerminationError>()
+                    .is_some_and(|error| TERMINATION_ERROR == error.to_string())
         ),
         "unexpected error: {:?}",
         ending.error()
@@ -1378,7 +1381,7 @@ async fn panicked_termination_ends_the_stream_with_a_join_error_and_requests_can
     let listener = ResultListener::<QueryResultEncoding>::bind(base_listener_config())?;
     let session = listener.open_session(SessionConfig::default())?;
     let (request_cancellation, cancellation_requests) = request_cancellation();
-    let mut events = Box::pin(session.into_events(
+    let mut events = Box::pin(session.into_events::<TerminationError>(
         async { panic!("the test's wait for the job's termination panics") },
         request_cancellation,
     ));

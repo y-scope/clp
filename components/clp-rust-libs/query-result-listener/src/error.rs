@@ -89,17 +89,13 @@ pub enum SessionError {
 }
 
 /// Reasons the events of a session's query job end in a failure.
-///
-/// # Type Parameters
-///
-/// * `TerminationErrorType` - The error of a failure to wait for the job's termination.
 #[derive(Debug, thiserror::Error)]
-pub enum SessionEventError<TerminationErrorType> {
+pub enum SessionEventError {
     #[error("the session's results can't be encoded: {0}")]
     Encoding(String),
 
     #[error("waiting for the query job's termination failed: {0}")]
-    Termination(TerminationErrorType),
+    Termination(Box<dyn std::error::Error + Send + Sync>),
 
     #[error("the task waiting for the query job's termination failed: {0}")]
     TerminationTaskFailed(JoinError),

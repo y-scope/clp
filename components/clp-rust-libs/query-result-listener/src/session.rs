@@ -103,13 +103,13 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
     ///
     /// The returned stream panics if the session's result stream ends while the session is open,
     /// which the listener never lets it do.
-    pub fn into_events<TerminationErrorType: Send + 'static>(
+    pub fn into_events<TerminationErrorType: std::error::Error + Send + Sync + 'static>(
         self,
         wait_for_termination: impl Future<Output = Result<QueryJobStatus, TerminationErrorType>>
         + Send
         + 'static,
         request_cancellation: impl Future<Output = ()> + Send + 'static,
-    ) -> impl Stream<Item = SessionEvent<EncodingType::Batch, TerminationErrorType>> + Send {
+    ) -> impl Stream<Item = SessionEvent<EncodingType::Batch>> + Send {
         let Self {
             session,
             mut results,
@@ -128,7 +128,8 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
                     }
                     status = &mut termination_task => {
                         break match status {
-                            Ok(status) => status.map_err(SessionEventError::Termination),
+                            Ok(status) => status
+                                .map_err(|error| SessionEventError::Termination(Box::new(error))),
                             Err(error) => Err(SessionEventError::TerminationTaskFailed(error)),
                         };
                     }
@@ -165,9 +166,8 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
 /// # Type Parameters
 ///
 /// * `BatchType` - The type of a batch of encoded results.
-/// * `TerminationErrorType` - The error of a failure to wait for the job's termination.
 #[derive(Debug)]
-pub enum SessionEvent<BatchType, TerminationErrorType> {
+pub enum SessionEvent<BatchType> {
     /// A batch of the job's results.
     Results(BatchType),
 
@@ -183,7 +183,7 @@ pub enum SessionEvent<BatchType, TerminationErrorType> {
 
     /// The end of the events because the session failed or waiting for the job's termination
     /// failed. The job's cancellation has been requested.
-    Failed(SessionEventError<TerminationErrorType>),
+    Failed(SessionEventError),
 }
 
 /// Statistics of a session's connections.
