@@ -210,8 +210,7 @@ impl Ending {
     ///
     /// # Panics
     ///
-    /// Panics if the stream doesn't yield its end or failure within [`TIMEOUT`], or ends without
-    /// one.
+    /// Panics if the stream ends without an end or a failure.
     async fn receive(events: &mut (impl Stream<Item = TestEvent> + Unpin)) -> Self {
         let mut results = Vec::new();
         let last_event = loop {
@@ -366,8 +365,7 @@ async fn next_event(events: &mut (impl Stream<Item = TestEvent> + Unpin)) -> Opt
 ///
 /// # Panics
 ///
-/// Panics if the stream yields anything but batches, or the results don't arrive within
-/// [`TIMEOUT`].
+/// Panics if the stream yields anything but batches.
 async fn receive_results(
     events: &mut (impl Stream<Item = TestEvent> + Unpin),
     num_results: usize,
@@ -390,10 +388,6 @@ async fn receive_results(
 /// # Returns
 ///
 /// The connected attempt.
-///
-/// # Panics
-///
-/// Panics if connecting or sending fails.
 async fn connect_attempt_blocked_on_its_second_batch(network_output: &NetworkOutput) -> FakeClpS {
     let mut attempt = FakeClpS::connect(network_output).await;
     attempt.send_handshake(0, ARCHIVE_ID).await;
