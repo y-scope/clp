@@ -79,13 +79,11 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
     /// terminal status, the stream ends the session, yields the batches that the session's
     /// connections had already claimed until the session's result stream ends, and then yields a
     /// [`SessionEvent::Ended`]. Instead, if the session fails, or `wait_for_termination` resolves
-    /// with an error or panics, the stream requests the job's cancellation and yields a
+    /// with an error or panics, the stream awaits `request_cancellation` and then yields a
     /// [`SessionEvent::Failed`].
     ///
     /// `wait_for_termination` runs in a task of its own on the current Tokio runtime from when this
     /// method is called, so that it makes progress even while the stream isn't polled.
-    ///
-    /// The stream awaits `request_cancellation` before it yields a [`SessionEvent::Failed`].
     ///
     /// Dropping the stream ends the session and stops the task that runs `wait_for_termination`. If
     /// the stream hasn't yet found the job terminated or started to request the job's cancellation,
