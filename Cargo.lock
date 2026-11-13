@@ -3334,6 +3334,7 @@ name = "query-result-listener"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
+ "async-stream",
  "bytes",
  "clp-rust-utils",
  "dashmap",
