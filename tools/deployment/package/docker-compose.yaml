@@ -2,6 +2,9 @@ name: "clp-package"
 
 include:
   - "docker-compose.utils.yaml"
+  - path:
+      - "usr/share/spider-compose/compose.yaml"
+      - "compose.clp-spider.yaml"
 
 services:
   database:
@@ -14,16 +17,6 @@ services:
       file: "docker-compose-all.yaml"
       service: "db-table-creator"
 
-  queue:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "queue"
-
-  redis:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "redis"
-
   results-cache:
     extends:
       file: "docker-compose-all.yaml"
@@ -34,15 +27,14 @@ services:
       file: "docker-compose-all.yaml"
       service: "results-cache-indices-creator"
 
-  compression-scheduler:
+  compression-coordinator:
     extends:
       file: "docker-compose-all.yaml"
-      service: "compression-scheduler"
-
-  compression-worker:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "compression-worker"
+      service: "compression-coordinator"
+    environment:
+      SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "compression"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "\
+        ${CLP_SPIDER_COMPRESSION_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
 
   webui:
     extends:
@@ -59,20 +51,14 @@ services:
       file: "docker-compose-all.yaml"
       service: "api-server"
 
-  query-scheduler:
+  query-coordinator:
     extends:
       file: "docker-compose-all.yaml"
-      service: "query-scheduler"
-
-  query-worker:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "query-worker"
-
-  reducer:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "reducer"
+      service: "query-coordinator"
+    environment:
+      SPIDER_EXTERNAL_RESOURCE_GROUP_ID: "query"
+      SPIDER_RESOURCE_GROUP_PASSWORD: "\
+        ${CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD:?Please set a value.}"
 
   mcp-server:
     extends:

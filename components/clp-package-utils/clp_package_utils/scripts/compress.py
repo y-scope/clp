@@ -185,37 +185,37 @@ def main(argv):
     if clp_config.logs_input.type != StorageType.FS:
         logger.error(
             "Filesystem compression expects `logs_input.type` to be `%s`, but `%s` is found. For S3"
-            " compression, use `compress-from-s3.sh` instead.",
+            " inputs, use `log-ingestor` instead.",
             StorageType.FS,
             clp_config.logs_input.type,
         )
         return -1
 
     storage_engine: StorageEngine = clp_config.package.storage_engine
-    dataset = parsed_args.dataset
-    if StorageEngine.CLP_S == storage_engine:
-        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
-        try:
-            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
-            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-        except Exception as e:
-            logger.error(e)
-            return -1
-
-        if parsed_args.timestamp_key is None and not parsed_args.unstructured:
-            logger.warning(
-                "`--timestamp-key` not specified. Events will not have assigned timestamps and can "
-                "only be searched from the command line without a timestamp filter."
-            )
-        if parsed_args.timestamp_key is not None and parsed_args.unstructured:
-            parsed_args.timestamp_key = None
-            logger.warning(
-                "`--timestamp-key` and `--unstructured` are not compatible. The input logs will be "
-                "treated as unstructured, and the argument to `--timestamp-key` will be ignored."
-            )
-    elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+    if StorageEngine.CLP_S != storage_engine:
+        logger.error("Spider compression supports only the CLP-S storage engine.")
         return -1
+
+    dataset = parsed_args.dataset
+    dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+    try:
+        clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+        validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+    except Exception as e:
+        logger.error(e)
+        return -1
+
+    if parsed_args.timestamp_key is None and not parsed_args.unstructured:
+        logger.warning(
+            "`--timestamp-key` not specified. Events will not have assigned timestamps and can "
+            "only be searched from the command line without a timestamp filter."
+        )
+    if parsed_args.timestamp_key is not None and parsed_args.unstructured:
+        parsed_args.timestamp_key = None
+        logger.warning(
+            "`--timestamp-key` and `--unstructured` are not compatible. The input logs will be "
+            "treated as unstructured, and the argument to `--timestamp-key` will be ignored."
+        )
 
     # Validate filesystem input arguments
     _validate_fs_input_args(parsed_args, args_parser)

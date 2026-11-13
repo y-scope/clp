@@ -860,25 +860,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn reject_killed_job_status() -> anyhow::Result<()> {
-        let app = compression_usage_test_app();
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri(
-                        "/usage/compression?time_range_begin_millisecs=0&\
-                         time_range_end_millisecs=100&job_status=KILLED",
-                    )
-                    .body(Body::empty())?,
-            )
-            .await?;
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        let body = get_body(response).await;
-        assert!(body.contains("Unknown job_status: KILLED"));
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn reject_missing_time_range_begin_millisecs() -> anyhow::Result<()> {
         let app = compression_usage_test_app();
         let response = app

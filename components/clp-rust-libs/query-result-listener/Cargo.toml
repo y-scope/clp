@@ -11,6 +11,7 @@ path = "src/lib.rs"
 test-utils = []
 
 [dependencies]
+async-stream = { workspace = true }
 bytes = { workspace = true }
 clp-rust-utils = { workspace = true }
 dashmap = { workspace = true }
@@ -20,7 +21,7 @@ rmp = { workspace = true }
 spider-core = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["io-util", "macros", "net", "sync"] }
-tokio-util = { workspace = true }
+tokio-util = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
 
 [dev-dependencies]

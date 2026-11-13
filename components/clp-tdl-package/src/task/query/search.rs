@@ -833,8 +833,12 @@ mod tests {
 
     #[test]
     fn search_rejects_non_clp_s_storage_engine() {
-        let config = SpiderTaskExecutorConfig::default();
-        assert_eq!(config.package.storage_engine, StorageEngine::Clp);
+        let config = SpiderTaskExecutorConfig {
+            package: Package {
+                storage_engine: StorageEngine::Clp,
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
 
         let error = search(
             &task_context(),

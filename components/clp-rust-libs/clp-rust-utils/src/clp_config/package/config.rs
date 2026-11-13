@@ -59,9 +59,9 @@ impl Default for Config {
             },
             archive_output: ArchiveOutput::default(),
             telemetry: Telemetry::default(),
-            spider: None,
-            compression_coordinator: None,
-            query_coordinator: None,
+            spider: Some(Spider::default()),
+            compression_coordinator: Some(CompressionCoordinator::default()),
+            query_coordinator: Some(QueryCoordinator::default()),
         }
     }
 }
@@ -73,6 +73,7 @@ pub struct SpiderTaskExecutorConfig {
     pub package: Package,
     pub logs_input: LogsInput,
     pub archive_output: ArchiveOutput,
+    pub stream_output: StreamOutput,
     pub tmp_directory: String,
     pub database: Database,
     pub results_cache: ResultsCache,
@@ -101,6 +102,23 @@ impl SpiderTaskExecutorConfig {
         let directory = match &self.archive_output.storage {
             ArchiveOutputStorage::Fs { directory } => directory,
             ArchiveOutputStorage::S3 {
+                staging_directory, ..
+            } => staging_directory,
+        };
+        make_config_path_absolute(clp_home, directory)
+    }
+
+    /// Resolves the stream-output storage's local directory against `clp_home`.
+    ///
+    /// # Returns
+    ///
+    /// The storage's local directory (`directory` for `Fs`, `staging_directory` for `S3`) unchanged
+    /// if it is already absolute; otherwise, it is joined with `clp_home`.
+    #[must_use]
+    pub fn abs_stream_output_staging(&self, clp_home: &Path) -> PathBuf {
+        let directory = match &self.stream_output.storage {
+            StreamOutputStorage::Fs { directory } => directory,
+            StreamOutputStorage::S3 {
                 staging_directory, ..
             } => staging_directory,
         };
@@ -142,6 +160,7 @@ impl Default for SpiderTaskExecutorConfig {
             database: Database::default(),
             results_cache: ResultsCache::default(),
             archive_output: ArchiveOutput::default(),
+            stream_output: StreamOutput::default(),
             tmp_directory: "var/tmp".to_owned(),
         }
     }
@@ -307,7 +326,7 @@ pub struct Package {
 impl Default for Package {
     fn default() -> Self {
         Self {
-            storage_engine: StorageEngine::Clp,
+            storage_engine: StorageEngine::ClpS,
         }
     }
 }
@@ -389,6 +408,7 @@ pub enum StreamOutputStorage {
 
     #[serde(rename = "s3")]
     S3 {
+        #[serde(default = "default_stream_staging_directory")]
         staging_directory: String,
         s3_config: S3Config,
     },
@@ -652,9 +672,19 @@ impl Default for CompressionCoordinator {
 
 /// Spider configuration.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
 pub struct Spider {
     pub host: NonEmptyString,
     pub port: u16,
+}
+
+impl Default for Spider {
+    fn default() -> Self {
+        Self {
+            host: NonEmptyString::from_static_str("localhost"),
+            port: 50051,
+        }
+    }
 }
 
 /// Polling backoff configuration.
@@ -679,6 +709,10 @@ fn default_archive_staging_directory() -> String {
     "var/data/staged-archives".to_owned()
 }
 
+fn default_stream_staging_directory() -> String {
+    "var/data/staged-streams".to_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -688,6 +722,8 @@ mod tests {
     use super::Database;
     use super::LogsInput;
     use super::SpiderTaskExecutorConfig;
+    use super::StreamOutput;
+    use super::StreamOutputStorage;
     use crate::dataset::DatasetName;
 
     #[test]
@@ -945,6 +981,55 @@ mod tests {
         assert_eq!(
             config.abs_archive_output_staging(Path::new("/opt/clp")),
             Path::new("/abs/staged-archives")
+        );
+    }
+
+    #[test]
+    fn abs_stream_output_staging_joins_relative_fs_directory() {
+        let config = SpiderTaskExecutorConfig {
+            stream_output: StreamOutput {
+                storage: StreamOutputStorage::Fs {
+                    directory: "var/data/streams".to_owned(),
+                },
+                ..StreamOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+
+        assert_eq!(
+            config.abs_stream_output_staging(Path::new("/opt/clp")),
+            Path::new("/opt/clp/var/data/streams")
+        );
+    }
+
+    #[test]
+    fn abs_stream_output_staging_uses_s3_staging_directory() {
+        use non_empty_string::NonEmptyString;
+
+        use crate::clp_config::AwsAuthentication;
+        use crate::clp_config::S3Config;
+        use crate::types::non_empty_string::ExpectedNonEmpty;
+
+        let config = SpiderTaskExecutorConfig {
+            stream_output: StreamOutput {
+                storage: StreamOutputStorage::S3 {
+                    staging_directory: "/abs/staged-streams".to_owned(),
+                    s3_config: S3Config {
+                        bucket: NonEmptyString::from_static_str("bucket"),
+                        region_code: None,
+                        key_prefix: NonEmptyString::from_static_str("streams/"),
+                        endpoint_url: None,
+                        aws_authentication: AwsAuthentication::Default,
+                    },
+                },
+                ..StreamOutput::default()
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
+
+        assert_eq!(
+            config.abs_stream_output_staging(Path::new("/opt/clp")),
+            Path::new("/abs/staged-streams")
         );
     }
 
