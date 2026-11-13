@@ -30,27 +30,29 @@
         }
       }
     },
-    "/query": {
+    "/query/file": {
       "post": {
         "tags": [],
-        "description": "Submits a new query job.",
-        "operationId": "query",
+        "description": "Submits a new query job whose results are buffered in files in the stream output storage (the file system or S3).",
+        "operationId": "submit_query_to_file",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/QueryConfig"
+                "$ref": "#/components/schemas/QueryRequest_FileOutputOptions"
               },
               "example": {
-                "query_string": "*",
                 "datasets": [
                   "default"
                 ],
-                "time_range_begin_millisecs": 0,
-                "time_range_end_millisecs": 17356896,
-                "ignore_case": true,
-                "buffer_results_in_mongodb": true,
-                "count_by_time_bucket_size_millisecs": null
+                "query": {
+                  "query_string": "*",
+                  "time_range": {
+                    "begin_timestamp_millisecs": 0,
+                    "end_timestamp_millisecs": 17356896
+                  },
+                  "ignore_case": true
+                }
               }
             }
           },
@@ -71,7 +73,7 @@
             }
           },
           "400": {
-            "description": "The request body is not valid JSON or could not be read, query_string is empty, or time_range_begin_millisecs > time_range_end_millisecs.",
+            "description": "The request body is not valid JSON or could not be read.",
             "content": {
               "text/plain": {
                 "schema": {
@@ -101,7 +103,7 @@
             }
           },
           "422": {
-            "description": "The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., a non-positive `max_num_results`).",
+            "description": "The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., an empty `datasets` or `query.query_string`, or a `query.time_range` whose begin timestamp exceeds its end timestamp).",
             "content": {
               "text/plain": {
                 "schema": {
@@ -112,6 +114,179 @@
           },
           "500": {
             "description": ""
+          }
+        }
+      }
+    },
+    "/query/results_cache": {
+      "post": {
+        "tags": [],
+        "description": "Submits a new query job whose results are buffered in the results cache (`MongoDB`).",
+        "operationId": "submit_query_to_results_cache",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest_ResultsCacheOutput"
+              },
+              "example": {
+                "datasets": [
+                  "default"
+                ],
+                "query": {
+                  "query_string": "*",
+                  "time_range": {
+                    "begin_timestamp_millisecs": 0,
+                    "end_timestamp_millisecs": 17356896
+                  },
+                  "ignore_case": true
+                },
+                "output": {
+                  "max_num_results": 100
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The URI to fetch the results of the submitted query.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResultsUri"
+                },
+                "example": {
+                  "query_results_uri": "query_results/1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is not valid JSON or could not be read.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the configured size limit.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The Content-Type header is missing or is not a JSON media type.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., an empty `datasets` or `query.query_string`, a `query.time_range` whose begin timestamp exceeds its end timestamp, or a non-positive `output.max_num_results`).",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/query/stream": {
+      "post": {
+        "tags": [],
+        "description": "Submits a new query job whose results are streamed back to the client. Not available yet.",
+        "operationId": "submit_query_to_stream",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest_NetworkOutputOptions"
+              },
+              "example": {
+                "datasets": [
+                  "default"
+                ],
+                "query": {
+                  "query_string": "*",
+                  "time_range": {
+                    "begin_timestamp_millisecs": 0,
+                    "end_timestamp_millisecs": 17356896
+                  },
+                  "ignore_case": true
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "The request body is not valid JSON or could not be read.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the configured size limit.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The Content-Type header is missing or is not a JSON media type.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., an empty `datasets` or `query.query_string`, or a `query.time_range` whose begin timestamp exceeds its end timestamp).",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Streaming queries are not available yet.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }
@@ -307,6 +482,32 @@
   },
   "components": {
     "schemas": {
+      "Aggregation": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Counts the matching log events in each time bucket of the given width.",
+            "required": [
+              "bucket_size_millisecs",
+              "type"
+            ],
+            "properties": {
+              "bucket_size_millisecs": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 1
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "count_by_time"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "An aggregation over a query job's results."
+      },
       "CompressionJobStatus": {
         "type": "string",
         "enum": [
@@ -381,68 +582,128 @@
           }
         }
       },
-      "QueryConfig": {
+      "FileOutputOptions": {
         "type": "object",
-        "description": "Defines the request configuration for submitting a search query.",
+        "description": "The options of the file output, which takes none.",
+        "additionalProperties": false
+      },
+      "NetworkOutputOptions": {
+        "type": "object",
+        "description": "The options of the network output, which takes none.",
+        "additionalProperties": false
+      },
+      "NonEmptyDatasetNames": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1
+      },
+      "QueryRequest_FileOutputOptions": {
+        "type": "object",
+        "description": "Defines the request for submitting a search query whose results go to the output of the endpoint that receives it.",
         "required": [
-          "query_string"
+          "datasets",
+          "query"
         ],
         "properties": {
-          "buffer_results_in_mongodb": {
-            "type": "boolean",
-            "description": "Whether to buffer search results in `MongoDB`.\nBy default, search results are buffered in temporary files. When set to `true`, results\nwill be stored in `MongoDB` instead."
-          },
-          "count_by_time_bucket_size_millisecs": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int64",
-            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`.",
-            "minimum": 1
-          },
           "datasets": {
-            "type": [
-              "array",
-              "null"
+            "$ref": "#/components/schemas/NonEmptyDatasetNames",
+            "description": "The datasets to search within."
+          },
+          "output": {
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "The options of the file output, which takes none.",
+                "additionalProperties": false
+              }
             ],
-            "items": {
-              "type": "string"
-            },
-            "description": "The datasets to search within. If not provided, only `default` dataset will be searched."
+            "description": "The options of the output. Omit to use the defaults."
           },
-          "ignore_case": {
-            "type": "boolean",
-            "description": "Whether the string match should be case-insensitive."
+          "query": {
+            "$ref": "#/components/schemas/SearchQuery",
+            "description": "The search to run."
+          }
+        },
+        "additionalProperties": false
+      },
+      "QueryRequest_NetworkOutputOptions": {
+        "type": "object",
+        "description": "Defines the request for submitting a search query whose results go to the output of the endpoint that receives it.",
+        "required": [
+          "datasets",
+          "query"
+        ],
+        "properties": {
+          "datasets": {
+            "$ref": "#/components/schemas/NonEmptyDatasetNames",
+            "description": "The datasets to search within."
           },
-          "max_num_results": {
-            "type": [
-              "integer",
-              "null"
+          "output": {
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "The options of the network output, which takes none.",
+                "additionalProperties": false
+              }
             ],
-            "format": "int32",
-            "description": "The maximum number of results to return. Omit for no limit.",
-            "minimum": 1
+            "description": "The options of the output. Omit to use the defaults."
           },
-          "query_string": {
-            "type": "string",
-            "description": "The search query as a KQL string."
+          "query": {
+            "$ref": "#/components/schemas/SearchQuery",
+            "description": "The search to run."
+          }
+        },
+        "additionalProperties": false
+      },
+      "QueryRequest_ResultsCacheOutput": {
+        "type": "object",
+        "description": "Defines the request for submitting a search query whose results go to the output of the endpoint that receives it.",
+        "required": [
+          "datasets",
+          "query"
+        ],
+        "properties": {
+          "datasets": {
+            "$ref": "#/components/schemas/NonEmptyDatasetNames",
+            "description": "The datasets to search within."
           },
-          "time_range_begin_millisecs": {
-            "type": [
-              "integer",
-              "null"
+          "output": {
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "The results cache that a query job's results are buffered in.",
+                "properties": {
+                  "aggregation": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/Aggregation",
+                        "description": "The aggregation to compute over all matching results, regardless of `max_num_results`."
+                      }
+                    ]
+                  },
+                  "max_num_results": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int32",
+                    "description": "The maximum number of search results to keep. Omit for no limit.",
+                    "minimum": 1
+                  }
+                },
+                "additionalProperties": false
+              }
             ],
-            "format": "int64",
-            "description": "The beginning timestamp (in epoch milliseconds) for the search range (inclusive)."
+            "description": "The options of the output. Omit to use the defaults."
           },
-          "time_range_end_millisecs": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int64",
-            "description": "The ending timestamp (in epoch milliseconds) for the search range (inclusive)."
+          "query": {
+            "$ref": "#/components/schemas/SearchQuery",
+            "description": "The search to run."
           }
         },
         "additionalProperties": false
@@ -456,6 +717,80 @@
           "query_results_uri": {
             "type": "string",
             "description": "The uri to get the query results."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ResultsCacheOutput": {
+        "type": "object",
+        "description": "The results cache that a query job's results are buffered in.",
+        "properties": {
+          "aggregation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Aggregation",
+                "description": "The aggregation to compute over all matching results, regardless of `max_num_results`."
+              }
+            ]
+          },
+          "max_num_results": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The maximum number of search results to keep. Omit for no limit.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "SearchQuery": {
+        "type": "object",
+        "description": "The search a query job runs.",
+        "required": [
+          "query_string"
+        ],
+        "properties": {
+          "ignore_case": {
+            "type": "boolean",
+            "description": "Whether the string match should be case-insensitive."
+          },
+          "query_string": {
+            "type": "string",
+            "description": "The search query as a KQL string.",
+            "minLength": 1
+          },
+          "time_range": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "description": "An inclusive range of timestamps in Unix epoch milliseconds, where a missing bound leaves that\nside unbounded. The begin timestamp never exceeds the end timestamp.",
+                "properties": {
+                  "begin_timestamp_millisecs": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int64"
+                  },
+                  "end_timestamp_millisecs": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "int64"
+                  }
+                }
+              }
+            ],
+            "description": "The range of timestamps to search within. Omit or set to `null` for no bounds."
           }
         },
         "additionalProperties": false
