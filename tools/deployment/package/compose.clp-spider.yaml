@@ -2,11 +2,16 @@ x-clp-spider-worker-defaults: &clp_spider_worker_defaults
   image: >-
     ${CLP_SPIDER_WORKER_CONTAINER_IMAGE_REF:-ghcr.io/y-scope/clp/clp-spider-worker:main}
   user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
+  extra_hosts:
+    - "${CLP_EXTRA_HOST_DATABASE_NAME:-noop-db}=${CLP_EXTRA_HOST_DATABASE_ADDR:-127.0.0.2}"
+    - "${CLP_EXTRA_HOST_RESULTS_CACHE_NAME:-noop-rc}=\
+      ${CLP_EXTRA_HOST_RESULTS_CACHE_ADDR:-127.0.0.2}"
   volumes:
     - type: "bind"
       source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yaml"
       target: "/etc/clp-config.yaml"
       read_only: true
+    - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
     - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
     - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
 

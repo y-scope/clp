@@ -1462,9 +1462,15 @@ mod tests {
 
     #[test]
     fn compression_rejects_non_clp_s_engine_even_for_file_free_input() {
+        let config = SpiderTaskExecutorConfig {
+            package: Package {
+                storage_engine: StorageEngine::Clp,
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
         let error = compress(
             &task_context(),
-            &SpiderTaskExecutorConfig::default(),
+            &config,
             &BASE_OPTION,
             DatasetName::default(),
             FsInputSource { file_paths: vec![] },

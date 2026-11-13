@@ -1,21 +1,18 @@
 import argparse
 import datetime
 import logging
-import os
 import pathlib
 import sys
 import time
 from contextlib import closing
 
 from clp_py_utils.clp_config import (
-    AwsAuthentication,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
-    StorageType,
+    StorageEngine,
 )
 from clp_py_utils.pretty_size import pretty_size
-from clp_py_utils.s3_utils import parse_s3_url
 from clp_py_utils.sql_adapter import SqlAdapter
 from clp_py_utils.zstd_msgpack import serialize as serialize_zstd_msgpack
 from job_orchestration.scheduler.constants import (
@@ -27,15 +24,12 @@ from job_orchestration.scheduler.job_config import (
     FsInputConfig,
     InputType,
     OutputConfig,
-    S3InputConfig,
 )
 
 from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     get_clp_home,
     load_config_file,
-    S3_KEY_PREFIX_COMPRESSION,
-    S3_OBJECT_COMPRESSION,
 )
 
 logger = logging.getLogger(__file__)
@@ -89,11 +83,11 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             if not no_progress_reporting:
                 logger.info("Compression finished.")
                 print_compression_job_status(job_row)
-            break  # Done
+            return CompressionJobCompletionStatus.SUCCEEDED
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
             logger.error(f"Compression failed. {job_row['status_msg']}")
-            break  # Done
+            return CompressionJobCompletionStatus.FAILED
 
         if CompressionJobStatus.RUNNING == job_status:
             if not no_progress_reporting:
@@ -127,89 +121,37 @@ def handle_job(sql_adapter: SqlAdapter, clp_io_config: ClpIoConfig, no_progress_
             job_id = db_cursor.lastrowid
             logger.info(f"Compression job {job_id} submitted.")
 
-            handle_job_update(db, db_cursor, job_id, no_progress_reporting)
+            return handle_job_update(db, db_cursor, job_id, no_progress_reporting)
         except Exception as ex:
             logger.error(ex)
             return CompressionJobCompletionStatus.FAILED
-
-        logger.debug(f"Finished job {job_id}")
-
-        return CompressionJobCompletionStatus.SUCCEEDED
 
 
 def _generate_clp_io_config(
     clp_config: ClpConfig,
     logs_to_compress: list[str],
     parsed_args: argparse.Namespace,
-) -> S3InputConfig | FsInputConfig:
-    input_type = parsed_args.input_type
-
-    if input_type == "fs":
-        if len(logs_to_compress) == 0:
-            raise ValueError("No input paths given.")
-        return FsInputConfig(
-            type=InputType.FS.value,
-            dataset=parsed_args.dataset,
-            paths_to_compress=logs_to_compress,
-            timestamp_key=parsed_args.timestamp_key,
-            path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
-            unstructured=parsed_args.unstructured,
-        )
-    if input_type != "s3":
-        raise ValueError(f"Unsupported input type: `{input_type}`.")
-
-    # Handle S3 inputs
-    if len(logs_to_compress) < 2:
-        raise ValueError("No URLs given.")
-
-    aws_authentication = _get_aws_authentication_from_config(clp_config)
-
-    s3_compress_subcommand = logs_to_compress[0]
-    urls = logs_to_compress[1:]
-
-    if s3_compress_subcommand == S3_OBJECT_COMPRESSION:
-        endpoint_url, region_code, bucket, key_prefix, keys = _parse_and_validate_s3_object_urls(
-            urls
-        )
-        return S3InputConfig(
-            type=InputType.S3.value,
-            dataset=parsed_args.dataset,
-            endpoint_url=endpoint_url,
-            region_code=region_code,
-            bucket=bucket,
-            key_prefix=key_prefix,
-            keys=keys,
-            aws_authentication=aws_authentication,
-            timestamp_key=parsed_args.timestamp_key,
-            unstructured=parsed_args.unstructured,
-        )
-    if s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
-        if len(urls) != 1:
-            raise ValueError(
-                f"`{S3_KEY_PREFIX_COMPRESSION}` requires exactly one URL, got {len(urls)}"
-            )
-        endpoint_url, region_code, bucket, key_prefix = parse_s3_url(urls[0])
-        return S3InputConfig(
-            type=InputType.S3.value,
-            dataset=parsed_args.dataset,
-            endpoint_url=endpoint_url,
-            region_code=region_code,
-            bucket=bucket,
-            key_prefix=key_prefix,
-            keys=None,
-            aws_authentication=aws_authentication,
-            timestamp_key=parsed_args.timestamp_key,
-            unstructured=parsed_args.unstructured,
-        )
-    raise ValueError(f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`.")
+) -> FsInputConfig:
+    if clp_config.package.storage_engine != StorageEngine.CLP_S:
+        raise ValueError("Spider compression supports only the CLP-S storage engine.")
+    if len(logs_to_compress) == 0:
+        raise ValueError("No input paths given.")
+    return FsInputConfig(
+        type=InputType.FS.value,
+        dataset=parsed_args.dataset,
+        paths_to_compress=logs_to_compress,
+        timestamp_key=parsed_args.timestamp_key,
+        path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
+        unstructured=parsed_args.unstructured,
+    )
 
 
 def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
     """
-    Reads logs or URLs from the input file.
+    Reads filesystem paths from the input file.
 
     :param logs_list_path:
-    :return: List of paths/URLs.
+    :return: List of filesystem paths.
     """
     logs_to_compress = []
     with open(logs_list_path, "r") as f:
@@ -221,80 +163,6 @@ def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
             logs_to_compress.append(stripped_line)
 
     return logs_to_compress
-
-
-def _parse_and_validate_s3_object_urls(
-    urls: list[str],
-) -> tuple[str | None, str | None, str, str, list[str]]:
-    """
-    Parses and validates S3 object URLs.
-
-    The validation will ensure:
-    - All URLs have the same region and bucket.
-    - No duplicate keys among the URLs.
-    - The URLs share a non-empty common prefix.
-
-    :param urls:
-    :return: A tuple containing:
-        - The endpoint url.
-        - The region code.
-        - The bucket.
-        - The common key prefix.
-        - The list of keys.
-    :raises ValueError: If the validation fails.
-    """
-    if len(urls) == 0:
-        raise ValueError("No URLs provided.")
-
-    endpoint_url, region_code, bucket_name, key = parse_s3_url(urls[0])
-    keys = {key}
-
-    for url in urls[1:]:
-        parsed_endpoint_url, parsed_region_code, parsed_bucket_name, key = parse_s3_url(url)
-
-        if endpoint_url != parsed_endpoint_url:
-            raise ValueError(
-                "All S3 URLs must have the same endpoint."
-                f" Found {endpoint_url} and {parsed_endpoint_url}."
-            )
-
-        if region_code != parsed_region_code:
-            raise ValueError(
-                "All S3 URLs must be in the same region."
-                f" Found {region_code} and {parsed_region_code}."
-            )
-
-        if bucket_name != parsed_bucket_name:
-            raise ValueError(
-                "All S3 URLs must be in the same bucket."
-                f" Found {bucket_name} and {parsed_bucket_name}."
-            )
-
-        if key in keys:
-            raise ValueError(f"Duplicate S3 key found: {key}.")
-        keys.add(key)
-
-    key_list: list[str] = list(keys)
-    key_prefix = os.path.commonprefix(key_list)
-
-    if len(key_prefix) == 0:
-        raise ValueError("The given S3 URLs have no common prefix.")
-
-    return endpoint_url, region_code, bucket_name, key_prefix, key_list
-
-
-def _get_aws_authentication_from_config(clp_config: ClpConfig) -> AwsAuthentication:
-    """
-    Gets AWS authentication configuration.
-
-    :param clp_config:
-    :return: The AWS authentication configuration extracted from the CLP config.
-    :raise ValueError: If no authentication provided in `clp_config`.
-    """
-    if StorageType.S3 == clp_config.logs_input.type:
-        return clp_config.logs_input.aws_authentication
-
-    raise ValueError("No AWS authentication provided in `logs_input`.")
 
 
 def main(argv):
@@ -325,9 +193,9 @@ def main(argv):
         "--input-type",
         dest="input_type",
         type=str,
-        choices=["fs", "s3"],
+        choices=["fs"],
         default="fs",
-        help="Input type: 'fs' for filesystem paths, 's3' for S3 URLs.",
+        help="Input type: 'fs' for filesystem paths.",
     )
     args_parser.add_argument(
         "-f",

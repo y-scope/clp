@@ -1,5 +1,5 @@
 {{- $logIngestorEnabled := and (eq .Values.clpConfig.package.storage_engine "clp-s")
-    (eq .Values.clpConfig.logs_input.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
+    (eq .Values.global.logsInput.type "s3") (not (empty .Values.clpConfig.log_ingestor)) }}
 {{- if not (has .Values.global.archiveOutputStorageType (list "fs" "s3")) }}
 {{- fail (printf
   "global.archiveOutputStorageType (%v) must be \"fs\" or \"s3\""
@@ -73,7 +73,6 @@ data:
         | int }}
       target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size
         | int }}
-    {{- if .Values.spider.enabled }}
     compression_coordinator:
       commit_task_hard_timeout_secs: {{
         .Values.clpConfig.compression_coordinator.commit_task_hard_timeout_secs | int }}
@@ -99,18 +98,6 @@ data:
     spider:
       host: "{{ include "clp.spiderStorageHost" . }}"
       port: {{ include "clp.spiderStoragePort" . | int }}
-    {{- end }}
-    compression_scheduler:
-      jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
-      logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
-      max_concurrent_tasks_per_job: {{
-        .Values.clpConfig.compression_scheduler.max_concurrent_tasks_per_job | int }}
-      telemetry_update_interval_ms: {{ .Values.clpConfig.compression_scheduler.telemetry_update_interval_ms | int }}
-    compression_worker:
-      logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
-      task_soft_time_limit: {{ .Values.clpConfig.compression_worker.task_soft_time_limit | int }}
-      task_time_limit: {{ .Values.clpConfig.compression_worker.task_time_limit | int }}
-      telemetry_update_interval_ms: {{ .Values.clpConfig.compression_worker.telemetry_update_interval_ms | int }}
     data_directory: "/var/data"
     garbage_collector:
       logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
@@ -127,7 +114,7 @@ data:
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
     logs_directory: "/var/log"
-    {{- with .Values.clpConfig.logs_input }}
+    {{- with .Values.global.logsInput }}
     logs_input:
       {{- if eq .type "fs" }}
       directory: "/mnt/logs"
@@ -150,7 +137,7 @@ data:
         {{- end }}
       {{- end }}{{/* with .aws_authentication */}}
       {{- end }}{{/* if eq .type "fs" */}}
-    {{- end }}{{/* with .Values.clpConfig.logs_input */}}
+    {{- end }}{{/* with .Values.global.logsInput */}}
     {{- with .Values.clpConfig.log_ingestor }}
     log_ingestor:
       host: "localhost"
@@ -161,7 +148,6 @@ data:
     {{- end }}
     package:
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
-    {{- if .Values.spider.enabled }}
     query_coordinator:
       database_connection_pool_size: {{
         .Values.clpConfig.query_coordinator.database_connection_pool_size | int }}
@@ -178,40 +164,6 @@ data:
         .Values.clpConfig.query_coordinator.result_polling_interval_millisecs | int }}
       termination_timeout_secs: {{
         .Values.clpConfig.query_coordinator.termination_timeout_secs | int }}
-    {{- end }}
-    {{- with .Values.clpConfig.query_scheduler }}
-    query_scheduler:
-      host: "{{ include "clp.fullname" $ }}-query-scheduler"
-      jobs_poll_delay: {{ .jobs_poll_delay }}
-      logging_level: {{ .logging_level | quote }}
-      num_archives_to_search_per_sub_job: {{ .num_archives_to_search_per_sub_job | int }}
-      port: 7000
-      scheduler_concurrency: {{ .scheduler_concurrency | int }}
-      telemetry_update_interval_ms: {{ .telemetry_update_interval_ms | int }}
-    {{- end }}
-    {{- with .Values.clpConfig.query_worker }}
-    query_worker:
-      logging_level: {{ .logging_level | quote }}
-      task_soft_time_limit: {{ .task_soft_time_limit | int }}
-      task_time_limit: {{ .task_time_limit | int }}
-      telemetry_update_interval_ms: {{ .telemetry_update_interval_ms | int }}
-      query_trace_sampling_probability: {{ .query_trace_sampling_probability | float64 }}
-    {{- end }}
-    queue:
-      host: "{{ include "clp.queueHost" . }}"
-      port: {{ include "clp.queuePort" . | int }}
-    redis:
-      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database | int }}
-      host: "{{ include "clp.redisHost" . }}"
-      port: {{ include "clp.redisPort" . | int }}
-      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database | int }}
-    {{- with .Values.clpConfig.reducer }}
-    reducer:
-      base_port: 14009
-      host: "{{ include "clp.fullname" $ }}-reducer"
-      logging_level: {{ .logging_level | quote }}
-      upsert_interval: {{ .upsert_interval | int }}
-    {{- end }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: "{{ include "clp.resultsCacheHost" . }}"
@@ -300,13 +252,6 @@ data:
     # log_error override is needed. General log is not enabled because the
     # database process runs as a non-root user that cannot write to /dev/stdout.
 
-  redis.conf: |
-    # For full reference of configuration options see
-    # https://raw.githubusercontent.com/redis/redis/7.2/redis.conf
-
-    databases 2
-    logfile ""
-
   mongod.conf: |
     replication:
       replSetName: "rs0"
@@ -319,15 +264,11 @@ data:
         "ClpQueryEngine": {{ .Values.clpConfig.webui.query_engine | quote }},
         "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
 
-        "LogsInputType": {{ .Values.clpConfig.logs_input.type | quote }},
+        "LogsInputType": {{ .Values.global.logsInput.type | quote }},
         "LogIngestorEnabled": {{ $logIngestorEnabled }},
 
-        {{- if .Values.clpConfig.query_scheduler }}
-        {{- with .Values.clpConfig.query_scheduler.max_datasets_per_query }}
+        {{- with .Values.clpConfig.query_coordinator.max_datasets_per_query }}
         "MaxDatasetsPerQuery": {{ . | int }},
-        {{- else }}
-        "MaxDatasetsPerQuery": null,
-        {{- end }}
         {{- else }}
         "MaxDatasetsPerQuery": null,
         {{- end }}

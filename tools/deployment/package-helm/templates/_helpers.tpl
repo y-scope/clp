@@ -86,53 +86,6 @@ Creates common CLP resource attributes for telemetry.
 {{- end -}}
 
 {{/*
-Generates the OTLP JSON payload for topology metrics emission.
-
-This produces the same payload structure as DockerComposeController._emit_topology_metrics()
-in controller.py, ensuring feature parity between Docker Compose and Helm deployments.
-
-@return {string} OTLP JSON payload for topology metrics
-*/}}
-{{- define "clp.topologyMetricsPayload" -}}
-{{- $timestampNs := now.UnixNano -}}
-{{- $compressionWorkerScheduling := .Values.scheduling.compressionWorker -}}
-{{- $compressionWorkerReplicas := $compressionWorkerScheduling.replicas | default 1 | int -}}
-{{- $queryWorkerReplicas := .Values.scheduling.queryWorker.replicas | default 1 | int -}}
-{{- $reducerReplicas := .Values.scheduling.reducer.replicas | default 1 | int -}}
-{{- $compressionWorkerConcurrency := include "clp.schedulingSlotsPerPod" (dict
-  "root" .
-  "component" "compressionWorker"
-) | int -}}
-{{- $queryWorkerConcurrency := include "clp.schedulingSlotsPerPod" (dict
-  "root" .
-  "component" "queryWorker"
-) | int -}}
-{{- $reducerConcurrency := include "clp.schedulingSlotsPerPod" (dict
-  "root" .
-  "component" "reducer"
-) | int -}}
-{{- printf `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"controller"}}]},"scopeMetrics":[{"scope":{"name":"clp.controller"},"metrics":[{"name":"clp.deployment.compression_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.compression_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.query_worker_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_replicas","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}},{"name":"clp.deployment.reducer_concurrency","gauge":{"dataPoints":[{"asInt":"%d","timeUnixNano":"%d"}]}}]}]}]}` $compressionWorkerReplicas $timestampNs $compressionWorkerConcurrency $timestampNs $queryWorkerReplicas $timestampNs $queryWorkerConcurrency $timestampNs $reducerReplicas $timestampNs $reducerConcurrency $timestampNs -}}
-{{- end -}}
-
-{{/*
-Gets the effective slot count for a worker-like component.
-
-The `slotsPerPod` value is required for each component.
-
-@param {object} root Template context
-@param {string} component One of compressionWorker/queryWorker/reducer
-@return {int} Slot count for the component
-*/}}
-{{- define "clp.schedulingSlotsPerPod" -}}
-{{- $scheduling := index .root.Values.scheduling .component -}}
-{{- $slotsPerPod := $scheduling.slotsPerPod -}}
-{{- if not (hasKey $scheduling "slotsPerPod") -}}
-{{- fail (printf "scheduling.%s.slotsPerPod is required" .component) -}}
-{{- end -}}
-{{- $slotsPerPod | int -}}
-{{- end -}}
-
-{{/*
 Provides environment variables for telemetry (except service.name).
 */}}
 {{- define "clp.telemetryEnv" -}}
@@ -162,7 +115,7 @@ Renders repository@digest when "digest" is set; otherwise, renders repository:ta
 defaults to Chart.AppVersion when "tag" is omitted; other components require "tag".
 
 @param {object} root Root template context (required)
-@param {string} component Key under .Values.image (e.g., "clpPackage", "redis")
+@param {string} component Key under .Values.image (e.g., "clpPackage", "database")
 @return {string} Full image reference (repository@digest or repository:tag)
 */}}
 {{- define "clp.imageRef" -}}
@@ -292,62 +245,6 @@ Gets the port for the database service.
 {{- end }}
 
 {{/*
-Gets the host for the queue service.
-
-@param {object} . Root template context
-@return {string} The queue host
-*/}}
-{{- define "clp.queueHost" -}}
-{{- if has "queue" .Values.clpConfig.bundled -}}
-{{- printf "%s-queue" (include "clp.fullname" .) -}}
-{{- else -}}
-{{- .Values.clpConfig.queue.host -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-Gets the port for the queue service.
-
-@param {object} . Root template context
-@return {string} The queue port
-*/}}
-{{- define "clp.queuePort" -}}
-{{- if has "queue" .Values.clpConfig.bundled -}}
-5672
-{{- else -}}
-{{- .Values.clpConfig.queue.port -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-Gets the host for the Redis service.
-
-@param {object} . Root template context
-@return {string} The Redis host
-*/}}
-{{- define "clp.redisHost" -}}
-{{- if has "redis" .Values.clpConfig.bundled -}}
-{{- printf "%s-redis" (include "clp.fullname" .) -}}
-{{- else -}}
-{{- .Values.clpConfig.redis.host -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-Gets the port for the Redis service.
-
-@param {object} . Root template context
-@return {string} The Redis port
-*/}}
-{{- define "clp.redisPort" -}}
-{{- if has "redis" .Values.clpConfig.bundled -}}
-6379
-{{- else -}}
-{{- .Values.clpConfig.redis.port -}}
-{{- end -}}
-{{- end }}
-
-{{/*
 Gets the host for the results cache service.
 
 @param {object} . Root template context
@@ -466,36 +363,6 @@ Gets the port for the Spider storage service.
 {{- end }}
 
 {{/*
-Gets the BROKER_URL env var for Celery workers.
-
-@param {object} . Root template context
-@return {string} YAML-formatted env var definition
-*/}}
-{{- define "clp.celeryBrokerUrlEnvVar" -}}
-{{- $user := .Values.credentials.queue.username -}}
-{{- $pass := .Values.credentials.queue.password -}}
-{{- $host := include "clp.queueHost" . -}}
-{{- $port := include "clp.queuePort" . | int -}}
-name: "BROKER_URL"
-value: {{ printf "amqp://%s:%s@%s:%d" $user $pass $host $port | quote }}
-{{- end }}
-
-{{/*
-Gets the RESULT_BACKEND env var for Celery workers.
-
-@param {object} root Root template context
-@param {string} database Redis database number from config
-@return {string} YAML-formatted env var definition
-*/}}
-{{- define "clp.celeryResultBackendEnvVar" -}}
-{{- $pass := .root.Values.credentials.redis.password -}}
-{{- $host := include "clp.redisHost" .root -}}
-{{- $port := include "clp.redisPort" .root | int -}}
-name: "RESULT_BACKEND"
-value: {{ printf "redis://default:%s@%s:%d/%d" $pass $host $port (int .database) | quote }}
-{{- end }}
-
-{{/*
 Creates a volumeMount for the logs input directory.
 
 @return {string} YAML-formatted volumeMount definition
@@ -515,7 +382,7 @@ Creates a volume for the logs input directory.
 {{- define "clp.logsInputVolume" -}}
 name: "logs-input"
 hostPath:
-  path: {{ .Values.clpConfig.logs_input.directory | quote }}
+  path: {{ .Values.global.logsInput.directory | quote }}
   type: "Directory"
 {{- end }}
 
@@ -604,7 +471,7 @@ When distributedDeployment is false (single-node mode), a control-plane tolerati
 added so pods can be scheduled on tainted control-plane nodes without manual untainting.
 
 @param {object} root Root template context
-@param {string} component Key name under .Values.scheduling (e.g., "compressionWorker", "database")
+@param {string} component Key name under .Values.scheduling (e.g., "queryCoordinator", "database")
 @return {string} YAML-formatted scheduling fields (nodeSelector, affinity, tolerations,
   topologySpreadConstraints)
 */}}
@@ -640,7 +507,7 @@ topologySpreadConstraints:
 Creates resource requests and limits configuration for a component.
 
 @param {object} root Root template context
-@param {string} component Key name under .Values.resources (e.g., "compressionWorker", "database")
+@param {string} component Key name under .Values.resources (e.g., "queryCoordinator", "database")
 @return {string} YAML-formatted resources block (requests, limits) nested under a resources key
 */}}
 {{- define "clp.createResourceLimits" -}}
