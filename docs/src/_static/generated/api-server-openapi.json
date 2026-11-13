@@ -482,7 +482,7 @@
           },
           {
             "type": "object",
-            "description": "Buffers the results in temporary files.",
+            "description": "Buffers the results in files in the stream output storage (the file system or S3).",
             "required": [
               "type"
             ],

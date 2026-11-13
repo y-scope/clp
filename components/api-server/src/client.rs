@@ -229,7 +229,7 @@ pub enum QueryOutputConfig {
         aggregation: Option<Aggregation>,
     },
 
-    /// Buffers the results in temporary files.
+    /// Buffers the results in files in the stream output storage (the file system or S3).
     File {},
 }
 
@@ -808,7 +808,6 @@ mod tests {
     use std::str::FromStr;
 
     use clp_rust_utils::job_config::TimeRange;
-    use clp_rust_utils::types::PositiveI64;
     use non_empty_string::NonEmptyString;
 
     use super::*;
@@ -836,6 +835,8 @@ mod tests {
 
     #[test]
     fn query_config_converts_to_query_job_config_by_output() {
+        use clp_rust_utils::types::PositiveI64;
+
         let max_num_results = NonZeroU32::new(7);
         let aggregation = Some(Aggregation::CountByTime {
             bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
@@ -882,15 +883,31 @@ mod tests {
         let other_dataset: DatasetName = "other"
             .parse()
             .expect("name should be a valid dataset name");
-        let actual = QueryJobConfig::from(QueryConfig {
-            datasets: Some(vec![other_dataset.clone()]),
-            ..base_query_config()
-        });
-        assert_eq!(actual.datasets, vec![other_dataset]);
+        assert_eq!(
+            QueryJobConfig::from(QueryConfig {
+                datasets: Some(vec![other_dataset.clone()]),
+                ..base_query_config()
+            }),
+            QueryJobConfig {
+                datasets: vec![other_dataset],
+                query: base_query_config().query,
+                output: QueryOutput::File {},
+            }
+        );
     }
 
     #[test]
     fn query_config_without_datasets_searches_the_default_dataset() -> anyhow::Result<()> {
+        let expected = QueryJobConfig {
+            datasets: vec![DatasetName::default()],
+            query: SearchQuery {
+                query_string: NonEmptyString::new("*".to_owned())
+                    .expect("query string is non-empty"),
+                time_range: TimeRange::default(),
+                ignore_case: false,
+            },
+            output: QueryOutput::File {},
+        };
         for body in [
             serde_json::json!({"query": {"query_string": "*"}, "output": {"type": "file"}}),
             serde_json::json!({
@@ -900,11 +917,7 @@ mod tests {
             }),
         ] {
             let query_config: QueryConfig = serde_json::from_value(body.clone())?;
-            assert_eq!(
-                QueryJobConfig::from(query_config).datasets,
-                vec![DatasetName::default()],
-                "{body}"
-            );
+            assert_eq!(QueryJobConfig::from(query_config), expected, "{body}");
         }
         Ok(())
     }

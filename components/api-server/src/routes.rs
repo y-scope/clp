@@ -456,7 +456,6 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
     use clp_rust_utils::job_config::QueryJobStatus;
-    use clp_rust_utils::job_config::TimeRange;
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
@@ -464,6 +463,8 @@ mod tests {
 
     #[tokio::test]
     async fn query_rejects_invalid_requests_with_unprocessable_entity() -> anyhow::Result<()> {
+        use clp_rust_utils::job_config::TimeRange;
+
         let reversed_time_range_error =
             TimeRange::new(Some(2), Some(1)).expect_err("a reversed time range should be rejected");
         let app = clp_s_app_with_lazy_clients().await;

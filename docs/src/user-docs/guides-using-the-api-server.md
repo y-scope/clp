@@ -13,9 +13,8 @@ All available API endpoints are defined in the [OpenAPI] Specification. You can 
 using [Swagger UI][swagger-ui].
 
 :::{note}
-`clp-text` doesn't support buffering search results in the file system or S3. When using
-`clp-text`, set `output` to `{"type": "results_cache"}` so that results are buffered in `MongoDB`
-instead.
+`clp-text` doesn't support buffering search results in the file system or S3. When using `clp-text`,
+set `output` to `{"type": "results_cache"}` so that results are buffered in `MongoDB` instead.
 :::
 
 ## Example: Submitting search queries and receiving results
