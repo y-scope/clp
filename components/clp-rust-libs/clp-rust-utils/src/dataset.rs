@@ -235,6 +235,8 @@ mod tests {
 
     use super::DATASET_NAME_MAX_LEN;
     use super::DatasetName;
+    use super::EmptyDatasetNamesError;
+    use super::NonEmptyDatasetNames;
     use super::ParseDatasetNameError;
 
     #[test]
@@ -434,5 +436,23 @@ mod tests {
                 .expect("name should be a valid dataset name")
                 .is_default()
         );
+    }
+
+    #[test]
+    fn non_empty_dataset_names_rejects_only_an_empty_list() -> anyhow::Result<()> {
+        let dataset_names: NonEmptyDatasetNames =
+            serde_json::from_value(serde_json::json!(["logs", "metrics"]))?;
+        assert_eq!(
+            Vec::from(dataset_names),
+            vec![
+                "logs".parse::<DatasetName>()?,
+                "metrics".parse::<DatasetName>()?
+            ]
+        );
+
+        let error = serde_json::from_value::<NonEmptyDatasetNames>(serde_json::json!([]))
+            .expect_err("an empty list should be rejected");
+        assert_eq!(error.to_string(), EmptyDatasetNamesError.to_string());
+        Ok(())
     }
 }

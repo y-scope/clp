@@ -403,6 +403,30 @@ mod tests {
 
     use super::*;
 
+    #[tokio::test]
+    async fn streaming_query_is_parsed_and_answered_as_not_implemented() -> anyhow::Result<()> {
+        let app = clp_s_app_with_lazy_clients().await;
+        let body = serde_json::json!({
+            "datasets": ["default"],
+            "query": {"query_string": "*"},
+        });
+
+        let response = app
+            .oneshot(
+                Request::post("/query/stream")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body.to_string()))?,
+            )
+            .await?;
+
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(
+            get_body(response).await,
+            "streaming queries are not available yet"
+        );
+        Ok(())
+    }
+
     /// Builds a minimal Axum app that validates compression usage params via
     /// [`TryFrom<CompressionUsageParams>`] and returns the resolved
     /// status integer codes on success. No real database is needed.

@@ -106,3 +106,64 @@ impl<OutputOptionsType: OutputOptions> QueryRequest<OutputOptionsType> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroU16;
+    use std::num::NonZeroU32;
+
+    use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::job_config::TimeRange;
+    use non_empty_string::NonEmptyString;
+
+    use super::*;
+
+    #[test]
+    fn query_request_converts_to_a_query_job_config_with_the_output_of_its_options()
+    -> anyhow::Result<()> {
+        let datasets = vec!["logs".parse::<DatasetName>()?];
+        let query = SearchQuery {
+            query_string: NonEmptyString::new("level: ERROR".to_owned())
+                .expect("query string is non-empty"),
+            time_range: TimeRange::new(Some(1), Some(2))?,
+            ignore_case: true,
+        };
+        let options = ResultsCacheOutput {
+            max_num_results: NonZeroU32::new(7),
+            aggregation: None,
+        };
+
+        let query_job_config = QueryRequest {
+            datasets: NonEmptyDatasetNames::try_from(datasets.clone())?,
+            query: query.clone(),
+            output: options.clone(),
+        }
+        .into_query_job_config(());
+
+        assert_eq!(
+            query_job_config,
+            QueryJobConfig {
+                datasets,
+                query,
+                output: QueryOutput::ResultsCache(options),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn file_and_network_output_options_build_their_outputs() -> anyhow::Result<()> {
+        let network_output = NetworkOutput {
+            host: NonEmptyString::new("10.0.0.5".to_owned()).expect("host is non-empty"),
+            port: NonZeroU16::new(3003).expect("3003 is nonzero"),
+            session_token: "3f1c1a5e-5b6e-4a43-9d6b-0f2b2f5a8c11".parse()?,
+        };
+
+        assert_eq!(FileOutputOptions {}.into_output(()), QueryOutput::File {});
+        assert_eq!(
+            NetworkOutputOptions {}.into_output(network_output.clone()),
+            QueryOutput::Network(network_output)
+        );
+        Ok(())
+    }
+}
