@@ -59,9 +59,9 @@ impl Default for Config {
             },
             archive_output: ArchiveOutput::default(),
             telemetry: Telemetry::default(),
-            spider: None,
-            compression_coordinator: None,
-            query_coordinator: None,
+            spider: Some(Spider::default()),
+            compression_coordinator: Some(CompressionCoordinator::default()),
+            query_coordinator: Some(QueryCoordinator::default()),
         }
     }
 }
@@ -326,7 +326,7 @@ pub struct Package {
 impl Default for Package {
     fn default() -> Self {
         Self {
-            storage_engine: StorageEngine::Clp,
+            storage_engine: StorageEngine::ClpS,
         }
     }
 }
@@ -672,9 +672,19 @@ impl Default for CompressionCoordinator {
 
 /// Spider configuration.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
 pub struct Spider {
     pub host: NonEmptyString,
     pub port: u16,
+}
+
+impl Default for Spider {
+    fn default() -> Self {
+        Self {
+            host: NonEmptyString::from_static_str("localhost"),
+            port: 50051,
+        }
+    }
 }
 
 /// Polling backoff configuration.

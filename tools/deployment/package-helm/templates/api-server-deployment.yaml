@@ -66,7 +66,7 @@ spec:
             {{- if .Values.clpConfig.aws_config }}
             - {{- include "clp.awsConfigVolumeMount" . | nindent 14 }}
             {{- end }}
-            {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+            {{- if eq .Values.global.logsInput.type "fs" }}
             - {{- include "clp.logsInputVolumeMount" . | nindent 14 }}
             {{- end }}
             {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
@@ -97,7 +97,7 @@ spec:
         {{- if .Values.clpConfig.aws_config }}
         - {{- include "clp.awsConfigVolume" . | nindent 10 }}
         {{- end }}
-        {{- if eq .Values.clpConfig.logs_input.type "fs" }}
+        {{- if eq .Values.global.logsInput.type "fs" }}
         - {{- include "clp.logsInputVolume" . | nindent 10 }}
         {{- end }}
         {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
