@@ -1166,7 +1166,7 @@ async fn results_are_forwarded_while_the_job_runs_and_the_end_carries_its_status
     attempt.finish(3).await;
 
     termination_sender
-        .send(Ok(QueryJobStatus::Succeeded))
+        .send(Ok(QueryJobStatus::Cancelled))
         .expect("the stream should wait for the job's termination");
     let ending = Ending::receive(&mut events).await;
 
@@ -1175,7 +1175,7 @@ async fn results_are_forwarded_while_the_job_runs_and_the_end_carries_its_status
     assert_eq!(
         ending.ended(),
         Ended {
-            status: QueryJobStatus::Succeeded,
+            status: QueryJobStatus::Cancelled,
             stats: SessionStats {
                 num_results_emitted: 3,
                 num_duplicates_dropped: 0,
