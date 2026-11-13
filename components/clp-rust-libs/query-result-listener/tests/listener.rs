@@ -211,8 +211,26 @@ impl Ending {
     ///
     /// # Panics
     ///
-    /// Panics if the stream ends without an end or a failure, or doesn't end after it.
+    /// Panics if the stream doesn't end after its end or failure.
     async fn receive(events: &mut (impl Stream<Item = TestEvent> + Unpin)) -> Self {
+        let ending = Self::receive_without_polling_further(events).await;
+        expect_end(events).await;
+        ending
+    }
+
+    /// Receives the items of `events` until its end or failure, without polling it further, so
+    /// that the stream hasn't finished yet.
+    ///
+    /// # Returns
+    ///
+    /// The results of the received batches, and the stream's last item.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stream ends without an end or a failure.
+    async fn receive_without_polling_further(
+        events: &mut (impl Stream<Item = TestEvent> + Unpin),
+    ) -> Self {
         let mut results = Vec::new();
         let last_event = loop {
             match next_event(events)
@@ -223,10 +241,6 @@ impl Ending {
                 last_event => break last_event,
             }
         };
-        assert!(
-            next_event(events).await.is_none(),
-            "the event stream should end after its last event"
-        );
         Self {
             results,
             last_event,
@@ -360,6 +374,18 @@ async fn next_event(events: &mut (impl Stream<Item = TestEvent> + Unpin)) -> Opt
     timeout(TIMEOUT, events.next())
         .await
         .expect("the event stream should yield an item or end")
+}
+
+/// Checks that `events` has no item left.
+///
+/// # Panics
+///
+/// Panics if the stream yields another item.
+async fn expect_end(events: &mut (impl Stream<Item = TestEvent> + Unpin)) {
+    assert!(
+        next_event(events).await.is_none(),
+        "the event stream should end after its last event"
+    );
 }
 
 /// Receives batches from `events` until they hold `num_results` results.
@@ -1272,7 +1298,7 @@ async fn session_failure_takes_priority_over_a_terminal_status_and_requests_canc
     // Lets the task waiting for the job's termination finish before the stream is polled.
     yield_now().await;
 
-    let ending = Ending::receive(&mut events).await;
+    let ending = Ending::receive_without_polling_further(&mut events).await;
 
     let expected_error = EncodingError::UnencodableMessage {
         archive_id: ARCHIVE_ID.parse::<ArchiveId>()?,
@@ -1289,6 +1315,7 @@ async fn session_failure_takes_priority_over_a_terminal_status_and_requests_canc
     // Counted while the stream is alive, so that only the failure can have requested the
     // cancellation.
     assert_eq!(timeout(TIMEOUT, cancellation_requests.count()).await?, 1);
+    expect_end(&mut events).await;
     Ok(())
 }
 
@@ -1359,7 +1386,7 @@ async fn failed_termination_ends_the_stream_with_its_error_and_requests_cancella
     // Lets the task waiting for the job's termination finish before the stream is polled.
     yield_now().await;
 
-    let ending = Ending::receive(&mut events).await;
+    let ending = Ending::receive_without_polling_further(&mut events).await;
     attempt.expect_closed_by_listener().await;
 
     assert_eq!(ending.results, [] as [QueryResult; 0]);
@@ -1377,6 +1404,7 @@ async fn failed_termination_ends_the_stream_with_its_error_and_requests_cancella
     // Counted while the stream is alive, so that only the failure can have requested the
     // cancellation.
     assert_eq!(timeout(TIMEOUT, cancellation_requests.count()).await?, 1);
+    expect_end(&mut events).await;
     Ok(())
 }
 
@@ -1391,7 +1419,7 @@ async fn panicked_termination_ends_the_stream_with_a_join_error_and_requests_can
         request_cancellation,
     ));
 
-    let ending = Ending::receive(&mut events).await;
+    let ending = Ending::receive_without_polling_further(&mut events).await;
 
     assert!(
         matches!(
@@ -1404,6 +1432,7 @@ async fn panicked_termination_ends_the_stream_with_a_join_error_and_requests_can
     // Counted while the stream is alive, so that only the failure can have requested the
     // cancellation.
     assert_eq!(timeout(TIMEOUT, cancellation_requests.count()).await?, 1);
+    expect_end(&mut events).await;
     Ok(())
 }
 
