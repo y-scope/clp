@@ -53,14 +53,16 @@ public:
 
     /**
      * Ingests a nanosecond precision timestamp, potentially adjusting the start and end bounds for
-     * this TimestampEntry.
+     * this TimestampEntry to maintain the invariant that the bounds represent a tight bound on all
+     * ingested timestamps in terms of epoch milliseconds.
      * @param timestamp the timestamp to be ingested
      */
     void ingest_timestamp(epochtime_t timestamp);
 
     /**
      * Ingests a millisecond precision timestamp, potentially adjusting the start and end bounds for
-     * this TimestampEntry.
+     * this TimestampEntry to maintain the invariant that the bounds represent a tight bound on all
+     * ingested timestamps in terms of epoch milliseconds.
      * @param timestamp The timestamp to be ingested
      */
     auto ingest_millisecond_timestamp(epochtime_t millisecond_timestamp) -> void;
