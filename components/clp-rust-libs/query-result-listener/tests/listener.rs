@@ -1386,7 +1386,10 @@ async fn panicked_termination_ends_the_stream_with_a_join_error_and_requests_can
     let ending = Ending::receive(&mut events).await;
 
     assert!(
-        matches!(ending.error(), SessionEventError::TerminationTaskFailed(error) if error.is_panic()),
+        matches!(
+            ending.error(),
+            SessionEventError::TerminationTaskFailed(error) if error.is_panic()
+        ),
         "unexpected error: {:?}",
         ending.error()
     );
