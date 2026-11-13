@@ -129,8 +129,6 @@ StorageEngineStr = Annotated[StorageEngine, StrEnumSerializer]
 
 class BundledService(LowercaseStrEnum):
     DATABASE = auto()
-    QUEUE = auto()
-    REDIS = auto()
     RESULTS_CACHE = auto()
     OTEL_COLLECTOR = auto()
 
@@ -144,14 +142,6 @@ class DatabaseEngine(KebabCaseStrEnum):
 
 
 DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
-
-
-class CompressionOrchestration(KebabCaseStrEnum):
-    CELERY = auto()
-    SPIDER = auto()
-
-
-CompressionOrchestrationStr = Annotated[CompressionOrchestration, StrEnumSerializer]
 
 
 class SpiderSchedulerPolicy(SnakeCaseStrEnum):
@@ -185,7 +175,6 @@ AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
 
 class Package(BaseModel):
     storage_engine: StorageEngineStr = StorageEngine.CLP_S
-    scheduler: CompressionOrchestrationStr = CompressionOrchestration.CELERY
 
 
 class ClpDbUserType(KebabCaseStrEnum):
@@ -430,7 +419,6 @@ class Redis(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     query_backend_database: int = 0
-    compression_backend_database: int = 1
     # redis can perform authentication without a username
     password: str | None = None
 
@@ -1022,31 +1010,21 @@ class ClpConfig(BaseModel):
     logs_input: FsIngestionConfig | S3IngestionConfig = FsIngestionConfig()
     bundled: list[BundledServiceStr] = [
         BundledService.DATABASE,
-        BundledService.QUEUE,
-        BundledService.REDIS,
         BundledService.RESULTS_CACHE,
         BundledService.OTEL_COLLECTOR,
     ]
 
     package: Package = Package()
     database: Database = Database()
-    # Default to use celery backend
-    queue: Queue | None = Queue()
-    redis: Redis | None = Redis()
-    reducer: Reducer | None = Reducer()
     results_cache: ResultsCache = ResultsCache()
     otel_collector: OtelCollector = OtelCollector()
-    compression_scheduler: CompressionScheduler = CompressionScheduler()
-    query_scheduler: QueryScheduler | None = QueryScheduler()
-    compression_worker: CompressionWorker = CompressionWorker()
-    query_worker: QueryWorker | None = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
     api_server: ApiServer | None = ApiServer()
     log_ingestor: LogIngestor | None = LogIngestor()
-    spider: Spider | None = None
-    compression_coordinator: CompressionCoordinator | None = None
-    query_coordinator: QueryCoordinator | None = None
+    spider: Spider = Spider()
+    compression_coordinator: CompressionCoordinator = CompressionCoordinator()
+    query_coordinator: QueryCoordinator = QueryCoordinator()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: McpServer | None = None
@@ -1227,8 +1205,6 @@ class ClpConfig(BaseModel):
             "compression_coordinator",
             "database",
             "query_coordinator",
-            "queue",
-            "redis",
             "spider",
         }
         d = self.model_dump(exclude=custom_serialized_fields)
@@ -1248,57 +1224,21 @@ class ClpConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_compression_orchestration_config(self):
-        if CompressionOrchestration.SPIDER != self.package.scheduler:
-            # None of these services are deployed in this mode, so no `spider`,
-            # `compression_coordinator` or `query_coordinator` config check is necessary.
-            return self
-        if self.spider is None:
-            msg = (
-                "`spider` must be configured when `package.scheduler` is"
-                f" `{CompressionOrchestration.SPIDER}`."
-            )
-            raise ValueError(msg)
-        if self.compression_coordinator is None:
-            msg = (
-                "`compression_coordinator` must be configured when `package.scheduler` is"
-                f" `{CompressionOrchestration.SPIDER}`."
-            )
-            raise ValueError(msg)
-        if self.query_coordinator is None:
-            msg = (
-                "`query_coordinator` must be configured when `package.scheduler` is"
-                f" `{CompressionOrchestration.SPIDER}`."
-            )
-            raise ValueError(msg)
-        return self
-
-    @model_validator(mode="after")
     def validate_compression_coordinator_config(self):
-        if self.compression_coordinator is None:
-            return self
         if self.package.storage_engine != StorageEngine.CLP_S:
             msg = (
                 "compression-coordinator is only compatible with storage engine "
                 f"`{StorageEngine.CLP_S}`."
             )
             raise ValueError(msg)
-        if self.spider is None:
-            msg = "compression-coordinator requires Spider to be configured."
-            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
     def validate_query_coordinator_config(self):
-        if self.query_coordinator is None:
-            return self
         if self.package.storage_engine != StorageEngine.CLP_S:
             msg = (
                 f"query-coordinator is only compatible with storage engine `{StorageEngine.CLP_S}`."
             )
-            raise ValueError(msg)
-        if self.spider is None:
-            msg = "query-coordinator requires Spider to be configured."
             raise ValueError(msg)
         return self
 
@@ -1334,14 +1274,6 @@ class ClpConfig(BaseModel):
 
         return self
 
-    @model_validator(mode="after")
-    def validate_celery_config(self):
-        if self.queue is None:
-            raise ValueError("`queue` must be configured when using Celery orchestration.")
-        if self.redis is None:
-            raise ValueError("`redis` must be configured when using Celery orchestration.")
-        return self
-
     def transform_for_container(self) -> None:
         """
         Converts all relevant directories to absolute paths inside the container, and updates
@@ -1357,24 +1289,15 @@ class ClpConfig(BaseModel):
         self.stream_output.storage.transform_for_container()
 
         self.database.transform_for_container(BundledService.DATABASE in self.bundled)
-        if self.queue is not None:
-            self.queue.transform_for_container(BundledService.QUEUE in self.bundled)
-        if self.redis is not None:
-            self.redis.transform_for_container(BundledService.REDIS in self.bundled)
         self.results_cache.transform_for_container(BundledService.RESULTS_CACHE in self.bundled)
         self.otel_collector.transform_for_container(BundledService.OTEL_COLLECTOR in self.bundled)
         if self.api_server is not None:
             self.api_server.transform_for_container()
         if self.log_ingestor is not None:
             self.log_ingestor.transform_for_container()
-        if self.query_scheduler is not None:
-            self.query_scheduler.transform_for_container()
-        if self.reducer is not None:
-            self.reducer.transform_for_container()
         if self.presto is not None:
             self.presto.transform_for_container()
-        if self.spider is not None:
-            self.spider.transform_for_container()
+        self.spider.transform_for_container()
 
 
 class WorkerConfig(BaseModel):

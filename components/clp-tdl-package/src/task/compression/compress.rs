@@ -12,7 +12,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use clp_rust_utils::aws::AWS_DEFAULT_REGION;
-use clp_rust_utils::clp_config::S3Config;
 use clp_rust_utils::clp_config::package::config::ArchiveOutput;
 use clp_rust_utils::clp_config::package::config::ArchiveOutputStorage;
 use clp_rust_utils::clp_config::package::config::Database;
@@ -21,7 +20,6 @@ use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
 use clp_rust_utils::clp_config::package::config::StorageEngine;
 use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::logs_input::LogsInputMountPoint;
-use clp_rust_utils::s3::create_new_client;
 use clp_rust_utils::s3::generate_s3_url;
 use clp_rust_utils::task_io::compression::ArchiveMetadata;
 use clp_rust_utils::task_io::compression::ClpSCompressionOption;
@@ -34,8 +32,10 @@ use non_empty_string::NonEmptyString;
 
 use crate::common::clp_home;
 use crate::common::runtime;
+use crate::task::utils::build_s3_client;
 use crate::task::utils::clp_binary_path;
 use crate::task::utils::s3_credential_env;
+use crate::task::utils::upload_file_to_s3;
 
 /// Source-specific validation and preparation for compression.
 pub(super) trait Source {
@@ -609,53 +609,6 @@ fn build_fs_logs_list(
         list.push('\n');
     }
     Ok(list)
-}
-
-/// Builds an S3 client for the archive-output bucket, resolving the region to
-/// [`AWS_DEFAULT_REGION`] when the config omits it.
-///
-/// # Returns
-///
-/// The S3 client the archives are uploaded through.
-fn build_s3_client(runtime: &tokio::runtime::Handle, s3_config: &S3Config) -> aws_sdk_s3::Client {
-    let region = s3_config
-        .region_code
-        .as_ref()
-        .map_or(AWS_DEFAULT_REGION, NonEmptyString::as_str);
-    runtime.block_on(create_new_client(
-        region,
-        s3_config.endpoint_url.as_ref(),
-        &s3_config.aws_authentication,
-    ))
-}
-
-/// Uploads a local file to S3 through `PutObject`.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`aws_sdk_s3::primitives::ByteStream::from_path`]'s return values on failure.
-/// * Forwards [`aws_sdk_s3::operation::put_object::builders::PutObjectFluentBuilder::send`]'s
-///   return values on failure.
-async fn upload_file_to_s3(
-    client: &aws_sdk_s3::Client,
-    bucket: &str,
-    key: &str,
-    src: &Path,
-) -> anyhow::Result<()> {
-    let body = aws_sdk_s3::primitives::ByteStream::from_path(src)
-        .await
-        .with_context(|| format!("failed to read {} for upload", src.display()))?;
-    client
-        .put_object()
-        .bucket(bucket)
-        .key(key)
-        .body(body)
-        .send()
-        .await
-        .with_context(|| format!("failed to upload to s3://{bucket}/{key}"))?;
-    Ok(())
 }
 
 /// Waits for all archive finishers, collecting the first execution or join error.
@@ -1509,9 +1462,15 @@ mod tests {
 
     #[test]
     fn compression_rejects_non_clp_s_engine_even_for_file_free_input() {
+        let config = SpiderTaskExecutorConfig {
+            package: Package {
+                storage_engine: StorageEngine::Clp,
+            },
+            ..SpiderTaskExecutorConfig::default()
+        };
         let error = compress(
             &task_context(),
-            &SpiderTaskExecutorConfig::default(),
+            &config,
             &BASE_OPTION,
             DatasetName::default(),
             FsInputSource { file_paths: vec![] },
