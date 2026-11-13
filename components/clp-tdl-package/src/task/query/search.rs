@@ -414,6 +414,7 @@ mod tests {
     use clp_rust_utils::clp_config::package::config::SpiderTaskExecutorConfig;
     use clp_rust_utils::clp_config::package::config::StorageEngine;
     use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::dataset::NonEmptyDatasetNames;
     use clp_rust_utils::job_config::Aggregation;
     use clp_rust_utils::job_config::NetworkOutput;
     use clp_rust_utils::job_config::QueryOutput;
@@ -444,8 +445,14 @@ mod tests {
     /// # Returns
     ///
     /// A search query with no timestamp bounds and case-sensitive matching.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the dataset names are empty.
     fn unbounded_query() -> SearchQuery {
         SearchQuery {
+            datasets: NonEmptyDatasetNames::try_from(vec![DatasetName::default()])
+                .expect("dataset names should be non-empty"),
             query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
             time_range: TimeRange::default(),
             ignore_case: false,
@@ -557,10 +564,10 @@ mod tests {
     #[test]
     fn build_clp_s_query_args_fs_with_timestamps_and_ignore_case() {
         let query = SearchQuery {
-            query_string: NonEmptyString::from_static_str("level: \"ERROR\""),
             time_range: TimeRange::new(Some(1_310_138_944_000), Some(1_311_208_074_120))
                 .expect("range is ordered"),
             ignore_case: true,
+            ..unbounded_query()
         };
 
         assert_eq!(

@@ -216,6 +216,8 @@ fn build_query_task_graph(
 mod tests {
     use std::num::NonZeroU16;
 
+    use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::dataset::NonEmptyDatasetNames;
     use clp_rust_utils::job_config::Aggregation;
     use clp_rust_utils::job_config::NetworkOutput;
     use clp_rust_utils::job_config::QueryOutput;
@@ -232,6 +234,7 @@ mod tests {
     #[test]
     fn commit_task_is_attached_only_for_count_by_time_output() -> anyhow::Result<()> {
         let query = SearchQuery {
+            datasets: NonEmptyDatasetNames::try_from(vec![DatasetName::default()])?,
             query_string: NonEmptyString::from_static_str("*"),
             time_range: TimeRange::default(),
             ignore_case: false,

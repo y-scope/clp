@@ -31,8 +31,8 @@ following commands to submit a query to clp-json and stream the results.
    curl -X POST http://localhost:3001/query \
        -H "Content-Type: application/json" \
        -d '{
-          "datasets": ["default"],
           "query": {
+             "datasets": ["default"],
              "query_string": "*log*",
              "ignore_case": false
           },
@@ -43,6 +43,7 @@ following commands to submit a query to clp-json and stream the results.
        }'
    ```
 
+   `query` is the search to run, including the datasets to search within, which must not be empty.
    `output` chooses where the results are buffered: `{"type": "results_cache"}` buffers them in
    `MongoDB`, and `{"type": "file"}` buffers them in the file system or S3. Omit `max_num_results`
    to return all matching results. When specified, the limit must be a positive integer; zero is

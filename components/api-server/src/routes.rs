@@ -144,8 +144,8 @@ async fn health() -> String {
     request_body(
         content= QueryConfig,
         example = json!({
-            "datasets": ["default"],
             "query": {
+                "datasets": ["default"],
                 "query_string": "*",
                 "time_range": {
                     "begin_timestamp_millisecs": 0,
@@ -170,7 +170,7 @@ async fn health() -> String {
             description = "The Content-Type header is missing or is not a JSON media type."),
         (status = UNPROCESSABLE_ENTITY, body = String, content_type = "text/plain",
             description = "The JSON body has missing or unknown fields, or fields with invalid \
-                types or values (e.g., an empty `datasets` or `query.query_string`, a \
+                types or values (e.g., an empty `query.datasets` or `query.query_string`, a \
                 `query.time_range` whose begin timestamp exceeds its end timestamp, or a \
                 non-positive `output.max_num_results`)."),
         (status = INTERNAL_SERVER_ERROR)
@@ -465,8 +465,7 @@ mod tests {
     async fn query_rejects_a_network_output_with_unprocessable_entity() -> anyhow::Result<()> {
         let app = clp_s_app_with_lazy_clients().await;
         let body = serde_json::json!({
-            "datasets": ["default"],
-            "query": {"query_string": "*"},
+            "query": {"datasets": ["default"], "query_string": "*"},
             "output": {
                 "type": "network",
                 "host": "localhost",

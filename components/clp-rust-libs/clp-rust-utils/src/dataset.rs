@@ -175,6 +175,16 @@ pub struct NonEmptyDatasetNames {
     dataset_names: Vec<DatasetName>,
 }
 
+impl NonEmptyDatasetNames {
+    /// # Returns
+    ///
+    /// The dataset names as a slice.
+    #[must_use]
+    pub const fn as_slice(&self) -> &[DatasetName] {
+        self.dataset_names.as_slice()
+    }
+}
+
 impl TryFrom<Vec<DatasetName>> for NonEmptyDatasetNames {
     type Error = EmptyDatasetNamesError;
 

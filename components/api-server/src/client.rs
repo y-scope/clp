@@ -9,7 +9,6 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::database::mysql::query_job;
-use clp_rust_utils::dataset::NonEmptyDatasetNames;
 use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
@@ -180,9 +179,6 @@ pub struct CompressionUsage {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QueryConfig {
-    /// The datasets to search within.
-    pub datasets: NonEmptyDatasetNames,
-
     /// The search to run.
     pub query: SearchQuery,
 
@@ -191,23 +187,21 @@ pub struct QueryConfig {
 }
 
 impl From<QueryConfig> for QueryJobConfig {
-    fn from(value: QueryConfig) -> Self {
-        let output = match value.output {
-            QueryOutputConfig::ResultsCache {
-                max_num_results,
-                aggregation,
-            } => QueryOutput::ResultsCache(ResultsCacheOutput {
-                max_num_results,
-                aggregation,
-            }),
-            QueryOutputConfig::File {} => QueryOutput::File {},
-        };
+    fn from(config: QueryConfig) -> Self {
         Self {
-            datasets: value.datasets.into(),
-            query: value.query,
-            output,
+            query: config.query,
+            output: config.output.into(),
         }
     }
+}
+
+/// Defines the request configuration for submitting a search query whose results are streamed
+/// instead of buffered.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct StreamingQueryConfig {
+    /// The search to run.
+    pub query: SearchQuery,
 }
 
 /// Defines where a submitted search query's results are buffered.
@@ -228,6 +222,21 @@ pub enum QueryOutputConfig {
 
     /// Buffers the results in files in the stream output storage (the file system or S3).
     File {},
+}
+
+impl From<QueryOutputConfig> for QueryOutput {
+    fn from(output: QueryOutputConfig) -> Self {
+        match output {
+            QueryOutputConfig::ResultsCache {
+                max_num_results,
+                aggregation,
+            } => Self::ResultsCache(ResultsCacheOutput {
+                max_num_results,
+                aggregation,
+            }),
+            QueryOutputConfig::File {} => Self::File {},
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -779,6 +788,7 @@ mod tests {
     use std::str::FromStr;
 
     use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::dataset::NonEmptyDatasetNames;
     use clp_rust_utils::job_config::TimeRange;
     use non_empty_string::NonEmptyString;
 
@@ -806,24 +816,14 @@ mod tests {
     }
 
     #[test]
-    fn query_config_converts_to_query_job_config_by_output() {
+    fn query_output_config_converts_to_the_matching_query_output() {
         use clp_rust_utils::types::PositiveI64;
 
         let max_num_results = NonZeroU32::new(7);
         let aggregation = Some(Aggregation::CountByTime {
             bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
         });
-        for (output, expected_output) in [
-            (
-                QueryOutputConfig::ResultsCache {
-                    max_num_results,
-                    aggregation: None,
-                },
-                QueryOutput::ResultsCache(ResultsCacheOutput {
-                    max_num_results,
-                    aggregation: None,
-                }),
-            ),
+        for (output, expected) in [
             (
                 QueryOutputConfig::ResultsCache {
                     max_num_results,
@@ -836,41 +836,42 @@ mod tests {
             ),
             (QueryOutputConfig::File {}, QueryOutput::File {}),
         ] {
-            let query_config = QueryConfig {
-                output,
-                ..base_query_config()
-            };
-            let expected = QueryJobConfig {
-                datasets: base_query_config().datasets.into(),
-                query: base_query_config().query,
-                output: expected_output,
-            };
             assert_eq!(
-                QueryJobConfig::from(query_config.clone()),
+                QueryOutput::from(output.clone()),
                 expected,
-                "query config: {query_config:?}"
+                "output: {output:?}"
             );
         }
     }
 
-    /// # Returns
-    ///
-    /// A valid query config whose results are buffered in files.
-    fn base_query_config() -> QueryConfig {
-        QueryConfig {
-            datasets: NonEmptyDatasetNames::try_from(vec![
-                "logs"
-                    .parse::<DatasetName>()
-                    .expect("name should be a valid dataset name"),
-            ])
-            .expect("dataset names are non-empty"),
-            query: SearchQuery {
-                query_string: NonEmptyString::new("level: ERROR".to_owned())
-                    .expect("query string is non-empty"),
-                time_range: TimeRange::new(Some(1), Some(2)).expect("range is ordered"),
-                ignore_case: true,
-            },
-            output: QueryOutputConfig::File {},
-        }
+    #[test]
+    fn query_config_converts_to_a_query_job_config_with_its_query_and_output() -> anyhow::Result<()>
+    {
+        let query = SearchQuery {
+            datasets: NonEmptyDatasetNames::try_from(vec!["logs".parse::<DatasetName>()?])?,
+            query_string: NonEmptyString::new("level: ERROR".to_owned())
+                .expect("query string is non-empty"),
+            time_range: TimeRange::new(Some(1), Some(2))?,
+            ignore_case: true,
+        };
+        let max_num_results = NonZeroU32::new(7);
+
+        assert_eq!(
+            QueryJobConfig::from(QueryConfig {
+                query: query.clone(),
+                output: QueryOutputConfig::ResultsCache {
+                    max_num_results,
+                    aggregation: None,
+                },
+            }),
+            QueryJobConfig {
+                query,
+                output: QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results,
+                    aggregation: None,
+                }),
+            }
+        );
+        Ok(())
     }
 }

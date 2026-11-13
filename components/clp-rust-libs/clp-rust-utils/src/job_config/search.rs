@@ -10,7 +10,7 @@ use serde::Serialize;
 use strum::EnumString;
 use utoipa::ToSchema;
 
-use crate::dataset::DatasetName;
+use crate::dataset::NonEmptyDatasetNames;
 use crate::types::PositiveI64;
 use crate::types::SessionToken;
 
@@ -24,26 +24,17 @@ pub type QueryJobId = i32;
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct QueryJobConfig {
-    #[serde(default = "QueryJobConfig::default_datasets")]
-    pub datasets: Vec<DatasetName>,
     pub query: SearchQuery,
     pub output: QueryOutput,
-}
-
-impl QueryJobConfig {
-    /// # Returns
-    ///
-    /// The datasets a query job searches when none are given: only the default dataset.
-    #[must_use]
-    pub fn default_datasets() -> Vec<DatasetName> {
-        vec![DatasetName::default()]
-    }
 }
 
 /// The search a query job runs.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SearchQuery {
+    /// The datasets to search within.
+    pub datasets: NonEmptyDatasetNames,
+
     /// The search query as a KQL string.
     #[schema(value_type = String, min_length = 1)]
     pub query_string: NonEmptyString,
@@ -357,7 +348,7 @@ mod tests {
     #[test]
     fn null_time_range_deserializes_as_unbounded() {
         let config: QueryJobConfig = serde_json::from_value(serde_json::json!({
-            "query": {"query_string": "*", "time_range": null},
+            "query": {"datasets": ["default"], "query_string": "*", "time_range": null},
             "output": {"type": "file"},
         }))
         .expect("a null time range should deserialize");
@@ -369,6 +360,7 @@ mod tests {
     fn reversed_time_range_in_a_search_query_is_rejected() {
         let error = serde_json::from_value::<QueryJobConfig>(serde_json::json!({
             "query": {
+                "datasets": ["default"],
                 "query_string": "*",
                 "time_range": {"begin_timestamp_millisecs": 2, "end_timestamp_millisecs": 1},
             },
@@ -391,7 +383,7 @@ mod tests {
     #[test]
     fn file_output_with_an_unknown_field_is_rejected() {
         let error = serde_json::from_value::<QueryJobConfig>(serde_json::json!({
-            "query": {"query_string": "*"},
+            "query": {"datasets": ["default"], "query_string": "*"},
             "output": {"type": "file", "unknown": 1},
         }))
         .expect_err("a file output with an unknown field should be rejected");
