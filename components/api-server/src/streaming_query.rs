@@ -83,7 +83,7 @@ pub fn stream_events<EncodingType: ResultEncoding>(
     + 'static,
     request_cancellation: impl Future<Output = ()> + Send + 'static,
 ) -> impl Stream<Item = StreamingQueryEvent<EncodingType::Batch>> + Send {
-    let mut cancellation_guard = CancellationGuard::new(request_cancellation);
+    let cancellation_guard = CancellationGuard::new(request_cancellation);
     let mut termination_task = AbortOnDropHandle::new(tokio::spawn(wait_for_termination));
     stream! {
         let end = loop {
@@ -116,7 +116,9 @@ pub fn stream_events<EncodingType: ResultEncoding>(
             }
             Err(error) => {
                 drop(results);
-                cancellation_guard.request();
+                // Fires the cancellation before the error is yielded, rather than once the stream
+                // ends or is dropped.
+                drop(cancellation_guard);
                 yield StreamingQueryEvent::Error(error);
             }
         }
@@ -144,14 +146,16 @@ impl<CancellationType: Future<Output = ()> + Send + 'static> CancellationGuard<C
         }
     }
 
-    /// Disarms the guard, so that dropping it doesn't request the cancellation.
-    fn disarm(&mut self) {
+    /// Disarms the guard, dropping it without firing the cancellation.
+    fn disarm(mut self) {
         self.cancellation = None;
     }
+}
 
-    /// Requests the cancellation in a background task, unless it has already been requested or the
-    /// guard disarmed. Outside a Tokio runtime, only logs that the cancellation can't be requested.
-    fn request(&mut self) {
+impl<CancellationType: Future<Output = ()> + Send + 'static> Drop
+    for CancellationGuard<CancellationType>
+{
+    fn drop(&mut self) {
         let Some(cancellation) = self.cancellation.take() else {
             return;
         };
@@ -163,14 +167,6 @@ impl<CancellationType: Future<Output = ()> + Send + 'static> CancellationGuard<C
             return;
         };
         runtime.spawn(cancellation);
-    }
-}
-
-impl<CancellationType: Future<Output = ()> + Send + 'static> Drop
-    for CancellationGuard<CancellationType>
-{
-    fn drop(&mut self) {
-        self.request();
     }
 }
 
