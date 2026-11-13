@@ -1294,6 +1294,51 @@ async fn session_failure_takes_priority_over_a_terminal_status_and_requests_canc
 }
 
 #[tokio::test]
+async fn failure_is_yielded_only_after_the_wait_is_stopped_and_the_cancellation_request_finishes()
+-> Result<()> {
+    let listener = ResultListener::<FallibleQueryResultEncoding>::bind(base_listener_config())?;
+    let session = listener.open_session(SessionConfig::default())?;
+    let network_output = session.network_output().clone();
+    let (mut termination_sender, wait_for_termination) = wait_for_termination();
+    let (finish_sender, finish_receiver) = oneshot::channel::<()>();
+    let request_cancellation = async move {
+        finish_receiver
+            .await
+            .expect("the test should let the cancellation request finish");
+    };
+    let mut events = Box::pin(session.into_events(wait_for_termination, request_cancellation));
+    let mut failing_attempt = FakeClpS::connect(&network_output).await;
+    failing_attempt.send_handshake(0, ARCHIVE_ID).await;
+    failing_attempt
+        .send(&encode_result(0, timestamp(0), UNENCODABLE_MESSAGE))
+        .await;
+    // The listener closes the connection only once it has failed the session.
+    failing_attempt.expect_closed_by_listener().await;
+
+    timeout(TIMEOUT, async {
+        tokio::select! {
+            biased;
+            event = events.next() => {
+                panic!("the stream shouldn't yield before the request finishes: {event:?}")
+            }
+            () = termination_sender.closed() => {}
+        }
+    })
+    .await?;
+    finish_sender
+        .send(())
+        .expect("the stream should be awaiting the cancellation request");
+    let ending = Ending::receive(&mut events).await;
+
+    assert!(
+        matches!(ending.error(), SessionEventError::Encoding(_)),
+        "unexpected error: {:?}",
+        ending.error()
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn failed_termination_ends_the_stream_with_its_error_and_requests_cancellation_once()
 -> Result<()> {
     use std::num::NonZeroUsize;

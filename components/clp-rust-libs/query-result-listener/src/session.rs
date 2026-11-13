@@ -85,13 +85,13 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
     /// `wait_for_termination` runs in a task of its own on the current Tokio runtime from when this
     /// method is called, so that it makes progress even while the stream isn't polled.
     ///
-    /// Dropping the stream ends the session and stops the task that runs `wait_for_termination`. If
-    /// the stream hasn't yet found the job terminated or yielded a [`SessionEvent::Failed`],
-    /// dropping it also requests the job's cancellation.
+    /// The stream awaits `request_cancellation` before it yields a [`SessionEvent::Failed`].
     ///
-    /// The stream requests the job's cancellation by spawning `request_cancellation` on the current
-    /// Tokio runtime. Outside a Tokio runtime, it only logs that the cancellation can't be
-    /// requested.
+    /// Dropping the stream ends the session and stops the task that runs `wait_for_termination`. If
+    /// the stream hasn't yet found the job terminated or started to request the job's cancellation,
+    /// dropping it also requests the cancellation, by spawning `request_cancellation` on the
+    /// current Tokio runtime. Outside a Tokio runtime, it only logs that the cancellation can't be
+    /// requested. A request that the stream is awaiting when it's dropped is abandoned.
     ///
     /// # Type Parameters
     ///
@@ -153,9 +153,8 @@ impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
                 }
                 Err(error) => {
                     drop(results);
-                    // Fires the cancellation before the failure is yielded, rather than once the
-                    // stream ends or is dropped.
-                    drop(cancellation_guard);
+                    drop(termination_task);
+                    cancellation_guard.request().await;
                     yield SessionEvent::Failed(error);
                 }
             }
@@ -610,6 +609,13 @@ impl<CancellationType: Future<Output = ()> + Send + 'static> CancellationGuard<C
     /// Disarms the guard, dropping it without firing the cancellation.
     fn disarm(mut self) {
         self.cancellation = None;
+    }
+
+    /// Requests the cancellation, and waits for the request to finish.
+    async fn request(mut self) {
+        if let Some(cancellation) = self.cancellation.take() {
+            cancellation.await;
+        }
     }
 }
 
