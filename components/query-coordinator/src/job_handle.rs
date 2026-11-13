@@ -713,8 +713,8 @@ impl ArchiveSelector<'_> {
         const SOFT_TIMEOUT_MILLISECS_PER_MIB: u64 = 10;
         const HARD_TIMEOUT_MILLISECS_PER_MIB: u64 = 2 * 1000;
 
-        /// The minimum timeout accepted by Spider, in milliseconds.
-        const MIN_TIMEOUT_MILLISECS: u64 = 100;
+        const MIN_SOFT_TIMEOUT_MILLISECS: u64 = 1000;
+        const MIN_HARD_TIMEOUT_MILLISECS: u64 = 10_000;
 
         /// The maximum timeout accepted by Spider, in milliseconds (24 hours).
         const MAX_TIMEOUT_MILLISECS: u64 = 1000 * 60 * 60 * 24;
@@ -722,11 +722,11 @@ impl ArchiveSelector<'_> {
         let hard_timeout_ms = (archive_uncompressed_size
             .saturating_mul(HARD_TIMEOUT_MILLISECS_PER_MIB)
             / BYTES_PER_MIB)
-            .clamp(MIN_TIMEOUT_MILLISECS + 1, MAX_TIMEOUT_MILLISECS);
+            .clamp(MIN_HARD_TIMEOUT_MILLISECS, MAX_TIMEOUT_MILLISECS);
         let soft_timeout_ms = (archive_uncompressed_size
             .saturating_mul(SOFT_TIMEOUT_MILLISECS_PER_MIB)
             / BYTES_PER_MIB)
-            .clamp(MIN_TIMEOUT_MILLISECS, hard_timeout_ms - 1);
+            .clamp(MIN_SOFT_TIMEOUT_MILLISECS, hard_timeout_ms - 1);
 
         ExecutionPolicy {
             max_num_retry: self.context.spider_option.query_task_max_retry,
