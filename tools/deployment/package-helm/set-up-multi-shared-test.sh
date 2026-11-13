@@ -9,9 +9,9 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 CLP_HOME="${CLP_HOME:-/tmp/clp}"
 CLUSTER_NAME="${CLUSTER_NAME:-clp-test}"
 NUM_WORKER_NODES="${NUM_WORKER_NODES:-2}"
+GENERAL_WORKER_REPLICAS="${GENERAL_WORKER_REPLICAS:-2}"
 COMPRESSION_WORKER_REPLICAS="${COMPRESSION_WORKER_REPLICAS:-2}"
 QUERY_WORKER_REPLICAS="${QUERY_WORKER_REPLICAS:-2}"
-REDUCER_REPLICAS="${REDUCER_REPLICAS:-2}"
 PRESTO_WORKER_REPLICAS="${PRESTO_WORKER_REPLICAS:-0}"
 
 # shellcheck source=.set-up-common.sh
@@ -27,9 +27,9 @@ fi
 echo "=== Multi-node setup with shared worker nodes ==="
 echo "Cluster: ${CLUSTER_NAME}"
 echo "Worker nodes: ${NUM_WORKER_NODES}"
+echo "General workers: ${GENERAL_WORKER_REPLICAS}"
 echo "Compression workers: ${COMPRESSION_WORKER_REPLICAS}"
 echo "Query workers: ${QUERY_WORKER_REPLICAS}"
-echo "Reducers: ${REDUCER_REPLICAS}"
 echo "Presto workers: ${PRESTO_WORKER_REPLICAS}"
 echo "Presto: ${ENABLE_PRESTO}"
 echo ""
@@ -47,9 +47,8 @@ helm dependency update "${script_dir}"
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
-    --set "scheduling.compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
-    --set "scheduling.queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
-    --set "scheduling.reducer.replicas=${REDUCER_REPLICAS}" \
+    --values <(get_spider_worker_values \
+        "${GENERAL_WORKER_REPLICAS}" "${COMPRESSION_WORKER_REPLICAS}" "${QUERY_WORKER_REPLICAS}") \
     --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
     $(get_service_exposure_helm_args) \
     $(get_presto_helm_args) \
