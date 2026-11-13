@@ -51,82 +51,115 @@ impl Default for SessionConfig {
     }
 }
 
-/// A session that receives the results streamed for one query job.
+/// A session paired with the stream of its results.
 ///
-/// The session accepts the connections that present its token until it ends. A session ends if:
-///
-/// * It is dropped.
-/// * It fails, which happens if:
-///   * A connection fails to create its encoder.
-///   * A connection fails to encode a result it received.
-///
-/// Once a session ends, its open connections stop reading and end without an acknowledgement, but
-/// still hand on the batches they've claimed.
+/// Dropping it ends the session.
 ///
 /// # Type Parameters
 ///
 /// * `EncodingType` - The encoding of the results the session delivers.
-pub struct Session<EncodingType: ResultEncoding> {
-    _registration: Registration<EncodingType>,
-    network_output: NetworkOutput,
-    state: Arc<State<EncodingType>>,
+pub struct OpenSession<EncodingType: ResultEncoding> {
+    session: Session<EncodingType>,
+    results: ResultStream<EncodingType::Batch>,
 }
 
-impl<EncodingType: ResultEncoding> Session<EncodingType> {
+impl<EncodingType: ResultEncoding> OpenSession<EncodingType> {
     /// # Returns
     ///
     /// The network output that directs a query job's tasks to stream their results to this session.
     #[must_use]
     pub const fn network_output(&self) -> &NetworkOutput {
-        &self.network_output
+        self.session.network_output()
     }
 
-    /// Waits until the session fails, as [`Session`] defines it. Never returns for a session that
-    /// doesn't fail.
+    /// Streams the events of the session's query job.
+    ///
+    /// The stream yields the batches of the job's results as they arrive, until
+    /// `wait_for_termination` resolves. Once `wait_for_termination` resolves with the job's
+    /// terminal status, the stream ends the session, yields the batches that the session's
+    /// connections had already claimed until the session's result stream ends, and then yields a
+    /// [`SessionEvent::Ended`]. Instead, if the session fails, or `wait_for_termination` resolves
+    /// with an error or panics, the stream requests the job's cancellation and yields a
+    /// [`SessionEvent::Failed`].
+    ///
+    /// `wait_for_termination` runs in a task of its own on the current Tokio runtime from when this
+    /// method is called, so that it makes progress even while the stream isn't polled.
+    ///
+    /// Dropping the stream ends the session and stops the task that runs `wait_for_termination`. If
+    /// the stream hasn't yet found the job terminated or yielded a [`SessionEvent::Failed`],
+    /// dropping it also requests the job's cancellation.
+    ///
+    /// The stream requests the job's cancellation by spawning `request_cancellation` on the current
+    /// Tokio runtime. Outside a Tokio runtime, it only logs that the cancellation can't be
+    /// requested.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `TerminationErrorType` - The error of a failure to wait for the job's termination.
     ///
     /// # Returns
     ///
-    /// The error of the session's first failure.
+    /// The stream of the job's events.
     ///
     /// # Panics
     ///
-    /// Panics if the session's end signal is cancelled without an encoding error recorded, which
-    /// can't happen while the session is borrowed.
-    pub async fn failed(&self) -> &EncodingType::Error {
-        self.state.end_signal.cancelled().await;
-        self.state
-            .encoding_error()
-            .expect("a session's end signal is cancelled only once it fails or is dropped")
-    }
-}
-
-/// The stream of a session's results, in the batches its connections encoded them into.
-///
-/// The stream ends once its session is dropped and all its connections have ended.
-///
-/// # Type Parameters
-///
-/// * `BatchType` - The type of a batch of encoded results.
-pub struct ResultStream<BatchType> {
-    batches_receiver: mpsc::Receiver<BatchType>,
-    stats: Arc<AtomicSessionStats>,
-}
-
-impl<BatchType> ResultStream<BatchType> {
-    /// # Returns
-    ///
-    /// The statistics recorded by the session's finished connections.
-    #[must_use]
-    pub fn stats(&self) -> SessionStats {
-        self.stats.load()
-    }
-}
-
-impl<BatchType> Stream for ResultStream<BatchType> {
-    type Item = BatchType;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        self.batches_receiver.poll_recv(cx)
+    /// The returned stream panics if the session's result stream ends while the session is open,
+    /// which the listener never lets it do.
+    pub fn into_events<TerminationErrorType: Send + 'static>(
+        self,
+        wait_for_termination: impl Future<Output = Result<QueryJobStatus, TerminationErrorType>>
+        + Send
+        + 'static,
+        request_cancellation: impl Future<Output = ()> + Send + 'static,
+    ) -> impl Stream<Item = SessionEvent<EncodingType::Batch, TerminationErrorType>> + Send {
+        let Self {
+            session,
+            mut results,
+        } = self;
+        let cancellation_guard = CancellationGuard::new(request_cancellation);
+        let mut termination_task = AbortOnDropHandle::new(tokio::spawn(wait_for_termination));
+        stream! {
+            let end = loop {
+                // `biased`, so that a session failure isn't missed because the job's status was
+                // seen first, and a steady flow of batches doesn't keep the job's status from being
+                // noticed.
+                tokio::select! {
+                    biased;
+                    error = session.failed() => {
+                        break Err(SessionEventError::Encoding(error.to_string()));
+                    }
+                    status = &mut termination_task => {
+                        break match status {
+                            Ok(status) => status.map_err(SessionEventError::Termination),
+                            Err(error) => Err(SessionEventError::TerminationPanicked(error)),
+                        };
+                    }
+                    batch = results.next() => yield SessionEvent::Results(batch.expect(
+                        "a session's result stream shouldn't end while the session is open",
+                    )),
+                }
+            };
+            drop(session);
+            match end {
+                Ok(status) => {
+                    cancellation_guard.disarm();
+                    while let Some(batch) = results.next().await {
+                        yield SessionEvent::Results(batch);
+                    }
+                    yield SessionEvent::Ended {
+                        status,
+                        stats: results.stats(),
+                    };
+                }
+                Err(error) => {
+                    drop(results);
+                    // Fires the cancellation before the failure is yielded, rather than once the
+                    // stream ends or is dropped.
+                    drop(cancellation_guard);
+                    yield SessionEvent::Failed(error);
+                }
+            }
+        }
     }
 }
 
@@ -167,92 +200,6 @@ pub struct SessionStats {
     pub num_duplicates_dropped: u64,
 }
 
-/// Streams the events of a query job from `session`, which the job's tasks stream their results to,
-/// and its `results`.
-///
-/// The stream yields the batches of the job's results as they arrive, until `wait_for_termination`
-/// resolves. Once `wait_for_termination` resolves with the job's terminal status, the stream ends
-/// the session, yields the batches that the session's connections had already claimed until
-/// `results` ends, and then yields a [`SessionEvent::Ended`]. Instead, if the session fails, or
-/// `wait_for_termination` resolves with an error or panics, the stream requests the job's
-/// cancellation and yields a [`SessionEvent::Failed`].
-///
-/// `wait_for_termination` runs in a task of its own on the current Tokio runtime from when this
-/// function is called, so that it makes progress even while the stream isn't polled.
-///
-/// Dropping the stream ends the session and stops the task that runs `wait_for_termination`. If the
-/// stream hasn't yet found the job terminated or yielded a [`SessionEvent::Failed`], dropping it
-/// also requests the job's cancellation.
-///
-/// The stream requests the job's cancellation by spawning `request_cancellation` on the current
-/// Tokio runtime. Outside a Tokio runtime, it only logs that the cancellation can't be requested.
-///
-/// # Type Parameters
-///
-/// * `EncodingType` - The encoding of the job's results.
-/// * `TerminationErrorType` - The error of a failure to wait for the job's termination.
-///
-/// # Returns
-///
-/// The stream of the job's events.
-///
-/// # Panics
-///
-/// The returned stream panics if `results` ends while `session` is open, which the listener never
-/// lets it do.
-pub fn stream_events<EncodingType: ResultEncoding, TerminationErrorType: Send + 'static>(
-    session: Session<EncodingType>,
-    mut results: ResultStream<EncodingType::Batch>,
-    wait_for_termination: impl Future<Output = Result<QueryJobStatus, TerminationErrorType>>
-    + Send
-    + 'static,
-    request_cancellation: impl Future<Output = ()> + Send + 'static,
-) -> impl Stream<Item = SessionEvent<EncodingType::Batch, TerminationErrorType>> + Send {
-    let cancellation_guard = CancellationGuard::new(request_cancellation);
-    let mut termination_task = AbortOnDropHandle::new(tokio::spawn(wait_for_termination));
-    stream! {
-        let end = loop {
-            // `biased`, so that a session failure isn't missed because the job's status was seen
-            // first, and a steady flow of batches doesn't keep the job's status from being noticed.
-            tokio::select! {
-                biased;
-                error = session.failed() => {
-                    break Err(SessionEventError::Encoding(error.to_string()));
-                }
-                status = &mut termination_task => {
-                    break match status {
-                        Ok(status) => status.map_err(SessionEventError::Termination),
-                        Err(error) => Err(SessionEventError::TerminationPanicked(error)),
-                    };
-                }
-                batch = results.next() => yield SessionEvent::Results(batch.expect(
-                    "a session's result stream shouldn't end while the session is open",
-                )),
-            }
-        };
-        drop(session);
-        match end {
-            Ok(status) => {
-                cancellation_guard.disarm();
-                while let Some(batch) = results.next().await {
-                    yield SessionEvent::Results(batch);
-                }
-                yield SessionEvent::Ended {
-                    status,
-                    stats: results.stats(),
-                };
-            }
-            Err(error) => {
-                drop(results);
-                // Fires the cancellation before the failure is yielded, rather than once the stream
-                // ends or is dropped.
-                drop(cancellation_guard);
-                yield SessionEvent::Failed(error);
-            }
-        }
-    }
-}
-
 /// The sessions registered on a listener, keyed by their tokens.
 ///
 /// # Type Parameters
@@ -282,10 +229,7 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
     ///
     /// # Returns
     ///
-    /// On success, a tuple containing:
-    ///
-    /// * The newly opened session.
-    /// * The stream of the session's results.
+    /// The newly opened session on success.
     ///
     /// # Errors
     ///
@@ -297,7 +241,7 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
         host: NonEmptyString,
         port: NonZeroU16,
         config: SessionConfig,
-    ) -> Result<(Session<EncodingType>, ResultStream<EncodingType::Batch>), SessionError> {
+    ) -> Result<OpenSession<EncodingType>, SessionError> {
         let token = SessionToken::generate();
         let Entry::Vacant(entry) = self.sessions.entry(token) else {
             return Err(SessionError::TokenCollision(token));
@@ -318,13 +262,13 @@ impl<EncodingType: ResultEncoding> SessionRegistry<EncodingType> {
             },
             state: session_state,
         };
-        Ok((
+        Ok(OpenSession {
             session,
-            ResultStream {
+            results: ResultStream {
                 batches_receiver,
                 stats,
             },
-        ))
+        })
     }
 
     /// Joins a connection to the session and task cursor that `handshake` names.
@@ -547,6 +491,85 @@ impl AtomicSessionStats {
     }
 }
 
+/// A session that receives the results streamed for one query job.
+///
+/// The session accepts the connections that present its token until it ends. A session ends if:
+///
+/// * It is dropped.
+/// * It fails, which happens if:
+///   * A connection fails to create its encoder.
+///   * A connection fails to encode a result it received.
+///
+/// Once a session ends, its open connections stop reading and end without an acknowledgement, but
+/// still hand on the batches they've claimed.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the results the session delivers.
+struct Session<EncodingType: ResultEncoding> {
+    _registration: Registration<EncodingType>,
+    network_output: NetworkOutput,
+    state: Arc<State<EncodingType>>,
+}
+
+impl<EncodingType: ResultEncoding> Session<EncodingType> {
+    /// # Returns
+    ///
+    /// The network output that directs a query job's tasks to stream their results to this session.
+    #[must_use]
+    const fn network_output(&self) -> &NetworkOutput {
+        &self.network_output
+    }
+
+    /// Waits until the session fails, as [`Session`] defines it. Never returns for a session that
+    /// doesn't fail.
+    ///
+    /// # Returns
+    ///
+    /// The error of the session's first failure.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the session's end signal is cancelled without an encoding error recorded, which
+    /// can't happen while the session is borrowed.
+    async fn failed(&self) -> &EncodingType::Error {
+        self.state.end_signal.cancelled().await;
+        self.state
+            .encoding_error()
+            .expect("a session's end signal is cancelled only once it fails or is dropped")
+    }
+}
+
+/// The stream of a session's results, in the batches its connections encoded them into.
+///
+/// The stream ends once its session is dropped and all its connections have ended.
+///
+/// # Type Parameters
+///
+/// * `BatchType` - The type of a batch of encoded results.
+struct ResultStream<BatchType> {
+    batches_receiver: mpsc::Receiver<BatchType>,
+    stats: Arc<AtomicSessionStats>,
+}
+
+impl<BatchType> ResultStream<BatchType> {
+    /// # Returns
+    ///
+    /// The statistics recorded by the session's finished connections.
+    #[must_use]
+    fn stats(&self) -> SessionStats {
+        self.stats.load()
+    }
+}
+
+impl<BatchType> Stream for ResultStream<BatchType> {
+    type Item = BatchType;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.batches_receiver.poll_recv(cx)
+    }
+}
+
 /// A session's entry in a [`SessionRegistry`], unregistered when dropped.
 ///
 /// # Type Parameters
@@ -614,6 +637,7 @@ mod tests {
     use clp_rust_utils::types::ArchiveId;
     use clp_rust_utils::types::SessionToken;
 
+    use super::OpenSession;
     use super::Session;
     use super::SessionConfig;
     use super::SessionRegistry;
@@ -647,7 +671,7 @@ mod tests {
 
         use non_empty_string::NonEmptyString;
 
-        let (session, _results) = session_registry
+        let OpenSession { session, .. } = session_registry
             .open(
                 NonEmptyString::new("127.0.0.1".to_owned())
                     .expect("the host fixture should be non-empty"),

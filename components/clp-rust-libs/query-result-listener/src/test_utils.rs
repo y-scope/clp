@@ -1,16 +1,11 @@
-//! Encoders for the frames of the wire protocol, encodings of query results, and a simulated
-//! `clp-s` query task, for tests.
+//! Encoders for the frames of the wire protocol and encodings of query results, for tests.
 
 use std::convert::Infallible;
 use std::ops::Range;
 use std::time::Duration;
 
-use clp_rust_utils::job_config::NetworkOutput;
 use clp_rust_utils::types::ArchiveId;
-use clp_rust_utils::types::SessionToken;
 use spider_core::task::TaskIndex;
-use tokio::io::AsyncWriteExt;
-use tokio::net::TcpStream;
 
 use crate::encoding::ResultEncoder;
 use crate::encoding::ResultEncoding;
@@ -145,155 +140,6 @@ pub enum EncodingError {
         archive_id: ArchiveId,
         timestamp_millisecs: i64,
     },
-}
-
-/// A simulated attempt of a `clp-s` query task, streaming its results over TCP.
-pub struct FakeClpS {
-    stream: TcpStream,
-    session_token: SessionToken,
-}
-
-impl FakeClpS {
-    /// Connects to the listener that `network_output` names, as an attempt for its session.
-    ///
-    /// # Returns
-    ///
-    /// The connected attempt.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the connection fails.
-    pub async fn connect(network_output: &NetworkOutput) -> Self {
-        let stream = TcpStream::connect((network_output.host.as_str(), network_output.port.get()))
-            .await
-            .expect("connecting to the listener should succeed");
-        Self {
-            stream,
-            session_token: network_output.session_token,
-        }
-    }
-
-    /// Sends `bytes` as they are.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the write fails.
-    pub async fn send(&mut self, bytes: &[u8]) {
-        self.stream
-            .write_all(bytes)
-            .await
-            .expect("sending to the listener should succeed");
-    }
-
-    /// Sends a handshake for task `task_index` of archive `archive_id`, presenting the token of the
-    /// session that the attempt connected to.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `task_index` doesn't fit in `u64`, or the write fails.
-    pub async fn send_handshake(&mut self, task_index: TaskIndex, archive_id: &str) {
-        use crate::protocol::PROTOCOL_VERSION;
-
-        self.send(&encode_handshake(
-            PROTOCOL_VERSION,
-            &self.session_token.to_string(),
-            u64::try_from(task_index).expect("test task indices fit in `u64`"),
-            archive_id,
-        ))
-        .await;
-    }
-
-    /// Sends the results at `result_indices` of task `task_index` in a single write.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the write fails.
-    pub async fn send_results(
-        &mut self,
-        task_index: TaskIndex,
-        result_indices: impl IntoIterator<Item = u64>,
-    ) {
-        self.send(&encode_results(task_index, result_indices)).await;
-    }
-
-    /// Sends the results at `result_indices` of task `task_index` one at a time, until every result
-    /// is sent or the listener has closed the connection.
-    pub async fn send_results_until_closed(
-        mut self,
-        task_index: TaskIndex,
-        result_indices: impl IntoIterator<Item = u64>,
-    ) {
-        for result_index in result_indices {
-            if self
-                .stream
-                .write_all(&encode_results(task_index, [result_index]))
-                .await
-                .is_err()
-            {
-                return;
-            }
-        }
-    }
-
-    /// Ends the stream the way `clp-s` does: sends a trailer counting `num_results` results, then
-    /// EOF, and waits until the listener closes the connection.
-    ///
-    /// # Returns
-    ///
-    /// The bytes the listener sent back.
-    ///
-    /// # Panics
-    ///
-    /// Panics if sending fails, or the listener doesn't close the connection within [`TIMEOUT`].
-    pub async fn finish(mut self, num_results: u64) -> Vec<u8> {
-        self.send(&encode_trailer(num_results)).await;
-        self.stream
-            .shutdown()
-            .await
-            .expect("sending EOF to the listener should succeed");
-        self.read_until_closed().await
-    }
-
-    /// Waits until the listener closes the connection without sending anything.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the listener sends anything, or doesn't close the connection within [`TIMEOUT`].
-    pub async fn expect_closed_by_listener(self) {
-        assert_eq!(
-            self.read_until_closed().await,
-            [] as [u8; 0],
-            "the listener shouldn't acknowledge the connection"
-        );
-    }
-
-    /// Waits until the listener closes the connection, either cleanly or with a reset.
-    ///
-    /// # Returns
-    ///
-    /// The bytes the listener sent before closing.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the listener doesn't close the connection within [`TIMEOUT`], or reading fails
-    /// with an error other than a reset.
-    async fn read_until_closed(mut self) -> Vec<u8> {
-        use std::io::ErrorKind;
-
-        use tokio::io::AsyncReadExt;
-        use tokio::time::timeout;
-
-        let mut received = Vec::new();
-        match timeout(TIMEOUT, self.stream.read_to_end(&mut received))
-            .await
-            .expect("the listener should close the connection")
-        {
-            Ok(_) => received,
-            // The listener resets the connection if it closes it before reading every byte sent.
-            Err(e) if ErrorKind::ConnectionReset == e.kind() => received,
-            Err(e) => panic!("reading from the listener failed: {e}"),
-        }
-    }
 }
 
 /// # Returns
