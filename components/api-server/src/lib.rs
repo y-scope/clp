@@ -1,5 +1,6 @@
 pub mod client;
 mod error;
+pub mod query_request;
 pub mod routes;
 #[cfg_attr(
     not(test),
