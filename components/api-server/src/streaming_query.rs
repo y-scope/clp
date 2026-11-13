@@ -123,8 +123,7 @@ pub fn stream_events<EncodingType: ResultEncoding>(
     }
 }
 
-/// A guard that requests the cancellation of a streaming query's job if it's dropped before the
-/// cancellation has been requested or the guard disarmed.
+/// A guard that fires the cancellation on drop.
 ///
 /// # Type Parameters
 ///
