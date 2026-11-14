@@ -9,7 +9,6 @@ use clp_rust_utils::aws::AWS_DEFAULT_REGION;
 use clp_rust_utils::clp_config::package::config::Config;
 use clp_rust_utils::clp_config::package::config::StreamOutputStorage;
 use clp_rust_utils::database::mysql::query_job;
-use clp_rust_utils::dataset::DatasetName;
 use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
@@ -19,11 +18,8 @@ use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::job_config::SearchQuery;
-use clp_rust_utils::job_config::TimeRange;
-use clp_rust_utils::types::PositiveI64;
 use futures::Stream;
 use futures::StreamExt;
-use non_empty_string::NonEmptyString;
 use pin_project_lite::pin_project;
 use serde::Deserialize;
 use serde::Serialize;
@@ -183,87 +179,63 @@ pub struct CompressionUsage {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QueryConfig {
-    /// The search query as a KQL string.
-    pub query_string: String,
+    /// The search to run.
+    pub query: SearchQuery,
 
-    /// The datasets to search within. If not provided, only `default` dataset will be searched.
-    #[serde(default)]
-    #[schema(value_type = Option<Vec<String>>)]
-    pub datasets: Option<Vec<DatasetName>>,
-
-    /// The maximum number of results to return. Omit for no limit.
-    #[serde(default)]
-    #[schema(value_type = Option<u32>, minimum = 1)]
-    pub max_num_results: Option<NonZeroU32>,
-
-    /// The beginning timestamp (in epoch milliseconds) for the search range (inclusive).
-    #[serde(default)]
-    pub time_range_begin_millisecs: Option<i64>,
-
-    /// The ending timestamp (in epoch milliseconds) for the search range (inclusive).
-    #[serde(default)]
-    pub time_range_end_millisecs: Option<i64>,
-
-    /// Whether the string match should be case-insensitive.
-    #[serde(default)]
-    pub ignore_case: bool,
-
-    /// Whether to buffer search results in `MongoDB`.
-    /// By default, search results are buffered in temporary files. When set to `true`, results
-    /// will be stored in `MongoDB` instead.
-    #[serde(default)]
-    pub buffer_results_in_mongodb: bool,
-
-    /// The size of each time bucket (in milliseconds) for count-by-time aggregation.
-    /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
-    /// search job, and its results are always buffered in `MongoDB`.
-    #[serde(default)]
-    #[schema(value_type = Option<i64>, minimum = 1)]
-    pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
+    /// Where to buffer the search results.
+    pub output: QueryOutputConfig,
 }
 
-impl TryFrom<QueryConfig> for QueryJobConfig {
-    type Error = ClientError;
+impl From<QueryConfig> for QueryJobConfig {
+    fn from(config: QueryConfig) -> Self {
+        Self {
+            query: config.query,
+            output: config.output.into(),
+        }
+    }
+}
 
-    fn try_from(value: QueryConfig) -> Result<Self, Self::Error> {
-        let query_string = NonEmptyString::new(value.query_string)
-            .map_err(|_| ClientError::InvalidInput("query_string must not be empty".to_owned()))?;
-        let time_range = TimeRange::new(
-            value.time_range_begin_millisecs,
-            value.time_range_end_millisecs,
-        )
-        .map_err(|_| {
-            ClientError::InvalidInput(
-                "time_range_begin_millisecs must be <= time_range_end_millisecs".to_owned(),
-            )
-        })?;
-        let output = match value.count_by_time_bucket_size_millisecs {
-            Some(bucket_size_millisecs) => {
-                // Aggregation results are always buffered in MongoDB.
-                QueryOutput::ResultsCache(ResultsCacheOutput {
-                    max_num_results: value.max_num_results,
-                    aggregation: Some(Aggregation::CountByTime {
-                        bucket_size_millisecs,
-                    }),
-                })
-            }
-            None if value.buffer_results_in_mongodb => {
-                QueryOutput::ResultsCache(ResultsCacheOutput {
-                    max_num_results: value.max_num_results,
-                    aggregation: None,
-                })
-            }
-            None => QueryOutput::File {},
-        };
-        Ok(Self {
-            datasets: value.datasets.unwrap_or_else(Self::default_datasets),
-            query: SearchQuery {
-                query_string,
-                time_range,
-                ignore_case: value.ignore_case,
-            },
-            output,
-        })
+/// Defines the request configuration for submitting a search query whose results are streamed
+/// instead of buffered.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct StreamingQueryConfig {
+    /// The search to run.
+    pub query: SearchQuery,
+}
+
+/// Defines where a submitted search query's results are buffered.
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
+pub enum QueryOutputConfig {
+    /// Buffers the results in `MongoDB`.
+    ResultsCache {
+        /// The maximum number of results to return. Omit for no limit.
+        #[serde(default)]
+        #[schema(value_type = Option<u32>, minimum = 1)]
+        max_num_results: Option<NonZeroU32>,
+
+        /// The aggregation to compute over all matching results, regardless of `max_num_results`.
+        #[serde(default)]
+        aggregation: Option<Aggregation>,
+    },
+
+    /// Buffers the results in files in the stream output storage (the file system or S3).
+    File {},
+}
+
+impl From<QueryOutputConfig> for QueryOutput {
+    fn from(output: QueryOutputConfig) -> Self {
+        match output {
+            QueryOutputConfig::ResultsCache {
+                max_num_results,
+                aggregation,
+            } => Self::ResultsCache(ResultsCacheOutput {
+                max_num_results,
+                aggregation,
+            }),
+            QueryOutputConfig::File {} => Self::File {},
+        }
     }
 }
 
@@ -296,9 +268,7 @@ impl Client {
         }
     }
 
-    /// Submits a search or aggregation query as a job. The job is a count-by-time aggregation
-    /// job if `count_by_time_bucket_size_millisecs` is set in the query config; otherwise it's a
-    /// plain search job.
+    /// Submits a search or aggregation query as a job.
     ///
     /// # Returns
     ///
@@ -308,11 +278,12 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`QueryJobConfig::try_from`]'s return values on failure.
     /// * Forwards [`query_job::submit`]'s return values on failure.
-    pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
-        let query_job_config = QueryJobConfig::try_from(query_config)?;
-        Ok(query_job::submit(&self.sql_pool, &query_job_config).await?)
+    pub async fn submit_query(
+        &self,
+        query_job_config: &QueryJobConfig,
+    ) -> Result<u64, ClientError> {
+        Ok(query_job::submit(&self.sql_pool, query_job_config).await?)
     }
 
     /// Asynchronously fetches the results of a completed query job.
@@ -816,6 +787,11 @@ where
 mod tests {
     use std::str::FromStr;
 
+    use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::dataset::NonEmptyDatasetNames;
+    use clp_rust_utils::job_config::TimeRange;
+    use non_empty_string::NonEmptyString;
+
     use super::*;
 
     #[test]
@@ -840,103 +816,62 @@ mod tests {
     }
 
     #[test]
-    fn query_config_converts_to_query_job_config_by_output() {
+    fn query_output_config_converts_to_the_matching_query_output() {
+        use clp_rust_utils::types::PositiveI64;
+
         let max_num_results = NonZeroU32::new(7);
-        for (query_config, expected_output) in [
+        let aggregation = Some(Aggregation::CountByTime {
+            bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
+        });
+        for (output, expected) in [
             (
-                QueryConfig {
-                    count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
-                    ..base_query_config()
+                QueryOutputConfig::ResultsCache {
+                    max_num_results,
+                    aggregation,
                 },
                 QueryOutput::ResultsCache(ResultsCacheOutput {
                     max_num_results,
-                    aggregation: Some(Aggregation::CountByTime {
-                        bucket_size_millisecs: PositiveI64::new(60_000)
-                            .expect("60,000 is positive"),
-                    }),
+                    aggregation,
                 }),
             ),
-            (
-                QueryConfig {
-                    buffer_results_in_mongodb: true,
-                    ..base_query_config()
-                },
-                QueryOutput::ResultsCache(ResultsCacheOutput {
-                    max_num_results,
-                    aggregation: None,
-                }),
-            ),
-            (base_query_config(), QueryOutput::File {}),
+            (QueryOutputConfig::File {}, QueryOutput::File {}),
         ] {
-            let expected = QueryJobConfig {
-                datasets: vec![DatasetName::default()],
-                query: SearchQuery {
-                    query_string: NonEmptyString::new("level: ERROR".to_owned())
-                        .expect("query string is non-empty"),
-                    time_range: TimeRange::new(Some(1), Some(2)).expect("range is ordered"),
-                    ignore_case: true,
-                },
-                output: expected_output,
-            };
-            let actual = QueryJobConfig::try_from(query_config.clone())
-                .expect("query config should convert");
-            assert_eq!(actual, expected, "query config: {query_config:?}");
-        }
-
-        let other_dataset: DatasetName = "other"
-            .parse()
-            .expect("name should be a valid dataset name");
-        let actual = QueryJobConfig::try_from(QueryConfig {
-            datasets: Some(vec![other_dataset.clone()]),
-            ..base_query_config()
-        })
-        .expect("query config should convert");
-        assert_eq!(actual.datasets, vec![other_dataset]);
-    }
-
-    #[test]
-    fn invalid_query_config_is_rejected_as_invalid_input() {
-        for (query_config, expected_field) in [
-            (
-                QueryConfig {
-                    query_string: String::new(),
-                    ..base_query_config()
-                },
-                "query_string",
-            ),
-            (
-                QueryConfig {
-                    time_range_begin_millisecs: Some(3),
-                    ..base_query_config()
-                },
-                "time_range_begin_millisecs",
-            ),
-        ] {
-            let error = QueryJobConfig::try_from(query_config.clone())
-                .expect_err("query config should be rejected");
-            assert!(
-                matches!(
-                    &error,
-                    ClientError::InvalidInput(message) if message.contains(expected_field)
-                ),
-                "unexpected error for {query_config:?}: {error:?}"
+            assert_eq!(
+                QueryOutput::from(output.clone()),
+                expected,
+                "output: {output:?}"
             );
         }
     }
 
-    /// # Returns
-    ///
-    /// A valid query config whose results are buffered in files.
-    fn base_query_config() -> QueryConfig {
-        QueryConfig {
-            query_string: "level: ERROR".to_owned(),
-            datasets: None,
-            max_num_results: NonZeroU32::new(7),
-            time_range_begin_millisecs: Some(1),
-            time_range_end_millisecs: Some(2),
+    #[test]
+    fn query_config_converts_to_a_query_job_config_with_its_query_and_output() -> anyhow::Result<()>
+    {
+        let query = SearchQuery {
+            datasets: NonEmptyDatasetNames::try_from(vec!["logs".parse::<DatasetName>()?])?,
+            query_string: NonEmptyString::new("level: ERROR".to_owned())
+                .expect("query string is non-empty"),
+            time_range: TimeRange::new(Some(1), Some(2))?,
             ignore_case: true,
-            buffer_results_in_mongodb: false,
-            count_by_time_bucket_size_millisecs: None,
-        }
+        };
+        let max_num_results = NonZeroU32::new(7);
+
+        assert_eq!(
+            QueryJobConfig::from(QueryConfig {
+                query: query.clone(),
+                output: QueryOutputConfig::ResultsCache {
+                    max_num_results,
+                    aggregation: None,
+                },
+            }),
+            QueryJobConfig {
+                query,
+                output: QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results,
+                    aggregation: None,
+                }),
+            }
+        );
+        Ok(())
     }
 }

@@ -13,9 +13,8 @@ All available API endpoints are defined in the [OpenAPI] Specification. You can 
 using [Swagger UI][swagger-ui].
 
 :::{note}
-`clp-text` doesn't support buffering search results in the file system or S3. When using
-`clp-text`, set `buffer_results_in_mongodb` to `true` so that results are buffered in `MongoDB`
-instead.
+`clp-text` doesn't support buffering search results in the file system or S3. When using `clp-text`,
+set `output` to `{"type": "results_cache"}` so that results are buffered in `MongoDB` instead.
 :::
 
 ## Example: Submitting search queries and receiving results
@@ -32,15 +31,23 @@ following commands to submit a query to clp-json and stream the results.
    curl -X POST http://localhost:3001/query \
        -H "Content-Type: application/json" \
        -d '{
-          "query_string": "*log*",
-          "datasets": ["default"],
-          "ignore_case": false,
-          "max_num_results": 100
+          "query": {
+             "datasets": ["default"],
+             "query_string": "*log*",
+             "ignore_case": false
+          },
+          "output": {
+             "type": "results_cache",
+             "max_num_results": 100
+          }
        }'
    ```
 
-   Omit `max_num_results` to return all matching results. When specified, the limit must be a
-   positive integer; zero is rejected.
+   `query` is the search to run, including the datasets to search within, which must not be empty.
+   `output` chooses where the results are buffered: `{"type": "results_cache"}` buffers them in
+   `MongoDB`, and `{"type": "file"}` buffers them in the file system or S3. Omit `max_num_results`
+   to return all matching results. When specified, the limit must be a positive integer; zero is
+   rejected. Only the `results_cache` output accepts a limit.
 
    On success, the server responds with:
 

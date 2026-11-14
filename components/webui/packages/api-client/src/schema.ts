@@ -262,6 +262,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description An aggregation over a query job's results. */
+        Aggregation: {
+            /** Format: int64 */
+            bucket_size_millisecs: number;
+            /** @enum {string} */
+            type: "count_by_time";
+        };
         /** @description Response body of the compression-job submission endpoint. */
         CompressionJob: {
             /**
@@ -485,42 +492,27 @@ export interface components {
              */
             num_messages: number;
         };
+        NonEmptyDatasetNames: string[];
         /** @description Defines the request configuration for submitting a search query. */
         QueryConfig: {
-            /**
-             * @description Whether to buffer search results in `MongoDB`.
-             *     By default, search results are buffered in temporary files. When set to `true`, results
-             *     will be stored in `MongoDB` instead.
-             */
-            buffer_results_in_mongodb?: boolean;
-            /**
-             * Format: int64
-             * @description The size of each time bucket (in milliseconds) for count-by-time aggregation.
-             *     When set, the job is submitted as a count-by-time aggregation job instead of a plain
-             *     search job, and its results are always buffered in `MongoDB`.
-             */
-            count_by_time_bucket_size_millisecs?: number | null;
-            /** @description The datasets to search within. If not provided, only `default` dataset will be searched. */
-            datasets?: string[] | null;
-            /** @description Whether the string match should be case-insensitive. */
-            ignore_case?: boolean;
+            /** @description Where to buffer the search results. */
+            output: components["schemas"]["QueryOutputConfig"];
+            /** @description The search to run. */
+            query: components["schemas"]["SearchQuery"];
+        };
+        /** @description Defines where a submitted search query's results are buffered. */
+        QueryOutputConfig: {
+            aggregation?: null | components["schemas"]["Aggregation"];
             /**
              * Format: int32
              * @description The maximum number of results to return. Omit for no limit.
              */
             max_num_results?: number | null;
-            /** @description The search query as a KQL string. */
-            query_string: string;
-            /**
-             * Format: int64
-             * @description The beginning timestamp (in epoch milliseconds) for the search range (inclusive).
-             */
-            time_range_begin_millisecs?: number | null;
-            /**
-             * Format: int64
-             * @description The ending timestamp (in epoch milliseconds) for the search range (inclusive).
-             */
-            time_range_end_millisecs?: number | null;
+            /** @enum {string} */
+            type: "results_cache";
+        } | {
+            /** @enum {string} */
+            type: "file";
         };
         QueryResultsUri: {
             /** @description The uri to get the query results. */
@@ -538,6 +530,22 @@ export interface components {
              * @description Wall-clock duration the job ran, in seconds.
              */
             duration: number;
+        };
+        /** @description The search a query job runs. */
+        SearchQuery: {
+            /** @description The datasets to search within. */
+            datasets: components["schemas"]["NonEmptyDatasetNames"];
+            /** @description Whether the string match should be case-insensitive. */
+            ignore_case?: boolean;
+            /** @description The search query as a KQL string. */
+            query_string: string;
+            /** @description The range of timestamps to search within. Omit or set to `null` for no bounds. */
+            time_range?: null | {
+                /** Format: int64 */
+                begin_timestamp_millisecs?: number | null;
+                /** Format: int64 */
+                end_timestamp_millisecs?: number | null;
+            };
         };
         /** @description Aggregated space-savings statistics. */
         SpaceSavings: {
@@ -987,15 +995,21 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "query_string": "*",
-                 *       "datasets": [
-                 *         "default"
-                 *       ],
-                 *       "time_range_begin_millisecs": 0,
-                 *       "time_range_end_millisecs": 17356896,
-                 *       "ignore_case": true,
-                 *       "buffer_results_in_mongodb": true,
-                 *       "count_by_time_bucket_size_millisecs": null
+                 *       "query": {
+                 *         "datasets": [
+                 *           "default"
+                 *         ],
+                 *         "query_string": "*",
+                 *         "time_range": {
+                 *           "begin_timestamp_millisecs": 0,
+                 *           "end_timestamp_millisecs": 17356896
+                 *         },
+                 *         "ignore_case": true
+                 *       },
+                 *       "output": {
+                 *         "type": "results_cache",
+                 *         "max_num_results": 100
+                 *       }
                  *     }
                  */
                 "application/json": components["schemas"]["QueryConfig"];
@@ -1016,7 +1030,7 @@ export interface operations {
                     "application/json": components["schemas"]["QueryResultsUri"];
                 };
             };
-            /** @description The request body is not valid JSON or could not be read, query_string is empty, or time_range_begin_millisecs > time_range_end_millisecs. */
+            /** @description The request body is not valid JSON or could not be read. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1043,7 +1057,7 @@ export interface operations {
                     "text/plain": string;
                 };
             };
-            /** @description The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., a non-positive `max_num_results`). */
+            /** @description The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., an empty `query.datasets` or `query.query_string`, a `query.time_range` whose begin timestamp exceeds its end timestamp, or a non-positive `output.max_num_results`). */
             422: {
                 headers: {
                     [name: string]: unknown;
