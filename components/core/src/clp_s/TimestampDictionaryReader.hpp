@@ -33,6 +33,8 @@ public:
      * @param decompressor
      * @param has_deprecated_timestamp_format
      * @return ErrorCodeSuccess on success, and the relevant ErrorCode otherwise
+     * @throws OperationFailed if the timestamp dictionary contains more than one timestamp entry,
+     * or if a timestamp entry can't be read.
      */
     [[nodiscard]] auto read(ZstdDecompressor& decompressor, bool has_deprecated_timestamp_format)
             -> ErrorCode;
@@ -64,12 +66,11 @@ public:
     ) const;
 
     /**
-     * Gets iterators for the column to range mappings
-     * @return begin and end iterators for the column to range mappings
+     * @return The time range of the archive's authoritative timestamp column, if it exists.
      */
-    auto tokenized_column_to_range_begin() const { return m_tokenized_column_to_range.begin(); }
-
-    auto tokenized_column_to_range_end() const { return m_tokenized_column_to_range.end(); }
+    [[nodiscard]] auto get_timestamp_entry() const -> std::optional<TimestampEntry> const& {
+        return m_timestamp_entry;
+    }
 
     std::optional<std::pair<std::vector<std::string>, std::string>>&
     get_authoritative_timestamp_tokenized_column() {
@@ -81,14 +82,10 @@ public:
     }
 
 private:
-    using tokenized_column_to_range_t
-            = std::vector<std::pair<std::vector<std::string>, TimestampEntry*>>;
-
     // Variables
     std::unordered_map<uint64_t, TimestampPattern> m_deprecated_patterns;
     std::unordered_map<uint64_t, timestamp_parser::TimestampPattern> m_timestamp_patterns;
-    std::vector<TimestampEntry> m_entries;
-    tokenized_column_to_range_t m_tokenized_column_to_range;
+    std::optional<TimestampEntry> m_timestamp_entry;
 
     std::optional<std::pair<std::vector<std::string>, std::string>>
             m_authoritative_timestamp_tokenized_column;

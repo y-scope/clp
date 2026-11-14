@@ -46,6 +46,8 @@ class CompressOptions:
     single_file_archive: bool = False
     target_encoded_size: int | None = None
     parsing_spec_path: Path | None = None
+    disable_log_order: bool = False
+    print_archive_stats: bool = False
 
 
 def compress(
@@ -54,7 +56,7 @@ def compress(
     input_path: Path,
     *,
     options: CompressOptions | None = None,
-) -> None:
+) -> list[dict[str, Any]] | None:
     """
     Runs `clp-s c`, failing the test on a non-zero exit.
 
@@ -63,6 +65,8 @@ def compress(
     :param input_path:
     :param options: Optional arguments for `clp-s c`. Setting `options.parsing_spec_path` selects
         the clpp flavour; otherwise compression uses the default clp-s flavour.
+    :return: The parsed stats of each archive created if `options.print_archive_stats` is set;
+        otherwise `None`.
     """
     options = CompressOptions() if options is None else options
     cmd = [str(clp_core_path_config.clp_s_binary_path), "c"]
@@ -80,8 +84,15 @@ def compress(
                 f"--parsing-specification={options.parsing_spec_path}",
             ]
         )
+    if options.disable_log_order:
+        cmd.append("--disable-log-order")
+    if options.print_archive_stats:
+        cmd.append("--print-archive-stats")
     cmd.extend([str(archives_dir), str(input_path)])
-    _run_and_verify(cmd)
+    action = _run_and_verify(cmd)
+    if not options.print_archive_stats:
+        return None
+    return _parse_archive_stats(action)
 
 
 def compress_dataset_with_clpp(
@@ -253,6 +264,29 @@ def search(
                 f"Error:      {e}\nLine:       {line!r}"
             )
     return results
+
+
+def _parse_archive_stats(compression_action: ClpAction) -> list[dict[str, Any]]:
+    """
+    Parses each output line of a `clp-s c --print-archive-stats` run as a JSON object. Any non-JSON
+    output line fails the test.
+
+    :param compression_action:
+    :return: The parsed stats of each archive created.
+    """
+    context = f"Command:    {compression_action.cmd!r}\n"
+    archive_stats: list[dict[str, Any]] = []
+    for line in compression_action.completed_proc.stdout.splitlines():
+        if not line.startswith("{"):
+            pytest.fail(f"Archive stats line is not a JSON object.\n{context}Line:       {line!r}")
+        try:
+            archive_stats.append(json.loads(line))
+        except json.JSONDecodeError as e:
+            pytest.fail(
+                f"Failed to parse archive stats as JSON.\n{context}"
+                f"Error:      {e}\nLine:       {line!r}"
+            )
+    return archive_stats
 
 
 def _run_and_verify(cmd: list[str]) -> ClpAction:
