@@ -11,12 +11,12 @@ use tokio::net::TcpListener;
 use tokio::net::TcpSocket;
 use tokio::task::JoinHandle;
 
-use crate::connection;
 use crate::encoding::ResultEncoding;
 use crate::error::SessionError;
 use crate::session::OpenSession;
 use crate::session::SessionConfig;
 use crate::session::SessionRegistry;
+use crate::session::serve;
 
 /// Configuration of a listener.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -142,7 +142,7 @@ async fn accept_connections<EncodingType: ResultEncoding>(
     loop {
         match tcp_listener.accept().await {
             Ok((stream, peer_addr)) => {
-                tokio::spawn(connection::serve(
+                tokio::spawn(serve(
                     stream,
                     peer_addr,
                     Arc::clone(&session_registry),
