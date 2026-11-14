@@ -3,7 +3,7 @@ entries:
   clp:
   - apiVersion: v2
     appVersion: 0.14.1
-    created: "2026-11-13T19:34:03.864864817Z"
+    created: "2026-11-14T21:21:26.045343849Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -33,7 +33,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: 0.14.0
-    created: "2026-11-13T19:34:03.860676752Z"
+    created: "2026-11-14T21:21:26.043688947Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -63,7 +63,36 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.841192941Z"
+    created: "2026-11-14T21:21:26.029864404Z"
+    dependencies:
+    - name: spider
+      repository: https://github.com/y-scope/spider/raw/gh-pages
+      version: 0.2.0-dev.6
+    description: A Helm chart for CLP's (Compressed Log Processor) package deployment
+    digest: 4ac17d3ebf122d807f499dc14f756e25a1110425818040da8b4b28f021a5f60d
+    home: https://github.com/y-scope/clp
+    icon: https://github.com/y-scope/clp/raw/main/docs/src/clp-logo.png
+    keywords:
+    - analytics
+    - compression
+    - log-management
+    - log-parser
+    - logging
+    - search
+    maintainers:
+    - email: dev@yscope.com
+      name: y-scope
+      url: https://yscope.com
+    name: clp
+    sources:
+    - https://github.com/y-scope/clp
+    type: application
+    urls:
+    - https://github.com/y-scope/clp/raw/gh-pages/clp-0.4.1-dev.28.tgz
+    version: 0.4.1-dev.28
+  - apiVersion: v2
+    appVersion: 0.13.1-dev
+    created: "2026-11-14T21:21:26.027490584Z"
     dependencies:
     - name: spider
       repository: https://github.com/y-scope/spider/raw/gh-pages
@@ -92,7 +121,7 @@ entries:
     version: 0.4.1-dev.27
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.839210529Z"
+    created: "2026-11-14T21:21:26.026085139Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -122,7 +151,7 @@ entries:
     version: 0.4.1-dev.26
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.836852479Z"
+    created: "2026-11-14T21:21:26.024374651Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -152,7 +181,7 @@ entries:
     version: 0.4.1-dev.25
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.83303224Z"
+    created: "2026-11-14T21:21:26.02244128Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -182,7 +211,7 @@ entries:
     version: 0.4.1-dev.24
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.830757327Z"
+    created: "2026-11-14T21:21:26.020179649Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -212,7 +241,7 @@ entries:
     version: 0.4.1-dev.23
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.828401742Z"
+    created: "2026-11-14T21:21:26.018494568Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -242,7 +271,7 @@ entries:
     version: 0.4.1-dev.22
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.825489967Z"
+    created: "2026-11-14T21:21:26.016727157Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -272,7 +301,7 @@ entries:
     version: 0.4.1-dev.21
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.82270625Z"
+    created: "2026-11-14T21:21:26.014202035Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -302,7 +331,7 @@ entries:
     version: 0.4.1-dev.20
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.818921774Z"
+    created: "2026-11-14T21:21:26.011405601Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -332,7 +361,7 @@ entries:
     version: 0.4.1-dev.19
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.815287473Z"
+    created: "2026-11-14T21:21:26.00892893Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -362,7 +391,7 @@ entries:
     version: 0.4.1-dev.18
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.813112749Z"
+    created: "2026-11-14T21:21:26.007231442Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -392,7 +421,7 @@ entries:
     version: 0.4.1-dev.17
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.810897979Z"
+    created: "2026-11-14T21:21:26.005536638Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -422,7 +451,7 @@ entries:
     version: 0.4.1-dev.16
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.807231195Z"
+    created: "2026-11-14T21:21:26.003523921Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -452,7 +481,7 @@ entries:
     version: 0.4.1-dev.15
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.805063063Z"
+    created: "2026-11-14T21:21:26.00136085Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -482,7 +511,7 @@ entries:
     version: 0.4.1-dev.14
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.802844156Z"
+    created: "2026-11-14T21:21:25.999757049Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -512,7 +541,7 @@ entries:
     version: 0.4.1-dev.13
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.799362308Z"
+    created: "2026-11-14T21:21:25.998074268Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -542,7 +571,7 @@ entries:
     version: 0.4.1-dev.12
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.797239081Z"
+    created: "2026-11-14T21:21:25.995711519Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -572,7 +601,7 @@ entries:
     version: 0.4.1-dev.11
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.795097168Z"
+    created: "2026-11-14T21:21:25.99412712Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -602,7 +631,7 @@ entries:
     version: 0.4.1-dev.10
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.858499553Z"
+    created: "2026-11-14T21:21:26.042026279Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -632,7 +661,7 @@ entries:
     version: 0.4.1-dev.9
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.856382668Z"
+    created: "2026-11-14T21:21:26.039635595Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -662,7 +691,7 @@ entries:
     version: 0.4.1-dev.8
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.853518887Z"
+    created: "2026-11-14T21:21:26.038079099Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -692,7 +721,7 @@ entries:
     version: 0.4.1-dev.7
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.850297151Z"
+    created: "2026-11-14T21:21:26.036528738Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -722,7 +751,7 @@ entries:
     version: 0.4.1-dev.6
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.848250217Z"
+    created: "2026-11-14T21:21:26.03443967Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -752,7 +781,7 @@ entries:
     version: 0.4.1-dev.5
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.846151597Z"
+    created: "2026-11-14T21:21:26.032504506Z"
     dependencies:
     - condition: spider.enabled
       name: spider
@@ -782,7 +811,7 @@ entries:
     version: 0.4.1-dev.4
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.842636819Z"
+    created: "2026-11-14T21:21:26.030998284Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: c3305078227f7d40c9f165f775a7a5203481fec7075c9bb7c901eb7ac13734f5
     home: https://github.com/y-scope/clp
@@ -807,7 +836,7 @@ entries:
     version: 0.4.1-dev.3
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.820413052Z"
+    created: "2026-11-14T21:21:26.01249575Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: c2035d050fa2ca249cb546dd2e3140eb2454595a9e8aac3207c72ff13493b040
     home: https://github.com/y-scope/clp
@@ -832,7 +861,7 @@ entries:
     version: 0.4.1-dev.2
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.792165712Z"
+    created: "2026-11-14T21:21:25.992477439Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 031ca345965386110a76b3c498dee8120f386c03f91f83fd0e2d36c0b73691a2
     home: https://github.com/y-scope/clp
@@ -857,7 +886,7 @@ entries:
     version: 0.4.1-dev.1
   - apiVersion: v2
     appVersion: 0.13.1-dev
-    created: "2026-11-13T19:34:03.790374737Z"
+    created: "2026-11-14T21:21:25.99130242Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 7a608b681fcb7249a774480041c3b6f0fb2613c757feeb45fea29c60e91be975
     home: https://github.com/y-scope/clp
@@ -882,7 +911,7 @@ entries:
     version: 0.4.1-dev.0
   - apiVersion: v2
     appVersion: 0.13.0
-    created: "2026-11-13T19:34:03.788867469Z"
+    created: "2026-11-14T21:21:25.989391724Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: a04fc72fa0266d2c6141d966456547b244f8ab2192b43af24b3bef414dc99ba8
     home: https://github.com/y-scope/clp
@@ -907,7 +936,7 @@ entries:
     version: 0.4.0
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.776463571Z"
+    created: "2026-11-14T21:21:25.980332668Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 5240b2a38fa5449db2c76f9bb1a81e3c0d2aa735868a84dc6ba59477210844e2
     home: https://github.com/y-scope/clp
@@ -932,7 +961,7 @@ entries:
     version: 0.3.2-dev.19
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.774281078Z"
+    created: "2026-11-14T21:21:25.978681528Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: b05444f2e2d7b2dd1946b5191788026a939b5d19c85803efdfeeba0fa81de623
     home: https://github.com/y-scope/clp
@@ -957,7 +986,7 @@ entries:
     version: 0.3.2-dev.18
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.772827762Z"
+    created: "2026-11-14T21:21:25.977504899Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 1cec3484178bfeccb42f0885d53febda731a1111c24264414938fe121fe24136
     home: https://github.com/y-scope/clp
@@ -982,7 +1011,7 @@ entries:
     version: 0.3.2-dev.17
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.771344009Z"
+    created: "2026-11-14T21:21:25.976440154Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 6e07a42165efb141218bdee38c3aee298740cfd05aa44f1005119adf3250ceaf
     home: https://github.com/y-scope/clp
@@ -1007,7 +1036,7 @@ entries:
     version: 0.3.2-dev.16
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.769644529Z"
+    created: "2026-11-14T21:21:25.975375918Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 56c66b65fbdbca164f7bdad33aa36c577d8e51b1e7a43b5e857a6a22f961130a
     home: https://github.com/y-scope/clp
@@ -1032,7 +1061,7 @@ entries:
     version: 0.3.2-dev.15
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.767068129Z"
+    created: "2026-11-14T21:21:25.974297066Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 5c70f662f3098f7e2e477501208561cafff837409e2e4f06b89ca46fe220956b
     home: https://github.com/y-scope/clp
@@ -1057,7 +1086,7 @@ entries:
     version: 0.3.2-dev.14
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.765670267Z"
+    created: "2026-11-14T21:21:25.972727378Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 3f37b4214ea07e4caf4a59495d77326187baac806980fca941d77f9275bdc1f0
     home: https://github.com/y-scope/clp
@@ -1082,7 +1111,7 @@ entries:
     version: 0.3.2-dev.13
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.764351815Z"
+    created: "2026-11-14T21:21:25.971067711Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 036683b1d7b92efd14f815281038d459b819f35b201edc532f493344c82ce709
     home: https://github.com/y-scope/clp
@@ -1107,7 +1136,7 @@ entries:
     version: 0.3.2-dev.12
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.763039484Z"
+    created: "2026-11-14T21:21:25.970092825Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: f2a6014309f03f7c11a556de83939c950669e500fbc1033503a2b5ef990d5435
     home: https://github.com/y-scope/clp
@@ -1132,7 +1161,7 @@ entries:
     version: 0.3.2-dev.11
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.761636894Z"
+    created: "2026-11-14T21:21:25.969097318Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: c1176abae66be531800c55106568014ea39f17641c040b5c09cabe2caac597d9
     home: https://github.com/y-scope/clp
@@ -1157,7 +1186,7 @@ entries:
     version: 0.3.2-dev.10
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.787443078Z"
+    created: "2026-11-14T21:21:25.988322766Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 66ee5b54cfef7666a42aeda55257fb589ee1c1f2a443452bbbb9ccecbfc8a9c3
     home: https://github.com/y-scope/clp
@@ -1182,7 +1211,7 @@ entries:
     version: 0.3.2-dev.9
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.786156786Z"
+    created: "2026-11-14T21:21:25.98735788Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: df3269b8a6e15172bfd5c4874342cfef1c4e3111f1adc19d00b166cf93bbbf99
     home: https://github.com/y-scope/clp
@@ -1207,7 +1236,7 @@ entries:
     version: 0.3.2-dev.8
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.783980292Z"
+    created: "2026-11-14T21:21:25.986348075Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: ecaaf9df1cc141b4a961f5d7401bbed8afcafd7be9cec458cbb0ad5c23702bc5
     home: https://github.com/y-scope/clp
@@ -1232,7 +1261,7 @@ entries:
     version: 0.3.2-dev.7
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.782713363Z"
+    created: "2026-11-14T21:21:25.985165088Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: fc2457747052b9852b83d4f819402caeaa0313d09a7f48367d04ba793d06f403
     home: https://github.com/y-scope/clp
@@ -1257,7 +1286,7 @@ entries:
     version: 0.3.2-dev.6
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.781581973Z"
+    created: "2026-11-14T21:21:25.983727225Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 38d54dff9d8a3981d33a480879f7f37ef388641c95e3437fa8dfa1ab3ee12334
     home: https://github.com/y-scope/clp
@@ -1282,7 +1311,7 @@ entries:
     version: 0.3.2-dev.5
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.780412211Z"
+    created: "2026-11-14T21:21:25.982891308Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 1831f67b5224d47e7e5429542d0a6ea1a929bc4297ae71df578c33a80e810842
     home: https://github.com/y-scope/clp
@@ -1307,7 +1336,7 @@ entries:
     version: 0.3.2-dev.4
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.7792166Z"
+    created: "2026-11-14T21:21:25.982056161Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: f97836ec27eba0da4d9535cfe6e21461fcd949dc13350489ed5121f3f73af62a
     home: https://github.com/y-scope/clp
@@ -1332,7 +1361,7 @@ entries:
     version: 0.3.2-dev.3
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.778035877Z"
+    created: "2026-11-14T21:21:25.981196704Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: c2871817543b0bf5ac8e8928b2f8c36ed743dc7d579dc0600b4c6f5c7d3c0fc7
     home: https://github.com/y-scope/clp
@@ -1357,7 +1386,7 @@ entries:
     version: 0.3.2-dev.2
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.759166736Z"
+    created: "2026-11-14T21:21:25.968068514Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 890391ca8604da1dc6646af18fcef961da32aa1c11f2dcda000a1e664d08a2fb
     home: https://github.com/y-scope/clp
@@ -1382,7 +1411,7 @@ entries:
     version: 0.3.2-dev.1
   - apiVersion: v2
     appVersion: 0.12.1-dev
-    created: "2026-11-13T19:34:03.758041969Z"
+    created: "2026-11-14T21:21:25.96643497Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 1aa47148dfe48bfa78d1753a7283c5dc381addbde213516eaec7924e25b3b744
     home: https://github.com/y-scope/clp
@@ -1407,7 +1436,7 @@ entries:
     version: 0.3.2-dev.0
   - apiVersion: v2
     appVersion: 0.12.0
-    created: "2026-11-13T19:34:03.75692194Z"
+    created: "2026-11-14T21:21:25.965271202Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 5c13326bb9710ff1c000caf4b8427853546927b8302e786d3e21dd3d7c2072ec
     home: https://github.com/y-scope/clp
@@ -1432,7 +1461,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: 0.11.1-dev
-    created: "2026-11-13T19:34:03.755789498Z"
+    created: "2026-11-14T21:21:25.964469166Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 33015ce916e96df9dee01d668b6b2f64c679848b54f424d53b03d83cdc30b43d
     home: https://github.com/y-scope/clp
@@ -1457,7 +1486,7 @@ entries:
     version: 0.3.1-dev.1
   - apiVersion: v2
     appVersion: 0.11.1-dev
-    created: "2026-11-13T19:34:03.754478169Z"
+    created: "2026-11-14T21:21:25.963676409Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: b4137fe804afe8ea00adf51470ac2bc2648b5ba39a0b4bd90c958541c8da74de
     home: https://github.com/y-scope/clp
@@ -1482,7 +1511,7 @@ entries:
     version: 0.3.1-dev.0
   - apiVersion: v2
     appVersion: 0.11.0
-    created: "2026-11-13T19:34:03.751835781Z"
+    created: "2026-11-14T21:21:25.962841071Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: e9fb825295f679355edf4113d7a820e277e4d8e7716739571f8fa6695b5d713e
     home: https://github.com/y-scope/clp
@@ -1507,7 +1536,7 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: 0.10.1-dev
-    created: "2026-11-13T19:34:03.750766488Z"
+    created: "2026-11-14T21:21:25.961950531Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: ce831e9b06e77733eb1e01af210b9126bde90568e9cc8793ce8242718713b804
     home: https://github.com/y-scope/clp
@@ -1532,7 +1561,7 @@ entries:
     version: 0.2.1-dev.6
   - apiVersion: v2
     appVersion: 0.10.1-dev
-    created: "2026-11-13T19:34:03.749696674Z"
+    created: "2026-11-14T21:21:25.960209379Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 22dc56aa6d093a30c1628d309dffcaaa7257514bb7e9ef3ca9b9ad176a0eede1
     home: https://github.com/y-scope/clp
@@ -1557,7 +1586,7 @@ entries:
     version: 0.2.1-dev.5
   - apiVersion: v2
     appVersion: 0.10.1-dev
-    created: "2026-11-13T19:34:03.748615308Z"
+    created: "2026-11-14T21:21:25.959381296Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 66ac16be5697b1e3742df18ded8eb7e56610c6a2088e3e8ffd97a6866dc49060
     home: https://github.com/y-scope/clp
@@ -1582,7 +1611,7 @@ entries:
     version: 0.2.1-dev.4
   - apiVersion: v2
     appVersion: 0.10.1-dev
-    created: "2026-11-13T19:34:03.747507623Z"
+    created: "2026-11-14T21:21:25.958541741Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: ac3d7c1b0ca3aa8a850bed78c665f5ea5c2186e11229b5f0903c6d2560c093f3
     home: https://github.com/y-scope/clp
@@ -1607,7 +1636,7 @@ entries:
     version: 0.2.1-dev.3
   - apiVersion: v2
     appVersion: 0.10.1-dev
-    created: "2026-11-13T19:34:03.745976079Z"
+    created: "2026-11-14T21:21:25.957717234Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: fb0581f6d684d4d50ecbb7f5cfbc655ad28bbd8f3ff7be0faf5e8e26b8e4cfdc
     home: https://github.com/y-scope/clp
@@ -1632,7 +1661,7 @@ entries:
     version: 0.2.1-dev.2
   - apiVersion: v2
     appVersion: 0.10.1-dev
-    created: "2026-11-13T19:34:03.7442484Z"
+    created: "2026-11-14T21:21:25.956945976Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: a4bed24658591620ce3261adfcffa267e22f12ab07af3bdc7d4ae880ae0bdf8c
     home: https://github.com/y-scope/clp
@@ -1657,7 +1686,7 @@ entries:
     version: 0.2.1-dev.1
   - apiVersion: v2
     appVersion: 0.10.1-dev
-    created: "2026-11-13T19:34:03.743194866Z"
+    created: "2026-11-14T21:21:25.955936764Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: ea6191a04cc82f98d2798eb2d6f48168749487e5ea068c26a475a08563fec678
     home: https://github.com/y-scope/clp
@@ -1682,7 +1711,7 @@ entries:
     version: 0.2.1-dev.0
   - apiVersion: v2
     appVersion: 0.10.0
-    created: "2026-11-13T19:34:03.742114172Z"
+    created: "2026-11-14T21:21:25.954644309Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: d5c24f9974c12804ad1f8061c4266b0929356a261e9df4980f69feb56908e6f1
     home: https://github.com/y-scope/clp
@@ -1707,7 +1736,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 0.9.1-dev
-    created: "2026-11-13T19:34:03.741160226Z"
+    created: "2026-11-14T21:21:25.953869609Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 26f00cf6571df94235335aad4f27a0b5ac38a60b15f6f2bca050c40707acd4e5
     home: https://github.com/y-scope/clp
@@ -1732,7 +1761,7 @@ entries:
     version: 0.2.0-dev.2
   - apiVersion: v2
     appVersion: 0.9.1-dev
-    created: "2026-11-13T19:34:03.740159983Z"
+    created: "2026-11-14T21:21:25.953102339Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 1e3196d25017a18d99e992c78b5a21942bb5d821a29682d069aab67d70c206b1
     home: https://github.com/y-scope/clp
@@ -1757,7 +1786,7 @@ entries:
     version: 0.2.0-dev.1
   - apiVersion: v2
     appVersion: 0.9.1-dev
-    created: "2026-11-13T19:34:03.738894861Z"
+    created: "2026-11-14T21:21:25.952339409Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 9b5cc9369bde5a9a641aa4d1ae76598ce3c1cf8adbd40356d10f0c4b1af074fc
     home: https://github.com/y-scope/clp
@@ -1782,7 +1811,7 @@ entries:
     version: 0.2.0-dev.0
   - apiVersion: v2
     appVersion: 0.9.1-dev
-    created: "2026-11-13T19:34:03.736506762Z"
+    created: "2026-11-14T21:21:25.951562038Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: d44bb298d9c4d317244742e39dc4c31d9bc8f974ad7929f45f08cd497d20bc0b
     home: https://github.com/y-scope/clp
@@ -1807,7 +1836,7 @@ entries:
     version: 0.1.4-dev.4
   - apiVersion: v2
     appVersion: 0.9.1-dev
-    created: "2026-11-13T19:34:03.734952065Z"
+    created: "2026-11-14T21:21:25.950461899Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: c6e940d4094babbdda3c804c9e0da0764d19332292bfa9d63c9cf5770d6e80ce
     home: https://github.com/y-scope/clp
@@ -1832,7 +1861,7 @@ entries:
     version: 0.1.4-dev.3
   - apiVersion: v2
     appVersion: 0.9.1-dev
-    created: "2026-11-13T19:34:03.733660123Z"
+    created: "2026-11-14T21:21:25.948442983Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 76869eed6bf5b4575d5406f58ddf8053b92915ed34b4cbaa4d179987527fd7e1
     home: https://github.com/y-scope/clp
@@ -1857,7 +1886,7 @@ entries:
     version: 0.1.4-dev.2
   - apiVersion: v2
     appVersion: 0.9.1-dev
-    created: "2026-11-13T19:34:03.732456276Z"
+    created: "2026-11-14T21:21:25.947523108Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: fcc91daa040c71f46b39d076bc79aae247edc9970f9b6c1709ef8cdcfaaaa791
     home: https://github.com/y-scope/clp
@@ -1882,7 +1911,7 @@ entries:
     version: 0.1.4-dev.1
   - apiVersion: v2
     appVersion: 0.9.0
-    created: "2026-11-13T19:34:03.731187427Z"
+    created: "2026-11-14T21:21:25.946651484Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 899f966347d9bb897ef5af9366621f428b4c3d9f3245d8ffd12ccf732e091f36
     home: https://github.com/y-scope/clp
@@ -1907,7 +1936,7 @@ entries:
     version: 0.1.3
   - apiVersion: v2
     appVersion: 0.8.1-dev
-    created: "2026-11-13T19:34:03.729835242Z"
+    created: "2026-11-14T21:21:25.945695509Z"
     description: A Helm chart for CLP's (Compressed Log Processor) package deployment
     digest: 3a55143293ba3f8723f0a346fe9929e8d525c04182d172206b5ff5a06e174c3b
     home: https://github.com/y-scope/clp
@@ -1930,4 +1959,4 @@ entries:
     urls:
     - https://github.com/y-scope/clp/raw/gh-pages/clp-0.1.3-dev.2.tgz
     version: 0.1.3-dev.2
-generated: "2026-11-13T19:34:03.728133047Z"
+generated: "2026-11-14T21:21:25.944592002Z"
