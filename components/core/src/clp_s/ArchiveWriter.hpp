@@ -307,6 +307,19 @@ public:
     }
 
     /**
+     * Closes the time range of the current file split, resetting the accumulated time ranges for
+     * the next file split.
+     *
+     * @return A pair representing the start and end timestamp of the closed file split as
+     * milliseconds since the UNIX epoch.
+     * @return std::nullopt if the file split has no timestamps.
+     */
+    [[nodiscard]] auto close_current_file_split_time_range()
+            -> std::optional<std::pair<epochtime_t, epochtime_t>> {
+        return m_timestamp_dict.close_current_file_split();
+    }
+
+    /**
      * Updates the log shape dictionary for the given log shape, adding it to the dictionary if
      * necessary.
      * @param log_shape
