@@ -52,8 +52,8 @@ constexpr auto decompose_archive_version(ArchiveVersion archive_version)
 }
 
 // define the version
-constexpr uint8_t cArchiveMajorVersion = 0;
-constexpr uint8_t cArchiveMinorVersion{6};
+constexpr uint8_t cArchiveMajorVersion{0};
+constexpr uint8_t cArchiveMinorVersion{7};
 constexpr uint16_t cArchivePatchVersion{0};
 constexpr ArchiveVersion cArchiveVersion{
         make_archive_version(cArchiveMajorVersion, cArchiveMinorVersion, cArchivePatchVersion)

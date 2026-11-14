@@ -21,13 +21,21 @@ auto TimestampDictionaryReader::read(
         bool has_deprecated_timestamp_format
 ) -> ErrorCode {
     ErrorCode error;
-    uint64_t range_index_size;
-    error = decompressor.try_read_numeric_value<uint64_t>(range_index_size);
+    uint64_t num_entries{0};
+    error = decompressor.try_read_numeric_value<uint64_t>(num_entries);
     if (ErrorCodeSuccess != error) {
         return error;
     }
 
-    for (uint64_t i = 0; i < range_index_size; ++i) {
+    if (num_entries > 1) {
+        SPDLOG_ERROR(
+                "Timestamp dictionary contains {} timestamp entries, but at most one is supported.",
+                num_entries
+        );
+        throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
+    }
+
+    if (1 == num_entries) {
         TimestampEntry entry;
         std::vector<std::string> tokens;
         std::string descriptor_namespace;
@@ -44,18 +52,11 @@ auto TimestampDictionaryReader::read(
         {
             throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
         }
-        m_entries.emplace_back(std::move(entry));
 
-        // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time,
-        // but the timestamp dictionary is designed to store the ranges of several timestamp
-        // columns. We should enforce a convention that the first entry in the timestamp dictionary
-        // corresponds to the "authoritative" timestamp column for the dataset.
-        if (i == 0) {
-            m_authoritative_timestamp_column_ids = m_entries.back().get_column_ids();
-            m_authoritative_timestamp_tokenized_column = {tokens, descriptor_namespace};
-        }
-
-        m_tokenized_column_to_range.emplace_back(std::move(tokens), &m_entries.back());
+        m_authoritative_timestamp_column_ids = entry.get_column_ids();
+        m_authoritative_timestamp_tokenized_column
+                = {std::move(tokens), std::move(descriptor_namespace)};
+        m_timestamp_entry.emplace(std::move(entry));
     }
 
     uint64_t num_patterns{0};

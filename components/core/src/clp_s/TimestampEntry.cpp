@@ -30,6 +30,12 @@ void TimestampEntry::ingest_timestamp(epochtime_t timestamp) {
     m_epoch_end = std::max(m_epoch_end, millisecond_timestamp_upper_bound);
 }
 
+auto TimestampEntry::ingest_millisecond_timestamp(epochtime_t millisecond_timestamp) -> void {
+    m_encoding = Epoch;
+    m_epoch_start = std::min(m_epoch_start, millisecond_timestamp);
+    m_epoch_end = std::max(m_epoch_end, millisecond_timestamp);
+}
+
 void TimestampEntry::write_to_stream(std::stringstream& stream) const {
     write_numeric_value<uint64_t>(stream, m_key_name.size());
     stream.write(m_key_name.data(), m_key_name.size());
@@ -117,7 +123,7 @@ void TimestampEntry::read_from_file(ZstdDecompressor& decompressor) {
     }
 }
 
-EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, double timestamp) {
+auto TimestampEntry::evaluate_filter(FilterOperation op, double timestamp) const -> EvaluatedValue {
     if (op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS) {
         return EvaluatedValue::Unknown;
     }
@@ -176,7 +182,8 @@ EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, double timest
     }
 }
 
-EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, epochtime_t timestamp) {
+auto TimestampEntry::evaluate_filter(FilterOperation op, epochtime_t timestamp) const
+        -> EvaluatedValue {
     if (op == FilterOperation::EXISTS || op == FilterOperation::NEXISTS) {
         return EvaluatedValue::Unknown;
     }
