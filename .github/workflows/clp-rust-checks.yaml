@@ -11,6 +11,7 @@ on:
       - "components/clp-rust-libs/**"
       - "components/clp-tdl-package/**"
       - "components/compression-coordinator/**"
+      - "components/db-table-creator/**"
       - "components/log-ingestor/**"
       - "components/query-coordinator/**"
       - "taskfile.yaml"
