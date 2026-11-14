@@ -14,6 +14,8 @@ x-clp-spider-worker-defaults: &clp_spider_worker_defaults
     - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}:ro"
     - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
     - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
+    - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
+    - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
 
 x-clp-spider-worker-env-defaults: &clp_spider_worker_env_defaults
   CLP_CONFIG_PATH: "/etc/clp-config.yaml"

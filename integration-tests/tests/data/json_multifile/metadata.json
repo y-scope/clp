@@ -1,7 +1,7 @@
 {
     "dataset_name": "json_multifile",
     "unstructured": false,
-    "timestamp_key": "@timestamp",
+    "timestamp_key": "timestamp",
     "begin_ts": 1679976002040,
     "end_ts": 1679976232990,
     "logs_subdir": "logs",

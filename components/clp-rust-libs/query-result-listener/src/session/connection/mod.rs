@@ -1,39 +1,105 @@
 //! Serving a connection from a query task: its handshake, then the results it streams, then the
 //! trailer that the connection's acknowledgement answers.
 
+mod io;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use bytes::BufMut;
 use bytes::BytesMut;
 use tokio::io::AsyncRead;
-use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
-use crate::cursor::Claim;
-use crate::cursor::TaskCursor;
 use crate::encoding::ResultEncoder;
 use crate::encoding::ResultEncoding;
 use crate::error::ConnectionError;
 use crate::error::ProtocolError;
 use crate::protocol::Ack;
 use crate::protocol::Frame;
-use crate::protocol::Handshake;
 use crate::protocol::ResultFrame;
 use crate::protocol::Trailer;
 use crate::session::SessionRegistry;
 use crate::session::SessionStats;
-use crate::session::State;
+use crate::session::connection::io::check_eof;
+use crate::session::connection::io::read_handshake;
+use crate::session::connection::io::read_more;
+use crate::session::cursor::Claim;
+use crate::session::cursor::TaskCursor;
+use crate::session::state::State;
+
+/// Serves a connection from a query task until it ends, and logs why if it ends without an
+/// acknowledgement.
+///
+/// Reads the connection's handshake within `handshake_timeout`, then joins the connection to the
+/// session in `session_registry` that the handshake names.
+///
+/// # Type Parameters
+///
+/// * `EncodingType` - The encoding of the results the sessions deliver.
+pub async fn serve<EncodingType: ResultEncoding>(
+    mut input_stream: TcpStream,
+    peer_addr: SocketAddr,
+    session_registry: Arc<SessionRegistry<EncodingType>>,
+    handshake_timeout: Duration,
+) {
+    let mut buffer = BytesMut::new();
+    let handshake = match tokio::time::timeout(
+        handshake_timeout,
+        read_handshake(&mut input_stream, &mut buffer),
+    )
+    .await
+    .unwrap_or(Err(ConnectionError::HandshakeTimeout(handshake_timeout)))
+    {
+        Ok(Some(handshake)) => handshake,
+        Ok(None) => {
+            tracing::debug!(
+                peer_addr = % peer_addr,
+                "Connection closed before sending a handshake."
+            );
+            return;
+        }
+        Err(e) => {
+            tracing::warn!(
+                peer_addr = % peer_addr,
+                error = % e,
+                "Closing a connection without a valid handshake."
+            );
+            return;
+        }
+    };
+
+    let mut connection = match session_registry.join(&handshake) {
+        Ok(connection) => connection,
+        Err(e) => {
+            tracing::warn!(
+                peer_addr = % peer_addr,
+                task_index = handshake.task_index,
+                error = % e,
+                "Rejecting a connection."
+            );
+            return;
+        }
+    };
+
+    if let Err(e) = connection.run(&mut input_stream, buffer).await {
+        tracing::warn!(
+            peer_addr = % peer_addr,
+            task_index = handshake.task_index,
+            error = % e,
+            "Closing a connection without acknowledging its results."
+        );
+    }
+}
 
 /// A connection that joined a session, streaming the results of one attempt of a query task.
 ///
 /// # Type Parameters
 ///
 /// * `EncodingType` - The encoding of the results the session delivers.
-pub struct Connection<EncodingType: ResultEncoding> {
+pub(super) struct Connection<EncodingType: ResultEncoding> {
     session_state: Arc<State<EncodingType>>,
     cursor: Arc<TaskCursor>,
     encoder: EncodingType::Encoder,
@@ -242,72 +308,6 @@ impl<EncodingType: ResultEncoding> Drop for Connection<EncodingType> {
     }
 }
 
-/// Serves a connection from a query task until it ends, and logs why if it ends without an
-/// acknowledgement.
-///
-/// Reads the connection's handshake within `handshake_timeout`, then joins the connection to the
-/// session in `session_registry` that the handshake names.
-///
-/// # Type Parameters
-///
-/// * `EncodingType` - The encoding of the results the sessions deliver.
-pub async fn serve<EncodingType: ResultEncoding>(
-    mut input_stream: TcpStream,
-    peer_addr: SocketAddr,
-    session_registry: Arc<SessionRegistry<EncodingType>>,
-    handshake_timeout: Duration,
-) {
-    let mut buffer = BytesMut::new();
-    let handshake = match tokio::time::timeout(
-        handshake_timeout,
-        read_handshake(&mut input_stream, &mut buffer),
-    )
-    .await
-    .unwrap_or(Err(ConnectionError::HandshakeTimeout(handshake_timeout)))
-    {
-        Ok(Some(handshake)) => handshake,
-        Ok(None) => {
-            tracing::debug!(
-                peer_addr = % peer_addr,
-                "Connection closed before sending a handshake."
-            );
-            return;
-        }
-        Err(e) => {
-            tracing::warn!(
-                peer_addr = % peer_addr,
-                error = % e,
-                "Closing a connection without a valid handshake."
-            );
-            return;
-        }
-    };
-
-    let mut connection = match session_registry.join(&handshake) {
-        Ok(connection) => connection,
-        Err(e) => {
-            tracing::warn!(
-                peer_addr = % peer_addr,
-                task_index = handshake.task_index,
-                error = % e,
-                "Rejecting a connection."
-            );
-            return;
-        }
-    };
-
-    if let Err(e) = connection.run(&mut input_stream, buffer).await {
-        tracing::warn!(
-            peer_addr = % peer_addr,
-            task_index = handshake.task_index,
-            error = % e,
-            "Closing a connection without acknowledging its results."
-        );
-    }
-}
-
-const MAX_READ_SIZE: usize = 64 * 1024;
-
 /// What decoding a connection's buffered frames found.
 enum Decoded {
     /// The buffer ends before the next frame does, so the connection must read more bytes.
@@ -315,88 +315,6 @@ enum Decoded {
 
     /// The connection sent its trailer, which counts the results it streamed.
     Trailer(Trailer),
-}
-
-/// Reads the handshake a query task sends first on its connection, leaving the bytes read after it
-/// in `buffer`.
-///
-/// # Returns
-///
-/// On success:
-///
-/// * The handshake.
-/// * `None` if the connection closes before sending any byte.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`ConnectionError::TruncatedFrame`] if the connection closes in the middle of the handshake.
-/// * Forwards [`Handshake::decode`]'s return values on failure.
-/// * Forwards [`read_more`]'s return values on failure.
-async fn read_handshake(
-    input_stream: &mut TcpStream,
-    buffer: &mut BytesMut,
-) -> Result<Option<Handshake>, ConnectionError> {
-    loop {
-        if let Some(handshake) = Handshake::decode(buffer)? {
-            return Ok(Some(handshake));
-        }
-        if 0 == read_more(input_stream, buffer).await? {
-            if buffer.is_empty() {
-                return Ok(None);
-            }
-            return Err(ConnectionError::TruncatedFrame);
-        }
-    }
-}
-
-/// Reads at most [`MAX_READ_SIZE`] more bytes from `input_stream` into `buffer`.
-///
-/// # Type Parameters
-///
-/// * `StreamType` - The type of the connection's stream.
-///
-/// # Returns
-///
-/// The number of bytes read on success, which is 0 once `input_stream` has reached EOF.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * Forwards [`AsyncReadExt::read_buf`]'s return values on failure.
-async fn read_more<StreamType: AsyncRead + Unpin>(
-    input_stream: &mut StreamType,
-    buffer: &mut BytesMut,
-) -> std::io::Result<usize> {
-    buffer.reserve(MAX_READ_SIZE);
-    let mut read_window = (&mut *buffer).limit(MAX_READ_SIZE);
-    input_stream.read_buf(&mut read_window).await
-}
-
-/// Checks that no bytes follow the connection's trailer, either left in `buffer` or read next from
-/// `input_stream`.
-///
-/// # Type Parameters
-///
-/// * `StreamType` - The type of the connection's stream.
-///
-/// # Errors
-///
-/// Returns an error if:
-///
-/// * [`ConnectionError::Protocol`] wrapping [`ProtocolError::DataAfterTrailer`] if any byte follows
-///   the trailer.
-/// * Forwards [`read_more`]'s return values on failure.
-async fn check_eof<StreamType: AsyncRead + Unpin>(
-    input_stream: &mut StreamType,
-    buffer: &mut BytesMut,
-) -> Result<(), ConnectionError> {
-    if !buffer.is_empty() || 0 != read_more(input_stream, buffer).await? {
-        return Err(ProtocolError::DataAfterTrailer.into());
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -417,9 +335,9 @@ mod tests {
     use crate::error::ConnectionError;
     use crate::error::ProtocolError;
     use crate::protocol::Ack;
-    use crate::session::AtomicSessionStats;
     use crate::session::SessionStats;
-    use crate::session::State;
+    use crate::session::state::State;
+    use crate::session::stats::AtomicSessionStats;
     use crate::test_utils::ARCHIVE_ID;
     use crate::test_utils::EncodingError;
     use crate::test_utils::FallibleQueryResultEncoding;
@@ -1065,7 +983,7 @@ mod tests {
 
     #[tokio::test]
     async fn one_large_write_is_read_at_most_max_read_size_at_a_time() -> anyhow::Result<()> {
-        use super::MAX_READ_SIZE;
+        use super::io::MAX_READ_SIZE;
 
         /// Far more bytes than [`MAX_READ_SIZE`], and fewer than the in-memory stream holds.
         const NUM_RESULTS: u64 = 10_000;

@@ -7,7 +7,7 @@ use clp_rust_utils::types::ArchiveId;
 
 /// The outcome of claiming a result index on a [`TaskCursor`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Claim {
+pub(super) enum Claim {
     /// The calling attempt is the first to claim the result.
     Claimed,
 
@@ -17,7 +17,7 @@ pub enum Claim {
 
 /// Tracks the next unclaimed result of one query task across all of its attempts.
 #[derive(Debug)]
-pub struct TaskCursor {
+pub(super) struct TaskCursor {
     next_result_index: AtomicU64,
     archive_id: ArchiveId,
 }

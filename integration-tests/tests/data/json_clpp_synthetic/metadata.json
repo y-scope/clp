@@ -1,7 +1,7 @@
 {
     "dataset_name": "json_clpp_synthetic",
     "unstructured": false,
-    "timestamp_key": "@timestamp",
+    "timestamp_key": "timestamp",
     "begin_ts": 1679976000500,
     "end_ts": 1679976000500,
     "logs_subdir": "logs",

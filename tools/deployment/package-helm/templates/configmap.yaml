@@ -6,6 +6,12 @@
   .Values.global.archiveOutputStorageType
 ) }}
 {{- end }}
+{{- if not (has .Values.global.streamOutputStorageType (list "fs" "s3")) }}
+{{- fail (printf
+  "global.streamOutputStorageType (%v) must be \"fs\" or \"s3\""
+  .Values.global.streamOutputStorageType
+) }}
+{{- end }}
 apiVersion: "v1"
 kind: "ConfigMap"
 metadata:
@@ -179,15 +185,14 @@ data:
       port: {{ include "clp.otelCollectorPort" . | int }}
     {{- with .Values.clpConfig.stream_output }}
     stream_output:
-      {{- with .storage }}
       storage:
-        {{- if eq .type "fs" }}
+        {{- if eq $.Values.global.streamOutputStorageType "fs" }}
         directory: "/var/data/streams"
         type: "fs"
-        {{- else if eq .type "s3" }}
+        {{- else if eq $.Values.global.streamOutputStorageType "s3" }}
         type: "s3"
         staging_directory: "/var/data/staged-streams"
-        {{- with .s3_config }}
+        {{- with .storage.s3_config }}
         s3_config:
           {{- if .endpoint_url }}
           endpoint_url: {{ .endpoint_url | quote }}
@@ -212,9 +217,8 @@ data:
               {{- end }}
             {{- end }}
           {{- end }}{{/* with .aws_authentication */}}
-        {{- end }}{{/* with .s3_config */}}
-        {{- end }}{{/* if eq .type "fs" */}}
-      {{- end }}{{/* with .storage */}}
+        {{- end }}{{/* with .storage.s3_config */}}
+        {{- end }}{{/* if eq $.Values.global.streamOutputStorageType "fs" */}}
       target_uncompressed_size: {{ .target_uncompressed_size | int }}
     {{- end }}{{/* with .Values.clpConfig.stream_output */}}
     tmp_directory: "/var/tmp"
@@ -293,7 +297,7 @@ data:
 
         "ClientDir": "/opt/clp/var/www/webui/client",
         "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
-        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+        {{- if eq .Values.global.streamOutputStorageType "fs" }}
         "StreamFilesDir": "/var/data/streams",
         {{- else }}
         "StreamFilesDir": null,
