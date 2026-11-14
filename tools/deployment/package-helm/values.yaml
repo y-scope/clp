@@ -1,6 +1,8 @@
 global:
   # Where archives are stored: "fs" or "s3".
   archiveOutputStorageType: "fs"
+  # Where stream files are stored: "fs" or "s3".
+  streamOutputStorageType: "fs"
 
   # Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
   # workers.
@@ -60,9 +62,9 @@ image:
 #   - Pods automatically tolerate control-plane taints.
 #   - Each worker deployment supports only 1 replica.
 # - If true: Multi-node deployment.
-#   - When using filesystem storage (`global.archiveOutputStorageType: "fs"`), the PVC-backed
-#     directories must be accessible from all worker nodes (e.g., via NFS/CephFS mounted at
-#     the same path).
+#   - When using filesystem storage (`global.archiveOutputStorageType: "fs"` or
+#     `global.streamOutputStorageType: "fs"`), the PVC-backed directories must be accessible from
+#     all worker nodes (e.g., via NFS/CephFS mounted at the same path).
 distributedDeployment: false
 
 scheduling:
@@ -255,8 +257,7 @@ clpConfig:
 
   # Where CLP stream files (e.g., IR streams) should be output
   stream_output:
-    storage:
-      type: "fs"
+    storage: {}
 
     # How large each stream file should be before being split into a new stream file
     target_uncompressed_size: 134217728  # 128 MB
@@ -356,6 +357,13 @@ spider:
         - name: "shared-data-archives"
           mountPath: "/var/data/archives"
         {{- end }}
+        {{- if eq .Values.global.streamOutputStorageType "fs" }}
+        - name: "shared-data-streams"
+          mountPath: "/var/data/streams"
+        {{- else if eq .Values.global.streamOutputStorageType "s3" }}
+        - name: "staged-streams"
+          mountPath: "/var/data/staged-streams"
+        {{- end }}
       extra_volumes: |-
         {{- if eq .Values.global.logsInput.type "fs" }}
         - {{- include "clp.logsInputVolume" . | nindent 2 }}
@@ -369,6 +377,14 @@ spider:
         - name: "shared-data-archives"
           persistentVolumeClaim:
             claimName: "{{ include "clp.fullname" . }}-shared-data-archives"
+        {{- end }}
+        {{- if eq .Values.global.streamOutputStorageType "fs" }}
+        - name: "shared-data-streams"
+          persistentVolumeClaim:
+            claimName: "{{ include "clp.fullname" . }}-shared-data-streams"
+        {{- else if eq .Values.global.streamOutputStorageType "s3" }}
+        - name: "staged-streams"
+          emptyDir: {}
         {{- end }}
       service_account_name: "{{ include \"clp.fullname\" . }}-service-account"
       pools:
