@@ -7,7 +7,6 @@ use clp_rust_utils::types::ParseArchiveIdError;
 use clp_rust_utils::types::ParseSessionTokenError;
 use clp_rust_utils::types::SessionToken;
 use spider_core::task::TaskIndex;
-use tokio::task::JoinError;
 
 /// Violations of the wire protocol.
 #[derive(Debug, thiserror::Error)]
@@ -86,17 +85,4 @@ pub enum ConnectionError {
 pub enum SessionError {
     #[error("session token {0} is already registered")]
     TokenCollision(SessionToken),
-}
-
-/// Reasons the events of a session's query job end in a failure.
-#[derive(Debug, thiserror::Error)]
-pub enum SessionEventError {
-    #[error("the session's results can't be encoded: {0}")]
-    Encoding(String),
-
-    #[error("waiting for the query job's termination failed: {0}")]
-    Termination(Box<dyn std::error::Error + Send + Sync>),
-
-    #[error("the task waiting for the query job's termination failed: {0}")]
-    TerminationTaskFailed(JoinError),
 }
