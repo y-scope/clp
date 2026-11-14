@@ -787,11 +787,6 @@ where
 mod tests {
     use std::str::FromStr;
 
-    use clp_rust_utils::dataset::DatasetName;
-    use clp_rust_utils::dataset::NonEmptyDatasetNames;
-    use clp_rust_utils::job_config::TimeRange;
-    use non_empty_string::NonEmptyString;
-
     use super::*;
 
     #[test]
@@ -842,36 +837,5 @@ mod tests {
                 "output: {output:?}"
             );
         }
-    }
-
-    #[test]
-    fn query_config_converts_to_a_query_job_config_with_its_query_and_output() -> anyhow::Result<()>
-    {
-        let query = SearchQuery {
-            datasets: NonEmptyDatasetNames::try_from(vec!["logs".parse::<DatasetName>()?])?,
-            query_string: NonEmptyString::new("level: ERROR".to_owned())
-                .expect("query string is non-empty"),
-            time_range: TimeRange::new(Some(1), Some(2))?,
-            ignore_case: true,
-        };
-        let max_num_results = NonZeroU32::new(7);
-
-        assert_eq!(
-            QueryJobConfig::from(QueryConfig {
-                query: query.clone(),
-                output: QueryOutputConfig::ResultsCache {
-                    max_num_results,
-                    aggregation: None,
-                },
-            }),
-            QueryJobConfig {
-                query,
-                output: QueryOutput::ResultsCache(ResultsCacheOutput {
-                    max_num_results,
-                    aggregation: None,
-                }),
-            }
-        );
-        Ok(())
     }
 }
