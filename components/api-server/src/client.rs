@@ -20,7 +20,6 @@ use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::job_config::TimeRange;
-use clp_rust_utils::types::PositiveI64;
 use futures::Stream;
 use futures::StreamExt;
 use non_empty_string::NonEmptyString;
@@ -191,11 +190,6 @@ pub struct QueryConfig {
     #[schema(value_type = Option<Vec<String>>)]
     pub datasets: Option<Vec<DatasetName>>,
 
-    /// The maximum number of results to return. Omit for no limit.
-    #[serde(default)]
-    #[schema(value_type = Option<u32>, minimum = 1)]
-    pub max_num_results: Option<NonZeroU32>,
-
     /// The beginning timestamp (in epoch milliseconds) for the search range (inclusive).
     #[serde(default)]
     pub time_range_begin_millisecs: Option<i64>,
@@ -208,18 +202,8 @@ pub struct QueryConfig {
     #[serde(default)]
     pub ignore_case: bool,
 
-    /// Whether to buffer search results in `MongoDB`.
-    /// By default, search results are buffered in temporary files. When set to `true`, results
-    /// will be stored in `MongoDB` instead.
-    #[serde(default)]
-    pub buffer_results_in_mongodb: bool,
-
-    /// The size of each time bucket (in milliseconds) for count-by-time aggregation.
-    /// When set, the job is submitted as a count-by-time aggregation job instead of a plain
-    /// search job, and its results are always buffered in `MongoDB`.
-    #[serde(default)]
-    #[schema(value_type = Option<i64>, minimum = 1)]
-    pub count_by_time_bucket_size_millisecs: Option<PositiveI64>,
+    /// Where to buffer the search results.
+    pub output: QueryOutputConfig,
 }
 
 impl TryFrom<QueryConfig> for QueryJobConfig {
@@ -237,23 +221,15 @@ impl TryFrom<QueryConfig> for QueryJobConfig {
                 "time_range_begin_millisecs must be <= time_range_end_millisecs".to_owned(),
             )
         })?;
-        let output = match value.count_by_time_bucket_size_millisecs {
-            Some(bucket_size_millisecs) => {
-                // Aggregation results are always buffered in MongoDB.
-                QueryOutput::ResultsCache(ResultsCacheOutput {
-                    max_num_results: value.max_num_results,
-                    aggregation: Some(Aggregation::CountByTime {
-                        bucket_size_millisecs,
-                    }),
-                })
-            }
-            None if value.buffer_results_in_mongodb => {
-                QueryOutput::ResultsCache(ResultsCacheOutput {
-                    max_num_results: value.max_num_results,
-                    aggregation: None,
-                })
-            }
-            None => QueryOutput::File {},
+        let output = match value.output {
+            QueryOutputConfig::ResultsCache {
+                max_num_results,
+                aggregation,
+            } => QueryOutput::ResultsCache(ResultsCacheOutput {
+                max_num_results,
+                aggregation,
+            }),
+            QueryOutputConfig::File {} => QueryOutput::File {},
         };
         Ok(Self {
             datasets: value.datasets.unwrap_or_else(Self::default_datasets),
@@ -265,6 +241,26 @@ impl TryFrom<QueryConfig> for QueryJobConfig {
             output,
         })
     }
+}
+
+/// Defines where a submitted search query's results are buffered.
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
+pub enum QueryOutputConfig {
+    /// Buffers the results in `MongoDB`.
+    ResultsCache {
+        /// The maximum number of results to return. Omit for no limit.
+        #[serde(default)]
+        #[schema(value_type = Option<u32>, minimum = 1)]
+        max_num_results: Option<NonZeroU32>,
+
+        /// The aggregation to compute over all matching results, regardless of `max_num_results`.
+        #[serde(default)]
+        aggregation: Option<Aggregation>,
+    },
+
+    /// Buffers the results in temporary files.
+    File {},
 }
 
 #[derive(Clone)]
@@ -296,9 +292,7 @@ impl Client {
         }
     }
 
-    /// Submits a search or aggregation query as a job. The job is a count-by-time aggregation
-    /// job if `count_by_time_bucket_size_millisecs` is set in the query config; otherwise it's a
-    /// plain search job.
+    /// Submits a search or aggregation query as a job.
     ///
     /// # Returns
     ///
@@ -308,11 +302,12 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`QueryJobConfig::try_from`]'s return values on failure.
     /// * Forwards [`query_job::submit`]'s return values on failure.
-    pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
-        let query_job_config = QueryJobConfig::try_from(query_config)?;
-        Ok(query_job::submit(&self.sql_pool, &query_job_config).await?)
+    pub async fn submit_query(
+        &self,
+        query_job_config: &QueryJobConfig,
+    ) -> Result<u64, ClientError> {
+        Ok(query_job::submit(&self.sql_pool, query_job_config).await?)
     }
 
     /// Asynchronously fetches the results of a completed query job.
@@ -816,6 +811,8 @@ where
 mod tests {
     use std::str::FromStr;
 
+    use clp_rust_utils::types::PositiveI64;
+
     use super::*;
 
     #[test]
@@ -842,32 +839,36 @@ mod tests {
     #[test]
     fn query_config_converts_to_query_job_config_by_output() {
         let max_num_results = NonZeroU32::new(7);
-        for (query_config, expected_output) in [
+        let aggregation = Some(Aggregation::CountByTime {
+            bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
+        });
+        for (output, expected_output) in [
             (
-                QueryConfig {
-                    count_by_time_bucket_size_millisecs: PositiveI64::new(60_000),
-                    ..base_query_config()
-                },
-                QueryOutput::ResultsCache(ResultsCacheOutput {
+                QueryOutputConfig::ResultsCache {
                     max_num_results,
-                    aggregation: Some(Aggregation::CountByTime {
-                        bucket_size_millisecs: PositiveI64::new(60_000)
-                            .expect("60,000 is positive"),
-                    }),
-                }),
-            ),
-            (
-                QueryConfig {
-                    buffer_results_in_mongodb: true,
-                    ..base_query_config()
+                    aggregation: None,
                 },
                 QueryOutput::ResultsCache(ResultsCacheOutput {
                     max_num_results,
                     aggregation: None,
                 }),
             ),
-            (base_query_config(), QueryOutput::File {}),
+            (
+                QueryOutputConfig::ResultsCache {
+                    max_num_results: None,
+                    aggregation,
+                },
+                QueryOutput::ResultsCache(ResultsCacheOutput {
+                    max_num_results: None,
+                    aggregation,
+                }),
+            ),
+            (QueryOutputConfig::File {}, QueryOutput::File {}),
         ] {
+            let query_config = QueryConfig {
+                output,
+                ..base_query_config()
+            };
             let expected = QueryJobConfig {
                 datasets: vec![DatasetName::default()],
                 query: SearchQuery {
@@ -931,12 +932,10 @@ mod tests {
         QueryConfig {
             query_string: "level: ERROR".to_owned(),
             datasets: None,
-            max_num_results: NonZeroU32::new(7),
             time_range_begin_millisecs: Some(1),
             time_range_end_millisecs: Some(2),
             ignore_case: true,
-            buffer_results_in_mongodb: false,
-            count_by_time_bucket_size_millisecs: None,
+            output: QueryOutputConfig::File {},
         }
     }
 }

@@ -371,8 +371,10 @@
                 "time_range_begin_millisecs": 0,
                 "time_range_end_millisecs": 17356896,
                 "ignore_case": true,
-                "buffer_results_in_mongodb": true,
-                "count_by_time_bucket_size_millisecs": null
+                "output": {
+                  "type": "results_cache",
+                  "max_num_results": 100
+                }
               }
             }
           },
@@ -423,7 +425,7 @@
             }
           },
           "422": {
-            "description": "The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., a non-positive `max_num_results`).",
+            "description": "The JSON body has missing or unknown fields, or fields with invalid types or values (e.g., a non-positive `output.max_num_results`).",
             "content": {
               "text/plain": {
                 "schema": {
@@ -675,6 +677,32 @@
   },
   "components": {
     "schemas": {
+      "Aggregation": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Counts the matching log events in each time bucket of the given width.",
+            "required": [
+              "bucket_size_millisecs",
+              "type"
+            ],
+            "properties": {
+              "bucket_size_millisecs": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 1
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "count_by_time"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "An aggregation over a query job's results."
+      },
       "CompressionJob": {
         "type": "object",
         "description": "Response body of the compression-job submission endpoint.",
@@ -1056,22 +1084,10 @@
         "type": "object",
         "description": "Defines the request configuration for submitting a search query.",
         "required": [
-          "query_string"
+          "query_string",
+          "output"
         ],
         "properties": {
-          "buffer_results_in_mongodb": {
-            "type": "boolean",
-            "description": "Whether to buffer search results in `MongoDB`.\nBy default, search results are buffered in temporary files. When set to `true`, results\nwill be stored in `MongoDB` instead."
-          },
-          "count_by_time_bucket_size_millisecs": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int64",
-            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`.",
-            "minimum": 1
-          },
           "datasets": {
             "type": [
               "array",
@@ -1086,14 +1102,9 @@
             "type": "boolean",
             "description": "Whether the string match should be case-insensitive."
           },
-          "max_num_results": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32",
-            "description": "The maximum number of results to return. Omit for no limit.",
-            "minimum": 1
+          "output": {
+            "$ref": "#/components/schemas/QueryOutputConfig",
+            "description": "Where to buffer the search results."
           },
           "query_string": {
             "type": "string",
@@ -1117,6 +1128,61 @@
           }
         },
         "additionalProperties": false
+      },
+      "QueryOutputConfig": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Buffers the results in `MongoDB`.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "aggregation": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Aggregation",
+                    "description": "The aggregation to compute over all matching results, regardless of `max_num_results`."
+                  }
+                ]
+              },
+              "max_num_results": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int32",
+                "description": "The maximum number of results to return. Omit for no limit.",
+                "minimum": 1
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "results_cache"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Buffers the results in temporary files.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "file"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Defines where a submitted search query's results are buffered."
       },
       "QueryResultsUri": {
         "type": "object",
