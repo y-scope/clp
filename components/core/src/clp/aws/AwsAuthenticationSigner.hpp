@@ -76,20 +76,53 @@ private:
  */
 class AwsAuthenticationSigner {
 public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(
+                ErrorCode error_code,
+                char const* const filename,
+                int line_number,
+                std::string message = "AwsAuthenticationSigner operation failed"
+        )
+                : TraceableException{error_code, filename, line_number},
+                  m_message{std::move(message)} {}
+
+        // Methods
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return m_message.c_str();
+        }
+
+    private:
+        std::string m_message;
+    };
+
     // Constants
     // Default expire time of presigned URL in seconds
     static constexpr std::chrono::seconds cDefaultExpireTime{86'400};
+    // Range of expire times that AWS Signature Version 4 allows for presigned URLs. See:
+    // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-authentication-methods.html
+    static constexpr std::chrono::seconds cMinExpireTime{1};
+    static constexpr std::chrono::seconds cMaxExpireTime{604'800};
     static constexpr std::string_view cHttpGetMethod{"GET"};
 
     // Constructors
+    /**
+     * @param access_key_id
+     * @param secret_access_key
+     * @param session_token
+     * @param expire_time How long presigned URLs remain valid after they're generated. Presigned
+     * URLs that use temporary credentials also stop working when those credentials expire.
+     * @throw AwsAuthenticationSigner::OperationFailed if `expire_time` is outside of
+     * [`cMinExpireTime`, `cMaxExpireTime`].
+     */
     AwsAuthenticationSigner(
             std::string access_key_id,
             std::string secret_access_key,
-            std::optional<std::string> session_token
-    )
-            : m_access_key_id{std::move(access_key_id)},
-              m_secret_access_key{std::move(secret_access_key)},
-              m_session_token{std::move(session_token)} {}
+            std::optional<std::string> session_token,
+            std::chrono::seconds expire_time = cDefaultExpireTime
+    );
 
     // Methods
     /**
@@ -148,6 +181,7 @@ private:
     std::string m_access_key_id;
     std::string m_secret_access_key;
     std::optional<std::string> m_session_token;
+    std::chrono::seconds m_expire_time;
 };
 }  // namespace clp::aws
 
