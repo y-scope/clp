@@ -179,10 +179,10 @@ pub struct CompressionUsage {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QueryConfig {
-    /// The search to run.
+    /// The query to run.
     pub query: SearchQuery,
 
-    /// Where to buffer the search results.
+    /// Where to store the query results.
     pub output: QueryOutputConfig,
 }
 
@@ -195,22 +195,22 @@ impl From<QueryConfig> for QueryJobConfig {
     }
 }
 
-/// Defines the request configuration for submitting a search query whose results are streamed
-/// instead of buffered.
+/// Defines the request configuration for submitting a query job whose results are streamed instead
+/// of buffered.
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StreamingQueryConfig {
-    /// The search to run.
+    /// The query to run.
     pub query: SearchQuery,
 }
 
-/// Defines where a submitted search query's results are buffered.
+/// Defines where a submitted query job's results are buffered.
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields, tag = "type", rename_all = "snake_case")]
 pub enum QueryOutputConfig {
-    /// Buffers the results in `MongoDB`.
+    /// Buffers the results in the results cache (backed by `MongoDB`).
     ResultsCache {
-        /// The maximum number of results to return. Omit for no limit.
+        /// The maximum number of results to keep. Omit for no limit.
         #[serde(default)]
         #[schema(value_type = Option<u32>, minimum = 1)]
         max_num_results: Option<NonZeroU32>,
@@ -220,7 +220,7 @@ pub enum QueryOutputConfig {
         aggregation: Option<Aggregation>,
     },
 
-    /// Buffers the results in files in the stream output storage (the file system or S3).
+    /// Buffers the results in files stored in the stream output storage.
     File {},
 }
 
