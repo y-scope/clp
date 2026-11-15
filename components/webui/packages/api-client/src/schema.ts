@@ -495,7 +495,7 @@ export interface components {
              */
             num_messages: number;
         };
-        /** @description Defines the request configuration for submitting a search query. */
+        /** @description Defines the request configuration for submitting a query job. */
         QueryConfig: {
             /** @description Where to store the query results. */
             output: components["schemas"]["QueryOutputConfig"];

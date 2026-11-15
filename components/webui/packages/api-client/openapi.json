@@ -1087,7 +1087,7 @@
       },
       "QueryConfig": {
         "type": "object",
-        "description": "Defines the request configuration for submitting a search query.",
+        "description": "Defines the request configuration for submitting a query job.",
         "required": [
           "query",
           "output"
