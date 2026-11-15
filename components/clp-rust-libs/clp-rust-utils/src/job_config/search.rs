@@ -33,6 +33,7 @@ pub struct QueryJobConfig {
 #[serde(deny_unknown_fields)]
 pub struct SearchQuery {
     /// The datasets to search within.
+    #[schema(value_type = Vec<String>, min_items = 1)]
     pub datasets: NonEmptyDatasetNames,
 
     /// The search query as a KQL string.
@@ -152,6 +153,7 @@ pub struct ResultsCacheOutput {
 pub enum Aggregation {
     /// Counts the matching log events in each time bucket of the given width.
     CountByTime {
+        /// The width of each time bucket, in milliseconds.
         #[schema(value_type = i64, minimum = 1)]
         bucket_size_millisecs: PositiveI64,
     },

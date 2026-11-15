@@ -167,8 +167,6 @@ pub enum ParseDatasetNameError {
 }
 
 /// A non-empty list of dataset names.
-///
-/// It serializes as a list of dataset names, and deserializes from one that isn't empty.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(try_from = "Vec<DatasetName>", into = "Vec<DatasetName>")]
 pub struct NonEmptyDatasetNames {
