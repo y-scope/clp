@@ -194,6 +194,13 @@ if(CLP_NEED_DATE)
     endif()
 endif()
 
+if(CLP_NEED_FAST_FLOAT)
+    find_package(FastFloat REQUIRED)
+    if (FastFloat_FOUND)
+        message(STATUS "Found FastFloat (fast_float) ${FastFloat_VERSION}")
+    endif()
+endif()
+
 if(CLP_NEED_FMT)
     find_package(fmt REQUIRED)
     if(fmt_FOUND)
@@ -363,6 +370,7 @@ add_subdirectory(src/clp/clo)
 add_subdirectory(src/clp/clp)
 add_subdirectory(src/glt/glt)
 add_subdirectory(src/clp/make_dictionaries_readable)
+add_subdirectory(src/clpp)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
@@ -647,6 +655,7 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
+        src/clpp/test/test_TextShape.cpp
         src/utils/profiling/test/test_Profiler.cpp
         src/utils/profiling/test/test_Reporter.cpp
         src/utils/profiling/test/test_ScopedProfiler.cpp
@@ -702,6 +711,7 @@ if(CLP_ENABLE_TESTS)
             clp_s::search::sql
             clp_s::timestamp_parser
             clp_s::timestamp_pattern
+            clpp::core
             utils::profiling
             )
 

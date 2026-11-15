@@ -117,6 +117,21 @@ auto to_lower(std::string& str) -> void;
 [[nodiscard]] auto is_wildcard(char c) -> bool;
 
 /**
+ * Checks a non-empty string against a set of allowed characters.
+ * @param str The string to check.
+ * @param allowed_chars The characters permitted in the string.
+ * @return Whether `str` is non-empty and every character of `str` appears in `allowed_chars`.
+ */
+[[nodiscard]] auto consists_only_of(std::string_view str, std::string_view allowed_chars) -> bool;
+
+/**
+ * Trims trailing whitespace off of a string.
+ * @param str
+ * @return A view of `str` without its trailing whitespace.
+ */
+[[nodiscard]] auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
+
+/**
  * Same as ``wildcard_match_unsafe_case_sensitive`` except this method allows
  * the caller to specify whether the match should be case sensitive.
  *
@@ -159,7 +174,7 @@ wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_view wil
  * @tparam integer_t
  * @param raw
  * @param converted
- * @return true if the conversion was successful, false otherwise
+ * @return Whether the entire string was successfully converted.
  */
 template <std::integral integer_t>
 [[nodiscard]] auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool;
@@ -173,6 +188,15 @@ auto convert_string_to_int(std::string_view raw, integer_t& converted) -> bool {
 
     return result.ptr == raw_end && std::errc{} == result.ec;
 }
+
+/**
+ * Converts a string to a double-precision floating-point value if possible.
+ *
+ * @param raw The string to convert.
+ * @param converted Output parameter for the converted value.
+ * @return Whether the entire string was successfully converted.
+ */
+[[nodiscard]] auto convert_string_to_double(std::string_view raw, double& converted) -> bool;
 }  // namespace clp::string_utils
 
 #endif  // CLP_STRING_UTILS_STRING_UTILS_HPP

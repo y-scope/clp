@@ -45,7 +45,7 @@ prepare_environment() {
 # flags for using it. If image is not specified, returns empty string.
 #
 # @param {string} cluster_name Name of the kind cluster
-# @param {string} component Flat image component name (e.g., "clpPackage", "redis", "queue")
+# @param {string} component Flat image component name (e.g., "clpPackage", "mariadb", "resultsCache")
 # @param {string} [image] Docker image (e.g., "clp-package:dev-junhao-a6bf")
 # @return Prints helm --set flags to stdout
 get_image_helm_args() {
@@ -145,10 +145,45 @@ get_presto_helm_args() {
 SPLIT_FILTER
 )" \
          "--set" "clpConfig.api_server=null" \
-         "--set" "clpConfig.query_scheduler=null" \
-         "--set" "clpConfig.query_worker=null" \
-         "--set" "clpConfig.reducer=null" \
          "--set" "clpConfig.results_cache.retention_period=null"
+}
+
+# Generates worker pool values with general, compression, and query replica counts.
+#
+# @param {int} general_replicas Number of general workers
+# @param {int} compression_replicas Number of compression workers
+# @param {int} query_replicas Number of query workers
+# @return Prints Helm values YAML to stdout
+get_spider_worker_values() {
+    local general_replicas=$1
+    local compression_replicas=$2
+    local query_replicas=$3
+
+    cat <<EOF
+spider:
+  spiderConfig:
+    worker:
+      pools:
+        - name: "general"
+          replicas: ${general_replicas}
+          resource_group: null
+        - name: "compression"
+          replicas: ${compression_replicas}
+          resource_group:
+            external_id: "compression"
+            password:
+              secretKeyRef:
+                name: '{{ include "clp.fullname" . }}-spider-resource-groups'
+                key: "compression"
+        - name: "query"
+          replicas: ${query_replicas}
+          resource_group:
+            external_id: "query"
+            password:
+              secretKeyRef:
+                name: '{{ include "clp.fullname" . }}-spider-resource-groups'
+                key: "query"
+EOF
 }
 
 # Generates kind cluster configuration YAML

@@ -579,19 +579,17 @@ impl ArchiveSelector<'_> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::InvalidQueryJobConfig`] if:
-    ///   * The job's requested datasets are empty.
-    ///   * The number of distinct datasets exceeds
-    ///     [`ArchiveSelectionOptions::max_datasets_per_query`].
+    /// * [`Error::InvalidQueryJobConfig`] if the number of distinct datasets exceeds
+    ///   [`ArchiveSelectionOptions::max_datasets_per_query`].
     fn deduplicate_and_validate_requested_datasets(&self) -> Result<HashSet<DatasetName>, Error> {
-        let requested_datasets = &self.query_job_config.datasets;
-        if requested_datasets.is_empty() {
-            return Err(Error::InvalidQueryJobConfig(
-                "the datasets list must not be empty".to_owned(),
-            ));
-        }
-
-        let datasets: HashSet<DatasetName> = requested_datasets.iter().cloned().collect();
+        let datasets: HashSet<DatasetName> = self
+            .query_job_config
+            .query
+            .datasets
+            .as_slice()
+            .iter()
+            .cloned()
+            .collect();
 
         if let Some(max_datasets_per_query) = self
             .context
@@ -612,8 +610,8 @@ impl ArchiveSelector<'_> {
     /// Checks that every requested dataset exists in the metadata database.
     ///
     /// `datasets` is assumed to be non-empty, since an empty set would make the generated `IN`
-    /// clause invalid SQL. [`Self::deduplicate_and_validate_requested_datasets`] guarantees this by
-    /// rejecting an empty request.
+    /// clause invalid SQL. The job config's [`clp_rust_utils::dataset::NonEmptyDatasetNames`]
+    /// guarantees this.
     ///
     /// # Errors
     ///
@@ -713,8 +711,8 @@ impl ArchiveSelector<'_> {
         const SOFT_TIMEOUT_MILLISECS_PER_MIB: u64 = 10;
         const HARD_TIMEOUT_MILLISECS_PER_MIB: u64 = 2 * 1000;
 
-        /// The minimum timeout accepted by Spider, in milliseconds.
-        const MIN_TIMEOUT_MILLISECS: u64 = 100;
+        const MIN_SOFT_TIMEOUT_MILLISECS: u64 = 1000;
+        const MIN_HARD_TIMEOUT_MILLISECS: u64 = 10_000;
 
         /// The maximum timeout accepted by Spider, in milliseconds (24 hours).
         const MAX_TIMEOUT_MILLISECS: u64 = 1000 * 60 * 60 * 24;
@@ -722,11 +720,11 @@ impl ArchiveSelector<'_> {
         let hard_timeout_ms = (archive_uncompressed_size
             .saturating_mul(HARD_TIMEOUT_MILLISECS_PER_MIB)
             / BYTES_PER_MIB)
-            .clamp(MIN_TIMEOUT_MILLISECS + 1, MAX_TIMEOUT_MILLISECS);
+            .clamp(MIN_HARD_TIMEOUT_MILLISECS, MAX_TIMEOUT_MILLISECS);
         let soft_timeout_ms = (archive_uncompressed_size
             .saturating_mul(SOFT_TIMEOUT_MILLISECS_PER_MIB)
             / BYTES_PER_MIB)
-            .clamp(MIN_TIMEOUT_MILLISECS, hard_timeout_ms - 1);
+            .clamp(MIN_SOFT_TIMEOUT_MILLISECS, hard_timeout_ms - 1);
 
         ExecutionPolicy {
             max_num_retry: self.context.spider_option.query_task_max_retry,
@@ -763,6 +761,7 @@ mod tests {
     use async_trait::async_trait;
     use clp_rust_utils::clp_config::package::config::Database;
     use clp_rust_utils::dataset::DatasetName;
+    use clp_rust_utils::dataset::NonEmptyDatasetNames;
     use clp_rust_utils::job_config::Aggregation;
     use clp_rust_utils::job_config::NetworkOutput;
     use clp_rust_utils::job_config::QueryJobConfig;
@@ -883,9 +882,14 @@ mod tests {
             .parse()
             .expect("name should be a valid dataset name");
         let select_datasets = |datasets| {
+            let base_query_job_config = base_query_job_config();
             let query_job_config = QueryJobConfig {
-                datasets,
-                ..base_query_job_config()
+                query: SearchQuery {
+                    datasets: NonEmptyDatasetNames::try_from(datasets)
+                        .expect("dataset names should be non-empty"),
+                    ..base_query_job_config.query
+                },
+                ..base_query_job_config
             };
             ArchiveSelector {
                 context: &context,
@@ -940,10 +944,15 @@ mod tests {
     ///
     /// A query job config that searches the default dataset and buffers its results in the
     /// results cache.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the dataset names are empty.
     fn base_query_job_config() -> QueryJobConfig {
         QueryJobConfig {
-            datasets: vec![DatasetName::default()],
             query: SearchQuery {
+                datasets: NonEmptyDatasetNames::try_from(vec![DatasetName::default()])
+                    .expect("dataset names should be non-empty"),
                 query_string: NonEmptyString::from_static_str("*"),
                 time_range: TimeRange::default(),
                 ignore_case: false,

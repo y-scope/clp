@@ -135,6 +135,16 @@ OR
 *: value
 ```
 
+:::{note}
+A `*` key may match zero kv-pairs, so `*: *` matches every log event, including log events with no
+kv-pairs (e.g., `{}`). Conversely, `NOT *: *` matches no log events.
+
+This doesn't apply when the value restricts the kv-pair's type. For example, `*: null` only matches
+log events with at least one kv-pair whose value is `null`, and `NOT *: null` only matches log events
+with at least one kv-pair whose value isn't `null` (so it doesn't match `{}`). This is consistent
+with `key: null` and `NOT key: null`, which only match log events that contain `key`.
+:::
+
 To search for a kv-pair where only some parts of a nested key are known, you can replace the unknown
 parts with the `*` wildcard:
 

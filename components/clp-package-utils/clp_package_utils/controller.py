@@ -1,13 +1,11 @@
 import ipaddress
 import json
 import logging
-import multiprocessing
 import os
 import pathlib
 import socket
 import stat
 import subprocess
-import time
 import uuid
 from abc import ABC, abstractmethod
 from typing import Any
@@ -19,16 +17,10 @@ from clp_py_utils.clp_config import (
     CLP_DB_ROOT_PASS_ENV_VAR_NAME,
     CLP_DB_ROOT_USER_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
-    CLP_QUEUE_PASS_ENV_VAR_NAME,
-    CLP_QUEUE_USER_ENV_VAR_NAME,
-    CLP_REDIS_PASS_ENV_VAR_NAME,
     ClpConfig,
     ClpDbNameType,
     ClpDbUserType,
     COMPRESSION_COORDINATOR_COMPONENT_NAME,
-    COMPRESSION_SCHEDULER_COMPONENT_NAME,
-    COMPRESSION_WORKER_COMPONENT_NAME,
-    CompressionOrchestration,
     DatabaseEngine,
     DB_COMPONENT_NAME,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
@@ -36,12 +28,7 @@ from clp_py_utils.clp_config import (
     MCP_SERVER_COMPONENT_NAME,
     OTEL_COLLECTOR_COMPONENT_NAME,
     QUERY_COORDINATOR_COMPONENT_NAME,
-    QUERY_SCHEDULER_COMPONENT_NAME,
-    QUERY_WORKER_COMPONENT_NAME,
     QueryEngine,
-    QUEUE_COMPONENT_NAME,
-    REDIS_COMPONENT_NAME,
-    REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     SPIDER_COMPONENT_NAME,
     SpiderResourceGroupRoundRobin,
@@ -59,13 +46,10 @@ from clp_package_utils.general import (
     dump_shared_container_config,
     generate_docker_compose_container_config,
     get_clp_home,
-    http_request,
     is_log_ingestor_enabled,
     is_retention_period_configured,
     validate_db_config,
     validate_mcp_server_config,
-    validate_queue_config,
-    validate_redis_config,
     validate_results_cache_config,
     validate_spider_config,
     validate_webui_config,
@@ -211,167 +195,6 @@ class BaseController(ABC):
 
         return env_vars
 
-    def _set_up_env_for_queue_bundling(self) -> EnvVarsDict:
-        """
-        Sets up environment variables and directories for bundling the queue component.
-
-        :return: Dictionary of environment variables necessary to bundle the component.
-        """
-        component_name = QUEUE_COMPONENT_NAME
-
-        if self._clp_config.queue is None or BundledService.QUEUE not in self._clp_config.bundled:
-            logger.info(
-                "%s is not configured or part of the 'bundled' configuration, skipping "
-                "service bundling...",
-                component_name,
-            )
-            # Bundling
-            return EnvVarsDict({"CLP_QUEUE_ENABLED": "0"})
-
-        logger.info("Setting up environment for bundling %s...", component_name)
-
-        logs_dir = self._clp_config.logs_directory / component_name
-        validate_queue_config(self._clp_config, logs_dir)
-
-        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
-        resolved_logs_dir.mkdir(exist_ok=True, parents=True)
-        _chown_paths_if_root(resolved_logs_dir)
-
-        env_vars = EnvVarsDict()
-
-        # Paths
-        env_vars |= {
-            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
-        }
-
-        return env_vars
-
-    def _set_up_env_for_queue(self) -> EnvVarsDict:
-        """
-        Sets up environment variables for the message queue component.
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = QUEUE_COMPONENT_NAME
-        if self._clp_config.queue is None:
-            logger.info(
-                "%s is not configured, skipping environment setup...",
-                component_name,
-            )
-            return EnvVarsDict()
-
-        logger.info("Setting up environment for %s...", component_name)
-
-        env_vars = EnvVarsDict()
-
-        # Connection config
-        if BundledService.QUEUE not in self._clp_config.bundled:
-            env_vars |= {
-                "CLP_QUEUE_CONNECT_PORT": str(self._clp_config.queue.port),
-                "CLP_EXTRA_HOST_QUEUE_NAME": QUEUE_COMPONENT_NAME,
-                "CLP_EXTRA_HOST_QUEUE_ADDR": _resolve_external_host(self._clp_config.queue.host),
-            }
-        else:
-            env_vars |= {
-                "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
-                "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
-            }
-
-        # Credentials
-        env_vars |= {
-            CLP_QUEUE_PASS_ENV_VAR_NAME: self._clp_config.queue.password,
-            CLP_QUEUE_USER_ENV_VAR_NAME: self._clp_config.queue.username,
-        }
-
-        return env_vars
-
-    def _set_up_env_for_redis_bundling(self) -> EnvVarsDict:
-        """
-        Sets up environment variables and directories for bundling the redis component.
-
-        :return: Dictionary of environment variables necessary to bundle the component.
-        """
-        component_name = REDIS_COMPONENT_NAME
-
-        if self._clp_config.redis is None or BundledService.REDIS not in self._clp_config.bundled:
-            logger.info(
-                "%s is not configured or part of the 'bundled' configuration, skipping "
-                "service bundling...",
-                component_name,
-            )
-            # Bundling
-            return EnvVarsDict({"CLP_REDIS_ENABLED": "0"})
-
-        logger.info("Setting up environment for bundling %s...", component_name)
-
-        conf_file = self._conf_dir / "redis" / "redis.conf"
-        data_dir = self._clp_config.data_directory / component_name
-        logs_dir = self._clp_config.logs_directory / component_name
-        validate_redis_config(self._clp_config, conf_file, data_dir, logs_dir)
-
-        resolved_data_dir = resolve_host_path_in_container(data_dir)
-        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
-
-        resolved_data_dir.mkdir(exist_ok=True, parents=True)
-        resolved_logs_dir.mkdir(exist_ok=True, parents=True)
-        _chown_paths_if_root(resolved_data_dir, resolved_logs_dir)
-
-        env_vars = EnvVarsDict()
-
-        # Backend databases
-        env_vars |= {
-            "CLP_REDIS_BACKEND_DB_COMPRESSION": str(
-                self._clp_config.redis.compression_backend_database
-            ),
-            "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
-        }
-
-        # Paths
-        env_vars |= {
-            "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
-            "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
-            "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
-        }
-
-        return env_vars
-
-    def _set_up_env_for_redis(self) -> EnvVarsDict:
-        """
-        Sets up environment variables for the Redis component.
-
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = REDIS_COMPONENT_NAME
-        if self._clp_config.redis is None:
-            logger.info(
-                "%s is not configured, skipping environment setup...",
-                component_name,
-            )
-            return EnvVarsDict()
-
-        logger.info("Setting up environment for %s...", component_name)
-
-        env_vars = EnvVarsDict()
-
-        # Connection config
-        if BundledService.REDIS not in self._clp_config.bundled:
-            env_vars |= {
-                "CLP_REDIS_CONNECT_PORT": str(self._clp_config.redis.port),
-                "CLP_EXTRA_HOST_REDIS_NAME": REDIS_COMPONENT_NAME,
-                "CLP_EXTRA_HOST_REDIS_ADDR": _resolve_external_host(self._clp_config.redis.host),
-            }
-        else:
-            env_vars |= {
-                "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
-                "CLP_REDIS_PORT": str(self._clp_config.redis.port),
-            }
-
-        # Credentials
-        env_vars |= {
-            CLP_REDIS_PASS_ENV_VAR_NAME: self._clp_config.redis.password,
-        }
-
-        return env_vars
-
     def _set_up_env_for_results_cache_bundling(self) -> EnvVarsDict:
         """
         Sets up environment variables and directories for bundling the results cache component.
@@ -452,75 +275,6 @@ class BaseController(ABC):
 
         return env_vars
 
-    def _set_up_env_for_compression_scheduler(self) -> EnvVarsDict:
-        """
-        Sets up environment variables and files for the compression scheduler component.
-
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
-        logger.info("Setting up environment for %s...", component_name)
-
-        logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
-        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
-
-        env_vars = EnvVarsDict()
-
-        # Logging config
-        env_vars |= {
-            "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": (
-                self._clp_config.compression_scheduler.logging_level
-            ),
-        }
-
-        # Telemetry config
-        env_vars |= {
-            "CLP_COMPRESSION_SCHEDULER_METRIC_EXPORT_INTERVAL": str(
-                self._clp_config.compression_scheduler.telemetry_update_interval_ms
-            ),
-        }
-
-        return env_vars
-
-    def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
-        """
-        Sets up environment variables and files for the query scheduler component.
-
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = QUERY_SCHEDULER_COMPONENT_NAME
-        if self._clp_config.query_scheduler is None:
-            logger.info("%s is not configured, skipping environment setup...", component_name)
-            return EnvVarsDict({"CLP_QUERY_SCHEDULER_ENABLED": "0"})
-
-        logger.info("Setting up environment for %s...", component_name)
-
-        logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
-        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
-
-        env_vars = EnvVarsDict()
-
-        # Service enablement
-        env_vars |= {
-            "CLP_QUERY_SCHEDULER_ENABLED": "1",
-        }
-
-        # Logging config
-        env_vars |= {
-            "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
-        }
-
-        # Telemetry config
-        env_vars |= {
-            "CLP_QUERY_SCHEDULER_METRIC_EXPORT_INTERVAL": str(
-                self._clp_config.query_scheduler.telemetry_update_interval_ms
-            ),
-        }
-
-        return env_vars
-
     def _set_up_env_for_spider(self) -> EnvVarsDict:
         """
         Sets up environment variables for Spider's components.
@@ -529,13 +283,6 @@ class BaseController(ABC):
         """
         component_name = SPIDER_COMPONENT_NAME
         spider_config = self._clp_config.spider
-        if (
-            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
-            or spider_config is None
-        ):
-            logger.info("%s is not configured, skipping environment setup...", component_name)
-            return EnvVarsDict()
-
         logger.info("Setting up environment for %s...", component_name)
 
         validate_spider_config(self._clp_config)
@@ -624,13 +371,6 @@ class BaseController(ABC):
         """
         component_name = COMPRESSION_COORDINATOR_COMPONENT_NAME
         coordinator_config = self._clp_config.compression_coordinator
-        if (
-            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
-            or coordinator_config is None
-        ):
-            logger.info("%s is not configured, skipping environment setup...", component_name)
-            return EnvVarsDict()
-
         logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
@@ -657,13 +397,6 @@ class BaseController(ABC):
         """
         component_name = QUERY_COORDINATOR_COMPONENT_NAME
         coordinator_config = self._clp_config.query_coordinator
-        if (
-            CompressionOrchestration.SPIDER != self._clp_config.package.scheduler
-            or coordinator_config is None
-        ):
-            logger.info("%s is not configured, skipping environment setup...", component_name)
-            return EnvVarsDict()
-
         logger.info("Setting up environment for %s...", component_name)
 
         env_vars = EnvVarsDict()
@@ -678,125 +411,6 @@ class BaseController(ABC):
             "CLP_SPIDER_QUERY_RESOURCE_GROUP_PASSWORD": (
                 coordinator_config.resource_group_password
             ),
-        }
-
-        return env_vars
-
-    def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
-        """
-        Sets up environment variables for the compression worker component.
-
-        :param num_workers: Number of worker processes to run.
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = COMPRESSION_WORKER_COMPONENT_NAME
-        logger.info("Setting up environment for %s...", component_name)
-
-        logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
-        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
-
-        env_vars = EnvVarsDict()
-
-        # Logging config
-        env_vars |= {
-            "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": (
-                self._clp_config.compression_worker.logging_level
-            ),
-        }
-
-        # Resources
-        env_vars |= {
-            "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
-        }
-
-        # Telemetry config
-        env_vars |= {
-            "CLP_COMPRESSION_WORKER_METRIC_EXPORT_INTERVAL": str(
-                self._clp_config.compression_worker.telemetry_update_interval_ms
-            ),
-        }
-
-        return env_vars
-
-    def _set_up_env_for_query_worker(self, num_workers: int) -> EnvVarsDict:
-        """
-        Sets up environment variables for the query worker component.
-
-        :param num_workers: Number of worker processes to run.
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = QUERY_WORKER_COMPONENT_NAME
-        if self._clp_config.query_worker is None:
-            logger.info("%s is not configured, skipping environment setup...", component_name)
-            return EnvVarsDict({"CLP_QUERY_WORKER_ENABLED": "0"})
-
-        logger.info("Setting up environment for %s...", component_name)
-
-        logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
-        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
-
-        env_vars = EnvVarsDict()
-
-        # Service enablement
-        env_vars |= {
-            "CLP_QUERY_WORKER_ENABLED": "1",
-        }
-
-        # Logging config
-        env_vars |= {
-            "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
-        }
-
-        # Resources
-        env_vars |= {
-            "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
-        }
-
-        # Telemetry config
-        env_vars |= {
-            "CLP_QUERY_WORKER_METRIC_EXPORT_INTERVAL": str(
-                self._clp_config.query_worker.telemetry_update_interval_ms
-            ),
-        }
-
-        return env_vars
-
-    def _set_up_env_for_reducer(self, num_workers: int) -> EnvVarsDict:
-        """
-        Sets up environment variables for the reducer component.
-
-        :param num_workers: Number of worker processes to run.
-        :return: Dictionary of environment variables necessary to launch the component.
-        """
-        component_name = REDUCER_COMPONENT_NAME
-        if self._clp_config.reducer is None:
-            logger.info("%s is not configured, skipping environment setup...", component_name)
-            return EnvVarsDict({"CLP_REDUCER_ENABLED": "0"})
-
-        logger.info("Setting up environment for %s...", component_name)
-
-        logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
-        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
-
-        env_vars = EnvVarsDict()
-
-        # Service enablement
-        env_vars |= {
-            "CLP_REDUCER_ENABLED": "1",
-        }
-
-        # Logging config
-        env_vars |= {
-            "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.reducer.logging_level,
-        }
-
-        # Resources
-        env_vars |= {
-            "CLP_REDUCER_CONCURRENCY": str(num_workers),
-            "CLP_REDUCER_UPSERT_INTERVAL": str(self._clp_config.reducer.upsert_interval),
         }
 
         return env_vars
@@ -885,10 +499,6 @@ class BaseController(ABC):
             presto_host = container_clp_config.presto.host
             presto_port = container_clp_config.presto.port
 
-        max_datasets_per_query = None
-        if self._clp_config.query_scheduler is not None:
-            max_datasets_per_query = self._clp_config.query_scheduler.max_datasets_per_query
-
         log_ingestor_url = (
             f"http://{container_clp_config.log_ingestor.host}"
             f":{container_clp_config.log_ingestor.port}"
@@ -902,7 +512,7 @@ class BaseController(ABC):
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "LogsInputType": self._clp_config.logs_input.type,
             "LogIngestorEnabled": is_log_ingestor_enabled(container_clp_config),
-            "MaxDatasetsPerQuery": max_datasets_per_query,
+            "MaxDatasetsPerQuery": self._clp_config.query_coordinator.max_datasets_per_query,
             "PrestoMaxNumSearchResults": self._clp_config.webui.presto_max_num_search_results,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
@@ -1199,7 +809,6 @@ class DockerComposeController(BaseController):
         """
         # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
-        num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self._clp_config)
 
         env_vars = EnvVarsDict()
@@ -1256,23 +865,14 @@ class DockerComposeController(BaseController):
 
         # Component-specific config
         env_vars |= self._set_up_env_for_database_bundling()
-        env_vars |= self._set_up_env_for_queue_bundling()
-        env_vars |= self._set_up_env_for_redis_bundling()
         env_vars |= self._set_up_env_for_results_cache_bundling()
         env_vars |= self._set_up_env_for_otel_collector_bundling()
         env_vars |= self._set_up_env_for_database()
-        env_vars |= self._set_up_env_for_queue()
-        env_vars |= self._set_up_env_for_redis()
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_otel_collector()
-        env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_compression_coordinator()
         env_vars |= self._set_up_env_for_query_coordinator()
         env_vars |= self._set_up_env_for_spider()
-        env_vars |= self._set_up_env_for_query_scheduler()
-        env_vars |= self._set_up_env_for_compression_worker(num_workers)
-        env_vars |= self._set_up_env_for_query_worker(num_workers)
-        env_vars |= self._set_up_env_for_reducer(num_workers)
         env_vars |= self._set_up_env_for_api_server()
         env_vars |= self._set_up_env_for_log_ingestor()
         env_vars |= self._set_up_env_for_webui(container_clp_config)
@@ -1300,15 +900,13 @@ class DockerComposeController(BaseController):
         logger.info("Starting CLP using Docker Compose...")
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
-        cmd += ["--file", self._get_docker_file_name()]
+        cmd += ["--file", "docker-compose.yaml"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
             cwd=self._clp_home,
             check=True,
         )
-        if not self._clp_config.telemetry.disable:
-            self._emit_topology_metrics()
         logger.info("Started CLP.")
 
     def stop(self) -> None:
@@ -1343,7 +941,7 @@ class DockerComposeController(BaseController):
                 "--project-name",
                 self._project_name,
                 "--file",
-                self._get_docker_file_name(),
+                "docker-compose.yaml",
                 "down",
                 "--remove-orphans",
             ],
@@ -1351,80 +949,6 @@ class DockerComposeController(BaseController):
             check=True,
         )
         logger.info("Stopped CLP.")
-
-    def _get_docker_file_name(self) -> str:
-        """
-        :return: The Docker Compose file name to use based on the config.
-        """
-        if CompressionOrchestration.SPIDER == self._clp_config.package.scheduler:
-            return "docker-compose-spider.yaml"
-        return "docker-compose.yaml"
-
-    @staticmethod
-    def _get_num_workers() -> int:
-        """
-        :return: Number of worker processes to run.
-        """
-        # This will change when we move from single to multi-container workers. See y-scope/clp#1424
-        return max(1, multiprocessing.cpu_count() // 2)
-
-    def _emit_topology_metrics(self) -> None:
-        timestamp_ns = int(time.time() * 1e9)
-        metrics = []
-
-        def add_gauge(name: str, value: int):
-            metrics.append(
-                {
-                    "name": name,
-                    "gauge": {
-                        "dataPoints": [{"asInt": str(value), "timeUnixNano": str(timestamp_ns)}]
-                    },
-                }
-            )
-
-        num_workers = self._get_num_workers()
-
-        # NOTE: Replicas are hardcoded to 1 until multi-container workers land (see #1424).
-        add_gauge("clp.deployment.compression_worker_replicas", 1)
-        add_gauge("clp.deployment.compression_worker_concurrency", num_workers)
-
-        query_worker_replicas = 0 if self._clp_config.query_worker is None else 1
-        query_worker_concurrency = 0 if self._clp_config.query_worker is None else num_workers
-        add_gauge("clp.deployment.query_worker_replicas", query_worker_replicas)
-        add_gauge("clp.deployment.query_worker_concurrency", query_worker_concurrency)
-
-        reducer_replicas = 0 if self._clp_config.reducer is None else 1
-        reducer_concurrency = 0 if self._clp_config.reducer is None else num_workers
-        add_gauge("clp.deployment.reducer_replicas", reducer_replicas)
-        add_gauge("clp.deployment.reducer_concurrency", reducer_concurrency)
-
-        payload = {
-            "resourceMetrics": [
-                {
-                    "resource": {"attributes": []},
-                    "scopeMetrics": [{"scope": {"name": "clp.controller"}, "metrics": metrics}],
-                }
-            ]
-        }
-
-        payload["resourceMetrics"][0]["resource"]["attributes"].append(
-            {"key": "service.name", "value": {"stringValue": "controller"}}
-        )
-
-        try:
-            payload_bytes = json.dumps(payload).encode("utf-8")
-            otel_collector_host = self._clp_config.otel_collector.host
-            if BundledService.OTEL_COLLECTOR in self._clp_config.bundled:
-                otel_collector_host = _get_ip_from_hostname(otel_collector_host)
-            with http_request(
-                f"http://{otel_collector_host}:{self._clp_config.otel_collector.port}/v1/metrics",
-                method="POST",
-                data=payload_bytes,
-                headers={"Content-Type": "application/json"},
-            ) as response:
-                response.read()
-        except Exception as e:
-            logger.warning("Failed to emit topology metrics: %s", e)
 
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:

@@ -3,12 +3,10 @@ import {
     useEffect,
 } from "react";
 
-import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {Dayjs} from "dayjs";
 
 import ResultsTimeline from "../../../../../components/ResultsTimeline/index";
 import {TimelineConfig} from "../../../../../components/ResultsTimeline/typings";
-import {SETTINGS_STORAGE_ENGINE} from "../../../../../config";
 import {handleQuerySubmit} from "../../../SearchControls/Native/search-requests";
 import {TIME_RANGE_OPTION} from "../../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
@@ -51,15 +49,12 @@ const NativeResultsTimeline = () => {
             return;
         }
 
-        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            if (0 < selectedDatasets.length) {
-                updateQueriedDatasets(selectedDatasets);
-            } else {
-                console.error("Cannot submit a clp-s query without a dataset selection.");
+        if (0 === selectedDatasets.length) {
+            console.error("Cannot submit a query without a dataset selection.");
 
-                return;
-            }
+            return;
         }
+        updateQueriedDatasets(selectedDatasets);
 
         handleQuerySubmit({
             datasets: selectedDatasets,

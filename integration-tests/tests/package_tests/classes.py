@@ -50,11 +50,6 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
         return self.clp_package_dir / "sbin" / "admin-tools" / "archive-manager.sh"
 
     @property
-    def compress_from_s3_path(self) -> Path:
-        """:return: The absolute path to the package compress-from-s3 script."""
-        return self.clp_package_dir / "sbin" / "compress-from-s3.sh"
-
-    @property
     def compress_path(self) -> Path:
         """:return: The absolute path to the package compress script."""
         return self.clp_package_dir / "sbin" / "compress.sh"
@@ -109,7 +104,6 @@ class ClpPackageTestPathConfig(IntegrationTestPathConfig):
         return [
             *super()._static_paths(),
             self.archive_manager_path,
-            self.compress_from_s3_path,
             self.compress_path,
             self.dataset_manager_path,
             self.decompress_path,

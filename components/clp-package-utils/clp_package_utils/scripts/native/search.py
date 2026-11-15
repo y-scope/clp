@@ -298,7 +298,7 @@ def main(argv):
     database_config: Database = clp_config.database
     datasets = parsed_args.dataset
     if datasets is not None:
-        max_datasets_per_query = clp_config.query_scheduler.max_datasets_per_query
+        max_datasets_per_query = clp_config.query_coordinator.max_datasets_per_query
         if max_datasets_per_query is not None and len(datasets) > max_datasets_per_query:
             logger.error(
                 "Number of datasets (%d) exceeds max_datasets_per_query=%s.",

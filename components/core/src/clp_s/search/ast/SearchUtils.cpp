@@ -9,6 +9,7 @@
 
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ErrorCode.hpp>
+#include <clp_s/search/ast/ColumnDescriptor.hpp>
 
 #include "ConvertToExists.hpp"
 #include "EmptyExpr.hpp"

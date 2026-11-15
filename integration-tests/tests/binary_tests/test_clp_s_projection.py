@@ -2,7 +2,8 @@
 Integration tests verifying how `clp-s s --projection` interprets its column arguments.
 
 Each argument is treated as a double-quoted KQL column name, so `my key` names the key `my key`
-rather than the key `my`. Standard KQL escape sequences are accepted.
+rather than the key `my`. Standard KQL escape sequences are accepted. Only inside
+`shape()`/`decompose()` is the column written as in a query.
 """
 
 import json
@@ -11,7 +12,8 @@ from typing import Any, Final
 
 import pytest
 
-from tests.binary_tests.clp_s_utils import compress, search
+from tests.binary_tests.clp_s_utils import build_search_cmd, compress, search
+from tests.utils.classes import ClpAction
 from tests.utils.config import ClpCorePathConfig
 
 pytestmark = pytest.mark.core
@@ -53,7 +55,6 @@ def projection_archive(
         pytest.param(['"my key"'], {}, id="quotes_are_literal"),
         pytest.param(["a.b"], {"a": {"b": 2}}, id="dot_is_path_separator"),
         pytest.param(["a\\.b"], {"a.b": 1}, id="escaped_dot"),
-        pytest.param(["foo(bar)"], {"foo(bar)": 3}, id="unescaped_parentheses"),
         pytest.param(["foo\\(bar\\)"], {"foo(bar)": 3}, id="escaped_parentheses"),
         pytest.param(["foo\\u0028bar\\u0029"], {"foo(bar)": 3}, id="unicode_escapes"),
         pytest.param(["my key", "a.b"], {"my key": "value", "a": {"b": 2}}, id="multiple"),
@@ -78,4 +79,39 @@ def test_clp_s_projection_bare_column_is_literal(
         f"Projection {projection} produced unexpected output.\n"
         f"  Expected: {expected!r}\n"
         f"  Actual:   {results!r}"
+    )
+
+
+@pytest.mark.clp_s
+@pytest.mark.parametrize(
+    "projection",
+    [
+        pytest.param(["shape(my key)"], id="unquoted_space_in_function_arg"),
+        pytest.param(["shape(a.b) extra)"], id="trailing_input_after_function_call"),
+        pytest.param(["bogus(a.b)"], id="unknown_function"),
+    ],
+)
+def test_clp_s_projection_malformed_function_call_is_rejected(
+    clp_core_path_config: ClpCorePathConfig,
+    projection_archive: Path,
+    projection: list[str],
+) -> None:
+    """
+    Validates that a `--projection` argument shaped like a function call but not parseable as one
+    is rejected rather than silently truncated.
+
+    :param clp_core_path_config:
+    :param projection_archive:
+    :param projection: Column specifiers passed via `--projection`.
+    """
+    cmd = build_search_cmd(clp_core_path_config, projection_archive, "*", projection)
+    action = ClpAction.from_cmd(cmd)
+    assert 0 != action.completed_proc.returncode, (
+        f"Projection {projection} should have failed but exited 0.\n"
+        f"stdout: {action.completed_proc.stdout!r}\n"
+        f"stderr: {action.completed_proc.stderr!r}"
+    )
+    assert "Can not parse projection column" in action.completed_proc.stderr, (
+        f"Projection {projection} did not produce the expected error.\n"
+        f"stderr: {action.completed_proc.stderr!r}"
     )

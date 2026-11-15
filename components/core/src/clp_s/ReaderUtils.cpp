@@ -7,7 +7,6 @@
 
 #include <clp_s/archive_constants.hpp>
 #include <clp_s/ArchiveReaderAdaptor.hpp>
-#include <clp_s/DictionaryReader.hpp>
 #include <clp_s/ErrorCode.hpp>
 #include <clp_s/SchemaTree.hpp>
 #include <clp_s/TraceableException.hpp>
@@ -59,34 +58,22 @@ auto ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) -> std::shared
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
 
-        tree->add_node(parent_id, static_cast<NodeType>(node_type), key);
+        if (adaptor.get_header().mpt_has_node_count()) {
+            uint32_t count{0};
+            error_code = schema_tree_decompressor.try_read_numeric_value(count);
+            if (ErrorCodeSuccess != error_code) {
+                throw OperationFailed(error_code, __FILENAME__, __LINE__);
+            }
+            tree->add_node(parent_id, static_cast<NodeType>(node_type), key, count);
+        } else {
+            tree->add_node(parent_id, static_cast<NodeType>(node_type), key);
+        }
     }
 
     schema_tree_decompressor.close();
     adaptor.checkin_reader_for_section(constants::cArchiveSchemaTreeFile);
 
     return tree;
-}
-
-auto ReaderUtils::get_variable_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-        -> std::shared_ptr<VariableDictionaryReader> {
-    auto reader = std::make_shared<VariableDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveVarDictFile);
-    return reader;
-}
-
-auto ReaderUtils::get_log_type_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-        -> std::shared_ptr<LogTypeDictionaryReader> {
-    auto reader = std::make_shared<LogTypeDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveLogDictFile);
-    return reader;
-}
-
-auto ReaderUtils::get_array_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-        -> std::shared_ptr<LogTypeDictionaryReader> {
-    auto reader = std::make_shared<LogTypeDictionaryReader>(adaptor);
-    reader->open(constants::cArchiveArrayDictFile);
-    return reader;
 }
 
 auto ReaderUtils::read_schemas(ArchiveReaderAdaptor& adaptor)
@@ -144,5 +131,29 @@ auto ReaderUtils::read_schemas(ArchiveReaderAdaptor& adaptor)
     adaptor.checkin_reader_for_section(constants::cArchiveSchemaMapFile);
 
     return schemas_pointer;
+}
+
+auto ReaderUtils::read_parsing_spec(ArchiveReaderAdaptor& adaptor) -> std::string {
+    auto reader = adaptor.checkout_reader_for_section(constants::cArchiveParsingSpecFile);
+
+    ZstdDecompressor decompressor;
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    uint64_t schema_size{0};
+    auto error_code{decompressor.try_read_numeric_value(schema_size)};
+    if (ErrorCodeSuccess != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+
+    std::string schema_text(schema_size, '\0');
+    error_code = decompressor.try_read_exact_length(schema_text.data(), schema_size);
+    if (ErrorCodeSuccess != error_code) {
+        throw OperationFailed(error_code, __FILENAME__, __LINE__);
+    }
+
+    decompressor.close();
+    adaptor.checkin_reader_for_section(constants::cArchiveParsingSpecFile);
+
+    return schema_text;
 }
 }  // namespace clp_s

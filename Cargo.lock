@@ -114,6 +114,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "pin-project-lite",
+ "query-result-listener",
  "rmp-serde",
  "secrecy",
  "serde",
@@ -3333,6 +3334,7 @@ name = "query-result-listener"
 version = "0.13.1-dev"
 dependencies = [
  "anyhow",
+ "async-stream",
  "bytes",
  "clp-rust-utils",
  "dashmap",
@@ -3343,6 +3345,7 @@ dependencies = [
  "spider-core",
  "thiserror",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 

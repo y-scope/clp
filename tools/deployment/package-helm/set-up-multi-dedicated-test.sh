@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Multi-node cluster setup with dedicated worker nodes for each worker type
-# Demonstrates nodeSelector scheduling with separate node pools
+# Multi-node cluster setup with labeled node pools
+# Uses nodeSelector for core services; Spider worker node placement is not configured
 # TODO: Migrate into integration test
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -13,9 +13,9 @@ NUM_QUERY_NODES="${NUM_QUERY_NODES:-2}"
 NUM_PRESTO_NODES="${NUM_PRESTO_NODES:-0}"
 NUM_DB_NODES="${NUM_DB_NODES:-1}"
 NUM_CORE_NODES="${NUM_CORE_NODES:-1}"
+GENERAL_WORKER_REPLICAS="${GENERAL_WORKER_REPLICAS:-2}"
 COMPRESSION_WORKER_REPLICAS="${COMPRESSION_WORKER_REPLICAS:-2}"
 QUERY_WORKER_REPLICAS="${QUERY_WORKER_REPLICAS:-2}"
-REDUCER_REPLICAS="${REDUCER_REPLICAS:-2}"
 PRESTO_WORKER_REPLICAS="${PRESTO_WORKER_REPLICAS:-0}"
 
 # shellcheck source=.set-up-common.sh
@@ -32,16 +32,16 @@ if [[ "${ENABLE_PRESTO}" == "true" ]]; then
     [[ "${PRESTO_WORKER_REPLICAS}" -eq 0 ]] && PRESTO_WORKER_REPLICAS=2
 fi
 
-echo "=== Multi-node setup with dedicated worker nodes ==="
+echo "=== Multi-node setup with labeled node pools ==="
 echo "Cluster: ${CLUSTER_NAME}"
 echo "Compression nodes: ${NUM_COMPRESSION_NODES}"
 echo "Query nodes: ${NUM_QUERY_NODES}"
 echo "Presto nodes: ${NUM_PRESTO_NODES}"
 echo "DB nodes: ${NUM_DB_NODES}"
 echo "Core nodes: ${NUM_CORE_NODES}"
+echo "General workers: ${GENERAL_WORKER_REPLICAS}"
 echo "Compression workers: ${COMPRESSION_WORKER_REPLICAS}"
 echo "Query workers: ${QUERY_WORKER_REPLICAS}"
-echo "Reducers: ${REDUCER_REPLICAS}"
 echo "Presto workers: ${PRESTO_WORKER_REPLICAS}"
 echo "Presto: ${ENABLE_PRESTO}"
 echo ""
@@ -141,21 +141,15 @@ helm dependency update "${script_dir}"
 # shellcheck disable=SC2046
 helm install test "${script_dir}" \
     --set "distributedDeployment=true" \
-    --set "scheduling.compressionWorker.replicas=${COMPRESSION_WORKER_REPLICAS}" \
-    --set "scheduling.compressionWorker.nodeSelector.yscope\.io/nodeType=compression" \
-    --set "scheduling.queryWorker.replicas=${QUERY_WORKER_REPLICAS}" \
-    --set "scheduling.queryWorker.nodeSelector.yscope\.io/nodeType=query" \
-    --set "scheduling.reducer.replicas=${REDUCER_REPLICAS}" \
-    --set "scheduling.reducer.nodeSelector.yscope\.io/nodeType=query" \
+    --values <(get_spider_worker_values \
+        "${GENERAL_WORKER_REPLICAS}" "${COMPRESSION_WORKER_REPLICAS}" "${QUERY_WORKER_REPLICAS}") \
     --set "scheduling.prestoWorker.replicas=${PRESTO_WORKER_REPLICAS}" \
     --set "scheduling.prestoWorker.nodeSelector.yscope\.io/nodeType=presto" \
     --set "scheduling.database.nodeSelector.yscope\.io/nodeType=db" \
-    --set "scheduling.queue.nodeSelector.yscope\.io/nodeType=db" \
-    --set "scheduling.redis.nodeSelector.yscope\.io/nodeType=db" \
     --set "scheduling.resultsCache.nodeSelector.yscope\.io/nodeType=db" \
-    --set "scheduling.compressionScheduler.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.compressionCoordinator.nodeSelector.yscope\.io/nodeType=core" \
     --set "scheduling.logIngestor.nodeSelector.yscope\.io/nodeType=core" \
-    --set "scheduling.queryScheduler.nodeSelector.yscope\.io/nodeType=core" \
+    --set "scheduling.queryCoordinator.nodeSelector.yscope\.io/nodeType=core" \
     --set "scheduling.prestoCoordinator.nodeSelector.yscope\.io/nodeType=core" \
     --set "scheduling.garbageCollector.nodeSelector.yscope\.io/nodeType=core" \
     --set "scheduling.apiServer.nodeSelector.yscope\.io/nodeType=core" \

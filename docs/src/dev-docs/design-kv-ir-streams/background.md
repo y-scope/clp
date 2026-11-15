@@ -55,7 +55,7 @@ Once clp-s assigns a type to a value, it can add it to the log event's schema tr
 root, each node in a schema tree represents a unique key and value-type pair from the schema. For
 instance, the tree for the schema in [Table 1](#table-1) is shown in [Figure 2](#figure-2). Since
 the tree represents the structure of a structured log event, each internal (non-leaf) node will
-always correspond to an `Object` or `StructuredArray`, while the leaf nodes will correspond to
+always correspond to an `Object` or `StructurizedArray`, while the leaf nodes will correspond to
 values with primitive types (since `UnstructuredArray` values are encoded as JSON strings, they are
 primitives from the perspective of a schema tree). Accordingly, the root node represents the event
 object itself, and has no key.
@@ -136,7 +136,7 @@ with dot notation. The value types are described in [Table 3](#table-3).
 | NullValue         | A null value                                                                                            | Leaf      |
 | UnstructuredArray | An array that's serialized as a JSON string                                                             | Leaf      |
 | Object            | An object                                                                                               | Internal  |
-| StructuredArray   | An array                                                                                                | Internal  |
+| StructurizedArray | An array                                                                                                | Internal  |
 
 +++
 **Table 3**: clp-s value types.
@@ -291,7 +291,7 @@ conventionally with the following exceptions:
 **Table 4**: How clp-s encodes each of its leaf node value types.
 :::
 
-clp-s' two array types are used to encode arrays with different characteristics. `StructuredArray`
+clp-s' two array types are used to encode arrays with different characteristics. `StructurizedArray`
 values are similar to `Object` values in that all of their elements will be added to the schema
 tree. Accordingly, this type is more appropriate for encoding arrays whose elements don't change
 types significantly between log events; otherwise, the schema tree would be significantly larger.

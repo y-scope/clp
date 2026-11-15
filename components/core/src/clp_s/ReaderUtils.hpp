@@ -6,12 +6,12 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <string>
 #include <system_error>
 
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "ArchiveReaderAdaptor.hpp"
-#include "DictionaryReader.hpp"
 #include "ErrorCode.hpp"
 #include "Schema.hpp"
 #include "SchemaTree.hpp"
@@ -45,28 +45,12 @@ public:
     static auto read_schemas(ArchiveReaderAdaptor& adaptor) -> std::shared_ptr<SchemaMap>;
 
     /**
-     * Gets the variable dictionary reader for an archive
+     * Reads the parsing specification from an archive.
      * @param adaptor
-     * @return the variable dictionary reader
+     * @return The parsing specification contents.
+     * @throw OperationFailed if the schema is missing or corrupt.
      */
-    static auto get_variable_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-            -> std::shared_ptr<VariableDictionaryReader>;
-
-    /**
-     * Gets the log type dictionary reader for an archive
-     * @param adaptor
-     * @return the log type dictionary reader
-     */
-    static auto get_log_type_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-            -> std::shared_ptr<LogTypeDictionaryReader>;
-
-    /**
-     * Gets the array dictionary reader for an archive
-     * @param adaptor
-     * @return the array dictionary reader
-     */
-    static auto get_array_dictionary_reader(ArchiveReaderAdaptor& adaptor)
-            -> std::shared_ptr<LogTypeDictionaryReader>;
+    static auto read_parsing_spec(ArchiveReaderAdaptor& adaptor) -> std::string;
 
     /**
      * Converts a serialized 64-bit numeric value into `size_t` with bounds checking.

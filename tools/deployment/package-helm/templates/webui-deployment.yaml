@@ -57,7 +57,7 @@ spec:
               mountPath: "/opt/clp/etc/webui/settings.json"
               subPath: "webui-settings.json"
               readOnly: true
-            {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+            {{- if eq .Values.global.streamOutputStorageType "fs" }}
             - name: {{ include "clp.volumeName" (dict
                 "component_category" "shared-data"
                 "name" "streams"
@@ -80,7 +80,7 @@ spec:
         - name: "webui-settings"
           configMap:
             name: {{ include "clp.fullname" . }}-config
-        {{- if eq .Values.clpConfig.stream_output.storage.type "fs" }}
+        {{- if eq .Values.global.streamOutputStorageType "fs" }}
         - {{- include "clp.pvcVolume" (dict
             "root" .
             "component_category" "shared-data"

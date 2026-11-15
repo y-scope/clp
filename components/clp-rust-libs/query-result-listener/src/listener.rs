@@ -11,13 +11,12 @@ use tokio::net::TcpListener;
 use tokio::net::TcpSocket;
 use tokio::task::JoinHandle;
 
-use crate::connection;
 use crate::encoding::ResultEncoding;
 use crate::error::SessionError;
-use crate::session::ResultStream;
-use crate::session::Session;
+use crate::session::OpenSession;
 use crate::session::SessionConfig;
 use crate::session::SessionRegistry;
+use crate::session::serve;
 
 /// Configuration of a listener.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -100,10 +99,7 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
     ///
     /// # Returns
     ///
-    /// On success, a tuple containing:
-    ///
-    /// * The newly opened session.
-    /// * The stream of the session's results.
+    /// The newly opened session on success.
     ///
     /// # Errors
     ///
@@ -113,7 +109,7 @@ impl<EncodingType: ResultEncoding> ResultListener<EncodingType> {
     pub fn open_session(
         &self,
         config: SessionConfig,
-    ) -> Result<(Session<EncodingType>, ResultStream<EncodingType::Batch>), SessionError> {
+    ) -> Result<OpenSession<EncodingType>, SessionError> {
         self.session_registry
             .open(self.advertised_host.clone(), self.port, config)
     }
@@ -146,7 +142,7 @@ async fn accept_connections<EncodingType: ResultEncoding>(
     loop {
         match tcp_listener.accept().await {
             Ok((stream, peer_addr)) => {
-                tokio::spawn(connection::serve(
+                tokio::spawn(serve(
                     stream,
                     peer_addr,
                     Arc::clone(&session_registry),

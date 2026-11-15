@@ -131,6 +131,12 @@ option(
     ON
 )
 
+option(
+    CLP_BUILD_CLPP_DECOMPOSITION
+    "Enable clp+ query decomposition (log-surgeon interpretation generation)."
+    OFF
+)
+
 # Validates that the `CLP_BUILD_` options required by `TARGET_CLP_BUILD_OPTION` are `ON`.
 #
 # @param {string} TARGET_CLP_BUILD_OPTION
@@ -312,6 +318,7 @@ endfunction()
 function(set_clp_s_clp_dependencies_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_MSGPACKCXX
@@ -442,6 +449,12 @@ function(set_clp_s_search_dependencies)
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_XXHASH
+    )
+endfunction()
+
+function(validate_clp_s_search_ast_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_SEARCH_AST
+        CLP_BUILD_CLP_STRING_UTILS
     )
 endfunction()
 
@@ -591,6 +604,7 @@ function(validate_and_setup_all_clp_dependency_flags)
     endif()
 
     if (CLP_BUILD_CLP_S_SEARCH_AST)
+        validate_clp_s_search_ast_dependencies()
         set_clp_s_search_ast_dependencies()
     endif()
 
@@ -623,6 +637,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_CATCH2
         CLP_NEED_CURL
         CLP_NEED_DATE
+        CLP_NEED_FAST_FLOAT
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LIBLZMA

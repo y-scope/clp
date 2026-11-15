@@ -14,6 +14,8 @@ services:
 
       CLP_HOME: "${CLP_HOME:?Please set a value.}"
       CLP_PWD_HOST: "${CLP_PWD_HOST:-${PWD}}"
+      CLP_SPIDER_WORKER_CONTAINER_IMAGE_REF: "${CLP_SPIDER_WORKER_CONTAINER_IMAGE_REF:-}"
+      SPIDER_PULL_POLICY: "${SPIDER_PULL_POLICY:-always}"
 
       # Telemetry opt-out vars (forwarded so start_clp.py can respect them)
       CLP_DISABLE_TELEMETRY: "${CLP_DISABLE_TELEMETRY:-}"

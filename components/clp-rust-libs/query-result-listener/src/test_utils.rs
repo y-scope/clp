@@ -1,5 +1,6 @@
-//! Encoders for the frames of the wire protocol and an encoding of query results, for tests.
+//! Encoders for the frames of the wire protocol and encodings of query results, for tests.
 
+use std::convert::Infallible;
 use std::ops::Range;
 use std::time::Duration;
 
@@ -14,6 +15,12 @@ pub const ARCHIVE_ID: &str = "018e90e5-8b2a-4a61-a2fc-cac799936caf";
 
 /// The ID of an archive other than [`ARCHIVE_ID`].
 pub const OTHER_ARCHIVE_ID: &str = "4b0c2f8e-6d13-4f4e-9a57-1c2d3e4f5a6b";
+
+/// The ID of an archive for which a [`FallibleQueryResultEncoder`] can't be created.
+pub const UNENCODABLE_ARCHIVE_ID: &str = "9c3e5a71-2f4b-4d8e-b6a0-7e1f2d3c4b5a";
+
+/// A message that a [`FallibleQueryResultEncoder`] can't encode.
+pub const UNENCODABLE_MESSAGE: &str = "unencodable\n";
 
 /// The session token that the tests' handshakes carry.
 pub const SESSION_TOKEN: &str = "6f1d3b52-8a4e-4c1b-9f6e-2d7a5c0b9e13";
@@ -43,6 +50,7 @@ pub enum QueryResultEncoding {}
 impl ResultEncoding for QueryResultEncoding {
     type Batch = Vec<QueryResult>;
     type Encoder = QueryResultEncoder;
+    type Error = Infallible;
 }
 
 /// The [`ResultEncoder`] for [`QueryResultEncoding`].
@@ -53,25 +61,85 @@ pub struct QueryResultEncoder {
 
 impl ResultEncoder for QueryResultEncoder {
     type Batch = Vec<QueryResult>;
+    type Error = Infallible;
 
-    fn new(archive_id: ArchiveId) -> Self {
-        Self {
+    fn new(archive_id: ArchiveId) -> Result<Self, Infallible> {
+        Ok(Self {
             archive_id,
             batch: Vec::new(),
-        }
+        })
     }
 
-    fn encode(&mut self, timestamp_millisecs: i64, message: &str) {
+    fn encode(&mut self, timestamp_millisecs: i64, message: &str) -> Result<(), Infallible> {
         self.batch.push(QueryResult {
             archive_id: self.archive_id,
             timestamp_millisecs,
             message: message.to_owned(),
         });
+        Ok(())
     }
 
     fn take_batch(&mut self) -> Vec<QueryResult> {
         std::mem::take(&mut self.batch)
     }
+}
+
+/// A [`ResultEncoding`] like [`QueryResultEncoding`] that fails for [`UNENCODABLE_ARCHIVE_ID`] and
+/// [`UNENCODABLE_MESSAGE`].
+pub enum FallibleQueryResultEncoding {}
+
+impl ResultEncoding for FallibleQueryResultEncoding {
+    type Batch = Vec<QueryResult>;
+    type Encoder = FallibleQueryResultEncoder;
+    type Error = EncodingError;
+}
+
+/// The [`ResultEncoder`] for [`FallibleQueryResultEncoding`].
+pub struct FallibleQueryResultEncoder {
+    encoder: QueryResultEncoder,
+}
+
+impl ResultEncoder for FallibleQueryResultEncoder {
+    type Batch = Vec<QueryResult>;
+    type Error = EncodingError;
+
+    fn new(archive_id: ArchiveId) -> Result<Self, EncodingError> {
+        if UNENCODABLE_ARCHIVE_ID == archive_id.to_string() {
+            return Err(EncodingError::UnencodableArchive(archive_id));
+        }
+        let Ok(encoder) = QueryResultEncoder::new(archive_id);
+        Ok(Self { encoder })
+    }
+
+    fn encode(&mut self, timestamp_millisecs: i64, message: &str) -> Result<(), EncodingError> {
+        if UNENCODABLE_MESSAGE == message {
+            return Err(EncodingError::UnencodableMessage {
+                archive_id: self.encoder.archive_id,
+                timestamp_millisecs,
+            });
+        }
+        let Ok(()) = self.encoder.encode(timestamp_millisecs, message);
+        Ok(())
+    }
+
+    fn take_batch(&mut self) -> Vec<QueryResult> {
+        self.encoder.take_batch()
+    }
+}
+
+/// Failures of a [`FallibleQueryResultEncoder`].
+#[derive(Debug, Eq, PartialEq, thiserror::Error)]
+pub enum EncodingError {
+    #[error("archive {0} is unencodable")]
+    UnencodableArchive(ArchiveId),
+
+    #[error(
+        "the message of the result at {timestamp_millisecs} of archive {archive_id} is unencodable"
+    )]
+    UnencodableMessage {
+        archive_id: ArchiveId,
+        timestamp_millisecs: i64,
+    },
 }
 
 /// # Returns
