@@ -28,7 +28,6 @@ use clp_rust_utils::types::ArchiveId;
 use non_empty_string::NonEmptyString;
 use spider_core::task::TaskIndex;
 use spider_core::types::id::TaskId;
-use spider_core::types::id::TaskInstanceId;
 
 use crate::common::clp_home;
 use crate::common::runtime;
@@ -97,14 +96,7 @@ pub(super) fn search(
         )?;
     let results_file = match output {
         QueryOutput::File {} => Some(
-            ResultsFile::create(
-                clp_home,
-                config,
-                query_job_id,
-                archive_id,
-                ctx.task_instance_id,
-            )
-            .inspect_err(|e| {
+            ResultsFile::create(clp_home, config, query_job_id, archive_id).inspect_err(|e| {
                 tracing::error!(
                     job_id = % ctx.job_id,
                     task_id = % ctx.task_id,
@@ -129,26 +121,27 @@ pub(super) fn search(
         task_index,
     );
     let clp_s_bin = clp_binary_path(clp_home, "clp-s");
-    let search_result = arg_lists
+    if let Err(e) = arg_lists
         .into_iter()
-        .try_for_each(|args| run_clp_s_search(&clp_s_bin, args, &credential_env));
-    if let Some(results_file) = results_file {
-        if search_result.is_err() {
-            results_file.remove_staging_file();
-        } else {
-            results_file.publish(&runtime()).inspect_err(|e| {
-                tracing::error!(
-                    job_id = % ctx.job_id,
-                    task_id = % ctx.task_id,
-                    task_instance_id = % ctx.task_instance_id,
-                    query_job_id = % query_job_id,
-                    error = % e,
-                    "Failed to publish the query results file."
-                );
-            })?;
+        .try_for_each(|args| run_clp_s_search(&clp_s_bin, args, &credential_env))
+    {
+        if let Some(results_file) = results_file {
+            results_file.discard();
         }
+        return Err(e);
     }
-    search_result?;
+    if let Some(results_file) = results_file {
+        results_file.publish(&runtime()).inspect_err(|e| {
+            tracing::error!(
+                job_id = % ctx.job_id,
+                task_id = % ctx.task_id,
+                task_instance_id = % ctx.task_instance_id,
+                query_job_id = % query_job_id,
+                error = % e,
+                "Failed to publish the query results file."
+            );
+        })?;
+    }
 
     tracing::info!(
         job_id = % ctx.job_id,
@@ -172,8 +165,8 @@ enum ArchiveDescriptor {
     ObjectUrl(String),
 }
 
-/// The file that clp-s's `file` output handler writes one archive's query results to, staged per
-/// task instance and then published to its destination.
+/// The file that clp-s's `file` output handler writes one archive's query results to, staged under
+/// a unique name and then published to its destination.
 struct ResultsFile<'config> {
     staging_path: PathBuf,
     destination: ResultsFileDestination<'config>,
@@ -182,8 +175,8 @@ struct ResultsFile<'config> {
 impl<'config> ResultsFile<'config> {
     /// Factory function.
     ///
-    /// Creates the directories that the task instance's results file is staged in and published
-    /// to.
+    /// Creates the staging directory and, for filesystem stream output, the query job's directory
+    /// that the results file is published to.
     ///
     /// # Returns
     ///
@@ -199,7 +192,6 @@ impl<'config> ResultsFile<'config> {
         config: &'config SpiderTaskExecutorConfig,
         query_job_id: QueryJobId,
         archive_id: ArchiveId,
-        task_instance_id: TaskInstanceId,
     ) -> anyhow::Result<Self> {
         const STAGING_DIRECTORY_NAME: &str = ".staging";
 
@@ -228,13 +220,15 @@ impl<'config> ResultsFile<'config> {
             },
         };
         Ok(Self {
-            staging_path: staging_directory
-                .join(format!("{query_job_id}.{archive_id}.{task_instance_id}")),
+            staging_path: staging_directory.join(format!(
+                "{query_job_id}.{archive_id}.{}",
+                uuid::Uuid::new_v4()
+            )),
             destination,
         })
     }
 
-    /// Publishes the staged results file once clp-s has written it, and removes the staged file.
+    /// Publishes the staged results file once clp-s has written it, and discards the staged file.
     ///
     /// # Errors
     ///
@@ -243,12 +237,12 @@ impl<'config> ResultsFile<'config> {
     /// * Forwards [`ResultsFile::deliver_staging_file`]'s return values on failure.
     fn publish(self, runtime: &tokio::runtime::Handle) -> anyhow::Result<()> {
         let result = self.deliver_staging_file(runtime);
-        self.remove_staging_file();
+        self.discard();
         result
     }
 
     /// Removes the staged results file, if any.
-    fn remove_staging_file(&self) {
+    fn discard(self) {
         match std::fs::remove_file(&self.staging_path) {
             Ok(()) => {}
             Err(e) if std::io::ErrorKind::NotFound == e.kind() => {}
@@ -262,36 +256,23 @@ impl<'config> ResultsFile<'config> {
         }
     }
 
-    /// Moves the staged results file to its filesystem destination, or uploads it to its S3
-    /// destination unless it's missing or empty.
+    /// Delivers the staged results file to its destination, unless clp-s didn't create it.
+    ///
+    /// The file is moved to a filesystem destination, or uploaded to an S3 destination unless it's
+    /// empty.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`std::fs::rename`]'s return values on failure.
     /// * Forwards [`std::fs::metadata`]'s return values on failure, unless the staged file is not
     ///   found.
+    /// * Forwards [`std::fs::rename`]'s return values on failure.
     /// * Forwards [`upload_file_to_s3`]'s return values on failure.
     fn deliver_staging_file(&self, runtime: &tokio::runtime::Handle) -> anyhow::Result<()> {
-        let (s3_config, object_key) = match &self.destination {
-            ResultsFileDestination::Fs { path } => {
-                return std::fs::rename(&self.staging_path, path).with_context(|| {
-                    format!(
-                        "failed to move {} to {}",
-                        self.staging_path.display(),
-                        path.display()
-                    )
-                });
-            }
-            ResultsFileDestination::S3 {
-                s3_config,
-                object_key,
-            } => (s3_config, object_key),
-        };
-        let is_empty = match std::fs::metadata(&self.staging_path) {
-            Ok(metadata) => 0 == metadata.len(),
-            Err(e) if std::io::ErrorKind::NotFound == e.kind() => true,
+        let metadata = match std::fs::metadata(&self.staging_path) {
+            Ok(metadata) => metadata,
+            Err(e) if std::io::ErrorKind::NotFound == e.kind() => return Ok(()),
             Err(e) => {
                 return Err(e).with_context(|| {
                     format!(
@@ -301,20 +282,35 @@ impl<'config> ResultsFile<'config> {
                 });
             }
         };
-        if is_empty {
-            tracing::info!(
-                object_key = % object_key,
-                "Skipping the upload of an empty query results file."
-            );
-            return Ok(());
+        match &self.destination {
+            ResultsFileDestination::Fs { path } => std::fs::rename(&self.staging_path, path)
+                .with_context(|| {
+                    format!(
+                        "failed to move {} to {}",
+                        self.staging_path.display(),
+                        path.display()
+                    )
+                }),
+            ResultsFileDestination::S3 {
+                s3_config,
+                object_key,
+            } => {
+                if 0 == metadata.len() {
+                    tracing::info!(
+                        object_key = % object_key,
+                        "Skipping the upload of an empty query results file."
+                    );
+                    return Ok(());
+                }
+                let client = build_s3_client(runtime, s3_config);
+                runtime.block_on(upload_file_to_s3(
+                    &client,
+                    s3_config.bucket.as_str(),
+                    object_key,
+                    &self.staging_path,
+                ))
+            }
         }
-        let client = build_s3_client(runtime, s3_config);
-        runtime.block_on(upload_file_to_s3(
-            &client,
-            s3_config.bucket.as_str(),
-            object_key,
-            &self.staging_path,
-        ))
     }
 }
 
@@ -341,7 +337,7 @@ enum ResultsFileDestination<'config> {
 ///
 /// Panics if `output` is [`QueryOutput::File`] but `results_file_path` is `None`.
 fn build_clp_s_arg_lists(
-    query_args: Vec<OsString>,
+    mut query_args: Vec<OsString>,
     output: &QueryOutput,
     results_cache: &ResultsCache,
     results_file_path: Option<&Path>,
@@ -349,48 +345,48 @@ fn build_clp_s_arg_lists(
     dataset: &str,
     task_index: TaskIndex,
 ) -> Vec<Vec<OsString>> {
-    let mut normal_args = query_args;
     match output {
         QueryOutput::ResultsCache(output) => {
-            let timeline_args = output.aggregation.map(
-                |Aggregation::CountByTime {
-                     bucket_size_millisecs,
-                 }| {
-                    let mut timeline_args = normal_args.clone();
-                    timeline_args.extend([
-                        OsString::from("--count-by-time"),
-                        OsString::from(bucket_size_millisecs.get().to_string()),
-                    ]);
-                    timeline_args.extend(build_clp_s_results_cache_output_args(
-                        results_cache,
-                        None,
-                        &timeline::collection_name(query_job_id),
-                        dataset,
-                    ));
-                    timeline_args
-                },
-            );
+            let mut normal_args = query_args.clone();
             normal_args.extend(build_clp_s_results_cache_output_args(
                 results_cache,
                 output.max_num_results,
                 &query_job_id.to_string(),
                 dataset,
             ));
-            std::iter::once(normal_args).chain(timeline_args).collect()
+            let mut arg_lists = vec![normal_args];
+            if let Some(Aggregation::CountByTime {
+                bucket_size_millisecs,
+            }) = output.aggregation
+            {
+                let mut timeline_args = query_args;
+                timeline_args.extend([
+                    OsString::from("--count-by-time"),
+                    OsString::from(bucket_size_millisecs.get().to_string()),
+                ]);
+                timeline_args.extend(build_clp_s_results_cache_output_args(
+                    results_cache,
+                    None,
+                    &timeline::collection_name(query_job_id),
+                    dataset,
+                ));
+                arg_lists.push(timeline_args);
+            }
+            arg_lists
         }
         QueryOutput::Network(network_output) => {
-            normal_args.extend(build_clp_s_network_output_args(network_output, task_index));
-            vec![normal_args]
+            query_args.extend(build_clp_s_network_output_args(network_output, task_index));
+            vec![query_args]
         }
         QueryOutput::File {} => {
             let results_file_path =
                 results_file_path.expect("file output requires a results file path");
-            normal_args.extend([
+            query_args.extend([
                 OsString::from("file"),
                 OsString::from("--path"),
                 results_file_path.as_os_str().to_os_string(),
             ]);
-            vec![normal_args]
+            vec![query_args]
         }
     }
 }
@@ -678,13 +674,24 @@ mod tests {
 
     /// # Returns
     ///
-    /// The AWS credentials the S3-backed test configs authenticate with.
-    fn test_aws_authentication() -> AwsAuthentication {
-        AwsAuthentication::Credentials {
-            credentials: AwsCredentials {
-                access_key_id: "the-access-key".to_string(),
-                secret_access_key: "the-secret-key".to_string(),
-                session_token: None,
+    /// An [`S3Config`] for the bucket `bucket` with the given key prefix and endpoint URL, which
+    /// authenticates with static AWS credentials.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `key_prefix` or `endpoint_url` is empty.
+    fn test_s3_config(key_prefix: &'static str, endpoint_url: Option<&'static str>) -> S3Config {
+        S3Config {
+            bucket: NonEmptyString::from_static_str("bucket"),
+            region_code: None,
+            key_prefix: NonEmptyString::from_static_str(key_prefix),
+            endpoint_url: endpoint_url.map(NonEmptyString::from_static_str),
+            aws_authentication: AwsAuthentication::Credentials {
+                credentials: AwsCredentials {
+                    access_key_id: "the-access-key".to_string(),
+                    secret_access_key: "the-secret-key".to_string(),
+                    session_token: None,
+                },
             },
         }
     }
@@ -703,10 +710,6 @@ mod tests {
     ///
     /// A [`SpiderTaskExecutorConfig`] whose archive output is S3-backed with the given staging
     /// directory and endpoint URL.
-    ///
-    /// # Panics
-    ///
-    /// Panics if any of the static S3 config strings is empty.
     fn s3_backed_config(
         staging_directory: &str,
         endpoint_url: Option<&'static str>,
@@ -718,13 +721,7 @@ mod tests {
             archive_output: ArchiveOutput {
                 storage: ArchiveOutputStorage::S3 {
                     staging_directory: staging_directory.to_owned(),
-                    s3_config: S3Config {
-                        bucket: NonEmptyString::from_static_str("bucket"),
-                        region_code: None,
-                        key_prefix: NonEmptyString::from_static_str("LIB1/"),
-                        endpoint_url: endpoint_url.map(NonEmptyString::from_static_str),
-                        aws_authentication: test_aws_authentication(),
-                    },
+                    s3_config: test_s3_config("LIB1/", endpoint_url),
                 },
                 ..ArchiveOutput::default()
             },
@@ -772,27 +769,37 @@ mod tests {
     ///
     /// A [`SpiderTaskExecutorConfig`] whose stream output is S3-backed with a relative staging
     /// directory, the key prefix `streams/`, and an endpoint that refuses connections.
-    ///
-    /// # Panics
-    ///
-    /// Panics if any of the static S3 config strings is empty.
     fn s3_stream_output_config() -> SpiderTaskExecutorConfig {
         SpiderTaskExecutorConfig {
             stream_output: StreamOutput {
                 storage: StreamOutputStorage::S3 {
                     staging_directory: "var/data/staged-streams".to_owned(),
-                    s3_config: S3Config {
-                        bucket: NonEmptyString::from_static_str("bucket"),
-                        region_code: None,
-                        key_prefix: NonEmptyString::from_static_str("streams/"),
-                        endpoint_url: Some(NonEmptyString::from_static_str("http://127.0.0.1:1")),
-                        aws_authentication: test_aws_authentication(),
-                    },
+                    s3_config: test_s3_config("streams/", Some("http://127.0.0.1:1")),
                 },
                 ..StreamOutput::default()
             },
             ..SpiderTaskExecutorConfig::default()
         }
+    }
+
+    /// # Returns
+    ///
+    /// A [`ResultsFile`] for query job 42 and [`ARCHIVE_ID`], created under `clp_home`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`ResultsFile::create`] returns an error.
+    fn create_results_file<'config>(
+        clp_home: &Path,
+        config: &'config SpiderTaskExecutorConfig,
+    ) -> ResultsFile<'config> {
+        ResultsFile::create(
+            clp_home,
+            config,
+            42,
+            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
+        )
+        .expect("failed to create the results file")
     }
 
     #[test]
@@ -1042,25 +1049,30 @@ mod tests {
     }
 
     #[test]
-    fn results_file_fs_is_staged_per_task_instance_outside_the_query_job_directory()
-    -> anyhow::Result<()> {
+    fn results_file_fs_is_staged_uniquely_outside_the_query_job_directory() -> anyhow::Result<()> {
         let clp_home = tempfile::tempdir()?;
         let config = SpiderTaskExecutorConfig::default();
 
-        let results_file = ResultsFile::create(
-            clp_home.path(),
-            &config,
-            42,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-            7,
-        )?;
+        let results_file = create_results_file(clp_home.path(), &config);
+        let other_results_file = create_results_file(clp_home.path(), &config);
 
         let stream_directory = config.abs_stream_output_staging(clp_home.path());
+        let staging_directory = stream_directory.join(".staging");
         assert_eq!(
-            results_file.staging_path,
-            stream_directory.join(format!(".staging/42.{ARCHIVE_ID}.7"))
+            results_file.staging_path.parent(),
+            Some(staging_directory.as_path())
         );
-        assert!(stream_directory.join(".staging").is_dir());
+        let staging_file_name = results_file
+            .staging_path
+            .file_name()
+            .expect("the staging path should have a file name")
+            .to_string_lossy();
+        assert!(
+            staging_file_name.starts_with(&format!("42.{ARCHIVE_ID}.")),
+            "unexpected staging file name: {staging_file_name}"
+        );
+        assert_ne!(results_file.staging_path, other_results_file.staging_path);
+        assert!(staging_directory.is_dir());
         let ResultsFileDestination::Fs { path } = &results_file.destination else {
             panic!("expected a filesystem destination");
         };
@@ -1071,31 +1083,23 @@ mod tests {
     }
 
     #[test]
-    fn results_file_s3_is_staged_per_task_instance_and_keyed_by_query_job_and_archive()
+    fn results_file_s3_is_keyed_by_query_job_and_archive_without_a_local_query_job_directory()
     -> anyhow::Result<()> {
         let clp_home = tempfile::tempdir()?;
         let config = s3_stream_output_config();
 
-        let results_file = ResultsFile::create(
-            clp_home.path(),
-            &config,
-            42,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-            7,
-        )?;
+        let results_file = create_results_file(clp_home.path(), &config);
 
-        let staging_directory = config
-            .abs_stream_output_staging(clp_home.path())
-            .join(".staging");
-        assert_eq!(
-            results_file.staging_path,
-            staging_directory.join(format!("42.{ARCHIVE_ID}.7"))
-        );
-        assert!(staging_directory.is_dir());
         let ResultsFileDestination::S3 { object_key, .. } = &results_file.destination else {
             panic!("expected an S3 destination");
         };
         assert_eq!(object_key, &format!("streams/42/{ARCHIVE_ID}"));
+        assert!(
+            !config
+                .abs_stream_output_staging(clp_home.path())
+                .join("42")
+                .exists()
+        );
 
         Ok(())
     }
@@ -1105,13 +1109,7 @@ mod tests {
         let clp_home = tempfile::tempdir()?;
         let config = SpiderTaskExecutorConfig::default();
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let results_file = ResultsFile::create(
-            clp_home.path(),
-            &config,
-            42,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-            7,
-        )?;
+        let results_file = create_results_file(clp_home.path(), &config);
         let staging_path = results_file.staging_path.clone();
         std::fs::write(&staging_path, b"results")?;
 
@@ -1126,17 +1124,30 @@ mod tests {
     }
 
     #[test]
+    fn publish_succeeds_without_creating_a_destination_file_if_no_fs_results_file_is_staged()
+    -> anyhow::Result<()> {
+        let clp_home = tempfile::tempdir()?;
+        let config = SpiderTaskExecutorConfig::default();
+        let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
+        let results_file = create_results_file(clp_home.path(), &config);
+
+        results_file.publish(runtime.handle())?;
+
+        assert!(
+            !config
+                .abs_stream_output_staging(clp_home.path())
+                .join(format!("42/{ARCHIVE_ID}"))
+                .exists()
+        );
+        Ok(())
+    }
+
+    #[test]
     fn publish_skips_uploading_an_empty_s3_results_file_and_removes_it() -> anyhow::Result<()> {
         let clp_home = tempfile::tempdir()?;
         let config = s3_stream_output_config();
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let results_file = ResultsFile::create(
-            clp_home.path(),
-            &config,
-            42,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-            7,
-        )?;
+        let results_file = create_results_file(clp_home.path(), &config);
         let staging_path = results_file.staging_path.clone();
         std::fs::write(&staging_path, b"")?;
 
@@ -1147,21 +1158,15 @@ mod tests {
     }
 
     #[test]
-    fn publish_fails_if_the_staged_s3_results_file_cannot_be_inspected() -> anyhow::Result<()> {
+    fn publish_fails_if_the_staged_results_file_cannot_be_inspected() -> anyhow::Result<()> {
         let clp_home = tempfile::tempdir()?;
         let config = s3_stream_output_config();
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
         let not_a_directory = clp_home.path().join("not-a-directory");
         std::fs::write(&not_a_directory, b"")?;
         let results_file = ResultsFile {
-            staging_path: not_a_directory.join(format!("42.{ARCHIVE_ID}.7")),
-            ..ResultsFile::create(
-                clp_home.path(),
-                &config,
-                42,
-                ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-                7,
-            )?
+            staging_path: not_a_directory.join(format!("42.{ARCHIVE_ID}")),
+            ..create_results_file(clp_home.path(), &config)
         };
 
         let error = results_file
@@ -1180,13 +1185,7 @@ mod tests {
         let clp_home = tempfile::tempdir()?;
         let config = s3_stream_output_config();
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
-        let results_file = ResultsFile::create(
-            clp_home.path(),
-            &config,
-            42,
-            ARCHIVE_ID.parse::<ArchiveId>().expect("valid archive UUID"),
-            7,
-        )?;
+        let results_file = create_results_file(clp_home.path(), &config);
         let staging_path = results_file.staging_path.clone();
         std::fs::write(&staging_path, b"results")?;
 
