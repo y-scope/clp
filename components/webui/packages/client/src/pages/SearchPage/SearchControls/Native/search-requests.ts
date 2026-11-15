@@ -26,16 +26,11 @@ import {unquoteString} from "./utils";
  */
 const buildQueryConfig = (payload: QueryJobCreation, aggregation?: Aggregation): QueryConfig => ({
     // Buffer results in the results cache (MongoDB) so that the results contain structured metadata
-    // (e.g., timestamps and original file paths). Also, the `clp` storage engine doesn't support
-    // writing search results to files.
+    // (e.g., timestamps and original file paths).
     output: {
+        aggregation: aggregation ?? null,
+        max_num_results: payload.maxNumResults ?? null,
         type: "results_cache",
-        ...("undefined" === typeof aggregation ?
-            {} :
-            {aggregation}),
-        ...("undefined" === typeof payload.maxNumResults ?
-            {} :
-            {max_num_results: payload.maxNumResults}),
     },
     query: {
         datasets: payload.datasets,
