@@ -550,6 +550,54 @@
         }
       }
     },
+    "/query_results/{query_job_id}/timeline": {
+      "get": {
+        "tags": [],
+        "description": "Streams committed timeline buckets as Server-Sent Events (SSE).",
+        "operationId": "query_timeline",
+        "parameters": [
+          {
+            "name": "query_job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each event contains one timeline bucket in JSON format.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineBucket"
+                },
+                "example": "data: {\"timestamp\": 1633036800000, \"count\": 42}\\n"
+              }
+            }
+          },
+          "400": {
+            "description": "The query job ID is invalid or the job has no timeline configuration.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No query job with the given ID was found."
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/stream_files/extract": {
       "post": {
         "description": "Extracts a JSON stream file that contains the log event at `log_event_idx` in the archive with ID `archive_id`. Only the clp-s storage engine is supported. If the results cache already has such a stream file, returns its metadata directly; otherwise submits an extraction job, waits for it to finish, and returns the metadata of the stream file it extracted. The wait is bounded by `api_server.stream_file_extraction_timeout_secs`; the job keeps running when the timeout is reached.",
@@ -1069,7 +1117,7 @@
               "null"
             ],
             "format": "int64",
-            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job is submitted as a count-by-time aggregation job instead of a plain\nsearch job, and its results are always buffered in `MongoDB`.",
+            "description": "The size of each time bucket (in milliseconds) for count-by-time aggregation.\nWhen set, the job requests timeline aggregation alongside normal search, with both result\ntypes buffered in `MongoDB`.",
             "minimum": 1
           },
           "datasets": {
@@ -1252,6 +1300,27 @@
             "type": "integer",
             "format": "int64",
             "description": "Latest log entry timestamp (epoch milliseconds)."
+          }
+        }
+      },
+      "TimelineBucket": {
+        "type": "object",
+        "required": [
+          "timestamp",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991
           }
         }
       }

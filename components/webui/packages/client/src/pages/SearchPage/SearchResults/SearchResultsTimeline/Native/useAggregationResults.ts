@@ -1,7 +1,6 @@
-import {useQueryResults} from "@webui/api-client/useQueryResults";
+import {useTimelineResults} from "@webui/api-client/useTimelineResults";
 
 import {apiClient} from "../../../../../api/search";
-import {TimelineBucket} from "../../../../../components/ResultsTimeline/typings";
 import useSearchStore from "../../../SearchState/index";
 
 
@@ -14,13 +13,10 @@ import useSearchStore from "../../../SearchState/index";
 const useAggregationResults = () => {
     const aggregationJobId = useSearchStore((state) => state.aggregationJobId);
 
-    return useQueryResults<TimelineBucket>(apiClient, aggregationJobId, {
+    return useTimelineResults(apiClient, aggregationJobId, {
         onError: (err) => {
             console.error("Failed to stream aggregation results:", err);
         },
-        parse: (data) => JSON.parse(data) as TimelineBucket,
-        rawDocs: true,
-        sorted: false,
     });
 };
 

@@ -224,6 +224,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/query_results/{query_job_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Streams committed timeline buckets as Server-Sent Events (SSE). */
+        get: operations["query_timeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/stream_files/extract": {
         parameters: {
             query?: never;
@@ -496,8 +513,8 @@ export interface components {
             /**
              * Format: int64
              * @description The size of each time bucket (in milliseconds) for count-by-time aggregation.
-             *     When set, the job is submitted as a count-by-time aggregation job instead of a plain
-             *     search job, and its results are always buffered in `MongoDB`.
+             *     When set, the job requests timeline aggregation alongside normal search, with both result
+             *     types buffered in `MongoDB`.
              */
             count_by_time_bucket_size_millisecs?: number | null;
             /** @description The datasets to search within. If not provided, only `default` dataset will be searched. */
@@ -605,6 +622,12 @@ export interface components {
              * @description Latest log entry timestamp (epoch milliseconds).
              */
             end_timestamp: number;
+        };
+        TimelineBucket: {
+            /** Format: int64 */
+            count: number;
+            /** Format: int64 */
+            timestamp: number;
         };
     };
     responses: never;
@@ -1162,6 +1185,51 @@ export interface operations {
             };
             /** @description The query job streamed its results to a network listener, so they aren't stored. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    query_timeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                query_job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each event contains one timeline bucket in JSON format. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example data: {"timestamp": 1633036800000, "count": 42}\n */
+                    "text/event-stream": components["schemas"]["TimelineBucket"];
+                };
+            };
+            /** @description The query job ID is invalid or the job has no timeline configuration. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description No query job with the given ID was found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
