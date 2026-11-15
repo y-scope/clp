@@ -30,6 +30,7 @@ use crate::client::ClientError;
 use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
+use crate::client::TimelineBucket;
 use crate::client::ValidatedCompressionUsageParams;
 use crate::webui_client::WebuiClient;
 
@@ -71,6 +72,7 @@ pub fn from_app_state(state: AppState) -> Result<axum::Router, serde_json::Error
         .routes(routes!(health))
         .routes(routes!(query))
         .routes(routes!(query_results))
+        .routes(routes!(query_timeline))
         .routes(routes!(cancel_query))
         .routes(routes!(compression_usage))
         .split_for_parts();
@@ -95,6 +97,7 @@ mod api_doc {
     use super::__path_health;
     use super::__path_query;
     use super::__path_query_results;
+    use super::__path_query_timeline;
     use super::CompressionUsage;
     use super::OpenApi;
     use super::OpenApiRouter;
@@ -108,7 +111,14 @@ mod api_doc {
             description = "API Server for CLP",
             contact(name = "YScope")
         ),
-        paths(health, query, query_results, cancel_query, compression_usage),
+        paths(
+            health,
+            query,
+            query_results,
+            query_timeline,
+            cancel_query,
+            compression_usage
+        ),
         components(schemas(CompressionUsage, CompressionJobStatus))
     )]
     pub struct ApiDoc;
@@ -282,6 +292,33 @@ async fn query_results(
         Ok(Event::default().data(trimmed_message))
     });
     Ok(Sse::new(event_stream).keep_alive(KeepAlive::default()))
+}
+
+#[utoipa::path(
+    get,
+    path = "/query_results/{query_job_id}/timeline",
+    description = "Streams committed timeline buckets as Server-Sent Events (SSE).",
+    responses(
+        (
+            status = OK,
+            body = TimelineBucket,
+            content_type = "text/event-stream",
+            description = "Each event contains one timeline bucket in JSON format.",
+            example = r#"data: {"timestamp": 1633036800000, "count": 42}\n"#
+        ),
+        (status = BAD_REQUEST, body = String, content_type = "text/plain",
+            description = "The query job ID is invalid or the job has no timeline configuration."),
+        (status = NOT_FOUND, description = "No query job with the given ID was found."),
+        (status = INTERNAL_SERVER_ERROR)
+    )
+)]
+async fn query_timeline(
+    State(client): State<Client>,
+    Path(query_job_id): Path<u64>,
+) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
+    let buckets = client.fetch_timeline(query_job_id).await?;
+    let events = buckets.map(|bucket| Ok(Event::default().json_data(bucket?)?));
+    Ok(Sse::new(events).keep_alive(KeepAlive::default()))
 }
 
 #[utoipa::path(

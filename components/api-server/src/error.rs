@@ -122,3 +122,12 @@ impl From<clp_rust_utils::Error> for ClientError {
         }
     }
 }
+
+impl From<clp_rust_utils::timeline::Error> for ClientError {
+    fn from(value: clp_rust_utils::timeline::Error) -> Self {
+        match value {
+            clp_rust_utils::timeline::Error::Mongo(error) => Self::Mongo(error),
+            _ => Self::MalformedData,
+        }
+    }
+}

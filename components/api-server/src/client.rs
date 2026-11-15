@@ -2,6 +2,7 @@ use std::num::NonZeroU32;
 use std::pin::Pin;
 
 use async_stream::stream;
+use async_stream::try_stream;
 use chrono::DateTime;
 use chrono::TimeZone;
 use chrono::Utc;
@@ -20,9 +21,18 @@ use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::job_config::SearchQuery;
 use clp_rust_utils::job_config::TimeRange;
+use clp_rust_utils::timeline;
+use clp_rust_utils::timeline::Bucket;
 use clp_rust_utils::types::PositiveI64;
 use futures::Stream;
 use futures::StreamExt;
+use futures::TryStreamExt;
+use mongodb::bson::Document;
+use mongodb::bson::doc;
+use mongodb::options::DatabaseOptions;
+use mongodb::options::Hint;
+use mongodb::options::ReadPreference;
+use mongodb::options::SelectionCriteria;
 use non_empty_string::NonEmptyString;
 use pin_project_lite::pin_project;
 use serde::Deserialize;
@@ -267,6 +277,29 @@ impl TryFrom<QueryConfig> for QueryJobConfig {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Serialize, ToSchema)]
+pub struct TimelineBucket {
+    #[schema(minimum = -9_007_199_254_740_991_i64, maximum = 9_007_199_254_740_991_i64)]
+    pub timestamp: i64,
+    #[schema(minimum = 0, maximum = 9_007_199_254_740_991_i64)]
+    pub count: i64,
+}
+
+impl TryFrom<Bucket> for TimelineBucket {
+    type Error = ClientError;
+
+    fn try_from(bucket: Bucket) -> Result<Self, Self::Error> {
+        const MAX_SAFE_INTEGER: i64 = (1_i64 << 53) - 1;
+        let timestamp = bucket.timestamp();
+        let count = bucket.count();
+        if !(-MAX_SAFE_INTEGER..=MAX_SAFE_INTEGER).contains(&timestamp) || count > MAX_SAFE_INTEGER
+        {
+            return Err(ClientError::MalformedData);
+        }
+        Ok(Self { timestamp, count })
+    }
+}
+
 #[derive(Clone)]
 pub struct Client {
     #[allow(clippy::struct_field_names)]
@@ -331,7 +364,7 @@ impl Client {
     ///
     /// * [`ClientError::QueryResultsNotStored`] if the job streamed its results to a network
     ///   listener, which means they're not stored.
-    /// * Forwards [`Client::get_status`]'s return values on failure.
+    /// * Forwards [`Client::wait_for_query_success`]'s return values on failure.
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_s3`]'s return values on failure.
@@ -348,46 +381,15 @@ impl Client {
         >,
         ClientError,
     > {
-        let api_server_config = self.get_api_server_config();
-        let mut delay_ms = api_server_config.query_job_polling.initial_backoff_ms;
-        let max_delay_ms = api_server_config.query_job_polling.max_backoff_ms;
-        loop {
-            match self.get_status(query_job_id).await? {
-                QueryJobStatus::Succeeded => {
-                    break;
-                }
-                QueryJobStatus::Failed
-                | QueryJobStatus::CancelRequested
-                | QueryJobStatus::Cancelling
-                | QueryJobStatus::Cancelled
-                | QueryJobStatus::Killed => {
-                    return Err(ClientError::QueryNotSucceeded);
-                }
-                QueryJobStatus::Running | QueryJobStatus::Pending => {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
-                    delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
-                }
-            }
-        }
-
-        match self.get_job_config(query_job_id).await?.output {
+        let output = self.get_job_config(query_job_id).await?.output;
+        self.wait_for_query_success(query_job_id).await?;
+        match output {
             QueryOutput::ResultsCache(ResultsCacheOutput {
-                aggregation: Some(_),
-                ..
-            }) => {
-                // Each document is an aggregation record (e.g., a time bucket) rather than a log
-                // message, so stream the documents whole and without a limit.
-                self.fetch_results_from_mongo(query_job_id, None, true, false)
-                    .await
-                    .map(|s| SearchResultStream::Mongo { inner: s })
-            }
-            QueryOutput::ResultsCache(ResultsCacheOutput {
-                max_num_results,
-                aggregation: None,
+                max_num_results, ..
             }) => self
                 .fetch_results_from_mongo(query_job_id, max_num_results, raw_docs, sorted)
                 .await
-                .map(|s| SearchResultStream::Mongo { inner: s }),
+                .map(|inner| SearchResultStream::Mongo { inner }),
             QueryOutput::File {} => Ok(match &self.config.stream_output.storage {
                 StreamOutputStorage::Fs { .. } => SearchResultStream::File {
                     inner: self.fetch_results_from_file(query_job_id),
@@ -398,6 +400,82 @@ impl Client {
             }),
             QueryOutput::Network(_) => Err(ClientError::QueryResultsNotStored(query_job_id)),
         }
+    }
+
+    /// Asynchronously fetches committed timeline buckets for a query job.
+    ///
+    /// # Returns
+    ///
+    /// A stream of [`TimelineBucket`] values in ascending timestamp order on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::InvalidInput`] if the query has no timeline configuration.
+    /// * [`ClientError::MalformedData`] if the query ID is out of range or the commit marker is
+    ///   absent.
+    /// * [`ClientError::Mongo`] if reading the commit marker fails.
+    /// * Forwards [`Self::get_job_config`]'s return values on failure.
+    /// * Forwards [`Self::wait_for_query_success`]'s return values on failure.
+    ///
+    /// When consumed, the stream yields [`ClientError::Mongo`] if querying or reading buckets
+    /// fails, [`ClientError::MalformedData`] if [`Bucket::try_from_committed_document`] fails,
+    /// and forwards [`TimelineBucket::try_from`]'s return values on failure.
+    pub async fn fetch_timeline(
+        &self,
+        query_job_id: u64,
+    ) -> Result<impl Stream<Item = Result<TimelineBucket, ClientError>> + use<>, ClientError> {
+        let output = self.get_job_config(query_job_id).await?.output;
+        if !matches!(
+            output,
+            QueryOutput::ResultsCache(ResultsCacheOutput {
+                aggregation: Some(Aggregation::CountByTime { .. }),
+                ..
+            })
+        ) {
+            return Err(ClientError::InvalidInput(
+                "query job has no timeline configuration".to_owned(),
+            ));
+        }
+        self.wait_for_query_success(query_job_id).await?;
+        let started = std::time::Instant::now();
+        let database = self.mongodb_client.database_with_options(
+            &self.config.results_cache.db_name,
+            DatabaseOptions::builder()
+                .selection_criteria(SelectionCriteria::ReadPreference(ReadPreference::Primary))
+                .build(),
+        );
+        let timeline_name = timeline::collection_name(
+            query_job_id
+                .try_into()
+                .map_err(|_| ClientError::MalformedData)?,
+        );
+        let collection = database.collection::<Document>(&timeline_name);
+        collection
+            .find_one(doc! { "_id": timeline::COMMIT_MARKER_ID })
+            .await?
+            .ok_or(ClientError::MalformedData)?;
+        Ok(try_stream! {
+            let mut num_buckets = 0_u64;
+            let mut cursor = collection
+                .find(doc! { "_id": { "$type": "number" } })
+                .sort(doc! { "_id": 1 })
+                .hint(Hint::Name("_id_".to_owned()))
+                .await?;
+            while let Some(document) = cursor.try_next().await? {
+                let bucket = Bucket::try_from_committed_document(&document)
+                    .map_err(ClientError::from)?;
+                yield TimelineBucket::try_from(bucket)?;
+                num_buckets += 1;
+            }
+            tracing::debug!(
+                query_job_id,
+                num_buckets,
+                elapsed_micros = started.elapsed().as_micros(),
+                "Finished reading timeline results."
+            );
+        })
     }
 
     /// Submits a cancellation request for a query job.
@@ -445,13 +523,48 @@ impl Client {
             .ok_or(ClientError::QueryJobNotFound(query_job_id))
     }
 
+    /// Waits until a query succeeds, fails, or begins cancellation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::QueryNotSucceeded`] if the query fails or cancellation has begun.
+    /// * Forwards [`Self::get_status`]'s return values on failure.
+    async fn wait_for_query_success(&self, query_job_id: u64) -> Result<(), ClientError> {
+        let api_server_config = self.get_api_server_config();
+        let mut delay_ms = api_server_config.query_job_polling.initial_backoff_ms;
+        let max_delay_ms = api_server_config.query_job_polling.max_backoff_ms;
+        loop {
+            match self.get_status(query_job_id).await? {
+                QueryJobStatus::Succeeded => {
+                    break;
+                }
+                QueryJobStatus::Failed
+                | QueryJobStatus::CancelRequested
+                | QueryJobStatus::Cancelling
+                | QueryJobStatus::Cancelled
+                | QueryJobStatus::Killed => {
+                    return Err(ClientError::QueryNotSucceeded);
+                }
+                QueryJobStatus::Running | QueryJobStatus::Pending => {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     async fn get_job_config(&self, query_job_id: u64) -> Result<QueryJobConfig, ClientError> {
         let row = sqlx::query(&format!(
             "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
         ))
         .bind(query_job_id)
-        .fetch_one(&self.sql_pool)
-        .await?;
+        .fetch_optional(&self.sql_pool)
+        .await?
+        .ok_or(ClientError::QueryJobNotFound(query_job_id))?;
         let msgpack: &[u8] = row.try_get("job_config")?;
         Ok(rmp_serde::from_slice(msgpack)?)
     }
@@ -604,9 +717,8 @@ impl Client {
     ///
     /// When `max_num_results` is set, the query is limited to at most that many documents.
     ///
-    /// When `raw_docs` is `true`, each document is serialized to JSON whole (used
-    /// for aggregation results); otherwise the document's "message" field is extracted (used for
-    /// search results).
+    /// When `raw_docs` is `true`, each search document is serialized to JSON whole; otherwise
+    /// the document's "message" field is extracted. Timeline records are excluded.
     ///
     /// When `sorted` is `true`, documents are returned sorted by `timestamp` descending (then
     /// `_id` ascending); otherwise, they're returned in insertion order.
@@ -656,7 +768,12 @@ impl Client {
             });
         }
         let cursor = collection
-            .find(mongodb::bson::doc! {})
+            .find(mongodb::bson::doc! {
+                "_id": { "$type": "object" },
+                "_id.log_event_idx": { "$type": ["int", "long"] },
+                "_id.timestamp": { "$exists": false },
+                "count": { "$exists": false },
+            })
             .with_options(find_options)
             .await?;
 
