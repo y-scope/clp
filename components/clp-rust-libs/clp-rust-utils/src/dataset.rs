@@ -13,11 +13,6 @@ use sqlx::encode::IsNull;
 use sqlx::error::BoxDynError;
 use sqlx::mysql::MySqlTypeInfo;
 use sqlx::mysql::MySqlValueRef;
-use utoipa::PartialSchema;
-use utoipa::ToSchema;
-use utoipa::openapi::RefOr;
-use utoipa::openapi::schema::ArrayBuilder;
-use utoipa::openapi::schema::Schema;
 
 use crate::clp_config::package::config::CLP_METADATA_TABLE_PREFIX;
 
@@ -195,17 +190,6 @@ impl TryFrom<Vec<DatasetName>> for NonEmptyDatasetNames {
         })
     }
 }
-
-impl PartialSchema for NonEmptyDatasetNames {
-    fn schema() -> RefOr<Schema> {
-        ArrayBuilder::new()
-            .items(String::schema())
-            .min_items(Some(1))
-            .into()
-    }
-}
-
-impl ToSchema for NonEmptyDatasetNames {}
 
 impl From<NonEmptyDatasetNames> for Vec<DatasetName> {
     fn from(dataset_names: NonEmptyDatasetNames) -> Self {
