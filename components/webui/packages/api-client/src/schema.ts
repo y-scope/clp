@@ -264,7 +264,10 @@ export interface components {
     schemas: {
         /** @description An aggregation over a query job's results. */
         Aggregation: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The width of each time bucket, in milliseconds.
+             */
             bucket_size_millisecs: number;
             /** @enum {string} */
             type: "count_by_time";
@@ -492,20 +495,19 @@ export interface components {
              */
             num_messages: number;
         };
-        NonEmptyDatasetNames: string[];
         /** @description Defines the request configuration for submitting a search query. */
         QueryConfig: {
-            /** @description Where to buffer the search results. */
+            /** @description Where to store the query results. */
             output: components["schemas"]["QueryOutputConfig"];
-            /** @description The search to run. */
+            /** @description The query to run. */
             query: components["schemas"]["SearchQuery"];
         };
-        /** @description Defines where a submitted search query's results are buffered. */
+        /** @description Defines where a submitted query job's results are buffered. */
         QueryOutputConfig: {
             aggregation?: null | components["schemas"]["Aggregation"];
             /**
              * Format: int32
-             * @description The maximum number of results to return. Omit for no limit.
+             * @description The maximum number of results to keep. Omit for no limit.
              */
             max_num_results?: number | null;
             /** @enum {string} */
@@ -534,7 +536,7 @@ export interface components {
         /** @description The search a query job runs. */
         SearchQuery: {
             /** @description The datasets to search within. */
-            datasets: components["schemas"]["NonEmptyDatasetNames"];
+            datasets: string[];
             /** @description Whether the string match should be case-insensitive. */
             ignore_case?: boolean;
             /** @description The search query as a KQL string. */
