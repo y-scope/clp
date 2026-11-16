@@ -171,6 +171,19 @@ fn build_query_task_graph(
             ..ExecutionPolicy::default()
         }),
     });
+    if archives_to_search.is_empty()
+        && let Some(commit_task) = commit_task
+    {
+        let mut graph = TaskGraph::new(None, None)?;
+        graph.insert_task(TaskDescriptor {
+            tdl_context: commit_task.tdl_context,
+            execution_policy: commit_task.execution_policy,
+            inputs: vec![],
+            outputs: vec![],
+            input_sources: None,
+        })?;
+        return Ok((graph, TaskGraphInputBuilder::new().build()));
+    }
     let mut graph = TaskGraph::new(commit_task, None)?;
 
     let mut inputs = TaskGraphInputBuilder::new();
@@ -228,8 +241,10 @@ mod tests {
     use clp_rust_utils::types::SessionToken;
     use clp_rust_utils::types::non_empty_string::ExpectedNonEmpty;
     use non_empty_string::NonEmptyString;
+    use spider_core::task::ExecutionPolicy;
 
     use super::build_query_task_graph;
+    use crate::query_job_submitter::ArchiveMetadata;
 
     #[test]
     fn commit_task_is_attached_only_for_count_by_time_output() -> anyhow::Result<()> {
@@ -266,7 +281,20 @@ mod tests {
                 false,
             ),
         ] {
-            let (graph, _) = build_query_task_graph(42, &query, &output, vec![])?;
+            let (graph, _) = build_query_task_graph(
+                42,
+                &query,
+                &output,
+                vec![(
+                    ArchiveMetadata {
+                        id: "00000000-0000-0000-0000-000000000001".parse()?,
+                        dataset: DatasetName::default(),
+                        uncompressed_size: 1,
+                        end_timestamp: 0,
+                    },
+                    ExecutionPolicy::default(),
+                )],
+            )?;
             let commit = graph.get_commit_task_descriptor();
             assert_eq!(commit.is_some(), has_commit);
             if let Some(commit) = commit {
@@ -280,6 +308,34 @@ mod tests {
                 assert_eq!(policy.max_num_instances, 1);
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    fn empty_timeline_uses_a_regular_commit_task() -> anyhow::Result<()> {
+        let query = SearchQuery {
+            datasets: NonEmptyDatasetNames::try_from(vec![DatasetName::default()])?,
+            query_string: NonEmptyString::from_static_str("*"),
+            time_range: TimeRange::default(),
+            ignore_case: false,
+        };
+        let output = QueryOutput::ResultsCache(ResultsCacheOutput {
+            max_num_results: None,
+            aggregation: Some(Aggregation::CountByTime {
+                bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
+            }),
+        });
+        let (graph, inputs) = build_query_task_graph(42, &query, &output, vec![])?;
+        assert_eq!(graph.get_num_tasks(), 1);
+        assert_eq!(graph.get_commit_task_descriptor(), None);
+        assert_eq!(inputs.get_positional_inputs(), &[]);
+        let commit = graph.get_task(0).expect("the graph contains one task");
+        assert_eq!(commit.get_tdl_context().package, "clp");
+        assert_eq!(commit.get_tdl_context().task_func, "query::commit_timeline");
+        assert_eq!(commit.get_input_dep_indices(), &Vec::<usize>::new());
+        assert_eq!(commit.get_output_dep_indices(), &Vec::<usize>::new());
+        assert_eq!(commit.get_execution_policy().max_num_retry, 3);
+        assert_eq!(commit.get_execution_policy().max_num_instances, 1);
         Ok(())
     }
 }

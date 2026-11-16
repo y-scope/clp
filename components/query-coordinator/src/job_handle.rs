@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::DatasetName;
+use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobId;
@@ -75,9 +76,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::UnsupportedJobConfig`] if:
-    ///   * The job carries an aggregation.
-    ///   * The job writes its results to files.
+    /// * [`Error::UnsupportedJobConfig`] if the job writes its results to files.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -87,18 +86,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
         job_creation_timestamp_millisecs: i64,
     ) -> Result<Self, Error> {
         match &query_job_config.output {
-            QueryOutput::ResultsCache(ResultsCacheOutput {
-                aggregation: None, ..
-            })
-            | QueryOutput::Network(_) => {}
-            QueryOutput::ResultsCache(ResultsCacheOutput {
-                aggregation: Some(_),
-                ..
-            }) => {
-                return Err(Error::UnsupportedJobConfig(
-                    "aggregation jobs are not supported".to_owned(),
-                ));
-            }
+            QueryOutput::ResultsCache(_) | QueryOutput::Network(_) => {}
             QueryOutput::File {} => {
                 return Err(Error::UnsupportedJobConfig(
                     "writing query results to files is not supported".to_owned(),
@@ -127,7 +115,8 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     /// was assigned, and then waits for the job to reach a terminal state. On failure, it attempts
     /// to persist a terminal status for the query job before the error is returned.
     ///
-    /// If no archives are selected, it marks the query job as succeeded without submitting it.
+    /// If no archives are selected and no timeline is requested, it marks the query job as
+    /// succeeded without submitting it.
     ///
     /// # Errors
     ///
@@ -142,7 +131,15 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
         let result = async {
             let archives_to_search = self.plan().await?;
-            if archives_to_search.is_empty() {
+            if archives_to_search.is_empty()
+                && !matches!(
+                    self.query_job_config.output,
+                    QueryOutput::ResultsCache(ResultsCacheOutput {
+                        aggregation: Some(Aggregation::CountByTime { .. }),
+                        ..
+                    })
+                )
+            {
                 return self.terminate(QueryJobOutcome::Succeeded).await;
             }
 
@@ -820,7 +817,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_job_handle_rejects_aggregation_and_file_outputs() {
+    async fn query_job_handle_accepts_results_cache_and_network_outputs() {
         let context = Arc::new(context(None));
         let results_cache_output = ResultsCacheOutput {
             max_num_results: NonZeroU32::new(7),
@@ -849,30 +846,24 @@ mod tests {
         }))
         .expect("a network output should be supported");
 
-        for (output, expected_message) in [
-            (
-                QueryOutput::ResultsCache(ResultsCacheOutput {
-                    aggregation: Some(Aggregation::CountByTime {
-                        bucket_size_millisecs: PositiveI64::new(60_000)
-                            .expect("60,000 is positive"),
-                    }),
-                    ..results_cache_output
-                }),
-                "aggregation",
+        new_job_handle(QueryOutput::ResultsCache(ResultsCacheOutput {
+            aggregation: Some(Aggregation::CountByTime {
+                bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
+            }),
+            ..results_cache_output
+        }))
+        .expect("a results cache output with count-by-time aggregation should be supported");
+
+        let Err(error) = new_job_handle(QueryOutput::File {}) else {
+            panic!("file output should be unsupported");
+        };
+        assert!(
+            matches!(
+                &error,
+                Error::UnsupportedJobConfig(message) if message.contains("files")
             ),
-            (QueryOutput::File {}, "files"),
-        ] {
-            let Err(error) = new_job_handle(output.clone()) else {
-                panic!("output should be unsupported: {output:?}");
-            };
-            assert!(
-                matches!(
-                    &error,
-                    Error::UnsupportedJobConfig(message) if message.contains(expected_message)
-                ),
-                "unexpected error for {output:?}: {error:?}"
-            );
-        }
+            "unexpected error: {error:?}"
+        );
     }
 
     #[tokio::test]
