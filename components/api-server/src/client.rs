@@ -355,7 +355,7 @@ impl Client {
         }
     }
 
-    /// Asynchronously fetches committed timeline buckets for a query job.
+    /// Asynchronously fetches the committed timeline buckets of a completed query job.
     ///
     /// # Returns
     ///
@@ -365,11 +365,11 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidInput`] if the query has no timeline configuration.
-    /// * [`ClientError::TimelineNotCommitted`] if the commit marker is absent.
-    /// * [`ClientError::Mongo`] if reading the commit marker fails.
+    /// * [`ClientError::InvalidInput`] if the query job has no timeline configuration.
+    /// * [`ClientError::TimelineNotCommitted`] if the timeline's commit marker is absent.
     /// * Forwards [`Self::get_job_config`]'s return values on failure.
     /// * Forwards [`Self::wait_for_query_success`]'s return values on failure.
+    /// * Forwards [`mongodb::Collection::find_one`]'s return values on failure.
     ///
     /// When consumed, the stream yields [`ClientError::Mongo`] if querying or reading buckets
     /// fails, and [`ClientError::Timeline`] if [`Bucket::try_from_committed_document`] fails.
