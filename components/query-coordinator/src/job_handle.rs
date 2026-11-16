@@ -807,7 +807,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_job_handle_accepts_results_cache_and_network_outputs() {
+    async fn query_job_handle_rejects_only_file_output() {
         let context = Arc::new(context(None));
         let results_cache_output = ResultsCacheOutput {
             max_num_results: NonZeroU32::new(7),
