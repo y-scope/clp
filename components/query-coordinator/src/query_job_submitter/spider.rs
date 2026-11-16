@@ -121,6 +121,9 @@ impl QueryJobSubmitter for SpiderClient {
 
 /// Builds archive-search tasks and a final publication task for timeline queries.
 ///
+/// For timeline queries with no archives, the graph contains a single regular
+/// `query::commit_timeline` task that publishes an empty timeline.
+///
 /// Spider may accept cancellation while the commit task runs. Published timeline data must remain
 /// hidden unless the query job reaches its successful terminal state.
 ///
