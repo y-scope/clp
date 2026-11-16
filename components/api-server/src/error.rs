@@ -27,6 +27,12 @@ pub enum ClientError {
     #[error("Malformed data")]
     MalformedData,
 
+    #[error("timeline of query job {0} has not been committed")]
+    TimelineNotCommitted(u64),
+
+    #[error("`clp_rust_utils::timeline::Error`: {0}")]
+    Timeline(clp_rust_utils::timeline::Error),
+
     #[error("background task failed: {0}")]
     TaskJoin(#[from] tokio::task::JoinError),
 
@@ -127,7 +133,7 @@ impl From<clp_rust_utils::timeline::Error> for ClientError {
     fn from(value: clp_rust_utils::timeline::Error) -> Self {
         match value {
             clp_rust_utils::timeline::Error::Mongo(error) => Self::Mongo(error),
-            _ => Self::MalformedData,
+            error => Self::Timeline(error),
         }
     }
 }

@@ -384,14 +384,14 @@ impl Client {
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidInput`] if the query has no timeline configuration.
-    /// * [`ClientError::MalformedData`] if the query ID is out of range or the commit marker is
-    ///   absent.
+    /// * [`ClientError::MalformedData`] if the query ID is out of range.
+    /// * [`ClientError::TimelineNotCommitted`] if the commit marker is absent.
     /// * [`ClientError::Mongo`] if reading the commit marker fails.
     /// * Forwards [`Self::get_job_config`]'s return values on failure.
     /// * Forwards [`Self::wait_for_query_success`]'s return values on failure.
     ///
     /// When consumed, the stream yields [`ClientError::Mongo`] if querying or reading buckets
-    /// fails, [`ClientError::MalformedData`] if [`Bucket::try_from_committed_document`] fails,
+    /// fails, [`ClientError::Timeline`] if [`Bucket::try_from_committed_document`] fails,
     /// and forwards [`TimelineBucket::try_from`]'s return values on failure.
     pub async fn fetch_timeline(
         &self,
@@ -426,7 +426,7 @@ impl Client {
         collection
             .find_one(doc! { "_id": timeline::COMMIT_MARKER_ID })
             .await?
-            .ok_or(ClientError::MalformedData)?;
+            .ok_or(ClientError::TimelineNotCommitted(query_job_id))?;
         Ok(try_stream! {
             let mut num_buckets = 0_u64;
             let mut cursor = collection
