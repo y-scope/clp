@@ -15,6 +15,7 @@ use clp_rust_utils::job_config::Cancellability;
 pub use clp_rust_utils::job_config::CompressionJobStatus;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobConfig;
+use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryOutput;
 use clp_rust_utils::job_config::ResultsCacheOutput;
@@ -361,7 +362,6 @@ impl Client {
     /// Returns an error if:
     ///
     /// * [`ClientError::InvalidInput`] if the query has no timeline configuration.
-    /// * [`ClientError::MalformedData`] if the query ID is out of range.
     /// * [`ClientError::TimelineNotCommitted`] if the commit marker is absent.
     /// * [`ClientError::Mongo`] if reading the commit marker fails.
     /// * Forwards [`Self::get_job_config`]'s return values on failure.
@@ -369,11 +369,18 @@ impl Client {
     ///
     /// When consumed, the stream yields [`ClientError::Mongo`] if querying or reading buckets
     /// fails, and [`ClientError::Timeline`] if [`Bucket::try_from_committed_document`] fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an existing query job's ID does not fit in [`QueryJobId`].
     pub async fn fetch_timeline(
         &self,
         query_job_id: u64,
     ) -> Result<impl Stream<Item = Result<Bucket, ClientError>> + use<>, ClientError> {
         let output = self.get_job_config(query_job_id).await?.output;
+        let timeline_query_job_id: QueryJobId = query_job_id
+            .try_into()
+            .expect("an existing query job's ID fits in `QueryJobId`");
         if !matches!(
             output,
             QueryOutput::ResultsCache(ResultsCacheOutput {
@@ -393,11 +400,7 @@ impl Client {
                 .selection_criteria(SelectionCriteria::ReadPreference(ReadPreference::Primary))
                 .build(),
         );
-        let timeline_name = timeline::collection_name(
-            query_job_id
-                .try_into()
-                .map_err(|_| ClientError::MalformedData)?,
-        );
+        let timeline_name = timeline::collection_name(timeline_query_job_id);
         let collection = database.collection::<Document>(&timeline_name);
         collection
             .find_one(doc! { "_id": timeline::COMMIT_MARKER_ID })
