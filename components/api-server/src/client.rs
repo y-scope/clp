@@ -427,7 +427,7 @@ impl Client {
             .find_one(doc! { "_id": timeline::COMMIT_MARKER_ID })
             .await?
             .ok_or(ClientError::TimelineNotCommitted(query_job_id))?;
-        Ok(try_stream! {
+        let buckets = try_stream! {
             let mut num_buckets = 0_u64;
             let mut cursor = collection
                 .find(doc! { "_id": { "$type": "number" } })
@@ -446,7 +446,14 @@ impl Client {
                 elapsed_micros = started.elapsed().as_micros(),
                 "Finished reading timeline results."
             );
-        })
+        };
+        Ok(buckets.inspect_err(move |error: &ClientError| {
+            tracing::error!(
+                query_job_id,
+                error = % error,
+                "An error occurred when streaming timeline results."
+            );
+        }))
     }
 
     /// Submits a cancellation request for a query job.

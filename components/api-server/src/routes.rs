@@ -328,12 +328,7 @@ async fn query_timeline(
         .inspect_err(|error| {
             tracing::error!(query_job_id, error = ? error, "Failed to fetch timeline.");
         })?;
-    let events = buckets.map(move |bucket| {
-        let bucket = bucket.inspect_err(|error| {
-            tracing::error!(query_job_id, error = ? error, "Failed to stream timeline.");
-        })?;
-        Ok(Event::default().json_data(bucket)?)
-    });
+    let events = buckets.map(|bucket| Ok(Event::default().json_data(bucket?)?));
     Ok(Sse::new(events).keep_alive(KeepAlive::default()))
 }
 
