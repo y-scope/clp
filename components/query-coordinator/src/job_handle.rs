@@ -75,9 +75,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
     ///
     /// Returns an error if:
     ///
-    /// * [`Error::UnsupportedJobConfig`] if:
-    ///   * The job carries an aggregation.
-    ///   * The job writes its results to files.
+    /// * [`Error::UnsupportedJobConfig`] if the job carries an aggregation.
     pub fn new(
         context: Arc<QueryJobHandleContext>,
         query_job_id: QueryJobId,
@@ -90,18 +88,14 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
             QueryOutput::ResultsCache(ResultsCacheOutput {
                 aggregation: None, ..
             })
-            | QueryOutput::Network(_) => {}
+            | QueryOutput::Network(_)
+            | QueryOutput::File {} => {}
             QueryOutput::ResultsCache(ResultsCacheOutput {
                 aggregation: Some(_),
                 ..
             }) => {
                 return Err(Error::UnsupportedJobConfig(
                     "aggregation jobs are not supported".to_owned(),
-                ));
-            }
-            QueryOutput::File {} => {
-                return Err(Error::UnsupportedJobConfig(
-                    "writing query results to files is not supported".to_owned(),
                 ));
             }
         }
@@ -820,7 +814,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_job_handle_rejects_aggregation_and_file_outputs() {
+    async fn query_job_handle_rejects_only_aggregation_outputs() {
         let context = Arc::new(context(None));
         let results_cache_output = ResultsCacheOutput {
             max_num_results: NonZeroU32::new(7),
@@ -840,39 +834,35 @@ mod tests {
             )
         };
 
-        new_job_handle(QueryOutput::ResultsCache(results_cache_output.clone()))
-            .expect("a results cache output without aggregation should be supported");
-        new_job_handle(QueryOutput::Network(NetworkOutput {
-            host: NonEmptyString::from_static_str("10.0.0.5"),
-            port: NonZeroU16::new(3003).expect("3003 is nonzero"),
-            session_token: SessionToken::from(uuid::Uuid::nil()),
-        }))
-        .expect("a network output should be supported");
-
-        for (output, expected_message) in [
-            (
-                QueryOutput::ResultsCache(ResultsCacheOutput {
-                    aggregation: Some(Aggregation::CountByTime {
-                        bucket_size_millisecs: PositiveI64::new(60_000)
-                            .expect("60,000 is positive"),
-                    }),
-                    ..results_cache_output
-                }),
-                "aggregation",
-            ),
-            (QueryOutput::File {}, "files"),
+        for output in [
+            QueryOutput::ResultsCache(results_cache_output.clone()),
+            QueryOutput::Network(NetworkOutput {
+                host: NonEmptyString::from_static_str("10.0.0.5"),
+                port: NonZeroU16::new(3003).expect("3003 is nonzero"),
+                session_token: SessionToken::from(uuid::Uuid::nil()),
+            }),
+            QueryOutput::File {},
         ] {
-            let Err(error) = new_job_handle(output.clone()) else {
-                panic!("output should be unsupported: {output:?}");
-            };
-            assert!(
-                matches!(
-                    &error,
-                    Error::UnsupportedJobConfig(message) if message.contains(expected_message)
-                ),
-                "unexpected error for {output:?}: {error:?}"
-            );
+            if let Err(error) = new_job_handle(output.clone()) {
+                panic!("output should be supported: {output:?}: {error:?}");
+            }
         }
+
+        let error = new_job_handle(QueryOutput::ResultsCache(ResultsCacheOutput {
+            aggregation: Some(Aggregation::CountByTime {
+                bucket_size_millisecs: PositiveI64::new(60_000).expect("60,000 is positive"),
+            }),
+            ..results_cache_output
+        }))
+        .err()
+        .expect("an aggregation output should be unsupported");
+        assert!(
+            matches!(
+                &error,
+                Error::UnsupportedJobConfig(message) if message.contains("aggregation")
+            ),
+            "unexpected error: {error:?}"
+        );
     }
 
     #[tokio::test]
