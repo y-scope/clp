@@ -164,6 +164,10 @@ enum ArchiveDescriptor {
 /// a unique name and then published to its destination.
 ///
 /// The staged file is removed when the [`ResultsFile`] is dropped.
+///
+/// # Type Parameters
+///
+/// * `'config` - The lifetime of the executor config that the results file borrows.
 struct ResultsFile<'config> {
     staging_path: PathBuf,
     destination: ResultsFileDestination<'config>,
@@ -226,10 +230,9 @@ impl<'config> ResultsFile<'config> {
     }
 
     /// Publishes the staged results file to its destination once clp-s has written it, unless
-    /// clp-s didn't create it.
+    /// clp-s didn't create it or left it empty.
     ///
-    /// The file is moved to a filesystem destination, or uploaded to an S3 destination unless it's
-    /// empty.
+    /// The file is moved to a filesystem destination, or uploaded to an S3 destination.
     ///
     /// # Errors
     ///
@@ -240,9 +243,9 @@ impl<'config> ResultsFile<'config> {
     /// * Forwards [`std::fs::rename`]'s return values on failure.
     /// * Forwards [`upload_file_to_s3`]'s return values on failure.
     fn publish(self, runtime: &tokio::runtime::Handle) -> anyhow::Result<()> {
-        let metadata = match std::fs::metadata(&self.staging_path) {
-            Ok(metadata) => metadata,
-            Err(e) if std::io::ErrorKind::NotFound == e.kind() => return Ok(()),
+        let is_missing_or_empty = match std::fs::metadata(&self.staging_path) {
+            Ok(metadata) => 0 == metadata.len(),
+            Err(e) if std::io::ErrorKind::NotFound == e.kind() => true,
             Err(e) => {
                 return Err(e).with_context(|| {
                     format!(
@@ -252,6 +255,9 @@ impl<'config> ResultsFile<'config> {
                 });
             }
         };
+        if is_missing_or_empty {
+            return Ok(());
+        }
         match &self.destination {
             ResultsFileDestination::Fs { path } => std::fs::rename(&self.staging_path, path)
                 .with_context(|| {
@@ -265,13 +271,6 @@ impl<'config> ResultsFile<'config> {
                 s3_config,
                 object_key,
             } => {
-                if 0 == metadata.len() {
-                    tracing::info!(
-                        object_key = % object_key,
-                        "Skipping the upload of an empty query results file."
-                    );
-                    return Ok(());
-                }
                 let client = build_s3_client(runtime, s3_config);
                 runtime.block_on(upload_file_to_s3(
                     &client,
@@ -301,6 +300,10 @@ impl Drop for ResultsFile<'_> {
 }
 
 /// Where a [`ResultsFile`] is published.
+///
+/// # Type Parameters
+///
+/// * `'config` - The lifetime of the S3 config that the destination borrows.
 enum ResultsFileDestination<'config> {
     /// A file in the query job's directory under the stream output directory.
     Fs { path: PathBuf },
@@ -780,6 +783,10 @@ mod tests {
         }
     }
 
+    /// # Type Parameters
+    ///
+    /// * `'config` - The lifetime of the executor config that the results file borrows.
+    ///
     /// # Returns
     ///
     /// A [`ResultsFile`] for query job 42 and [`ARCHIVE_ID`], created under `clp_home`.
@@ -1131,21 +1138,22 @@ mod tests {
     }
 
     #[test]
-    fn publish_succeeds_without_creating_a_destination_file_if_no_fs_results_file_is_staged()
+    fn publish_creates_no_fs_destination_file_if_the_staged_results_file_is_missing_or_empty()
     -> anyhow::Result<()> {
         let clp_home = tempfile::tempdir()?;
         let config = SpiderTaskExecutorConfig::default();
         let runtime = tokio::runtime::Runtime::new().expect("failed to create Tokio runtime");
+        let path = config
+            .abs_stream_output_staging(clp_home.path())
+            .join(format!("42/{ARCHIVE_ID}"));
+
+        create_results_file(clp_home.path(), &config).publish(runtime.handle())?;
+        assert!(!path.exists());
+
         let results_file = create_results_file(clp_home.path(), &config);
-
+        std::fs::write(&results_file.staging_path, b"")?;
         results_file.publish(runtime.handle())?;
-
-        assert!(
-            !config
-                .abs_stream_output_staging(clp_home.path())
-                .join(format!("42/{ARCHIVE_ID}"))
-                .exists()
-        );
+        assert!(!path.exists());
         Ok(())
     }
 
