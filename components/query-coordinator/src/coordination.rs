@@ -240,8 +240,6 @@ impl Coordinator {
     /// Spawns a detached handle to drive each query job that a previous coordinator instance had
     /// already submitted to Spider.
     ///
-    /// A job whose handle cannot be constructed is marked [`QueryJobStatus::Failed`] and skipped.
-    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -264,29 +262,14 @@ impl Coordinator {
                 status = ? status,
                 "Recovering a previously submitted job."
             );
-            let job_handle = match QueryJobHandle::new(
+            let job_handle = QueryJobHandle::new(
                 self.job_handle_context.clone(),
                 job_id,
                 self.spider_client.clone(),
                 self.resource_group_id,
                 query_job_config,
                 job_creation_timestamp_millisecs,
-            ) {
-                Ok(job_handle) => job_handle,
-                Err(e) => {
-                    tracing::error!(
-                        error = % e,
-                        job_id = % job_id,
-                        "Failed to create the query job handle for recovery. Skipping."
-                    );
-                    self.mark_job_failed(
-                        job_id,
-                        &format!("Failed to create the query job handle for recovery: {e}"),
-                    )
-                    .await;
-                    continue;
-                }
-            };
+            );
             tokio::spawn(async move {
                 // `QueryJobHandle::recover` already logs and persists its own failures.
                 let _ = job_handle.recover(spider_job_id).await;
@@ -323,8 +306,7 @@ impl Coordinator {
     /// Fetches pending query jobs and spawns a detached handle to drive each one as permitted by
     /// the job-handler semaphore.
     ///
-    /// A job whose config cannot be deserialized is marked [`QueryJobStatus::Failed`] and skipped;
-    /// a job whose handle cannot be constructed is marked failed and skipped as well.
+    /// A job whose config cannot be deserialized is marked [`QueryJobStatus::Failed`] and skipped.
     ///
     /// # Returns
     ///
@@ -367,29 +349,14 @@ impl Coordinator {
                     }
                 };
             tracing::info!(job_id = % job_id, "Scheduling new job.");
-            let job_handle = match QueryJobHandle::new(
+            let job_handle = QueryJobHandle::new(
                 self.job_handle_context.clone(),
                 job_id,
                 self.spider_client.clone(),
                 self.resource_group_id,
                 query_job_config,
                 job_row.job_creation_timestamp_millisecs,
-            ) {
-                Ok(job_handle) => job_handle,
-                Err(e) => {
-                    tracing::error!(
-                        error = % e,
-                        job_id = % job_id,
-                        "Failed to create the query job handle. Skipping."
-                    );
-                    self.mark_job_failed(
-                        job_id,
-                        &format!("Failed to create the query job handle: {e}"),
-                    )
-                    .await;
-                    continue;
-                }
-            };
+            );
 
             let permit = self
                 .job_handler_sem
