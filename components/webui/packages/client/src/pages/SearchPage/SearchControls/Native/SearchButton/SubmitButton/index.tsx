@@ -1,7 +1,6 @@
 import {useCallback} from "react";
 
 import {SearchOutlined} from "@ant-design/icons";
-import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     Button,
     message,
@@ -9,7 +8,6 @@ import {
 } from "antd";
 import {Dayjs} from "dayjs";
 
-import {SETTINGS_STORAGE_ENGINE} from "../../../../../../config";
 import {computeTimelineConfig} from "../../../../SearchResults/SearchResultsTimeline/utils";
 import useSearchStore from "../../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
@@ -65,17 +63,12 @@ const SubmitButton = () => {
         const {updateTimelineConfig} = useSearchStore.getState();
         updateTimelineConfig(newTimelineConfig);
 
-        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            if (0 < selectedDatasets.length) {
-                updateQueriedDatasets(selectedDatasets);
-            } else {
-                console.error(
-                    "Cannot submit a clp-s query without a dataset selection.",
-                );
+        if (0 === selectedDatasets.length) {
+            console.error("Cannot submit a query without a dataset selection.");
 
-                return;
-            }
+            return;
         }
+        updateQueriedDatasets(selectedDatasets);
 
         handleQuerySubmit({
             datasets: selectedDatasets,
@@ -109,13 +102,11 @@ const SubmitButton = () => {
 
     const isQueryStringEmpty = "" === queryString;
 
-    // Submit button must be disabled if there are no datasets since clp-s requires dataset option
-    // for queries.
-    const isNoDatasetsAndClpS = 0 === selectedDatasets.length &&
-        CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE;
+    // Submit button must be disabled if there are no datasets since queries require at least one.
+    const isNoDatasets = 0 === selectedDatasets.length;
 
     let tooltipTitle = "";
-    if (isNoDatasetsAndClpS) {
+    if (isNoDatasets) {
         tooltipTitle = "Some data must be ingested to enable search";
     } else if (isQueryStringEmpty) {
         tooltipTitle = "Enter query to search";
@@ -131,7 +122,7 @@ const SubmitButton = () => {
                 size={"middle"}
                 type={"primary"}
                 disabled={isQueryStringEmpty ||
-                    isNoDatasetsAndClpS ||
+                    isNoDatasets ||
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
                 onClick={() => {
                     handleSubmitButtonClick().catch((err: unknown) => {
