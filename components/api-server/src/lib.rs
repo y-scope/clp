@@ -5,7 +5,7 @@ pub mod routes;
     not(test),
     expect(
         dead_code,
-        reason = "the streaming query endpoint that uses the encoding comes in a later change"
+        reason = "the streaming query endpoint that uses the module comes in a later change"
     )
 )]
 mod sse;
