@@ -633,10 +633,17 @@ export interface components {
              */
             end_timestamp: number;
         };
+        /** @description A validated timeline bucket with an integral timestamp and nonnegative count. */
         TimelineBucket: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The number of matching events in the bucket.
+             */
             count: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The bucket's start timestamp in epoch milliseconds.
+             */
             timestamp: number;
         };
     };

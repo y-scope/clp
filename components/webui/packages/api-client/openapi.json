@@ -1402,6 +1402,7 @@
       },
       "TimelineBucket": {
         "type": "object",
+        "description": "A validated timeline bucket with an integral timestamp and nonnegative count.",
         "required": [
           "timestamp",
           "count"
@@ -1410,14 +1411,13 @@
           "count": {
             "type": "integer",
             "format": "int64",
-            "maximum": 9007199254740991,
+            "description": "The number of matching events in the bucket.",
             "minimum": 0
           },
           "timestamp": {
             "type": "integer",
             "format": "int64",
-            "maximum": 9007199254740991,
-            "minimum": -9007199254740991
+            "description": "The bucket's start timestamp in epoch milliseconds."
           }
         }
       }

@@ -13,6 +13,7 @@ use axum::response::sse::KeepAlive;
 use axum::routing::get;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::logs_input::LogsInputError;
+use clp_rust_utils::timeline::Bucket;
 use futures::Stream;
 use futures::StreamExt;
 use serde::Deserialize;
@@ -31,7 +32,6 @@ use crate::client::ClientError;
 use crate::client::CompressionUsage;
 use crate::client::CompressionUsageParams;
 use crate::client::QueryConfig;
-use crate::client::TimelineBucket;
 use crate::client::ValidatedCompressionUsageParams;
 use crate::webui_client::WebuiClient;
 
@@ -307,7 +307,7 @@ async fn query_results(
     responses(
         (
             status = OK,
-            body = TimelineBucket,
+            body = Bucket,
             content_type = "text/event-stream",
             description = "Each event contains one timeline bucket in JSON format.",
             example = r#"data: {"timestamp": 1633036800000, "count": 42}\n"#

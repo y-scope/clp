@@ -249,29 +249,6 @@ impl From<QueryOutputConfig> for QueryOutput {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Serialize, ToSchema)]
-pub struct TimelineBucket {
-    #[schema(minimum = -9_007_199_254_740_991_i64, maximum = 9_007_199_254_740_991_i64)]
-    pub timestamp: i64,
-    #[schema(minimum = 0, maximum = 9_007_199_254_740_991_i64)]
-    pub count: i64,
-}
-
-impl TryFrom<Bucket> for TimelineBucket {
-    type Error = ClientError;
-
-    fn try_from(bucket: Bucket) -> Result<Self, Self::Error> {
-        const MAX_SAFE_INTEGER: i64 = (1_i64 << 53) - 1;
-        let timestamp = bucket.timestamp();
-        let count = bucket.count();
-        if !(-MAX_SAFE_INTEGER..=MAX_SAFE_INTEGER).contains(&timestamp) || count > MAX_SAFE_INTEGER
-        {
-            return Err(ClientError::MalformedData);
-        }
-        Ok(Self { timestamp, count })
-    }
-}
-
 #[derive(Clone)]
 pub struct Client {
     #[allow(clippy::struct_field_names)]
@@ -377,7 +354,7 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A stream of [`TimelineBucket`] values in ascending timestamp order on success.
+    /// A stream of [`Bucket`] values in ascending timestamp order on success.
     ///
     /// # Errors
     ///
@@ -391,12 +368,11 @@ impl Client {
     /// * Forwards [`Self::wait_for_query_success`]'s return values on failure.
     ///
     /// When consumed, the stream yields [`ClientError::Mongo`] if querying or reading buckets
-    /// fails, [`ClientError::Timeline`] if [`Bucket::try_from_committed_document`] fails,
-    /// and forwards [`TimelineBucket::try_from`]'s return values on failure.
+    /// fails, and [`ClientError::Timeline`] if [`Bucket::try_from_committed_document`] fails.
     pub async fn fetch_timeline(
         &self,
         query_job_id: u64,
-    ) -> Result<impl Stream<Item = Result<TimelineBucket, ClientError>> + use<>, ClientError> {
+    ) -> Result<impl Stream<Item = Result<Bucket, ClientError>> + use<>, ClientError> {
         let output = self.get_job_config(query_job_id).await?.output;
         if !matches!(
             output,
@@ -437,7 +413,7 @@ impl Client {
             while let Some(document) = cursor.try_next().await? {
                 let bucket = Bucket::try_from_committed_document(&document)
                     .map_err(ClientError::from)?;
-                yield TimelineBucket::try_from(bucket)?;
+                yield bucket;
                 num_buckets += 1;
             }
             tracing::debug!(

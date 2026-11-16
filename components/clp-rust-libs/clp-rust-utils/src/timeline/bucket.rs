@@ -2,13 +2,20 @@
 
 use mongodb::bson::Bson;
 use mongodb::bson::Document;
+use serde::Serialize;
+use utoipa::ToSchema;
 
 use super::Error;
 
 /// A validated timeline bucket with an integral timestamp and nonnegative count.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, ToSchema)]
+#[schema(as = TimelineBucket)]
 pub struct Bucket {
+    /// The bucket's start timestamp in epoch milliseconds.
     timestamp: i64,
+
+    /// The number of matching events in the bucket.
+    #[schema(minimum = 0)]
     count: i64,
 }
 
