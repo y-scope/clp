@@ -1141,6 +1141,7 @@ mod tests {
             .abs_stream_output_staging(clp_home.path())
             .join(format!("42/{ARCHIVE_ID}"));
         assert_eq!(std::fs::read(path)?, b"results");
+        assert!(!staging_path.exists());
         Ok(())
     }
 
@@ -1154,13 +1155,18 @@ mod tests {
             .abs_stream_output_staging(clp_home.path())
             .join(format!("42/{ARCHIVE_ID}"));
 
-        create_results_file(clp_home.path(), &config).publish(runtime.handle())?;
-        assert!(!path.exists());
-
         let results_file = create_results_file(clp_home.path(), &config);
-        std::fs::write(&results_file.staging_path, b"")?;
+        let staging_path = results_file.staging_path.clone();
         results_file.publish(runtime.handle())?;
         assert!(!path.exists());
+        assert!(!staging_path.exists());
+
+        let results_file = create_results_file(clp_home.path(), &config);
+        let staging_path = results_file.staging_path.clone();
+        std::fs::write(&staging_path, b"")?;
+        results_file.publish(runtime.handle())?;
+        assert!(!path.exists());
+        assert!(!staging_path.exists());
         Ok(())
     }
 
@@ -1175,6 +1181,7 @@ mod tests {
 
         results_file.publish(runtime.handle())?;
 
+        assert!(!staging_path.exists());
         Ok(())
     }
 
@@ -1216,6 +1223,7 @@ mod tests {
             error.to_string().contains("failed to upload"),
             "unexpected error: {error}"
         );
+        assert!(!staging_path.exists());
         Ok(())
     }
 
