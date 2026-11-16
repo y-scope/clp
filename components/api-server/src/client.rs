@@ -373,26 +373,37 @@ impl Client {
         }
     }
 
-    /// Asynchronously fetches committed timeline buckets for a query job.
+    /// Asynchronously fetches the committed timeline buckets of a completed query job.
     ///
     /// # Returns
     ///
-    /// A stream of [`TimelineBucket`] values in ascending timestamp order on success.
+    /// A stream of the job's timeline buckets in ascending timestamp order on success. Each item in
+    /// the stream is a [`Result`] that:
+    ///
+    /// ## Returns
+    ///
+    /// The next [`Bucket`] on success.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::Mongo`] if querying or reading the next bucket fails.
+    /// * Forwards [`Bucket::try_from_committed_document`]'s return values on failure.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::InvalidInput`] if the query has no timeline configuration.
-    /// * [`ClientError::MalformedData`] if the query ID is out of range or the commit marker is
-    ///   absent.
-    /// * [`ClientError::Mongo`] if reading the commit marker fails.
+    /// * [`ClientError::InvalidInput`] if the query job has no timeline configuration.
+    /// * [`ClientError::TimelineNotCommitted`] if the timeline's commit marker is absent.
     /// * Forwards [`Self::get_job_config`]'s return values on failure.
     /// * Forwards [`Self::wait_for_query_success`]'s return values on failure.
+    /// * Forwards [`mongodb::Collection::find_one`]'s return values on failure.
     ///
-    /// When consumed, the stream yields [`ClientError::Mongo`] if querying or reading buckets
-    /// fails, [`ClientError::MalformedData`] if [`Bucket::try_from_committed_document`] fails,
-    /// and forwards [`TimelineBucket::try_from`]'s return values on failure.
+    /// # Panics
+    ///
+    /// Panics if an existing query job's ID doesn't fit in [`QueryJobId`].
     pub async fn fetch_timeline(
         &self,
         query_job_id: u64,
