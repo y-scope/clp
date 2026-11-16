@@ -311,8 +311,8 @@ impl Client {
     ///
     /// Returns an error if:
     ///
-    /// * [`ClientError::QueryResultsNotStored`] if the job streamed its results to a network
-    ///   listener, which means they're not stored.
+    /// * [`ClientError::QueryResultsNotStored`] if the job is configured to stream its results to a
+    ///   network listener, which means they're not stored.
     /// * Forwards [`Client::wait_for_query_success`]'s return values on failure.
     /// * Forwards [`Client::get_job_config`]'s return values on failure.
     /// * Forwards [`Client::fetch_results_from_mongo`]'s return values on failure.
@@ -331,22 +331,26 @@ impl Client {
         ClientError,
     > {
         let output = self.get_job_config(query_job_id).await?.output;
-        self.wait_for_query_success(query_job_id).await?;
         match output {
             QueryOutput::ResultsCache(ResultsCacheOutput {
                 max_num_results, ..
-            }) => self
-                .fetch_results_from_mongo(query_job_id, max_num_results, raw_docs, sorted)
-                .await
-                .map(|inner| SearchResultStream::Mongo { inner }),
-            QueryOutput::File {} => Ok(match &self.config.stream_output.storage {
-                StreamOutputStorage::Fs { .. } => SearchResultStream::File {
-                    inner: self.fetch_results_from_file(query_job_id),
-                },
-                StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
-                    inner: self.fetch_results_from_s3(query_job_id).await?,
-                },
-            }),
+            }) => {
+                self.wait_for_query_success(query_job_id).await?;
+                self.fetch_results_from_mongo(query_job_id, max_num_results, raw_docs, sorted)
+                    .await
+                    .map(|inner| SearchResultStream::Mongo { inner })
+            }
+            QueryOutput::File {} => {
+                self.wait_for_query_success(query_job_id).await?;
+                Ok(match &self.config.stream_output.storage {
+                    StreamOutputStorage::Fs { .. } => SearchResultStream::File {
+                        inner: self.fetch_results_from_file(query_job_id),
+                    },
+                    StreamOutputStorage::S3 { .. } => SearchResultStream::S3 {
+                        inner: self.fetch_results_from_s3(query_job_id).await?,
+                    },
+                })
+            }
             QueryOutput::Network(_) => Err(ClientError::QueryResultsNotStored(query_job_id)),
         }
     }
