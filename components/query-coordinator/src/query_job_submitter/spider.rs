@@ -5,10 +5,8 @@ use std::collections::hash_map::Entry;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryOutput;
-use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::job_config::SearchQuery;
 use spider_client::SpiderClient;
 use spider_client::error::ClientError;
@@ -153,14 +151,7 @@ fn build_query_task_graph(
     const CLP_TDL_PACKAGE_NAME: &str = "clp";
     const QUERY_TASK_FUNC: &str = "query::clp_s_search";
 
-    let commit_task = matches!(
-        output,
-        QueryOutput::ResultsCache(ResultsCacheOutput {
-            aggregation: Some(Aggregation::CountByTime { .. }),
-            ..
-        })
-    )
-    .then(|| TerminationTaskDescriptor {
+    let commit_task = output.has_timeline().then(|| TerminationTaskDescriptor {
         tdl_context: TdlContext {
             package: CLP_TDL_PACKAGE_NAME.to_owned(),
             task_func: "query::commit_timeline".to_owned(),

@@ -9,13 +9,11 @@ use std::time::Duration;
 
 use clp_rust_utils::clp_config::package::config::Database;
 use clp_rust_utils::dataset::DatasetName;
-use clp_rust_utils::job_config::Aggregation;
 use clp_rust_utils::job_config::QUERY_JOBS_TABLE_NAME;
 use clp_rust_utils::job_config::QueryJobConfig;
 use clp_rust_utils::job_config::QueryJobId;
 use clp_rust_utils::job_config::QueryJobStatus;
 use clp_rust_utils::job_config::QueryOutput;
-use clp_rust_utils::job_config::ResultsCacheOutput;
 use clp_rust_utils::types::ArchiveId;
 use const_format::formatcp;
 use spider_core::task::ExecutionPolicy;
@@ -131,15 +129,7 @@ impl<SubmitterType: QueryJobSubmitter> QueryJobHandle<SubmitterType> {
 
         let result = async {
             let archives_to_search = self.plan().await?;
-            if archives_to_search.is_empty()
-                && !matches!(
-                    self.query_job_config.output,
-                    QueryOutput::ResultsCache(ResultsCacheOutput {
-                        aggregation: Some(Aggregation::CountByTime { .. }),
-                        ..
-                    })
-                )
-            {
+            if archives_to_search.is_empty() && !self.query_job_config.output.has_timeline() {
                 return self.terminate(QueryJobOutcome::Succeeded).await;
             }
 

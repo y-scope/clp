@@ -134,6 +134,22 @@ pub enum QueryOutput {
     File {},
 }
 
+impl QueryOutput {
+    /// # Returns
+    ///
+    /// Whether the output includes a timeline.
+    #[must_use]
+    pub const fn has_timeline(&self) -> bool {
+        matches!(
+            self,
+            Self::ResultsCache(ResultsCacheOutput {
+                aggregation: Some(Aggregation::CountByTime { .. }),
+                ..
+            })
+        )
+    }
+}
+
 /// The results cache that a query job's results are buffered in.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]

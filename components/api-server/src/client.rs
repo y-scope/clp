@@ -381,13 +381,7 @@ impl Client {
         let timeline_query_job_id: QueryJobId = query_job_id
             .try_into()
             .expect("an existing query job's ID fits in `QueryJobId`");
-        if !matches!(
-            output,
-            QueryOutput::ResultsCache(ResultsCacheOutput {
-                aggregation: Some(Aggregation::CountByTime { .. }),
-                ..
-            })
-        ) {
+        if !output.has_timeline() {
             return Err(ClientError::InvalidInput(
                 "query job has no timeline configuration".to_owned(),
             ));
