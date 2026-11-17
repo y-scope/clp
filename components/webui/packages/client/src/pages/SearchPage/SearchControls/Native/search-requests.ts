@@ -1,12 +1,8 @@
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import {
-    type QueryJob,
-    type QueryJobCreation,
-} from "@webui/common/schemas/search";
+import {type QueryJobCreation} from "@webui/common/schemas/search";
 import {message} from "antd";
 
 import {
-    type Aggregation,
     cancelQuery,
     type QueryConfig,
     submitQuery,
@@ -21,14 +17,16 @@ import {unquoteString} from "./utils";
  * Builds an API server query config from a query job creation payload.
  *
  * @param payload
- * @param aggregation
  * @return
  */
-const buildQueryConfig = (payload: QueryJobCreation, aggregation?: Aggregation): QueryConfig => ({
+const buildQueryConfig = (payload: QueryJobCreation): QueryConfig => ({
     // Buffer results in the results cache (MongoDB) so that the results contain structured metadata
     // (e.g., timestamps and original file paths).
     output: {
-        aggregation: aggregation ?? null,
+        aggregation: {
+            bucket_size_millisecs: payload.timeRangeBucketSizeMillis,
+            type: "count_by_time",
+        },
         max_num_results: payload.maxNumResults ?? null,
         type: "results_cache",
     },
@@ -44,8 +42,7 @@ const buildQueryConfig = (payload: QueryJobCreation, aggregation?: Aggregation):
 });
 
 /**
- * Submits a new search query to the API server. Two query jobs are submitted: a search job and a
- * count-by-time aggregation job for the results timeline.
+ * Submits a query job that produces search results and count-by-time timeline buckets.
  *
  * @param payload
  */
@@ -89,27 +86,15 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
     store.updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
-    Promise.all([
-        submitQuery(buildQueryConfig(payload)),
-        submitQuery(buildQueryConfig(payload, {
-            bucket_size_millisecs: payload.timeRangeBucketSizeMillis,
-            type: "count_by_time",
-        })),
-    ])
-        .then(([searchJobId, aggregationJobId]) => {
-            store.updateSearchJobId(searchJobId.toString());
-            store.updateAggregationJobId(aggregationJobId.toString());
+    submitQuery(buildQueryConfig(payload))
+        .then((jobId) => {
+            store.updateSearchJobId(jobId.toString());
+            store.updateAggregationJobId(jobId.toString());
             store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
             store.updateSubmittedMaxNumResults(
                 payload.maxNumResults ?? SEARCH_STATE_DEFAULT.submittedMaxNumResults
             );
-            console.debug(
-                "Search jobs created - ",
-                "Search job ID:",
-                searchJobId,
-                "Aggregation job ID:",
-                aggregationJobId
-            );
+            console.debug("Search and timeline job created:", jobId);
         })
         .catch((err: unknown) => {
             console.error("Failed to submit query:", err);
@@ -120,9 +105,9 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
 /**
  * Cancels an ongoing search query on the API server.
  *
- * @param payload
+ * @param jobId
  */
-const handleQueryCancel = (payload: QueryJob) => {
+const handleQueryCancel = (jobId: number) => {
     const store = useSearchStore.getState();
 
     if (store.searchUiState !== SEARCH_UI_STATE.QUERYING) {
@@ -132,10 +117,7 @@ const handleQueryCancel = (payload: QueryJob) => {
     }
 
     store.updateSearchUiState(SEARCH_UI_STATE.DONE);
-    Promise.all([
-        cancelQuery(payload.searchJobId),
-        cancelQuery(payload.aggregationJobId),
-    ])
+    cancelQuery(jobId)
         .then(() => {
             console.debug("Query cancelled successfully");
         })
