@@ -329,9 +329,6 @@ pub struct QueryResultListener {
     /// The port that the listener binds to on every interface.
     pub port: NonZeroU16,
 
-    /// The host that query tasks connect to the listener at.
-    pub advertised_host: NonEmptyString,
-
     /// How long a query task's connection may take to send its handshake, in seconds.
     pub handshake_timeout_secs: NonZeroU64,
 }
@@ -340,7 +337,6 @@ impl Default for QueryResultListener {
     fn default() -> Self {
         Self {
             port: NonZeroU16::new(3003).expect("default port should not be zero"),
-            advertised_host: NonEmptyString::from_static_str("localhost"),
             handshake_timeout_secs: NonZeroU64::new(10)
                 .expect("default handshake timeout should not be zero"),
         }

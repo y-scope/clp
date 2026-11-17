@@ -7,8 +7,6 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
 spec:
-  # Must stay at one replica: a streamed query's results reach the listener of whichever replica
-  # the query task connects to, which must be the replica holding the query's session.
   replicas: 1
   selector:
     matchLabels:
@@ -51,6 +49,10 @@ spec:
                   key: "username"
             - name: "OTEL_SERVICE_NAME"
               value: "api-server"
+            - name: "POD_IP"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
             - name: "RUST_LOG"
               value: "INFO"
           {{- include "clp.createResourceLimits" (dict
@@ -84,7 +86,8 @@ spec:
             "/opt/clp/bin/api_server",
             "--host", "0.0.0.0",
             "--port", "3001",
-            "--config", "/etc/clp-config.yaml"
+            "--config", "/etc/clp-config.yaml",
+            "--query-result-listener-advertised-host", "$(POD_IP)"
           ]
           readinessProbe:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}

@@ -750,12 +750,10 @@ class QueryResultListener(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3003
 
     port: Port = DEFAULT_PORT
-    advertised_host: DomainStr = "localhost"
     handshake_timeout_secs: PositiveInt = 10
 
     def transform_for_container(self) -> None:
-        """Advertises the API server's container hostname and listens on the default port."""
-        self.advertised_host = API_SERVER_COMPONENT_NAME
+        """Listens on the default port."""
         self.port = self.DEFAULT_PORT
 
 

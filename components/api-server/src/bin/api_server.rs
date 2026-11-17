@@ -5,9 +5,12 @@ use std::sync::Arc;
 use anyhow::Context;
 use api_server::routes::SseEncoding;
 use clap::Parser;
+use clap::builder::NonEmptyStringValueParser;
+use clap::builder::TypedValueParser;
 use clp_rust_utils::clp_config::package;
 use clp_rust_utils::database::mysql::create_clp_db_mysql_pool;
 use clp_rust_utils::serde::yaml;
+use non_empty_string::NonEmptyString;
 use query_result_listener::listener::ListenerConfig;
 use query_result_listener::listener::ResultListener;
 
@@ -22,6 +25,10 @@ struct Args {
 
     #[arg(long)]
     port: Option<u16>,
+
+    /// The host that the tasks of streaming queries' jobs connect to the query result listener at.
+    #[arg(long, value_parser = NonEmptyStringValueParser::new().try_map(NonEmptyString::new))]
+    query_result_listener_advertised_host: NonEmptyString,
 }
 
 fn read_config_and_credentials(
@@ -44,7 +51,8 @@ fn read_config_and_credentials(
     Ok((config, credentials))
 }
 
-/// Binds the query result listener that `config` configures, on every interface.
+/// Binds the query result listener that `config` configures, on every interface, advertising
+/// `advertised_host` to the tasks of streaming queries' jobs.
 ///
 /// # Returns
 ///
@@ -57,10 +65,11 @@ fn read_config_and_credentials(
 /// * Forwards [`ResultListener::bind`]'s return values on failure.
 fn bind_query_result_listener(
     config: &package::config::QueryResultListener,
+    advertised_host: &NonEmptyString,
 ) -> anyhow::Result<Arc<ResultListener<SseEncoding>>> {
     let listener = ResultListener::bind(ListenerConfig {
         bind_addr: SocketAddr::from((Ipv4Addr::UNSPECIFIED, config.port.get())),
-        advertised_host: config.advertised_host.clone(),
+        advertised_host: advertised_host.clone(),
         handshake_timeout_sec: config.handshake_timeout_secs,
     })
     .context(format!(
@@ -69,7 +78,7 @@ fn bind_query_result_listener(
     ))?;
     tracing::info!(
         port = config.port.get(),
-        advertised_host = % config.advertised_host,
+        advertised_host = % advertised_host,
         "Listening for the results of streaming queries."
     );
     Ok(Arc::new(listener))
@@ -121,8 +130,10 @@ async fn main() -> anyhow::Result<()> {
     let mongodb_client = mongodb::Client::with_uri_str(mongo_uri)
         .await
         .context("cannot connect to MongoDB")?;
-    let query_result_listener =
-        bind_query_result_listener(&api_server_config.query_result_listener)?;
+    let query_result_listener = bind_query_result_listener(
+        &api_server_config.query_result_listener,
+        &args.query_result_listener_advertised_host,
+    )?;
 
     let client = api_server::client::Client::new(
         config.clone(),
