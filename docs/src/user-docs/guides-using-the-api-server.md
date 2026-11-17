@@ -107,9 +107,11 @@ event: end
 data: {"status":"Succeeded","num_results_emitted":1,"num_duplicates_dropped":0}
 ```
 
-Results from different archives arrive in no particular order. If the client disconnects before the
-`end` event, the query job's cancellation is requested. If the query fails after its job was
-submitted, an `error` event replaces the `end` event, and the job's cancellation is also requested.
+Results from different archives arrive in no particular order. A query job that fails still ends
+the stream with an `end` event, whose `status` is `Failed`. If the API server can no longer stream
+the query after its job was submitted (e.g., it can't read the job's status), an `error` event
+replaces the `end` event, and the job's cancellation is requested. If the client disconnects before
+the `end` event, the query job's cancellation is requested too.
 
 [OpenAPI]: https://swagger.io/specification/
 [server-sent-events]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
